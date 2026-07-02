@@ -1,0 +1,63 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Mapa público código -> trainerId, usado solo para vincular clientes
+    // a su entrenador durante el registro. No contiene datos personales.
+    match /trainerCodes/{code} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Perfiles de usuario (entrenadores y clientes).
+    match /users/{userId} {
+      allow read: if request.auth != null
+        && (request.auth.uid == userId || resource.data.trainerId == request.auth.uid);
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Biblioteca de ejercicios de cada entrenador.
+    match /exercises/{exerciseId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId == resource.data.trainerId);
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
+    // Rutinas asignadas a cada cliente.
+    match /routines/{routineId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
+    // Entrenamientos registrados por cada cliente.
+    match /workoutLogs/{logId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Registros de peso de cada cliente.
+    match /weightLogs/{logId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}
