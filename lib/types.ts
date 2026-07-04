@@ -13,6 +13,8 @@ export interface UserProfile {
   /** Solo en clientes: objetivo principal del cliente. */
   goal?: string;
   photoURL?: string;
+  /** Token de Expo Push Notifications del último dispositivo registrado. */
+  pushToken?: string;
 }
 
 export const MUSCLE_GROUPS = [

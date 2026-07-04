@@ -8,7 +8,9 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { sendPushNotification } from '../notifications';
 import type { ChatMessage } from '../types';
+import { getUserProfile } from './users';
 
 const collectionRef = () => collection(db, 'messages');
 
@@ -45,5 +47,15 @@ export function subscribeToMessages(
 
 export async function sendMessage(data: Omit<ChatMessage, 'id' | 'createdAt'>): Promise<string> {
   const ref = await addDoc(collectionRef(), { ...data, createdAt: Date.now() });
+
+  const recipientId = data.senderId === data.trainerId ? data.clientId : data.trainerId;
+  const [sender, recipient] = await Promise.all([
+    getUserProfile(data.senderId),
+    getUserProfile(recipientId),
+  ]);
+  if (sender && recipient?.pushToken) {
+    await sendPushNotification(recipient.pushToken, sender.name, data.text);
+  }
+
   return ref.id;
 }

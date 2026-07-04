@@ -1,11 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useAuth } from '../../lib/auth-context';
+import { sendMessage } from '../../lib/firestore/chat';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { colors, spacing, typography } from '../../lib/theme';
@@ -18,6 +20,8 @@ export default function TrainerDashboard() {
   const [clients, setClients] = useState<UserProfile[]>([]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [remindersSent, setRemindersSent] = useState<Set<string>>(new Set());
+  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -53,6 +57,22 @@ export default function TrainerDashboard() {
     if (!last) return true;
     return (now - last) / (1000 * 60 * 60 * 24) > INACTIVE_DAYS_THRESHOLD;
   });
+
+  const handleSendReminder = async (client: UserProfile) => {
+    if (!profile) return;
+    setSendingReminder(client.uid);
+    try {
+      await sendMessage({
+        trainerId: profile.uid,
+        clientId: client.uid,
+        senderId: profile.uid,
+        text: `¡Hola ${client.name.split(' ')[0]}! Hace tiempo que no te veo registrar entrenamientos. ¿Todo bien? Aquí estoy para ayudarte a retomarlo 💪`,
+      });
+      setRemindersSent((prev) => new Set(prev).add(client.uid));
+    } finally {
+      setSendingReminder(null);
+    }
+  };
 
   return (
     <ScreenContainer>
@@ -92,13 +112,23 @@ export default function TrainerDashboard() {
           <Text style={styles.mutedText}>Todos tus clientes están al día. 🎉</Text>
         ) : (
           inactiveClients.map((client) => (
-            <View key={client.uid} style={styles.logRow}>
-              <Text style={styles.logClient}>{client.name}</Text>
-              <Text style={styles.alertText}>
-                {lastLogByClient.get(client.uid)
-                  ? `Última vez: ${new Date(lastLogByClient.get(client.uid)!).toLocaleDateString('es-ES')}`
-                  : 'Sin entrenamientos aún'}
-              </Text>
+            <View key={client.uid} style={styles.inactiveRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.logClient}>{client.name}</Text>
+                <Text style={styles.alertText}>
+                  {lastLogByClient.get(client.uid)
+                    ? `Última vez: ${new Date(lastLogByClient.get(client.uid)!).toLocaleDateString('es-ES')}`
+                    : 'Sin entrenamientos aún'}
+                </Text>
+              </View>
+              <Button
+                title={remindersSent.has(client.uid) ? 'Enviado ✓' : 'Recordar'}
+                variant="secondary"
+                onPress={() => handleSendReminder(client)}
+                loading={sendingReminder === client.uid}
+                disabled={remindersSent.has(client.uid)}
+                style={styles.reminderBtn}
+              />
             </View>
           ))
         )}
@@ -130,6 +160,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  inactiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  reminderBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   logClient: { ...typography.body, color: colors.text, fontWeight: '600' },
   logDetail: { ...typography.small, color: colors.textMuted },
   alertText: { ...typography.small, color: colors.warning },

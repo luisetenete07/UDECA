@@ -12,6 +12,7 @@ import {
   setActiveNutritionPlan,
   updateNutritionPlan,
 } from '../../../../lib/firestore/nutrition';
+import { notifyUser } from '../../../../lib/notifications';
 import { colors, spacing, typography } from '../../../../lib/theme';
 
 export default function NutritionEditorScreen() {
@@ -77,6 +78,11 @@ export default function NutritionEditorScreen() {
         });
         await setActiveNutritionPlan(clientId, newId);
       }
+      notifyUser(
+        clientId,
+        planId ? 'Plan nutricional actualizado' : 'Nuevo plan nutricional',
+        `Tu entrenador ha actualizado tu plan: ${name}`
+      );
       router.back();
     } finally {
       setSaving(false);

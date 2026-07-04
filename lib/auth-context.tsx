@@ -10,6 +10,7 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
 import { getTrainerIdForInviteCode, registerTrainerInviteCode } from './firestore/users';
+import { registerForPushNotificationsAsync } from './notifications';
 import type { UserProfile, UserRole } from './types';
 
 interface AuthContextValue {
@@ -63,6 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFirebaseUser(user);
       if (user) {
         await loadProfile(user.uid);
+        // No bloquea el arranque: si falla (sin proyecto EAS, web, etc.) se ignora.
+        registerForPushNotificationsAsync(user.uid);
       } else {
         setProfile(null);
       }

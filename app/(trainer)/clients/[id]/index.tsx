@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
@@ -14,6 +16,7 @@ import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getUserProfile } from '../../../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
+import { buildClientReportHtml } from '../../../../lib/report';
 import { colors, radius, spacing, typography } from '../../../../lib/theme';
 import type {
   BodyMeasurement,
@@ -34,6 +37,7 @@ export default function ClientDetailScreen() {
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -72,6 +76,32 @@ export default function ClientDetailScreen() {
     .filter((m) => m.waistCm !== undefined)
     .map((m) => ({ date: m.date, value: m.waistCm as number }));
 
+  const handleGenerateReport = async () => {
+    if (!client) return;
+    setGeneratingReport(true);
+    try {
+      const html = buildClientReportHtml({
+        client,
+        routine: activeRoutine ?? null,
+        weightLogs,
+        workoutLogs,
+        measurements,
+        nutritionPlan,
+      });
+
+      if (Platform.OS === 'web') {
+        await Print.printAsync({ html });
+      } else {
+        const { uri } = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
+        }
+      }
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
   return (
     <ScreenContainer>
       <View style={styles.header}>
@@ -83,6 +113,14 @@ export default function ClientDetailScreen() {
           <Text style={styles.email}>{client.email}</Text>
         </View>
       </View>
+
+      <Button
+        title="Generar informe PDF"
+        variant="secondary"
+        onPress={handleGenerateReport}
+        loading={generatingReport}
+        style={{ marginBottom: spacing.md }}
+      />
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Rutina asignada</Text>

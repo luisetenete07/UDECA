@@ -14,6 +14,7 @@ import {
   setActiveRoutine,
   updateRoutine,
 } from '../../../../lib/firestore/routines';
+import { notifyUser } from '../../../../lib/notifications';
 import { colors, radius, spacing, typography } from '../../../../lib/theme';
 import type { Exercise, Routine, RoutineDay, RoutineExercise } from '../../../../lib/types';
 
@@ -130,6 +131,11 @@ export default function RoutineEditorScreen() {
         });
         await setActiveRoutine(clientId, newId);
       }
+      notifyUser(
+        clientId,
+        routineId ? 'Rutina actualizada' : 'Nueva rutina asignada',
+        `Tu entrenador ha actualizado tu plan: ${name}`
+      );
       router.back();
     } finally {
       setSaving(false);

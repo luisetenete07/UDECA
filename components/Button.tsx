@@ -1,12 +1,14 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { colors, radius, spacing, typography } from '../lib/theme';
 
 interface ButtonProps {
@@ -27,9 +29,21 @@ export function Button({
   style,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
+
+  const handlePress = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(
+        variant === 'danger'
+          ? Haptics.ImpactFeedbackStyle.Heavy
+          : Haptics.ImpactFeedbackStyle.Light
+      );
+    }
+    onPress();
+  };
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.base,

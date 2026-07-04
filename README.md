@@ -7,7 +7,7 @@ lugar, y para que cada cliente acceda a su plan personalizado.
 Construida con **Expo (React Native + React Native Web)** y **Firebase**
 (autenticación + Firestore).
 
-## Estado del proyecto — Fase 1 y Fase 2
+## Estado del proyecto — Fase 1, Fase 2 y Fase 3
 
 Implementado hasta ahora:
 
@@ -39,8 +39,23 @@ Implementado hasta ahora:
   (`components/LineChart.tsx`) usado tanto para el peso como para las
   medidas corporales.
 
-Pendiente para la Fase 3: notificaciones push, reportes PDF,
-automatizaciones y mejoras de diseño/rendimiento.
+**Fase 3**
+- **Notificaciones push**: aviso al cliente cuando el entrenador le asigna
+  o actualiza una rutina o un plan nutricional, y aviso a quien no está
+  mirando el chat cuando recibe un mensaje nuevo. Se envían directamente
+  desde el cliente a la API de Expo Push (sin servidor propio ni Cloud
+  Functions). **Requiere haber creado un proyecto EAS** (`npx eas init`)
+  para que se genere el `projectId` en `app.json` — sin él, la app sigue
+  funcionando con normalidad pero no se registran tokens push.
+- **Reportes PDF**: botón "Generar informe PDF" en la ficha de cada
+  cliente (rutina, plan nutricional, medidas, historial de peso y
+  entrenamientos), generado con `expo-print` y compartido con
+  `expo-sharing`. En web abre el diálogo de impresión del navegador.
+- **Automatizaciones**: recordatorio de un toque para que el entrenador
+  avise a un cliente inactivo (envía un mensaje de chat + notificación
+  push), y aviso automático al cliente en su panel si lleva más de una
+  semana sin registrar su peso.
+- **Mejoras de diseño**: feedback háptico en los botones (iOS/Android).
 
 ## 1. Requisitos
 
@@ -97,7 +112,23 @@ npm run android   # emulador / dispositivo Android
 Si `.env` no existe o le faltan variables, la app mostrará una pantalla
 avisando de que falta configurar Firebase en lugar de fallar.
 
-## 5. Cómo funciona la vinculación entrenador–cliente
+## 5. Activar notificaciones push (opcional)
+
+Las notificaciones push (rutina asignada, mensajes de chat, recordatorios)
+usan el servicio gratuito de Expo Push Notifications y no requieren
+servidor propio, pero sí necesitan un proyecto EAS:
+
+```bash
+npx eas login       # crea una cuenta gratuita en expo.dev si no tienes una
+npx eas init
+```
+
+Esto añade automáticamente un `extra.eas.projectId` a `app.json`. A partir
+de ahí, cada usuario que abra la app en un dispositivo físico (no
+simulador) y conceda permiso de notificaciones quedará registrado. Sin
+este paso, la app funciona igual pero no se enviarán notificaciones.
+
+## 6. Cómo funciona la vinculación entrenador–cliente
 
 No hay panel de administración para crear usuarios: cada persona se
 registra ella misma.
@@ -110,24 +141,26 @@ registra ella misma.
    Queda vinculado automáticamente a su entrenador y aparece en la lista de
    clientes de este.
 
-## 6. Estructura del proyecto
+## 7. Estructura del proyecto
 
 ```
 app/                      Pantallas (expo-router, navegación por archivos)
   (auth)/                 Login y registro
-  (trainer)/              Área del entrenador (tabs: inicio, clientes, ejercicios, perfil)
-  (client)/                Área del cliente (tabs: inicio, entreno, progreso, perfil)
+  (trainer)/              Área del entrenador (tabs: inicio, clientes, ejercicios, chat, perfil)
+  (client)/                Área del cliente (tabs: inicio, entreno, nutrición, progreso, chat, perfil)
 components/                Componentes de UI reutilizables
 lib/
   firebase.ts              Inicialización de Firebase (auth + Firestore)
   auth-context.tsx         Contexto de autenticación y perfil de usuario
   types.ts                 Tipos de datos (Firestore)
   theme.ts                 Colores, tipografía y espaciados
+  notifications.ts          Registro y envío de notificaciones push (Expo)
+  report.ts                 Generación del HTML del informe PDF de cliente
   firestore/                Funciones de acceso a datos por colección
 firestore.rules            Reglas de seguridad de Firestore
 ```
 
-## 7. Modelo de datos (Firestore)
+## 8. Modelo de datos (Firestore)
 
 | Colección       | Descripción                                                   |
 | ---------------- | -------------------------------------------------------------- |
@@ -142,7 +175,7 @@ firestore.rules            Reglas de seguridad de Firestore
 | `mealLogs`           | Comidas registradas por cada cliente                              |
 | `messages`            | Mensajes de chat entre un entrenador y su cliente                 |
 
-## 8. Publicar (build)
+## 9. Publicar (build)
 
 - **Web**: `npx expo export --platform web` genera una build estática en
   `dist/`, lista para desplegar en cualquier hosting estático (Firebase
