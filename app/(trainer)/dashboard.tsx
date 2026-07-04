@@ -66,7 +66,7 @@ export default function TrainerDashboard() {
         trainerId: profile.uid,
         clientId: client.uid,
         senderId: profile.uid,
-        text: `¡Hola ${client.name.split(' ')[0]}! Hace tiempo que no te veo registrar entrenamientos. ¿Todo bien? Aquí estoy para ayudarte a retomarlo 💪`,
+        text: `Hola ${client.name.split(' ')[0]}, hace tiempo que no registras entrenamientos. ¿Todo bien? Aquí estoy para ayudarte a retomarlo.`,
       });
       setRemindersSent((prev) => new Set(prev).add(client.uid));
     } finally {
@@ -76,7 +76,7 @@ export default function TrainerDashboard() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.greeting}>Hola, {profile?.name?.split(' ')[0]} 👋</Text>
+      <Text style={styles.greeting}>Hola, {profile?.name?.split(' ')[0]}</Text>
       <Text style={styles.subtitle}>Resumen de tu negocio</Text>
 
       <View style={styles.statsRow}>
@@ -109,7 +109,7 @@ export default function TrainerDashboard() {
           Clientes inactivos (+{INACTIVE_DAYS_THRESHOLD} días sin entrenar)
         </Text>
         {inactiveClients.length === 0 ? (
-          <Text style={styles.mutedText}>Todos tus clientes están al día. 🎉</Text>
+          <Text style={styles.mutedText}>Todos tus clientes están al día.</Text>
         ) : (
           inactiveClients.map((client) => (
             <View key={client.uid} style={styles.inactiveRow}>
@@ -140,7 +140,7 @@ export default function TrainerDashboard() {
 function StatCard({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
     <Card style={styles.statCard}>
-      <Text style={[styles.statValue, warn && { color: colors.warning }]}>{value}</Text>
+      <Text style={[styles.statValue, warn && { color: colors.danger }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </Card>
   );
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   statCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
-  statValue: { ...typography.h1, color: colors.primary },
+  statValue: { ...typography.h1, color: colors.text },
   statLabel: { ...typography.small, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
@@ -164,7 +165,12 @@ export default function WorkoutScreen() {
         </Card>
       ))}
 
-      {saved ? <Text style={styles.savedText}>¡Entrenamiento registrado! ✅</Text> : null}
+      {saved ? (
+        <View style={styles.savedRow}>
+          <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+          <Text style={styles.savedText}>Entrenamiento registrado</Text>
+        </View>
+      ) : null}
 
       <Button
         title="Marcar sesión como completada"
@@ -190,7 +196,7 @@ const styles = StyleSheet.create({
   },
   dayTabSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   dayTabText: { ...typography.small, color: colors.textMuted, fontWeight: '600' },
-  dayTabTextSelected: { color: colors.background },
+  dayTabTextSelected: { color: colors.text },
   exerciseCard: { marginBottom: spacing.md },
   exerciseName: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   setRow: {
@@ -201,10 +207,16 @@ const styles = StyleSheet.create({
   },
   setLabel: { ...typography.small, color: colors.textMuted, width: 56 },
   setInput: { flex: 1, marginBottom: 0 },
+  savedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
   savedText: {
     ...typography.body,
-    color: colors.accent,
-    textAlign: 'center',
-    marginBottom: spacing.md,
+    color: colors.primary,
+    fontWeight: '600',
   },
 });

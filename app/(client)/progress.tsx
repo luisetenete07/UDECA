@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   tabButton: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
   tabButtonActive: { backgroundColor: colors.primary },
   tabButtonText: { ...typography.small, fontWeight: '700', color: colors.textMuted },
-  tabButtonTextActive: { color: colors.background },
+  tabButtonTextActive: { color: colors.text },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm },

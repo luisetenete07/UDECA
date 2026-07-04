@@ -12,7 +12,7 @@ export default function TrainerProfileScreen() {
 
   const handleShare = async () => {
     if (!profile?.inviteCode) return;
-    const message = `Únete a mis entrenamientos en Calistenia Coach. Descarga la app y regístrate como cliente usando este código: ${profile.inviteCode}`;
+    const message = `Únete a mis entrenamientos en UDECA. Descarga la app y regístrate como cliente usando este código: ${profile.inviteCode}`;
     if (Platform.OS === 'web') {
       try {
         await navigator.clipboard.writeText(profile.inviteCode);

@@ -1,13 +1,9 @@
 import React from 'react';
 import { Redirect, Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { TabIcon } from '../../components/TabIcon';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { useAuth } from '../../lib/auth-context';
 import { colors } from '../../lib/theme';
-
-function TabIcon({ emoji }: { emoji: string }) {
-  return <Text style={{ fontSize: 20 }}>{emoji}</Text>;
-}
 
 export default function TrainerLayout() {
   const { loading, firebaseUser, profile } = useAuth();
@@ -30,23 +26,44 @@ export default function TrainerLayout() {
     >
       <Tabs.Screen
         name="dashboard"
-        options={{ title: 'Inicio', tabBarIcon: () => <TabIcon emoji="🏠" /> }}
+        options={{
+          title: 'Inicio',
+          tabBarIcon: (props) => <TabIcon {...props} outline="home-outline" filled="home" />,
+        }}
       />
       <Tabs.Screen
         name="clients"
-        options={{ title: 'Clientes', tabBarIcon: () => <TabIcon emoji="👥" /> }}
+        options={{
+          title: 'Clientes',
+          tabBarIcon: (props) => <TabIcon {...props} outline="people-outline" filled="people" />,
+        }}
       />
       <Tabs.Screen
         name="exercises"
-        options={{ title: 'Ejercicios', tabBarIcon: () => <TabIcon emoji="🏋️" /> }}
+        options={{
+          title: 'Ejercicios',
+          tabBarIcon: (props) => (
+            <TabIcon {...props} outline="barbell-outline" filled="barbell" />
+          ),
+        }}
       />
       <Tabs.Screen
         name="chat"
-        options={{ title: 'Chat', tabBarIcon: () => <TabIcon emoji="💬" /> }}
+        options={{
+          title: 'Chat',
+          tabBarIcon: (props) => (
+            <TabIcon {...props} outline="chatbubble-ellipses-outline" filled="chatbubble-ellipses" />
+          ),
+        }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: 'Perfil', tabBarIcon: () => <TabIcon emoji="⚙️" /> }}
+        options={{
+          title: 'Perfil',
+          tabBarIcon: (props) => (
+            <TabIcon {...props} outline="person-circle-outline" filled="person-circle" />
+          ),
+        }}
       />
     </Tabs>
   );

@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
@@ -97,7 +98,12 @@ export default function ExercisesScreen() {
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
                 <Text style={styles.exerciseGroup}>{exercise.muscleGroup}</Text>
               </View>
-              {exercise.videoUrl ? <Text style={styles.videoBadge}>▶ Vídeo</Text> : null}
+              {exercise.videoUrl ? (
+                <View style={styles.videoBadge}>
+                  <Ionicons name="play-circle-outline" size={16} color={colors.primary} />
+                  <Text style={styles.videoBadgeText}>Vídeo</Text>
+                </View>
+              ) : null}
             </Card>
           </Pressable>
         ))
@@ -138,9 +144,10 @@ const styles = StyleSheet.create({
   },
   chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { ...typography.small, color: colors.textMuted, fontWeight: '600' },
-  chipTextSelected: { color: colors.background },
+  chipTextSelected: { color: colors.text },
   exerciseCard: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   exerciseName: { ...typography.h3, color: colors.text },
   exerciseGroup: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  videoBadge: { ...typography.small, color: colors.primary, fontWeight: '700' },
+  videoBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  videoBadgeText: { ...typography.small, color: colors.primary, fontWeight: '700' },
 });

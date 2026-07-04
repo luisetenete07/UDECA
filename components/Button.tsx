@@ -54,9 +54,9 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.background : colors.text} />
+        <ActivityIndicator color={colors.text} />
       ) : (
-        <Text style={[styles.text, variant === 'primary' && styles.textPrimary]}>{title}</Text>
+        <Text style={styles.text}>{title}</Text>
       )}
     </Pressable>
   );
@@ -81,14 +81,11 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: colors.text,
   },
-  textPrimary: {
-    color: colors.background,
-  },
 });
 
 const variantStyles: Record<NonNullable<ButtonProps['variant']>, ViewStyle> = {
   primary: { backgroundColor: colors.primary },
   secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
   ghost: { backgroundColor: 'transparent' },
-  danger: { backgroundColor: 'rgba(248, 113, 113, 0.15)', borderWidth: 1, borderColor: colors.danger },
+  danger: { backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger },
 };

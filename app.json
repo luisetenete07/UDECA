@@ -1,21 +1,22 @@
 {
   "expo": {
-    "name": "Calistenia Coach",
-    "slug": "App-calistenia",
-    "scheme": "calisteniacoach",
+    "name": "UDECA",
+    "slug": "udeca",
+    "scheme": "udeca",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#000000",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.calisteniacoach.app"
+      "bundleIdentifier": "com.udeca.app"
     },
     "android": {
-      "package": "com.calisteniacoach.app",
+      "package": "com.udeca.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0F172A",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -25,7 +26,8 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "static"
+      "output": "static",
+      "backgroundColor": "#000000"
     },
     "plugins": [
       "expo-router",
@@ -38,7 +40,7 @@
       [
         "expo-notifications",
         {
-          "color": "#22D3EE"
+          "color": "#E0242F"
         }
       ]
     ],

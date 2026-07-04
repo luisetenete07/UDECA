@@ -1,8 +1,9 @@
-# Calistenia Coach
+# UDECA — Universidad de Calistenia
 
-App multiplataforma (iOS, Android y Web) para que un entrenador de calistenia
-gestione a sus clientes, rutinas, entrenamientos y progreso desde un único
-lugar, y para que cada cliente acceda a su plan personalizado.
+App multiplataforma (iOS, Android y Web) de UDECA (by Luis Tena /
+luistenafit) para que el entrenador gestione a sus clientes, rutinas,
+entrenamientos y progreso desde un único lugar, y para que cada cliente
+acceda a su plan personalizado.
 
 Construida con **Expo (React Native + React Native Web)** y **Firebase**
 (autenticación + Firestore).
@@ -175,7 +176,28 @@ firestore.rules            Reglas de seguridad de Firestore
 | `mealLogs`           | Comidas registradas por cada cliente                              |
 | `messages`            | Mensajes de chat entre un entrenador y su cliente                 |
 
-## 9. Publicar (build)
+## 9. Añadir el logo real (icono, splash y favicon)
+
+Por ahora la app usa los iconos de ejemplo que genera Expo por defecto. Para
+poner el logo real de UDECA, sustituye estos archivos en `assets/` por el
+tuyo (mismo nombre, mismas dimensiones — puedes exportarlos con cualquier
+editor de imagen o herramienta online tipo Canva/Figma):
+
+| Archivo                             | Tamaño     | Uso                                  |
+| ------------------------------------ | ---------- | ------------------------------------- |
+| `assets/icon.png`                     | 1024×1024  | Icono de la app (iOS, Android, web)   |
+| `assets/splash-icon.png`              | 1024×1024  | Pantalla de carga (fondo negro)       |
+| `assets/android-icon-foreground.png`  | 512×512    | Icono adaptable de Android (primer plano, fondo transparente) |
+| `assets/android-icon-background.png`  | 512×512    | Icono adaptable de Android (fondo, ya en negro) |
+| `assets/android-icon-monochrome.png`  | 432×432    | Versión monocromo (Android 13+)       |
+| `assets/favicon.png`                  | 48×48      | Icono de pestaña en el navegador web  |
+
+Recomendación: usa tu logo del tridente en plata/blanco sobre fondo negro
+para que combine con el resto de la app. Después de reemplazar los
+archivos, reinicia el servidor (`npm start`) para que se regeneren los
+iconos.
+
+## 10. Publicar (build)
 
 - **Web**: `npx expo export --platform web` genera una build estática en
   `dist/`, lista para desplegar en cualquier hosting estático (Firebase

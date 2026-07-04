@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { TextField } from './TextField';
 import { subscribeToMessages, sendMessage } from '../lib/firestore/chat';
 import { colors, radius, spacing, typography } from '../lib/theme';
@@ -85,7 +86,7 @@ export function ChatThread({ trainerId, clientId, currentUserId, title }: ChatTh
             disabled={sending || !text.trim()}
             style={[styles.sendButton, (sending || !text.trim()) && styles.sendButtonDisabled]}
           >
-            <Text style={styles.sendButtonText}>➤</Text>
+            <Ionicons name="send" size={18} color={colors.text} />
           </Pressable>
         </View>
       </SafeAreaView>
@@ -138,9 +139,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 2,
   },
   bubbleText: { ...typography.body, color: colors.text },
-  bubbleTextMine: { color: colors.background },
+  bubbleTextMine: { color: colors.text },
   bubbleTime: { ...typography.small, color: colors.textFaint, marginTop: 2, fontSize: 10 },
-  bubbleTimeMine: { color: 'rgba(11,18,32,0.6)' },
+  bubbleTimeMine: { color: 'rgba(255,255,255,0.7)' },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -160,5 +161,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendButtonDisabled: { opacity: 0.4 },
-  sendButtonText: { fontSize: 18, color: colors.background },
 });

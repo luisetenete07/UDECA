@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
@@ -82,7 +83,7 @@ export default function ClientsScreen() {
                 <Text style={styles.clientName}>{client.name}</Text>
                 <Text style={styles.clientGoal}>{client.goal || 'Sin objetivo definido'}</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
             </Card>
           </Pressable>
         ))
@@ -120,5 +121,4 @@ const styles = StyleSheet.create({
   avatarText: { ...typography.h3, color: colors.white },
   clientName: { ...typography.h3, color: colors.text },
   clientGoal: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  chevron: { ...typography.h2, color: colors.textFaint },
 });

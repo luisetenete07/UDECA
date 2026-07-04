@@ -121,9 +121,9 @@ export default function NutritionScreen() {
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Hoy</Text>
         <MacroBar label="Calorías" consumed={totals.calories} target={plan.dailyCalories} unit="kcal" />
-        <MacroBar label="Proteína" consumed={totals.proteinG} target={plan.proteinG} unit="g" color={colors.accent} />
-        <MacroBar label="Carbohidratos" consumed={totals.carbsG} target={plan.carbsG} unit="g" color={colors.primary} />
-        <MacroBar label="Grasas" consumed={totals.fatG} target={plan.fatG} unit="g" color={colors.warning} />
+        <MacroBar label="Proteína" consumed={totals.proteinG} target={plan.proteinG} unit="g" />
+        <MacroBar label="Carbohidratos" consumed={totals.carbsG} target={plan.carbsG} unit="g" />
+        <MacroBar label="Grasas" consumed={totals.fatG} target={plan.fatG} unit="g" />
       </Card>
 
       <Card style={styles.section}>

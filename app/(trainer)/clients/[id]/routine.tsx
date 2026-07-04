@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
@@ -180,8 +181,11 @@ export default function RoutineEditorScreen() {
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
                   style={styles.smallInput}
                 />
-                <Pressable onPress={() => removeExercise(day.id, ex.id)}>
-                  <Text style={styles.deleteX}>✕</Text>
+                <Pressable
+                  onPress={() => removeExercise(day.id, ex.id)}
+                  style={styles.deleteBtn}
+                >
+                  <Ionicons name="close" size={18} color={colors.danger} />
                 </Pressable>
               </View>
             </View>
@@ -245,7 +249,7 @@ const styles = StyleSheet.create({
   exerciseName: { ...typography.body, color: colors.text, fontWeight: '600', marginBottom: spacing.xs },
   exerciseFields: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   smallInput: { width: 80, marginBottom: 0 },
-  deleteX: { ...typography.h3, color: colors.danger, marginLeft: 'auto' },
+  deleteBtn: { marginLeft: 'auto', padding: spacing.xs },
   picker: {
     marginTop: spacing.sm,
     borderWidth: 1,

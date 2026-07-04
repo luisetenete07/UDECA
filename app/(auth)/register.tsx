@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
+import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
@@ -51,6 +52,7 @@ export default function RegisterScreen() {
   return (
     <ScreenContainer contentStyle={styles.content}>
       <View style={styles.header}>
+        <Logo compact />
         <Text style={styles.title}>Crea tu cuenta</Text>
         <Text style={styles.subtitle}>Elige cómo quieres usar la app</Text>
       </View>
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   roleOptionTextSelected: {
-    color: colors.background,
+    color: colors.text,
   },
   error: {
     ...typography.small,

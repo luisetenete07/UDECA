@@ -66,7 +66,7 @@ export default function ClientDashboard() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.greeting}>Hola, {profile?.name?.split(' ')[0]} 👋</Text>
+      <Text style={styles.greeting}>Hola, {profile?.name?.split(' ')[0]}</Text>
       <Text style={styles.subtitle}>{profile?.goal || 'Define tu objetivo con tu entrenador'}</Text>
 
       {showWeightReminder ? (

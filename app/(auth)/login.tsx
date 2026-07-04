@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
+import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
@@ -34,7 +35,7 @@ export default function LoginScreen() {
   return (
     <ScreenContainer contentStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.logo}>💪 Calistenia Coach</Text>
+        <Logo />
         <Text style={styles.title}>Bienvenido de nuevo</Text>
         <Text style={styles.subtitle}>Inicia sesión para continuar con tu entrenamiento</Text>
       </View>
@@ -79,14 +80,10 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.xl,
   },
-  logo: {
-    ...typography.label,
-    color: colors.primary,
-    marginBottom: spacing.md,
-  },
   title: {
     ...typography.h1,
     color: colors.text,
+    marginTop: spacing.lg,
     marginBottom: spacing.xs,
   },
   subtitle: {

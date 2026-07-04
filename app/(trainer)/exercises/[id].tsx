@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { ...typography.small, color: colors.textMuted, fontWeight: '600' },
-  chipTextSelected: { color: colors.background },
+  chipTextSelected: { color: colors.text },
   textarea: { height: 100, textAlignVertical: 'top' },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });
