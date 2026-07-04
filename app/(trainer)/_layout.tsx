@@ -41,6 +41,10 @@ export default function TrainerLayout() {
         options={{ title: 'Ejercicios', tabBarIcon: () => <TabIcon emoji="🏋️" /> }}
       />
       <Tabs.Screen
+        name="chat"
+        options={{ title: 'Chat', tabBarIcon: () => <TabIcon emoji="💬" /> }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{ title: 'Perfil', tabBarIcon: () => <TabIcon emoji="⚙️" /> }}
       />

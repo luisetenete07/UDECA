@@ -2,7 +2,7 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { colors } from '../../../lib/theme';
 
-export default function ClientsLayout() {
+export default function ChatLayout() {
   return (
     <Stack
       screenOptions={{
@@ -12,10 +12,8 @@ export default function ClientsLayout() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Clientes' }} />
-      <Stack.Screen name="[id]/index" options={{ title: 'Cliente' }} />
-      <Stack.Screen name="[id]/routine" options={{ title: 'Rutina' }} />
-      <Stack.Screen name="[id]/nutrition" options={{ title: 'Nutrición' }} />
+      <Stack.Screen name="index" options={{ title: 'Chats' }} />
+      <Stack.Screen name="[clientId]" options={{ title: 'Conversación' }} />
     </Stack>
   );
 }

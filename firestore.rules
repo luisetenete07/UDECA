@@ -59,5 +59,44 @@ service cloud.firestore {
         && request.resource.data.clientId == request.auth.uid;
       allow update, delete: if false;
     }
+
+    // Medidas corporales de cada cliente.
+    match /bodyMeasurements/{measurementId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Planes nutricionales asignados a cada cliente.
+    match /nutritionPlans/{planId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
+    // Comidas registradas por cada cliente.
+    match /mealLogs/{logId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Mensajes de chat entre un entrenador y su cliente.
+    match /messages/{messageId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.senderId == request.auth.uid
+        && (request.auth.uid == request.resource.data.trainerId
+          || request.auth.uid == request.resource.data.clientId);
+      allow update, delete: if false;
+    }
   }
 }

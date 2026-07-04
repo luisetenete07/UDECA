@@ -6,13 +6,23 @@ import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
+import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
+import { getMeasurementsForClient } from '../../../../lib/firestore/measurements';
+import { getActiveNutritionPlanForClient } from '../../../../lib/firestore/nutrition';
 import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getUserProfile } from '../../../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { colors, radius, spacing, typography } from '../../../../lib/theme';
-import type { Routine, UserProfile, WeightLog, WorkoutLog } from '../../../../lib/types';
+import type {
+  BodyMeasurement,
+  NutritionPlan,
+  Routine,
+  UserProfile,
+  WeightLog,
+  WorkoutLog,
+} from '../../../../lib/types';
 
 export default function ClientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,6 +31,8 @@ export default function ClientDetailScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
+  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -28,17 +40,22 @@ export default function ClientDetailScreen() {
       if (!id) return;
       let cancelled = false;
       (async () => {
-        const [clientData, routineData, weightData, workoutData] = await Promise.all([
-          getUserProfile(id),
-          getRoutinesForClient(id),
-          getWeightLogsForClient(id),
-          getWorkoutLogsForClient(id),
-        ]);
+        const [clientData, routineData, weightData, workoutData, measurementData, planData] =
+          await Promise.all([
+            getUserProfile(id),
+            getRoutinesForClient(id),
+            getWeightLogsForClient(id),
+            getWorkoutLogsForClient(id),
+            getMeasurementsForClient(id),
+            getActiveNutritionPlanForClient(id),
+          ]);
         if (cancelled) return;
         setClient(clientData);
         setRoutines(routineData);
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
+        setMeasurements(measurementData);
+        setNutritionPlan(planData);
         setLoading(false);
       })();
       return () => {
@@ -51,6 +68,9 @@ export default function ClientDetailScreen() {
   if (!client) return <EmptyState title="Cliente no encontrado" />;
 
   const activeRoutine = routines.find((r) => r.active);
+  const waistPoints = measurements
+    .filter((m) => m.waistCm !== undefined)
+    .map((m) => ({ date: m.date, value: m.waistCm as number }));
 
   return (
     <ScreenContainer>
@@ -85,8 +105,38 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Plan nutricional</Text>
+        {nutritionPlan ? (
+          <>
+            <Text style={styles.routineName}>{nutritionPlan.name}</Text>
+            <Text style={styles.routineMeta}>
+              {nutritionPlan.dailyCalories} kcal · P{nutritionPlan.proteinG}g C
+              {nutritionPlan.carbsG}g G{nutritionPlan.fatG}g
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.mutedText}>Este cliente no tiene un plan nutricional activo.</Text>
+        )}
+        <Button
+          title={nutritionPlan ? 'Editar plan' : 'Crear plan'}
+          variant="secondary"
+          onPress={() => router.push(`/(trainer)/clients/${id}/nutrition`)}
+          style={{ marginTop: spacing.md }}
+        />
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Evolución del peso</Text>
         <WeightChart logs={weightLogs} />
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Medidas corporales — cintura</Text>
+        <LineChart
+          points={waistPoints}
+          unit="cm"
+          emptyMessage="El cliente todavía no ha registrado al menos dos medidas de cintura."
+        />
       </Card>
 
       <Card style={styles.section}>

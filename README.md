@@ -7,10 +7,11 @@ lugar, y para que cada cliente acceda a su plan personalizado.
 Construida con **Expo (React Native + React Native Web)** y **Firebase**
 (autenticación + Firestore).
 
-## Estado del proyecto — Fase 1 (MVP)
+## Estado del proyecto — Fase 1 y Fase 2
 
-Implementado en esta fase:
+Implementado hasta ahora:
 
+**Fase 1 (MVP)**
 - **Login y registro** con dos roles: entrenador y cliente.
 - **Vinculación cliente–entrenador** mediante un código de invitación (sin
   necesidad de backend propio ni Cloud Functions).
@@ -26,9 +27,20 @@ Implementado en esta fase:
   entrenamientos, alertas de inactividad) y para cliente (próximo
   entrenamiento, peso actual, resumen semanal).
 
-Pendiente para fases siguientes (ver `APP PARA ENTRENADORES PERSONALES`):
-nutrición, chat integrado, medidas corporales, notificaciones push,
-reportes PDF.
+**Fase 2**
+- **Nutrición**: el entrenador crea un plan (calorías y macros) por
+  cliente; el cliente registra comidas y ve su consumo del día frente al
+  objetivo con barras de progreso.
+- **Chat integrado**: conversación en tiempo real (Firestore `onSnapshot`)
+  entre cada cliente y su entrenador.
+- **Medidas corporales**: registro de pecho, cintura, cadera, brazo y
+  muslo, con gráfica de evolución de cintura.
+- **Gráficos de progreso**: componente de gráfica de líneas reutilizable
+  (`components/LineChart.tsx`) usado tanto para el peso como para las
+  medidas corporales.
+
+Pendiente para la Fase 3: notificaciones push, reportes PDF,
+automatizaciones y mejoras de diseño/rendimiento.
 
 ## 1. Requisitos
 
@@ -125,6 +137,10 @@ firestore.rules            Reglas de seguridad de Firestore
 | `routines`          | Rutinas asignadas a cada cliente (días, ejercicios, series)     |
 | `workoutLogs`       | Entrenamientos registrados por cada cliente                     |
 | `weightLogs`        | Registros de peso de cada cliente                                |
+| `bodyMeasurements`   | Medidas corporales de cada cliente (pecho, cintura, cadera...)  |
+| `nutritionPlans`     | Planes nutricionales asignados a cada cliente                    |
+| `mealLogs`           | Comidas registradas por cada cliente                              |
+| `messages`            | Mensajes de chat entre un entrenador y su cliente                 |
 
 ## 8. Publicar (build)
 

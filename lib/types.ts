@@ -100,3 +100,55 @@ export interface WeightLog {
   notes?: string;
   createdAt: number;
 }
+
+export interface BodyMeasurement {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  date: number;
+  chestCm?: number;
+  waistCm?: number;
+  hipsCm?: number;
+  armCm?: number;
+  thighCm?: number;
+  notes?: string;
+  createdAt: number;
+}
+
+export interface NutritionPlan {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  name: string;
+  active: boolean;
+  dailyCalories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MealLog {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  date: number;
+  name: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  notes?: string;
+  createdAt: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  senderId: string;
+  text: string;
+  createdAt: number;
+}

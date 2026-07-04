@@ -37,8 +37,16 @@ export default function ClientLayout() {
         options={{ title: 'Entreno', tabBarIcon: () => <TabIcon emoji="🏋️" /> }}
       />
       <Tabs.Screen
+        name="nutrition"
+        options={{ title: 'Nutrición', tabBarIcon: () => <TabIcon emoji="🥗" /> }}
+      />
+      <Tabs.Screen
         name="progress"
         options={{ title: 'Progreso', tabBarIcon: () => <TabIcon emoji="📈" /> }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{ title: 'Chat', tabBarIcon: () => <TabIcon emoji="💬" /> }}
       />
       <Tabs.Screen
         name="profile"
