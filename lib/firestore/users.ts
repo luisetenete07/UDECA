@@ -35,3 +35,11 @@ export async function updateClientGoal(clientId: string, goal: string) {
 export async function updateUserProfile(uid: string, data: Partial<UserProfile>) {
   await setDoc(doc(db, 'users', uid), data, { merge: true });
 }
+
+/** El entrenador cambia el estado (activo/pausa/inactivo) de un cliente suyo. */
+export async function updateClientStatus(
+  clientId: string,
+  status: UserProfile['status']
+) {
+  await setDoc(doc(db, 'users', clientId), { status }, { merge: true });
+}

@@ -16,19 +16,22 @@ import { getMeasurementsForClient } from '../../../../lib/firestore/measurements
 import { getActiveNutritionPlanForClient } from '../../../../lib/firestore/nutrition';
 import { getProgressPhotosForClient } from '../../../../lib/firestore/progressPhotos';
 import { getRoutinesForClient } from '../../../../lib/firestore/routines';
-import { getUserProfile } from '../../../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { buildClientReportHtml } from '../../../../lib/report';
+import { getUserProfile, updateClientStatus } from '../../../../lib/firestore/users';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
-import type {
-  BodyMeasurement,
-  NutritionPlan,
-  ProgressPhoto,
-  Routine,
-  UserProfile,
-  WeightLog,
-  WorkoutLog,
+import {
+  CLIENT_STATUSES,
+  CLIENT_STATUS_LABEL,
+  type BodyMeasurement,
+  type ClientStatus,
+  type NutritionPlan,
+  type ProgressPhoto,
+  type Routine,
+  type UserProfile,
+  type WeightLog,
+  type WorkoutLog,
 } from '../../../../lib/types';
 
 export default function ClientDetailScreen() {
@@ -75,10 +78,17 @@ export default function ClientDetailScreen() {
     }, [id])
   );
 
+  const handleSetStatus = async (status: ClientStatus) => {
+    if (!id || !client) return;
+    setClient({ ...client, status });
+    await updateClientStatus(id, status);
+  };
+
   if (loading) return <LoadingScreen />;
   if (!client) return <EmptyState title="Cliente no encontrado" />;
 
   const activeRoutine = routines.find((r) => r.active);
+  const currentStatus: ClientStatus = client.status ?? 'active';
   const waistPoints = measurements
     .filter((m) => m.waistCm !== undefined)
     .map((m) => ({ date: m.date, value: m.waistCm as number }));
@@ -125,6 +135,20 @@ export default function ClientDetailScreen() {
       </View>
 
       {client.bio ? <Text style={styles.bio}>{client.bio}</Text> : null}
+
+      <View style={styles.statusRow}>
+        {CLIENT_STATUSES.map((s) => (
+          <Pressable
+            key={s}
+            onPress={() => handleSetStatus(s)}
+            style={[styles.statusChip, currentStatus === s && styles.statusChipActive]}
+          >
+            <Text style={[styles.statusText, currentStatus === s && styles.statusTextActive]}>
+              {CLIENT_STATUS_LABEL[s]}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       {client.goal || client.targetWeightKg ? (
         <Card style={styles.section}>
@@ -272,6 +296,19 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: spacing.md,
   },
+  statusRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  statusChip: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+  },
+  statusChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  statusText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  statusTextActive: { color: colors.onPrimary },
   miniLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },

@@ -23,9 +23,20 @@ export interface UserProfile {
   /** Recordatorio diario de entrenamiento (hora local, 0-23). */
   reminderHour?: number;
   reminderEnabled?: boolean;
+  /** Estado del alumno gestionado por el entrenador. */
+  status?: ClientStatus;
   /** Token de Expo Push Notifications del último dispositivo registrado. */
   pushToken?: string;
 }
+
+export const CLIENT_STATUSES = ['active', 'paused', 'inactive'] as const;
+export type ClientStatus = (typeof CLIENT_STATUSES)[number];
+
+export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
+  active: 'Activo',
+  paused: 'En pausa',
+  inactive: 'Inactivo',
+};
 
 export const EXPERIENCE_LEVELS = ['Principiante', 'Intermedio', 'Avanzado', 'Élite'] as const;
 export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];

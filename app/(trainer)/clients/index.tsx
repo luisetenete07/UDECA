@@ -10,8 +10,8 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
 import { getClientsForTrainer } from '../../../lib/firestore/users';
-import { colors, radius, spacing, typography } from '../../../lib/theme';
-import type { UserProfile } from '../../../lib/types';
+import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
+import { CLIENT_STATUS_LABEL, type UserProfile } from '../../../lib/types';
 
 export default function ClientsScreen() {
   const { profile } = useAuth();
@@ -82,6 +82,11 @@ export default function ClientsScreen() {
                 <Text style={styles.clientName}>{client.name}</Text>
                 <Text style={styles.clientGoal}>{client.goal || 'Sin objetivo definido'}</Text>
               </View>
+              {client.status && client.status !== 'active' ? (
+                <View style={styles.statusDot}>
+                  <Text style={styles.statusDotText}>{CLIENT_STATUS_LABEL[client.status]}</Text>
+                </View>
+              ) : null}
               <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
             </Card>
           </Pressable>
@@ -111,4 +116,13 @@ const styles = StyleSheet.create({
   },
   clientName: { ...typography.h3, color: colors.text },
   clientGoal: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  statusDot: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.warning,
+    backgroundColor: colors.dangerMuted,
+  },
+  statusDotText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, fontSize: 11 },
 });
