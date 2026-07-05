@@ -32,8 +32,9 @@ Implementado hasta ahora:
 - **Nutrición**: el entrenador crea un plan (calorías y macros) por
   cliente; el cliente registra comidas y ve su consumo del día frente al
   objetivo con barras de progreso.
-- **Chat integrado**: conversación en tiempo real (Firestore `onSnapshot`)
-  entre cada cliente y su entrenador.
+- **Sección Social**: ranking de constancia de los miembros del mismo
+  coaching (racha, entrenos de la semana y totales), con métricas públicas
+  no sensibles almacenadas aparte del perfil.
 - **Medidas corporales**: registro de pecho, cintura, cadera, brazo y
   muslo, con gráfica de evolución de cintura.
 - **Gráficos de progreso**: componente de gráfica de líneas reutilizable
@@ -147,8 +148,8 @@ registra ella misma.
 ```
 app/                      Pantallas (expo-router, navegación por archivos)
   (auth)/                 Login y registro
-  (trainer)/              Área del entrenador (tabs: inicio, clientes, ejercicios, chat, perfil)
-  (client)/                Área del cliente (tabs: inicio, entreno, nutrición, progreso, chat, perfil)
+  (trainer)/              Área del entrenador (tabs: inicio, clientes, ejercicios, perfil)
+  (client)/                Área del cliente (tabs: inicio, entreno, nutrición, progreso, social, perfil)
 components/                Componentes de UI reutilizables
 lib/
   firebase.ts              Inicialización de Firebase (auth + Firestore)
@@ -174,7 +175,7 @@ firestore.rules            Reglas de seguridad de Firestore
 | `bodyMeasurements`   | Medidas corporales de cada cliente (pecho, cintura, cadera...)  |
 | `nutritionPlans`     | Planes nutricionales asignados a cada cliente                    |
 | `mealLogs`           | Comidas registradas por cada cliente                              |
-| `messages`            | Mensajes de chat entre un entrenador y su cliente                 |
+| `socialStats`         | Métricas públicas por miembro para el ranking social (no sensibles) |
 
 ## 9. Añadir el logo real (icono, splash y favicon)
 

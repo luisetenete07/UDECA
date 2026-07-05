@@ -88,15 +88,22 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Mensajes de chat entre un entrenador y su cliente.
-    match /messages/{messageId} {
+    // Estadísticas públicas para el ranking social del coaching. Solo
+    // contienen métricas no sensibles (nombre, foto, racha, sesiones). Cada
+    // usuario escribe únicamente las suyas; las leen los miembros del mismo
+    // entrenador (y el propio entrenador).
+    match /socialStats/{userId} {
       allow read: if request.auth != null
-        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
-      allow create: if request.auth != null
-        && request.resource.data.senderId == request.auth.uid
-        && (request.auth.uid == request.resource.data.trainerId
-          || request.auth.uid == request.resource.data.clientId);
-      allow update, delete: if false;
+        && (
+          resource.data.uid == request.auth.uid
+          || resource.data.trainerId == request.auth.uid
+          || resource.data.trainerId ==
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
+        );
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
     }
   }
 }

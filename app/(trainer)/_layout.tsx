@@ -48,15 +48,6 @@ export default function TrainerLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
-        options={{
-          title: 'Chat',
-          tabBarIcon: (props) => (
-            <TabIcon {...props} outline="chatbubble-ellipses-outline" filled="chatbubble-ellipses" />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',

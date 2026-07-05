@@ -11,6 +11,7 @@ import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { syncMySocialStats } from '../../lib/firestore/social';
 import { lastPerformanceByExercise, type LastPerformance } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { LoggedExercise, Routine, RoutineDay } from '../../lib/types';
@@ -102,6 +103,9 @@ export default function WorkoutScreen() {
         date: Date.now(),
         exercises: log,
       });
+      // Actualiza el ranking social con las nuevas métricas.
+      const freshLogs = await getWorkoutLogsForClient(profile.uid);
+      await syncMySocialStats(profile, freshLogs);
       setSaved(true);
     } finally {
       setSaving(false);

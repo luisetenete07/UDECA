@@ -7,9 +7,9 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useAuth } from '../../lib/auth-context';
-import { sendMessage } from '../../lib/firestore/chat';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
+import { notifyUser } from '../../lib/notifications';
 import { fonts, colors, spacing, typography } from '../../lib/theme';
 import type { UserProfile, WorkoutLog } from '../../lib/types';
 
@@ -62,12 +62,11 @@ export default function TrainerDashboard() {
     if (!profile) return;
     setSendingReminder(client.uid);
     try {
-      await sendMessage({
-        trainerId: profile.uid,
-        clientId: client.uid,
-        senderId: profile.uid,
-        text: `Hola ${client.name.split(' ')[0]}, hace tiempo que no registras entrenamientos. ¿Todo bien? Aquí estoy para ayudarte a retomarlo.`,
-      });
+      await notifyUser(
+        client.uid,
+        'Te echamos de menos',
+        `${client.name.split(' ')[0]}, hace tiempo que no registras entrenamientos. ¡Retomemos el ritmo!`
+      );
       setRemindersSent((prev) => new Set(prev).add(client.uid));
     } finally {
       setSendingReminder(null);

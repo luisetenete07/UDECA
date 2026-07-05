@@ -156,11 +156,19 @@ export interface MealLog {
   createdAt: number;
 }
 
-export interface ChatMessage {
-  id: string;
+/**
+ * Documento público (por cliente) con métricas no sensibles para el ranking
+ * social del coaching. Se guarda aparte del perfil para no exponer datos
+ * privados (email, peso, medidas) al resto de miembros.
+ */
+export interface SocialStats {
+  uid: string;
   trainerId: string;
-  clientId: string;
-  senderId: string;
-  text: string;
-  createdAt: number;
+  name: string;
+  photoURL?: string;
+  level?: ExperienceLevel;
+  currentStreak: number;
+  sessionsThisWeek: number;
+  totalWorkouts: number;
+  updatedAt: number;
 }

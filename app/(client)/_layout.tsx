@@ -59,12 +59,10 @@ export default function ClientLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="social"
         options={{
-          title: 'Chat',
-          tabBarIcon: (props) => (
-            <TabIcon {...props} outline="chatbubble-ellipses-outline" filled="chatbubble-ellipses" />
-          ),
+          title: 'Social',
+          tabBarIcon: (props) => <TabIcon {...props} outline="people-outline" filled="people" />,
         }}
       />
       <Tabs.Screen
