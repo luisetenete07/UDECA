@@ -41,6 +41,15 @@ export default function ClientLayout() {
         }}
       />
       <Tabs.Screen
+        name="courses"
+        options={{
+          title: 'Cursos',
+          tabBarIcon: (props) => (
+            <TabIcon {...props} outline="school-outline" filled="school" />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="nutrition"
         options={{
           title: 'Nutrición',
@@ -65,15 +74,9 @@ export default function ClientLayout() {
           tabBarIcon: (props) => <TabIcon {...props} outline="people-outline" filled="people" />,
         }}
       />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Perfil',
-          tabBarIcon: (props) => (
-            <TabIcon {...props} outline="person-circle-outline" filled="person-circle" />
-          ),
-        }}
-      />
+      {/* El perfil se abre tocando el avatar en Inicio; lo ocultamos de la
+          barra para no saturarla con demasiadas pestañas. */}
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }

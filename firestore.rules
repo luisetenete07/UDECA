@@ -105,5 +105,23 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid;
       allow delete: if false;
     }
+
+    // Cursos en vídeo del entrenador. Los alumnos solo pueden leer los cursos
+    // PUBLICADOS de su propio entrenador; el entrenador gestiona los suyos.
+    match /courses/{courseId} {
+      allow read: if request.auth != null
+        && (
+          resource.data.trainerId == request.auth.uid
+          || (
+            resource.data.published == true
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
+              == resource.data.trainerId
+          )
+        );
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
   }
 }

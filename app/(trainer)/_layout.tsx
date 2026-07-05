@@ -48,6 +48,15 @@ export default function TrainerLayout() {
         }}
       />
       <Tabs.Screen
+        name="courses"
+        options={{
+          title: 'Cursos',
+          tabBarIcon: (props) => (
+            <TabIcon {...props} outline="school-outline" filled="school" />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',

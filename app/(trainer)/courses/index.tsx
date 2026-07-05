@@ -1,0 +1,114 @@
+import React, { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Button } from '../../../components/Button';
+import { Card } from '../../../components/Card';
+import { EmptyState } from '../../../components/EmptyState';
+import { LoadingScreen } from '../../../components/LoadingScreen';
+import { ScreenContainer } from '../../../components/ScreenContainer';
+import { useAuth } from '../../../lib/auth-context';
+import { getCoursesForTrainer } from '../../../lib/firestore/courses';
+import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
+import type { Course } from '../../../lib/types';
+
+function lessonCount(course: Course): number {
+  return course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
+}
+
+export default function TrainerCoursesScreen() {
+  const { profile } = useAuth();
+  const router = useRouter();
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!profile) return;
+    const data = await getCoursesForTrainer(profile.uid);
+    setCourses(data);
+    setLoading(false);
+    setRefreshing(false);
+  }, [profile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  if (loading) return <LoadingScreen />;
+
+  return (
+    <ScreenContainer
+      refreshing={refreshing}
+      onRefresh={() => {
+        setRefreshing(true);
+        load();
+      }}
+    >
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Cursos</Text>
+          <Text style={styles.subtitle}>{courses.length} curso(s)</Text>
+        </View>
+        <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/courses/new')} />
+      </View>
+
+      {courses.length === 0 ? (
+        <EmptyState
+          title="Aún no tienes cursos"
+          subtitle="Crea tu primer curso, organízalo en secciones y sube tus lecciones en vídeo."
+        />
+      ) : (
+        courses.map((course) => (
+          <Pressable key={course.id} onPress={() => router.push(`/(trainer)/courses/${course.id}`)}>
+            <Card style={styles.card}>
+              <View style={styles.cardIcon}>
+                <Ionicons name="play-circle" size={26} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.courseTitle}>{course.title}</Text>
+                <Text style={styles.courseMeta}>
+                  {course.sections.length} secciones · {lessonCount(course)} lecciones
+                </Text>
+              </View>
+              <View style={[styles.badge, course.published ? styles.badgeOn : styles.badgeOff]}>
+                <Text style={[styles.badgeText, course.published && styles.badgeTextOn]}>
+                  {course.published ? 'Publicado' : 'Borrador'}
+                </Text>
+              </View>
+            </Card>
+          </Pressable>
+        ))
+      )}
+    </ScreenContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  title: { ...typography.h1, color: colors.text },
+  subtitle: { ...typography.body, color: colors.textMuted },
+  card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  cardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  courseTitle: { ...typography.h3, color: colors.text },
+  courseMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  badgeOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  badgeOff: { borderColor: colors.border, backgroundColor: colors.surfaceAlt },
+  badgeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 11 },
+  badgeTextOn: { color: colors.primary },
+});

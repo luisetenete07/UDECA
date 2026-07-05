@@ -172,3 +172,31 @@ export interface SocialStats {
   totalWorkouts: number;
   updatedAt: number;
 }
+
+export interface Lesson {
+  id: string;
+  title: string;
+  /** URL del vídeo (Firebase Storage, Vimeo privado, etc.). Puede estar vacío. */
+  videoUrl?: string;
+  durationLabel?: string;
+  description?: string;
+}
+
+export interface CourseSection {
+  id: string;
+  title: string;
+  lessons: Lesson[];
+}
+
+export interface Course {
+  id: string;
+  trainerId: string;
+  title: string;
+  description?: string;
+  coverURL?: string;
+  /** Solo los cursos publicados son visibles para los alumnos. */
+  published: boolean;
+  sections: CourseSection[];
+  createdAt: number;
+  updatedAt: number;
+}
