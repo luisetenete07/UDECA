@@ -10,9 +10,7 @@ export function Logo({ compact }: { compact?: boolean }) {
         style={compact ? styles.emblemCompact : styles.emblem}
         resizeMode="contain"
       />
-      <Text style={[styles.mark, compact && styles.markCompact]}>
-        UDE<Text style={styles.markAccent}>CA</Text>
-      </Text>
+      <Text style={[styles.mark, compact && styles.markCompact]}>UDECA</Text>
       <View style={styles.rule} />
       <Text style={styles.subtitle}>Universidad de Calistenia</Text>
       {!compact ? <Text style={styles.credit}>by Luis Tena</Text> : null}
@@ -43,13 +41,10 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontFamily: fonts.display,
     letterSpacing: 3,
-    color: colors.text,
+    color: colors.primary,
   },
   markCompact: {
     fontSize: 22,
-  },
-  markAccent: {
-    color: colors.primary,
   },
   rule: {
     width: 36,
