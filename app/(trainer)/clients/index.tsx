@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Avatar } from '../../../components/Avatar';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
@@ -76,9 +77,7 @@ export default function ClientsScreen() {
             onPress={() => router.push(`/(trainer)/clients/${client.uid}`)}
           >
             <Card style={styles.clientCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{client.name.charAt(0).toUpperCase()}</Text>
-              </View>
+              <Avatar name={client.name} photoURL={client.photoURL} size={44} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.clientName}>{client.name}</Text>
                 <Text style={styles.clientGoal}>{client.goal || 'Sin objetivo definido'}</Text>
@@ -110,15 +109,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.sm,
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { ...typography.h3, color: colors.white },
   clientName: { ...typography.h3, color: colors.text },
   clientGoal: { ...typography.small, color: colors.textMuted, marginTop: 2 },
 });

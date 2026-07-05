@@ -1,14 +1,36 @@
 import React, { useState } from 'react';
-import { Platform, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useAuth } from '../../lib/auth-context';
-import { colors, radius, spacing, typography } from '../../lib/theme';
+import { updateUserProfile } from '../../lib/firestore/users';
+import { pickAvatar } from '../../lib/image';
+import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 
 export default function TrainerProfileScreen() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, refreshProfile } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const handleChangePhoto = async () => {
+    if (!profile) return;
+    setUploadingPhoto(true);
+    try {
+      const dataUrl = await pickAvatar();
+      if (dataUrl) {
+        await updateUserProfile(profile.uid, { photoURL: dataUrl });
+        await refreshProfile();
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'No se pudo actualizar la foto.';
+      if (Platform.OS !== 'web') Alert.alert('Foto de perfil', message);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleShare = async () => {
     if (!profile?.inviteCode) return;
@@ -28,12 +50,23 @@ export default function TrainerProfileScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Perfil</Text>
-
-      <Card style={styles.section}>
+      <View style={styles.hero}>
+        <Pressable onPress={handleChangePhoto} style={styles.avatarWrap}>
+          <Avatar name={profile?.name} photoURL={profile?.photoURL} size={104} />
+          <View style={styles.cameraBadge}>
+            <Ionicons
+              name={uploadingPhoto ? 'hourglass' : 'camera'}
+              size={15}
+              color={colors.onPrimary}
+            />
+          </View>
+        </Pressable>
         <Text style={styles.name}>{profile?.name}</Text>
         <Text style={styles.email}>{profile?.email}</Text>
-      </Card>
+        <View style={styles.roleBadge}>
+          <Text style={styles.roleBadgeText}>Entrenador</Text>
+        </View>
+      </View>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Código de invitación</Text>
@@ -57,10 +90,38 @@ export default function TrainerProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
+  hero: { alignItems: 'center', marginBottom: spacing.lg },
+  avatarWrap: { marginBottom: spacing.md },
+  cameraBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: colors.background,
+  },
+  name: { ...typography.h1, color: colors.text, textAlign: 'center' },
+  email: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  roleBadge: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
+  },
+  roleBadgeText: {
+    ...typography.label,
+    color: colors.primary,
+    textTransform: 'uppercase',
+  },
   section: { marginBottom: spacing.md },
-  name: { ...typography.h2, color: colors.text },
-  email: { ...typography.small, color: colors.textMuted },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
   helperText: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
   codeBox: {
@@ -76,5 +137,6 @@ const styles = StyleSheet.create({
     ...typography.h1,
     color: colors.primary,
     letterSpacing: 4,
+    fontFamily: fonts.display,
   },
 });

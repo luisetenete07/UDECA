@@ -3,6 +3,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { Avatar } from '../../../../components/Avatar';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
@@ -105,14 +106,35 @@ export default function ClientDetailScreen() {
   return (
     <ScreenContainer>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{client.name.charAt(0).toUpperCase()}</Text>
-        </View>
+        <Avatar name={client.name} photoURL={client.photoURL} size={64} />
         <View style={{ flex: 1 }}>
           <Text style={styles.name}>{client.name}</Text>
           <Text style={styles.email}>{client.email}</Text>
+          {client.level ? (
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelBadgeText}>{client.level}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
+
+      {client.bio ? <Text style={styles.bio}>{client.bio}</Text> : null}
+
+      {client.goal || client.targetWeightKg ? (
+        <Card style={styles.section}>
+          {client.goal ? (
+            <>
+              <Text style={styles.miniLabel}>Objetivo</Text>
+              <Text style={styles.miniValue}>{client.goal}</Text>
+            </>
+          ) : null}
+          {client.targetWeightKg ? (
+            <Text style={[styles.miniValue, { marginTop: client.goal ? spacing.sm : 0 }]}>
+              Peso objetivo: {client.targetWeightKg} kg
+            </Text>
+          ) : null}
+        </Card>
+      ) : null}
 
       <Button
         title="Generar informe PDF"
@@ -198,18 +220,28 @@ export default function ClientDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { ...typography.h2, color: colors.white },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   name: { ...typography.h2, color: colors.text },
   email: { ...typography.small, color: colors.textMuted },
+  levelBadge: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
+  },
+  levelBadgeText: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
+  bio: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginBottom: spacing.md,
+  },
+  miniLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
+  miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },

@@ -10,7 +10,8 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
-import { createWorkoutLog } from '../../lib/firestore/workoutLogs';
+import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { lastPerformanceByExercise, type LastPerformance } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { LoggedExercise, Routine, RoutineDay } from '../../lib/types';
 
@@ -32,6 +33,7 @@ export default function WorkoutScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [log, setLog] = useState<LoggedExercise[]>([]);
+  const [lastPerf, setLastPerf] = useState<Record<string, LastPerformance>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -40,9 +42,13 @@ export default function WorkoutScreen() {
       if (!profile) return;
       let cancelled = false;
       (async () => {
-        const data = await getActiveRoutineForClient(profile.uid);
+        const [data, history] = await Promise.all([
+          getActiveRoutineForClient(profile.uid),
+          getWorkoutLogsForClient(profile.uid),
+        ]);
         if (cancelled) return;
         setRoutine(data);
+        setLastPerf(lastPerformanceByExercise(history));
         if (data && data.days.length > 0) {
           setSelectedDayId((prev) => prev ?? data.days[0].id);
         }
@@ -136,9 +142,20 @@ export default function WorkoutScreen() {
         ))}
       </ScrollView>
 
-      {log.map((exercise, exerciseIndex) => (
+      {log.map((exercise, exerciseIndex) => {
+        const prev = lastPerf[exercise.exerciseId];
+        return (
         <Card key={exercise.exerciseId + exerciseIndex} style={styles.exerciseCard}>
           <Text style={styles.exerciseName}>{exercise.name}</Text>
+          {prev ? (
+            <View style={styles.prevRow}>
+              <Ionicons name="time-outline" size={13} color={colors.primary} />
+              <Text style={styles.prevText}>
+                Última vez: {prev.weight ? `${prev.weight} kg × ` : ''}
+                {prev.reps ?? '—'} reps
+              </Text>
+            </View>
+          ) : null}
           {exercise.sets.map((set, setIndex) => (
             <View key={setIndex} style={styles.setRow}>
               <Text style={styles.setLabel}>Serie {setIndex + 1}</Text>
@@ -163,7 +180,8 @@ export default function WorkoutScreen() {
             </View>
           ))}
         </Card>
-      ))}
+        );
+      })}
 
       {saved ? (
         <View style={styles.savedRow}>
@@ -198,7 +216,9 @@ const styles = StyleSheet.create({
   dayTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
   dayTabTextSelected: { color: colors.onPrimary },
   exerciseCard: { marginBottom: spacing.md },
-  exerciseName: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  exerciseName: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
+  prevRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm },
+  prevText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',

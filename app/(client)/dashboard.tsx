@@ -1,25 +1,21 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { StatTile } from '../../components/StatTile';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { currentStreak, sessionsThisWeek as weekSessions } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { Routine, WeightLog, WorkoutLog } from '../../lib/types';
 
 const WEIGHT_REMINDER_DAYS = 7;
-
-function startOfWeek(date: Date) {
-  const d = new Date(date);
-  const day = d.getDay() === 0 ? 7 : d.getDay();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - day + 1);
-  return d.getTime();
-}
 
 export default function ClientDashboard() {
   const { profile } = useAuth();
@@ -54,8 +50,8 @@ export default function ClientDashboard() {
   if (loading) return <LoadingScreen />;
 
   const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
-  const weekStart = startOfWeek(new Date());
-  const sessionsThisWeek = workoutLogs.filter((log) => log.date >= weekStart).length;
+  const sessions = weekSessions(workoutLogs);
+  const streak = currentStreak(workoutLogs);
   const nextDay = routine?.days[0];
 
   const lastWeightLog = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
@@ -64,79 +60,153 @@ export default function ClientDashboard() {
     : Infinity;
   const showWeightReminder = daysSinceWeight > WEIGHT_REMINDER_DAYS;
 
+  const targetSessions = routine?.days.length ?? 0;
+  const weekProgress = targetSessions > 0 ? Math.min(sessions / targetSessions, 1) : 0;
+
   return (
     <ScreenContainer>
-      <Text style={styles.greeting}>Hola, {profile?.name?.split(' ')[0]}</Text>
-      <Text style={styles.subtitle}>{profile?.goal || 'Define tu objetivo con tu entrenador'}</Text>
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greetingLabel}>Bienvenido de nuevo</Text>
+          <Text style={styles.greeting}>{profile?.name?.split(' ')[0]}</Text>
+        </View>
+        <Pressable onPress={() => router.push('/(client)/profile')}>
+          <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
+        </Pressable>
+      </View>
 
       {showWeightReminder ? (
         <Pressable onPress={() => router.push('/(client)/progress')}>
           <View style={styles.reminderBanner}>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
             <Text style={styles.reminderText}>
               {lastWeightLog
-                ? 'Llevas más de una semana sin registrar tu peso. Toca para añadirlo.'
-                : 'Todavía no has registrado tu peso. Toca para empezar tu seguimiento.'}
+                ? 'Llevas más de una semana sin registrar tu peso.'
+                : 'Todavía no has registrado tu peso. Empieza tu seguimiento.'}
             </Text>
           </View>
         </Pressable>
       ) : null}
 
       <View style={styles.statsRow}>
-        <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{currentWeight ? `${currentWeight} kg` : '—'}</Text>
-          <Text style={styles.statLabel}>Peso actual</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={styles.statValue}>{sessionsThisWeek}</Text>
-          <Text style={styles.statLabel}>Entrenos esta semana</Text>
-        </Card>
+        <StatTile icon="flame" value={String(streak)} label="Racha (días)" highlight={streak > 0} />
+        <StatTile icon="checkmark-done" value={String(sessions)} label="Esta semana" />
+        <StatTile
+          icon="body"
+          value={currentWeight ? `${currentWeight}` : '—'}
+          label="Peso (kg)"
+        />
       </View>
 
+      <Pressable onPress={() => router.push('/(client)/workout')}>
+        <Card style={styles.nextCard}>
+          <View style={styles.nextHeader}>
+            <Text style={styles.sectionLabel}>Próximo entrenamiento</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+          </View>
+          {routine && nextDay ? (
+            <>
+              <Text style={styles.routineName}>{nextDay.name}</Text>
+              <Text style={styles.routineMeta}>
+                {routine.name} · {nextDay.exercises.length} ejercicios
+              </Text>
+              <View style={styles.ctaRow}>
+                <Ionicons name="play-circle" size={20} color={colors.primary} />
+                <Text style={styles.ctaText}>Empezar sesión</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.mutedText}>
+              Tu entrenador todavía no te ha asignado una rutina.
+            </Text>
+          )}
+        </Card>
+      </Pressable>
+
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Próximo entrenamiento</Text>
-        {routine && nextDay ? (
+        <Text style={styles.sectionLabel}>Objetivo semanal</Text>
+        {targetSessions > 0 ? (
           <>
-            <Text style={styles.routineName}>{routine.name}</Text>
-            <Text style={styles.dayName}>{nextDay.name}</Text>
-            <Text style={styles.mutedText}>{nextDay.exercises.length} ejercicios</Text>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressValue}>
+                {sessions} / {targetSessions} sesiones
+              </Text>
+              <Text style={styles.progressPct}>{Math.round(weekProgress * 100)}%</Text>
+            </View>
+            <View style={styles.track}>
+              <View style={[styles.fill, { width: `${weekProgress * 100}%` }]} />
+            </View>
+            <Text style={styles.mutedText}>
+              {sessions >= targetSessions
+                ? '¡Objetivo de la semana cumplido! Sigue así.'
+                : `Te faltan ${targetSessions - sessions} sesión(es) para completar la semana.`}
+            </Text>
           </>
         ) : (
           <Text style={styles.mutedText}>
-            Tu entrenador todavía no te ha asignado una rutina.
+            Cuando tengas una rutina asignada, aquí verás tu objetivo semanal.
           </Text>
         )}
       </Card>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Resumen semanal</Text>
-        <Text style={styles.mutedText}>
-          Has completado {sessionsThisWeek} sesión(es) esta semana
-          {routine ? ` de ${routine.days.length} planificadas` : ''}.
-        </Text>
-      </Card>
+      {profile?.goal ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionLabel}>Mi objetivo</Text>
+          <Text style={styles.goalText}>{profile.goal}</Text>
+        </Card>
+      ) : null}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  greeting: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
+  greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
   reminderBanner: {
-    backgroundColor: 'rgba(251, 191, 36, 0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.dangerMuted,
     borderWidth: 1,
     borderColor: colors.warning,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, },
+  reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  statCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
-  statValue: { ...typography.h1, color: colors.primary },
-  statLabel: { ...typography.small, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
+  nextCard: { marginBottom: spacing.md },
+  nextHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  sectionLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
+  routineName: { ...typography.h2, color: colors.text },
+  routineMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  ctaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md },
+  ctaText: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
   section: { marginBottom: spacing.md },
-  sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
-  dayName: { ...typography.body, color: colors.primary, marginTop: 2 },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  progressValue: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  progressPct: { ...typography.body, color: colors.primary, fontFamily: fonts.heading },
+  track: {
+    height: 10,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  fill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
+  goalText: { ...typography.body, color: colors.text, marginTop: spacing.xs },
   mutedText: { ...typography.small, color: colors.textMuted },
 });

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Avatar } from '../../../components/Avatar';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
@@ -61,9 +62,7 @@ export default function TrainerChatListScreen() {
           return (
             <Pressable key={client.uid} onPress={() => router.push(`/(trainer)/chat/${client.uid}`)}>
               <Card style={styles.row}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{client.name.charAt(0).toUpperCase()}</Text>
-                </View>
+                <Avatar name={client.name} photoURL={client.photoURL} size={44} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{client.name}</Text>
                   <Text style={styles.preview} numberOfLines={1}>
@@ -82,15 +81,6 @@ export default function TrainerChatListScreen() {
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryDark,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: { ...typography.h3, color: colors.white },
   name: { ...typography.h3, color: colors.text },
   preview: { ...typography.small, color: colors.textMuted, marginTop: 2 },
 });

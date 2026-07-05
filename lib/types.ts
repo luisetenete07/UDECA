@@ -12,10 +12,20 @@ export interface UserProfile {
   trainerId?: string;
   /** Solo en clientes: objetivo principal del cliente. */
   goal?: string;
+  /** Avatar del usuario como data URL (base64) o URL remota. */
   photoURL?: string;
+  /** Breve biografía / presentación del alumno. */
+  bio?: string;
+  /** Nivel de experiencia del alumno. */
+  level?: ExperienceLevel;
+  /** Peso objetivo del alumno en kg. */
+  targetWeightKg?: number;
   /** Token de Expo Push Notifications del último dispositivo registrado. */
   pushToken?: string;
 }
+
+export const EXPERIENCE_LEVELS = ['Principiante', 'Intermedio', 'Avanzado', 'Élite'] as const;
+export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
 
 export const MUSCLE_GROUPS = [
   'Tren superior',

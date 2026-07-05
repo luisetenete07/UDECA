@@ -30,3 +30,8 @@ export async function getClientsForTrainer(trainerId: string): Promise<UserProfi
 export async function updateClientGoal(clientId: string, goal: string) {
   await setDoc(doc(db, 'users', clientId), { goal }, { merge: true });
 }
+
+/** Actualiza campos editables del propio perfil (foto, nombre, bio, etc.). */
+export async function updateUserProfile(uid: string, data: Partial<UserProfile>) {
+  await setDoc(doc(db, 'users', uid), data, { merge: true });
+}
