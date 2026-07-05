@@ -86,7 +86,7 @@ export function ChatThread({ trainerId, clientId, currentUserId, title }: ChatTh
             disabled={sending || !text.trim()}
             style={[styles.sendButton, (sending || !text.trim()) && styles.sendButtonDisabled]}
           >
-            <Ionicons name="send" size={18} color={colors.text} />
+            <Ionicons name="send" size={18} color={colors.onPrimary} />
           </Pressable>
         </View>
       </SafeAreaView>
@@ -139,9 +139,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 2,
   },
   bubbleText: { ...typography.body, color: colors.text },
-  bubbleTextMine: { color: colors.text },
+  bubbleTextMine: { color: colors.onPrimary },
   bubbleTime: { ...typography.small, color: colors.textFaint, marginTop: 2, fontSize: 10 },
-  bubbleTimeMine: { color: 'rgba(255,255,255,0.7)' },
+  bubbleTimeMine: { color: 'rgba(10,10,10,0.65)' },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',

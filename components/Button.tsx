@@ -54,9 +54,9 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={colors.text} />
+        <ActivityIndicator color={variant === 'primary' ? colors.onPrimary : colors.text} />
       ) : (
-        <Text style={styles.text}>{title}</Text>
+        <Text style={[styles.text, variant === 'primary' && styles.textPrimary]}>{title}</Text>
       )}
     </Pressable>
   );
@@ -80,6 +80,9 @@ const styles = StyleSheet.create({
   text: {
     ...typography.h3,
     color: colors.text,
+  },
+  textPrimary: {
+    color: colors.onPrimary,
   },
 });
 

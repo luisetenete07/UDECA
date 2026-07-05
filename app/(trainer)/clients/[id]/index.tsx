@@ -17,7 +17,7 @@ import { getUserProfile } from '../../../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { buildClientReportHtml } from '../../../../lib/report';
-import { colors, radius, spacing, typography } from '../../../../lib/theme';
+import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import type {
   BodyMeasurement,
   NutritionPlan,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   email: { ...typography.small, color: colors.textMuted },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  routineName: { ...typography.body, color: colors.text, fontWeight: '700' },
+  routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
   routineMeta: { ...typography.small, color: colors.textMuted },
   mutedText: { ...typography.small, color: colors.textFaint },
   logRow: {
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  logTitle: { ...typography.body, color: colors.text, fontWeight: '600' },
+  logTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, },
   logDate: { ...typography.small, color: colors.textFaint },
   logExercises: { ...typography.small, color: colors.textMuted },
 });

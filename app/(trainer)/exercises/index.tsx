@@ -10,7 +10,7 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
 import { getExercisesForTrainer } from '../../../lib/firestore/exercises';
-import { colors, radius, spacing, typography } from '../../../lib/theme';
+import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import { MUSCLE_GROUPS, type Exercise } from '../../../lib/types';
 
 export default function ExercisesScreen() {
@@ -143,11 +143,11 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.small, color: colors.textMuted, fontWeight: '600' },
-  chipTextSelected: { color: colors.text },
+  chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
+  chipTextSelected: { color: colors.onPrimary },
   exerciseCard: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   exerciseName: { ...typography.h3, color: colors.text },
   exerciseGroup: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   videoBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  videoBadgeText: { ...typography.small, color: colors.primary, fontWeight: '700' },
+  videoBadgeText: { ...typography.small, color: colors.primary, fontFamily: fonts.heading, },
 });

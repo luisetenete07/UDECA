@@ -7,7 +7,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { friendlyAuthError } from '../../lib/firebase-errors';
-import { colors, radius, spacing, typography } from '../../lib/theme';
+import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { UserRole } from '../../lib/types';
 
 export default function RegisterScreen() {
@@ -140,16 +140,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
+    alignItems: 'center',
     marginBottom: spacing.lg,
   },
   title: {
-    ...typography.h1,
+    ...typography.h2,
     color: colors.text,
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
     color: colors.textMuted,
+    textAlign: 'center',
   },
   roleSwitch: {
     flexDirection: 'row',
@@ -171,11 +174,11 @@ const styles = StyleSheet.create({
   },
   roleOptionText: {
     ...typography.small,
-    fontWeight: '700',
+    fontFamily: fonts.semiBold,
     color: colors.textMuted,
   },
   roleOptionTextSelected: {
-    color: colors.text,
+    color: colors.onPrimary,
   },
   error: {
     ...typography.small,
@@ -197,6 +200,6 @@ const styles = StyleSheet.create({
   link: {
     ...typography.body,
     color: colors.primary,
-    fontWeight: '700',
+    fontFamily: fonts.semiBold,
   },
 });

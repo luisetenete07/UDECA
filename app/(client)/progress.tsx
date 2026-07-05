@@ -12,7 +12,7 @@ import { WeightChart } from '../../components/WeightChart';
 import { useAuth } from '../../lib/auth-context';
 import { createMeasurement, getMeasurementsForClient } from '../../lib/firestore/measurements';
 import { createWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
-import { colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { BodyMeasurement, WeightLog } from '../../lib/types';
 
 type Tab = 'weight' | 'measurements';
@@ -277,8 +277,8 @@ const styles = StyleSheet.create({
   },
   tabButton: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
   tabButtonActive: { backgroundColor: colors.primary },
-  tabButtonText: { ...typography.small, fontWeight: '700', color: colors.textMuted },
-  tabButtonTextActive: { color: colors.text },
+  tabButtonText: { ...typography.small, fontFamily: fonts.heading, color: colors.textMuted },
+  tabButtonTextActive: { color: colors.onPrimary },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm },
@@ -291,6 +291,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  logValue: { ...typography.body, color: colors.text, fontWeight: '700', flex: 1, marginRight: spacing.sm },
+  logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
   logDate: { ...typography.small, color: colors.textMuted },
 });

@@ -10,7 +10,7 @@ import { useAuth } from '../../lib/auth-context';
 import { sendMessage } from '../../lib/firestore/chat';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
-import { colors, spacing, typography } from '../../lib/theme';
+import { fonts, colors, spacing, typography } from '../../lib/theme';
 import type { UserProfile, WorkoutLog } from '../../lib/types';
 
 const INACTIVE_DAYS_THRESHOLD = 7;
@@ -122,7 +122,7 @@ export default function TrainerDashboard() {
                 </Text>
               </View>
               <Button
-                title={remindersSent.has(client.uid) ? 'Enviado ✓' : 'Recordar'}
+                title={remindersSent.has(client.uid) ? 'Enviado' : 'Recordar'}
                 variant="secondary"
                 onPress={() => handleSendReminder(client)}
                 loading={sendingReminder === client.uid}
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   reminderBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  logClient: { ...typography.body, color: colors.text, fontWeight: '600' },
+  logClient: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, },
   logDetail: { ...typography.small, color: colors.textMuted },
   alertText: { ...typography.small, color: colors.warning },
   mutedText: { ...typography.small, color: colors.textFaint },

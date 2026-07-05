@@ -7,7 +7,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { friendlyAuthError } from '../../lib/firebase-errors';
-import { colors, spacing, typography } from '../../lib/theme';
+import { colors, fonts, spacing, typography } from '../../lib/theme';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -78,17 +78,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
+    alignItems: 'center',
     marginBottom: spacing.xl,
   },
   title: {
-    ...typography.h1,
+    ...typography.h2,
     color: colors.text,
     marginTop: spacing.lg,
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
     color: colors.textMuted,
+    textAlign: 'center',
   },
   error: {
     ...typography.small,
@@ -110,6 +113,6 @@ const styles = StyleSheet.create({
   link: {
     ...typography.body,
     color: colors.primary,
-    fontWeight: '700',
+    fontFamily: fonts.semiBold,
   },
 });

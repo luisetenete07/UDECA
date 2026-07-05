@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, typography } from '../lib/theme';
+import { fonts, colors, radius, spacing, typography } from '../lib/theme';
 
 interface MacroBarProps {
   label: string;
@@ -37,8 +37,8 @@ export function MacroBar({ label, consumed, target, unit, color = colors.text }:
 const styles = StyleSheet.create({
   container: { marginBottom: spacing.sm },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },
-  label: { ...typography.small, color: colors.textMuted, fontWeight: '600' },
-  value: { ...typography.small, color: colors.text, fontWeight: '600' },
+  label: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
+  value: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, },
   track: {
     height: 8,
     borderRadius: radius.full,

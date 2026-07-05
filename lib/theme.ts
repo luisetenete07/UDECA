@@ -1,15 +1,25 @@
+export const fonts = {
+  display: 'Cinzel_700Bold',
+  displaySemiBold: 'Cinzel_600SemiBold',
+  heading: 'Inter_700Bold',
+  body: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semiBold: 'Inter_600SemiBold',
+};
+
 export const colors = {
   background: '#000000',
   surface: '#0D0D0D',
   surfaceAlt: '#181818',
   border: '#2A2A2A',
-  primary: '#E0242F',
-  primaryDark: '#8F1720',
-  primaryMuted: 'rgba(224, 36, 47, 0.14)',
+  primary: '#A2968B',
+  primaryDark: '#7A6F66',
+  primaryMuted: 'rgba(162, 150, 139, 0.16)',
+  onPrimary: '#0A0A0A',
   accent: '#FFFFFF',
-  danger: '#E0242F',
-  dangerMuted: 'rgba(224, 36, 47, 0.14)',
-  warning: '#E0242F',
+  danger: '#C4433B',
+  dangerMuted: 'rgba(196, 67, 59, 0.14)',
+  warning: '#C4433B',
   text: '#FFFFFF',
   textMuted: '#ADADAD',
   textFaint: '#666666',
@@ -33,10 +43,10 @@ export const radius = {
 };
 
 export const typography = {
-  h1: { fontSize: 28, fontWeight: '800' as const, letterSpacing: 0.2 },
-  h2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: 0.2 },
-  h3: { fontSize: 17, fontWeight: '700' as const },
-  body: { fontSize: 15, fontWeight: '400' as const },
-  small: { fontSize: 13, fontWeight: '400' as const },
-  label: { fontSize: 12, fontWeight: '700' as const, letterSpacing: 1 },
+  h1: { fontSize: 28, fontFamily: fonts.display, letterSpacing: 0.4 },
+  h2: { fontSize: 21, fontFamily: fonts.displaySemiBold, letterSpacing: 0.3 },
+  h3: { fontSize: 17, fontFamily: fonts.heading },
+  body: { fontSize: 15, fontFamily: fonts.body },
+  small: { fontSize: 13, fontFamily: fonts.body },
+  label: { fontSize: 12, fontFamily: fonts.semiBold, letterSpacing: 1.4 },
 };

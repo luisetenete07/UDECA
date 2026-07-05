@@ -8,7 +8,7 @@ import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { Routine, WeightLog, WorkoutLog } from '../../lib/types';
 
 const WEIGHT_REMINDER_DAYS = 7;
@@ -129,14 +129,14 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
   },
-  reminderText: { ...typography.small, color: colors.warning, fontWeight: '600' },
+  reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   statCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
   statValue: { ...typography.h1, color: colors.primary },
   statLabel: { ...typography.small, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  routineName: { ...typography.body, color: colors.text, fontWeight: '700' },
+  routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
   dayName: { ...typography.body, color: colors.primary, marginTop: 2 },
   mutedText: { ...typography.small, color: colors.textMuted },
 });

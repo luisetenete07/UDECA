@@ -12,7 +12,7 @@ import {
   getExercise,
   updateExercise,
 } from '../../../lib/firestore/exercises';
-import { colors, radius, spacing, typography } from '../../../lib/theme';
+import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import { MUSCLE_GROUPS, type MuscleGroup } from '../../../lib/types';
 
 export default function ExerciseEditorScreen() {
@@ -163,8 +163,8 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.small, color: colors.textMuted, fontWeight: '600' },
-  chipTextSelected: { color: colors.text },
+  chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
+  chipTextSelected: { color: colors.onPrimary },
   textarea: { height: 100, textAlignVertical: 'top' },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });

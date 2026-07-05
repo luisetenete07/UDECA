@@ -16,7 +16,7 @@ import {
   updateRoutine,
 } from '../../../../lib/firestore/routines';
 import { notifyUser } from '../../../../lib/notifications';
-import { colors, radius, spacing, typography } from '../../../../lib/theme';
+import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import type { Exercise, Routine, RoutineDay, RoutineExercise } from '../../../../lib/types';
 
 function uid() {
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  exerciseName: { ...typography.body, color: colors.text, fontWeight: '600', marginBottom: spacing.xs },
+  exerciseName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: spacing.xs },
   exerciseFields: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   smallInput: { width: 80, marginBottom: 0 },
   deleteBtn: { marginLeft: 'auto', padding: spacing.xs },

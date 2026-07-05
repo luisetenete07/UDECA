@@ -11,7 +11,7 @@ import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog } from '../../lib/firestore/workoutLogs';
-import { colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { LoggedExercise, Routine, RoutineDay } from '../../lib/types';
 
 function buildLog(day: RoutineDay): LoggedExercise[] {
@@ -195,8 +195,8 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   dayTabSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dayTabText: { ...typography.small, color: colors.textMuted, fontWeight: '600' },
-  dayTabTextSelected: { color: colors.text },
+  dayTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
+  dayTabTextSelected: { color: colors.onPrimary },
   exerciseCard: { marginBottom: spacing.md },
   exerciseName: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   setRow: {
@@ -217,6 +217,5 @@ const styles = StyleSheet.create({
   savedText: {
     ...typography.body,
     color: colors.primary,
-    fontWeight: '600',
-  },
+    fontFamily: fonts.semiBold, },
 });

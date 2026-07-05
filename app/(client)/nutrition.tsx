@@ -14,7 +14,7 @@ import {
   getActiveNutritionPlanForClient,
   getMealLogsForClient,
 } from '../../lib/firestore/nutrition';
-import { colors, spacing, typography } from '../../lib/theme';
+import { fonts, colors, spacing, typography } from '../../lib/theme';
 import type { MealLog, NutritionPlan } from '../../lib/types';
 
 function isToday(timestamp: number) {
@@ -199,6 +199,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  mealName: { ...typography.body, color: colors.text, fontWeight: '600' },
+  mealName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, },
   mealMacros: { ...typography.small, color: colors.textMuted },
 });

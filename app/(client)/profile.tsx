@@ -43,7 +43,7 @@ export default function ClientProfileScreen() {
           onChangeText={setGoal}
           placeholder="Ej. Conseguir mi primera dominada"
         />
-        {saved ? <Text style={styles.savedText}>Guardado ✓</Text> : null}
+        {saved ? <Text style={styles.savedText}>Guardado</Text> : null}
         <Button title="Guardar objetivo" variant="secondary" onPress={handleSaveGoal} loading={saving} />
       </Card>
 

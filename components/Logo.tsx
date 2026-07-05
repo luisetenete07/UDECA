@@ -1,10 +1,15 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '../lib/theme';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { colors, fonts, spacing } from '../lib/theme';
 
 export function Logo({ compact }: { compact?: boolean }) {
   return (
     <View style={compact ? styles.containerCompact : styles.container}>
+      <Image
+        source={require('../assets/android-icon-foreground.png')}
+        style={compact ? styles.emblemCompact : styles.emblem}
+        resizeMode="contain"
+      />
       <Text style={[styles.mark, compact && styles.markCompact]}>
         UDE<Text style={styles.markAccent}>CA</Text>
       </Text>
@@ -17,39 +22,52 @@ export function Logo({ compact }: { compact?: boolean }) {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   containerCompact: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  emblem: {
+    width: 72,
+    height: 72,
     marginBottom: spacing.sm,
   },
+  emblemCompact: {
+    width: 52,
+    height: 52,
+    marginBottom: spacing.xs,
+  },
   mark: {
-    fontSize: 34,
-    fontWeight: '800',
+    fontSize: 30,
+    fontFamily: fonts.display,
     letterSpacing: 3,
     color: colors.text,
   },
   markCompact: {
-    fontSize: 24,
+    fontSize: 22,
   },
   markAccent: {
     color: colors.primary,
   },
   rule: {
     width: 36,
-    height: 3,
+    height: 2,
     backgroundColor: colors.primary,
     marginTop: spacing.xs,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
     letterSpacing: 2,
     textTransform: 'uppercase',
     color: colors.textMuted,
   },
   credit: {
     fontSize: 11,
+    fontFamily: fonts.body,
     color: colors.textFaint,
     marginTop: 2,
   },

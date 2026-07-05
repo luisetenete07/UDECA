@@ -45,7 +45,7 @@ export default function TrainerProfileScreen() {
           <Text style={styles.code}>{profile?.inviteCode}</Text>
         </View>
         <Button
-          title={copied ? 'Copiado ✓' : Platform.OS === 'web' ? 'Copiar código' : 'Compartir código'}
+          title={copied ? 'Copiado' : Platform.OS === 'web' ? 'Copiar código' : 'Compartir código'}
           variant="secondary"
           onPress={handleShare}
         />
