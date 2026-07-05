@@ -95,3 +95,49 @@ export async function scheduleLocalReminder(
     // No crítico: si falla, el usuario simplemente no recibe el recordatorio local.
   }
 }
+
+const WORKOUT_REMINDER_ID = 'daily-workout-reminder';
+
+/**
+ * Programa (o reprograma) un recordatorio diario de entrenamiento a la hora
+ * indicada. Cancela primero el anterior para no acumular duplicados.
+ * Devuelve true si quedó programado. En web no está soportado.
+ */
+export async function scheduleWorkoutReminder(hour: number, minute: number): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    const existing = await Notifications.getPermissionsAsync();
+    let granted = existing.status === 'granted';
+    if (!granted) {
+      const req = await Notifications.requestPermissionsAsync();
+      granted = req.status === 'granted';
+    }
+    if (!granted) return false;
+
+    await cancelWorkoutReminder();
+    await Notifications.scheduleNotificationAsync({
+      identifier: WORKOUT_REMINDER_ID,
+      content: {
+        title: 'Hora de entrenar',
+        body: 'Tu sesión de hoy te espera. ¡Vamos a por ella!',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function cancelWorkoutReminder(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(WORKOUT_REMINDER_ID);
+  } catch {
+    // Si no existía, no pasa nada.
+  }
+}

@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
@@ -11,17 +12,29 @@ import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { useAuth } from '../../lib/auth-context';
 import { createMeasurement, getMeasurementsForClient } from '../../lib/firestore/measurements';
+import {
+  createProgressPhoto,
+  getProgressPhotosForClient,
+} from '../../lib/firestore/progressPhotos';
 import { createWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
+import { pickProgressPhoto } from '../../lib/image';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
-import type { BodyMeasurement, WeightLog } from '../../lib/types';
+import {
+  PHOTO_POSES,
+  type BodyMeasurement,
+  type PhotoPose,
+  type ProgressPhoto,
+  type WeightLog,
+} from '../../lib/types';
 
-type Tab = 'weight' | 'measurements';
+type Tab = 'weight' | 'measurements' | 'photos';
 
 export default function ProgressScreen() {
   const { profile } = useAuth();
   const [tab, setTab] = useState<Tab>('weight');
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
+  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [weightInput, setWeightInput] = useState('');
@@ -33,15 +46,18 @@ export default function ProgressScreen() {
   const [thigh, setThigh] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [weightData, measurementData] = await Promise.all([
+    const [weightData, measurementData, photoData] = await Promise.all([
       getWeightLogsForClient(profile.uid),
       getMeasurementsForClient(profile.uid),
+      getProgressPhotosForClient(profile.uid),
     ]);
     setWeightLogs(weightData);
     setMeasurements(measurementData);
+    setPhotos(photoData);
     setLoading(false);
   }, [profile]);
 
@@ -108,6 +124,29 @@ export default function ProgressScreen() {
     }
   };
 
+  const handleAddPhoto = async (pose: PhotoPose) => {
+    if (!profile) return;
+    setUploadingPose(pose);
+    try {
+      const imageURL = await pickProgressPhoto();
+      if (imageURL) {
+        await createProgressPhoto({
+          trainerId: profile.trainerId ?? '',
+          clientId: profile.uid,
+          pose,
+          imageURL,
+          date: Date.now(),
+        });
+        await load();
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'No se pudo subir la foto.';
+      if (Platform.OS !== 'web') Alert.alert('Foto de progreso', message);
+    } finally {
+      setUploadingPose(null);
+    }
+  };
+
   if (loading) return <LoadingScreen />;
 
   const waistPoints = measurements
@@ -125,6 +164,7 @@ export default function ProgressScreen() {
           active={tab === 'measurements'}
           onPress={() => setTab('measurements')}
         />
+        <TabButton label="Fotos" active={tab === 'photos'} onPress={() => setTab('photos')} />
       </View>
 
       {tab === 'weight' ? (
@@ -163,7 +203,7 @@ export default function ProgressScreen() {
             )}
           </Card>
         </>
-      ) : (
+      ) : tab === 'measurements' ? (
         <>
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Evolución de cintura</Text>
@@ -243,6 +283,54 @@ export default function ProgressScreen() {
             )}
           </Card>
         </>
+      ) : (
+        <>
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Añadir foto</Text>
+            <Text style={styles.photoHint}>
+              Sube fotos de frente, perfil y espalda. Solo tú y tu entrenador las veréis.
+            </Text>
+            <View style={styles.poseRow}>
+              {PHOTO_POSES.map((pose) => (
+                <Button
+                  key={pose.key}
+                  title={pose.label}
+                  variant="secondary"
+                  onPress={() => handleAddPhoto(pose.key)}
+                  loading={uploadingPose === pose.key}
+                  style={styles.poseBtn}
+                />
+              ))}
+            </View>
+          </Card>
+
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Galería</Text>
+            {photos.length === 0 ? (
+              <EmptyState title="Todavía no has subido fotos de progreso" />
+            ) : (
+              <View style={styles.photoGrid}>
+                {photos.map((p) => (
+                  <View key={p.id} style={styles.photoCard}>
+                    <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
+                    <View style={styles.photoInfo}>
+                      <Text style={styles.photoPose}>
+                        {PHOTO_POSES.find((x) => x.key === p.pose)?.label ?? p.pose}
+                      </Text>
+                      <Text style={styles.photoDate}>
+                        {new Date(p.date).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
+        </>
       )}
     </ScreenContainer>
   );
@@ -293,4 +381,20 @@ const styles = StyleSheet.create({
   },
   logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
   logDate: { ...typography.small, color: colors.textMuted },
+  photoHint: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md },
+  poseRow: { flexDirection: 'row', gap: spacing.sm },
+  poseBtn: { flex: 1, paddingHorizontal: spacing.sm },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  photoCard: { width: '31%' },
+  photo: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  photoInfo: { marginTop: 4 },
+  photoPose: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, fontSize: 11 },
+  photoDate: { ...typography.small, color: colors.textFaint, fontSize: 10 },
 });

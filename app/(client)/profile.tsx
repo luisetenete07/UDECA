@@ -14,6 +14,7 @@ import { updateUserProfile } from '../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { pickAvatar } from '../../lib/image';
+import { cancelWorkoutReminder, scheduleWorkoutReminder } from '../../lib/notifications';
 import {
   activeWeeks,
   computeAchievements,
@@ -22,6 +23,8 @@ import {
 } from '../../lib/stats';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import { EXPERIENCE_LEVELS, type ExperienceLevel } from '../../lib/types';
+
+const REMINDER_TIMES = [7, 9, 12, 18, 20];
 
 export default function ClientProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
@@ -34,6 +37,9 @@ export default function ClientProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [reminderHour, setReminderHour] = useState<number | null>(
+    profile?.reminderEnabled ? profile.reminderHour ?? 18 : null
+  );
 
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -96,6 +102,25 @@ export default function ClientProfileScreen() {
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleReminder = async (hour: number) => {
+    if (!profile) return;
+    // Si tocas la hora ya activa, se desactiva.
+    if (reminderHour === hour) {
+      setReminderHour(null);
+      await cancelWorkoutReminder();
+      await updateUserProfile(profile.uid, { reminderEnabled: false });
+      await refreshProfile();
+      return;
+    }
+    setReminderHour(hour);
+    const ok = await scheduleWorkoutReminder(hour, 0);
+    await updateUserProfile(profile.uid, { reminderEnabled: ok, reminderHour: hour });
+    await refreshProfile();
+    if (!ok && Platform.OS === 'web') {
+      // En web las notificaciones no están soportadas; guardamos la preferencia igual.
     }
   };
 
@@ -205,6 +230,30 @@ export default function ClientProfileScreen() {
         <Button title="Guardar cambios" onPress={handleSave} loading={saving} />
       </Card>
 
+      <Card style={styles.section}>
+        <View style={styles.reminderHeader}>
+          <Ionicons name="alarm-outline" size={18} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Recordatorio de entreno</Text>
+        </View>
+        <Text style={styles.reminderHint}>
+          Elige una hora y te avisaremos cada día para entrenar.
+          {Platform.OS === 'web' ? ' (Disponible en la app de móvil.)' : ''}
+        </Text>
+        <View style={styles.timeRow}>
+          {REMINDER_TIMES.map((h) => (
+            <Pressable
+              key={h}
+              onPress={() => handleToggleReminder(h)}
+              style={[styles.timeChip, reminderHour === h && styles.timeChipActive]}
+            >
+              <Text style={[styles.timeText, reminderHour === h && styles.timeTextActive]}>
+                {String(h).padStart(2, '0')}:00
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </Card>
+
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={styles.signOut} />
     </ScreenContainer>
   );
@@ -293,5 +342,19 @@ const styles = StyleSheet.create({
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   chipTextSelected: { color: colors.onPrimary },
   savedText: { ...typography.small, color: colors.primary, marginBottom: spacing.sm },
+  reminderHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  reminderHint: { ...typography.small, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.md },
+  timeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  timeChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  timeChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  timeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  timeTextActive: { color: colors.onPrimary },
   signOut: { marginTop: spacing.sm, marginBottom: spacing.xl },
 });

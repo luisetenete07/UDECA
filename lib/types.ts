@@ -20,6 +20,9 @@ export interface UserProfile {
   level?: ExperienceLevel;
   /** Peso objetivo del alumno en kg. */
   targetWeightKg?: number;
+  /** Recordatorio diario de entrenamiento (hora local, 0-23). */
+  reminderHour?: number;
+  reminderEnabled?: boolean;
   /** Token de Expo Push Notifications del último dispositivo registrado. */
   pushToken?: string;
 }
@@ -199,4 +202,22 @@ export interface Course {
   sections: CourseSection[];
   createdAt: number;
   updatedAt: number;
+}
+
+export type PhotoPose = 'front' | 'side' | 'back';
+
+export const PHOTO_POSES: { key: PhotoPose; label: string }[] = [
+  { key: 'front', label: 'Frente' },
+  { key: 'side', label: 'Perfil' },
+  { key: 'back', label: 'Espalda' },
+];
+
+export interface ProgressPhoto {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  pose: PhotoPose;
+  imageURL: string;
+  date: number;
+  createdAt: number;
 }

@@ -16,6 +16,7 @@ export default function ClientsLayout() {
       <Stack.Screen name="[id]/index" options={{ title: 'Cliente' }} />
       <Stack.Screen name="[id]/routine" options={{ title: 'Rutina' }} />
       <Stack.Screen name="[id]/nutrition" options={{ title: 'Nutrición' }} />
+      <Stack.Screen name="[id]/session" options={{ title: 'Sesión' }} />
     </Stack>
   );
 }

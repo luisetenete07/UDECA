@@ -1,15 +1,16 @@
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
-const AVATAR_SIZE = 256;
+interface PickOptions {
+  /** Tamaño máximo del lado mayor en px. */
+  maxSize: number;
+  /** Compresión 0-1 (1 = máxima calidad). */
+  compress: number;
+  /** Relación de aspecto para el recorte (opcional). */
+  aspect?: [number, number];
+}
 
-/**
- * Abre la galería, deja recortar en cuadrado y devuelve la imagen como
- * data URL (base64) ya redimensionada a 256px y comprimida. Devuelve null
- * si el usuario cancela. Guardamos el avatar directamente en Firestore
- * (data URL) para no requerir configurar Firebase Storage.
- */
-export async function pickAvatar(): Promise<string | null> {
+async function pickImage(options: PickOptions): Promise<string | null> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
     throw new Error('Necesitamos permiso para acceder a tus fotos.');
@@ -18,30 +19,37 @@ export async function pickAvatar(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: 'images',
     allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.7,
+    aspect: options.aspect,
+    quality: 0.8,
     base64: true,
   });
 
   if (result.canceled || !result.assets?.length) return null;
-
   const asset = result.assets[0];
 
   try {
     const manipulated = await manipulateAsync(
       asset.uri,
-      [{ resize: { width: AVATAR_SIZE, height: AVATAR_SIZE } }],
-      { compress: 0.6, format: SaveFormat.JPEG, base64: true }
+      [{ resize: { width: options.maxSize } }],
+      { compress: options.compress, format: SaveFormat.JPEG, base64: true }
     );
     if (manipulated.base64) {
       return `data:image/jpeg;base64,${manipulated.base64}`;
     }
   } catch {
-    // Si el redimensionado falla (p. ej. en web), usamos el base64 original.
+    // En web el redimensionado puede fallar; usamos el base64 original.
   }
 
-  if (asset.base64) {
-    return `data:image/jpeg;base64,${asset.base64}`;
-  }
+  if (asset.base64) return `data:image/jpeg;base64,${asset.base64}`;
   return asset.uri;
+}
+
+/** Avatar cuadrado, pequeño y ligero (se guarda en el perfil). */
+export function pickAvatar(): Promise<string | null> {
+  return pickImage({ maxSize: 200, compress: 0.55, aspect: [1, 1] });
+}
+
+/** Foto de progreso, algo mayor para apreciar la evolución. */
+export function pickProgressPhoto(): Promise<string | null> {
+  return pickImage({ maxSize: 720, compress: 0.6 });
 }

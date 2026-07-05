@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Avatar } from '../../../../components/Avatar';
@@ -13,6 +14,7 @@ import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getMeasurementsForClient } from '../../../../lib/firestore/measurements';
 import { getActiveNutritionPlanForClient } from '../../../../lib/firestore/nutrition';
+import { getProgressPhotosForClient } from '../../../../lib/firestore/progressPhotos';
 import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getUserProfile } from '../../../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
@@ -22,6 +24,7 @@ import { fonts, colors, radius, spacing, typography } from '../../../../lib/them
 import type {
   BodyMeasurement,
   NutritionPlan,
+  ProgressPhoto,
   Routine,
   UserProfile,
   WeightLog,
@@ -37,6 +40,7 @@ export default function ClientDetailScreen() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
+  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingReport, setGeneratingReport] = useState(false);
 
@@ -45,7 +49,7 @@ export default function ClientDetailScreen() {
       if (!id) return;
       let cancelled = false;
       (async () => {
-        const [clientData, routineData, weightData, workoutData, measurementData, planData] =
+        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id),
@@ -53,6 +57,7 @@ export default function ClientDetailScreen() {
             getWorkoutLogsForClient(id),
             getMeasurementsForClient(id),
             getActiveNutritionPlanForClient(id),
+            getProgressPhotosForClient(id),
           ]);
         if (cancelled) return;
         setClient(clientData);
@@ -61,6 +66,7 @@ export default function ClientDetailScreen() {
         setWorkoutLogs(workoutData);
         setMeasurements(measurementData);
         setNutritionPlan(planData);
+        setPhotos(photoData);
         setLoading(false);
       })();
       return () => {
@@ -200,18 +206,44 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Fotos de progreso</Text>
+        {photos.length === 0 ? (
+          <Text style={styles.mutedText}>El cliente todavía no ha subido fotos.</Text>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoStrip}>
+            {photos.slice(0, 12).map((p) => (
+              <View key={p.id} style={styles.photoItem}>
+                <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
+                <Text style={styles.photoDate}>
+                  {new Date(p.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Historial de entrenamientos</Text>
         {workoutLogs.length === 0 ? (
           <Text style={styles.mutedText}>Todavía no ha registrado entrenamientos.</Text>
         ) : (
           workoutLogs.slice(0, 10).map((log) => (
-            <View key={log.id} style={styles.logRow}>
-              <View>
-                <Text style={styles.logTitle}>{log.dayName}</Text>
-                <Text style={styles.logDate}>{new Date(log.date).toLocaleDateString('es-ES')}</Text>
+            <Pressable
+              key={log.id}
+              onPress={() => router.push(`/(trainer)/clients/${id}/session?logId=${log.id}`)}
+            >
+              <View style={styles.logRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.logTitle}>{log.dayName}</Text>
+                  <Text style={styles.logDate}>
+                    {new Date(log.date).toLocaleDateString('es-ES')}
+                  </Text>
+                </View>
+                <Text style={styles.logExercises}>{log.exercises.length} ejercicios</Text>
+                <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
               </View>
-              <Text style={styles.logExercises}>{log.exercises.length} ejercicios</Text>
-            </View>
+            </Pressable>
           ))
         )}
       </Card>
@@ -247,10 +279,22 @@ const styles = StyleSheet.create({
   routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
   routineMeta: { ...typography.small, color: colors.textMuted },
   mutedText: { ...typography.small, color: colors.textFaint },
+  photoStrip: { marginTop: spacing.xs },
+  photoItem: { marginRight: spacing.sm, alignItems: 'center' },
+  photo: {
+    width: 96,
+    height: 128,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  photoDate: { ...typography.small, color: colors.textFaint, marginTop: 4, fontSize: 11 },
   logRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,

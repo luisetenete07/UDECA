@@ -1,8 +1,13 @@
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { WorkoutLog } from '../types';
 
 const collectionRef = () => collection(db, 'workoutLogs');
+
+export async function getWorkoutLog(id: string): Promise<WorkoutLog | null> {
+  const snap = await getDoc(doc(db, 'workoutLogs', id));
+  return snap.exists() ? ({ id: snap.id, ...snap.data() } as WorkoutLog) : null;
+}
 
 export async function getWorkoutLogsForClient(clientId: string): Promise<WorkoutLog[]> {
   const q = query(collectionRef(), where('clientId', '==', clientId));
