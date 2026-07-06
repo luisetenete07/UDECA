@@ -1,10 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { startOfWeek } from '../lib/stats';
+import { addDays, startOfWeek } from '../lib/stats';
 import { colors, fonts, spacing } from '../lib/theme';
 import { WEEKDAY_LABELS } from '../lib/types';
-
-const DAY_MS = 1000 * 60 * 60 * 24;
 
 /**
  * Mapa de constancia: cuadrícula de las últimas `weeks` semanas (columnas)
@@ -24,9 +22,8 @@ export function ConsistencyMap({
   today.setHours(0, 0, 0, 0);
   const todayTs = today.getTime();
 
-  const weekStarts = Array.from(
-    { length: weeks },
-    (_, i) => currentWeekStart - (weeks - 1 - i) * DAY_MS * 7
+  const weekStarts = Array.from({ length: weeks }, (_, i) =>
+    addDays(currentWeekStart, -7 * (weeks - 1 - i))
   );
 
   return (
@@ -36,7 +33,7 @@ export function ConsistencyMap({
           <View key={label} style={styles.row}>
             <Text style={styles.rowLabel}>{label}</Text>
             {weekStarts.map((ws) => {
-              const dayTs = ws + row * DAY_MS;
+              const dayTs = addDays(ws, row);
               const trained = days.has(dayTs);
               const isFuture = dayTs > todayTs;
               const isToday = dayTs === todayTs;

@@ -43,7 +43,17 @@ export function lastPerformanceByExercise(
   return result;
 }
 
-const DAY_MS = 1000 * 60 * 60 * 24;
+/**
+ * Suma días de calendario devolviendo la medianoche local resultante.
+ * Imprescindible frente a sumar milisegundos: el día del cambio de hora
+ * dura 23 o 25 horas y desalinearía rachas, mapas y semanas.
+ */
+export function addDays(ts: number, n: number): number {
+  const d = new Date(ts);
+  d.setDate(d.getDate() + n);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
 
 function startOfDay(ts: number): number {
   const d = new Date(ts);
@@ -70,13 +80,13 @@ export function currentStreak(logs: WorkoutLog[]): number {
   const today = startOfDay(Date.now());
 
   // La racha sigue viva si entrenó hoy o ayer.
-  let cursor = days.has(today) ? today : today - DAY_MS;
+  let cursor = days.has(today) ? today : addDays(today, -1);
   if (!days.has(cursor)) return 0;
 
   let streak = 0;
   while (days.has(cursor)) {
     streak += 1;
-    cursor -= DAY_MS;
+    cursor = addDays(cursor, -1);
   }
   return streak;
 }
@@ -272,10 +282,9 @@ export function weeklyActivity(
   logs: WorkoutLog[],
   weeks = 8
 ): { weekStart: number; sessions: number; volumeKg: number }[] {
-  const WEEK_MS = DAY_MS * 7;
   const currentWeek = startOfWeek(Date.now());
   const result = Array.from({ length: weeks }, (_, i) => ({
-    weekStart: currentWeek - (weeks - 1 - i) * WEEK_MS,
+    weekStart: addDays(currentWeek, -7 * (weeks - 1 - i)),
     sessions: 0,
     volumeKg: 0,
   }));
