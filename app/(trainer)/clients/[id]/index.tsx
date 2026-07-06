@@ -12,6 +12,7 @@ import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
+import { getCheckInsForClient } from '../../../../lib/firestore/checkins';
 import { getMeasurementsForClient } from '../../../../lib/firestore/measurements';
 import { getActiveNutritionPlanForClient } from '../../../../lib/firestore/nutrition';
 import { getProgressPhotosForClient } from '../../../../lib/firestore/progressPhotos';
@@ -22,6 +23,7 @@ import { buildClientReportHtml } from '../../../../lib/report';
 import { getUserProfile, updateClientStatus } from '../../../../lib/firestore/users';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
+  CHECKIN_FIELDS,
   CLIENT_STATUSES,
   CLIENT_STATUS_LABEL,
   type BodyMeasurement,
@@ -30,6 +32,7 @@ import {
   type ProgressPhoto,
   type Routine,
   type UserProfile,
+  type WeeklyCheckIn,
   type WeightLog,
   type WorkoutLog,
 } from '../../../../lib/types';
@@ -44,6 +47,7 @@ export default function ClientDetailScreen() {
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
+  const [checkIns, setCheckIns] = useState<WeeklyCheckIn[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingReport, setGeneratingReport] = useState(false);
 
@@ -52,7 +56,7 @@ export default function ClientDetailScreen() {
       if (!id) return;
       let cancelled = false;
       (async () => {
-        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData] =
+        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id),
@@ -61,6 +65,7 @@ export default function ClientDetailScreen() {
             getMeasurementsForClient(id),
             getActiveNutritionPlanForClient(id),
             getProgressPhotosForClient(id),
+            getCheckInsForClient(id),
           ]);
         if (cancelled) return;
         setClient(clientData);
@@ -70,6 +75,7 @@ export default function ClientDetailScreen() {
         setMeasurements(measurementData);
         setNutritionPlan(planData);
         setPhotos(photoData);
+        setCheckIns(checkInData);
         setLoading(false);
       })();
       return () => {
@@ -248,6 +254,34 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Check-ins semanales</Text>
+        {checkIns.length === 0 ? (
+          <Text style={styles.mutedText}>Todavía no ha enviado ningún check-in.</Text>
+        ) : (
+          checkIns.slice(0, 4).map((c) => (
+            <View key={c.id} style={styles.checkInRow}>
+              <Text style={styles.checkInDate}>
+                Semana del{' '}
+                {new Date(c.weekStart).toLocaleDateString('es-ES', {
+                  day: '2-digit',
+                  month: 'short',
+                })}
+              </Text>
+              <View style={styles.checkInScores}>
+                {CHECKIN_FIELDS.map((f) => (
+                  <View key={f.key} style={styles.checkInScore}>
+                    <Text style={styles.checkInScoreValue}>{c[f.key]}</Text>
+                    <Text style={styles.checkInScoreLabel}>{f.label.split(' ')[0]}</Text>
+                  </View>
+                ))}
+              </View>
+              {c.notes ? <Text style={styles.checkInNotes}>“{c.notes}”</Text> : null}
+            </View>
+          ))
+        )}
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Historial de entrenamientos</Text>
         {workoutLogs.length === 0 ? (
           <Text style={styles.mutedText}>Todavía no ha registrado entrenamientos.</Text>
@@ -316,6 +350,35 @@ const styles = StyleSheet.create({
   routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
   routineMeta: { ...typography.small, color: colors.textMuted },
   mutedText: { ...typography.small, color: colors.textFaint },
+  checkInRow: {
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  checkInDate: {
+    ...typography.small,
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    marginBottom: spacing.xs,
+  },
+  checkInScores: { flexDirection: 'row', gap: spacing.sm },
+  checkInScore: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  checkInScoreValue: { ...typography.h3, color: colors.primaryBright },
+  checkInScoreLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fonts.medium },
+  checkInNotes: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
+  },
   photoStrip: { marginTop: spacing.xs },
   photoItem: { marginRight: spacing.sm, alignItems: 'center' },
   photo: {

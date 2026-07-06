@@ -4,16 +4,24 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
+import { CheckInCard } from '../../components/CheckInCard';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
+import { getCheckInsForClient, hasCheckInThisWeek } from '../../lib/firestore/checkins';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { currentStreak, sessionsThisWeek as weekSessions } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
-import type { Routine, WeightLog, WorkoutLog } from '../../lib/types';
+import {
+  todayWeekday,
+  WEEKDAY_NAMES,
+  type Routine,
+  type WeightLog,
+  type WorkoutLog,
+} from '../../lib/types';
 
 const WEIGHT_REMINDER_DAYS = 7;
 
@@ -23,6 +31,7 @@ export default function ClientDashboard() {
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [needsCheckIn, setNeedsCheckIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -30,15 +39,17 @@ export default function ClientDashboard() {
       if (!profile) return;
       let cancelled = false;
       (async () => {
-        const [routineData, weightData, workoutData] = await Promise.all([
+        const [routineData, weightData, workoutData, checkIns] = await Promise.all([
           getActiveRoutineForClient(profile.uid),
           getWeightLogsForClient(profile.uid),
           getWorkoutLogsForClient(profile.uid),
+          getCheckInsForClient(profile.uid),
         ]);
         if (cancelled) return;
         setRoutine(routineData);
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
+        setNeedsCheckIn(!hasCheckInThisWeek(checkIns));
         setLoading(false);
       })();
       return () => {
@@ -52,7 +63,13 @@ export default function ClientDashboard() {
   const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
   const sessions = weekSessions(workoutLogs);
   const streak = currentStreak(workoutLogs);
-  const nextDay = routine?.days[0];
+  // Día planificado para hoy (si el entrenador asignó días de la semana);
+  // si no, el primero de la rutina.
+  const todaysDay = routine?.days.find((d) => d.weekday === todayWeekday());
+  const restDay = Boolean(
+    routine && !todaysDay && routine.days.some((d) => d.weekday !== undefined)
+  );
+  const nextDay = todaysDay ?? routine?.days[0];
 
   const lastWeightLog = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
   const daysSinceWeight = lastWeightLog
@@ -88,6 +105,10 @@ export default function ClientDashboard() {
         </Pressable>
       ) : null}
 
+      {needsCheckIn && profile ? (
+        <CheckInCard profile={profile} onDone={() => setNeedsCheckIn(false)} />
+      ) : null}
+
       <View style={styles.statsRow}>
         <StatTile icon="flame" value={String(streak)} label="Racha (días)" highlight={streak > 0} />
         <StatTile icon="checkmark-done" value={String(sessions)} label="Esta semana" />
@@ -101,14 +122,25 @@ export default function ClientDashboard() {
       <Pressable onPress={() => router.push('/(client)/workout')}>
         <Card style={styles.nextCard}>
           <View style={styles.nextHeader}>
-            <Text style={styles.sectionLabel}>Próximo entrenamiento</Text>
+            <Text style={styles.sectionLabel}>
+              {todaysDay ? 'Hoy toca' : 'Próximo entrenamiento'}
+            </Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </View>
-          {routine && nextDay ? (
+          {routine && restDay ? (
+            <>
+              <Text style={styles.routineName}>Descanso</Text>
+              <Text style={styles.routineMeta}>
+                Hoy ({WEEKDAY_NAMES[todayWeekday()]}) no tienes sesión planificada. Recupera:
+                también es entrenar.
+              </Text>
+            </>
+          ) : routine && nextDay ? (
             <>
               <Text style={styles.routineName}>{nextDay.name}</Text>
               <Text style={styles.routineMeta}>
                 {routine.name} · {nextDay.exercises.length} ejercicios
+                {todaysDay ? ` · ${WEEKDAY_NAMES[todayWeekday()]}` : ''}
               </Text>
               <View style={styles.ctaRow}>
                 <Ionicons name="play-circle" size={20} color={colors.primary} />

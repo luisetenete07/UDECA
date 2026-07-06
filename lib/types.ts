@@ -77,7 +77,26 @@ export interface RoutineExercise {
 export interface RoutineDay {
   id: string;
   name: string;
+  /** Día de la semana asignado (0=lunes ... 6=domingo). Sin valor = flexible. */
+  weekday?: number;
   exercises: RoutineExercise[];
+}
+
+export const WEEKDAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const;
+export const WEEKDAY_NAMES = [
+  'Lunes',
+  'Martes',
+  'Miércoles',
+  'Jueves',
+  'Viernes',
+  'Sábado',
+  'Domingo',
+] as const;
+
+/** Índice de día de la semana con lunes=0 (JS usa domingo=0). */
+export function todayWeekday(): number {
+  const d = new Date().getDay();
+  return d === 0 ? 6 : d - 1;
 }
 
 export interface Routine {
@@ -114,6 +133,8 @@ export interface WorkoutLog {
   date: number;
   exercises: LoggedExercise[];
   feedback?: string;
+  /** Duración de la sesión en minutos (desde la primera serie completada). */
+  durationMin?: number;
   createdAt: number;
 }
 
@@ -186,6 +207,33 @@ export interface SocialStats {
   totalWorkouts: number;
   updatedAt: number;
 }
+
+/**
+ * Check-in semanal del alumno: pulso subjetivo (energía, sueño, adherencia,
+ * sensaciones) que el entrenador revisa en la ficha. Práctica estándar del
+ * coaching online serio.
+ */
+export interface WeeklyCheckIn {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  /** Inicio (lunes) de la semana a la que corresponde el check-in. */
+  weekStart: number;
+  /** Valoraciones de 1 (muy mal) a 5 (excelente). */
+  energy: number;
+  sleep: number;
+  adherence: number;
+  soreness: number;
+  notes?: string;
+  createdAt: number;
+}
+
+export const CHECKIN_FIELDS: { key: 'energy' | 'sleep' | 'adherence' | 'soreness'; label: string }[] = [
+  { key: 'energy', label: 'Energía' },
+  { key: 'sleep', label: 'Sueño' },
+  { key: 'adherence', label: 'Dieta y adherencia' },
+  { key: 'soreness', label: 'Sensaciones físicas' },
+];
 
 export interface Lesson {
   id: string;

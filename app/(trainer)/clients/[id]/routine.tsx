@@ -17,7 +17,12 @@ import {
 } from '../../../../lib/firestore/routines';
 import { notifyUser } from '../../../../lib/notifications';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
-import type { Exercise, Routine, RoutineDay, RoutineExercise } from '../../../../lib/types';
+import {
+  WEEKDAY_LABELS,
+  type Exercise,
+  type RoutineDay,
+  type RoutineExercise,
+} from '../../../../lib/types';
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -65,6 +70,15 @@ export default function RoutineEditorScreen() {
 
   const updateDayName = (dayId: string, value: string) => {
     setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, name: value } : d)));
+  };
+
+  // Asigna o quita el día de la semana (tocar el mismo chip lo desasigna).
+  const updateDayWeekday = (dayId: string, weekday: number) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId ? { ...d, weekday: d.weekday === weekday ? undefined : weekday } : d
+      )
+    );
   };
 
   const addExerciseToDay = (dayId: string, exercise: Exercise) => {
@@ -164,6 +178,29 @@ export default function RoutineEditorScreen() {
             ) : null}
           </View>
 
+          <View style={styles.weekdayRow}>
+            <Text style={styles.weekdayLabel}>Día de la semana</Text>
+            <View style={styles.weekdayChips}>
+              {WEEKDAY_LABELS.map((label, i) => (
+                <Pressable
+                  key={label}
+                  onPress={() => updateDayWeekday(day.id, i)}
+                  style={[styles.weekdayChip, day.weekday === i && styles.weekdayChipSelected]}
+                  hitSlop={4}
+                >
+                  <Text
+                    style={[
+                      styles.weekdayChipText,
+                      day.weekday === i && styles.weekdayChipTextSelected,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
           {day.exercises.map((ex) => (
             <View key={ex.id} style={styles.exerciseRow}>
               <Text style={styles.exerciseName}>{ex.name}</Text>
@@ -241,6 +278,27 @@ const styles = StyleSheet.create({
   dayNameInput: { flex: 1, marginBottom: 0 },
   removeDayBtn: { paddingHorizontal: spacing.sm },
   removeDayText: { ...typography.small, color: colors.danger },
+  weekdayRow: { marginTop: spacing.sm, marginBottom: spacing.sm },
+  weekdayLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  weekdayChips: { flexDirection: 'row', gap: spacing.xs },
+  weekdayChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  weekdayChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  weekdayChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  weekdayChipTextSelected: { color: colors.onPrimary },
   exerciseRow: {
     paddingVertical: spacing.sm,
     borderTopWidth: 1,

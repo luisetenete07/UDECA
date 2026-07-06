@@ -107,6 +107,16 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Check-ins semanales del alumno: los crea el propio alumno y los lee
+    // también su entrenador. No se editan ni borran (registro histórico).
+    match /checkIns/{checkInId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     // Estadísticas públicas para el ranking social del coaching. Solo
     // contienen métricas no sensibles (nombre, foto, racha, sesiones). Cada
     // usuario escribe únicamente las suyas; las leen los miembros del mismo

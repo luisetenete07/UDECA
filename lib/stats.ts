@@ -1,4 +1,4 @@
-import type { WeightLog, WorkoutLog } from './types';
+import type { LoggedExercise, WeightLog, WorkoutLog } from './types';
 
 export interface LastPerformance {
   weight?: string;
@@ -177,4 +177,92 @@ export function computeAchievements(
       unlocked: weightProgress <= -3,
     },
   ];
+}
+
+/** Marcas históricas de un ejercicio: mejor peso y mejores reps sin lastre. */
+export interface ExerciseBest {
+  bestWeightKg: number;
+  bestRepsAtWeight: number;
+  bestReps: number;
+}
+
+function parseReps(reps: string): number {
+  const n = parseInt(reps, 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/** Mejores marcas históricas por ejercicio a partir del historial. */
+export function bestsByExercise(logs: WorkoutLog[]): Record<string, ExerciseBest> {
+  const bests: Record<string, ExerciseBest> = {};
+  for (const log of logs) {
+    for (const ex of log.exercises) {
+      const b = (bests[ex.exerciseId] ??= { bestWeightKg: 0, bestRepsAtWeight: 0, bestReps: 0 });
+      for (const set of ex.sets) {
+        if (!set.completed) continue;
+        const w = Number(set.weight) || 0;
+        const r = parseReps(set.reps);
+        if (w > b.bestWeightKg || (w === b.bestWeightKg && r > b.bestRepsAtWeight)) {
+          if (w > 0) {
+            b.bestWeightKg = w;
+            b.bestRepsAtWeight = r;
+          }
+        }
+        if (r > b.bestReps) b.bestReps = r;
+      }
+    }
+  }
+  return bests;
+}
+
+export interface PersonalRecord {
+  exerciseName: string;
+  /** Descripción corta del récord, p.ej. "12 kg × 8" o "15 reps". */
+  label: string;
+}
+
+/**
+ * Compara la sesión recién completada con las mejores marcas históricas y
+ * devuelve los récords personales conseguidos hoy (más peso, o más reps con
+ * el mismo peso / sin lastre).
+ */
+export function detectNewPRs(
+  history: WorkoutLog[],
+  session: LoggedExercise[]
+): PersonalRecord[] {
+  const bests = bestsByExercise(history);
+  const prs: PersonalRecord[] = [];
+
+  for (const ex of session) {
+    const b = bests[ex.exerciseId] ?? { bestWeightKg: 0, bestRepsAtWeight: 0, bestReps: 0 };
+    let record: PersonalRecord | null = null;
+    for (const set of ex.sets) {
+      if (!set.completed) continue;
+      const w = Number(set.weight) || 0;
+      const r = parseReps(set.reps);
+      if (w > 0 && (w > b.bestWeightKg || (w === b.bestWeightKg && r > b.bestRepsAtWeight))) {
+        record = { exerciseName: ex.name, label: `${w} kg × ${r || '—'}` };
+      } else if (w === 0 && b.bestReps > 0 && r > b.bestReps) {
+        record = { exerciseName: ex.name, label: `${r} reps` };
+      }
+    }
+    if (record) prs.push(record);
+  }
+  return prs;
+}
+
+/** Métricas agregadas de una sesión para el resumen post-entreno. */
+export function sessionTotals(session: LoggedExercise[]) {
+  let sets = 0;
+  let reps = 0;
+  let volumeKg = 0;
+  for (const ex of session) {
+    for (const set of ex.sets) {
+      if (!set.completed) continue;
+      const r = parseReps(set.reps);
+      sets += 1;
+      reps += r;
+      volumeKg += (Number(set.weight) || 0) * r;
+    }
+  }
+  return { sets, reps, volumeKg: Math.round(volumeKg) };
 }
