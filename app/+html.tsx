@@ -28,11 +28,22 @@ export default function Root({ children }: PropsWithChildren) {
         {/* Fondo negro inmediato para evitar el destello blanco al cargar. */}
         <style dangerouslySetInnerHTML={{ __html: backgroundStyle }} />
         <ScrollViewStyleReset />
+
+        {/* Service worker: carga instantánea y soporte offline de la PWA. */}
+        <script dangerouslySetInnerHTML={{ __html: swRegistration(base) }} />
       </head>
       <body>{children}</body>
     </html>
   );
 }
+
+const swRegistration = (base: string) => `
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('${base}/sw.js').catch(function () {});
+  });
+}
+`;
 
 const backgroundStyle = `
 html, body { background-color: #000000; }

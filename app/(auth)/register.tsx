@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
@@ -57,51 +58,58 @@ export default function RegisterScreen() {
         <Text style={styles.subtitle}>Elige cómo quieres usar la app</Text>
       </View>
 
-      <View style={styles.roleSwitch}>
-        <RoleOption
-          label="Soy cliente"
-          selected={role === 'client'}
-          onPress={() => setRole('client')}
-        />
-        <RoleOption
-          label="Soy entrenador"
-          selected={role === 'trainer'}
-          onPress={() => setRole('trainer')}
-        />
-      </View>
+      <Card accent style={styles.formCard}>
+        <View style={styles.roleSwitch}>
+          <RoleOption
+            label="Soy cliente"
+            selected={role === 'client'}
+            onPress={() => setRole('client')}
+          />
+          <RoleOption
+            label="Soy entrenador"
+            selected={role === 'trainer'}
+            onPress={() => setRole('trainer')}
+          />
+        </View>
 
-      <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Tu nombre" />
-      <TextField
-        label="Correo electrónico"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        autoComplete="email"
-        value={email}
-        onChangeText={setEmail}
-        placeholder="tucorreo@ejemplo.com"
-      />
-      <TextField
-        label="Contraseña"
-        secureTextEntry
-        autoComplete="password-new"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Mínimo 6 caracteres"
-      />
-
-      {role === 'client' ? (
+        <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Tu nombre" />
         <TextField
-          label="Código de tu entrenador"
-          autoCapitalize="characters"
-          value={inviteCode}
-          onChangeText={setInviteCode}
-          placeholder="Ej. 7XQK2M"
+          label="Correo electrónico"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="tucorreo@ejemplo.com"
         />
-      ) : null}
+        <TextField
+          label="Contraseña"
+          secureTextEntry
+          autoComplete="password-new"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Mínimo 6 caracteres"
+        />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+        {role === 'client' ? (
+          <TextField
+            label="Código de tu entrenador"
+            autoCapitalize="characters"
+            value={inviteCode}
+            onChangeText={setInviteCode}
+            placeholder="Ej. 7XQK2M"
+          />
+        ) : null}
 
-      <Button title="Crear cuenta" onPress={handleSubmit} loading={loading} style={styles.submit} />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <Button
+          title="Crear cuenta"
+          onPress={handleSubmit}
+          loading={loading}
+          style={styles.submit}
+        />
+      </Card>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
@@ -153,6 +161,9 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textMuted,
     textAlign: 'center',
+  },
+  formCard: {
+    padding: spacing.lg,
   },
   roleSwitch: {
     flexDirection: 'row',

@@ -1,0 +1,66 @@
+# Despliegue automático de la web UDECA a GitHub Pages.
+#
+# Cada push a la rama de desarrollo compila la app web (Expo) y publica el
+# resultado en la rama gh-pages, que GitHub Pages sirve en el dominio
+# udeca.luistenafit.com. Así no hace falta desplegar a mano nunca más.
+#
+# Nota sobre las variables EXPO_PUBLIC_FIREBASE_*: son la configuración
+# PÚBLICA de cliente de Firebase (van incrustadas en el JavaScript que
+# descarga cualquier visitante de la web, por diseño del SDK). No son
+# secretos: la seguridad real la imponen las reglas de Firestore.
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    branches:
+      - claude/calisthenics-coaching-app-o72apc
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+env:
+  EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyCZ8cGqFNCJHEHFRbQrVUpZxDXfv6Nl2ZE
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: udeca-luistenafit.firebaseapp.com
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID: udeca-luistenafit
+  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: udeca-luistenafit.firebasestorage.app
+  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "1042172841881"
+  EXPO_PUBLIC_FIREBASE_APP_ID: 1:1042172841881:web:91985251ac5b7db1884d08
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build web (Expo export)
+        run: npx expo export --platform web --clear
+
+      - name: Prepare Pages artifacts
+        run: |
+          touch dist/.nojekyll
+          echo "udeca.luistenafit.com" > dist/CNAME
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          user_name: "UDECA Deploy"
+          user_email: "udeca-bot@example.com"
+          commit_message: "Deploy web build"

@@ -5,11 +5,13 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing, typography } from '../lib/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, gradients, radius, spacing, typography } from '../lib/theme';
 
 interface ButtonProps {
   title: string;
@@ -41,28 +43,46 @@ export function Button({
     onPress();
   };
 
+  const inner = loading ? (
+    <ActivityIndicator color={variant === 'primary' ? colors.onPrimary : colors.text} />
+  ) : (
+    <Text style={[styles.text, variant === 'primary' && styles.textPrimary]}>{title}</Text>
+  );
+
   return (
     <Pressable
       onPress={handlePress}
       disabled={isDisabled}
       style={({ pressed }) => [
-        styles.base,
-        variantStyles[variant],
+        styles.outer,
         isDisabled && styles.disabled,
         pressed && !isDisabled && styles.pressed,
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.onPrimary : colors.text} />
+      {variant === 'primary' ? (
+        // Acabado oro con degradado de marca y filo brillante superior.
+        <LinearGradient
+          colors={gradients.gold}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.base}
+        >
+          <View style={styles.sheen} />
+          {inner}
+        </LinearGradient>
       ) : (
-        <Text style={[styles.text, variant === 'primary' && styles.textPrimary]}>{title}</Text>
+        <View style={[styles.base, variantStyles[variant]]}>{inner}</View>
       )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  outer: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
   base: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
@@ -71,8 +91,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
   },
+  sheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+  },
   pressed: {
-    opacity: 0.8,
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
   disabled: {
     opacity: 0.5,
@@ -80,15 +109,15 @@ const styles = StyleSheet.create({
   text: {
     ...typography.h3,
     color: colors.text,
+    letterSpacing: 0.3,
   },
   textPrimary: {
     color: colors.onPrimary,
   },
 });
 
-const variantStyles: Record<NonNullable<ButtonProps['variant']>, ViewStyle> = {
-  primary: { backgroundColor: colors.primary },
-  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+const variantStyles: Record<Exclude<NonNullable<ButtonProps['variant']>, 'primary'>, ViewStyle> = {
+  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.hairline },
   ghost: { backgroundColor: 'transparent' },
   danger: { backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger },
 };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../components/Button';
+import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
@@ -40,27 +41,34 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>Inicia sesión para continuar con tu entrenamiento</Text>
       </View>
 
-      <TextField
-        label="Correo electrónico"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        autoComplete="email"
-        value={email}
-        onChangeText={setEmail}
-        placeholder="tucorreo@ejemplo.com"
-      />
-      <TextField
-        label="Contraseña"
-        secureTextEntry
-        autoComplete="password"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-      />
+      <Card accent style={styles.formCard}>
+        <TextField
+          label="Correo electrónico"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="tucorreo@ejemplo.com"
+        />
+        <TextField
+          label="Contraseña"
+          secureTextEntry
+          autoComplete="password"
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+        />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Button title="Iniciar sesión" onPress={handleSubmit} loading={loading} style={styles.submit} />
+        <Button
+          title="Iniciar sesión"
+          onPress={handleSubmit}
+          loading={loading}
+          style={styles.submit}
+        />
+      </Card>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>¿No tienes cuenta?</Text>
@@ -92,6 +100,9 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textMuted,
     textAlign: 'center',
+  },
+  formCard: {
+    padding: spacing.lg,
   },
   error: {
     ...typography.small,

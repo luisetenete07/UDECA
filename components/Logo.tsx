@@ -1,15 +1,17 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, spacing } from '../lib/theme';
+import { colors, fonts, shadows, spacing } from '../lib/theme';
 
 export function Logo({ compact }: { compact?: boolean }) {
   return (
     <View style={compact ? styles.containerCompact : styles.container}>
-      <Image
-        source={require('../assets/android-icon-foreground.png')}
-        style={compact ? styles.emblemCompact : styles.emblem}
-        resizeMode="contain"
-      />
+      <View style={!compact && styles.emblemGlow}>
+        <Image
+          source={require('../assets/android-icon-foreground.png')}
+          style={compact ? styles.emblemCompact : styles.emblem}
+          resizeMode="contain"
+        />
+      </View>
       <Text style={[styles.mark, compact && styles.markCompact]}>UDECA</Text>
       <View style={styles.rule} />
       <Text style={styles.subtitle}>Universidad de Calistenia</Text>
@@ -26,6 +28,10 @@ const styles = StyleSheet.create({
   containerCompact: {
     alignItems: 'center',
     marginBottom: spacing.md,
+  },
+  emblemGlow: {
+    borderRadius: 999,
+    ...shadows.glowGold,
   },
   emblem: {
     width: 72,

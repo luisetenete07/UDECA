@@ -13,8 +13,13 @@ export const colors = {
   surfaceAlt: '#181818',
   border: '#2A2A2A',
   primary: '#A2968B',
+  /** Oro claro: brillos, extremos de degradado, estados resaltados. */
+  primaryBright: '#C9BDB0',
   primaryDark: '#7A6F66',
   primaryMuted: 'rgba(162, 150, 139, 0.16)',
+  /** Línea fina dorada translúcida para bordes premium. */
+  hairline: 'rgba(162, 150, 139, 0.35)',
+  hairlineFaint: 'rgba(162, 150, 139, 0.18)',
   onPrimary: '#0A0A0A',
   accent: '#FFFFFF',
   danger: '#C4433B',
@@ -24,6 +29,31 @@ export const colors = {
   textMuted: '#ADADAD',
   textFaint: '#666666',
   white: '#FFFFFF',
+};
+
+/** Degradados de marca (para expo-linear-gradient). */
+export const gradients = {
+  gold: ['#C9BDB0', '#A2968B', '#8A7E73'] as const,
+  goldSubtle: ['rgba(162,150,139,0.22)', 'rgba(162,150,139,0.06)'] as const,
+  surface: ['#141414', '#0A0A0A'] as const,
+};
+
+/** Sombras suaves reutilizables (web + nativo). */
+export const shadows = {
+  card: {
+    shadowColor: '#000000',
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  glowGold: {
+    shadowColor: '#A2968B',
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
 };
 
 export const spacing = {
