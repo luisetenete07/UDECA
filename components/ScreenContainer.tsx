@@ -1,6 +1,7 @@
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FadeIn } from './FadeIn';
 import { colors, spacing } from '../lib/theme';
 
 interface ScreenContainerProps {
@@ -21,7 +22,9 @@ export function ScreenContainer({
   if (!scroll) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={[styles.content, contentStyle]}>{children}</View>
+        <FadeIn style={{ flex: 1 }}>
+          <View style={[styles.content, contentStyle]}>{children}</View>
+        </FadeIn>
       </SafeAreaView>
     );
   }
@@ -41,7 +44,7 @@ export function ScreenContainer({
           ) : undefined
         }
       >
-        {children}
+        <FadeIn>{children}</FadeIn>
       </ScrollView>
     </SafeAreaView>
   );

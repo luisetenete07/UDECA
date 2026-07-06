@@ -1,5 +1,7 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
+import Head from 'expo-router/head';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -27,6 +29,11 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      {Platform.OS === 'web' ? (
+        <Head>
+          <title>UDECA — Universidad de Calistenia</title>
+        </Head>
+      ) : null}
       <SafeAreaProvider>
         <AuthProvider>
           <StatusBar style="light" />

@@ -5,8 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { Confetti } from '../../components/Confetti';
+import { FadeIn, PopIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { ProgressBar } from '../../components/ProgressBar';
 import { RestTimer } from '../../components/RestTimer';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
@@ -204,15 +207,20 @@ export default function WorkoutScreen() {
   if (summary) {
     return (
       <ScreenContainer contentStyle={styles.summaryContent}>
-        <View style={styles.summaryBadge}>
-          <Ionicons name="checkmark" size={44} color={colors.onPrimary} />
-        </View>
-        <Text style={styles.summaryTitle}>Sesión completada</Text>
-        <Text style={styles.summarySubtitle}>
-          {routine.name} · {day?.name}
-        </Text>
+        <Confetti />
+        <PopIn style={{ alignSelf: 'center' }}>
+          <View style={styles.summaryBadge}>
+            <Ionicons name="checkmark" size={44} color={colors.onPrimary} />
+          </View>
+        </PopIn>
+        <FadeIn delay={150}>
+          <Text style={styles.summaryTitle}>Sesión completada</Text>
+          <Text style={styles.summarySubtitle}>
+            {routine.name} · {day?.name}
+          </Text>
+        </FadeIn>
 
-        <View style={styles.summaryTiles}>
+        <FadeIn delay={300} style={styles.summaryTiles}>
           {summary.durationMin > 0 ? (
             <StatTile icon="time" value={`${summary.durationMin} min`} label="Duración" />
           ) : null}
@@ -221,9 +229,10 @@ export default function WorkoutScreen() {
           {summary.volumeKg > 0 ? (
             <StatTile icon="barbell" value={`${summary.volumeKg} kg`} label="Volumen" />
           ) : null}
-        </View>
+        </FadeIn>
 
         {summary.prs.length > 0 ? (
+          <FadeIn delay={450}>
           <Card accent style={styles.prCard}>
             <View style={styles.prHeader}>
               <Ionicons name="trophy" size={18} color={colors.primary} />
@@ -238,6 +247,7 @@ export default function WorkoutScreen() {
               </View>
             ))}
           </Card>
+          </FadeIn>
         ) : null}
 
         {summary.streak > 1 ? (
@@ -289,8 +299,8 @@ export default function WorkoutScreen() {
 
       {totalSets > 0 ? (
         <View style={styles.progressWrap}>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${Math.max(progress * 100, 1)}%` }]} />
+          <View style={{ flex: 1 }}>
+            <ProgressBar progress={progress} height={6} />
           </View>
           <Text style={styles.progressText}>
             {doneSets}/{totalSets} series

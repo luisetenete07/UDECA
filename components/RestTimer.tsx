@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
@@ -19,6 +19,17 @@ export function RestTimer({ seconds, onDone }: RestTimerProps) {
   const total = useRef(seconds);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
+  const barAnim = useRef(new Animated.Value(1)).current;
+
+  // Barra fluida: acompaña la cuenta atrás sin saltos por segundo.
+  useEffect(() => {
+    Animated.timing(barAnim, {
+      toValue: total.current > 0 ? Math.max(remaining - 1, 0) / total.current : 0,
+      duration: 1000,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    }).start();
+  }, [remaining, barAnim]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -45,7 +56,6 @@ export function RestTimer({ seconds, onDone }: RestTimerProps) {
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
-  const progress = total.current > 0 ? remaining / total.current : 0;
 
   return (
     <View style={styles.container}>
@@ -63,7 +73,17 @@ export function RestTimer({ seconds, onDone }: RestTimerProps) {
         </Pressable>
       </View>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.max(progress * 100, 2)}%` }]} />
+        <Animated.View
+          style={[
+            styles.fill,
+            {
+              width: barAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['2%', '100%'],
+              }),
+            },
+          ]}
+        />
       </View>
     </View>
   );

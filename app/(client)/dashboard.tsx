@@ -6,6 +6,7 @@ import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
 import { CheckInCard } from '../../components/CheckInCard';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { useAuth } from '../../lib/auth-context';
@@ -21,6 +22,7 @@ import {
 } from '../../lib/firestore/habits';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { quoteOfTheDay } from '../../lib/quotes';
 import { currentStreak, sessionsThisWeek as weekSessions } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
@@ -144,6 +146,11 @@ export default function ClientDashboard() {
         </Pressable>
       </View>
 
+      <View style={styles.quoteWrap}>
+        <View style={styles.quoteRule} />
+        <Text style={styles.quoteText}>{quoteOfTheDay()}</Text>
+      </View>
+
       {showWeightReminder ? (
         <Pressable onPress={() => router.push('/(client)/progress')}>
           <View style={styles.reminderBanner}>
@@ -254,8 +261,8 @@ export default function ClientDashboard() {
               </Text>
               <Text style={styles.progressPct}>{Math.round(weekProgress * 100)}%</Text>
             </View>
-            <View style={styles.track}>
-              <View style={[styles.fill, { width: `${weekProgress * 100}%` }]} />
+            <View style={{ marginBottom: spacing.sm }}>
+              <ProgressBar progress={weekProgress} />
             </View>
             <Text style={styles.mutedText}>
               {sessions >= targetSessions
@@ -296,6 +303,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },
+  quoteWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingRight: spacing.md,
+  },
+  quoteRule: { width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: colors.primary },
+  quoteText: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    flex: 1,
+    lineHeight: 21,
+  },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   nextCard: { marginBottom: spacing.md },
   nextHeader: {
