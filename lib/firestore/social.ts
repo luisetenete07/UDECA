@@ -1,5 +1,6 @@
 import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
+import { getActiveChallenge } from './challenges';
 import { currentStreak, sessionsThisWeek } from '../stats';
 import type { SocialStats, UserProfile, WorkoutLog } from '../types';
 
@@ -11,6 +12,20 @@ const collectionRef = () => collection(db, 'socialStats');
  */
 export async function syncMySocialStats(profile: UserProfile, workoutLogs: WorkoutLog[]) {
   if (!profile.trainerId) return;
+
+  // Sesiones dentro del periodo del reto activo del grupo (si lo hay).
+  let challengeSessions: number | undefined;
+  try {
+    const challenge = await getActiveChallenge(profile.trainerId);
+    if (challenge) {
+      challengeSessions = workoutLogs.filter(
+        (l) => l.date >= challenge.startDate && l.date <= challenge.endDate
+      ).length;
+    }
+  } catch {
+    // El ranking del reto es secundario: no bloquea la sincronización.
+  }
+
   const stats: SocialStats = {
     uid: profile.uid,
     trainerId: profile.trainerId,
@@ -20,6 +35,7 @@ export async function syncMySocialStats(profile: UserProfile, workoutLogs: Worko
     currentStreak: currentStreak(workoutLogs),
     sessionsThisWeek: sessionsThisWeek(workoutLogs),
     totalWorkouts: workoutLogs.length,
+    challengeSessions,
     updatedAt: Date.now(),
   };
   // Firestore rechaza campos `undefined`; los omitimos.

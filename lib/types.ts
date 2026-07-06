@@ -207,6 +207,8 @@ export interface SocialStats {
   currentStreak: number;
   sessionsThisWeek: number;
   totalWorkouts: number;
+  /** Sesiones dentro del periodo del reto activo (para el ranking del reto). */
+  challengeSessions?: number;
   updatedAt: number;
 }
 
@@ -236,6 +238,47 @@ export const CHECKIN_FIELDS: { key: 'energy' | 'sleep' | 'adherence' | 'soreness
   { key: 'adherence', label: 'Dieta y adherencia' },
   { key: 'soreness', label: 'Sensaciones físicas' },
 ];
+
+/** Anuncio del entrenador para todo su grupo (tablón, no chat). */
+export interface Announcement {
+  id: string;
+  trainerId: string;
+  title: string;
+  body: string;
+  createdAt: number;
+}
+
+/** Hábito diario asignado por el entrenador a un alumno. */
+export interface Habit {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  name: string;
+  createdAt: number;
+}
+
+/** Registro de un hábito cumplido en un día concreto (medianoche local). */
+export interface HabitLog {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  habitId: string;
+  /** Día al que corresponde (timestamp a medianoche). */
+  day: number;
+  createdAt: number;
+}
+
+/** Reto del grupo: cuenta sesiones de entrenamiento dentro del periodo. */
+export interface Challenge {
+  id: string;
+  trainerId: string;
+  title: string;
+  description?: string;
+  startDate: number;
+  endDate: number;
+  active: boolean;
+  createdAt: number;
+}
 
 export interface Lesson {
   id: string;

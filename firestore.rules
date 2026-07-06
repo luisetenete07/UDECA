@@ -107,6 +107,55 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Anuncios del entrenador: los gestiona él; los leen sus alumnos.
+    match /announcements/{announcementId} {
+      allow read: if request.auth != null
+        && (
+          resource.data.trainerId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
+            == resource.data.trainerId
+        );
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
+    // Hábitos diarios asignados por el entrenador a un alumno.
+    match /habits/{habitId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
+    // Registros diarios de hábitos: los crea y borra el propio alumno.
+    match /habitLogs/{logId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.data.clientId == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Retos del grupo: los gestiona el entrenador; los leen sus alumnos.
+    match /challenges/{challengeId} {
+      allow read: if request.auth != null
+        && (
+          resource.data.trainerId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
+            == resource.data.trainerId
+        );
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
     // Check-ins semanales del alumno: los crea el propio alumno y los lee
     // también su entrenador. No se editan ni borran (registro histórico).
     match /checkIns/{checkInId} {

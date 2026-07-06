@@ -10,9 +10,16 @@ import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
+import { TextField } from '../../../../components/TextField';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getCheckInsForClient } from '../../../../lib/firestore/checkins';
+import {
+  createHabit,
+  deleteHabit,
+  getHabitLogsForClient,
+  getHabitsForClient,
+} from '../../../../lib/firestore/habits';
 import { getMeasurementsForClient } from '../../../../lib/firestore/measurements';
 import { getActiveNutritionPlanForClient } from '../../../../lib/firestore/nutrition';
 import { getProgressPhotosForClient } from '../../../../lib/firestore/progressPhotos';
@@ -31,6 +38,8 @@ import {
   type NutritionPlan,
   type ProgressPhoto,
   type Routine,
+  type Habit,
+  type HabitLog,
   type UserProfile,
   type WeeklyCheckIn,
   type WeightLog,
@@ -48,6 +57,10 @@ export default function ClientDetailScreen() {
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [checkIns, setCheckIns] = useState<WeeklyCheckIn[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
+  const [newHabit, setNewHabit] = useState('');
+  const [addingHabit, setAddingHabit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generatingReport, setGeneratingReport] = useState(false);
 
@@ -56,7 +69,7 @@ export default function ClientDetailScreen() {
       if (!id) return;
       let cancelled = false;
       (async () => {
-        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData] =
+        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData, habitData, habitLogData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id),
@@ -66,6 +79,8 @@ export default function ClientDetailScreen() {
             getActiveNutritionPlanForClient(id),
             getProgressPhotosForClient(id),
             getCheckInsForClient(id),
+            getHabitsForClient(id),
+            getHabitLogsForClient(id),
           ]);
         if (cancelled) return;
         setClient(clientData);
@@ -76,6 +91,8 @@ export default function ClientDetailScreen() {
         setNutritionPlan(planData);
         setPhotos(photoData);
         setCheckIns(checkInData);
+        setHabits(habitData);
+        setHabitLogs(habitLogData);
         setLoading(false);
       })();
       return () => {
@@ -83,6 +100,25 @@ export default function ClientDetailScreen() {
       };
     }, [id])
   );
+
+  const handleAddHabit = async () => {
+    if (!id || !client) return;
+    const name = newHabit.trim();
+    if (!name) return;
+    setAddingHabit(true);
+    try {
+      await createHabit({ trainerId: client.trainerId ?? '', clientId: id, name });
+      setNewHabit('');
+      setHabits(await getHabitsForClient(id));
+    } finally {
+      setAddingHabit(false);
+    }
+  };
+
+  const handleDeleteHabit = async (habitId: string) => {
+    setHabits((prev) => prev.filter((h) => h.id !== habitId));
+    await deleteHabit(habitId);
+  };
 
   const handleSetStatus = async (status: ClientStatus) => {
     if (!id || !client) return;
@@ -254,6 +290,42 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Hábitos diarios</Text>
+        <Text style={styles.mutedText}>
+          Asigna hábitos que el alumno marcará cada día desde su inicio.
+        </Text>
+        {habits.map((h) => {
+          const weekCount = habitLogs.filter((l) => l.habitId === h.id).length;
+          return (
+            <View key={h.id} style={styles.habitManageRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.logTitle}>{h.name}</Text>
+                <Text style={styles.logDate}>{weekCount}/7 días esta semana</Text>
+              </View>
+              <Pressable onPress={() => handleDeleteHabit(h.id)} hitSlop={6}>
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
+              </Pressable>
+            </View>
+          );
+        })}
+        <View style={styles.habitAddRow}>
+          <TextField
+            placeholder="Ej: Dormir 8 horas"
+            value={newHabit}
+            onChangeText={setNewHabit}
+            style={{ flex: 1, marginBottom: 0 }}
+          />
+          <Button
+            title="Añadir"
+            variant="secondary"
+            onPress={handleAddHabit}
+            loading={addingHabit}
+            disabled={!newHabit.trim()}
+          />
+        </View>
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Check-ins semanales</Text>
         {checkIns.length === 0 ? (
           <Text style={styles.mutedText}>Todavía no ha enviado ningún check-in.</Text>
@@ -350,6 +422,21 @@ const styles = StyleSheet.create({
   routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
   routineMeta: { ...typography.small, color: colors.textMuted },
   mutedText: { ...typography.small, color: colors.textFaint },
+  habitManageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    marginTop: spacing.sm,
+  },
+  habitAddRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
   checkInRow: {
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
