@@ -8,7 +8,18 @@ acceda a su plan personalizado.
 Construida con **Expo (React Native + React Native Web)** y **Firebase**
 (autenticación + Firestore).
 
-## Estado del proyecto — Fase 1, Fase 2 y Fase 3
+## Producción
+
+- **Web/PWA en vivo**: https://udeca.luistenafit.com (dominio propio con
+  HTTPS; instalable en el móvil desde "Añadir a pantalla de inicio").
+- **Despliegue automático**: cada push a la rama de desarrollo compila la
+  web y la publica en GitHub Pages vía `.github/workflows/deploy.yml`.
+  No hay despliegues manuales.
+- **Offline**: un service worker (`public/sw.js`) cachea la aplicación
+  para carga instantánea y uso sin conexión (los datos de Firebase
+  siempre van a red).
+
+## Estado del proyecto
 
 Implementado hasta ahora:
 
@@ -58,6 +69,37 @@ Implementado hasta ahora:
   push), y aviso automático al cliente en su panel si lleva más de una
   semana sin registrar su peso.
 - **Mejoras de diseño**: feedback háptico en los botones (iOS/Android).
+
+**Fase 4 — Identidad UDECA y experiencia élite**
+- **Rebranding UDECA**: negro + oro (#A2968B), tipografías Cinzel/Inter,
+  logotipos reales, degradados oro, halos y tarjetas con filo dorado.
+- **Perfil de alumno enriquecido**: foto de perfil (base64 en Firestore),
+  bio, nivel, peso objetivo, logros/insignias y recordatorio diario de
+  entrenamiento configurable.
+- **Cursos en vídeo**: cursos → secciones → lecciones, privados y solo
+  visibles para alumnos del entrenador cuando están publicados;
+  reproductor sin descarga.
+- **Fotos de progreso**: frente/perfil/espalda, visibles solo para el
+  alumno y su entrenador.
+- **Entreno inmersivo**: barra de progreso de sesión, ejercicio actual
+  destacado, cronómetro de descanso entre series (+30s/saltar),
+  detección de récords personales y pantalla resumen post-entreno
+  (duración, series, reps, volumen, PRs, racha).
+- **Planificación semanal**: cada día de rutina puede fijarse a un día de
+  la semana; el alumno ve "Hoy toca"/descanso y el día preseleccionado.
+- **Editor de rutinas pro**: descanso y notas por ejercicio, superseries
+  (sin descanso entre encadenados), reordenar y copiar la rutina de otro
+  alumno.
+- **Check-in semanal**: energía/sueño/adherencia/sensaciones (1-5) + nota;
+  el entrenador ve el histórico en la ficha.
+- **Hábitos diarios**: el entrenador los asigna; el alumno los marca cada
+  día desde su inicio.
+- **Anuncios del coach**: tablón con push a todos los alumnos.
+- **Retos del grupo**: un reto activo con ranking de sesiones en Social.
+- **Estadísticas avanzadas**: mapa de constancia de 12 semanas, volumen
+  semanal y top de ejercicios más entrenados.
+- **Estado del alumno** (activo/pausa/inactivo) gestionado por el
+  entrenador.
 
 ## 1. Requisitos
 
@@ -176,6 +218,13 @@ firestore.rules            Reglas de seguridad de Firestore
 | `nutritionPlans`     | Planes nutricionales asignados a cada cliente                    |
 | `mealLogs`           | Comidas registradas por cada cliente                              |
 | `socialStats`         | Métricas públicas por miembro para el ranking social (no sensibles) |
+| `courses`             | Cursos en vídeo (secciones y lecciones); publicados = visibles para alumnos |
+| `progressPhotos`      | Fotos de progreso (frente/perfil/espalda), privadas alumno+entrenador |
+| `checkIns`            | Check-ins semanales del alumno (energía, sueño, adherencia, sensaciones) |
+| `announcements`       | Anuncios del entrenador para su grupo                            |
+| `habits`              | Hábitos diarios asignados por el entrenador a cada alumno         |
+| `habitLogs`           | Registro diario de hábitos cumplidos (creado por el alumno)       |
+| `challenges`          | Retos del grupo (uno activo por entrenador; ranking en Social)    |
 
 ## 9. Añadir el logo real (icono, splash y favicon)
 
