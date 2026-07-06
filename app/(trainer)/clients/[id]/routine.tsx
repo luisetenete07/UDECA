@@ -15,6 +15,7 @@ import {
   setActiveRoutine,
   updateRoutine,
 } from '../../../../lib/firestore/routines';
+import { getClientsForTrainer } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
@@ -22,6 +23,7 @@ import {
   type Exercise,
   type RoutineDay,
   type RoutineExercise,
+  type UserProfile,
 } from '../../../../lib/types';
 
 function uid() {
@@ -40,6 +42,9 @@ export default function RoutineEditorScreen() {
   const [days, setDays] = useState<RoutineDay[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [pickerForDay, setPickerForDay] = useState<string | null>(null);
+  const [copyPickerOpen, setCopyPickerOpen] = useState(false);
+  const [otherClients, setOtherClients] = useState<UserProfile[]>([]);
+  const [copying, setCopying] = useState(false);
 
   useEffect(() => {
     if (!clientId || !profile) return;
@@ -110,7 +115,7 @@ export default function RoutineEditorScreen() {
   const updateExerciseField = (
     dayId: string,
     exerciseRowId: string,
-    field: 'sets' | 'reps',
+    field: 'sets' | 'reps' | 'restSeconds' | 'notes',
     value: string
   ) => {
     setDays((prev) =>
@@ -120,13 +125,82 @@ export default function RoutineEditorScreen() {
               ...d,
               exercises: d.exercises.map((e) =>
                 e.id === exerciseRowId
-                  ? { ...e, [field]: field === 'sets' ? Number(value) || 0 : value }
+                  ? {
+                      ...e,
+                      [field]:
+                        field === 'sets' || field === 'restSeconds'
+                          ? Number(value) || 0
+                          : value,
+                    }
                   : e
               ),
             }
           : d
       )
     );
+  };
+
+  // Encadena o desencadena un ejercicio en superserie con el anterior.
+  const toggleSuperset = (dayId: string, exerciseRowId: string) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) =>
+                e.id === exerciseRowId
+                  ? { ...e, supersetWithPrevious: !e.supersetWithPrevious }
+                  : e
+              ),
+            }
+          : d
+      )
+    );
+  };
+
+  // Mueve un ejercicio una posición arriba o abajo dentro de su día.
+  const moveExercise = (dayId: string, index: number, delta: -1 | 1) => {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.id !== dayId) return d;
+        const target = index + delta;
+        if (target < 0 || target >= d.exercises.length) return d;
+        const list = [...d.exercises];
+        [list[index], list[target]] = [list[target], list[index]];
+        return { ...d, exercises: list };
+      })
+    );
+  };
+
+  // Abre el selector de "copiar rutina de otro alumno".
+  const openCopyPicker = async () => {
+    if (!profile) return;
+    setCopyPickerOpen(true);
+    if (otherClients.length === 0) {
+      const clients = await getClientsForTrainer(profile.uid);
+      setOtherClients(clients.filter((c) => c.uid !== clientId));
+    }
+  };
+
+  // Copia nombre y días (con ids nuevos) de la rutina activa de otro alumno.
+  const copyFromClient = async (otherId: string) => {
+    setCopying(true);
+    try {
+      const source = await getActiveRoutineForClient(otherId);
+      if (source) {
+        setName(`${source.name}`);
+        setDays(
+          source.days.map((d) => ({
+            ...d,
+            id: uid(),
+            exercises: d.exercises.map((e) => ({ ...e, id: uid() })),
+          }))
+        );
+      }
+      setCopyPickerOpen(false);
+    } finally {
+      setCopying(false);
+    }
   };
 
   const handleSave = useCallback(async () => {
@@ -162,6 +236,40 @@ export default function RoutineEditorScreen() {
   return (
     <ScreenContainer>
       <TextField label="Nombre de la rutina" value={name} onChangeText={setName} />
+
+      {copyPickerOpen ? (
+        <Card style={styles.copyCard}>
+          <Text style={styles.copyTitle}>Copiar la rutina activa de...</Text>
+          {otherClients.length === 0 ? (
+            <Text style={styles.mutedText}>Cargando alumnos...</Text>
+          ) : (
+            otherClients.map((c) => (
+              <Pressable
+                key={c.uid}
+                onPress={() => copyFromClient(c.uid)}
+                style={styles.pickerRow}
+                disabled={copying}
+              >
+                <Text style={styles.pickerRowText}>{c.name}</Text>
+                <Ionicons name="copy-outline" size={16} color={colors.primary} />
+              </Pressable>
+            ))
+          )}
+          <Button
+            title="Cancelar"
+            variant="ghost"
+            onPress={() => setCopyPickerOpen(false)}
+            style={{ marginTop: spacing.xs }}
+          />
+        </Card>
+      ) : (
+        <Button
+          title="Copiar rutina de otro alumno"
+          variant="secondary"
+          onPress={openCopyPicker}
+          style={{ marginBottom: spacing.md }}
+        />
+      )}
 
       {days.map((day) => (
         <Card key={day.id} style={styles.dayCard}>
@@ -201,9 +309,41 @@ export default function RoutineEditorScreen() {
             </View>
           </View>
 
-          {day.exercises.map((ex) => (
-            <View key={ex.id} style={styles.exerciseRow}>
-              <Text style={styles.exerciseName}>{ex.name}</Text>
+          {day.exercises.map((ex, exIndex) => (
+            <View
+              key={ex.id}
+              style={[styles.exerciseRow, ex.supersetWithPrevious && styles.exerciseRowLinked]}
+            >
+              {ex.supersetWithPrevious ? (
+                <View style={styles.supersetTag}>
+                  <Ionicons name="link" size={12} color={colors.primaryBright} />
+                  <Text style={styles.supersetTagText}>SUPERSERIE con el anterior</Text>
+                </View>
+              ) : null}
+              <View style={styles.exerciseTitleRow}>
+                <Text style={styles.exerciseName}>{ex.name}</Text>
+                <Pressable
+                  onPress={() => moveExercise(day.id, exIndex, -1)}
+                  style={styles.moveBtn}
+                  hitSlop={4}
+                >
+                  <Ionicons name="chevron-up" size={16} color={colors.textMuted} />
+                </Pressable>
+                <Pressable
+                  onPress={() => moveExercise(day.id, exIndex, 1)}
+                  style={styles.moveBtn}
+                  hitSlop={4}
+                >
+                  <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+                </Pressable>
+                <Pressable
+                  onPress={() => removeExercise(day.id, ex.id)}
+                  style={styles.deleteBtn}
+                  hitSlop={4}
+                >
+                  <Ionicons name="close" size={18} color={colors.danger} />
+                </Pressable>
+              </View>
               <View style={styles.exerciseFields}>
                 <TextField
                   label="Series"
@@ -218,13 +358,36 @@ export default function RoutineEditorScreen() {
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
                   style={styles.smallInput}
                 />
-                <Pressable
-                  onPress={() => removeExercise(day.id, ex.id)}
-                  style={styles.deleteBtn}
-                >
-                  <Ionicons name="close" size={18} color={colors.danger} />
-                </Pressable>
+                <TextField
+                  label="Descanso (s)"
+                  keyboardType="number-pad"
+                  value={ex.restSeconds ? String(ex.restSeconds) : ''}
+                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'restSeconds', v)}
+                  placeholder="90"
+                  style={styles.smallInput}
+                />
               </View>
+              <TextField
+                label="Indicaciones (opcional)"
+                value={ex.notes ?? ''}
+                onChangeText={(v) => updateExerciseField(day.id, ex.id, 'notes', v)}
+                placeholder="Tempo, agarre, técnica..."
+                style={{ marginBottom: 0, marginTop: spacing.xs }}
+              />
+              {exIndex > 0 ? (
+                <Pressable onPress={() => toggleSuperset(day.id, ex.id)} style={styles.linkBtn}>
+                  <Ionicons
+                    name={ex.supersetWithPrevious ? 'unlink' : 'link'}
+                    size={14}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.linkBtnText}>
+                    {ex.supersetWithPrevious
+                      ? 'Quitar superserie'
+                      : 'Superserie con el anterior'}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           ))}
 
@@ -304,10 +467,44 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  exerciseName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: spacing.xs },
+  exerciseName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
+  exerciseRowLinked: {
+    borderLeftWidth: 2,
+    borderLeftColor: colors.hairline,
+    paddingLeft: spacing.sm,
+  },
+  exerciseTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
   exerciseFields: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  smallInput: { width: 80, marginBottom: 0 },
-  deleteBtn: { marginLeft: 'auto', padding: spacing.xs },
+  smallInput: { flex: 1, marginBottom: 0 },
+  moveBtn: { padding: spacing.xs },
+  deleteBtn: { padding: spacing.xs },
+  supersetTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: spacing.xs,
+  },
+  supersetTagText: {
+    fontSize: 10,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 1,
+    color: colors.primaryBright,
+  },
+  linkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  linkBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  copyCard: { marginBottom: spacing.md },
+  copyTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   picker: {
     marginTop: spacing.sm,
     borderWidth: 1,

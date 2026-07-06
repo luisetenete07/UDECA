@@ -72,6 +72,8 @@ export interface RoutineExercise {
   reps: string;
   restSeconds?: number;
   notes?: string;
+  /** true = se hace en superserie encadenado con el ejercicio anterior. */
+  supersetWithPrevious?: boolean;
 }
 
 export interface RoutineDay {

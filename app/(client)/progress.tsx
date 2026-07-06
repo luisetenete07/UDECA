@@ -18,6 +18,9 @@ import {
 } from '../../lib/firestore/progressPhotos';
 import { createWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { pickProgressPhoto } from '../../lib/image';
+import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { topExercises, trainingDays, weeklyActivity } from '../../lib/stats';
+import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   PHOTO_POSES,
@@ -25,9 +28,10 @@ import {
   type PhotoPose,
   type ProgressPhoto,
   type WeightLog,
+  type WorkoutLog,
 } from '../../lib/types';
 
-type Tab = 'weight' | 'measurements' | 'photos';
+type Tab = 'weight' | 'measurements' | 'photos' | 'activity';
 
 export default function ProgressScreen() {
   const { profile } = useAuth();
@@ -35,6 +39,7 @@ export default function ProgressScreen() {
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [weightInput, setWeightInput] = useState('');
@@ -50,14 +55,16 @@ export default function ProgressScreen() {
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [weightData, measurementData, photoData] = await Promise.all([
+    const [weightData, measurementData, photoData, workoutData] = await Promise.all([
       getWeightLogsForClient(profile.uid),
       getMeasurementsForClient(profile.uid),
       getProgressPhotosForClient(profile.uid),
+      getWorkoutLogsForClient(profile.uid),
     ]);
     setWeightLogs(weightData);
     setMeasurements(measurementData);
     setPhotos(photoData);
+    setWorkoutLogs(workoutData);
     setLoading(false);
   }, [profile]);
 
@@ -165,6 +172,11 @@ export default function ProgressScreen() {
           onPress={() => setTab('measurements')}
         />
         <TabButton label="Fotos" active={tab === 'photos'} onPress={() => setTab('photos')} />
+        <TabButton
+          label="Actividad"
+          active={tab === 'activity'}
+          onPress={() => setTab('activity')}
+        />
       </View>
 
       {tab === 'weight' ? (
@@ -278,6 +290,44 @@ export default function ProgressScreen() {
                       .join(' · ')}
                   </Text>
                   <Text style={styles.logDate}>{new Date(m.date).toLocaleDateString('es-ES')}</Text>
+                </View>
+              ))
+            )}
+          </Card>
+        </>
+      ) : tab === 'activity' ? (
+        <>
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Constancia (12 semanas)</Text>
+            <Text style={styles.photoHint}>
+              Cada punto dorado es un día entrenado. Que no se apague la llama.
+            </Text>
+            <ConsistencyMap days={trainingDays(workoutLogs)} />
+          </Card>
+
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Volumen semanal (kg)</Text>
+            <LineChart
+              points={weeklyActivity(workoutLogs).map((w) => ({
+                date: w.weekStart,
+                value: w.volumeKg,
+              }))}
+              unit="kg"
+              emptyMessage="Registra entrenamientos con peso para ver tu volumen semanal."
+            />
+          </Card>
+
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Tus ejercicios más entrenados</Text>
+            {topExercises(workoutLogs).length === 0 ? (
+              <EmptyState title="Todavía no hay entrenamientos registrados" />
+            ) : (
+              topExercises(workoutLogs).map((ex, i) => (
+                <View key={ex.name} style={styles.logRow}>
+                  <Text style={styles.logValue}>
+                    {i + 1}. {ex.name}
+                  </Text>
+                  <Text style={styles.logDate}>{ex.count} sesiones</Text>
                 </View>
               ))
             )}

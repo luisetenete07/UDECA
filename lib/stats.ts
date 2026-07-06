@@ -266,3 +266,47 @@ export function sessionTotals(session: LoggedExercise[]) {
   }
   return { sets, reps, volumeKg: Math.round(volumeKg) };
 }
+
+/** Actividad agregada por semana (últimas `weeks`), para gráficas. */
+export function weeklyActivity(
+  logs: WorkoutLog[],
+  weeks = 8
+): { weekStart: number; sessions: number; volumeKg: number }[] {
+  const WEEK_MS = DAY_MS * 7;
+  const currentWeek = startOfWeek(Date.now());
+  const result = Array.from({ length: weeks }, (_, i) => ({
+    weekStart: currentWeek - (weeks - 1 - i) * WEEK_MS,
+    sessions: 0,
+    volumeKg: 0,
+  }));
+  const index = new Map(result.map((r, i) => [r.weekStart, i]));
+  for (const log of logs) {
+    const i = index.get(startOfWeek(log.date));
+    if (i === undefined) continue;
+    result[i].sessions += 1;
+    result[i].volumeKg += sessionTotals(log.exercises).volumeKg;
+  }
+  return result;
+}
+
+/** Ejercicios más entrenados (por nº de sesiones en que aparecen). */
+export function topExercises(logs: WorkoutLog[], n = 5): { name: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const log of logs) {
+    const seen = new Set<string>();
+    for (const ex of log.exercises) {
+      if (seen.has(ex.exerciseId)) continue;
+      seen.add(ex.exerciseId);
+      counts.set(ex.name, (counts.get(ex.name) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, n);
+}
+
+/** Días (timestamp a medianoche) con al menos un entrenamiento. */
+export function trainingDays(logs: WorkoutLog[]): Set<number> {
+  return new Set(logs.map((l) => startOfDay(l.date)));
+}

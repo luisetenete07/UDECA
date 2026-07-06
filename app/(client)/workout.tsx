@@ -131,9 +131,13 @@ export default function WorkoutScreen() {
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
-      const rest = day?.exercises[exerciseIndex]?.restSeconds || DEFAULT_REST_SECONDS;
-      setRestSeconds(rest);
-      setRestKey((k) => k + 1);
+      // En superserie no hay descanso: se encadena con el siguiente ejercicio.
+      const nextIsLinked = day?.exercises[exerciseIndex + 1]?.supersetWithPrevious === true;
+      if (!nextIsLinked) {
+        const rest = day?.exercises[exerciseIndex]?.restSeconds || DEFAULT_REST_SECONDS;
+        setRestSeconds(rest);
+        setRestKey((k) => k + 1);
+      }
     }
   };
 
@@ -300,6 +304,7 @@ export default function WorkoutScreen() {
 
       {log.map((exercise, exerciseIndex) => {
         const prev = lastPerf[exercise.exerciseId];
+        const planned = day?.exercises[exerciseIndex];
         const isCurrent = exerciseIndex === currentIndex;
         const isDone = exercise.sets.length > 0 && exercise.sets.every((s) => s.completed);
         return (
@@ -308,6 +313,12 @@ export default function WorkoutScreen() {
             accent={isCurrent}
             style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}
           >
+            {planned?.supersetWithPrevious ? (
+              <View style={styles.supersetRow}>
+                <Ionicons name="link" size={12} color={colors.primaryBright} />
+                <Text style={styles.supersetText}>SUPERSERIE con el anterior — sin descanso</Text>
+              </View>
+            ) : null}
             <View style={styles.exerciseHeader}>
               <Text style={[styles.exerciseName, isCurrent && styles.exerciseNameCurrent]}>
                 {exercise.name}
@@ -320,6 +331,7 @@ export default function WorkoutScreen() {
                 </View>
               ) : null}
             </View>
+            {planned?.notes ? <Text style={styles.coachNotes}>{planned.notes}</Text> : null}
             {prev ? (
               <View style={styles.prevRow}>
                 <Ionicons name="time-outline" size={13} color={colors.primary} />
@@ -431,6 +443,24 @@ const styles = StyleSheet.create({
   },
   prevRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm },
   prevText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
+  supersetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: spacing.xs,
+  },
+  supersetText: {
+    fontSize: 10,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 1,
+    color: colors.primaryBright,
+  },
+  coachNotes: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginBottom: spacing.sm,
+  },
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
