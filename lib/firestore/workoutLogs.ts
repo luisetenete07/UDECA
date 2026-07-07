@@ -9,8 +9,15 @@ export async function getWorkoutLog(id: string): Promise<WorkoutLog | null> {
   return snap.exists() ? ({ id: snap.id, ...snap.data() } as WorkoutLog) : null;
 }
 
-export async function getWorkoutLogsForClient(clientId: string): Promise<WorkoutLog[]> {
-  const q = query(collectionRef(), where('clientId', '==', clientId));
+export async function getWorkoutLogsForClient(
+  clientId: string,
+  trainerId?: string
+): Promise<WorkoutLog[]> {
+  // Las pantallas del entrenador pasan trainerId: las reglas de Firestore
+  // solo autorizan la consulta si esta demuestra el vinculo (filtro).
+  const q = trainerId
+    ? query(collectionRef(), where('clientId', '==', clientId), where('trainerId', '==', trainerId))
+    : query(collectionRef(), where('clientId', '==', clientId));
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as WorkoutLog)

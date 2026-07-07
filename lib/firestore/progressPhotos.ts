@@ -4,8 +4,15 @@ import type { ProgressPhoto } from '../types';
 
 const collectionRef = () => collection(db, 'progressPhotos');
 
-export async function getProgressPhotosForClient(clientId: string): Promise<ProgressPhoto[]> {
-  const q = query(collectionRef(), where('clientId', '==', clientId));
+export async function getProgressPhotosForClient(
+  clientId: string,
+  trainerId?: string
+): Promise<ProgressPhoto[]> {
+  // Las pantallas del entrenador pasan trainerId: las reglas de Firestore
+  // solo autorizan la consulta si esta demuestra el vinculo (filtro).
+  const q = trainerId
+    ? query(collectionRef(), where('clientId', '==', clientId), where('trainerId', '==', trainerId))
+    : query(collectionRef(), where('clientId', '==', clientId));
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as ProgressPhoto)

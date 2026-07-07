@@ -34,7 +34,7 @@ export default function NutritionEditorScreen() {
   useEffect(() => {
     if (!clientId) return;
     (async () => {
-      const existing = await getActiveNutritionPlanForClient(clientId);
+      const existing = await getActiveNutritionPlanForClient(clientId, profile?.uid);
       if (existing) {
         setPlanId(existing.id);
         setName(existing.name);

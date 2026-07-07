@@ -12,8 +12,15 @@ export function todayStart(): number {
   return d.getTime();
 }
 
-export async function getHabitsForClient(clientId: string): Promise<Habit[]> {
-  const q = query(habitsRef(), where('clientId', '==', clientId));
+export async function getHabitsForClient(
+  clientId: string,
+  trainerId?: string
+): Promise<Habit[]> {
+  // Las pantallas del entrenador pasan trainerId: las reglas de Firestore
+  // solo autorizan la consulta si esta demuestra el vinculo (filtro).
+  const q = trainerId
+    ? query(habitsRef(), where('clientId', '==', clientId), where('trainerId', '==', trainerId))
+    : query(habitsRef(), where('clientId', '==', clientId));
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as Habit)
@@ -32,9 +39,12 @@ export async function deleteHabit(id: string) {
 /** Registros de hábitos del cliente desde `since` (por defecto, últimos 7 días). */
 export async function getHabitLogsForClient(
   clientId: string,
+  trainerId?: string,
   since = todayStart() - 6 * 24 * 60 * 60 * 1000
 ): Promise<HabitLog[]> {
-  const q = query(logsRef(), where('clientId', '==', clientId));
+  const q = trainerId
+    ? query(logsRef(), where('clientId', '==', clientId), where('trainerId', '==', trainerId))
+    : query(logsRef(), where('clientId', '==', clientId));
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as HabitLog)

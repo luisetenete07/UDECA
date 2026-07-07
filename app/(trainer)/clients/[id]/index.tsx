@@ -30,6 +30,7 @@ import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { buildClientReportHtml } from '../../../../lib/report';
 import { trainingDays, weeklyActivity } from '../../../../lib/stats';
 import { getUserProfile, updateClientStatus } from '../../../../lib/firestore/users';
+import { useAuth } from '../../../../lib/auth-context';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
   CHECKIN_FIELDS,
@@ -51,6 +52,7 @@ import {
 export default function ClientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { profile } = useAuth();
   const [client, setClient] = useState<UserProfile | null>(null);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
@@ -69,22 +71,23 @@ export default function ClientDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!id) return;
+      if (!id || !profile) return;
       let cancelled = false;
+      const uid = profile.uid;
       (async () => {
         try {
         const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData, habitData, habitLogData] =
           await Promise.all([
             getUserProfile(id),
-            getRoutinesForClient(id),
-            getWeightLogsForClient(id),
-            getWorkoutLogsForClient(id),
-            getMeasurementsForClient(id),
-            getActiveNutritionPlanForClient(id),
-            getProgressPhotosForClient(id),
-            getCheckInsForClient(id),
-            getHabitsForClient(id),
-            getHabitLogsForClient(id),
+            getRoutinesForClient(id, uid),
+            getWeightLogsForClient(id, uid),
+            getWorkoutLogsForClient(id, uid),
+            getMeasurementsForClient(id, uid),
+            getActiveNutritionPlanForClient(id, uid),
+            getProgressPhotosForClient(id, uid),
+            getCheckInsForClient(id, uid),
+            getHabitsForClient(id, uid),
+            getHabitLogsForClient(id, uid),
           ]);
         if (cancelled) return;
         setClient(clientData);
@@ -106,7 +109,7 @@ export default function ClientDetailScreen() {
       return () => {
         cancelled = true;
       };
-    }, [id])
+    }, [id, profile])
   );
 
   const handleAddHabit = async () => {
@@ -117,7 +120,7 @@ export default function ClientDetailScreen() {
     try {
       await createHabit({ trainerId: client.trainerId ?? '', clientId: id, name });
       setNewHabit('');
-      setHabits(await getHabitsForClient(id));
+      setHabits(await getHabitsForClient(id, profile?.uid));
     } finally {
       setAddingHabit(false);
     }

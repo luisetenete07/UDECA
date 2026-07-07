@@ -50,7 +50,7 @@ export default function RoutineEditorScreen() {
     if (!clientId || !profile) return;
     (async () => {
       const [existing, library] = await Promise.all([
-        getActiveRoutineForClient(clientId),
+        getActiveRoutineForClient(clientId, profile.uid),
         getExercisesForTrainer(profile.uid),
       ]);
       setExercises(library);
@@ -186,7 +186,7 @@ export default function RoutineEditorScreen() {
   const copyFromClient = async (otherId: string) => {
     setCopying(true);
     try {
-      const source = await getActiveRoutineForClient(otherId);
+      const source = await getActiveRoutineForClient(otherId, profile?.uid);
       if (source) {
         setName(`${source.name}`);
         setDays(

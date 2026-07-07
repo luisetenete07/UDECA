@@ -14,16 +14,26 @@ import type { Routine } from '../types';
 
 const collectionRef = () => collection(db, 'routines');
 
-export async function getRoutinesForClient(clientId: string): Promise<Routine[]> {
-  const q = query(collectionRef(), where('clientId', '==', clientId));
+export async function getRoutinesForClient(
+  clientId: string,
+  trainerId?: string
+): Promise<Routine[]> {
+  // Las pantallas del entrenador pasan trainerId: las reglas de Firestore
+  // solo autorizan la consulta si esta demuestra el vinculo (filtro).
+  const q = trainerId
+    ? query(collectionRef(), where('clientId', '==', clientId), where('trainerId', '==', trainerId))
+    : query(collectionRef(), where('clientId', '==', clientId));
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as Routine)
     .sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-export async function getActiveRoutineForClient(clientId: string): Promise<Routine | null> {
-  const routines = await getRoutinesForClient(clientId);
+export async function getActiveRoutineForClient(
+  clientId: string,
+  trainerId?: string
+): Promise<Routine | null> {
+  const routines = await getRoutinesForClient(clientId, trainerId);
   return routines.find((r) => r.active) ?? null;
 }
 

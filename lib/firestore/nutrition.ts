@@ -5,8 +5,15 @@ import type { MealLog, NutritionPlan } from '../types';
 const plansRef = () => collection(db, 'nutritionPlans');
 const mealsRef = () => collection(db, 'mealLogs');
 
-export async function getNutritionPlansForClient(clientId: string): Promise<NutritionPlan[]> {
-  const q = query(plansRef(), where('clientId', '==', clientId));
+export async function getNutritionPlansForClient(
+  clientId: string,
+  trainerId?: string
+): Promise<NutritionPlan[]> {
+  // Las pantallas del entrenador pasan trainerId: las reglas de Firestore
+  // solo autorizan la consulta si esta demuestra el vinculo (filtro).
+  const q = trainerId
+    ? query(plansRef(), where('clientId', '==', clientId), where('trainerId', '==', trainerId))
+    : query(plansRef(), where('clientId', '==', clientId));
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as NutritionPlan)
@@ -14,9 +21,10 @@ export async function getNutritionPlansForClient(clientId: string): Promise<Nutr
 }
 
 export async function getActiveNutritionPlanForClient(
-  clientId: string
+  clientId: string,
+  trainerId?: string
 ): Promise<NutritionPlan | null> {
-  const plans = await getNutritionPlansForClient(clientId);
+  const plans = await getNutritionPlansForClient(clientId, trainerId);
   return plans.find((p) => p.active) ?? null;
 }
 

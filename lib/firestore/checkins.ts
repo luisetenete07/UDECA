@@ -5,8 +5,15 @@ import type { WeeklyCheckIn } from '../types';
 
 const collectionRef = () => collection(db, 'checkIns');
 
-export async function getCheckInsForClient(clientId: string): Promise<WeeklyCheckIn[]> {
-  const q = query(collectionRef(), where('clientId', '==', clientId));
+export async function getCheckInsForClient(
+  clientId: string,
+  trainerId?: string
+): Promise<WeeklyCheckIn[]> {
+  // Las pantallas del entrenador pasan trainerId: las reglas de Firestore
+  // solo autorizan la consulta si esta demuestra el vinculo (filtro).
+  const q = trainerId
+    ? query(collectionRef(), where('clientId', '==', clientId), where('trainerId', '==', trainerId))
+    : query(collectionRef(), where('clientId', '==', clientId));
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as WeeklyCheckIn)
