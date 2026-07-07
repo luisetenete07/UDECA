@@ -11,6 +11,7 @@ import { EmptyState } from '../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
+import { ConsistencyMap } from '../../../../components/ConsistencyMap';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getCheckInsForClient } from '../../../../lib/firestore/checkins';
@@ -27,6 +28,7 @@ import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { buildClientReportHtml } from '../../../../lib/report';
+import { trainingDays, weeklyActivity } from '../../../../lib/stats';
 import { getUserProfile, updateClientStatus } from '../../../../lib/firestore/users';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
@@ -323,6 +325,23 @@ export default function ClientDetailScreen() {
             disabled={!newHabit.trim()}
           />
         </View>
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Actividad (12 semanas)</Text>
+        <Text style={styles.mutedText}>Cada punto dorado es un día entrenado.</Text>
+        <View style={{ marginTop: spacing.sm }}>
+          <ConsistencyMap days={trainingDays(workoutLogs)} />
+        </View>
+        <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Volumen semanal (kg)</Text>
+        <LineChart
+          points={weeklyActivity(workoutLogs).map((w) => ({
+            date: w.weekStart,
+            value: w.volumeKg,
+          }))}
+          unit="kg"
+          emptyMessage="Sin entrenamientos con peso registrados todavía."
+        />
       </Card>
 
       <Card style={styles.section}>

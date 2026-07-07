@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { auth } from '../../lib/firebase';
 import { friendlyAuthError } from '../../lib/firebase-errors';
 import { colors, fonts, spacing, typography } from '../../lib/theme';
 
@@ -15,10 +17,27 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setInfo(null);
+    if (!email.trim()) {
+      setError('Escribe tu correo arriba y vuelve a pulsar el enlace.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setInfo('Te hemos enviado un correo para restablecer tu contraseña. Revisa tu bandeja (y el spam).');
+    } catch (e) {
+      setError(friendlyAuthError(e));
+    }
+  };
 
   const handleSubmit = async () => {
     setError(null);
+    setInfo(null);
     if (!email || !password) {
       setError('Introduce tu correo electrónico y contraseña.');
       return;
@@ -61,6 +80,7 @@ export default function LoginScreen() {
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {info ? <Text style={styles.info}>{info}</Text> : null}
 
         <Button
           title="Iniciar sesión"
@@ -68,6 +88,10 @@ export default function LoginScreen() {
           loading={loading}
           style={styles.submit}
         />
+
+        <Pressable onPress={handleForgotPassword} hitSlop={6}>
+          <Text style={styles.forgot}>¿Has olvidado tu contraseña?</Text>
+        </Pressable>
       </Card>
 
       <View style={styles.footer}>
@@ -108,6 +132,19 @@ const styles = StyleSheet.create({
     ...typography.small,
     color: colors.danger,
     marginBottom: spacing.md,
+  },
+  info: {
+    ...typography.small,
+    color: colors.primary,
+    marginBottom: spacing.md,
+    lineHeight: 19,
+  },
+  forgot: {
+    ...typography.small,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    textDecorationLine: 'underline',
   },
   submit: {
     marginTop: spacing.sm,

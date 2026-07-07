@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Button } from '../../components/Button';
@@ -15,6 +15,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
@@ -66,6 +67,7 @@ export default function WorkoutScreen() {
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [log, setLog] = useState<LoggedExercise[]>([]);
   const [lastPerf, setLastPerf] = useState<Record<string, LastPerformance>>({});
+  const [videoByExercise, setVideoByExercise] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [restKey, setRestKey] = useState(0);
@@ -85,6 +87,17 @@ export default function WorkoutScreen() {
         setRoutine(data);
         setHistory(logs);
         setLastPerf(lastPerformanceByExercise(logs));
+        // Vídeos de técnica de la biblioteca del entrenador (no bloquea).
+        if (profile.trainerId) {
+          getExercisesForTrainer(profile.trainerId)
+            .then((library) => {
+              if (cancelled) return;
+              const map: Record<string, string> = {};
+              for (const ex of library) if (ex.videoUrl) map[ex.id] = ex.videoUrl;
+              setVideoByExercise(map);
+            })
+            .catch(() => {});
+        }
         if (data && data.days.length > 0) {
           // Preselecciona el día planificado para hoy; si no hay, el primero.
           const todays = data.days.find((d) => d.weekday === todayWeekday());
@@ -342,6 +355,16 @@ export default function WorkoutScreen() {
               ) : null}
             </View>
             {planned?.notes ? <Text style={styles.coachNotes}>{planned.notes}</Text> : null}
+            {videoByExercise[exercise.exerciseId] ? (
+              <Pressable
+                onPress={() => Linking.openURL(videoByExercise[exercise.exerciseId])}
+                style={styles.videoLink}
+                hitSlop={4}
+              >
+                <Ionicons name="play-circle-outline" size={15} color={colors.primary} />
+                <Text style={styles.videoLinkText}>Ver técnica</Text>
+              </Pressable>
+            ) : null}
             {prev ? (
               <View style={styles.prevRow}>
                 <Ionicons name="time-outline" size={13} color={colors.primary} />
@@ -470,6 +493,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontStyle: 'italic',
     marginBottom: spacing.sm,
+  },
+  videoLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  videoLinkText: {
+    ...typography.small,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+    textDecorationLine: 'underline',
   },
   setRow: {
     flexDirection: 'row',
