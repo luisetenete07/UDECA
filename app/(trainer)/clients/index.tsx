@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../components/Avatar';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
+import { ErrorState } from '../../../components/ErrorState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
@@ -20,13 +21,20 @@ export default function ClientsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const data = await getClientsForTrainer(profile.uid);
-    setClients(data);
-    setLoading(false);
-    setRefreshing(false);
+    try {
+      setError(null);
+      const data = await getClientsForTrainer(profile.uid);
+      setClients(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [profile]);
 
   useFocusEffect(
@@ -42,8 +50,24 @@ export default function ClientsScreen() {
 
   if (loading) return <LoadingScreen />;
 
+  if (error) {
+    return (
+      <ScreenContainer>
+        <Text style={styles.title}>Tus clientes</Text>
+        <ErrorState
+          title="No se pudo cargar la lista"
+          subtitle={error}
+          onRetry={() => {
+            setLoading(true);
+            load();
+          }}
+        />
+      </ScreenContainer>
+    );
+  }
+
   const filtered = clients.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase().trim())
+    (c.name ?? '').toLowerCase().includes(search.toLowerCase().trim())
   );
 
   return (

@@ -24,7 +24,8 @@ export async function getClientsForTrainer(trainerId: string): Promise<UserProfi
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => d.data() as UserProfile)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    // Tolerante a documentos editados a mano sin algún campo.
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
 }
 
 export async function updateClientGoal(clientId: string, goal: string) {

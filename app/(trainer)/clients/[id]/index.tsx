@@ -64,6 +64,7 @@ export default function ClientDetailScreen() {
   const [newHabit, setNewHabit] = useState('');
   const [addingHabit, setAddingHabit] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
 
   useFocusEffect(
@@ -71,6 +72,7 @@ export default function ClientDetailScreen() {
       if (!id) return;
       let cancelled = false;
       (async () => {
+        try {
         const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData, habitData, habitLogData] =
           await Promise.all([
             getUserProfile(id),
@@ -95,7 +97,11 @@ export default function ClientDetailScreen() {
         setCheckIns(checkInData);
         setHabits(habitData);
         setHabitLogs(habitLogData);
-        setLoading(false);
+        } catch (e) {
+          if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
       })();
       return () => {
         cancelled = true;
@@ -129,6 +135,13 @@ export default function ClientDetailScreen() {
   };
 
   if (loading) return <LoadingScreen />;
+  if (loadError) {
+    return (
+      <ScreenContainer>
+        <EmptyState title="No se pudo cargar el cliente" subtitle={loadError} />
+      </ScreenContainer>
+    );
+  }
   if (!client) return <EmptyState title="Cliente no encontrado" />;
 
   const activeRoutine = routines.find((r) => r.active);

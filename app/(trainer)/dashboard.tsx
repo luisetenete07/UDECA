@@ -41,24 +41,30 @@ export default function TrainerDashboard() {
   const [challengeTitle, setChallengeTitle] = useState('');
   const [challengeWeeks, setChallengeWeeks] = useState('4');
   const [savingChallenge, setSavingChallenge] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       if (!profile) return;
       let cancelled = false;
       (async () => {
-        const [clientData, logData, announcementData, challengeData] = await Promise.all([
-          getClientsForTrainer(profile.uid),
-          getWorkoutLogsForTrainer(profile.uid),
-          getAnnouncementsForTrainer(profile.uid),
-          getActiveChallenge(profile.uid),
-        ]);
-        if (cancelled) return;
-        setClients(clientData);
-        setLogs(logData);
-        setAnnouncements(announcementData);
-        setChallenge(challengeData);
-        setLoading(false);
+        try {
+          const [clientData, logData, announcementData, challengeData] = await Promise.all([
+            getClientsForTrainer(profile.uid),
+            getWorkoutLogsForTrainer(profile.uid),
+            getAnnouncementsForTrainer(profile.uid),
+            getActiveChallenge(profile.uid),
+          ]);
+          if (cancelled) return;
+          setClients(clientData);
+          setLogs(logData);
+          setAnnouncements(announcementData);
+          setChallenge(challengeData);
+        } catch (e) {
+          if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
       })();
       return () => {
         cancelled = true;
@@ -152,6 +158,13 @@ export default function TrainerDashboard() {
     <ScreenContainer>
       <Text style={styles.greeting}>Hola, {profile?.name?.split(' ')[0]}</Text>
       <Text style={styles.subtitle}>Resumen de tu negocio</Text>
+
+      {loadError ? (
+        <Card style={[styles.section, { borderColor: colors.danger }]}>
+          <Text style={[styles.sectionTitle, { color: colors.danger }]}>Error al cargar datos</Text>
+          <Text style={styles.mutedText}>{loadError}</Text>
+        </Card>
+      ) : null}
 
       <View style={styles.statsRow}>
         <StatCard label="Clientes activos" value={String(clients.length)} />
