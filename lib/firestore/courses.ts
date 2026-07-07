@@ -9,6 +9,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { Course } from '../types';
 
@@ -47,12 +48,12 @@ export async function createCourse(
   data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
   const now = Date.now();
-  const ref = await addDoc(collectionRef(), { ...data, createdAt: now, updatedAt: now });
+  const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: now, updatedAt: now }));
   return ref.id;
 }
 
 export async function updateCourse(id: string, data: Partial<Course>) {
-  await updateDoc(doc(db, 'courses', id), { ...data, updatedAt: Date.now() });
+  await updateDoc(doc(db, 'courses', id), stripUndefined({ ...data, updatedAt: Date.now() }));
 }
 
 export async function deleteCourse(id: string) {

@@ -9,6 +9,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { Routine } from '../types';
 
@@ -46,12 +47,12 @@ export async function createRoutine(
   data: Omit<Routine, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
   const now = Date.now();
-  const ref = await addDoc(collectionRef(), { ...data, createdAt: now, updatedAt: now });
+  const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: now, updatedAt: now }));
   return ref.id;
 }
 
 export async function updateRoutine(id: string, data: Partial<Routine>) {
-  await updateDoc(doc(db, 'routines', id), { ...data, updatedAt: Date.now() });
+  await updateDoc(doc(db, 'routines', id), stripUndefined({ ...data, updatedAt: Date.now() }));
 }
 
 export async function deleteRoutine(id: string) {

@@ -9,6 +9,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { Exercise } from '../types';
 
@@ -30,12 +31,12 @@ export async function getExercise(id: string): Promise<Exercise | null> {
 export async function createExercise(
   data: Omit<Exercise, 'id' | 'createdAt'>
 ): Promise<string> {
-  const ref = await addDoc(collectionRef(), { ...data, createdAt: Date.now() });
+  const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
 }
 
 export async function updateExercise(id: string, data: Partial<Exercise>) {
-  await updateDoc(doc(db, 'exercises', id), data);
+  await updateDoc(doc(db, 'exercises', id), stripUndefined(data));
 }
 
 export async function deleteExercise(id: string) {

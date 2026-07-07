@@ -1,4 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { ProgressPhoto } from '../types';
 
@@ -22,7 +23,7 @@ export async function getProgressPhotosForClient(
 export async function createProgressPhoto(
   data: Omit<ProgressPhoto, 'id' | 'createdAt'>
 ): Promise<string> {
-  const ref = await addDoc(collectionRef(), { ...data, createdAt: Date.now() });
+  const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
 }
 

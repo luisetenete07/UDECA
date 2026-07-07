@@ -1,4 +1,5 @@
 import { addDoc, collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { Challenge } from '../types';
 
@@ -17,7 +18,7 @@ export async function getActiveChallenge(trainerId: string): Promise<Challenge |
 export async function createChallenge(
   data: Omit<Challenge, 'id' | 'createdAt' | 'active'>
 ): Promise<string> {
-  const ref = await addDoc(collectionRef(), { ...data, active: true, createdAt: Date.now() });
+  const ref = await addDoc(collectionRef(), stripUndefined({ ...data, active: true, createdAt: Date.now() }));
   return ref.id;
 }
 

@@ -1,4 +1,5 @@
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { UserProfile } from '../types';
 
@@ -34,7 +35,7 @@ export async function updateClientGoal(clientId: string, goal: string) {
 
 /** Actualiza campos editables del propio perfil (foto, nombre, bio, etc.). */
 export async function updateUserProfile(uid: string, data: Partial<UserProfile>) {
-  await setDoc(doc(db, 'users', uid), data, { merge: true });
+  await setDoc(doc(db, 'users', uid), stripUndefined(data), { merge: true });
 }
 
 /** El entrenador cambia el estado (activo/pausa/inactivo) de un cliente suyo. */

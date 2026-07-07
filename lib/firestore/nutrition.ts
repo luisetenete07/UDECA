@@ -1,4 +1,5 @@
 import { addDoc, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { MealLog, NutritionPlan } from '../types';
 
@@ -32,12 +33,12 @@ export async function createNutritionPlan(
   data: Omit<NutritionPlan, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
   const now = Date.now();
-  const ref = await addDoc(plansRef(), { ...data, createdAt: now, updatedAt: now });
+  const ref = await addDoc(plansRef(), stripUndefined({ ...data, createdAt: now, updatedAt: now }));
   return ref.id;
 }
 
 export async function updateNutritionPlan(id: string, data: Partial<NutritionPlan>) {
-  await updateDoc(doc(db, 'nutritionPlans', id), { ...data, updatedAt: Date.now() });
+  await updateDoc(doc(db, 'nutritionPlans', id), stripUndefined({ ...data, updatedAt: Date.now() }));
 }
 
 /** Marca este plan como activo y desactiva los demás planes del cliente. */
@@ -57,6 +58,6 @@ export async function getMealLogsForClient(clientId: string): Promise<MealLog[]>
 }
 
 export async function createMealLog(data: Omit<MealLog, 'id' | 'createdAt'>): Promise<string> {
-  const ref = await addDoc(mealsRef(), { ...data, createdAt: Date.now() });
+  const ref = await addDoc(mealsRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
 }

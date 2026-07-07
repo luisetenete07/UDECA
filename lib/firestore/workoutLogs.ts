@@ -1,4 +1,5 @@
 import { addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { WorkoutLog } from '../types';
 
@@ -35,6 +36,6 @@ export async function getWorkoutLogsForTrainer(trainerId: string): Promise<Worko
 export async function createWorkoutLog(
   data: Omit<WorkoutLog, 'id' | 'createdAt'>
 ): Promise<string> {
-  const ref = await addDoc(collectionRef(), { ...data, createdAt: Date.now() });
+  const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
 }

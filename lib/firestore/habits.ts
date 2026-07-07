@@ -1,4 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { Habit, HabitLog } from '../types';
 
@@ -28,7 +29,7 @@ export async function getHabitsForClient(
 }
 
 export async function createHabit(data: Omit<Habit, 'id' | 'createdAt'>): Promise<string> {
-  const ref = await addDoc(habitsRef(), { ...data, createdAt: Date.now() });
+  const ref = await addDoc(habitsRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
 }
 
@@ -55,7 +56,7 @@ export async function getHabitLogsForClient(
 export async function logHabitToday(
   data: Omit<HabitLog, 'id' | 'createdAt' | 'day'>
 ): Promise<string> {
-  const ref = await addDoc(logsRef(), { ...data, day: todayStart(), createdAt: Date.now() });
+  const ref = await addDoc(logsRef(), stripUndefined({ ...data, day: todayStart(), createdAt: Date.now() }));
   return ref.id;
 }
 

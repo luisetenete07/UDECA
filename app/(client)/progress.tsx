@@ -94,6 +94,8 @@ export default function ProgressScreen() {
       setWeightInput('');
       setNotesInput('');
       await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo guardar. Inténtalo de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -126,6 +128,8 @@ export default function ProgressScreen() {
       setArm('');
       setThigh('');
       await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo guardar. Inténtalo de nuevo.');
     } finally {
       setSaving(false);
     }

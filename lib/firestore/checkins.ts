@@ -1,4 +1,5 @@
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import { startOfWeek } from '../stats';
 import type { WeeklyCheckIn } from '../types';
@@ -23,11 +24,11 @@ export async function getCheckInsForClient(
 export async function createCheckIn(
   data: Omit<WeeklyCheckIn, 'id' | 'createdAt' | 'weekStart'>
 ): Promise<string> {
-  const ref = await addDoc(collectionRef(), {
+  const ref = await addDoc(collectionRef(), stripUndefined({
     ...data,
     weekStart: startOfWeek(Date.now()),
     createdAt: Date.now(),
-  });
+  }));
   return ref.id;
 }
 

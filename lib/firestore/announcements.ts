@@ -1,4 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { Announcement } from '../types';
 
@@ -15,7 +16,7 @@ export async function getAnnouncementsForTrainer(trainerId: string): Promise<Ann
 export async function createAnnouncement(
   data: Omit<Announcement, 'id' | 'createdAt'>
 ): Promise<string> {
-  const ref = await addDoc(collectionRef(), { ...data, createdAt: Date.now() });
+  const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
 }
 

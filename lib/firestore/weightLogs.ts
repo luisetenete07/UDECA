@@ -1,4 +1,5 @@
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { WeightLog } from '../types';
 
@@ -22,6 +23,6 @@ export async function getWeightLogsForClient(
 export async function createWeightLog(
   data: Omit<WeightLog, 'id' | 'createdAt'>
 ): Promise<string> {
-  const ref = await addDoc(collectionRef(), { ...data, createdAt: Date.now() });
+  const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
 }

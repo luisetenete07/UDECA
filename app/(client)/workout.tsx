@@ -69,6 +69,7 @@ export default function WorkoutScreen() {
   const [lastPerf, setLastPerf] = useState<Record<string, LastPerformance>>({});
   const [videoByExercise, setVideoByExercise] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [restKey, setRestKey] = useState(0);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
@@ -166,6 +167,7 @@ export default function WorkoutScreen() {
   const handleSave = async () => {
     if (!profile || !routine || !day) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const durationMin = startedAt.current
         ? Math.max(1, Math.round((Date.now() - startedAt.current) / 60000))
@@ -197,6 +199,8 @@ export default function WorkoutScreen() {
         streak: currentStreak(freshLogs),
       });
       setHistory(freshLogs);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'No se pudo guardar la sesión.');
     } finally {
       setSaving(false);
     }
@@ -407,6 +411,8 @@ export default function WorkoutScreen() {
         );
       })}
 
+      {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
+
       <Button
         title="Marcar sesión como completada"
         onPress={handleSave}
@@ -487,6 +493,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     letterSpacing: 1,
     color: colors.primaryBright,
+  },
+  saveError: {
+    ...typography.small,
+    color: colors.danger,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
   coachNotes: {
     ...typography.small,
