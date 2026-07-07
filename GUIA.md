@@ -80,10 +80,18 @@ y recordatorio diario de entrenamiento.
 
 ## Pendiente / siguientes pasos
 
-1. **Vídeos de los cursos**: las lecciones aceptan una URL de vídeo.
-   Recomendación: Vimeo (plan Starter) con privacidad "solo donde esté
-   incrustado", y pegar la URL del archivo en cada lección. Firebase
-   Storage exigiría plan de pago (Blaze).
+1. **Vídeos de los cursos (Vimeo)** — ya integrado en la app:
+   1. Crea cuenta en vimeo.com (el plan gratuito vale para empezar;
+      Starter da más almacenamiento).
+   2. Sube tu vídeo. En **Privacidad**: "Ocultar de Vimeo" (hide from
+      Vimeo) y en **¿Dónde se puede incrustar?** elige "Solo en sitios
+      específicos" y añade `udeca.luistenafit.com`.
+   3. Copia el **enlace del vídeo** (botón compartir; si es oculto tendrá
+      la forma `vimeo.com/123456789/a1b2c3`).
+   4. En la app: Cursos → tu curso → pega ese enlace en el campo de vídeo
+      de la lección y guarda. El reproductor oficial de Vimeo aparece
+      dentro de la app, y al estar restringido a tu dominio nadie puede
+      ver el vídeo fuera de UDECA.
 2. **Google Play** (opcional): cuenta de desarrollador (25 $ una vez) +
    `npx eas build -p android`. La PWA ya cubre iPhone y Android sin coste.
 3. **Notificaciones push en web instalada**: funcionan en Android/Chrome;

@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { parseVimeoUrl, vimeoEmbedUrl } from '../lib/video';
 import { colors, radius, spacing, typography } from '../lib/theme';
 
 /**
@@ -24,11 +25,49 @@ export function VideoPlayer({ url }: { url?: string }) {
     );
   }
 
+  // Enlaces de Vimeo: se reproducen con el player oficial embebido, que
+  // respeta la privacidad "solo donde esté incrustado" configurada en Vimeo.
+  const vimeo = parseVimeoUrl(url);
+  if (vimeo) {
+    return <VimeoVideo embedUrl={vimeoEmbedUrl(vimeo)} />;
+  }
+
   if (Platform.OS === 'web') {
     return <WebVideo url={url} />;
   }
 
   return <NativeVideo url={url} />;
+}
+
+function VimeoVideo({ embedUrl }: { embedUrl: string }) {
+  if (Platform.OS === 'web') {
+    return React.createElement('iframe', {
+      src: embedUrl,
+      allow: 'autoplay; fullscreen; picture-in-picture',
+      allowFullScreen: true,
+      frameBorder: '0',
+      style: {
+        width: '100%',
+        aspectRatio: '16 / 9',
+        backgroundColor: '#000',
+        borderRadius: radius.md,
+        border: 'none',
+      },
+    });
+  }
+  // Nativo (iOS/Android): player de Vimeo dentro de un WebView.
+  const { WebView } = require('react-native-webview');
+  return (
+    <View style={styles.video}>
+      <WebView
+        source={{ uri: embedUrl }}
+        allowsFullscreenVideo
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        style={{ flex: 1, backgroundColor: '#000', borderRadius: radius.md }}
+      />
+    </View>
+  );
 }
 
 function NativeVideo({ url }: { url: string }) {

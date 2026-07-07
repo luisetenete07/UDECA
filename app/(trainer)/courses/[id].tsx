@@ -203,7 +203,7 @@ export default function CourseEditorScreen() {
               <TextField
                 value={lesson.videoUrl ?? ''}
                 onChangeText={(v) => updateLesson(section.id, lesson.id, 'videoUrl', v)}
-                placeholder="URL del vídeo (puedes dejarlo vacío por ahora)"
+                placeholder="Enlace de Vimeo (ej. vimeo.com/123456789/abc123) o URL .mp4"
                 autoCapitalize="none"
               />
               <TextField
