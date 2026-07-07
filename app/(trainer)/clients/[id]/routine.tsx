@@ -46,6 +46,7 @@ export default function RoutineEditorScreen() {
   const [copyPickerOpen, setCopyPickerOpen] = useState(false);
   const [otherClients, setOtherClients] = useState<UserProfile[]>([]);
   const [copying, setCopying] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!clientId || !profile) return;
@@ -210,7 +211,7 @@ export default function RoutineEditorScreen() {
     try {
       if (routineId) {
         await updateRoutine(routineId, { name, days });
-        await setActiveRoutine(clientId, routineId);
+        await setActiveRoutine(clientId, routineId, profile.uid);
       } else {
         const newId = await createRoutine({
           trainerId: profile.uid,
@@ -219,7 +220,7 @@ export default function RoutineEditorScreen() {
           days,
           active: true,
         });
-        await setActiveRoutine(clientId, newId);
+        await setActiveRoutine(clientId, newId, profile.uid);
       }
       notifyUser(
         clientId,
@@ -228,6 +229,8 @@ export default function RoutineEditorScreen() {
       );
       showToast('Rutina guardada');
       router.back();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'No se pudo guardar la rutina.');
     } finally {
       setSaving(false);
     }
@@ -432,6 +435,7 @@ export default function RoutineEditorScreen() {
 
       <Button title="+ Añadir día" variant="ghost" onPress={addDay} style={styles.addDayBtn} />
 
+      {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
       <Button title="Guardar rutina" onPress={handleSave} loading={saving} style={styles.saveBtn} />
     </ScreenContainer>
   );
@@ -526,5 +530,11 @@ const styles = StyleSheet.create({
   pickerRowMuscle: { ...typography.small, color: colors.textFaint },
   mutedText: { ...typography.small, color: colors.textFaint },
   addDayBtn: { marginBottom: spacing.lg },
+  saveError: {
+    ...typography.small,
+    color: colors.danger,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
   saveBtn: { marginBottom: spacing.xl },
 });

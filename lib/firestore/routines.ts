@@ -60,8 +60,12 @@ export async function deleteRoutine(id: string) {
 }
 
 /** Marca esta rutina como activa y desactiva las demás rutinas del cliente. */
-export async function setActiveRoutine(clientId: string, routineId: string) {
-  const routines = await getRoutinesForClient(clientId);
+export async function setActiveRoutine(
+  clientId: string,
+  routineId: string,
+  trainerId?: string
+) {
+  const routines = await getRoutinesForClient(clientId, trainerId);
   await Promise.all(
     routines.map((r) => updateDoc(doc(db, 'routines', r.id), { active: r.id === routineId }))
   );

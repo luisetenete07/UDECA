@@ -42,8 +42,12 @@ export async function updateNutritionPlan(id: string, data: Partial<NutritionPla
 }
 
 /** Marca este plan como activo y desactiva los demás planes del cliente. */
-export async function setActiveNutritionPlan(clientId: string, planId: string) {
-  const plans = await getNutritionPlansForClient(clientId);
+export async function setActiveNutritionPlan(
+  clientId: string,
+  planId: string,
+  trainerId?: string
+) {
+  const plans = await getNutritionPlansForClient(clientId, trainerId);
   await Promise.all(
     plans.map((p) => updateDoc(doc(db, 'nutritionPlans', p.id), { active: p.id === planId }))
   );

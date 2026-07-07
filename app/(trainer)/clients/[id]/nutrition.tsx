@@ -68,7 +68,7 @@ export default function NutritionEditorScreen() {
       };
       if (planId) {
         await updateNutritionPlan(planId, data);
-        await setActiveNutritionPlan(clientId, planId);
+        await setActiveNutritionPlan(clientId, planId, profile?.uid);
       } else {
         const newId = await createNutritionPlan({
           trainerId: profile.uid,
@@ -76,7 +76,7 @@ export default function NutritionEditorScreen() {
           active: true,
           ...data,
         });
-        await setActiveNutritionPlan(clientId, newId);
+        await setActiveNutritionPlan(clientId, newId, profile?.uid);
       }
       notifyUser(
         clientId,
@@ -84,6 +84,8 @@ export default function NutritionEditorScreen() {
         `Tu entrenador ha actualizado tu plan: ${name}`
       );
       router.back();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo guardar el plan.');
     } finally {
       setSaving(false);
     }
