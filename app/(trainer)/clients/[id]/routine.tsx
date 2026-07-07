@@ -7,6 +7,7 @@ import { Card } from '../../../../components/Card';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
+import { showToast } from '../../../../components/Toast';
 import { useAuth } from '../../../../lib/auth-context';
 import { getExercisesForTrainer } from '../../../../lib/firestore/exercises';
 import {
@@ -225,6 +226,7 @@ export default function RoutineEditorScreen() {
         routineId ? 'Rutina actualizada' : 'Nueva rutina asignada',
         `Tu entrenador ha actualizado tu plan: ${name}`
       );
+      showToast('Rutina guardada');
       router.back();
     } finally {
       setSaving(false);

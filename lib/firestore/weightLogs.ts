@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { WeightLog } from '../types';
@@ -25,4 +25,9 @@ export async function createWeightLog(
 ): Promise<string> {
   const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
+}
+
+/** Borra un registro de peso erróneo (solo el propio alumno). */
+export async function deleteWeightLog(id: string) {
+  await deleteDoc(doc(db, 'weightLogs', id));
 }

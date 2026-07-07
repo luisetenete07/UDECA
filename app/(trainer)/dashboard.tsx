@@ -7,6 +7,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
+import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import {
   createAnnouncement,
@@ -101,6 +102,7 @@ export default function TrainerDashboard() {
       setAnnouncements(await getAnnouncementsForTrainer(profile.uid));
       // Aviso push a todos los alumnos.
       clients.forEach((c) => notifyUser(c.uid, 'Anuncio de tu coach', announceTitle.trim()));
+      showToast('Anuncio publicado');
     } finally {
       setPublishing(false);
     }
@@ -128,6 +130,7 @@ export default function TrainerDashboard() {
       clients.forEach((c) =>
         notifyUser(c.uid, 'Nuevo reto del grupo', challengeTitle.trim())
       );
+      showToast('Reto lanzado');
     } finally {
       setSavingChallenge(false);
     }

@@ -5,6 +5,8 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { TextField } from './TextField';
 import { createCheckIn } from '../lib/firestore/checkins';
+import { notifyUser } from '../lib/notifications';
+import { showToast } from './Toast';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import { CHECKIN_FIELDS, type UserProfile } from '../lib/types';
 
@@ -44,6 +46,12 @@ export function CheckInCard({ profile, onDone }: { profile: UserProfile; onDone:
         ...ratings,
         ...(notes.trim() ? { notes: notes.trim() } : {}),
       });
+      notifyUser(
+        profile.trainerId,
+        'Nuevo check-in semanal',
+        `${profile.name.split(' ')[0]} ha enviado su check-in.`
+      ).catch(() => {});
+      showToast('Check-in enviado');
       onDone();
     } finally {
       setSaving(false);

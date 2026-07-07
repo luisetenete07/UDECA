@@ -11,6 +11,7 @@ import { EmptyState } from '../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
+import { showToast } from '../../../../components/Toast';
 import { ConsistencyMap } from '../../../../components/ConsistencyMap';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
@@ -121,6 +122,7 @@ export default function ClientDetailScreen() {
       await createHabit({ trainerId: client.trainerId ?? '', clientId: id, name });
       setNewHabit('');
       setHabits(await getHabitsForClient(id, profile?.uid));
+      showToast('Hábito añadido');
     } finally {
       setAddingHabit(false);
     }

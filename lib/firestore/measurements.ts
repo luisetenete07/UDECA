@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { BodyMeasurement } from '../types';
@@ -25,4 +25,9 @@ export async function createMeasurement(
 ): Promise<string> {
   const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
+}
+
+/** Borra una medición errónea (solo el propio alumno). */
+export async function deleteMeasurement(id: string) {
+  await deleteDoc(doc(db, 'bodyMeasurements', id));
 }

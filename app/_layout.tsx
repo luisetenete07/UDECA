@@ -14,6 +14,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { ToastHost } from '../components/Toast';
 import { AuthProvider } from '../lib/auth-context';
 import { colors } from '../lib/theme';
 
@@ -37,6 +38,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AuthProvider>
           <StatusBar style="light" />
+          <ToastHost />
           {!fontsLoaded ? (
             <LoadingScreen />
           ) : (

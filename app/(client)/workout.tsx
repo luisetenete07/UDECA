@@ -1,8 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Confetti } from '../../components/Confetti';
@@ -14,11 +24,13 @@ import { RestTimer } from '../../components/RestTimer';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
+import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
+import { notifyUser } from '../../lib/notifications';
 import {
   currentStreak,
   detectNewPRs,
@@ -37,6 +49,18 @@ import {
 } from '../../lib/types';
 
 const DEFAULT_REST_SECONDS = 90;
+// Una sesión a medias caduca a las 12 h: después se descarta sola.
+const DRAFT_TTL_MS = 12 * 60 * 60 * 1000;
+
+interface WorkoutDraft {
+  routineId: string;
+  dayId: string;
+  log: LoggedExercise[];
+  startedAt: number | null;
+  savedAt: number;
+}
+
+const draftKey = (uid: string) => `udeca-workout-draft-${uid}`;
 
 function buildLog(day: RoutineDay): LoggedExercise[] {
   return day.exercises.map((ex) => ({
@@ -73,6 +97,7 @@ export default function WorkoutScreen() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [restKey, setRestKey] = useState(0);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [restored, setRestored] = useState(false);
   const startedAt = useRef<number | null>(null);
 
   useFocusEffect(
@@ -113,17 +138,100 @@ export default function WorkoutScreen() {
   );
 
   useEffect(() => {
-    if (!routine || !selectedDayId) return;
+    if (!routine || !selectedDayId || !profile) return;
     const day = routine.days.find((d) => d.id === selectedDayId);
-    if (day) {
+    if (!day) return;
+    let cancelled = false;
+    (async () => {
+      // Si hay una sesión a medias de este mismo día, se recupera.
+      try {
+        const raw = await AsyncStorage.getItem(draftKey(profile.uid));
+        if (raw) {
+          const draft: WorkoutDraft = JSON.parse(raw);
+          const fresh = Date.now() - draft.savedAt < DRAFT_TTL_MS;
+          if (
+            fresh &&
+            draft.routineId === routine.id &&
+            draft.dayId === selectedDayId &&
+            draft.log.some((ex) => ex.sets.some((st) => st.completed))
+          ) {
+            if (cancelled) return;
+            setLog(draft.log);
+            startedAt.current = draft.startedAt;
+            setRestored(true);
+            setSummary(null);
+            setRestSeconds(null);
+            return;
+          }
+        }
+      } catch {
+        // Borrador ilegible: se ignora y se empieza limpio.
+      }
+      if (cancelled) return;
       setLog(buildLog(day));
+      setRestored(false);
       setSummary(null);
       setRestSeconds(null);
       startedAt.current = null;
-    }
-  }, [routine, selectedDayId]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [routine, selectedDayId, profile]);
+
+  // Guarda el borrador en el dispositivo con cada cambio de la sesión.
+  useEffect(() => {
+    if (!profile || !routine || !selectedDayId) return;
+    const hasProgress = log.some((ex) => ex.sets.some((st) => st.completed));
+    if (!hasProgress) return;
+    const draft: WorkoutDraft = {
+      routineId: routine.id,
+      dayId: selectedDayId,
+      log,
+      startedAt: startedAt.current,
+      savedAt: Date.now(),
+    };
+    AsyncStorage.setItem(draftKey(profile.uid), JSON.stringify(draft)).catch(() => {});
+  }, [log, profile, routine, selectedDayId]);
+
+  const discardDraft = () => {
+    if (!routine || !selectedDayId) return;
+    const day = routine.days.find((d) => d.id === selectedDayId);
+    if (profile) AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+    if (day) setLog(buildLog(day));
+    startedAt.current = null;
+    setRestored(false);
+  };
 
   const day = routine?.days.find((d) => d.id === selectedDayId) ?? null;
+
+  const handleShareSummary = async () => {
+    if (!summary || !routine) return;
+    const parts = [
+      `Sesión completada en UDECA: ${day?.name ?? routine.name}`,
+      summary.durationMin > 0 ? `${summary.durationMin} min` : null,
+      `${summary.sets} series · ${summary.reps} reps`,
+      summary.volumeKg > 0 ? `${summary.volumeKg} kg de volumen` : null,
+      summary.prs.length > 0
+        ? `${summary.prs.length} récord${summary.prs.length > 1 ? 's' : ''} personal${
+            summary.prs.length > 1 ? 'es' : ''
+          }`
+        : null,
+      summary.streak > 1 ? `Racha: ${summary.streak} días` : null,
+    ].filter(Boolean);
+    const message = `${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    try {
+      await Share.share({ message });
+    } catch {
+      // El usuario canceló o el navegador no soporta compartir: copiamos.
+      try {
+        await navigator.clipboard.writeText(message);
+        showToast('Resumen copiado, pégalo donde quieras');
+      } catch {
+        showToast('No se pudo compartir');
+      }
+    }
+  };
 
   const updateSet = (
     exerciseIndex: number,
@@ -188,10 +296,20 @@ export default function WorkoutScreen() {
 
       const freshLogs = await getWorkoutLogsForClient(profile.uid);
       await syncMySocialStats(profile, freshLogs);
+      // Aviso al coach en tiempo real (nunca bloquea el guardado).
+      notifyUser(
+        routine.trainerId,
+        'Sesión completada',
+        `${profile.name.split(' ')[0]} ha terminado ${day.name} (${totals.sets} series${
+          prs.length > 0 ? `, ${prs.length} récord${prs.length > 1 ? 's' : ''}` : ''
+        }).`
+      ).catch(() => {});
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       setRestSeconds(null);
+      if (profile) AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+      setRestored(false);
       setSummary({
         durationMin,
         ...totals,
@@ -275,6 +393,11 @@ export default function WorkoutScreen() {
         ) : null}
 
         <Button
+          title="Compartir mi sesión"
+          onPress={handleShareSummary}
+          style={{ marginTop: spacing.lg }}
+        />
+        <Button
           title="Volver al entrenamiento"
           variant="secondary"
           onPress={() => {
@@ -282,7 +405,7 @@ export default function WorkoutScreen() {
             setSummary(null);
             startedAt.current = null;
           }}
-          style={{ marginTop: spacing.lg }}
+          style={{ marginTop: spacing.sm }}
         />
       </ScreenContainer>
     );
@@ -322,6 +445,16 @@ export default function WorkoutScreen() {
           <Text style={styles.progressText}>
             {doneSets}/{totalSets} series
           </Text>
+        </View>
+      ) : null}
+
+      {restored ? (
+        <View style={styles.restoredBanner}>
+          <Ionicons name="refresh-circle-outline" size={16} color={colors.primary} />
+          <Text style={styles.restoredText}>Sesión anterior recuperada</Text>
+          <Pressable onPress={discardDraft} hitSlop={6}>
+            <Text style={styles.restoredAction}>Empezar de cero</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -493,6 +626,25 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     letterSpacing: 1,
     color: colors.primaryBright,
+  },
+  restoredBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  restoredText: { ...typography.small, color: colors.primaryBright, flex: 1 },
+  restoredAction: {
+    ...typography.small,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+    textDecorationLine: 'underline',
   },
   saveError: {
     ...typography.small,

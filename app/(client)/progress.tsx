@@ -11,12 +11,17 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { useAuth } from '../../lib/auth-context';
-import { createMeasurement, getMeasurementsForClient } from '../../lib/firestore/measurements';
+import { showToast } from '../../components/Toast';
+import {
+  createMeasurement,
+  deleteMeasurement,
+  getMeasurementsForClient,
+} from '../../lib/firestore/measurements';
 import {
   createProgressPhoto,
   getProgressPhotosForClient,
 } from '../../lib/firestore/progressPhotos';
-import { createWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
+import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { pickProgressPhoto } from '../../lib/image';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { topExercises, trainingDays, weeklyActivity } from '../../lib/stats';
@@ -94,6 +99,7 @@ export default function ProgressScreen() {
       setWeightInput('');
       setNotesInput('');
       await load();
+      showToast('Peso guardado');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar. Inténtalo de nuevo.');
     } finally {
@@ -128,11 +134,39 @@ export default function ProgressScreen() {
       setArm('');
       setThigh('');
       await load();
+      showToast('Medidas guardadas');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar. Inténtalo de nuevo.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const confirmDelete = (message: string): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      return Promise.resolve(window.confirm(message));
+    }
+    return new Promise((resolve) => {
+      Alert.alert('Borrar registro', message, [
+        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Borrar', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+  };
+
+  const handleDeleteWeight = async (id: string) => {
+    if (!(await confirmDelete('¿Borrar este registro de peso?'))) return;
+    setWeightLogs((prev) => prev.filter((l) => l.id !== id));
+    await deleteWeightLog(id);
+    showToast('Registro borrado');
+  };
+
+  const handleDeleteMeasurement = async (id: string) => {
+    if (!(await confirmDelete('¿Borrar esta medición?'))) return;
+    setMeasurements((prev) => prev.filter((m) => m.id !== id));
+    await deleteMeasurement(id);
+    showToast('Medición borrada');
   };
 
   const handleAddPhoto = async (pose: PhotoPose) => {
@@ -149,6 +183,7 @@ export default function ProgressScreen() {
           date: Date.now(),
         });
         await load();
+        showToast('Foto subida');
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'No se pudo subir la foto.';
@@ -214,6 +249,9 @@ export default function ProgressScreen() {
                   <Text style={styles.logDate}>
                     {new Date(log.date).toLocaleDateString('es-ES')}
                   </Text>
+                  <Pressable onPress={() => handleDeleteWeight(log.id)} hitSlop={8}>
+                    <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
+                  </Pressable>
                 </View>
               ))
             )}
@@ -294,6 +332,9 @@ export default function ProgressScreen() {
                       .join(' · ')}
                   </Text>
                   <Text style={styles.logDate}>{new Date(m.date).toLocaleDateString('es-ES')}</Text>
+                  <Pressable onPress={() => handleDeleteMeasurement(m.id)} hitSlop={8}>
+                    <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
+                  </Pressable>
                 </View>
               ))
             )}
@@ -428,7 +469,8 @@ const styles = StyleSheet.create({
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
   logRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,

@@ -15,7 +15,13 @@ service cloud.firestore {
     // Perfiles de usuario (entrenadores y clientes).
     match /users/{userId} {
       allow read: if request.auth != null
-        && (request.auth.uid == userId || resource.data.trainerId == request.auth.uid);
+        && (
+          request.auth.uid == userId
+          || resource.data.trainerId == request.auth.uid
+          // El alumno puede leer el perfil de SU entrenador (p. ej. para
+          // enviarle una notificación al completar una sesión).
+          || userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
+        );
       allow create: if request.auth != null && request.auth.uid == userId;
       // El propio usuario edita su perfil; el entrenador solo puede cambiar
       // el campo `status` de sus clientes (nada más).
@@ -65,7 +71,10 @@ service cloud.firestore {
         && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
       allow create: if request.auth != null
         && request.resource.data.clientId == request.auth.uid;
-      allow update, delete: if false;
+      // El alumno puede borrar un registro erróneo suyo; no se editan.
+      allow delete: if request.auth != null
+        && resource.data.clientId == request.auth.uid;
+      allow update: if false;
     }
 
     // Medidas corporales de cada cliente.
@@ -74,7 +83,10 @@ service cloud.firestore {
         && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
       allow create: if request.auth != null
         && request.resource.data.clientId == request.auth.uid;
-      allow update, delete: if false;
+      // El alumno puede borrar una medición errónea suya; no se editan.
+      allow delete: if request.auth != null
+        && resource.data.clientId == request.auth.uid;
+      allow update: if false;
     }
 
     // Planes nutricionales asignados a cada cliente.

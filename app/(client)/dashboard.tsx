@@ -9,6 +9,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
+import { WeekStrip } from '../../components/WeekStrip';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getAnnouncementsForTrainer } from '../../lib/firestore/announcements';
@@ -23,7 +24,7 @@ import {
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { quoteOfTheDay } from '../../lib/quotes';
-import { currentStreak, sessionsThisWeek as weekSessions } from '../../lib/stats';
+import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   todayWeekday,
@@ -45,6 +46,7 @@ export default function ClientDashboard() {
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [needsCheckIn, setNeedsCheckIn] = useState(false);
+  const [hasAnyCheckIn, setHasAnyCheckIn] = useState(true);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
@@ -70,6 +72,7 @@ export default function ClientDashboard() {
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
         setNeedsCheckIn(!hasCheckInThisWeek(checkIns));
+        setHasAnyCheckIn(checkIns.length > 0);
         setAnnouncements(announcementData);
         setHabits(habitData);
         setHabitLogs(habitLogData);
@@ -134,6 +137,16 @@ export default function ClientDashboard() {
   const targetSessions = routine?.days.length ?? 0;
   const weekProgress = targetSessions > 0 ? Math.min(sessions / targetSessions, 1) : 0;
 
+  // Checklist de bienvenida: se oculta cuando está todo completado.
+  const firstSteps = [
+    { key: 'photo', label: 'Sube tu foto de perfil', done: Boolean(profile?.photoURL), go: '/(client)/profile' },
+    { key: 'weight', label: 'Registra tu peso inicial', done: weightLogs.length > 0, go: '/(client)/progress' },
+    { key: 'workout', label: 'Completa tu primer entrenamiento', done: workoutLogs.length > 0, go: '/(client)/workout' },
+    { key: 'checkin', label: 'Envía tu primer check-in', done: hasAnyCheckIn, go: null },
+  ] as const;
+  const showFirstSteps = firstSteps.some((s) => !s.done);
+  const stepsDone = firstSteps.filter((s) => s.done).length;
+
   return (
     <ScreenContainer>
       <View style={styles.header}>
@@ -162,6 +175,38 @@ export default function ClientDashboard() {
             </Text>
           </View>
         </Pressable>
+      ) : null}
+
+      {showFirstSteps ? (
+        <Card accent style={styles.section}>
+          <View style={styles.firstStepsHeader}>
+            <Text style={styles.sectionLabel}>Primeros pasos</Text>
+            <Text style={styles.firstStepsCount}>
+              {stepsDone}/{firstSteps.length}
+            </Text>
+          </View>
+          {firstSteps.map((step) => (
+            <Pressable
+              key={step.key}
+              onPress={() => {
+                if (!step.done && step.go) router.push(step.go);
+              }}
+              style={styles.firstStepRow}
+            >
+              <View style={[styles.stepCheck, step.done && styles.stepCheckDone]}>
+                {step.done ? (
+                  <Ionicons name="checkmark" size={12} color={colors.onPrimary} />
+                ) : null}
+              </View>
+              <Text style={[styles.stepLabel, step.done && styles.stepLabelDone]}>
+                {step.label}
+              </Text>
+              {!step.done && step.go ? (
+                <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
+              ) : null}
+            </Pressable>
+          ))}
+        </Card>
       ) : null}
 
       {announcements.length > 0 ? (
@@ -204,6 +249,8 @@ export default function ClientDashboard() {
           })}
         </Card>
       ) : null}
+
+      <WeekStrip routine={routine} trainedDays={trainingDays(workoutLogs)} />
 
       <View style={styles.statsRow}>
         <StatTile icon="flame" value={String(streak)} label="Racha (días)" highlight={streak > 0} />
@@ -381,4 +428,30 @@ const styles = StyleSheet.create({
   habitCheckDone: { backgroundColor: colors.primary, borderColor: colors.primary },
   habitName: { ...typography.body, color: colors.text },
   habitNameDone: { color: colors.textMuted, textDecorationLine: 'line-through' },
+  firstStepsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  firstStepsCount: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  firstStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  stepCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepCheckDone: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stepLabel: { ...typography.body, color: colors.text, flex: 1 },
+  stepLabelDone: { color: colors.textFaint, textDecorationLine: 'line-through' },
 });
