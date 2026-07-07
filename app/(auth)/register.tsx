@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
@@ -8,7 +9,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { friendlyAuthError } from '../../lib/firebase-errors';
-import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
+import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 import type { UserRole } from '../../lib/types';
 
 export default function RegisterScreen() {
@@ -52,6 +53,11 @@ export default function RegisterScreen() {
 
   return (
     <ScreenContainer contentStyle={styles.content}>
+      <LinearGradient
+        colors={gradients.goldSubtle}
+        style={styles.heroGlow}
+        pointerEvents="none"
+      />
       <View style={styles.header}>
         <Logo compact />
         <Text style={styles.title}>Crea tu cuenta</Text>
@@ -146,6 +152,14 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
+  },
+  heroGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 220,
+    opacity: 0.5,
   },
   header: {
     alignItems: 'center',

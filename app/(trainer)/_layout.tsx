@@ -3,7 +3,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { TabIcon } from '../../components/TabIcon';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { useAuth } from '../../lib/auth-context';
-import { colors } from '../../lib/theme';
+import { tabScreenOptions } from '../../lib/navTheme';
 
 export default function TrainerLayout() {
   const { loading, firebaseUser, profile } = useAuth();
@@ -14,15 +14,7 @@ export default function TrainerLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textFaint,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-        },
-      }}
+      screenOptions={tabScreenOptions}
     >
       <Tabs.Screen
         name="dashboard"

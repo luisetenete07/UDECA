@@ -362,7 +362,11 @@ export default function WorkoutScreen() {
           <StatTile icon="layers" value={`${summary.sets}`} label="Series" />
           <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
           {summary.volumeKg > 0 ? (
-            <StatTile icon="barbell" value={`${summary.volumeKg} kg`} label="Volumen" />
+            <StatTile
+              icon="barbell"
+              value={`${summary.volumeKg.toLocaleString('es-ES')} kg`}
+              label="Volumen"
+            />
           ) : null}
         </FadeIn>
 

@@ -1,5 +1,13 @@
 import React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FadeIn } from './FadeIn';
 import { colors, spacing } from '../lib/theme';
@@ -31,9 +39,15 @@ export function ScreenContainer({
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView
         contentContainerStyle={[styles.content, contentStyle]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
         refreshControl={
           onRefresh ? (
             <RefreshControl
@@ -46,6 +60,7 @@ export function ScreenContainer({
       >
         <FadeIn>{children}</FadeIn>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
