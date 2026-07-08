@@ -94,7 +94,9 @@ export default function RoutineEditorScreen() {
       exerciseId: exercise.id,
       name: exercise.name,
       sets: 3,
-      reps: '10',
+      reps: exercise.measure === 'seconds' ? '30' : '10',
+      measure: exercise.measure ?? 'reps',
+      band: exercise.band ?? false,
     };
     setDays((prev) =>
       prev.map((d) =>
@@ -117,7 +119,7 @@ export default function RoutineEditorScreen() {
   const updateExerciseField = (
     dayId: string,
     exerciseRowId: string,
-    field: 'sets' | 'reps' | 'restSeconds' | 'notes',
+    field: 'sets' | 'reps' | 'restSeconds' | 'notes' | 'rir',
     value: string
   ) => {
     setDays((prev) =>
@@ -130,7 +132,7 @@ export default function RoutineEditorScreen() {
                   ? {
                       ...e,
                       [field]:
-                        field === 'sets' || field === 'restSeconds'
+                        field === 'sets' || field === 'restSeconds' || field === 'rir'
                           ? Number(value) || 0
                           : value,
                     }
@@ -326,7 +328,10 @@ export default function RoutineEditorScreen() {
                 </View>
               ) : null}
               <View style={styles.exerciseTitleRow}>
-                <Text style={styles.exerciseName}>{ex.name}</Text>
+                <Text style={styles.exerciseName}>
+                  {ex.name}
+                  {ex.band ? '  🟡' : ''}
+                </Text>
                 <Pressable
                   onPress={() => moveExercise(day.id, exIndex, -1)}
                   style={styles.moveBtn}
@@ -358,9 +363,17 @@ export default function RoutineEditorScreen() {
                   style={styles.smallInput}
                 />
                 <TextField
-                  label="Reps"
+                  label={ex.measure === 'seconds' ? 'Seg' : 'Reps'}
                   value={ex.reps}
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
+                  style={styles.smallInput}
+                />
+                <TextField
+                  label="RIR"
+                  keyboardType="number-pad"
+                  value={ex.rir !== undefined ? String(ex.rir) : ''}
+                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'rir', v)}
+                  placeholder="2"
                   style={styles.smallInput}
                 />
                 <TextField

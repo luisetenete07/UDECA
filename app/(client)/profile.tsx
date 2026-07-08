@@ -9,6 +9,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
+import { DeleteAccountButton } from '../../components/DeleteAccountButton';
 import { useAuth } from '../../lib/auth-context';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
@@ -255,6 +256,7 @@ export default function ClientProfileScreen() {
       </Card>
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={styles.signOut} />
+      <DeleteAccountButton />
     </ScreenContainer>
   );
 }

@@ -3,11 +3,12 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  deleteUser,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
 import { getTrainerIdForInviteCode, registerTrainerInviteCode } from './firestore/users';
 import { registerForPushNotificationsAsync } from './notifications';
@@ -27,6 +28,7 @@ interface AuthContextValue {
     inviteCode: string
   ) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -127,6 +129,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
   };
 
+  // Borra la cuenta: primero el perfil en Firestore y luego el usuario de
+  // Auth. Si Firebase pide reautenticación reciente, se propaga el error
+  // para que la pantalla pida volver a iniciar sesión.
+  const deleteAccount = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid));
+    } catch {
+      // Si el borrado del perfil falla, seguimos con el de Auth igualmente.
+    }
+    await deleteUser(user);
+    setProfile(null);
+  };
+
   const refreshProfile = async () => {
     if (firebaseUser) {
       await loadProfile(firebaseUser.uid);
@@ -143,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       registerTrainer,
       registerClient,
       signOut,
+      deleteAccount,
       refreshProfile,
     }),
     [firebaseUser, profile, loading]

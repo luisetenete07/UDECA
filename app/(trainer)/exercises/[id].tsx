@@ -12,8 +12,9 @@ import {
   getExercise,
   updateExercise,
 } from '../../../lib/firestore/exercises';
+import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
-import { MUSCLE_GROUPS, type MuscleGroup } from '../../../lib/types';
+import { MUSCLE_GROUPS, type ExerciseMeasure, type MuscleGroup } from '../../../lib/types';
 
 export default function ExerciseEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +28,8 @@ export default function ExerciseEditorScreen() {
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>(MUSCLE_GROUPS[0]);
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
+  const [band, setBand] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,6 +41,8 @@ export default function ExerciseEditorScreen() {
         setMuscleGroup(exercise.muscleGroup);
         setDescription(exercise.description ?? '');
         setVideoUrl(exercise.videoUrl ?? '');
+        setMeasure(exercise.measure ?? 'reps');
+        setBand(exercise.band ?? false);
       }
       setLoading(false);
     })();
@@ -59,6 +64,8 @@ export default function ExerciseEditorScreen() {
           muscleGroup,
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
+          measure,
+          band,
         });
       } else if (id) {
         await updateExercise(id, {
@@ -66,8 +73,11 @@ export default function ExerciseEditorScreen() {
           muscleGroup,
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
+          measure,
+          band,
         });
       }
+      showToast('Ejercicio guardado');
       router.back();
     } finally {
       setSaving(false);
@@ -110,6 +120,36 @@ export default function ExerciseEditorScreen() {
           </Pressable>
         ))}
       </ScrollView>
+
+      <Text style={styles.label}>Se mide en</Text>
+      <View style={styles.segment}>
+        <Pressable
+          onPress={() => setMeasure('reps')}
+          style={[styles.segmentBtn, measure === 'reps' && styles.segmentBtnActive]}
+        >
+          <Text style={[styles.segmentText, measure === 'reps' && styles.segmentTextActive]}>
+            Repeticiones
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setMeasure('seconds')}
+          style={[styles.segmentBtn, measure === 'seconds' && styles.segmentBtnActive]}
+        >
+          <Text style={[styles.segmentText, measure === 'seconds' && styles.segmentTextActive]}>
+            Segundos (isométrico)
+          </Text>
+        </Pressable>
+      </View>
+
+      <Pressable onPress={() => setBand((b) => !b)} style={styles.bandRow}>
+        <View style={[styles.checkbox, band && styles.checkboxOn]}>
+          {band ? <Text style={styles.checkboxTick}>✓</Text> : null}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.bandLabel}>Con goma (banda elástica)</Text>
+          <Text style={styles.bandHint}>Asistencia o resistencia con banda</Text>
+        </View>
+      </Pressable>
 
       <TextField
         label="Descripción / técnica"
@@ -166,5 +206,44 @@ const styles = StyleSheet.create({
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
   chipTextSelected: { color: colors.onPrimary },
   textarea: { height: 100, textAlignVertical: 'top' },
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    padding: spacing.xs,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.xs,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+  },
+  segmentBtnActive: { backgroundColor: colors.primary },
+  segmentText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  segmentTextActive: { color: colors.onPrimary },
+  bandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  checkboxTick: { color: colors.onPrimary, fontSize: 14, fontFamily: fonts.semiBold },
+  bandLabel: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  bandHint: { ...typography.small, color: colors.textMuted },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });

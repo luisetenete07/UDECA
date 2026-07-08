@@ -5,6 +5,7 @@ import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { DeleteAccountButton } from '../../components/DeleteAccountButton';
 import { useAuth } from '../../lib/auth-context';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { pickAvatar } from '../../lib/image';
@@ -85,6 +86,7 @@ export default function TrainerProfileScreen() {
       </Card>
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={{ marginTop: spacing.lg }} />
+      <DeleteAccountButton />
     </ScreenContainer>
   );
 }

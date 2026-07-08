@@ -12,7 +12,6 @@ import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
-import { getAnnouncementsForTrainer } from '../../lib/firestore/announcements';
 import { getCheckInsForClient, hasCheckInThisWeek } from '../../lib/firestore/checkins';
 import {
   getHabitLogsForClient,
@@ -29,7 +28,6 @@ import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   todayWeekday,
   WEEKDAY_NAMES,
-  type Announcement,
   type Habit,
   type HabitLog,
   type Routine,
@@ -47,7 +45,6 @@ export default function ClientDashboard() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [needsCheckIn, setNeedsCheckIn] = useState(false);
   const [hasAnyCheckIn, setHasAnyCheckIn] = useState(true);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,13 +54,12 @@ export default function ClientDashboard() {
       if (!profile) return;
       let cancelled = false;
       (async () => {
-        const [routineData, weightData, workoutData, checkIns, announcementData, habitData, habitLogData] =
+        const [routineData, weightData, workoutData, checkIns, habitData, habitLogData] =
           await Promise.all([
             getActiveRoutineForClient(profile.uid),
             getWeightLogsForClient(profile.uid),
             getWorkoutLogsForClient(profile.uid),
             getCheckInsForClient(profile.uid),
-            profile.trainerId ? getAnnouncementsForTrainer(profile.trainerId) : Promise.resolve([]),
             getHabitsForClient(profile.uid),
             getHabitLogsForClient(profile.uid),
           ]);
@@ -73,7 +69,6 @@ export default function ClientDashboard() {
         setWorkoutLogs(workoutData);
         setNeedsCheckIn(!hasCheckInThisWeek(checkIns));
         setHasAnyCheckIn(checkIns.length > 0);
-        setAnnouncements(announcementData);
         setHabits(habitData);
         setHabitLogs(habitLogData);
         setLoading(false);
@@ -209,23 +204,6 @@ export default function ClientDashboard() {
         </Card>
       ) : null}
 
-      {announcements.length > 0 ? (
-        <Card accent style={styles.section}>
-          <View style={styles.announceHeader}>
-            <Ionicons name="megaphone-outline" size={16} color={colors.primary} />
-            <Text style={styles.sectionLabel}>Anuncios del coach</Text>
-          </View>
-          {announcements.slice(0, 2).map((a) => (
-            <View key={a.id} style={styles.announceRow}>
-              <Text style={styles.announceTitle}>{a.title}</Text>
-              {a.body ? <Text style={styles.announceBody}>{a.body}</Text> : null}
-              <Text style={styles.announceDate}>
-                {new Date(a.createdAt).toLocaleDateString('es-ES')}
-              </Text>
-            </View>
-          ))}
-        </Card>
-      ) : null}
 
       {needsCheckIn && profile ? (
         <CheckInCard profile={profile} onDone={() => setNeedsCheckIn(false)} />
@@ -399,16 +377,6 @@ const styles = StyleSheet.create({
   fill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   goalText: { ...typography.body, color: colors.text, marginTop: spacing.xs },
   mutedText: { ...typography.small, color: colors.textMuted },
-  announceHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  announceRow: {
-    paddingTop: spacing.sm,
-    marginTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  announceTitle: { ...typography.h3, color: colors.text },
-  announceBody: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  announceDate: { ...typography.small, color: colors.textFaint, marginTop: 2, fontSize: 11 },
   habitRow: {
     flexDirection: 'row',
     alignItems: 'center',

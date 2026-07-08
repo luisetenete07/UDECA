@@ -54,6 +54,9 @@ export const MUSCLE_GROUPS = [
 
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 
+/** Cómo se mide el ejercicio: repeticiones o segundos (isométricos). */
+export type ExerciseMeasure = 'reps' | 'seconds';
+
 export interface Exercise {
   id: string;
   trainerId: string;
@@ -61,6 +64,10 @@ export interface Exercise {
   muscleGroup: MuscleGroup;
   description?: string;
   videoUrl?: string;
+  /** 'reps' (por defecto) o 'seconds' para isométricos (planchas, L-sit...). */
+  measure?: ExerciseMeasure;
+  /** true si se ejecuta con goma (banda elástica) de asistencia/resistencia. */
+  band?: boolean;
   createdAt: number;
 }
 
@@ -69,11 +76,18 @@ export interface RoutineExercise {
   exerciseId: string;
   name: string;
   sets: number;
+  /** Objetivo por serie: repeticiones o segundos según `measure`. */
   reps: string;
   restSeconds?: number;
   notes?: string;
   /** true = se hace en superserie encadenado con el ejercicio anterior. */
   supersetWithPrevious?: boolean;
+  /** Copia de la medida del ejercicio al añadirlo ('reps' por defecto). */
+  measure?: ExerciseMeasure;
+  /** Copia del uso de goma del ejercicio al añadirlo. */
+  band?: boolean;
+  /** RIR objetivo (repeticiones en reserva), 0-5. */
+  rir?: number;
 }
 
 export interface RoutineDay {

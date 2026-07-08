@@ -10,11 +10,6 @@ import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import {
-  createAnnouncement,
-  deleteAnnouncement,
-  getAnnouncementsForTrainer,
-} from '../../lib/firestore/announcements';
-import {
   createChallenge,
   endChallenge,
   getActiveChallenge,
@@ -23,7 +18,7 @@ import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { fonts, colors, spacing, typography } from '../../lib/theme';
-import type { Announcement, Challenge, UserProfile, WorkoutLog } from '../../lib/types';
+import type { Challenge, UserProfile, WorkoutLog } from '../../lib/types';
 
 const INACTIVE_DAYS_THRESHOLD = 7;
 
@@ -34,10 +29,6 @@ export default function TrainerDashboard() {
   const [loading, setLoading] = useState(true);
   const [remindersSent, setRemindersSent] = useState<Set<string>>(new Set());
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [announceTitle, setAnnounceTitle] = useState('');
-  const [announceBody, setAnnounceBody] = useState('');
-  const [publishing, setPublishing] = useState(false);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [challengeTitle, setChallengeTitle] = useState('');
   const [challengeWeeks, setChallengeWeeks] = useState('4');
@@ -50,16 +41,14 @@ export default function TrainerDashboard() {
       let cancelled = false;
       (async () => {
         try {
-          const [clientData, logData, announcementData, challengeData] = await Promise.all([
+          const [clientData, logData, challengeData] = await Promise.all([
             getClientsForTrainer(profile.uid),
             getWorkoutLogsForTrainer(profile.uid),
-            getAnnouncementsForTrainer(profile.uid),
             getActiveChallenge(profile.uid),
           ]);
           if (cancelled) return;
           setClients(clientData);
           setLogs(logData);
-          setAnnouncements(announcementData);
           setChallenge(challengeData);
         } catch (e) {
           if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
@@ -87,31 +76,6 @@ export default function TrainerDashboard() {
     if (!last) return true;
     return (now - last) / (1000 * 60 * 60 * 24) > INACTIVE_DAYS_THRESHOLD;
   });
-
-  const handlePublish = async () => {
-    if (!profile || !announceTitle.trim()) return;
-    setPublishing(true);
-    try {
-      await createAnnouncement({
-        trainerId: profile.uid,
-        title: announceTitle.trim(),
-        body: announceBody.trim(),
-      });
-      setAnnounceTitle('');
-      setAnnounceBody('');
-      setAnnouncements(await getAnnouncementsForTrainer(profile.uid));
-      // Aviso push a todos los alumnos.
-      clients.forEach((c) => notifyUser(c.uid, 'Anuncio de tu coach', announceTitle.trim()));
-      showToast('Anuncio publicado');
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-  const handleDeleteAnnouncement = async (id: string) => {
-    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
-    await deleteAnnouncement(id);
-  };
 
   const handleStartChallenge = async () => {
     if (!profile || !challengeTitle.trim()) return;
@@ -174,44 +138,6 @@ export default function TrainerDashboard() {
         <StatCard label="Entrenos (total)" value={String(logs.length)} />
         <StatCard label="Inactivos" value={String(inactiveClients.length)} warn={inactiveClients.length > 0} />
       </View>
-
-      <Card accent style={styles.section}>
-        <Text style={styles.sectionTitle}>Tablón de anuncios</Text>
-        <TextField
-          placeholder="Título del anuncio"
-          value={announceTitle}
-          onChangeText={setAnnounceTitle}
-        />
-        <TextField
-          placeholder="Mensaje (opcional)"
-          value={announceBody}
-          onChangeText={setAnnounceBody}
-          multiline
-        />
-        <Button
-          title="Publicar anuncio"
-          onPress={handlePublish}
-          loading={publishing}
-          disabled={!announceTitle.trim()}
-        />
-        {announcements.slice(0, 3).map((a) => (
-          <View key={a.id} style={styles.announcementRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.logClient}>{a.title}</Text>
-              {a.body ? <Text style={styles.logDetail}>{a.body}</Text> : null}
-              <Text style={styles.announcementDate}>
-                {new Date(a.createdAt).toLocaleDateString('es-ES')}
-              </Text>
-            </View>
-            <Button
-              title="Borrar"
-              variant="ghost"
-              onPress={() => handleDeleteAnnouncement(a.id)}
-              style={styles.reminderBtn}
-            />
-          </View>
-        ))}
-      </Card>
 
       <Card accent style={styles.section}>
         <Text style={styles.sectionTitle}>Reto del grupo</Text>

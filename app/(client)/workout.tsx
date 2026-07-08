@@ -495,6 +495,31 @@ export default function WorkoutScreen() {
                 </View>
               ) : null}
             </View>
+            {planned ? (
+              <View style={styles.metaRow}>
+                <View style={styles.metaChip}>
+                  <Text style={styles.metaChipText}>
+                    {planned.sets} × {planned.reps}
+                    {planned.measure === 'seconds' ? 's' : ''}
+                  </Text>
+                </View>
+                {planned.rir !== undefined && planned.rir !== null ? (
+                  <View style={styles.metaChip}>
+                    <Text style={styles.metaChipText}>RIR {planned.rir}</Text>
+                  </View>
+                ) : null}
+                {planned.restSeconds ? (
+                  <View style={styles.metaChip}>
+                    <Text style={styles.metaChipText}>Descanso {planned.restSeconds}s</Text>
+                  </View>
+                ) : null}
+                {planned.band ? (
+                  <View style={[styles.metaChip, styles.metaChipBand]}>
+                    <Text style={styles.metaChipText}>Con goma</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
             {planned?.notes ? <Text style={styles.coachNotes}>{planned.notes}</Text> : null}
             {videoByExercise[exercise.exerciseId] ? (
               <Pressable
@@ -521,7 +546,7 @@ export default function WorkoutScreen() {
                 <TextField
                   value={set.reps}
                   onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
-                  placeholder="Reps"
+                  placeholder={planned?.measure === 'seconds' ? 'Seg' : 'Reps'}
                   style={styles.setInput}
                 />
                 <TextField
@@ -662,6 +687,17 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: spacing.sm,
   },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
+  metaChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  metaChipBand: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  metaChipText: { ...typography.small, color: colors.primaryBright, fontSize: 11, fontFamily: fonts.semiBold },
   videoLink: {
     flexDirection: 'row',
     alignItems: 'center',
