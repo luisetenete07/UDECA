@@ -25,6 +25,7 @@ import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { quoteOfTheDay } from '../../lib/quotes';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
+import { resolveTodaySession } from '../../lib/schedule';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
   todayWeekday,
@@ -85,13 +86,12 @@ export default function ClientDashboard() {
   const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
   const sessions = weekSessions(workoutLogs);
   const streak = currentStreak(workoutLogs);
-  // Día planificado para hoy (si el entrenador asignó días de la semana);
-  // si no, el primero de la rutina.
-  const todaysDay = routine?.days.find((d) => d.weekday === todayWeekday());
-  const restDay = Boolean(
-    routine && !todaysDay && routine.days.some((d) => d.weekday !== undefined)
-  );
-  const nextDay = todaysDay ?? routine?.days[0];
+  // Qué toca hoy según el modo (semanal o Método REIN TENA por ciclo).
+  const todaySession = resolveTodaySession(routine);
+  const todaysDay = todaySession.day;
+  const restDay = todaySession.isRest;
+  const nextDay = todaySession.day;
+  const isCycle = routine?.schedule === 'cycle';
 
   const lastWeightLog = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
   const daysSinceWeight = lastWeightLog
@@ -183,7 +183,13 @@ export default function ClientDashboard() {
         >
           <View style={{ flex: 1 }}>
             <Text style={styles.todayLabel}>
-              {todaysDay ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}` : 'Tu entrenamiento'}
+              {isCycle
+                ? `REIN TENA · ${todaySession.cycleLabel ?? ''}${
+                    routine?.intensity ? ` · Int. ${routine.intensity}/10` : ''
+                  }`
+                : todaysDay
+                  ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}`
+                  : 'Tu entrenamiento'}
             </Text>
             {routine && restDay ? (
               <>

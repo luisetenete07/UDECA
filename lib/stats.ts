@@ -55,7 +55,15 @@ export function addDays(ts: number, n: number): number {
   return d.getTime();
 }
 
-function startOfDay(ts: number): number {
+/**
+ * Número de días de calendario entre dos fechas (b - a). El round() absorbe
+ * el desfase de ±1h de los cambios de hora, así que es seguro frente a DST.
+ */
+export function dayDiff(a: number, b: number): number {
+  return Math.round((startOfDay(b) - startOfDay(a)) / (1000 * 60 * 60 * 24));
+}
+
+export function startOfDay(ts: number): number {
   const d = new Date(ts);
   d.setHours(0, 0, 0, 0);
   return d.getTime();

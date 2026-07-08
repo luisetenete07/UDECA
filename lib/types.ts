@@ -95,8 +95,18 @@ export interface RoutineDay {
   name: string;
   /** Día de la semana asignado (0=lunes ... 6=domingo). Sin valor = flexible. */
   weekday?: number;
+  /** En el Método REIN TENA (ciclo), marca este día del ciclo como descanso. */
+  isRest?: boolean;
   exercises: RoutineExercise[];
 }
+
+/**
+ * Cómo se programa una rutina:
+ *  - 'weekly': cada día se asigna a un día de la semana (lun/mié/vie...).
+ *  - 'cycle' (Método REIN TENA): los días rotan en un ciclo constante
+ *    (Día 1 → 2 → 3 → ... → repite) independientemente del día de la semana.
+ */
+export type RoutineSchedule = 'weekly' | 'cycle';
 
 export const WEEKDAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const;
 export const WEEKDAY_NAMES = [
@@ -122,6 +132,12 @@ export interface Routine {
   name: string;
   active: boolean;
   days: RoutineDay[];
+  /** Modo de programación ('weekly' por defecto). */
+  schedule?: RoutineSchedule;
+  /** Método REIN TENA: fecha (medianoche) en que el ciclo empieza por el Día 1. */
+  cycleStartDate?: number;
+  /** Método REIN TENA: intensidad 1-10 que personaliza el entrenador. */
+  intensity?: number;
   createdAt: number;
   updatedAt: number;
 }

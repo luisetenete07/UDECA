@@ -24,6 +24,7 @@ import {
   type Exercise,
   type RoutineDay,
   type RoutineExercise,
+  type RoutineSchedule,
   type UserProfile,
 } from '../../../../lib/types';
 
@@ -48,6 +49,13 @@ export default function RoutineEditorScreen() {
   const [copying, setCopying] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState('');
+  const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
+  const [cycleStartDate, setCycleStartDate] = useState<number>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  });
+  const [intensity, setIntensity] = useState(5);
 
   useEffect(() => {
     if (!clientId || !profile) return;
@@ -61,6 +69,9 @@ export default function RoutineEditorScreen() {
         setRoutineId(existing.id);
         setName(existing.name);
         setDays(existing.days);
+        setSchedule(existing.schedule ?? 'weekly');
+        if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
+        if (existing.intensity) setIntensity(existing.intensity);
       } else {
         setDays([{ id: uid(), name: 'Día 1', exercises: [] }]);
       }
@@ -78,6 +89,13 @@ export default function RoutineEditorScreen() {
 
   const updateDayName = (dayId: string, value: string) => {
     setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, name: value } : d)));
+  };
+
+  // Marca/desmarca un día del ciclo como descanso (Método REIN TENA).
+  const toggleRestDay = (dayId: string) => {
+    setDays((prev) =>
+      prev.map((d) => (d.id === dayId ? { ...d, isRest: !d.isRest } : d))
+    );
   };
 
   // Asigna o quita el día de la semana (tocar el mismo chip lo desasigna).
@@ -237,8 +255,13 @@ export default function RoutineEditorScreen() {
     if (!profile || !clientId) return;
     setSaving(true);
     try {
+      const scheduleFields = {
+        schedule,
+        cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
+        intensity: schedule === 'cycle' ? intensity : undefined,
+      };
       if (routineId) {
-        await updateRoutine(routineId, { name, days });
+        await updateRoutine(routineId, { name, days, ...scheduleFields });
         await setActiveRoutine(clientId, routineId, profile.uid);
       } else {
         const newId = await createRoutine({
@@ -247,6 +270,7 @@ export default function RoutineEditorScreen() {
           name,
           days,
           active: true,
+          ...scheduleFields,
         });
         await setActiveRoutine(clientId, newId, profile.uid);
       }
@@ -262,7 +286,7 @@ export default function RoutineEditorScreen() {
     } finally {
       setSaving(false);
     }
-  }, [profile, clientId, routineId, name, days, router]);
+  }, [profile, clientId, routineId, name, days, schedule, cycleStartDate, intensity, router]);
 
   if (loading) return <LoadingScreen />;
 
@@ -304,7 +328,82 @@ export default function RoutineEditorScreen() {
         />
       )}
 
-      {days.map((day) => (
+      <Card accent style={styles.scheduleCard}>
+        <Text style={styles.scheduleTitle}>Programación</Text>
+        <View style={styles.modeRow}>
+          <Pressable
+            onPress={() => setSchedule('weekly')}
+            style={[styles.modeBtn, schedule === 'weekly' && styles.modeBtnActive]}
+          >
+            <Text style={[styles.modeText, schedule === 'weekly' && styles.modeTextActive]}>
+              Días de la semana
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setSchedule('cycle')}
+            style={[styles.modeBtn, schedule === 'cycle' && styles.modeBtnActive]}
+          >
+            <Text style={[styles.modeText, schedule === 'cycle' && styles.modeTextActive]}>
+              Método REIN TENA
+            </Text>
+          </Pressable>
+        </View>
+
+        {schedule === 'cycle' ? (
+          <>
+            <Text style={styles.scheduleHint}>
+              Los {days.length} días rotan en ciclo constante (Día 1 → {days.length} → repite), sin
+              depender del día de la semana.
+            </Text>
+
+            <Text style={styles.intensityLabel}>Intensidad · {intensity}/10</Text>
+            <View style={styles.intensityRow}>
+              <Pressable
+                onPress={() => setIntensity((v) => Math.max(1, v - 1))}
+                style={styles.stepBtn}
+                hitSlop={6}
+              >
+                <Ionicons name="remove" size={18} color={colors.text} />
+              </Pressable>
+              <View style={styles.intensityTrack}>
+                <View style={[styles.intensityFill, { width: `${(intensity / 10) * 100}%` }]} />
+              </View>
+              <Pressable
+                onPress={() => setIntensity((v) => Math.min(10, v + 1))}
+                style={styles.stepBtn}
+                hitSlop={6}
+              >
+                <Ionicons name="add" size={18} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={() => {
+                const d = new Date();
+                d.setHours(0, 0, 0, 0);
+                setCycleStartDate(d.getTime());
+                showToast('Ciclo reiniciado hoy');
+              }}
+              style={styles.cycleResetBtn}
+            >
+              <Ionicons name="refresh" size={14} color={colors.primary} />
+              <Text style={styles.cycleResetText}>
+                Empezar ciclo hoy · actual:{' '}
+                {new Date(cycleStartDate).toLocaleDateString('es-ES', {
+                  day: '2-digit',
+                  month: 'short',
+                })}
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <Text style={styles.scheduleHint}>
+            Asigna cada día a un día de la semana con los botones L-D de abajo.
+          </Text>
+        )}
+      </Card>
+
+      {days.map((day, dayIndex) => (
         <Card key={day.id} style={styles.dayCard}>
           <View style={styles.dayHeader}>
             <TextField
@@ -319,6 +418,27 @@ export default function RoutineEditorScreen() {
             ) : null}
           </View>
 
+          {schedule === 'cycle' ? (
+            <View style={styles.cycleDayRow}>
+              <View style={styles.cyclePill}>
+                <Text style={styles.cyclePillText}>Día {dayIndex + 1} del ciclo</Text>
+              </View>
+              <Pressable
+                onPress={() => toggleRestDay(day.id)}
+                style={[styles.restToggle, day.isRest && styles.restToggleOn]}
+                hitSlop={4}
+              >
+                <Ionicons
+                  name={day.isRest ? 'bed' : 'bed-outline'}
+                  size={14}
+                  color={day.isRest ? colors.onPrimary : colors.textMuted}
+                />
+                <Text style={[styles.restToggleText, day.isRest && styles.restToggleTextOn]}>
+                  Descanso
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
           <View style={styles.weekdayRow}>
             <Text style={styles.weekdayLabel}>Día de la semana</Text>
             <View style={styles.weekdayChips}>
@@ -341,6 +461,7 @@ export default function RoutineEditorScreen() {
               ))}
             </View>
           </View>
+          )}
 
           {day.exercises.map((ex, exIndex) => (
             <View
@@ -513,6 +634,89 @@ export default function RoutineEditorScreen() {
 
 const styles = StyleSheet.create({
   dayCard: { marginBottom: spacing.md },
+  scheduleCard: { marginBottom: spacing.md },
+  scheduleTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  modeRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    padding: spacing.xs,
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  modeBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
+  modeBtnActive: { backgroundColor: colors.primary },
+  modeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  modeTextActive: { color: colors.onPrimary },
+  scheduleHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
+  intensityLabel: {
+    ...typography.label,
+    color: colors.primaryBright,
+    textTransform: 'uppercase',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  intensityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  stepBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  intensityTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  intensityFill: { height: '100%', backgroundColor: colors.primary },
+  cycleResetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+  },
+  cycleResetText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
+  cycleDayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  cyclePill: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  cyclePillText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, fontSize: 11 },
+  restToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  restToggleOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  restToggleText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
+  restToggleTextOn: { color: colors.onPrimary },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dayNameInput: { flex: 1, marginBottom: 0 },
   removeDayBtn: { paddingHorizontal: spacing.sm },

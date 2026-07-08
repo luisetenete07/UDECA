@@ -30,6 +30,7 @@ import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
+import { resolveTodaySession } from '../../lib/schedule';
 import { notifyUser } from '../../lib/notifications';
 import {
   currentStreak,
@@ -133,9 +134,10 @@ export default function WorkoutScreen() {
             .catch(() => {});
         }
         if (data && data.days.length > 0) {
-          // Preselecciona el día planificado para hoy; si no hay, el primero.
-          const todays = data.days.find((d) => d.weekday === todayWeekday());
-          setSelectedDayId((prev) => prev ?? todays?.id ?? data.days[0].id);
+          // Preselecciona el día que toca hoy (Método REIN TENA o semanal).
+          const session = resolveTodaySession(data);
+          const fallback = data.days.find((d) => !d.isRest) ?? data.days[0];
+          setSelectedDayId((prev) => prev ?? session.day?.id ?? fallback.id);
         }
         setLoading(false);
       })();
@@ -212,6 +214,7 @@ export default function WorkoutScreen() {
   };
 
   const day = routine?.days.find((d) => d.id === selectedDayId) ?? null;
+  const todaySession = resolveTodaySession(routine);
 
   const handleShareSummary = async () => {
     if (!summary || !routine) return;
@@ -429,8 +432,11 @@ export default function WorkoutScreen() {
       <Text style={styles.title}>{routine.name}</Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayTabs}>
-        {routine.days.map((d) => {
-          const isToday = d.weekday === todayWeekday();
+        {routine.days.map((d, i) => {
+          const isCycle = routine.schedule === 'cycle';
+          const isToday = isCycle
+            ? todaySession.cycleIndex === i
+            : d.weekday === todayWeekday();
           return (
             <Pressable
               key={d.id}
@@ -440,8 +446,10 @@ export default function WorkoutScreen() {
               <Text
                 style={[styles.dayTabText, selectedDayId === d.id && styles.dayTabTextSelected]}
               >
-                {d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}
-                {d.name}
+                {isCycle
+                  ? `Día ${i + 1}`
+                  : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`}
+                {d.isRest ? ' · descanso' : ''}
                 {isToday ? '  ·  HOY' : ''}
               </Text>
             </Pressable>
