@@ -412,11 +412,9 @@ export default function RoutineEditorScreen() {
               onChangeText={(v) => updateDayName(day.id, v)}
               style={styles.dayNameInput}
             />
-            {days.length > 1 ? (
-              <Pressable onPress={() => removeDay(day.id)} style={styles.removeDayBtn}>
-                <Text style={styles.removeDayText}>Eliminar día</Text>
-              </Pressable>
-            ) : null}
+            <Pressable onPress={() => removeDay(day.id)} style={styles.removeDayBtn} hitSlop={6}>
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            </Pressable>
           </View>
 
           {schedule === 'cycle' ? (
