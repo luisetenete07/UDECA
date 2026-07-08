@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
 import { CheckInCard } from '../../components/CheckInCard';
@@ -24,7 +25,7 @@ import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { quoteOfTheDay } from '../../lib/quotes';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
-import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
   todayWeekday,
   WEEKDAY_NAMES,
@@ -172,6 +173,103 @@ export default function ClientDashboard() {
         </Pressable>
       ) : null}
 
+      {/* Acción principal del día */}
+      <Pressable onPress={() => router.push('/(client)/workout')}>
+        <LinearGradient
+          colors={gradients.goldSubtle}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.todayCard}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.todayLabel}>
+              {todaysDay ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}` : 'Tu entrenamiento'}
+            </Text>
+            {routine && restDay ? (
+              <>
+                <Text style={styles.todayTitle}>Día de descanso</Text>
+                <Text style={styles.todaySub}>Hoy no toca sesión. Recupera y vuelve con todo.</Text>
+              </>
+            ) : routine && nextDay ? (
+              <>
+                <Text style={styles.todayTitle}>{nextDay.name}</Text>
+                <Text style={styles.todaySub}>
+                  {nextDay.exercises.length} ejercicios · Empezar sesión
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.todayTitle}>Sin rutina aún</Text>
+                <Text style={styles.todaySub}>Tu entrenador te la asignará pronto.</Text>
+              </>
+            )}
+          </View>
+          <View style={routine && !restDay && nextDay ? styles.todayPlay : styles.todayRest}>
+            <Ionicons
+              name={routine && !restDay && nextDay ? 'play' : 'bed-outline'}
+              size={routine && !restDay && nextDay ? 26 : 24}
+              color={routine && !restDay && nextDay ? colors.onPrimary : colors.primaryBright}
+            />
+          </View>
+        </LinearGradient>
+      </Pressable>
+
+      {/* Plan semanal: tira de días + objetivo, todo junto y ordenado */}
+      <Card style={styles.section}>
+        <View style={styles.weekHeader}>
+          <Text style={styles.sectionLabel}>Tu semana</Text>
+          {targetSessions > 0 ? (
+            <Text style={styles.weekCount}>
+              {sessions}/{targetSessions} sesiones
+            </Text>
+          ) : null}
+        </View>
+
+        <WeekStrip routine={routine} trainedDays={trainingDays(workoutLogs)} />
+
+        {targetSessions > 0 ? (
+          <>
+            <View style={{ marginTop: spacing.xs, marginBottom: spacing.sm }}>
+              <ProgressBar progress={weekProgress} height={8} />
+            </View>
+            <Text style={styles.weekHint}>
+              {sessions >= targetSessions
+                ? '¡Objetivo de la semana cumplido! 🔥'
+                : `Te faltan ${targetSessions - sessions} sesión(es) para cumplir tu semana.`}
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.weekHint}>
+            Cuando tengas rutina asignada verás aquí tu plan y objetivo semanal.
+          </Text>
+        )}
+
+        <View style={styles.weekLegend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.legendDone]} />
+            <Text style={styles.legendText}>Hecho</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.legendPlanned]} />
+            <Text style={styles.legendText}>Planificado</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, styles.legendTodayDot]} />
+            <Text style={styles.legendText}>Hoy</Text>
+          </View>
+        </View>
+      </Card>
+
+      <View style={styles.statsRow}>
+        <StatTile icon="flame" value={String(streak)} label="Racha (días)" highlight={streak > 0} />
+        <StatTile icon="checkmark-done" value={String(sessions)} label="Esta semana" />
+        <StatTile
+          icon="body"
+          value={currentWeight ? `${currentWeight}` : '—'}
+          label="Peso (kg)"
+        />
+      </View>
+
       {showFirstSteps ? (
         <Card accent style={styles.section}>
           <View style={styles.firstStepsHeader}>
@@ -204,7 +302,6 @@ export default function ClientDashboard() {
         </Card>
       ) : null}
 
-
       {needsCheckIn && profile ? (
         <CheckInCard profile={profile} onDone={() => setNeedsCheckIn(false)} />
       ) : null}
@@ -227,80 +324,6 @@ export default function ClientDashboard() {
           })}
         </Card>
       ) : null}
-
-      <WeekStrip routine={routine} trainedDays={trainingDays(workoutLogs)} />
-
-      <View style={styles.statsRow}>
-        <StatTile icon="flame" value={String(streak)} label="Racha (días)" highlight={streak > 0} />
-        <StatTile icon="checkmark-done" value={String(sessions)} label="Esta semana" />
-        <StatTile
-          icon="body"
-          value={currentWeight ? `${currentWeight}` : '—'}
-          label="Peso (kg)"
-        />
-      </View>
-
-      <Pressable onPress={() => router.push('/(client)/workout')}>
-        <Card style={styles.nextCard}>
-          <View style={styles.nextHeader}>
-            <Text style={styles.sectionLabel}>
-              {todaysDay ? 'Hoy toca' : 'Próximo entrenamiento'}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-          </View>
-          {routine && restDay ? (
-            <>
-              <Text style={styles.routineName}>Descanso</Text>
-              <Text style={styles.routineMeta}>
-                Hoy ({WEEKDAY_NAMES[todayWeekday()]}) no tienes sesión planificada. Recupera:
-                también es entrenar.
-              </Text>
-            </>
-          ) : routine && nextDay ? (
-            <>
-              <Text style={styles.routineName}>{nextDay.name}</Text>
-              <Text style={styles.routineMeta}>
-                {routine.name} · {nextDay.exercises.length} ejercicios
-                {todaysDay ? ` · ${WEEKDAY_NAMES[todayWeekday()]}` : ''}
-              </Text>
-              <View style={styles.ctaRow}>
-                <Ionicons name="play-circle" size={20} color={colors.primary} />
-                <Text style={styles.ctaText}>Empezar sesión</Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.mutedText}>
-              Tu entrenador todavía no te ha asignado una rutina.
-            </Text>
-          )}
-        </Card>
-      </Pressable>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionLabel}>Objetivo semanal</Text>
-        {targetSessions > 0 ? (
-          <>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressValue}>
-                {sessions} / {targetSessions} sesiones
-              </Text>
-              <Text style={styles.progressPct}>{Math.round(weekProgress * 100)}%</Text>
-            </View>
-            <View style={{ marginBottom: spacing.sm }}>
-              <ProgressBar progress={weekProgress} />
-            </View>
-            <Text style={styles.mutedText}>
-              {sessions >= targetSessions
-                ? '¡Objetivo de la semana cumplido! Sigue así.'
-                : `Te faltan ${targetSessions - sessions} sesión(es) para completar la semana.`}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.mutedText}>
-            Cuando tengas una rutina asignada, aquí verás tu objetivo semanal.
-          </Text>
-        )}
-      </Card>
 
       {profile?.goal ? (
         <Card style={styles.section}>
@@ -344,37 +367,70 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  nextCard: { marginBottom: spacing.md },
-  nextHeader: {
+  sectionLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
+  section: { marginBottom: spacing.md },
+  // ----- Hero "Hoy toca" -----
+  todayCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.card,
+  },
+  todayLabel: {
+    ...typography.label,
+    color: colors.primaryBright,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  todayTitle: { ...typography.h1, color: colors.text, fontSize: 24 },
+  todaySub: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  todayPlay: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.glowGold,
+  },
+  todayRest: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // ----- Tarjeta "Tu semana" -----
+  weekHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
-  sectionLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
-  routineName: { ...typography.h2, color: colors.text },
-  routineMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  ctaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md },
-  ctaText: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
-  section: { marginBottom: spacing.md },
-  progressHeader: {
+  weekCount: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  weekHint: { ...typography.small, color: colors.textMuted },
+  weekLegend: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  progressValue: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  progressPct: { ...typography.body, color: colors.primary, fontFamily: fonts.heading },
-  track: {
-    height: 10,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
-  },
-  fill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 1, borderColor: colors.border },
+  legendDone: { backgroundColor: colors.primary, borderColor: colors.primary },
+  legendPlanned: { backgroundColor: colors.surfaceAlt, borderColor: colors.hairline },
+  legendTodayDot: { backgroundColor: colors.surfaceAlt, borderColor: colors.primaryBright, borderWidth: 2 },
+  legendText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
   goalText: { ...typography.body, color: colors.text, marginTop: spacing.xs },
   mutedText: { ...typography.small, color: colors.textMuted },
   habitRow: {
