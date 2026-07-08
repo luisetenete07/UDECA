@@ -62,6 +62,14 @@ interface WorkoutDraft {
 
 const draftKey = (uid: string) => `udeca-workout-draft-${uid}`;
 
+/** Formatea segundos de descanso de forma legible (1 min, 1.5 min, 45 s). */
+function formatRest(seconds: number): string {
+  if (seconds < 60) return `${seconds} s`;
+  const m = seconds / 60;
+  const mins = Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, '');
+  return `${mins} min`;
+}
+
 function buildLog(day: RoutineDay): LoggedExercise[] {
   return day.exercises.map((ex) => ({
     exerciseId: ex.exerciseId,
@@ -510,7 +518,9 @@ export default function WorkoutScreen() {
                 ) : null}
                 {planned.restSeconds ? (
                   <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText}>Descanso {planned.restSeconds}s</Text>
+                    <Text style={styles.metaChipText}>
+                      Descanso {formatRest(planned.restSeconds)}
+                    </Text>
                   </View>
                 ) : null}
                 {planned.band ? (

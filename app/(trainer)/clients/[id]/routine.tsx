@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
@@ -47,6 +47,7 @@ export default function RoutineEditorScreen() {
   const [otherClients, setOtherClients] = useState<UserProfile[]>([]);
   const [copying, setCopying] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [exerciseSearch, setExerciseSearch] = useState('');
 
   useEffect(() => {
     if (!clientId || !profile) return;
@@ -103,7 +104,7 @@ export default function RoutineEditorScreen() {
         d.id === dayId ? { ...d, exercises: [...d.exercises, routineExercise] } : d
       )
     );
-    setPickerForDay(null);
+    showToast(`${exercise.name} añadido`);
   };
 
   const removeExercise = (dayId: string, exerciseRowId: string) => {
@@ -142,6 +143,31 @@ export default function RoutineEditorScreen() {
           : d
       )
     );
+  };
+
+  // Descanso escrito en minutos por comodidad; se guarda en segundos.
+  const updateRestMinutes = (dayId: string, exerciseRowId: string, value: string) => {
+    const mins = Number(value.replace(',', '.'));
+    const seconds = !value.trim() || Number.isNaN(mins) ? 0 : Math.round(mins * 60);
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) =>
+                e.id === exerciseRowId ? { ...e, restSeconds: seconds } : e
+              ),
+            }
+          : d
+      )
+    );
+  };
+
+  // Muestra los segundos guardados como minutos legibles (2, 1.5, 0.5...).
+  const restToMinutes = (seconds?: number) => {
+    if (!seconds) return '';
+    const m = seconds / 60;
+    return Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, '');
   };
 
   // Encadena o desencadena un ejercicio en superserie con el anterior.
@@ -377,11 +403,11 @@ export default function RoutineEditorScreen() {
                   style={styles.smallInput}
                 />
                 <TextField
-                  label="Descanso (s)"
-                  keyboardType="number-pad"
-                  value={ex.restSeconds ? String(ex.restSeconds) : ''}
-                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'restSeconds', v)}
-                  placeholder="90"
+                  label="Descanso (min)"
+                  keyboardType="numeric"
+                  value={restToMinutes(ex.restSeconds)}
+                  onChangeText={(v) => updateRestMinutes(day.id, ex.id, v)}
+                  placeholder="1.5"
                   style={styles.smallInput}
                 />
               </View>
@@ -409,42 +435,73 @@ export default function RoutineEditorScreen() {
             </View>
           ))}
 
-          {pickerForDay === day.id ? (
-            <View style={styles.picker}>
-              {exercises.length === 0 ? (
-                <Text style={styles.mutedText}>
-                  No tienes ejercicios en tu biblioteca todavía. Créalos en la pestaña
-                  Ejercicios.
-                </Text>
-              ) : (
-                exercises.map((ex) => (
-                  <Pressable
-                    key={ex.id}
-                    onPress={() => addExerciseToDay(day.id, ex)}
-                    style={styles.pickerRow}
-                  >
-                    <Text style={styles.pickerRowText}>{ex.name}</Text>
-                    <Text style={styles.pickerRowMuscle}>{ex.muscleGroup}</Text>
-                  </Pressable>
-                ))
-              )}
-              <Button
-                title="Cancelar"
-                variant="ghost"
-                onPress={() => setPickerForDay(null)}
-                style={{ marginTop: spacing.xs }}
-              />
-            </View>
-          ) : (
-            <Button
-              title="+ Añadir ejercicio"
-              variant="secondary"
-              onPress={() => setPickerForDay(day.id)}
-              style={{ marginTop: spacing.sm }}
-            />
-          )}
+          <Button
+            title="+ Añadir ejercicio"
+            variant="secondary"
+            onPress={() => {
+              setExerciseSearch('');
+              setPickerForDay(day.id);
+            }}
+            style={{ marginTop: spacing.sm }}
+          />
         </Card>
       ))}
+
+      <Modal
+        visible={pickerForDay !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPickerForDay(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Añadir ejercicio</Text>
+              <Pressable onPress={() => setPickerForDay(null)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <TextField
+              placeholder="Buscar ejercicio..."
+              value={exerciseSearch}
+              onChangeText={setExerciseSearch}
+              autoCapitalize="none"
+              style={{ marginBottom: spacing.sm }}
+            />
+            {exercises.length === 0 ? (
+              <Text style={styles.mutedText}>
+                No tienes ejercicios en tu biblioteca todavía. Créalos en la pestaña Ejercicios.
+              </Text>
+            ) : (
+              <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
+                {exercises
+                  .filter((ex) =>
+                    ex.name.toLowerCase().includes(exerciseSearch.toLowerCase().trim())
+                  )
+                  .map((ex) => (
+                    <Pressable
+                      key={ex.id}
+                      onPress={() => pickerForDay && addExerciseToDay(pickerForDay, ex)}
+                      style={styles.pickerRow}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.pickerRowText}>
+                          {ex.name}
+                          {ex.band ? '  🟡' : ''}
+                        </Text>
+                        <Text style={styles.pickerRowMuscle}>
+                          {ex.muscleGroup}
+                          {ex.measure === 'seconds' ? ' · isométrico' : ''}
+                        </Text>
+                      </View>
+                      <Ionicons name="add-circle" size={22} color={colors.primary} />
+                    </Pressable>
+                  ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <Button title="+ Añadir día" variant="ghost" onPress={addDay} style={styles.addDayBtn} />
 
@@ -524,18 +581,33 @@ const styles = StyleSheet.create({
   linkBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   copyCard: { marginBottom: spacing.md },
   copyTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  picker: {
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    maxHeight: 260,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
   },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderTopWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  modalTitle: { ...typography.h2, color: colors.text },
+  modalList: { maxHeight: 420 },
   pickerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
