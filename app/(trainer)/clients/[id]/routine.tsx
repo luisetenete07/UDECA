@@ -542,11 +542,13 @@ export default function RoutineEditorScreen() {
                   style={styles.smallInput}
                 />
                 <TextField
-                  label={ex.measure === 'seconds' ? 'Seg' : 'Reps'}
+                  label={ex.measure === 'seconds' ? 'Segundos' : 'Reps'}
                   value={ex.reps}
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
                   style={styles.smallInput}
                 />
+              </View>
+              <View style={styles.exerciseFields}>
                 <TextField
                   label="RIR"
                   keyboardType="number-pad"
@@ -556,7 +558,8 @@ export default function RoutineEditorScreen() {
                   style={styles.smallInput}
                 />
                 <TextField
-                  label="Descanso mm:ss"
+                  label="Descanso (min:seg)"
+                  keyboardType="numbers-and-punctuation"
                   value={restText[ex.id] ?? formatClock(ex.restSeconds)}
                   onChangeText={(v) => {
                     setRestText((prev) => ({ ...prev, [ex.id]: v }));
@@ -801,7 +804,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginBottom: spacing.xs,
   },
-  exerciseFields: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  exerciseFields: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginTop: spacing.xs },
   smallInput: { flex: 1, marginBottom: 0 },
   moveBtn: { padding: spacing.xs },
   deleteBtn: { padding: spacing.xs },
