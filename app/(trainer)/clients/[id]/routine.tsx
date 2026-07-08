@@ -32,6 +32,28 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+/** Convierte un texto "mm:ss" (o solo segundos) a segundos totales. */
+function parseClock(value: string): number {
+  const t = value.trim();
+  if (!t) return 0;
+  if (t.includes(':')) {
+    const [m, sec] = t.split(':');
+    const mm = parseInt(m, 10) || 0;
+    const ss = parseInt(sec, 10) || 0;
+    return mm * 60 + ss;
+  }
+  const n = parseInt(t, 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/** Formatea segundos como "m:ss" (vacío si no hay descanso). */
+function formatClock(seconds?: number): string {
+  if (!seconds) return '';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export default function RoutineEditorScreen() {
   const { id: clientId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -55,7 +77,7 @@ export default function RoutineEditorScreen() {
     d.setHours(0, 0, 0, 0);
     return d.getTime();
   });
-  const [intensity, setIntensity] = useState(5);
+  const [restText, setRestText] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!clientId || !profile) return;
@@ -71,7 +93,6 @@ export default function RoutineEditorScreen() {
         setDays(existing.days);
         setSchedule(existing.schedule ?? 'weekly');
         if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
-        if (existing.intensity) setIntensity(existing.intensity);
       } else {
         setDays([{ id: uid(), name: 'Día 1', exercises: [] }]);
       }
@@ -163,10 +184,19 @@ export default function RoutineEditorScreen() {
     );
   };
 
-  // Descanso escrito en minutos por comodidad; se guarda en segundos.
-  const updateRestMinutes = (dayId: string, exerciseRowId: string, value: string) => {
-    const mins = Number(value.replace(',', '.'));
-    const seconds = !value.trim() || Number.isNaN(mins) ? 0 : Math.round(mins * 60);
+  // Ajusta la intensidad (1-10) de un día del ciclo (Método REIN TENA).
+  const updateDayIntensity = (dayId: string, delta: number) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? { ...d, intensity: Math.max(1, Math.min(10, (d.intensity ?? 5) + delta)) }
+          : d
+      )
+    );
+  };
+
+  // Descanso en formato mm:ss; se guarda en segundos.
+  const updateRestSeconds = (dayId: string, exerciseRowId: string, seconds: number) => {
     setDays((prev) =>
       prev.map((d) =>
         d.id === dayId
@@ -179,13 +209,6 @@ export default function RoutineEditorScreen() {
           : d
       )
     );
-  };
-
-  // Muestra los segundos guardados como minutos legibles (2, 1.5, 0.5...).
-  const restToMinutes = (seconds?: number) => {
-    if (!seconds) return '';
-    const m = seconds / 60;
-    return Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, '');
   };
 
   // Encadena o desencadena un ejercicio en superserie con el anterior.
@@ -258,7 +281,6 @@ export default function RoutineEditorScreen() {
       const scheduleFields = {
         schedule,
         cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
-        intensity: schedule === 'cycle' ? intensity : undefined,
       };
       if (routineId) {
         await updateRoutine(routineId, { name, days, ...scheduleFields });
@@ -286,7 +308,7 @@ export default function RoutineEditorScreen() {
     } finally {
       setSaving(false);
     }
-  }, [profile, clientId, routineId, name, days, schedule, cycleStartDate, intensity, router]);
+  }, [profile, clientId, routineId, name, days, schedule, cycleStartDate, router]);
 
   if (loading) return <LoadingScreen />;
 
@@ -353,29 +375,8 @@ export default function RoutineEditorScreen() {
           <>
             <Text style={styles.scheduleHint}>
               Los {days.length} días rotan en ciclo constante (Día 1 → {days.length} → repite), sin
-              depender del día de la semana.
+              depender del día de la semana. La intensidad se ajusta en cada día, abajo.
             </Text>
-
-            <Text style={styles.intensityLabel}>Intensidad · {intensity}/10</Text>
-            <View style={styles.intensityRow}>
-              <Pressable
-                onPress={() => setIntensity((v) => Math.max(1, v - 1))}
-                style={styles.stepBtn}
-                hitSlop={6}
-              >
-                <Ionicons name="remove" size={18} color={colors.text} />
-              </Pressable>
-              <View style={styles.intensityTrack}>
-                <View style={[styles.intensityFill, { width: `${(intensity / 10) * 100}%` }]} />
-              </View>
-              <Pressable
-                onPress={() => setIntensity((v) => Math.min(10, v + 1))}
-                style={styles.stepBtn}
-                hitSlop={6}
-              >
-                <Ionicons name="add" size={18} color={colors.text} />
-              </Pressable>
-            </View>
 
             <Pressable
               onPress={() => {
@@ -419,6 +420,7 @@ export default function RoutineEditorScreen() {
           </View>
 
           {schedule === 'cycle' ? (
+            <>
             <View style={styles.cycleDayRow}>
               <View style={styles.cyclePill}>
                 <Text style={styles.cyclePillText}>Día {dayIndex + 1} del ciclo</Text>
@@ -438,6 +440,38 @@ export default function RoutineEditorScreen() {
                 </Text>
               </Pressable>
             </View>
+            {!day.isRest ? (
+              <View style={styles.dayIntensityRow}>
+                <Text style={styles.dayIntensityLabel}>
+                  Intensidad · {day.intensity ?? 5}/10
+                </Text>
+                <View style={styles.dayIntensityControls}>
+                  <Pressable
+                    onPress={() => updateDayIntensity(day.id, -1)}
+                    style={styles.stepBtn}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="remove" size={16} color={colors.text} />
+                  </Pressable>
+                  <View style={styles.intensityTrack}>
+                    <View
+                      style={[
+                        styles.intensityFill,
+                        { width: `${((day.intensity ?? 5) / 10) * 100}%` },
+                      ]}
+                    />
+                  </View>
+                  <Pressable
+                    onPress={() => updateDayIntensity(day.id, 1)}
+                    style={styles.stepBtn}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="add" size={16} color={colors.text} />
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+            </>
           ) : (
           <View style={styles.weekdayRow}>
             <Text style={styles.weekdayLabel}>Día de la semana</Text>
@@ -524,11 +558,13 @@ export default function RoutineEditorScreen() {
                   style={styles.smallInput}
                 />
                 <TextField
-                  label="Descanso (min)"
-                  keyboardType="numeric"
-                  value={restToMinutes(ex.restSeconds)}
-                  onChangeText={(v) => updateRestMinutes(day.id, ex.id, v)}
-                  placeholder="1.5"
+                  label="Descanso mm:ss"
+                  value={restText[ex.id] ?? formatClock(ex.restSeconds)}
+                  onChangeText={(v) => {
+                    setRestText((prev) => ({ ...prev, [ex.id]: v }));
+                    updateRestSeconds(day.id, ex.id, parseClock(v));
+                  }}
+                  placeholder="01:30"
                   style={styles.smallInput}
                 />
               </View>
@@ -651,6 +687,14 @@ const styles = StyleSheet.create({
   modeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   modeTextActive: { color: colors.onPrimary },
   scheduleHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
+  dayIntensityRow: { marginBottom: spacing.sm },
+  dayIntensityLabel: {
+    ...typography.label,
+    color: colors.primaryBright,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  dayIntensityControls: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   intensityLabel: {
     ...typography.label,
     color: colors.primaryBright,

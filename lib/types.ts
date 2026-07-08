@@ -97,6 +97,8 @@ export interface RoutineDay {
   weekday?: number;
   /** En el Método REIN TENA (ciclo), marca este día del ciclo como descanso. */
   isRest?: boolean;
+  /** Intensidad 1-10 de este entrenamiento (Método REIN TENA), la fija el coach. */
+  intensity?: number;
   exercises: RoutineExercise[];
 }
 
@@ -136,7 +138,7 @@ export interface Routine {
   schedule?: RoutineSchedule;
   /** Método REIN TENA: fecha (medianoche) en que el ciclo empieza por el Día 1. */
   cycleStartDate?: number;
-  /** Método REIN TENA: intensidad 1-10 que personaliza el entrenador. */
+  /** (Obsoleto) intensidad global; ahora se define por día en RoutineDay. */
   intensity?: number;
   createdAt: number;
   updatedAt: number;

@@ -63,12 +63,11 @@ interface WorkoutDraft {
 
 const draftKey = (uid: string) => `udeca-workout-draft-${uid}`;
 
-/** Formatea segundos de descanso de forma legible (1 min, 1.5 min, 45 s). */
+/** Formatea segundos de descanso como reloj mm:ss. */
 function formatRest(seconds: number): string {
-  if (seconds < 60) return `${seconds} s`;
-  const m = seconds / 60;
-  const mins = Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, '');
-  return `${mins} min`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 function buildLog(day: RoutineDay): LoggedExercise[] {
@@ -457,6 +456,15 @@ export default function WorkoutScreen() {
         })}
       </ScrollView>
 
+      {day?.intensity ? (
+        <View style={styles.intensityBanner}>
+          <Ionicons name="flame" size={15} color={colors.primary} />
+          <Text style={styles.intensityBannerText}>
+            Intensidad de hoy: {day.intensity}/10
+          </Text>
+        </View>
+      ) : null}
+
       {totalSets > 0 ? (
         <View style={styles.progressWrap}>
           <View style={{ flex: 1 }}>
@@ -619,6 +627,19 @@ const styles = StyleSheet.create({
   dayTabSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   dayTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   dayTabTextSelected: { color: colors.onPrimary },
+  intensityBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  intensityBannerText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   progressWrap: {
     flexDirection: 'row',
     alignItems: 'center',
