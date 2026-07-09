@@ -42,6 +42,7 @@ import {
 } from '../../lib/stats';
 import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
+  resolveLoad,
   todayWeekday,
   WEEKDAY_NAMES,
   type LoggedExercise,
@@ -518,6 +519,9 @@ export default function WorkoutScreen() {
         const planned = day?.exercises[exerciseIndex];
         const isCurrent = exerciseIndex === currentIndex;
         const isDone = exercise.sets.length > 0 && exercise.sets.every((s) => s.completed);
+        // Carga del ejercicio: define si hay casilla extra (peso/goma) o ninguna.
+        const load = planned ? resolveLoad(planned) : 'none';
+        const isSeconds = planned?.measure === 'seconds';
         return (
           <Card
             key={exercise.exerciseId + exerciseIndex}
@@ -562,9 +566,13 @@ export default function WorkoutScreen() {
                     </Text>
                   </View>
                 ) : null}
-                {planned.band ? (
+                {load === 'assisted' ? (
                   <View style={[styles.metaChip, styles.metaChipBand]}>
                     <Text style={styles.metaChipText}>Con goma</Text>
+                  </View>
+                ) : load === 'weighted' ? (
+                  <View style={[styles.metaChip, styles.metaChipBand]}>
+                    <Text style={styles.metaChipText}>Lastrado</Text>
                   </View>
                 ) : null}
               </View>
@@ -590,12 +598,12 @@ export default function WorkoutScreen() {
               </View>
             ) : null}
             <View style={styles.setHead}>
-              <Text style={styles.setHeadCap}>
-                {planned?.measure === 'seconds' ? 'SEGUNDOS' : 'REPS'}
-              </Text>
-              <Text style={styles.setHeadCap}>
-                {planned?.band ? 'GOMA ± KG' : 'PESO (OPC.)'}
-              </Text>
+              <Text style={styles.setHeadCap}>{isSeconds ? 'SEGUNDOS' : 'REPS'}</Text>
+              {load === 'weighted' ? (
+                <Text style={styles.setHeadCap}>PESO KG</Text>
+              ) : load === 'assisted' ? (
+                <Text style={styles.setHeadCap}>GOMA KG</Text>
+              ) : null}
             </View>
             {exercise.sets.map((set, setIndex) => (
               <View key={setIndex} style={styles.setRow}>
@@ -619,13 +627,15 @@ export default function WorkoutScreen() {
                   placeholder={planned?.reps || '—'}
                   style={styles.setFieldInput}
                 />
-                <TextField
-                  value={set.weight}
-                  onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'weight', v)}
-                  placeholder="—"
-                  keyboardType="numeric"
-                  style={styles.setFieldInput}
-                />
+                {load !== 'none' ? (
+                  <TextField
+                    value={set.weight}
+                    onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'weight', v)}
+                    placeholder="—"
+                    keyboardType="numeric"
+                    style={styles.setFieldInput}
+                  />
+                ) : null}
               </View>
             ))}
           </Card>
@@ -636,8 +646,8 @@ export default function WorkoutScreen() {
 
       {doneSets === 0 ? (
         <Text style={styles.saveHint}>
-          Marca cada serie con ✓ para registrar tus reps y peso, o pulsa el botón
-          para dar la sesión por hecha sin apuntar nada.
+          Marca cada serie con ✓ para registrarla, o pulsa el botón para dar la
+          sesión por hecha sin apuntar nada.
         </Text>
       ) : null}
 

@@ -14,7 +14,19 @@ import {
 } from '../../../lib/firestore/exercises';
 import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
-import { MUSCLE_GROUPS, type ExerciseMeasure, type MuscleGroup } from '../../../lib/types';
+import {
+  MUSCLE_GROUPS,
+  resolveLoad,
+  type ExerciseLoad,
+  type ExerciseMeasure,
+  type MuscleGroup,
+} from '../../../lib/types';
+
+const LOAD_OPTIONS: { key: ExerciseLoad; label: string; hint: string }[] = [
+  { key: 'none', label: 'Normal', hint: 'Solo peso corporal' },
+  { key: 'weighted', label: 'Lastrado', hint: 'Se añade peso (kg)' },
+  { key: 'assisted', label: 'Asistido', hint: 'Con goma (banda)' },
+];
 
 export default function ExerciseEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,7 +41,7 @@ export default function ExerciseEditorScreen() {
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
-  const [band, setBand] = useState(false);
+  const [load, setLoad] = useState<ExerciseLoad>('none');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,7 +54,7 @@ export default function ExerciseEditorScreen() {
         setDescription(exercise.description ?? '');
         setVideoUrl(exercise.videoUrl ?? '');
         setMeasure(exercise.measure ?? 'reps');
-        setBand(exercise.band ?? false);
+        setLoad(resolveLoad(exercise));
       }
       setLoading(false);
     })();
@@ -65,7 +77,8 @@ export default function ExerciseEditorScreen() {
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
           measure,
-          band,
+          load,
+          band: load === 'assisted',
         });
       } else if (id) {
         await updateExercise(id, {
@@ -74,7 +87,8 @@ export default function ExerciseEditorScreen() {
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
           measure,
-          band,
+          load,
+          band: load === 'assisted',
         });
       }
       showToast('Ejercicio guardado');
@@ -141,15 +155,23 @@ export default function ExerciseEditorScreen() {
         </Pressable>
       </View>
 
-      <Pressable onPress={() => setBand((b) => !b)} style={styles.bandRow}>
-        <View style={[styles.checkbox, band && styles.checkboxOn]}>
-          {band ? <Text style={styles.checkboxTick}>✓</Text> : null}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.bandLabel}>Con goma (banda elástica)</Text>
-          <Text style={styles.bandHint}>Asistencia o resistencia con banda</Text>
-        </View>
-      </Pressable>
+      <Text style={styles.label}>Carga</Text>
+      <View style={styles.loadSegment}>
+        {LOAD_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.key}
+            onPress={() => setLoad(opt.key)}
+            style={[styles.loadBtn, load === opt.key && styles.loadBtnActive]}
+          >
+            <Text style={[styles.loadLabel, load === opt.key && styles.loadLabelActive]}>
+              {opt.label}
+            </Text>
+            <Text style={[styles.loadHint, load === opt.key && styles.loadHintActive]}>
+              {opt.hint}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       <TextField
         label="Descripción / técnica"
@@ -225,25 +247,26 @@ const styles = StyleSheet.create({
   segmentBtnActive: { backgroundColor: colors.primary },
   segmentText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   segmentTextActive: { color: colors.onPrimary },
-  bandRow: {
+  loadSegment: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
     marginBottom: spacing.md,
   },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+  loadBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 2,
   },
-  checkboxOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  checkboxTick: { color: colors.onPrimary, fontSize: 14, fontFamily: fonts.semiBold },
-  bandLabel: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  bandHint: { ...typography.small, color: colors.textMuted },
+  loadBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  loadLabel: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  loadLabelActive: { color: colors.onPrimary },
+  loadHint: { fontSize: 10, color: colors.textMuted, textAlign: 'center' },
+  loadHintActive: { color: colors.onPrimary },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });

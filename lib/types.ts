@@ -57,6 +57,20 @@ export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 /** Cómo se mide el ejercicio: repeticiones o segundos (isométricos). */
 export type ExerciseMeasure = 'reps' | 'seconds';
 
+/**
+ * Carga del ejercicio (calistenia):
+ *  - 'none': peso corporal, sin nada extra (dominadas normales).
+ *  - 'weighted': lastrado, se añade peso (dominadas lastradas → casilla kg).
+ *  - 'assisted': asistido con goma/banda (dominadas asistidas → casilla goma).
+ */
+export type ExerciseLoad = 'none' | 'weighted' | 'assisted';
+
+/** Deriva la carga admitiendo datos antiguos (band = asistido con goma). */
+export function resolveLoad(x: { load?: ExerciseLoad; band?: boolean }): ExerciseLoad {
+  if (x.load) return x.load;
+  return x.band ? 'assisted' : 'none';
+}
+
 export interface Exercise {
   id: string;
   trainerId: string;
@@ -66,7 +80,9 @@ export interface Exercise {
   videoUrl?: string;
   /** 'reps' (por defecto) o 'seconds' para isométricos (planchas, L-sit...). */
   measure?: ExerciseMeasure;
-  /** true si se ejecuta con goma (banda elástica) de asistencia/resistencia. */
+  /** Carga: normal / lastrado / asistido con goma. */
+  load?: ExerciseLoad;
+  /** (Obsoleto) se conserva por compatibilidad; equivale a load='assisted'. */
   band?: boolean;
   createdAt: number;
 }
@@ -84,7 +100,9 @@ export interface RoutineExercise {
   supersetWithPrevious?: boolean;
   /** Copia de la medida del ejercicio al añadirlo ('reps' por defecto). */
   measure?: ExerciseMeasure;
-  /** Copia del uso de goma del ejercicio al añadirlo. */
+  /** Copia de la carga del ejercicio al añadirlo. */
+  load?: ExerciseLoad;
+  /** (Obsoleto) copia del uso de goma; equivale a load='assisted'. */
   band?: boolean;
   /** RIR objetivo (repeticiones en reserva), 0-5. */
   rir?: number;
