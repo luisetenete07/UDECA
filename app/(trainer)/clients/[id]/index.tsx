@@ -28,6 +28,7 @@ import { getProgressPhotosForClient } from '../../../../lib/firestore/progressPh
 import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
+import { notifyUser } from '../../../../lib/notifications';
 import { buildClientReportHtml } from '../../../../lib/report';
 import { trainingDays, weeklyActivity } from '../../../../lib/stats';
 import {
@@ -94,6 +95,8 @@ export default function ClientDetailScreen() {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [feeInput, setFeeInput] = useState('');
+  const [remindingPayment, setRemindingPayment] = useState(false);
+  const [paymentReminderSent, setPaymentReminderSent] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -209,6 +212,24 @@ export default function ClientDetailScreen() {
     const { nextPaymentDate, ...rest } = client;
     setClient(rest as UserProfile);
     await clearClientNextPayment(id);
+  };
+
+  const handleRemindPayment = async () => {
+    if (!id || !client) return;
+    setRemindingPayment(true);
+    try {
+      await notifyUser(
+        id,
+        'Recordatorio de pago',
+        `Hola ${client.name.split(' ')[0]}, tienes un pago pendiente de tu suscripción. ¡Gracias!`
+      );
+      setPaymentReminderSent(true);
+      showToast('Recordatorio de pago enviado');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo enviar');
+    } finally {
+      setRemindingPayment(false);
+    }
   };
 
   const handleRemoveFromGroup = async () => {
@@ -395,6 +416,17 @@ export default function ClientDetailScreen() {
             />
           ) : null}
         </View>
+
+        {client.paymentStatus === 'pending' || client.paymentStatus === 'overdue' ? (
+          <Button
+            title={paymentReminderSent ? 'Recordatorio enviado ✓' : 'Recordar pago al alumno'}
+            variant="secondary"
+            onPress={handleRemindPayment}
+            loading={remindingPayment}
+            disabled={paymentReminderSent}
+            style={{ marginTop: spacing.sm }}
+          />
+        ) : null}
       </Card>
 
       {client.goal || client.targetWeightKg ? (
