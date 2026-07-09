@@ -11,6 +11,7 @@ import {
 import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
 import { getTrainerIdForInviteCode, registerTrainerInviteCode } from './firestore/users';
+import { sendJoinRequest } from './firestore/joinRequests';
 import { registerForPushNotificationsAsync } from './notifications';
 import type { UserProfile, UserRole } from './types';
 
@@ -112,15 +113,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(credential.user, { displayName: name });
 
+    // El alumno se crea SIN entrenador: envía una solicitud que el coach debe
+    // aprobar manualmente. Hasta entonces verá la pantalla de "pendiente".
     const newProfile: UserProfile = {
       uid: credential.user.uid,
       role: 'client' as UserRole,
       name,
       email,
       createdAt: Date.now(),
-      trainerId,
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
+    await sendJoinRequest(trainerId, newProfile);
     setProfile(newProfile);
   };
 

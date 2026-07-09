@@ -18,6 +18,11 @@ import {
   getActiveChallenge,
 } from '../../lib/firestore/challenges';
 import { getClientsForTrainer } from '../../lib/firestore/users';
+import {
+  approveJoinRequest,
+  deleteJoinRequest,
+  getJoinRequestsForTrainer,
+} from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { sessionsThisWeek } from '../../lib/stats';
@@ -27,6 +32,7 @@ import {
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUS_TONE,
   type Challenge,
+  type JoinRequest,
   type UserProfile,
   type WorkoutLog,
 } from '../../lib/types';
@@ -45,6 +51,8 @@ export default function TrainerDashboard() {
   const router = useRouter();
   const [clients, setClients] = useState<UserProfile[]>([]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
+  const [requests, setRequests] = useState<JoinRequest[]>([]);
+  const [processingReq, setProcessingReq] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [remindersSent, setRemindersSent] = useState<Set<string>>(new Set());
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
@@ -60,15 +68,17 @@ export default function TrainerDashboard() {
       let cancelled = false;
       (async () => {
         try {
-          const [clientData, logData, challengeData] = await Promise.all([
+          const [clientData, logData, challengeData, requestData] = await Promise.all([
             getClientsForTrainer(profile.uid),
             getWorkoutLogsForTrainer(profile.uid),
             getActiveChallenge(profile.uid),
+            getJoinRequestsForTrainer(profile.uid),
           ]);
           if (cancelled) return;
           setClients(clientData);
           setLogs(logData);
           setChallenge(challengeData);
+          setRequests(requestData);
         } catch (e) {
           if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
         } finally {
@@ -151,6 +161,34 @@ export default function TrainerDashboard() {
     setChallenge(null);
   };
 
+  const handleApproveRequest = async (req: JoinRequest) => {
+    setProcessingReq(req.id);
+    try {
+      await approveJoinRequest(req);
+      setRequests((prev) => prev.filter((r) => r.id !== req.id));
+      if (profile) setClients(await getClientsForTrainer(profile.uid));
+      notifyUser(req.clientId, 'Solicitud aceptada', 'Tu entrenador te ha aceptado en su grupo. ¡A entrenar!').catch(() => {});
+      showToast(`${req.name.split(' ')[0]} ya está en tu grupo`);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo aprobar');
+    } finally {
+      setProcessingReq(null);
+    }
+  };
+
+  const handleRejectRequest = async (req: JoinRequest) => {
+    setProcessingReq(req.id);
+    try {
+      await deleteJoinRequest(req.clientId, req.trainerId);
+      setRequests((prev) => prev.filter((r) => r.id !== req.id));
+      showToast('Solicitud rechazada');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo rechazar');
+    } finally {
+      setProcessingReq(null);
+    }
+  };
+
   const handleSendReminder = async (client: UserProfile) => {
     if (!profile) return;
     setSendingReminder(client.uid);
@@ -183,6 +221,47 @@ export default function TrainerDashboard() {
         <Card style={[styles.section, { borderColor: colors.danger }]}>
           <Text style={[styles.sectionTitle, { color: colors.danger }]}>Error al cargar datos</Text>
           <Text style={styles.mutedText}>{loadError}</Text>
+        </Card>
+      ) : null}
+
+      {requests.length > 0 ? (
+        <Card accent style={styles.section}>
+          <View style={styles.titleRow}>
+            <Ionicons name="person-add-outline" size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>
+              Solicitudes de alumnos ({requests.length})
+            </Text>
+          </View>
+          <Text style={styles.subtleHint}>Revisa y acepta a quién quieras en tu grupo.</Text>
+          {requests.map((req) => (
+            <View key={req.id} style={styles.requestRow}>
+              <Avatar name={req.name} photoURL={req.photoURL} size={44} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.logClient}>{req.name}</Text>
+                <Text style={styles.reqEmail} numberOfLines={1}>
+                  {req.email}
+                </Text>
+              </View>
+              <View style={styles.reqActions}>
+                <Pressable
+                  onPress={() => handleRejectRequest(req)}
+                  disabled={processingReq === req.id}
+                  style={styles.reqReject}
+                  hitSlop={6}
+                >
+                  <Ionicons name="close" size={20} color={colors.danger} />
+                </Pressable>
+                <Pressable
+                  onPress={() => handleApproveRequest(req)}
+                  disabled={processingReq === req.id}
+                  style={styles.reqApprove}
+                  hitSlop={6}
+                >
+                  <Ionicons name="checkmark" size={20} color={colors.onPrimary} />
+                </Pressable>
+              </View>
+            </View>
+          ))}
         </Card>
       ) : null}
 
@@ -400,6 +479,34 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   reminderBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  requestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  reqEmail: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  reqActions: { flexDirection: 'row', gap: spacing.sm },
+  reqReject: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    backgroundColor: colors.dangerMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reqApprove: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   logClient: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   logDetail: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   alertText: { ...typography.small, color: colors.warning, marginTop: 2 },

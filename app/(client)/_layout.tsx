@@ -1,6 +1,7 @@
 import React from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { TabIcon } from '../../components/TabIcon';
+import { LinkTrainerScreen } from '../../components/LinkTrainerScreen';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { useAuth } from '../../lib/auth-context';
 import { tabScreenOptions } from '../../lib/navTheme';
@@ -11,6 +12,8 @@ export default function ClientLayout() {
   if (loading) return <LoadingScreen />;
   if (!firebaseUser || !profile) return <Redirect href="/(auth)/login" />;
   if (profile.role !== 'client') return <Redirect href="/(trainer)/dashboard" />;
+  // Alumno sin entrenador: pantalla para enviar/esperar la solicitud.
+  if (!profile.trainerId) return <LinkTrainerScreen />;
 
   return (
     <Tabs

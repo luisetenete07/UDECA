@@ -19,6 +19,21 @@ service cloud.firestore {
         && resource.data.trainerId == request.auth.uid;
     }
 
+    // Solicitudes de alumnos para unirse al grupo de un entrenador. El alumno
+    // crea la suya (clientId == él) y puede cancelarla; el entrenador
+    // destinatario la lee y la borra (al aceptar o rechazar). No se editan.
+    match /joinRequests/{reqId} {
+      allow read: if request.auth != null
+        && (resource.data.clientId == request.auth.uid
+          || resource.data.trainerId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid;
+      allow delete: if request.auth != null
+        && (resource.data.clientId == request.auth.uid
+          || resource.data.trainerId == request.auth.uid);
+      allow update: if false;
+    }
+
     // Perfiles de usuario (entrenadores y clientes).
     match /users/{userId} {
       allow read: if request.auth != null
@@ -46,6 +61,14 @@ service cloud.firestore {
                 .hasOnly(['trainerId', 'status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate'])
             )
           )
+        )
+        || (
+          // Aprobar solicitud: el entrenador se vincula a un alumno que le ha
+          // enviado una solicitud (existe joinRequests/{clientId}_{coach}).
+          request.resource.data.trainerId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId'])
+          && exists(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid))
+          && get(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid)).data.clientId == userId
         )
       );
       // El propio usuario puede borrar su cuenta (su documento de perfil).

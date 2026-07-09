@@ -329,6 +329,22 @@ export interface Announcement {
   createdAt: number;
 }
 
+/**
+ * Solicitud de un alumno para unirse al grupo de un entrenador. Se crea al
+ * introducir el código; el entrenador la aprueba manualmente (ve nombre,
+ * correo y foto). El id es `${clientId}_${trainerId}` (una por par).
+ */
+export interface JoinRequest {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  /** Datos del alumno mostrados al entrenador para decidir. */
+  name: string;
+  email: string;
+  photoURL?: string;
+  createdAt: number;
+}
+
 /** Hábito diario asignado por el entrenador a un alumno. */
 export interface Habit {
   id: string;
