@@ -110,6 +110,8 @@ export default function WorkoutScreen() {
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [restLabel, setRestLabel] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
+  // Índice del ejercicio que se muestra en el modo enfocado (1 por pantalla).
+  const [viewIndex, setViewIndex] = useState(0);
   const startedAt = useRef<number | null>(null);
 
   useFocusEffect(
@@ -174,6 +176,9 @@ export default function WorkoutScreen() {
             setRestored(true);
             setSummary(null);
             setRestSeconds(null);
+            // Retoma en el primer ejercicio con series pendientes.
+            const resume = draft.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
+            setViewIndex(resume >= 0 ? resume : 0);
             return;
           }
         }
@@ -185,6 +190,7 @@ export default function WorkoutScreen() {
       setRestored(false);
       setSummary(null);
       setRestSeconds(null);
+      setViewIndex(0);
       startedAt.current = null;
     })();
     return () => {
@@ -288,14 +294,26 @@ export default function WorkoutScreen() {
         setRestSeconds(rest);
         setRestKey((k) => k + 1);
       }
+
+      // Autoavance: si al marcar esta serie el ejercicio queda COMPLETO, pasa
+      // solo al siguiente (deja ver el ✓ un instante). El último no avanza.
+      const exSets = log[exerciseIndex]?.sets ?? [];
+      const nowAllDone =
+        exSets.length > 0 && exSets.every((s, j) => (j === setIndex ? true : s.completed));
+      if (nowAllDone && exerciseIndex < log.length - 1) {
+        setTimeout(() => {
+          setViewIndex((cur) => (cur === exerciseIndex ? exerciseIndex + 1 : cur));
+        }, 900);
+      }
     }
   };
 
   const totalSets = log.reduce((acc, ex) => acc + ex.sets.length, 0);
   const doneSets = log.reduce((acc, ex) => acc + ex.sets.filter((s) => s.completed).length, 0);
   const progress = totalSets > 0 ? doneSets / totalSets : 0;
-  // Ejercicio "actual": el primero con series pendientes.
-  const currentIndex = log.findIndex((ex) => ex.sets.some((s) => !s.completed));
+  // Índice visible en el modo enfocado (acotado por si la lista cambió).
+  const safeIndex = Math.min(viewIndex, Math.max(0, log.length - 1));
+  const isLastExercise = safeIndex >= log.length - 1;
 
   const handleSave = async () => {
     if (!profile || !routine || !day) return;
@@ -487,13 +505,16 @@ export default function WorkoutScreen() {
       ) : null}
 
       {totalSets > 0 ? (
-        <View style={styles.progressWrap}>
-          <View style={{ flex: 1 }}>
-            <ProgressBar progress={progress} height={6} />
+        <View style={styles.progressBlock}>
+          <View style={styles.progressTopRow}>
+            <Text style={styles.exerciseCounter}>
+              Ejercicio {safeIndex + 1} de {log.length}
+            </Text>
+            <Text style={styles.progressText}>
+              {doneSets}/{totalSets} series
+            </Text>
           </View>
-          <Text style={styles.progressText}>
-            {doneSets}/{totalSets} series
-          </Text>
+          <ProgressBar progress={progress} height={6} />
         </View>
       ) : null}
 
@@ -516,20 +537,19 @@ export default function WorkoutScreen() {
         />
       ) : null}
 
-      {log.map((exercise, exerciseIndex) => {
+      {(() => {
+        const exerciseIndex = safeIndex;
+        const exercise = log[exerciseIndex];
+        if (!exercise) return null;
         const prev = lastPerf[exercise.exerciseId];
         const planned = day?.exercises[exerciseIndex];
-        const isCurrent = exerciseIndex === currentIndex;
         const isDone = exercise.sets.length > 0 && exercise.sets.every((s) => s.completed);
         // Carga del ejercicio: define si hay casilla extra (peso/goma) o ninguna.
         const load = planned ? resolveLoad(planned) : 'none';
         const isSeconds = planned?.measure === 'seconds';
         return (
-          <Card
-            key={exercise.exerciseId + exerciseIndex}
-            accent={isCurrent}
-            style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}
-          >
+          <FadeIn key={exercise.exerciseId + exerciseIndex}>
+          <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
             {planned?.supersetWithPrevious ? (
               <View style={styles.supersetRow}>
                 <Ionicons name="link" size={12} color={colors.primaryBright} />
@@ -537,15 +557,11 @@ export default function WorkoutScreen() {
               </View>
             ) : null}
             <View style={styles.exerciseHeader}>
-              <Text style={[styles.exerciseName, isCurrent && styles.exerciseNameCurrent]}>
+              <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>
                 {exercise.name}
               </Text>
               {isDone ? (
-                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              ) : isCurrent ? (
-                <View style={styles.nowChip}>
-                  <Text style={styles.nowChipText}>AHORA</Text>
-                </View>
+                <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
               ) : null}
             </View>
             {planned ? (
@@ -641,30 +657,60 @@ export default function WorkoutScreen() {
               </View>
             ))}
           </Card>
+          </FadeIn>
         );
-      })}
+      })()}
 
       {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
 
-      {doneSets === 0 ? (
+      {isLastExercise && doneSets === 0 ? (
         <Text style={styles.saveHint}>
-          Marca cada serie con ✓ para registrarla, o pulsa el botón para dar la
-          sesión por hecha sin apuntar nada.
+          Marca cada serie con ✓, o pulsa “Terminar” para dar la sesión por hecha
+          sin apuntar nada.
         </Text>
       ) : null}
 
-      <Button
-        title={
-          doneSets === 0
-            ? 'He hecho la sesión (sin apuntar)'
-            : doneSets < totalSets
-              ? `Guardar sesión (${doneSets}/${totalSets} series)`
-              : 'Marcar sesión como completada'
-        }
-        onPress={handleSave}
-        loading={saving}
-        style={{ marginTop: spacing.sm, marginBottom: spacing.xl }}
-      />
+      <View style={styles.navRow}>
+        <Pressable
+          onPress={() => setViewIndex((i) => Math.max(0, i - 1))}
+          disabled={safeIndex === 0}
+          style={[styles.navBtn, safeIndex === 0 && styles.navBtnDisabled]}
+          hitSlop={6}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={22}
+            color={safeIndex === 0 ? colors.textFaint : colors.text}
+          />
+          <Text style={[styles.navBtnText, safeIndex === 0 && styles.navBtnTextDisabled]}>
+            Anterior
+          </Text>
+        </Pressable>
+
+        {isLastExercise ? (
+          <Button
+            title={
+              doneSets === 0
+                ? 'Terminar (sin apuntar)'
+                : doneSets < totalSets
+                  ? `Terminar (${doneSets}/${totalSets})`
+                  : 'Terminar sesión'
+            }
+            onPress={handleSave}
+            loading={saving}
+            style={{ flex: 1, marginLeft: spacing.sm }}
+          />
+        ) : (
+          <Pressable
+            onPress={() => setViewIndex((i) => Math.min(log.length - 1, i + 1))}
+            style={[styles.navBtn, styles.navNext]}
+            hitSlop={6}
+          >
+            <Text style={[styles.navBtnText, styles.navNextText]}>Siguiente</Text>
+            <Ionicons name="chevron-forward" size={22} color={colors.onPrimary} />
+          </Pressable>
+        )}
+      </View>
     </ScreenContainer>
   );
 }
@@ -703,6 +749,38 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
+  progressBlock: { marginBottom: spacing.md, gap: spacing.xs },
+  progressTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  exerciseCounter: {
+    ...typography.label,
+    color: colors.primaryBright,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  navBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  navBtnDisabled: { opacity: 0.4 },
+  navBtnText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  navBtnTextDisabled: { color: colors.textFaint },
+  navNext: { flex: 1, backgroundColor: colors.primary, borderColor: colors.primary },
+  navNextText: { color: colors.onPrimary },
   progressTrack: {
     flex: 1,
     height: 6,
