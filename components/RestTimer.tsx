@@ -7,6 +7,8 @@ import { colors, fonts, radius, shadows, spacing, typography } from '../lib/them
 interface RestTimerProps {
   /** Segundos de descanso. Cambiar la key del componente reinicia el timer. */
   seconds: number;
+  /** Texto de "lo siguiente" (p. ej. "Ahora: Serie 2 · Dominadas"). */
+  title?: string;
   onDone: () => void;
 }
 
@@ -14,7 +16,7 @@ interface RestTimerProps {
  * Cronómetro de descanso entre series. Aparece al completar una serie,
  * cuenta atrás con barra de progreso dorada y avisa (háptica) al terminar.
  */
-export function RestTimer({ seconds, onDone }: RestTimerProps) {
+export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
   const [remaining, setRemaining] = useState(seconds);
   const total = useRef(seconds);
   const doneRef = useRef(onDone);
@@ -59,18 +61,17 @@ export function RestTimer({ seconds, onDone }: RestTimerProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.row}>
-        <Ionicons name="hourglass-outline" size={16} color={colors.primary} />
-        <Text style={styles.label}>Descanso</Text>
+      <View style={styles.topRow}>
+        <View style={styles.labelWrap}>
+          <View style={styles.labelRow}>
+            <Ionicons name="hourglass-outline" size={15} color={colors.primary} />
+            <Text style={styles.label}>Descanso</Text>
+          </View>
+          {title ? <Text style={styles.title} numberOfLines={1}>{title}</Text> : null}
+        </View>
         <Text style={styles.time}>
           {mins}:{secs.toString().padStart(2, '0')}
         </Text>
-        <Pressable onPress={() => addTime(30)} style={styles.action} hitSlop={8}>
-          <Text style={styles.actionText}>+30s</Text>
-        </Pressable>
-        <Pressable onPress={() => doneRef.current()} style={styles.action} hitSlop={8}>
-          <Text style={styles.actionText}>Saltar</Text>
-        </Pressable>
       </View>
       <View style={styles.track}>
         <Animated.View
@@ -84,6 +85,20 @@ export function RestTimer({ seconds, onDone }: RestTimerProps) {
             },
           ]}
         />
+      </View>
+      <View style={styles.actionsRow}>
+        <Pressable onPress={() => addTime(15)} style={styles.action} hitSlop={8}>
+          <Ionicons name="add" size={14} color={colors.text} />
+          <Text style={styles.actionText}>15s</Text>
+        </Pressable>
+        <Pressable onPress={() => addTime(30)} style={styles.action} hitSlop={8}>
+          <Ionicons name="add" size={14} color={colors.text} />
+          <Text style={styles.actionText}>30s</Text>
+        </Pressable>
+        <Pressable onPress={() => doneRef.current()} style={[styles.action, styles.actionSkip]} hitSlop={8}>
+          <Text style={[styles.actionText, styles.actionSkipText]}>Saltar descanso</Text>
+          <Ionicons name="play-skip-forward" size={13} color={colors.onPrimary} />
+        </Pressable>
       </View>
     </View>
   );
@@ -100,31 +115,54 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadows.glowGold,
   },
-  row: {
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
+  labelWrap: { flex: 1, gap: 2 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   label: {
     ...typography.label,
     color: colors.textMuted,
     textTransform: 'uppercase',
   },
+  title: {
+    ...typography.small,
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+  },
   time: {
-    ...typography.h2,
+    fontSize: 40,
+    lineHeight: 44,
     color: colors.primaryBright,
-    flex: 1,
-    textAlign: 'right',
     fontFamily: fonts.heading,
+    fontVariant: ['tabular-nums'],
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   action: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+  },
+  actionSkip: {
+    marginLeft: 'auto',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    gap: 5,
   },
   actionText: {
     ...typography.small,
@@ -132,6 +170,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: 12,
   },
+  actionSkipText: { color: colors.onPrimary },
   track: {
     height: 4,
     borderRadius: 2,

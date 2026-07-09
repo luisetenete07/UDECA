@@ -105,6 +105,7 @@ export default function WorkoutScreen() {
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [restKey, setRestKey] = useState(0);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [restLabel, setRestLabel] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
   const startedAt = useRef<number | null>(null);
 
@@ -270,6 +271,17 @@ export default function WorkoutScreen() {
       const nextIsLinked = day?.exercises[exerciseIndex + 1]?.supersetWithPrevious === true;
       if (!nextIsLinked) {
         const rest = day?.exercises[exerciseIndex]?.restSeconds || DEFAULT_REST_SECONDS;
+        // Qué toca al terminar el descanso: otra serie del mismo ejercicio o el siguiente.
+        const setsInEx = log[exerciseIndex]?.sets.length ?? 0;
+        const exName = log[exerciseIndex]?.name ?? '';
+        const nextEx = day?.exercises[exerciseIndex + 1];
+        const nextLabel =
+          setIndex + 1 < setsInEx
+            ? `Ahora: Serie ${setIndex + 2} · ${exName}`
+            : nextEx
+              ? `Ahora: ${nextEx.name}`
+              : 'Última serie hecha · guarda la sesión';
+        setRestLabel(nextLabel);
         setRestSeconds(rest);
         setRestKey((k) => k + 1);
       }
@@ -290,8 +302,14 @@ export default function WorkoutScreen() {
       const durationMin = startedAt.current
         ? Math.max(1, Math.round((Date.now() - startedAt.current) / 60000))
         : 0;
-      const prs = detectNewPRs(history, log);
-      const totals = sessionTotals(log);
+      // Si no marcó ninguna serie, damos la sesión por hecha igualmente (para
+      // que cuente): marcamos todas las series como completadas.
+      const finalLog =
+        doneSets > 0
+          ? log
+          : log.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s, completed: true })) }));
+      const prs = detectNewPRs(history, finalLog);
+      const totals = sessionTotals(finalLog);
 
       await createWorkoutLog({
         trainerId: routine.trainerId,
@@ -300,7 +318,7 @@ export default function WorkoutScreen() {
         routineName: routine.name,
         dayName: day.name,
         date: Date.now(),
-        exercises: log,
+        exercises: finalLog,
         ...(durationMin > 0 ? { durationMin } : {}),
       });
 
@@ -487,7 +505,12 @@ export default function WorkoutScreen() {
       ) : null}
 
       {restSeconds !== null ? (
-        <RestTimer key={restKey} seconds={restSeconds} onDone={() => setRestSeconds(null)} />
+        <RestTimer
+          key={restKey}
+          seconds={restSeconds}
+          title={restLabel ?? undefined}
+          onDone={() => setRestSeconds(null)}
+        />
       ) : null}
 
       {log.map((exercise, exerciseIndex) => {
@@ -566,22 +589,14 @@ export default function WorkoutScreen() {
                 </Text>
               </View>
             ) : null}
+            <View style={styles.setHead}>
+              <Text style={styles.setHeadCap}>
+                {planned?.measure === 'seconds' ? 'SEG' : 'REPS'}
+              </Text>
+              <Text style={styles.setHeadCap}>PESO KG</Text>
+            </View>
             {exercise.sets.map((set, setIndex) => (
               <View key={setIndex} style={styles.setRow}>
-                <Text style={styles.setLabel}>Serie {setIndex + 1}</Text>
-                <TextField
-                  value={set.reps}
-                  onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
-                  placeholder={planned?.measure === 'seconds' ? 'Seg' : 'Reps'}
-                  style={styles.setInput}
-                />
-                <TextField
-                  value={set.weight}
-                  onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'weight', v)}
-                  placeholder="Peso (kg)"
-                  keyboardType="numeric"
-                  style={styles.setInput}
-                />
                 <Pressable
                   onPress={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
                   style={[styles.checkButton, set.completed && styles.checkButtonDone]}
@@ -589,10 +604,26 @@ export default function WorkoutScreen() {
                 >
                   <Ionicons
                     name="checkmark"
-                    size={18}
+                    size={20}
                     color={set.completed ? colors.onPrimary : colors.textFaint}
                   />
                 </Pressable>
+                <Text style={[styles.setLabel, set.completed && styles.setLabelDone]}>
+                  Serie {setIndex + 1}
+                </Text>
+                <TextField
+                  value={set.reps}
+                  onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
+                  placeholder={planned?.reps || '—'}
+                  style={styles.setFieldInput}
+                />
+                <TextField
+                  value={set.weight}
+                  onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'weight', v)}
+                  placeholder="—"
+                  keyboardType="numeric"
+                  style={styles.setFieldInput}
+                />
               </View>
             ))}
           </Card>
@@ -601,12 +632,24 @@ export default function WorkoutScreen() {
 
       {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
 
+      {doneSets === 0 ? (
+        <Text style={styles.saveHint}>
+          Marca cada serie con ✓ para registrar tus reps y peso, o pulsa el botón
+          para dar la sesión por hecha sin apuntar nada.
+        </Text>
+      ) : null}
+
       <Button
-        title="Marcar sesión como completada"
+        title={
+          doneSets === 0
+            ? 'He hecho la sesión (sin apuntar)'
+            : doneSets < totalSets
+              ? `Guardar sesión (${doneSets}/${totalSets} series)`
+              : 'Marcar sesión como completada'
+        }
         onPress={handleSave}
         loading={saving}
-        disabled={doneSets === 0}
-        style={{ marginBottom: spacing.xl }}
+        style={{ marginTop: spacing.sm, marginBottom: spacing.xl }}
       />
     </ScreenContainer>
   );
@@ -720,6 +763,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
+  saveHint: {
+    ...typography.small,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
   coachNotes: {
     ...typography.small,
     color: colors.textMuted,
@@ -750,18 +798,39 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     textDecorationLine: 'underline',
   },
+  setHead: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginBottom: 4,
+  },
+  setHeadCap: {
+    ...typography.small,
+    color: colors.textFaint,
+    fontSize: 10,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 0.8,
+    width: 66,
+    textAlign: 'center',
+  },
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
   },
-  setLabel: { ...typography.small, color: colors.textMuted, width: 56 },
-  setInput: { flex: 1, marginBottom: 0 },
+  setLabel: { ...typography.small, color: colors.text, flex: 1, fontFamily: fonts.semiBold },
+  setLabelDone: { color: colors.textMuted },
+  setFieldInput: {
+    width: 66,
+    marginBottom: 0,
+    paddingHorizontal: spacing.sm,
+    textAlign: 'center',
+  },
   checkButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
