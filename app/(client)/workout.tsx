@@ -591,9 +591,11 @@ export default function WorkoutScreen() {
             ) : null}
             <View style={styles.setHead}>
               <Text style={styles.setHeadCap}>
-                {planned?.measure === 'seconds' ? 'SEG' : 'REPS'}
+                {planned?.measure === 'seconds' ? 'SEGUNDOS' : 'REPS'}
               </Text>
-              <Text style={styles.setHeadCap}>PESO KG</Text>
+              <Text style={styles.setHeadCap}>
+                {planned?.band ? 'GOMA ± KG' : 'PESO (OPC.)'}
+              </Text>
             </View>
             {exercise.sets.map((set, setIndex) => (
               <View key={setIndex} style={styles.setRow}>

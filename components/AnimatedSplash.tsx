@@ -12,7 +12,6 @@ const NATIVE = Platform.OS !== 'web';
 export function AnimatedSplash({ onFinish }: { onFinish: () => void }) {
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.82)).current;
-  const glow = useRef(new Animated.Value(0)).current;
   const container = useRef(new Animated.Value(1)).current;
   const done = useRef(onFinish);
   done.current = onFinish;
@@ -32,14 +31,8 @@ export function AnimatedSplash({ onFinish }: { onFinish: () => void }) {
           tension: 55,
           useNativeDriver: NATIVE,
         }),
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 720,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: NATIVE,
-        }),
       ]),
-      Animated.delay(480),
+      Animated.delay(520),
       Animated.parallel([
         Animated.timing(container, {
           toValue: 0,
@@ -55,7 +48,7 @@ export function AnimatedSplash({ onFinish }: { onFinish: () => void }) {
         }),
       ]),
     ]).start(() => done.current());
-  }, [container, glow, logoOpacity, logoScale]);
+  }, [container, logoOpacity, logoScale]);
 
   return (
     <Animated.View style={[styles.container, { opacity: container }]} pointerEvents="none">
@@ -68,7 +61,6 @@ export function AnimatedSplash({ onFinish }: { onFinish: () => void }) {
           resizeMode="contain"
         />
       </Animated.View>
-      <Animated.View style={[styles.rule, { opacity: glow }]} />
     </Animated.View>
   );
 }
@@ -95,15 +87,8 @@ const styles = StyleSheet.create({
     elevation: 24,
   },
   logo: {
-    width: 132,
-    height: 132,
-    borderRadius: 30,
-  },
-  rule: {
-    marginTop: 24,
-    width: 46,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.primary,
+    width: 140,
+    height: 140,
+    borderRadius: 32,
   },
 });

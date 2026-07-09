@@ -215,6 +215,43 @@ export default function RoutineEditorScreen() {
     );
   };
 
+  // Cambia cómo se mide un ejercicio concreto de la rutina: repeticiones o
+  // tiempo (segundos). Es por ejercicio, independiente de la biblioteca.
+  const setExerciseMeasure = (
+    dayId: string,
+    exerciseRowId: string,
+    measure: 'reps' | 'seconds'
+  ) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) =>
+                e.id === exerciseRowId ? { ...e, measure } : e
+              ),
+            }
+          : d
+      )
+    );
+  };
+
+  // Marca/desmarca que un ejercicio se hace con goma (banda elástica).
+  const toggleExerciseBand = (dayId: string, exerciseRowId: string) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) =>
+                e.id === exerciseRowId ? { ...e, band: !e.band } : e
+              ),
+            }
+          : d
+      )
+    );
+  };
+
   // Encadena o desencadena un ejercicio en superserie con el anterior.
   const toggleSuperset = (dayId: string, exerciseRowId: string) => {
     setDays((prev) =>
@@ -537,6 +574,48 @@ export default function RoutineEditorScreen() {
                   <Ionicons name="close" size={18} color={colors.danger} />
                 </Pressable>
               </View>
+
+              {/* Personaliza CADA ejercicio: por repeticiones o por tiempo, y
+                  si se hace con goma (banda). */}
+              <View style={styles.exerciseOptions}>
+                <View style={styles.segment}>
+                  <Pressable
+                    onPress={() => setExerciseMeasure(day.id, ex.id, 'reps')}
+                    style={[styles.segmentBtn, (ex.measure ?? 'reps') === 'reps' && styles.segmentBtnOn]}
+                    hitSlop={2}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        (ex.measure ?? 'reps') === 'reps' && styles.segmentTextOn,
+                      ]}
+                    >
+                      Repeticiones
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setExerciseMeasure(day.id, ex.id, 'seconds')}
+                    style={[styles.segmentBtn, ex.measure === 'seconds' && styles.segmentBtnOn]}
+                    hitSlop={2}
+                  >
+                    <Text
+                      style={[styles.segmentText, ex.measure === 'seconds' && styles.segmentTextOn]}
+                    >
+                      Tiempo
+                    </Text>
+                  </Pressable>
+                </View>
+                <Pressable
+                  onPress={() => toggleExerciseBand(day.id, ex.id)}
+                  style={[styles.bandToggle, ex.band && styles.bandToggleOn]}
+                  hitSlop={4}
+                >
+                  <Text style={[styles.bandToggleText, ex.band && styles.bandToggleTextOn]}>
+                    {ex.band ? '🟡 Con goma' : 'Con goma'}
+                  </Text>
+                </Pressable>
+              </View>
+
               <View style={styles.exerciseFields}>
                 <TextField
                   label="Series"
@@ -810,6 +889,40 @@ const styles = StyleSheet.create({
   },
   exerciseFields: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginTop: spacing.xs },
   smallInput: { flex: 1, marginBottom: 0 },
+  exerciseOptions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 2,
+  },
+  segmentBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+  },
+  segmentBtnOn: { backgroundColor: colors.primary },
+  segmentText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
+  segmentTextOn: { color: colors.onPrimary },
+  bandToggle: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  bandToggleOn: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  bandToggleText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
+  bandToggleTextOn: { color: colors.primaryBright },
   moveBtn: { padding: spacing.xs },
   deleteBtn: { padding: spacing.xs },
   supersetTag: {
