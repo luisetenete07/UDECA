@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import {
   Linking,
   Platform,
@@ -31,6 +31,7 @@ import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { resolveTodaySession } from '../../lib/schedule';
+import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
 import {
   currentStreak,
@@ -96,6 +97,19 @@ interface SessionSummary {
 
 export default function WorkoutScreen() {
   const { profile } = useAuth();
+  const navigation = useNavigation();
+  const router = useRouter();
+
+  // Modo inmersivo: oculta la barra de pestañas mientras se entrena para
+  // concentrarse; la restaura al salir de la pantalla.
+  useFocusEffect(
+    useCallback(() => {
+      const parent = navigation.getParent();
+      parent?.setOptions({ tabBarStyle: { display: 'none' } });
+      return () => parent?.setOptions({ tabBarStyle: tabScreenOptions.tabBarStyle });
+    }, [navigation])
+  );
+
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [history, setHistory] = useState<import('../../lib/types').WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -378,6 +392,14 @@ export default function WorkoutScreen() {
   if (!routine || routine.days.length === 0) {
     return (
       <ScreenContainer>
+        <Pressable
+          onPress={() => router.push('/(client)/dashboard')}
+          style={styles.exitBtn}
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
+          <Text style={styles.exitText}>Volver a inicio</Text>
+        </Pressable>
         <Text style={styles.title}>Mi entrenamiento</Text>
         <EmptyState
           title="Sin rutina asignada"
@@ -451,6 +473,11 @@ export default function WorkoutScreen() {
           style={{ marginTop: spacing.lg }}
         />
         <Button
+          title="Ir a inicio"
+          onPress={() => router.push('/(client)/dashboard')}
+          style={{ marginTop: spacing.sm }}
+        />
+        <Button
           title="Volver al entrenamiento"
           variant="secondary"
           onPress={() => {
@@ -467,6 +494,14 @@ export default function WorkoutScreen() {
   // ---------- Modo entreno ----------
   return (
     <ScreenContainer>
+      <Pressable
+        onPress={() => router.push('/(client)/dashboard')}
+        style={styles.exitBtn}
+        hitSlop={8}
+      >
+        <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
+        <Text style={styles.exitText}>Salir del entreno</Text>
+      </Pressable>
       <Text style={styles.title}>{routine.name}</Text>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayTabs}>
@@ -717,6 +752,15 @@ export default function WorkoutScreen() {
 
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
+  exitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  exitText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   dayTabs: { marginBottom: spacing.md },
   dayTab: {
     paddingHorizontal: spacing.md,
