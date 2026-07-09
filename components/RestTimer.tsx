@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { playBeep, primeAudio } from '../lib/sound';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
 
 interface RestTimerProps {
@@ -33,6 +34,12 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
     }).start();
   }, [remaining, barAnim]);
 
+  // El timer aparece tras un gesto (marcar serie): preparamos el audio aquí
+  // para poder sonar al terminar la cuenta atrás (política de autoplay web).
+  useEffect(() => {
+    primeAudio();
+  }, []);
+
   useEffect(() => {
     const id = setInterval(() => {
       setRemaining((r) => {
@@ -40,6 +47,8 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
           clearInterval(id);
           if (Platform.OS !== 'web') {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } else {
+            playBeep();
           }
           // Da tiempo a ver el 0 antes de cerrarse.
           setTimeout(() => doneRef.current(), 600);
