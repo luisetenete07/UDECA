@@ -22,6 +22,7 @@ import { fonts, colors, radius, spacing, typography } from '../../../../lib/them
 import {
   resolveLoad,
   WEEKDAY_LABELS,
+  WEEKDAY_NAMES,
   type Exercise,
   type RoutineDay,
   type RoutineExercise,
@@ -83,6 +84,12 @@ export default function RoutineEditorScreen() {
     return d.getTime();
   });
   const [restText, setRestText] = useState<Record<string, string>>({});
+  // Qué días están desplegados en el editor (compacto por defecto).
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
+
+  const toggleDayExpanded = (dayId: string, fallback: boolean) => {
+    setExpandedDays((prev) => ({ ...prev, [dayId]: !(prev[dayId] ?? fallback) }));
+  };
 
   useEffect(() => {
     if (!clientId || !profile) return;
@@ -106,7 +113,9 @@ export default function RoutineEditorScreen() {
   }, [clientId, profile]);
 
   const addDay = () => {
-    setDays((prev) => [...prev, { id: uid(), name: `Día ${prev.length + 1}`, exercises: [] }]);
+    const id = uid();
+    setDays((prev) => [...prev, { id, name: `Día ${prev.length + 1}`, exercises: [] }]);
+    setExpandedDays((prev) => ({ ...prev, [id]: true })); // el día nuevo se abre
   };
 
   const removeDay = (dayId: string) => {
@@ -410,18 +419,51 @@ export default function RoutineEditorScreen() {
         )}
       </Card>
 
-      {days.map((day, dayIndex) => (
+      {days.map((day, dayIndex) => {
+        const isOpen = expandedDays[day.id] ?? dayIndex === 0;
+        const exCount = day.exercises.length;
+        const summaryParts: string[] = [];
+        if (schedule === 'cycle') {
+          if (day.isRest) summaryParts.push('Descanso');
+          else summaryParts.push(`Día ${dayIndex + 1}`, `Int. ${day.intensity ?? 5}/10`);
+        } else if (day.weekday !== undefined) {
+          summaryParts.push(WEEKDAY_NAMES[day.weekday]);
+        }
+        summaryParts.push(`${exCount} ${exCount === 1 ? 'ejercicio' : 'ejercicios'}`);
+        return (
         <Card key={day.id} style={styles.dayCard}>
-          <View style={styles.dayHeader}>
-            <TextField
-              value={day.name}
-              onChangeText={(v) => updateDayName(day.id, v)}
-              style={styles.dayNameInput}
-            />
-            <Pressable onPress={() => removeDay(day.id)} style={styles.removeDayBtn} hitSlop={6}>
+          <View style={styles.dayHeaderRow}>
+            <Pressable
+              style={styles.dayHeaderMain}
+              onPress={() => toggleDayExpanded(day.id, dayIndex === 0)}
+            >
+              <Text style={styles.dayTitle} numberOfLines={1}>
+                {day.name || `Día ${dayIndex + 1}`}
+              </Text>
+              <Text style={styles.daySummary} numberOfLines={1}>
+                {summaryParts.join(' · ')}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => removeDay(day.id)} style={styles.removeDayBtn} hitSlop={8}>
               <Ionicons name="trash-outline" size={18} color={colors.danger} />
             </Pressable>
+            <Pressable onPress={() => toggleDayExpanded(day.id, dayIndex === 0)} hitSlop={8}>
+              <Ionicons
+                name={isOpen ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.textMuted}
+              />
+            </Pressable>
           </View>
+
+          {isOpen ? (
+          <>
+          <TextField
+            label="Nombre del día"
+            value={day.name}
+            onChangeText={(v) => updateDayName(day.id, v)}
+            style={{ marginTop: spacing.sm }}
+          />
 
           {schedule === 'cycle' ? (
             <>
@@ -549,9 +591,10 @@ export default function RoutineEditorScreen() {
                   style={styles.smallInput}
                 />
                 <TextField
-                  label={ex.measure === 'seconds' ? 'Segundos' : 'Reps'}
+                  label={ex.measure === 'seconds' ? 'Aguante (seg)' : 'Reps'}
                   value={ex.reps}
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
+                  placeholder={ex.measure === 'seconds' ? '30' : '8-12'}
                   style={styles.smallInput}
                 />
               </View>
@@ -609,8 +652,11 @@ export default function RoutineEditorScreen() {
             }}
             style={{ marginTop: spacing.sm }}
           />
+          </>
+          ) : null}
         </Card>
-      ))}
+        );
+      })}
 
       <Modal
         visible={pickerForDay !== null}
@@ -772,6 +818,10 @@ const styles = StyleSheet.create({
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dayNameInput: { flex: 1, marginBottom: 0 },
   removeDayBtn: { paddingHorizontal: spacing.sm },
+  dayHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  dayHeaderMain: { flex: 1, paddingVertical: spacing.xs },
+  dayTitle: { ...typography.h3, color: colors.text },
+  daySummary: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   removeDayText: { ...typography.small, color: colors.danger },
   weekdayRow: { marginTop: spacing.sm, marginBottom: spacing.sm },
   weekdayLabel: {
