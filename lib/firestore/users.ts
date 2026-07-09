@@ -64,3 +64,36 @@ export async function updateClientStatus(
 export async function removeClientFromTrainer(clientId: string) {
   await updateDoc(doc(db, 'users', clientId), { trainerId: deleteField() });
 }
+
+/** El entrenador clasifica el estado de pago de un cliente suyo. */
+export async function updateClientPaymentStatus(
+  clientId: string,
+  paymentStatus: UserProfile['paymentStatus']
+) {
+  await setDoc(doc(db, 'users', clientId), { paymentStatus }, { merge: true });
+}
+
+/** Normaliza un código: mayúsculas, solo A-Z y 0-9 (sin espacios ni símbolos). */
+export function normalizeInviteCode(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+/**
+ * El entrenador fija su propio código de invitación personalizado. Comprueba
+ * que esté libre (o que ya sea suyo), reserva el mapeo público código->coach
+ * y lo guarda en su perfil. El código anterior sigue funcionando.
+ * Lanza un Error legible si el código está en uso por otro entrenador.
+ */
+export async function setTrainerInviteCode(trainerId: string, rawCode: string) {
+  const code = normalizeInviteCode(rawCode);
+  if (code.length < 3 || code.length > 16) {
+    throw new Error('El código debe tener entre 3 y 16 letras o números.');
+  }
+  const existing = await getTrainerIdForInviteCode(code);
+  if (existing && existing !== trainerId) {
+    throw new Error('Ese código ya está en uso. Prueba con otro.');
+  }
+  await registerTrainerInviteCode(code, trainerId);
+  await updateUserProfile(trainerId, { inviteCode: code });
+  return code;
+}

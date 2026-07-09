@@ -25,6 +25,8 @@ export interface UserProfile {
   reminderEnabled?: boolean;
   /** Estado del alumno gestionado por el entrenador. */
   status?: ClientStatus;
+  /** Estado de pago del alumno, gestionado por el entrenador. */
+  paymentStatus?: PaymentStatus;
   /** Token de Expo Push Notifications del último dispositivo registrado. */
   pushToken?: string;
 }
@@ -36,6 +38,27 @@ export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
   active: 'Activo',
   paused: 'En pausa',
   inactive: 'Inactivo',
+};
+
+/** Estado de pago del alumno, gestionado por el entrenador. */
+export const PAYMENT_STATUSES = ['paid', 'pending', 'overdue', 'trial', 'free'] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
+  paid: 'Pagado',
+  pending: 'Pago pendiente',
+  overdue: 'Vencido',
+  trial: 'Prueba',
+  free: 'Cortesía',
+};
+
+/** Color semántico de cada estado de pago (verde/ámbar/rojo/neutro). */
+export const PAYMENT_STATUS_TONE: Record<PaymentStatus, 'good' | 'warn' | 'bad' | 'muted'> = {
+  paid: 'good',
+  pending: 'warn',
+  overdue: 'bad',
+  trial: 'muted',
+  free: 'muted',
 };
 
 export const EXPERIENCE_LEVELS = ['Principiante', 'Intermedio', 'Avanzado', 'Élite'] as const;

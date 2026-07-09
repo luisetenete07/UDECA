@@ -9,7 +9,14 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null
         && request.resource.data.trainerId == request.auth.uid;
-      allow update, delete: if false;
+      // El dueño puede reescribir o liberar sus propios códigos; nadie puede
+      // apropiarse del código de otro entrenador (create solo aplica si el
+      // documento no existe; update solo si ya es tuyo).
+      allow update: if request.auth != null
+        && resource.data.trainerId == request.auth.uid
+        && request.resource.data.trainerId == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
     }
 
     // Perfiles de usuario (entrenadores y clientes).
@@ -30,11 +37,11 @@ service cloud.firestore {
         || (
           resource.data.trainerId == request.auth.uid
           && (
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentStatus'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId', 'status'])
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId', 'status', 'paymentStatus'])
             )
           )
         )

@@ -5,9 +5,11 @@ import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { TextField } from '../../components/TextField';
+import { showToast } from '../../components/Toast';
 import { DeleteAccountButton } from '../../components/DeleteAccountButton';
 import { useAuth } from '../../lib/auth-context';
-import { updateUserProfile } from '../../lib/firestore/users';
+import { normalizeInviteCode, setTrainerInviteCode, updateUserProfile } from '../../lib/firestore/users';
 import { pickAvatar } from '../../lib/image';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 
@@ -15,6 +17,26 @@ export default function TrainerProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
   const [copied, setCopied] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [editingCode, setEditingCode] = useState(false);
+  const [codeInput, setCodeInput] = useState('');
+  const [savingCode, setSavingCode] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+
+  const handleSaveCode = async () => {
+    if (!profile) return;
+    setCodeError(null);
+    setSavingCode(true);
+    try {
+      await setTrainerInviteCode(profile.uid, codeInput);
+      await refreshProfile();
+      setEditingCode(false);
+      showToast('Código actualizado');
+    } catch (e) {
+      setCodeError(e instanceof Error ? e.message : 'No se pudo guardar el código.');
+    } finally {
+      setSavingCode(false);
+    }
+  };
 
   const handleChangePhoto = async () => {
     if (!profile) return;
@@ -78,11 +100,53 @@ export default function TrainerProfileScreen() {
         <View style={styles.codeBox}>
           <Text style={styles.code}>{profile?.inviteCode}</Text>
         </View>
-        <Button
-          title={copied ? 'Copiado' : Platform.OS === 'web' ? 'Copiar código' : 'Compartir código'}
-          variant="secondary"
-          onPress={handleShare}
-        />
+
+        {editingCode ? (
+          <>
+            <TextField
+              label="Nuevo código (letras y números)"
+              value={codeInput}
+              onChangeText={(v) => setCodeInput(normalizeInviteCode(v))}
+              placeholder="Ej. LUISTENA"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={16}
+              error={codeError ?? undefined}
+            />
+            <Button
+              title="Guardar código"
+              onPress={handleSaveCode}
+              loading={savingCode}
+              disabled={codeInput.length < 3}
+            />
+            <Button
+              title="Cancelar"
+              variant="secondary"
+              onPress={() => {
+                setEditingCode(false);
+                setCodeError(null);
+              }}
+              style={{ marginTop: spacing.sm }}
+            />
+          </>
+        ) : (
+          <>
+            <Button
+              title={copied ? 'Copiado' : Platform.OS === 'web' ? 'Copiar código' : 'Compartir código'}
+              variant="secondary"
+              onPress={handleShare}
+            />
+            <Button
+              title="Personalizar mi código"
+              variant="ghost"
+              onPress={() => {
+                setCodeInput(profile?.inviteCode ?? '');
+                setEditingCode(true);
+              }}
+              style={{ marginTop: spacing.sm }}
+            />
+          </>
+        )}
       </Card>
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={{ marginTop: spacing.lg }} />

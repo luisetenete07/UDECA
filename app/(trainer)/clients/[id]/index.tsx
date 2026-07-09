@@ -33,6 +33,7 @@ import { trainingDays, weeklyActivity } from '../../../../lib/stats';
 import {
   getUserProfile,
   removeClientFromTrainer,
+  updateClientPaymentStatus,
   updateClientStatus,
 } from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
@@ -41,6 +42,10 @@ import {
   CHECKIN_FIELDS,
   CLIENT_STATUSES,
   CLIENT_STATUS_LABEL,
+  PAYMENT_STATUSES,
+  PAYMENT_STATUS_LABEL,
+  PAYMENT_STATUS_TONE,
+  type PaymentStatus,
   type BodyMeasurement,
   type ClientStatus,
   type NutritionPlan,
@@ -145,6 +150,12 @@ export default function ClientDetailScreen() {
     await updateClientStatus(id, status);
   };
 
+  const handleSetPayment = async (paymentStatus: PaymentStatus) => {
+    if (!id || !client) return;
+    setClient({ ...client, paymentStatus });
+    await updateClientPaymentStatus(id, paymentStatus);
+  };
+
   const handleRemoveFromGroup = async () => {
     if (!id) return;
     if (!confirmRemove) {
@@ -234,6 +245,31 @@ export default function ClientDetailScreen() {
             </Text>
           </Pressable>
         ))}
+      </View>
+
+      <Text style={styles.paymentLabel}>Estado de pago</Text>
+      <View style={styles.paymentRow}>
+        {PAYMENT_STATUSES.map((p) => {
+          const active = client.paymentStatus === p;
+          const tone = PAYMENT_STATUS_TONE[p];
+          return (
+            <Pressable
+              key={p}
+              onPress={() => handleSetPayment(p)}
+              style={[
+                styles.payChip,
+                active && styles.payChipActive,
+                active && tone === 'good' && styles.payGood,
+                active && tone === 'warn' && styles.payWarn,
+                active && tone === 'bad' && styles.payBad,
+              ]}
+            >
+              <Text style={[styles.payChipText, active && styles.payChipTextActive]}>
+                {PAYMENT_STATUS_LABEL[p]}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {client.goal || client.targetWeightKg ? (
@@ -505,6 +541,27 @@ const styles = StyleSheet.create({
   statusChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   statusText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   statusTextActive: { color: colors.onPrimary },
+  paymentLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+  },
+  paymentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  payChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  payChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  payGood: { backgroundColor: '#2E7D5B', borderColor: '#2E7D5B' },
+  payWarn: { backgroundColor: '#C9902B', borderColor: '#C9902B' },
+  payBad: { backgroundColor: colors.danger, borderColor: colors.danger },
+  payChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
+  payChipTextActive: { color: colors.white },
   miniLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },
