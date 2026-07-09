@@ -131,6 +131,27 @@ export default function RoutineEditorScreen() {
     setDays((prev) => prev.filter((d) => d.id !== dayId));
   };
 
+  // Duplica un día (con ids nuevos) justo debajo, para no rehacerlo.
+  const duplicateDay = (dayId: string) => {
+    const newId = uid();
+    setDays((prev) => {
+      const idx = prev.findIndex((d) => d.id === dayId);
+      if (idx < 0) return prev;
+      const src = prev[idx];
+      const clone: RoutineDay = {
+        ...src,
+        id: newId,
+        name: `${src.name} (copia)`,
+        exercises: src.exercises.map((e) => ({ ...e, id: uid() })),
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, clone);
+      return next;
+    });
+    setExpandedDays((p) => ({ ...p, [newId]: true }));
+    showToast('Día duplicado');
+  };
+
   const updateDayName = (dayId: string, value: string) => {
     setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, name: value } : d)));
   };
@@ -547,6 +568,9 @@ export default function RoutineEditorScreen() {
               <Text style={styles.daySummary} numberOfLines={1}>
                 {summaryParts.join(' · ')}
               </Text>
+            </Pressable>
+            <Pressable onPress={() => duplicateDay(day.id)} style={styles.removeDayBtn} hitSlop={8}>
+              <Ionicons name="copy-outline" size={17} color={colors.textMuted} />
             </Pressable>
             <Pressable onPress={() => removeDay(day.id)} style={styles.removeDayBtn} hitSlop={8}>
               <Ionicons name="trash-outline" size={18} color={colors.danger} />
