@@ -22,6 +22,8 @@ export interface UserProfile {
   targetWeightKg?: number;
   /** Recordatorio diario de entrenamiento (hora local, 0-23). */
   reminderHour?: number;
+  /** Minuto del recordatorio (0-59). */
+  reminderMinute?: number;
   reminderEnabled?: boolean;
   /** Estado del alumno gestionado por el entrenador. */
   status?: ClientStatus;
