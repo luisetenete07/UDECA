@@ -63,11 +63,11 @@ interface WorkoutDraft {
 
 const draftKey = (uid: string) => `udeca-workout-draft-${uid}`;
 
-/** Formatea segundos de descanso como reloj mm:ss. */
+/** Descanso en minutos para las etiquetas: 90 → "1,5 min", 120 → "2 min". */
 function formatRest(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
+  const rounded = Math.round((seconds / 60) * 10) / 10;
+  const str = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace('.', ',');
+  return `${str} min`;
 }
 
 function buildLog(day: RoutineDay): LoggedExercise[] {

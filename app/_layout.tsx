@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
@@ -13,12 +13,14 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
+import { AnimatedSplash } from '../components/AnimatedSplash';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ToastHost } from '../components/Toast';
 import { AuthProvider } from '../lib/auth-context';
 import { colors } from '../lib/theme';
 
 export default function RootLayout() {
+  const [splashDone, setSplashDone] = useState(false);
   const [fontsLoaded] = useFonts({
     Cinzel_600SemiBold,
     Cinzel_700Bold,
@@ -49,6 +51,7 @@ export default function RootLayout() {
               }}
             />
           )}
+          {!splashDone ? <AnimatedSplash onFinish={() => setSplashDone(true)} /> : null}
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

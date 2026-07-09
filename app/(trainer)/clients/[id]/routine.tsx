@@ -32,9 +32,13 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-/** Convierte un texto "mm:ss" (o solo segundos) a segundos totales. */
+/**
+ * Convierte el texto del descanso a segundos. Se escribe en MINUTOS
+ * (admite decimales: "1.5" o "1,5" = 1 min 30 s). También acepta "mm:ss"
+ * por si el coach lo escribe así.
+ */
 function parseClock(value: string): number {
-  const t = value.trim();
+  const t = value.trim().replace(',', '.');
   if (!t) return 0;
   if (t.includes(':')) {
     const [m, sec] = t.split(':');
@@ -42,16 +46,16 @@ function parseClock(value: string): number {
     const ss = parseInt(sec, 10) || 0;
     return mm * 60 + ss;
   }
-  const n = parseInt(t, 10);
-  return Number.isNaN(n) ? 0 : n;
+  const mins = parseFloat(t);
+  if (Number.isNaN(mins) || mins < 0) return 0;
+  return Math.round(mins * 60);
 }
 
-/** Formatea segundos como "m:ss" (vacío si no hay descanso). */
+/** Formatea segundos como minutos para el campo ("1,5" · vacío si no hay). */
 function formatClock(seconds?: number): string {
   if (!seconds) return '';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
+  const rounded = Math.round((seconds / 60) * 100) / 100;
+  return String(rounded).replace('.', ',');
 }
 
 export default function RoutineEditorScreen() {
@@ -558,14 +562,14 @@ export default function RoutineEditorScreen() {
                   style={styles.smallInput}
                 />
                 <TextField
-                  label="Descanso (min:seg)"
+                  label="Descanso (min)"
                   keyboardType="numbers-and-punctuation"
                   value={restText[ex.id] ?? formatClock(ex.restSeconds)}
                   onChangeText={(v) => {
                     setRestText((prev) => ({ ...prev, [ex.id]: v }));
                     updateRestSeconds(day.id, ex.id, parseClock(v));
                   }}
-                  placeholder="01:30"
+                  placeholder="1.5"
                   style={styles.smallInput}
                 />
               </View>
