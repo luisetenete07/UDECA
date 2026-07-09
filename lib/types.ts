@@ -33,6 +33,8 @@ export interface UserProfile {
   nextPaymentDate?: number;
   /** Token de Expo Push Notifications del último dispositivo registrado. */
   pushToken?: string;
+  /** true en cuentas creadas con verificación de correo obligatoria. */
+  emailVerificationRequired?: boolean;
 }
 
 export const CLIENT_STATUSES = ['active', 'paused', 'inactive'] as const;

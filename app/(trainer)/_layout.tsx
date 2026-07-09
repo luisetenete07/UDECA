@@ -2,15 +2,18 @@ import React from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { TabIcon } from '../../components/TabIcon';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { tabScreenOptions } from '../../lib/navTheme';
 
 export default function TrainerLayout() {
-  const { loading, firebaseUser, profile } = useAuth();
+  const { loading, firebaseUser, profile, emailVerified } = useAuth();
 
   if (loading) return <LoadingScreen />;
   if (!firebaseUser || !profile) return <Redirect href="/(auth)/login" />;
   if (profile.role !== 'trainer') return <Redirect href="/(client)/dashboard" />;
+  // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
+  if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
 
   return (
     <Tabs

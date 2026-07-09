@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   deleteUser,
   signOut as firebaseSignOut,
@@ -20,6 +21,8 @@ interface AuthContextValue {
   profile: UserProfile | null;
   loading: boolean;
   isFirebaseConfigured: boolean;
+  /** Si el correo del usuario actual está verificado (Firebase Auth). */
+  emailVerified: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   registerTrainer: (name: string, email: string, password: string) => Promise<void>;
   registerClient: (
@@ -31,6 +34,10 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  /** Recarga el usuario de Auth para refrescar el estado de verificación. */
+  reloadUser: () => Promise<boolean>;
+  /** Reenvía el correo de verificación al usuario actual. */
+  resendVerification: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -47,6 +54,7 @@ function generateInviteCode(): string {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [emailVerified, setEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const loadProfile = async (uid: string) => {
@@ -65,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
+      setEmailVerified(user?.emailVerified ?? false);
       if (user) {
         await loadProfile(user.uid);
         // No bloquea el arranque: si falla (sin proyecto EAS, web, etc.) se ignora.
@@ -93,9 +102,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       createdAt: Date.now(),
       inviteCode,
+      emailVerificationRequired: true,
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     await registerTrainerInviteCode(inviteCode, credential.user.uid);
+    // Envía el correo de verificación (no bloquea el registro si falla).
+    sendEmailVerification(credential.user).catch(() => {});
     setProfile(newProfile);
   };
 
@@ -121,9 +133,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       name,
       email,
       createdAt: Date.now(),
+      emailVerificationRequired: true,
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     await sendJoinRequest(trainerId, newProfile);
+    sendEmailVerification(credential.user).catch(() => {});
     setProfile(newProfile);
   };
 
@@ -153,20 +167,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const reloadUser = async () => {
+    const user = auth.currentUser;
+    if (!user) return false;
+    await user.reload();
+    const fresh = auth.currentUser;
+    setFirebaseUser(fresh);
+    setEmailVerified(fresh?.emailVerified ?? false);
+    return fresh?.emailVerified ?? false;
+  };
+
+  const resendVerification = async () => {
+    if (auth.currentUser) await sendEmailVerification(auth.currentUser);
+  };
+
   const value = useMemo(
     () => ({
       firebaseUser,
       profile,
       loading,
       isFirebaseConfigured,
+      emailVerified,
       signIn,
       registerTrainer,
       registerClient,
       signOut,
       deleteAccount,
       refreshProfile,
+      reloadUser,
+      resendVerification,
     }),
-    [firebaseUser, profile, loading]
+    [firebaseUser, profile, loading, emailVerified]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
