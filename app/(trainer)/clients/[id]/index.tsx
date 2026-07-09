@@ -30,7 +30,11 @@ import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { buildClientReportHtml } from '../../../../lib/report';
 import { trainingDays, weeklyActivity } from '../../../../lib/stats';
-import { getUserProfile, updateClientStatus } from '../../../../lib/firestore/users';
+import {
+  getUserProfile,
+  removeClientFromTrainer,
+  updateClientStatus,
+} from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
@@ -69,6 +73,8 @@ export default function ClientDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -137,6 +143,24 @@ export default function ClientDetailScreen() {
     if (!id || !client) return;
     setClient({ ...client, status });
     await updateClientStatus(id, status);
+  };
+
+  const handleRemoveFromGroup = async () => {
+    if (!id) return;
+    if (!confirmRemove) {
+      setConfirmRemove(true);
+      return;
+    }
+    setRemoving(true);
+    try {
+      await removeClientFromTrainer(id);
+      showToast('Alumno sacado de tu grupo');
+      router.replace('/(trainer)/clients');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo sacar al alumno');
+      setRemoving(false);
+      setConfirmRemove(false);
+    }
   };
 
   if (loading) return <LoadingScreen />;
@@ -414,6 +438,35 @@ export default function ClientDetailScreen() {
           ))
         )}
       </Card>
+
+      <Card style={[styles.section, styles.dangerZone]}>
+        <Text style={styles.sectionTitle}>Gestión del alumno</Text>
+        <Text style={styles.mutedText}>
+          Sácalo de tu grupo para que deje de aparecer en tus clientes. No se
+          borra su cuenta ni su historial; podrá vincularse a otro entrenador
+          con un código.
+        </Text>
+        {confirmRemove ? (
+          <Text style={styles.confirmText}>
+            ¿Seguro? Pulsa de nuevo para confirmar.
+          </Text>
+        ) : null}
+        <Button
+          title={confirmRemove ? 'Confirmar: sacar del grupo' : 'Sacar del grupo'}
+          variant="danger"
+          onPress={handleRemoveFromGroup}
+          loading={removing}
+          style={{ marginTop: spacing.md }}
+        />
+        {confirmRemove ? (
+          <Button
+            title="Cancelar"
+            variant="secondary"
+            onPress={() => setConfirmRemove(false)}
+            style={{ marginTop: spacing.sm }}
+          />
+        ) : null}
+      </Card>
     </ScreenContainer>
   );
 }
@@ -455,6 +508,13 @@ const styles = StyleSheet.create({
   miniLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },
+  dangerZone: { borderColor: colors.danger, borderWidth: 1, marginBottom: spacing.xl },
+  confirmText: {
+    ...typography.small,
+    color: colors.danger,
+    fontFamily: fonts.semiBold,
+    marginTop: spacing.sm,
+  },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
   routineMeta: { ...typography.small, color: colors.textMuted },

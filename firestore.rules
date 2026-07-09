@@ -23,13 +23,20 @@ service cloud.firestore {
           || userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
         );
       allow create: if request.auth != null && request.auth.uid == userId;
-      // El propio usuario edita su perfil; el entrenador solo puede cambiar
-      // el campo `status` de sus clientes (nada más).
+      // El propio usuario edita su perfil; el entrenador puede cambiar el
+      // `status` de sus clientes o sacarlos de su grupo (quitar `trainerId`).
       allow update: if request.auth != null && (
         request.auth.uid == userId
         || (
           resource.data.trainerId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            || (
+              // Sacar del grupo: se elimina el vínculo con el entrenador.
+              !('trainerId' in request.resource.data)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId', 'status'])
+            )
+          )
         )
       );
       // El propio usuario puede borrar su cuenta (su documento de perfil).

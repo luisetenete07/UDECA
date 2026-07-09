@@ -1,4 +1,14 @@
-import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import {
+  collection,
+  deleteField,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { UserProfile } from '../types';
@@ -44,4 +54,13 @@ export async function updateClientStatus(
   status: UserProfile['status']
 ) {
   await setDoc(doc(db, 'users', clientId), { status }, { merge: true });
+}
+
+/**
+ * El entrenador saca a un alumno de su grupo: elimina el vínculo (trainerId)
+ * de su perfil. No borra la cuenta del alumno ni sus datos; simplemente deja
+ * de pertenecer a este entrenador y podrá vincularse a otro con un código.
+ */
+export async function removeClientFromTrainer(clientId: string) {
+  await updateDoc(doc(db, 'users', clientId), { trainerId: deleteField() });
 }
