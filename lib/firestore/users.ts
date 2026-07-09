@@ -73,6 +73,22 @@ export async function updateClientPaymentStatus(
   await setDoc(doc(db, 'users', clientId), { paymentStatus }, { merge: true });
 }
 
+/**
+ * El entrenador actualiza los datos de cobro de un cliente (estado de pago,
+ * cuota mensual y/o fecha de próximo pago). Solo escribe los campos indicados.
+ */
+export async function updateClientBilling(
+  clientId: string,
+  data: Pick<UserProfile, 'paymentStatus' | 'monthlyFeeEur' | 'nextPaymentDate'>
+) {
+  await setDoc(doc(db, 'users', clientId), stripUndefined(data), { merge: true });
+}
+
+/** Quita la fecha de próximo pago de un cliente. */
+export async function clearClientNextPayment(clientId: string) {
+  await updateDoc(doc(db, 'users', clientId), { nextPaymentDate: deleteField() });
+}
+
 /** Normaliza un código: mayúsculas, solo A-Z y 0-9 (sin espacios ni símbolos). */
 export function normalizeInviteCode(raw: string): string {
   return raw.toUpperCase().replace(/[^A-Z0-9]/g, '');

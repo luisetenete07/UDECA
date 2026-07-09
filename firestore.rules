@@ -37,11 +37,13 @@ service cloud.firestore {
         || (
           resource.data.trainerId == request.auth.uid
           && (
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paymentStatus'])
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId', 'status', 'paymentStatus'])
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['trainerId', 'status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate'])
             )
           )
         )

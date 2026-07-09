@@ -27,6 +27,10 @@ export interface UserProfile {
   status?: ClientStatus;
   /** Estado de pago del alumno, gestionado por el entrenador. */
   paymentStatus?: PaymentStatus;
+  /** Cuota mensual del alumno en euros (la fija el entrenador). */
+  monthlyFeeEur?: number;
+  /** Fecha (timestamp) del próximo pago / renovación. */
+  nextPaymentDate?: number;
   /** Token de Expo Push Notifications del último dispositivo registrado. */
   pushToken?: string;
 }

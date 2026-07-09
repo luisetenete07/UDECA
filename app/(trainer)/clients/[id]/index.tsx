@@ -31,8 +31,10 @@ import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { buildClientReportHtml } from '../../../../lib/report';
 import { trainingDays, weeklyActivity } from '../../../../lib/stats';
 import {
+  clearClientNextPayment,
   getUserProfile,
   removeClientFromTrainer,
+  updateClientBilling,
   updateClientPaymentStatus,
   updateClientStatus,
 } from '../../../../lib/firestore/users';
@@ -59,6 +61,17 @@ import {
   type WorkoutLog,
 } from '../../../../lib/types';
 
+/** Suma `n` meses a un timestamp (Date gestiona el desbordamiento de mes). */
+function addMonths(ts: number, n: number): number {
+  const d = new Date(ts);
+  d.setMonth(d.getMonth() + n);
+  return d.getTime();
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const fmtDate = (ts: number) =>
+  new Date(ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+
 export default function ClientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -80,6 +93,7 @@ export default function ClientDetailScreen() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [feeInput, setFeeInput] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -103,6 +117,7 @@ export default function ClientDetailScreen() {
           ]);
         if (cancelled) return;
         setClient(clientData);
+        setFeeInput(clientData?.monthlyFeeEur ? String(clientData.monthlyFeeEur) : '');
         setRoutines(routineData);
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
@@ -154,6 +169,46 @@ export default function ClientDetailScreen() {
     if (!id || !client) return;
     setClient({ ...client, paymentStatus });
     await updateClientPaymentStatus(id, paymentStatus);
+  };
+
+  const handleSaveFee = async () => {
+    if (!id || !client) return;
+    const value = Number(feeInput.replace(',', '.'));
+    const monthlyFeeEur = Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
+    setClient({ ...client, monthlyFeeEur });
+    await updateClientBilling(id, { monthlyFeeEur });
+  };
+
+  // Registra el pago: marca "Pagado" y empuja la fecha un mes desde la última
+  // renovación (o desde hoy si ya venció). Un solo toque = cobro al día.
+  const handleRegisterPayment = async () => {
+    if (!id || !client) return;
+    const base =
+      client.nextPaymentDate && client.nextPaymentDate > Date.now()
+        ? client.nextPaymentDate
+        : Date.now();
+    const nextPaymentDate = addMonths(base, 1);
+    setClient({ ...client, paymentStatus: 'paid', nextPaymentDate });
+    await updateClientBilling(id, { paymentStatus: 'paid', nextPaymentDate });
+    showToast('Pago registrado · próxima renovación en 1 mes');
+  };
+
+  const handleExtendDays = async (days: number) => {
+    if (!id || !client) return;
+    const base =
+      client.nextPaymentDate && client.nextPaymentDate > Date.now()
+        ? client.nextPaymentDate
+        : Date.now();
+    const nextPaymentDate = base + days * DAY_MS;
+    setClient({ ...client, nextPaymentDate });
+    await updateClientBilling(id, { nextPaymentDate });
+  };
+
+  const handleClearNextPayment = async () => {
+    if (!id || !client) return;
+    const { nextPaymentDate, ...rest } = client;
+    setClient(rest as UserProfile);
+    await clearClientNextPayment(id);
   };
 
   const handleRemoveFromGroup = async () => {
@@ -247,30 +302,100 @@ export default function ClientDetailScreen() {
         ))}
       </View>
 
-      <Text style={styles.paymentLabel}>Estado de pago</Text>
-      <View style={styles.paymentRow}>
-        {PAYMENT_STATUSES.map((p) => {
-          const active = client.paymentStatus === p;
-          const tone = PAYMENT_STATUS_TONE[p];
-          return (
-            <Pressable
-              key={p}
-              onPress={() => handleSetPayment(p)}
-              style={[
-                styles.payChip,
-                active && styles.payChipActive,
-                active && tone === 'good' && styles.payGood,
-                active && tone === 'warn' && styles.payWarn,
-                active && tone === 'bad' && styles.payBad,
-              ]}
-            >
-              <Text style={[styles.payChipText, active && styles.payChipTextActive]}>
-                {PAYMENT_STATUS_LABEL[p]}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <Card style={styles.section}>
+        <View style={styles.titleRow}>
+          <Ionicons name="card-outline" size={16} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Pagos</Text>
+        </View>
+
+        <Text style={styles.paymentLabel}>Estado de pago</Text>
+        <View style={styles.paymentRow}>
+          {PAYMENT_STATUSES.map((p) => {
+            const active = client.paymentStatus === p;
+            const tone = PAYMENT_STATUS_TONE[p];
+            return (
+              <Pressable
+                key={p}
+                onPress={() => handleSetPayment(p)}
+                style={[
+                  styles.payChip,
+                  active && styles.payChipActive,
+                  active && tone === 'good' && styles.payGood,
+                  active && tone === 'warn' && styles.payWarn,
+                  active && tone === 'bad' && styles.payBad,
+                ]}
+              >
+                <Text style={[styles.payChipText, active && styles.payChipTextActive]}>
+                  {PAYMENT_STATUS_LABEL[p]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={styles.paymentLabel}>Cuota mensual</Text>
+        <View style={styles.feeRow}>
+          <TextField
+            value={feeInput}
+            onChangeText={setFeeInput}
+            onBlur={handleSaveFee}
+            onEndEditing={handleSaveFee}
+            keyboardType="number-pad"
+            placeholder="0"
+            style={styles.feeField}
+          />
+          <Text style={styles.euroLabel}>€ / mes</Text>
+        </View>
+
+        <Text style={styles.paymentLabel}>Próximo pago</Text>
+        <View style={styles.nextPayRow}>
+          <Ionicons
+            name="calendar-outline"
+            size={16}
+            color={
+              client.nextPaymentDate && client.nextPaymentDate < Date.now()
+                ? colors.danger
+                : colors.primary
+            }
+          />
+          <Text
+            style={[
+              styles.nextPayText,
+              client.nextPaymentDate != null &&
+                client.nextPaymentDate < Date.now() &&
+                styles.nextPayOverdue,
+            ]}
+          >
+            {client.nextPaymentDate
+              ? `${fmtDate(client.nextPaymentDate)}${
+                  client.nextPaymentDate < Date.now() ? ' · vencido' : ''
+                }`
+              : 'Sin fecha establecida'}
+          </Text>
+        </View>
+
+        <Button
+          title="Registrar pago (renueva +1 mes)"
+          onPress={handleRegisterPayment}
+          style={{ marginTop: spacing.sm }}
+        />
+        <View style={styles.payBtnRow}>
+          <Button
+            title="+15 días"
+            variant="secondary"
+            onPress={() => handleExtendDays(15)}
+            style={{ flex: 1 }}
+          />
+          {client.nextPaymentDate ? (
+            <Button
+              title="Quitar fecha"
+              variant="ghost"
+              onPress={handleClearNextPayment}
+              style={{ flex: 1 }}
+            />
+          ) : null}
+        </View>
+      </Card>
 
       {client.goal || client.targetWeightKg ? (
         <Card style={styles.section}>
@@ -545,9 +670,17 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.textMuted,
     textTransform: 'uppercase',
+    marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
-  paymentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  paymentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  feeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  feeField: { width: 110, marginBottom: 0 },
+  euroLabel: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold },
+  nextPayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  nextPayText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  nextPayOverdue: { color: colors.danger },
+  payBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   payChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -565,6 +698,7 @@ const styles = StyleSheet.create({
   miniLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
   dangerZone: { borderColor: colors.danger, borderWidth: 1, marginBottom: spacing.xl },
   confirmText: {
     ...typography.small,

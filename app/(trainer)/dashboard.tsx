@@ -22,9 +22,23 @@ import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { sessionsThisWeek } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
-import type { Challenge, UserProfile, WorkoutLog } from '../../lib/types';
+import {
+  PAYMENT_STATUSES,
+  PAYMENT_STATUS_LABEL,
+  PAYMENT_STATUS_TONE,
+  type Challenge,
+  type UserProfile,
+  type WorkoutLog,
+} from '../../lib/types';
 
 const INACTIVE_DAYS_THRESHOLD = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
+  good: '#2E7D5B',
+  warn: '#C9902B',
+  bad: colors.danger,
+  muted: colors.textFaint,
+};
 
 export default function TrainerDashboard() {
   const { profile } = useAuth();
@@ -84,6 +98,31 @@ export default function TrainerDashboard() {
 
   const weekSessions = sessionsThisWeek(logs);
   const byId = (id: string) => clients.find((c) => c.uid === id);
+
+  // ----- Resumen de cobros -----
+  const feeOf = (c: UserProfile) => c.monthlyFeeEur ?? 0;
+  const collected = clients
+    .filter((c) => c.paymentStatus === 'paid')
+    .reduce((s, c) => s + feeOf(c), 0);
+  const pendingAmount = clients
+    .filter((c) => c.paymentStatus === 'pending' || c.paymentStatus === 'overdue')
+    .reduce((s, c) => s + feeOf(c), 0);
+  const payCounts = clients.reduce(
+    (acc, c) => {
+      if (c.paymentStatus) acc[c.paymentStatus] = (acc[c.paymentStatus] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+  const overdueCount = clients.filter(
+    (c) => c.nextPaymentDate && c.nextPaymentDate < now
+  ).length;
+  const dueSoonCount = clients.filter(
+    (c) => c.nextPaymentDate && c.nextPaymentDate >= now && c.nextPaymentDate < now + 7 * DAY_MS
+  ).length;
+  const showBilling = clients.some(
+    (c) => c.paymentStatus || c.monthlyFeeEur || c.nextPaymentDate
+  );
 
   const handleStartChallenge = async () => {
     if (!profile || !challengeTitle.trim()) return;
@@ -161,6 +200,50 @@ export default function TrainerDashboard() {
           label="Inactivos"
         />
       </View>
+
+      {showBilling ? (
+        <Pressable onPress={() => router.push('/(trainer)/clients')}>
+          <Card style={styles.section}>
+            <View style={styles.titleRow}>
+              <Ionicons name="cash-outline" size={16} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Cobros del mes</Text>
+            </View>
+            <View style={styles.revenueRow}>
+              <View style={styles.revenueBox}>
+                <Text style={styles.revenueValue}>{collected} €</Text>
+                <Text style={styles.revenueLabel}>Cobrado</Text>
+              </View>
+              <View style={styles.revenueBox}>
+                <Text style={[styles.revenueValue, { color: '#C9902B' }]}>{pendingAmount} €</Text>
+                <Text style={styles.revenueLabel}>Pendiente</Text>
+              </View>
+            </View>
+            <View style={styles.countsRow}>
+              {PAYMENT_STATUSES.filter((p) => payCounts[p]).map((p) => (
+                <View key={p} style={styles.countChip}>
+                  <View
+                    style={[styles.dot, { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[p]] }]}
+                  />
+                  <Text style={styles.countText}>
+                    {payCounts[p]} {PAYMENT_STATUS_LABEL[p]}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            {overdueCount > 0 || dueSoonCount > 0 ? (
+              <View style={styles.dueBanner}>
+                <Ionicons name="alert-circle-outline" size={15} color={colors.warning} />
+                <Text style={styles.dueText}>
+                  {overdueCount > 0
+                    ? `${overdueCount} pago(s) vencido(s)`
+                    : `${dueSoonCount} pago(s) esta semana`}
+                  {overdueCount > 0 && dueSoonCount > 0 ? ` · ${dueSoonCount} esta semana` : ''}
+                </Text>
+              </View>
+            ) : null}
+          </Card>
+        </Pressable>
+      ) : null}
 
       <Card accent style={styles.section}>
         <View style={styles.rowBetween}>
@@ -278,6 +361,32 @@ const styles = StyleSheet.create({
   greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   section: { marginBottom: spacing.md },
+  revenueRow: { flexDirection: 'row', gap: spacing.sm },
+  revenueBox: {
+    flex: 1,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  revenueValue: { ...typography.h2, color: '#2E7D5B', fontFamily: fonts.heading },
+  revenueLabel: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  countsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  countChip: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  countText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  dueBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  dueText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
   sectionTitle: { ...typography.h3, color: colors.text },
