@@ -39,6 +39,10 @@ export default function SessionDetailScreen() {
 
       {log.exercises.map((ex, i) => {
         const done = ex.sets.filter((s) => s.completed).length;
+        const unit = ex.measure === 'seconds' ? 's' : 'reps';
+        // Solo mostramos la columna de carga si el ejercicio tuvo algún valor.
+        const showLoad = ex.sets.some((s) => s.weight);
+        const loadUnit = ex.load === 'assisted' ? 'goma' : 'kg';
         return (
           <Card key={ex.exerciseId + i} style={styles.card}>
             <View style={styles.exHeader}>
@@ -50,8 +54,14 @@ export default function SessionDetailScreen() {
             {ex.sets.map((set, j) => (
               <View key={j} style={styles.setRow}>
                 <Text style={styles.setLabel}>Serie {j + 1}</Text>
-                <Text style={styles.setValue}>{set.reps || '—'} reps</Text>
-                <Text style={styles.setValue}>{set.weight ? `${set.weight} kg` : '—'}</Text>
+                <Text style={styles.setValue}>
+                  {set.reps || '—'} {unit}
+                </Text>
+                {showLoad ? (
+                  <Text style={styles.setValue}>
+                    {set.weight ? `${set.weight} ${loadUnit}` : '—'}
+                  </Text>
+                ) : null}
                 <Ionicons
                   name={set.completed ? 'checkmark-circle' : 'ellipse-outline'}
                   size={18}

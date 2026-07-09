@@ -252,6 +252,7 @@ export function detectNewPRs(
 
   for (const ex of session) {
     const b = bests[ex.exerciseId] ?? { bestWeightKg: 0, bestRepsAtWeight: 0, bestReps: 0 };
+    const unit = ex.measure === 'seconds' ? 's' : 'reps';
     let record: PersonalRecord | null = null;
     for (const set of ex.sets) {
       if (!set.completed) continue;
@@ -260,7 +261,7 @@ export function detectNewPRs(
       if (w > 0 && (w > b.bestWeightKg || (w === b.bestWeightKg && r > b.bestRepsAtWeight))) {
         record = { exerciseName: ex.name, label: `${w} kg × ${r || '—'}` };
       } else if (w === 0 && b.bestReps > 0 && r > b.bestReps) {
-        record = { exerciseName: ex.name, label: `${r} reps` };
+        record = { exerciseName: ex.name, label: `${r} ${unit}` };
       }
     }
     if (record) prs.push(record);

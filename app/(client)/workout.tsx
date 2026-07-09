@@ -75,6 +75,8 @@ function buildLog(day: RoutineDay): LoggedExercise[] {
   return day.exercises.map((ex) => ({
     exerciseId: ex.exerciseId,
     name: ex.name,
+    measure: ex.measure ?? 'reps',
+    load: resolveLoad(ex),
     sets: Array.from({ length: ex.sets || 1 }, () => ({
       reps: ex.reps,
       weight: '',
@@ -592,8 +594,8 @@ export default function WorkoutScreen() {
               <View style={styles.prevRow}>
                 <Ionicons name="time-outline" size={13} color={colors.primary} />
                 <Text style={styles.prevText}>
-                  Última vez: {prev.weight ? `${prev.weight} kg × ` : ''}
-                  {prev.reps ?? '—'} reps
+                  Última vez: {load !== 'none' && prev.weight ? `${prev.weight} kg × ` : ''}
+                  {prev.reps ?? '—'} {isSeconds ? 's' : 'reps'}
                 </Text>
               </View>
             ) : null}

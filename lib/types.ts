@@ -173,6 +173,10 @@ export interface LoggedExercise {
   name: string;
   sets: LoggedSet[];
   notes?: string;
+  /** Cómo se midió (reps o segundos), para mostrar el histórico con su unidad. */
+  measure?: ExerciseMeasure;
+  /** Carga del ejercicio en su momento (normal/lastrado/asistido). */
+  load?: ExerciseLoad;
 }
 
 export interface WorkoutLog {
