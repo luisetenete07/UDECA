@@ -16,6 +16,11 @@ import {
   setActiveRoutine,
   updateRoutine,
 } from '../../../../lib/firestore/routines';
+import {
+  createRoutineTemplate,
+  deleteRoutineTemplate,
+  getRoutineTemplatesForTrainer,
+} from '../../../../lib/firestore/routineTemplates';
 import { getClientsForTrainer } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
@@ -27,6 +32,7 @@ import {
   type RoutineDay,
   type RoutineExercise,
   type RoutineSchedule,
+  type RoutineTemplate,
   type UserProfile,
 } from '../../../../lib/types';
 
@@ -75,6 +81,9 @@ export default function RoutineEditorScreen() {
   const [copyPickerOpen, setCopyPickerOpen] = useState(false);
   const [otherClients, setOtherClients] = useState<UserProfile[]>([]);
   const [copying, setCopying] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [templates, setTemplates] = useState<RoutineTemplate[]>([]);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
@@ -289,6 +298,57 @@ export default function RoutineEditorScreen() {
     }
   };
 
+  // Abre el panel de plantillas y las carga.
+  const openTemplates = async () => {
+    if (!profile) return;
+    setTemplatesOpen(true);
+    setTemplates(await getRoutineTemplatesForTrainer(profile.uid));
+  };
+
+  // Aplica una plantilla a la rutina actual (días con ids nuevos).
+  const applyTemplate = (t: RoutineTemplate) => {
+    setName(t.name);
+    setSchedule(t.schedule ?? 'weekly');
+    if (t.cycleStartDate) setCycleStartDate(t.cycleStartDate);
+    setDays(
+      t.days.map((d) => ({
+        ...d,
+        id: uid(),
+        exercises: d.exercises.map((e) => ({ ...e, id: uid() })),
+      }))
+    );
+    setTemplatesOpen(false);
+    showToast('Plantilla aplicada');
+  };
+
+  // Guarda la rutina que se está editando como plantilla reutilizable.
+  const saveAsTemplate = async () => {
+    if (!profile) return;
+    if (days.length === 0) {
+      showToast('Añade al menos un día antes de guardar la plantilla');
+      return;
+    }
+    setSavingTemplate(true);
+    try {
+      await createRoutineTemplate({
+        trainerId: profile.uid,
+        name: name.trim() || 'Plantilla',
+        schedule,
+        cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
+        days,
+      });
+      setTemplates(await getRoutineTemplatesForTrainer(profile.uid));
+      showToast('Guardada como plantilla');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const removeTemplate = async (id: string) => {
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
+    await deleteRoutineTemplate(id);
+  };
+
   const handleSave = useCallback(async () => {
     if (!profile || !clientId) return;
     setSaving(true);
@@ -356,13 +416,57 @@ export default function RoutineEditorScreen() {
             style={{ marginTop: spacing.xs }}
           />
         </Card>
+      ) : templatesOpen ? (
+        <Card style={styles.copyCard}>
+          <Text style={styles.copyTitle}>Plantillas de rutina</Text>
+          {templates.length === 0 ? (
+            <Text style={styles.mutedText}>
+              Aún no tienes plantillas. Guarda esta rutina para reutilizarla con
+              otros alumnos.
+            </Text>
+          ) : (
+            templates.map((t) => (
+              <View key={t.id} style={styles.templateRow}>
+                <Pressable style={{ flex: 1 }} onPress={() => applyTemplate(t)}>
+                  <Text style={styles.pickerRowText}>{t.name}</Text>
+                  <Text style={styles.mutedText}>
+                    {t.days.length} día(s) · toca para aplicar
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => removeTemplate(t.id)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                </Pressable>
+              </View>
+            ))
+          )}
+          <Button
+            title="Guardar rutina actual como plantilla"
+            onPress={saveAsTemplate}
+            loading={savingTemplate}
+            style={{ marginTop: spacing.sm }}
+          />
+          <Button
+            title="Cerrar"
+            variant="ghost"
+            onPress={() => setTemplatesOpen(false)}
+            style={{ marginTop: spacing.xs }}
+          />
+        </Card>
       ) : (
-        <Button
-          title="Copiar rutina de otro alumno"
-          variant="secondary"
-          onPress={openCopyPicker}
-          style={{ marginBottom: spacing.md }}
-        />
+        <View style={styles.actionsRow}>
+          <Button
+            title="Plantillas"
+            variant="secondary"
+            onPress={openTemplates}
+            style={{ flex: 1 }}
+          />
+          <Button
+            title="Copiar de un alumno"
+            variant="secondary"
+            onPress={openCopyPicker}
+            style={{ flex: 1 }}
+          />
+        </View>
       )}
 
       <Card accent style={styles.scheduleCard}>
@@ -887,6 +991,15 @@ const styles = StyleSheet.create({
   linkBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   copyCard: { marginBottom: spacing.md },
   copyTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  actionsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  templateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

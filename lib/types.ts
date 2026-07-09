@@ -191,6 +191,20 @@ export interface Routine {
   updatedAt: number;
 }
 
+/**
+ * Plantilla de rutina reutilizable del entrenador: guarda la estructura de
+ * días/ejercicios para aplicarla a cualquier alumno con un toque, sin rehacerla.
+ */
+export interface RoutineTemplate {
+  id: string;
+  trainerId: string;
+  name: string;
+  schedule?: RoutineSchedule;
+  cycleStartDate?: number;
+  days: RoutineDay[];
+  createdAt: number;
+}
+
 export interface LoggedSet {
   reps: string;
   weight?: string;

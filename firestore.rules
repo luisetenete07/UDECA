@@ -86,6 +86,16 @@ service cloud.firestore {
         && resource.data.trainerId == request.auth.uid;
     }
 
+    // Plantillas de rutina reutilizables del entrenador (solo suyas).
+    match /routineTemplates/{templateId} {
+      allow read: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
     // Rutinas asignadas a cada cliente.
     match /routines/{routineId} {
       allow read: if request.auth != null
