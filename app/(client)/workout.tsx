@@ -55,6 +55,7 @@ import {
   type LoggedExercise,
   type Routine,
   type RoutineDay,
+  type WorkoutLog,
 } from '../../lib/types';
 
 const DEFAULT_REST_SECONDS = 90;
@@ -76,6 +77,17 @@ function formatRest(seconds: number): string {
   const rounded = Math.round((seconds / 60) * 10) / 10;
   const str = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace('.', ',');
   return `${str} min`;
+}
+
+/** ¿El timestamp cae en el mismo día natural que la referencia (hoy)? */
+function isSameDay(ts: number, ref = Date.now()): boolean {
+  const a = new Date(ts);
+  const b = new Date(ref);
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
 function buildLog(day: RoutineDay): LoggedExercise[] {
@@ -143,6 +155,9 @@ export default function WorkoutScreen() {
   const [viewIndex, setViewIndex] = useState(0);
   // Índice del ejercicio con el vídeo de técnica desplegado (null = ninguno).
   const [videoOpenIndex, setVideoOpenIndex] = useState<number | null>(null);
+  // Día para el que el alumno ha pulsado "Entrenar otra vez" pese a haberlo
+  // completado hoy: mientras coincida con el día visible, se muestra el entreno.
+  const [retrainDayId, setRetrainDayId] = useState<string | null>(null);
   const startedAt = useRef<number | null>(null);
 
   useFocusEffect(
@@ -289,22 +304,8 @@ export default function WorkoutScreen() {
     }
   };
 
-  // Descarga el resultado de la sesión como PDF (para guardarlo y volver a verlo).
-  const handleDownloadResults = async () => {
-    if (!summary || !routine || !profile) return;
-    const html = buildSessionResultHtml({
-      clientName: profile.name,
-      routineName: routine.name,
-      dayName: summary.dayName,
-      date: summary.date,
-      durationMin: summary.durationMin,
-      sets: summary.sets,
-      reps: summary.reps,
-      volumeKg: summary.volumeKg,
-      exercises: summary.exercises,
-      prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
-      streak: summary.streak,
-    });
+  // Genera el PDF: en web abre el diálogo de imprimir/guardar; en móvil comparte.
+  const printResultsHtml = async (html: string) => {
     try {
       if (Platform.OS === 'web') {
         await Print.printAsync({ html });
@@ -317,6 +318,46 @@ export default function WorkoutScreen() {
     } catch {
       showToast('No se pudo generar el PDF');
     }
+  };
+
+  // Descarga el resultado de la sesión recién terminada (desde el resumen).
+  const handleDownloadResults = async () => {
+    if (!summary || !routine || !profile) return;
+    await printResultsHtml(
+      buildSessionResultHtml({
+        clientName: profile.name,
+        routineName: routine.name,
+        dayName: summary.dayName,
+        date: summary.date,
+        durationMin: summary.durationMin,
+        sets: summary.sets,
+        reps: summary.reps,
+        volumeKg: summary.volumeKg,
+        exercises: summary.exercises,
+        prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
+        streak: summary.streak,
+      })
+    );
+  };
+
+  // Descarga el resultado de una sesión ya guardada (día completado hoy).
+  const handleDownloadLog = async (logToDownload: WorkoutLog) => {
+    if (!profile) return;
+    const totals = sessionTotals(logToDownload.exercises);
+    await printResultsHtml(
+      buildSessionResultHtml({
+        clientName: profile.name,
+        routineName: logToDownload.routineName,
+        dayName: logToDownload.dayName,
+        date: logToDownload.date,
+        durationMin: logToDownload.durationMin ?? 0,
+        sets: totals.sets,
+        reps: totals.reps,
+        volumeKg: totals.volumeKg,
+        exercises: logToDownload.exercises,
+        streak: currentStreak(history),
+      })
+    );
   };
 
   const updateSet = (
@@ -381,6 +422,18 @@ export default function WorkoutScreen() {
   const safeIndex = Math.min(viewIndex, Math.max(0, log.length - 1));
   const isLastExercise = safeIndex >= log.length - 1;
 
+  // ¿El día visible ya se ha entrenado HOY? Si es así (y no hay una sesión en
+  // curso), mostramos "día completado" con descarga en vez de los ejercicios.
+  const completedTodayLog =
+    day && routine
+      ? history.find(
+          (l) => l.routineId === routine.id && l.dayName === day.name && isSameDay(l.date)
+        )
+      : undefined;
+  const inProgress = doneSets > 0 || restored;
+  const showCompleted =
+    !!completedTodayLog && !inProgress && retrainDayId !== selectedDayId;
+
   const handleSave = async () => {
     if (!profile || !routine || !day) return;
     setSaving(true);
@@ -438,6 +491,7 @@ export default function WorkoutScreen() {
       setRestSeconds(null);
       if (profile) AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
       setRestored(false);
+      setRetrainDayId(null);
       setSummary({
         durationMin,
         ...totals,
@@ -583,16 +637,6 @@ export default function WorkoutScreen() {
           onPress={() => router.push('/(client)/dashboard')}
           style={{ marginTop: spacing.sm }}
         />
-        <Button
-          title="Volver al entrenamiento"
-          variant="secondary"
-          onPress={() => {
-            if (day) setLog(buildLog(day));
-            setSummary(null);
-            startedAt.current = null;
-          }}
-          style={{ marginTop: spacing.sm }}
-        />
       </ScreenContainer>
     );
   }
@@ -645,6 +689,68 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
+      {showCompleted && completedTodayLog ? (
+        (() => {
+          const t = sessionTotals(completedTodayLog.exercises);
+          return (
+            <FadeIn>
+              <Card accent style={styles.completedCard}>
+                <PopIn style={{ alignSelf: 'center' }}>
+                  <View style={styles.completedBadge}>
+                    <Ionicons name="checkmark" size={38} color={colors.onPrimary} />
+                  </View>
+                </PopIn>
+                <Text style={styles.completedTitle}>Entrenamiento de hoy completado</Text>
+                <Text style={styles.completedSubtitle}>
+                  {routine.name} · {day?.name}
+                </Text>
+                <View style={styles.completedTiles}>
+                  {completedTodayLog.durationMin ? (
+                    <StatTile
+                      icon="time"
+                      value={`${completedTodayLog.durationMin} min`}
+                      label="Duración"
+                    />
+                  ) : null}
+                  <StatTile icon="layers" value={`${t.sets}`} label="Series" />
+                  <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
+                  {t.volumeKg > 0 ? (
+                    <StatTile
+                      icon="barbell"
+                      value={`${t.volumeKg.toLocaleString('es-ES')} kg`}
+                      label="Volumen"
+                    />
+                  ) : null}
+                </View>
+                <Button
+                  title="Descargar resultados (PDF)"
+                  onPress={() => handleDownloadLog(completedTodayLog)}
+                  style={{ marginTop: spacing.md }}
+                />
+                <Button
+                  title="Ir a inicio"
+                  variant="secondary"
+                  onPress={() => router.push('/(client)/dashboard')}
+                  style={{ marginTop: spacing.sm }}
+                />
+                <Pressable
+                  onPress={() => {
+                    setRetrainDayId(selectedDayId);
+                    if (day) setLog(buildLog(day));
+                    startedAt.current = null;
+                    setViewIndex(0);
+                  }}
+                  style={styles.retrainLink}
+                  hitSlop={6}
+                >
+                  <Text style={styles.retrainText}>Entrenar otra vez</Text>
+                </Pressable>
+              </Card>
+            </FadeIn>
+          );
+        })()
+      ) : (
+      <>
       {totalSets > 0 ? (
         <View style={styles.progressBlock}>
           <View style={styles.progressTopRow}>
@@ -874,6 +980,8 @@ export default function WorkoutScreen() {
           </Pressable>
         )}
       </View>
+      </>
+      )}
     </ScreenContainer>
   );
 }
@@ -1104,6 +1212,37 @@ const styles = StyleSheet.create({
   checkButtonDone: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+  },
+  // ----- Día ya completado hoy -----
+  completedCard: { alignItems: 'stretch', marginBottom: spacing.md },
+  completedBadge: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    ...shadows.glowGold,
+  },
+  completedTitle: {
+    ...typography.h2,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  completedSubtitle: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  completedTiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' },
+  retrainLink: { alignSelf: 'center', paddingVertical: spacing.sm, marginTop: spacing.xs },
+  retrainText: {
+    ...typography.small,
+    color: colors.textMuted,
+    textDecorationLine: 'underline',
   },
   // ----- Resumen -----
   summaryContent: { flexGrow: 1, justifyContent: 'center' },
