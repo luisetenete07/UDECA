@@ -523,21 +523,31 @@ export default function WorkoutScreen() {
 
         <FadeIn delay={300} style={styles.summaryTiles}>
           {summary.durationMin > 0 ? (
-            <StatTile icon="time" value={`${summary.durationMin} min`} label="Duración" />
+            <View style={styles.tileHalf}>
+              <StatTile icon="time" value={`${summary.durationMin} min`} label="Duración" />
+            </View>
           ) : null}
-          <StatTile icon="layers" value={`${summary.sets}`} label="Series" />
+          <View style={styles.tileHalf}>
+            <StatTile icon="layers" value={`${summary.sets}`} label="Series" />
+          </View>
           {summary.reps > 0 ? (
-            <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
+            <View style={styles.tileHalf}>
+              <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
+            </View>
           ) : null}
           {summary.seconds > 0 ? (
-            <StatTile icon="hourglass" value={`${summary.seconds}s`} label="Isométrico" />
+            <View style={styles.tileHalf}>
+              <StatTile icon="hourglass" value={`${summary.seconds}s`} label="Isométrico" />
+            </View>
           ) : null}
           {summary.volumeKg > 0 ? (
-            <StatTile
-              icon="barbell"
-              value={`${summary.volumeKg.toLocaleString('es-ES')} kg`}
-              label="Volumen"
-            />
+            <View style={styles.tileHalf}>
+              <StatTile
+                icon="barbell"
+                value={`${summary.volumeKg.toLocaleString('es-ES')} kg`}
+                label="Volumen"
+              />
+            </View>
           ) : null}
         </FadeIn>
 
@@ -727,25 +737,35 @@ export default function WorkoutScreen() {
                 </Text>
                 <View style={styles.completedTiles}>
                   {completedTodayLog.durationMin ? (
-                    <StatTile
-                      icon="time"
-                      value={`${completedTodayLog.durationMin} min`}
-                      label="Duración"
-                    />
+                    <View style={styles.tileHalf}>
+                      <StatTile
+                        icon="time"
+                        value={`${completedTodayLog.durationMin} min`}
+                        label="Duración"
+                      />
+                    </View>
                   ) : null}
-                  <StatTile icon="layers" value={`${t.sets}`} label="Series" />
+                  <View style={styles.tileHalf}>
+                    <StatTile icon="layers" value={`${t.sets}`} label="Series" />
+                  </View>
                   {t.reps > 0 ? (
-                    <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
+                    <View style={styles.tileHalf}>
+                      <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
+                    </View>
                   ) : null}
                   {t.seconds > 0 ? (
-                    <StatTile icon="hourglass" value={`${t.seconds}s`} label="Isométrico" />
+                    <View style={styles.tileHalf}>
+                      <StatTile icon="hourglass" value={`${t.seconds}s`} label="Isométrico" />
+                    </View>
                   ) : null}
                   {t.volumeKg > 0 ? (
-                    <StatTile
-                      icon="barbell"
-                      value={`${t.volumeKg.toLocaleString('es-ES')} kg`}
-                      label="Volumen"
-                    />
+                    <View style={styles.tileHalf}>
+                      <StatTile
+                        icon="barbell"
+                        value={`${t.volumeKg.toLocaleString('es-ES')} kg`}
+                        label="Volumen"
+                      />
+                    </View>
                   ) : null}
                 </View>
                 <Text style={styles.completedNote}>
@@ -1271,7 +1291,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     marginBottom: spacing.md,
   },
-  completedTiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' },
+  completedTiles: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: spacing.sm,
+  },
+  tileHalf: { width: '48%' },
   completedNote: {
     ...typography.small,
     color: colors.textFaint,
@@ -1311,7 +1337,9 @@ const styles = StyleSheet.create({
   },
   summaryTiles: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: spacing.sm,
     marginBottom: spacing.md,
   },
   prCard: { marginBottom: spacing.md },
