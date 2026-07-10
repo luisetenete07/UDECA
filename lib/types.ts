@@ -209,6 +209,16 @@ export interface RoutineTemplate {
   createdAt: number;
 }
 
+/** Pago registrado por el entrenador (para el historial de ingresos). */
+export interface Payment {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  amountEur: number;
+  date: number;
+  createdAt: number;
+}
+
 export interface LoggedSet {
   reps: string;
   weight?: string;

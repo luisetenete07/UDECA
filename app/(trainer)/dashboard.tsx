@@ -18,6 +18,7 @@ import {
   getActiveChallenge,
 } from '../../lib/firestore/challenges';
 import { getClientsForTrainer, updateClientPaymentStatus } from '../../lib/firestore/users';
+import { getPaymentsForTrainer } from '../../lib/firestore/payments';
 import {
   approveJoinRequest,
   deleteJoinRequest,
@@ -52,6 +53,7 @@ export default function TrainerDashboard() {
   const [clients, setClients] = useState<UserProfile[]>([]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
+  const [payments, setPayments] = useState<import('../../lib/types').Payment[]>([]);
   const [processingReq, setProcessingReq] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [remindersSent, setRemindersSent] = useState<Set<string>>(new Set());
@@ -68,17 +70,19 @@ export default function TrainerDashboard() {
       let cancelled = false;
       (async () => {
         try {
-          const [clientData, logData, challengeData, requestData] = await Promise.all([
+          const [clientData, logData, challengeData, requestData, paymentData] = await Promise.all([
             getClientsForTrainer(profile.uid),
             getWorkoutLogsForTrainer(profile.uid),
             getActiveChallenge(profile.uid),
             getJoinRequestsForTrainer(profile.uid),
+            getPaymentsForTrainer(profile.uid),
           ]);
           if (cancelled) return;
           setClients(clientData);
           setLogs(logData);
           setChallenge(challengeData);
           setRequests(requestData);
+          setPayments(paymentData);
           // Marca automáticamente como "Vencido" a quien se le pasó la fecha
           // de pago y no estaba ya marcado (aviso automático de impago).
           const nowTs = Date.now();
@@ -124,9 +128,6 @@ export default function TrainerDashboard() {
 
   // ----- Resumen de cobros -----
   const feeOf = (c: UserProfile) => c.monthlyFeeEur ?? 0;
-  const collected = clients
-    .filter((c) => c.paymentStatus === 'paid')
-    .reduce((s, c) => s + feeOf(c), 0);
   const pendingAmount = clients
     .filter((c) => c.paymentStatus === 'pending' || c.paymentStatus === 'overdue')
     .reduce((s, c) => s + feeOf(c), 0);
@@ -145,7 +146,14 @@ export default function TrainerDashboard() {
   ).length;
   const showBilling = clients.some(
     (c) => c.paymentStatus || c.monthlyFeeEur || c.nextPaymentDate
-  );
+  ) || payments.length > 0;
+  // Ingresos realmente cobrados este mes (a partir de los pagos registrados).
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const incomeThisMonth = payments
+    .filter((p) => p.date >= monthStart.getTime())
+    .reduce((s, p) => s + (p.amountEur || 0), 0);
 
   const handleStartChallenge = async () => {
     if (!profile || !challengeTitle.trim()) return;
@@ -302,8 +310,8 @@ export default function TrainerDashboard() {
             </View>
             <View style={styles.revenueRow}>
               <View style={styles.revenueBox}>
-                <Text style={styles.revenueValue}>{collected} €</Text>
-                <Text style={styles.revenueLabel}>Cobrado</Text>
+                <Text style={styles.revenueValue}>{incomeThisMonth} €</Text>
+                <Text style={styles.revenueLabel}>Ingresado este mes</Text>
               </View>
               <View style={styles.revenueBox}>
                 <Text style={[styles.revenueValue, { color: '#C9902B' }]}>{pendingAmount} €</Text>

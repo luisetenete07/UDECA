@@ -28,6 +28,8 @@ import { getProgressPhotosForClient } from '../../../../lib/firestore/progressPh
 import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
+import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNotes';
+import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
 import { buildClientReportHtml } from '../../../../lib/report';
 import { trainingDays, weeklyActivity } from '../../../../lib/stats';
@@ -97,6 +99,8 @@ export default function ClientDetailScreen() {
   const [feeInput, setFeeInput] = useState('');
   const [remindingPayment, setRemindingPayment] = useState(false);
   const [paymentReminderSent, setPaymentReminderSent] = useState(false);
+  const [coachNote, setCoachNote] = useState('');
+  const [noteSaved, setNoteSaved] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,7 +109,7 @@ export default function ClientDetailScreen() {
       const uid = profile.uid;
       (async () => {
         try {
-        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData, habitData, habitLogData] =
+        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData, habitData, habitLogData, noteData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id, uid),
@@ -117,9 +121,11 @@ export default function ClientDetailScreen() {
             getCheckInsForClient(id, uid),
             getHabitsForClient(id, uid),
             getHabitLogsForClient(id, uid),
+            getCoachNote(id),
           ]);
         if (cancelled) return;
         setClient(clientData);
+        setCoachNote(noteData);
         setFeeInput(clientData?.monthlyFeeEur ? String(clientData.monthlyFeeEur) : '');
         setRoutines(routineData);
         setWeightLogs(weightData);
@@ -185,7 +191,7 @@ export default function ClientDetailScreen() {
   // Registra el pago: marca "Pagado" y empuja la fecha un mes desde la última
   // renovación (o desde hoy si ya venció). Un solo toque = cobro al día.
   const handleRegisterPayment = async () => {
-    if (!id || !client) return;
+    if (!id || !client || !profile) return;
     const base =
       client.nextPaymentDate && client.nextPaymentDate > Date.now()
         ? client.nextPaymentDate
@@ -193,7 +199,21 @@ export default function ClientDetailScreen() {
     const nextPaymentDate = addMonths(base, 1);
     setClient({ ...client, paymentStatus: 'paid', nextPaymentDate });
     await updateClientBilling(id, { paymentStatus: 'paid', nextPaymentDate });
+    // Registro del cobro para el historial de ingresos (con la cuota actual).
+    createPayment({
+      trainerId: profile.uid,
+      clientId: id,
+      amountEur: client.monthlyFeeEur ?? 0,
+      date: Date.now(),
+    }).catch(() => {});
     showToast('Pago registrado · próxima renovación en 1 mes');
+  };
+
+  const handleSaveNote = async () => {
+    if (!id || !profile) return;
+    await saveCoachNote(profile.uid, id, coachNote.trim());
+    setNoteSaved(true);
+    setTimeout(() => setNoteSaved(false), 2000);
   };
 
   const handleExtendDays = async (days: number) => {
@@ -444,6 +464,24 @@ export default function ClientDetailScreen() {
           ) : null}
         </Card>
       ) : null}
+
+      <Card style={styles.section}>
+        <View style={styles.titleRow}>
+          <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Notas privadas</Text>
+        </View>
+        <Text style={styles.mutedText}>Solo tú las ves (lesiones, preferencias, objetivos…).</Text>
+        <TextField
+          value={coachNote}
+          onChangeText={setCoachNote}
+          onBlur={handleSaveNote}
+          placeholder="Escribe aquí tus notas sobre este alumno..."
+          multiline
+          numberOfLines={4}
+          style={{ height: 96, textAlignVertical: 'top', marginTop: spacing.sm, marginBottom: 0 }}
+        />
+        {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
+      </Card>
 
       <Button
         title="Generar informe PDF"
@@ -736,6 +774,11 @@ const styles = StyleSheet.create({
     ...typography.small,
     color: colors.danger,
     fontFamily: fonts.semiBold,
+    marginTop: spacing.sm,
+  },
+  confirmSavedText: {
+    ...typography.small,
+    color: colors.primary,
     marginTop: spacing.sm,
   },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
