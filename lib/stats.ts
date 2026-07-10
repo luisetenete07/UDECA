@@ -328,3 +328,64 @@ export function topExercises(logs: WorkoutLog[], n = 5): { name: string; count: 
 export function trainingDays(logs: WorkoutLog[]): Set<number> {
   return new Set(logs.map((l) => startOfDay(l.date)));
 }
+
+/** Ejercicios que aparecen en el historial (id + nombre), más recientes primero. */
+export function listExercisesInLogs(logs: WorkoutLog[]): { exerciseId: string; name: string }[] {
+  const map = new Map<string, string>();
+  const sorted = [...logs].sort((a, b) => b.date - a.date);
+  for (const log of sorted) {
+    for (const ex of log.exercises) {
+      if (!map.has(ex.exerciseId)) map.set(ex.exerciseId, ex.name);
+    }
+  }
+  return Array.from(map, ([exerciseId, name]) => ({ exerciseId, name }));
+}
+
+export interface ExerciseProgressPoint {
+  date: number;
+  reps: number;
+  weight: number;
+}
+export interface ExerciseProgress {
+  exerciseId: string;
+  name: string;
+  measure: 'reps' | 'seconds';
+  hasWeight: boolean;
+  points: ExerciseProgressPoint[];
+}
+
+/**
+ * Progresión de un ejercicio a lo largo del tiempo: por cada sesión en que se
+ * hizo, la mejor serie (más reps/segundos y más peso). Ideal para ver mejoras.
+ */
+export function exerciseProgression(
+  logs: WorkoutLog[],
+  exerciseId: string
+): ExerciseProgress | null {
+  const sorted = [...logs].sort((a, b) => a.date - b.date);
+  const points: ExerciseProgressPoint[] = [];
+  let name = '';
+  let measure: 'reps' | 'seconds' = 'reps';
+  let hasWeight = false;
+  for (const log of sorted) {
+    const ex = log.exercises.find((e) => e.exerciseId === exerciseId);
+    if (!ex) continue;
+    name = ex.name;
+    if (ex.measure) measure = ex.measure;
+    let bestReps = 0;
+    let bestWeight = 0;
+    for (const set of ex.sets) {
+      if (!set.completed) continue;
+      const r = parseInt(set.reps, 10);
+      if (!Number.isNaN(r)) bestReps = Math.max(bestReps, r);
+      const w = Number(set.weight);
+      if (set.weight && !Number.isNaN(w)) {
+        bestWeight = Math.max(bestWeight, w);
+        if (w > 0) hasWeight = true;
+      }
+    }
+    points.push({ date: log.date, reps: bestReps, weight: bestWeight });
+  }
+  if (points.length === 0) return null;
+  return { exerciseId, name, measure, hasWeight, points };
+}

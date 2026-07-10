@@ -24,7 +24,13 @@ import {
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { pickProgressPhoto } from '../../lib/image';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { topExercises, trainingDays, weeklyActivity } from '../../lib/stats';
+import {
+  exerciseProgression,
+  listExercisesInLogs,
+  topExercises,
+  trainingDays,
+  weeklyActivity,
+} from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
@@ -36,11 +42,12 @@ import {
   type WorkoutLog,
 } from '../../lib/types';
 
-type Tab = 'weight' | 'measurements' | 'photos' | 'activity';
+type Tab = 'weight' | 'measurements' | 'photos' | 'activity' | 'exercises';
 
 export default function ProgressScreen() {
   const { profile } = useAuth();
   const [tab, setTab] = useState<Tab>('weight');
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
@@ -199,12 +206,35 @@ export default function ProgressScreen() {
     .filter((m) => m.waistCm !== undefined)
     .map((m) => ({ date: m.date, value: m.waistCm as number }));
 
+  // Datos del historial por ejercicio (tab "Ejercicios").
+  const exercisesInLogs = listExercisesInLogs(workoutLogs);
+  const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
+  const progression = selExerciseId ? exerciseProgression(workoutLogs, selExerciseId) : null;
+  const progMetric = progression?.measure === 'seconds' ? 's' : progression?.hasWeight ? 'kg' : 'reps';
+  const progPoints = progression
+    ? progression.points.map((p) => ({
+        date: p.date,
+        value: progMetric === 'kg' ? p.weight : p.reps,
+      }))
+    : [];
+  const progBest = progPoints.reduce((m, p) => Math.max(m, p.value), 0);
+
   return (
     <ScreenContainer>
       <Text style={styles.title}>Mi progreso</Text>
 
-      <View style={styles.tabs}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabs}
+      >
         <TabButton label="Peso" active={tab === 'weight'} onPress={() => setTab('weight')} />
+        <TabButton
+          label="Ejercicios"
+          active={tab === 'exercises'}
+          onPress={() => setTab('exercises')}
+        />
         <TabButton
           label="Medidas"
           active={tab === 'measurements'}
@@ -216,7 +246,7 @@ export default function ProgressScreen() {
           active={tab === 'activity'}
           onPress={() => setTab('activity')}
         />
-      </View>
+      </ScrollView>
 
       {tab === 'weight' ? (
         <>
@@ -378,6 +408,64 @@ export default function ProgressScreen() {
             )}
           </Card>
         </>
+      ) : tab === 'exercises' ? (
+        exercisesInLogs.length === 0 ? (
+          <Card style={styles.section}>
+            <EmptyState
+              title="Aún no hay datos por ejercicio"
+              subtitle="Cuando completes entrenamientos verás aquí cómo mejoras en cada ejercicio."
+            />
+          </Card>
+        ) : (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.exPickerRow}
+            >
+              {exercisesInLogs.map((ex) => {
+                const active = selExerciseId === ex.exerciseId;
+                return (
+                  <Pressable
+                    key={ex.exerciseId}
+                    onPress={() => setSelectedExerciseId(ex.exerciseId)}
+                    style={[styles.exChip, active && styles.exChipActive]}
+                  >
+                    <Text style={[styles.exChipText, active && styles.exChipTextActive]}>
+                      {ex.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <Card style={styles.section}>
+              <View style={styles.exHeader}>
+                <Text style={styles.sectionTitle}>{progression?.name ?? 'Ejercicio'}</Text>
+                {progBest > 0 ? (
+                  <View style={styles.recordPill}>
+                    <Ionicons name="trophy" size={13} color={colors.primary} />
+                    <Text style={styles.recordText}>
+                      Récord: {progBest} {progMetric}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={styles.photoHint}>
+                {progMetric === 'kg'
+                  ? 'Mejor peso por sesión.'
+                  : progMetric === 's'
+                    ? 'Mejor aguante (segundos) por sesión.'
+                    : 'Mejores repeticiones por sesión.'}
+              </Text>
+              <LineChart
+                points={progPoints}
+                unit={progMetric}
+                emptyMessage="Necesitas al menos dos sesiones con este ejercicio."
+              />
+            </Card>
+          </>
+        )
       ) : (
         <>
           <Card style={styles.section}>
@@ -449,16 +537,48 @@ function TabButton({
 
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
+  tabsScroll: { marginBottom: spacing.lg, flexGrow: 0 },
   tabs: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
     padding: spacing.xs,
-    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 2,
+  },
+  tabButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+  },
+  exPickerRow: { gap: spacing.sm, paddingBottom: spacing.sm },
+  exChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  tabButton: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
+  exChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  exChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  exChipTextActive: { color: colors.onPrimary },
+  exHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  recordPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    marginBottom: spacing.sm,
+  },
+  recordText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, fontSize: 11 },
   tabButtonActive: { backgroundColor: colors.primary },
   tabButtonText: { ...typography.small, fontFamily: fonts.heading, color: colors.textMuted },
   tabButtonTextActive: { color: colors.onPrimary },
