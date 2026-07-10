@@ -194,6 +194,41 @@ export function computeAchievements(
       icon: 'ribbon',
       unlocked: weightProgress <= -3,
     },
+    {
+      id: 'hundred-workouts',
+      title: 'Centurión',
+      description: 'Registra 100 entrenamientos',
+      icon: 'shield-checkmark',
+      unlocked: totalWorkouts >= 100,
+    },
+    {
+      id: 'streak-14',
+      title: 'Máquina',
+      description: '14 días seguidos entrenando',
+      icon: 'flash',
+      unlocked: streak >= 14,
+    },
+    {
+      id: 'streak-30',
+      title: 'Leyenda',
+      description: '30 días seguidos entrenando',
+      icon: 'trophy',
+      unlocked: streak >= 30,
+    },
+    {
+      id: 'weeks-12',
+      title: 'Trimestre',
+      description: 'Entrena durante 12 semanas distintas',
+      icon: 'medal',
+      unlocked: weeks >= 12,
+    },
+    {
+      id: 'twentyfive-workouts',
+      title: 'Veterano',
+      description: 'Registra 25 entrenamientos',
+      icon: 'barbell',
+      unlocked: totalWorkouts >= 25,
+    },
   ];
 }
 

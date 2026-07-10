@@ -34,10 +34,12 @@ import { resolveTodaySession } from '../../lib/schedule';
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
 import {
+  computeAchievements,
   currentStreak,
   detectNewPRs,
   lastPerformanceByExercise,
   sessionTotals,
+  type Achievement,
   type LastPerformance,
   type PersonalRecord,
 } from '../../lib/stats';
@@ -93,6 +95,7 @@ interface SessionSummary {
   volumeKg: number;
   prs: PersonalRecord[];
   streak: number;
+  newAchievements: Achievement[];
 }
 
 export default function WorkoutScreen() {
@@ -345,6 +348,10 @@ export default function WorkoutScreen() {
           : log.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s, completed: true })) }));
       const prs = detectNewPRs(history, finalLog);
       const totals = sessionTotals(finalLog);
+      // Logros que estaban desbloqueados antes de esta sesión (base entrenos).
+      const beforeUnlocked = new Set(
+        computeAchievements(history, []).filter((a) => a.unlocked).map((a) => a.id)
+      );
 
       await createWorkoutLog({
         trainerId: routine.trainerId,
@@ -358,6 +365,9 @@ export default function WorkoutScreen() {
       });
 
       const freshLogs = await getWorkoutLogsForClient(profile.uid);
+      const newAchievements = computeAchievements(freshLogs, []).filter(
+        (a) => a.unlocked && !beforeUnlocked.has(a.id)
+      );
       await syncMySocialStats(profile, freshLogs);
       // Aviso al coach en tiempo real (nunca bloquea el guardado).
       notifyUser(
@@ -378,7 +388,11 @@ export default function WorkoutScreen() {
         ...totals,
         prs,
         streak: currentStreak(freshLogs),
+        newAchievements,
       });
+      if (newAchievements.length > 0) {
+        showToast(`¡Logro desbloqueado: ${newAchievements[0].title}! 🏅`);
+      }
       setHistory(freshLogs);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'No se pudo guardar la sesión.');
@@ -457,6 +471,34 @@ export default function WorkoutScreen() {
               </View>
             ))}
           </Card>
+          </FadeIn>
+        ) : null}
+
+        {summary.newAchievements.length > 0 ? (
+          <FadeIn delay={550}>
+            <Card accent style={styles.prCard}>
+              <View style={styles.prHeader}>
+                <Ionicons name="medal" size={18} color={colors.primary} />
+                <Text style={styles.prTitle}>
+                  {summary.newAchievements.length === 1
+                    ? 'Logro desbloqueado'
+                    : 'Logros desbloqueados'}
+                </Text>
+              </View>
+              {summary.newAchievements.map((a) => (
+                <View key={a.id} style={styles.prRow}>
+                  <View style={styles.achRow}>
+                    <Ionicons
+                      name={a.icon as keyof typeof Ionicons.glyphMap}
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.prExercise}>{a.title}</Text>
+                  </View>
+                  <Text style={styles.achDesc}>{a.description}</Text>
+                </View>
+              ))}
+            </Card>
           </FadeIn>
         ) : null}
 
@@ -1024,6 +1066,8 @@ const styles = StyleSheet.create({
   },
   prExercise: { ...typography.body, color: colors.text },
   prLabel: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
+  achRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  achDesc: { ...typography.small, color: colors.textMuted, flexShrink: 1, textAlign: 'right' },
   streakRow: {
     flexDirection: 'row',
     alignItems: 'center',
