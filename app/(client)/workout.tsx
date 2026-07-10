@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -34,6 +36,7 @@ import { syncMySocialStats } from '../../lib/firestore/social';
 import { resolveTodaySession } from '../../lib/schedule';
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
+import { buildSessionResultHtml } from '../../lib/report';
 import {
   computeAchievements,
   currentStreak,
@@ -97,6 +100,10 @@ interface SessionSummary {
   prs: PersonalRecord[];
   streak: number;
   newAchievements: Achievement[];
+  // Para poder descargar/re-visualizar el resultado de la sesión.
+  exercises: LoggedExercise[];
+  dayName: string;
+  date: number;
 }
 
 export default function WorkoutScreen() {
@@ -273,6 +280,36 @@ export default function WorkoutScreen() {
     }
   };
 
+  // Descarga el resultado de la sesión como PDF (para guardarlo y volver a verlo).
+  const handleDownloadResults = async () => {
+    if (!summary || !routine || !profile) return;
+    const html = buildSessionResultHtml({
+      clientName: profile.name,
+      routineName: routine.name,
+      dayName: summary.dayName,
+      date: summary.date,
+      durationMin: summary.durationMin,
+      sets: summary.sets,
+      reps: summary.reps,
+      volumeKg: summary.volumeKg,
+      exercises: summary.exercises,
+      prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
+      streak: summary.streak,
+    });
+    try {
+      if (Platform.OS === 'web') {
+        await Print.printAsync({ html });
+      } else {
+        const { uri } = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
+        }
+      }
+    } catch {
+      showToast('No se pudo generar el PDF');
+    }
+  };
+
   const updateSet = (
     exerciseIndex: number,
     setIndex: number,
@@ -392,6 +429,9 @@ export default function WorkoutScreen() {
         prs,
         streak: currentStreak(freshLogs),
         newAchievements,
+        exercises: finalLog,
+        dayName: day.name,
+        date: Date.now(),
       });
       if (newAchievements.length > 0) {
         showToast(`¡Logro desbloqueado: ${newAchievements[0].title}! 🏅`);
@@ -437,7 +477,7 @@ export default function WorkoutScreen() {
           </View>
         </PopIn>
         <FadeIn delay={150}>
-          <Text style={styles.summaryTitle}>Sesión completada</Text>
+          <Text style={styles.summaryTitle}>¡Entrenamiento completado!</Text>
           <Text style={styles.summarySubtitle}>
             {routine.name} · {day?.name}
           </Text>
@@ -513,9 +553,15 @@ export default function WorkoutScreen() {
         ) : null}
 
         <Button
-          title="Compartir mi sesión"
-          onPress={handleShareSummary}
+          title="Descargar resultados (PDF)"
+          onPress={handleDownloadResults}
           style={{ marginTop: spacing.lg }}
+        />
+        <Button
+          title="Compartir mi sesión"
+          variant="secondary"
+          onPress={handleShareSummary}
+          style={{ marginTop: spacing.sm }}
         />
         <Button
           title="Ir a inicio"

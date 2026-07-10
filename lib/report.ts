@@ -1,5 +1,6 @@
 import type {
   BodyMeasurement,
+  LoggedExercise,
   NutritionPlan,
   Routine,
   UserProfile,
@@ -134,6 +135,101 @@ export function buildClientReportHtml(data: ClientReportData): string {
             ? `<table><tr><th>Fecha</th><th>Sesión</th><th>Ejercicios</th></tr>${workoutRows}</table>`
             : '<p class="muted">Sin entrenamientos registrados.</p>'
         }
+      </body>
+    </html>
+  `;
+}
+
+export interface SessionResultData {
+  clientName: string;
+  routineName: string;
+  dayName: string;
+  date: number;
+  durationMin: number;
+  sets: number;
+  reps: number;
+  volumeKg: number;
+  exercises: LoggedExercise[];
+  prs?: { exerciseName: string; label: string }[];
+  streak?: number;
+}
+
+/**
+ * HTML del resumen de UNA sesión de entrenamiento, para descargar/guardar como
+ * PDF y poder volver a consultarlo cuando se quiera.
+ */
+export function buildSessionResultHtml(data: SessionResultData): string {
+  const stats = [
+    data.durationMin > 0 ? `<div class="stat"><b>${data.durationMin} min</b>Duración</div>` : '',
+    `<div class="stat"><b>${data.sets}</b>Series</div>`,
+    `<div class="stat"><b>${data.reps}</b>Reps</div>`,
+    data.volumeKg > 0
+      ? `<div class="stat"><b>${data.volumeKg.toLocaleString('es-ES')} kg</b>Volumen</div>`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('');
+
+  const exerciseBlocks = data.exercises
+    .map((ex) => {
+      const unit = ex.measure === 'seconds' ? 's' : 'reps';
+      const rows = ex.sets
+        .map((s, i) => {
+          const done = s.completed ? '✅' : '⬜';
+          const weight = s.weight ? ` · ${escapeHtml(s.weight)} kg` : '';
+          const val = s.reps ? `${escapeHtml(s.reps)} ${unit}` : '—';
+          return `<tr><td>${done} Serie ${i + 1}</td><td>${val}${weight}</td></tr>`;
+        })
+        .join('');
+      return `<h4>${escapeHtml(ex.name)}</h4><table>${rows}</table>`;
+    })
+    .join('');
+
+  const prBlock =
+    data.prs && data.prs.length > 0
+      ? `<h2>Récords personales 🏆</h2>${data.prs
+          .map(
+            (pr) =>
+              `<p><b>${escapeHtml(pr.exerciseName)}</b> — ${escapeHtml(pr.label)}</p>`
+          )
+          .join('')}`
+      : '';
+
+  return `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #0B1220; padding: 24px; }
+          h1 { font-size: 22px; margin-bottom: 4px; }
+          h2 { font-size: 16px; margin-top: 28px; border-bottom: 2px solid #C9902B; padding-bottom: 4px; }
+          h4 { font-size: 14px; margin: 16px 0 4px; }
+          .muted { color: #64748B; font-size: 13px; }
+          .stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+          .stat { border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 16px; }
+          .stat b { display: block; font-size: 18px; color: #B4791E; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 13px; }
+          td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #E2E8F0; }
+          td:last-child { text-align: right; font-weight: 600; }
+        </style>
+      </head>
+      <body>
+        <h1>Entrenamiento completado 💪</h1>
+        <p class="muted">${escapeHtml(data.clientName)} · ${escapeHtml(data.routineName)} — ${escapeHtml(
+          data.dayName
+        )}</p>
+        <p class="muted">${formatDate(data.date)}${
+          data.streak && data.streak > 1 ? ` · Racha de ${data.streak} días 🔥` : ''
+        }</p>
+
+        <div class="stats">${stats}</div>
+
+        ${prBlock}
+
+        <h2>Detalle por ejercicio</h2>
+        ${exerciseBlocks || '<p class="muted">Sesión marcada como completada.</p>'}
+
+        <p class="muted" style="margin-top:28px">Generado por UDECA — Universidad de Calistenia</p>
       </body>
     </html>
   `;

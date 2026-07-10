@@ -96,6 +96,51 @@ export async function scheduleLocalReminder(
   }
 }
 
+const REST_END_ID = 'rest-timer-end';
+
+/**
+ * Programa una notificación local que suena cuando termina el descanso entre
+ * series. Así la cuenta atrás "sigue viva" aunque el móvil se bloquee o la app
+ * pase a segundo plano: el sistema avisa igualmente al llegar a cero. Si aún no
+ * hay permiso de notificaciones, lo pide una vez. En web no está soportado.
+ */
+export async function scheduleRestEndNotification(seconds: number): Promise<void> {
+  if (Platform.OS === 'web' || seconds <= 0) return;
+  try {
+    const existing = await Notifications.getPermissionsAsync();
+    let granted = existing.status === 'granted';
+    if (!granted && existing.status !== 'denied') {
+      const req = await Notifications.requestPermissionsAsync();
+      granted = req.status === 'granted';
+    }
+    if (!granted) return;
+    await Notifications.cancelScheduledNotificationAsync(REST_END_ID).catch(() => {});
+    await Notifications.scheduleNotificationAsync({
+      identifier: REST_END_ID,
+      content: {
+        title: '¡Descanso terminado!',
+        body: 'A por la siguiente serie. 💪',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: Math.max(1, Math.round(seconds)),
+        repeats: false,
+      },
+    });
+  } catch {
+    // No crítico: la cuenta atrás en pantalla sigue funcionando igualmente.
+  }
+}
+
+export async function cancelRestEndNotification(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(REST_END_ID);
+  } catch {
+    // Si no existía, no pasa nada.
+  }
+}
+
 const WORKOUT_REMINDER_ID = 'daily-workout-reminder';
 
 /**
