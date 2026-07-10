@@ -118,9 +118,24 @@ export default function NutritionScreen() {
     <ScreenContainer>
       <Text style={styles.title}>Mi nutrición</Text>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Hoy</Text>
-        <MacroBar label="Calorías" consumed={totals.calories} target={plan.dailyCalories} unit="kcal" />
+      <Card accent style={styles.section}>
+        <View style={styles.hoyHeader}>
+          <Text style={styles.sectionTitle}>Hoy</Text>
+          {plan.name ? <Text style={styles.planName}>{plan.name}</Text> : null}
+        </View>
+
+        <View style={styles.calSummary}>
+          <Text style={styles.calBig}>
+            {Math.max(0, plan.dailyCalories - totals.calories)}
+          </Text>
+          <Text style={styles.calUnit}>
+            {totals.calories > plan.dailyCalories ? 'kcal de más' : 'kcal restantes'}
+          </Text>
+          <Text style={styles.calSub}>
+            {totals.calories} / {plan.dailyCalories} kcal consumidas
+          </Text>
+        </View>
+
         <MacroBar label="Proteína" consumed={totals.proteinG} target={plan.proteinG} unit="g" />
         <MacroBar label="Carbohidratos" consumed={totals.carbsG} target={plan.carbsG} unit="g" />
         <MacroBar label="Grasas" consumed={totals.fatG} target={plan.fatG} unit="g" />
@@ -166,16 +181,26 @@ export default function NutritionScreen() {
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Comidas de hoy</Text>
+        <View style={styles.hoyHeader}>
+          <Text style={styles.sectionTitle}>Comidas de hoy</Text>
+          {todayMeals.length > 0 ? (
+            <Text style={styles.mealCount}>
+              {todayMeals.length} · {totals.calories} kcal
+            </Text>
+          ) : null}
+        </View>
         {todayMeals.length === 0 ? (
           <Text style={styles.mutedText}>Todavía no has registrado comidas hoy.</Text>
         ) : (
           todayMeals.map((meal) => (
             <View key={meal.id} style={styles.mealRow}>
-              <Text style={styles.mealName}>{meal.name}</Text>
-              <Text style={styles.mealMacros}>
-                {meal.calories} kcal · P{meal.proteinG} C{meal.carbsG} G{meal.fatG}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.mealName}>{meal.name}</Text>
+                <Text style={styles.mealMacros}>
+                  P{meal.proteinG} · C{meal.carbsG} · G{meal.fatG}
+                </Text>
+              </View>
+              <Text style={styles.mealKcal}>{meal.calories} kcal</Text>
             </View>
           ))
         )}
@@ -188,17 +213,32 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  hoyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  planName: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  calSummary: { alignItems: 'center', marginBottom: spacing.md },
+  calBig: { ...typography.h1, color: colors.primaryBright, fontFamily: fonts.heading, fontSize: 44, lineHeight: 48 },
+  calUnit: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  calSub: { ...typography.small, color: colors.textFaint, marginTop: 4 },
   row: { flexDirection: 'row', gap: spacing.sm },
   smallField: { flex: 1 },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
   mutedText: { ...typography.small, color: colors.textFaint },
+  mealCount: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   mealRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.sm,
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  mealName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, },
-  mealMacros: { ...typography.small, color: colors.textMuted },
+  mealName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  mealMacros: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  mealKcal: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
 });
