@@ -148,6 +148,12 @@ export interface RoutineDay {
   weekday?: number;
   /** En el Método REIN TENA (ciclo), marca este día del ciclo como descanso. */
   isRest?: boolean;
+  /**
+   * Método REIN TENA: descanso OPCIONAL (p. ej. el Día 7). El alumno decide
+   * cada vez: descansar ese día o reiniciar el ciclo entrenando el Día 1.
+   * A efectos de programación cuenta como descanso (implica isRest).
+   */
+  optionalRest?: boolean;
   /** Intensidad 1-10 de este entrenamiento (Método REIN TENA), la fija el coach. */
   intensity?: number;
   exercises: RoutineExercise[];

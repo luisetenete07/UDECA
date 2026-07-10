@@ -26,6 +26,7 @@ import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { quoteOfTheDay } from '../../lib/quotes';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { resolveTodaySession } from '../../lib/schedule';
+import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
   todayWeekday,
@@ -49,6 +50,7 @@ export default function ClientDashboard() {
   const [hasAnyCheckIn, setHasAnyCheckIn] = useState(true);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
+  const [cycleAnchor, setCycleAnchor] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
@@ -65,6 +67,8 @@ export default function ClientDashboard() {
             getHabitsForClient(profile.uid),
             getHabitLogsForClient(profile.uid),
           ]);
+        if (cancelled) return;
+        setCycleAnchor(routineData ? await getCycleAnchor(routineData.id) : null);
         if (cancelled) return;
         setRoutine(routineData);
         setWeightLogs(weightData);
@@ -87,9 +91,10 @@ export default function ClientDashboard() {
   const sessions = weekSessions(workoutLogs);
   const streak = currentStreak(workoutLogs);
   // Qué toca hoy según el modo (semanal o Método REIN TENA por ciclo).
-  const todaySession = resolveTodaySession(routine);
+  const todaySession = resolveTodaySession(routine, cycleAnchor ?? undefined);
   const todaysDay = todaySession.day;
   const restDay = todaySession.isRest;
+  const optionalRest = todaySession.optionalRest;
   const nextDay = todaySession.day;
   const isCycle = routine?.schedule === 'cycle';
 
@@ -191,7 +196,14 @@ export default function ClientDashboard() {
                   ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}`
                   : 'Tu entrenamiento'}
             </Text>
-            {routine && restDay ? (
+            {routine && optionalRest ? (
+              <>
+                <Text style={styles.todayTitle}>Descanso opcional</Text>
+                <Text style={styles.todaySub}>
+                  Tú eliges: descansar o reiniciar el ciclo en el Día 1. Entra para decidir.
+                </Text>
+              </>
+            ) : routine && restDay ? (
               <>
                 <Text style={styles.todayTitle}>Día de descanso</Text>
                 <Text style={styles.todaySub}>Hoy no toca sesión. Recupera y vuelve con todo.</Text>

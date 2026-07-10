@@ -34,6 +34,7 @@ import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { resolveTodaySession } from '../../lib/schedule';
+import { getCycleAnchor, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
 import { buildSessionResultHtml } from '../../lib/report';
@@ -159,6 +160,11 @@ export default function WorkoutScreen() {
   // Día para el que el alumno ha pulsado "Entrenar otra vez" pese a haberlo
   // completado hoy: mientras coincida con el día visible, se muestra el entreno.
   const [retrainDayId, setRetrainDayId] = useState<string | null>(null);
+  // Ancla local del ciclo (Método REIN TENA): el alumno puede reiniciar en Día 1.
+  const [cycleAnchor, setCycleAnchor] = useState<number | null>(null);
+  // Elección del descanso opcional (Día 7 TENA): pendiente hasta que decide.
+  const [optionalResolved, setOptionalResolved] = useState(false);
+  const [restingToday, setRestingToday] = useState(false);
   const startedAt = useRef<number | null>(null);
 
   useFocusEffect(
@@ -190,9 +196,13 @@ export default function WorkoutScreen() {
             })
             .catch(() => {});
         }
+        // Ancla local del ciclo (si el alumno reinició su Método REIN TENA).
+        const anchor = data ? await getCycleAnchor(data.id) : null;
+        if (cancelled) return;
+        setCycleAnchor(anchor);
         if (data && data.days.length > 0) {
           // Preselecciona el día que toca hoy (Método REIN TENA o semanal).
-          const session = resolveTodaySession(data);
+          const session = resolveTodaySession(data, anchor ?? undefined);
           const fallback = data.days.find((d) => !d.isRest) ?? data.days[0];
           setSelectedDayId((prev) => prev ?? session.day?.id ?? fallback.id);
         }
@@ -275,7 +285,25 @@ export default function WorkoutScreen() {
   };
 
   const day = routine?.days.find((d) => d.id === selectedDayId) ?? null;
-  const todaySession = resolveTodaySession(routine);
+  const todaySession = resolveTodaySession(routine, cycleAnchor ?? undefined);
+
+  // Descanso opcional (Día 7 TENA): reinicia el ciclo entrenando el Día 1 hoy.
+  const handleStartCycleToday = async () => {
+    if (!routine || routine.days.length === 0) return;
+    const ts = await setCycleAnchorToday(routine.id);
+    setCycleAnchor(ts);
+    setOptionalResolved(true);
+    setRestingToday(false);
+    const firstDay = routine.days[0];
+    setSelectedDayId(firstDay.id);
+    setViewIndex(0);
+    startedAt.current = null;
+    showToast('Ciclo reiniciado · hoy es el Día 1');
+  };
+
+  const isOptionalRestToday = routine?.schedule === 'cycle' && todaySession.optionalRest;
+  const showOptionalChoice = isOptionalRestToday && !optionalResolved;
+  const showRestingCard = isOptionalRestToday && optionalResolved && restingToday;
 
   const handleShareSummary = async () => {
     if (!summary || !routine) return;
@@ -673,7 +701,12 @@ export default function WorkoutScreen() {
           return (
             <Pressable
               key={d.id}
-              onPress={() => setSelectedDayId(d.id)}
+              onPress={() => {
+                setSelectedDayId(d.id);
+                // Tocar un día resuelve el descanso opcional: se entrena ese día.
+                setOptionalResolved(true);
+                setRestingToday(false);
+              }}
               style={[styles.dayTab, selectedDayId === d.id && styles.dayTabSelected]}
             >
               <Text
@@ -682,7 +715,7 @@ export default function WorkoutScreen() {
                 {isCycle
                   ? `Día ${i + 1}`
                   : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`}
-                {d.isRest ? ' · descanso' : ''}
+                {d.optionalRest ? ' · descanso opcional' : d.isRest ? ' · descanso' : ''}
                 {isToday ? '  ·  HOY' : ''}
               </Text>
             </Pressable>
@@ -699,7 +732,52 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
-      {showCompleted && completedTodayLog ? (
+      {showOptionalChoice ? (
+        <FadeIn>
+          <Card accent style={styles.optionalCard}>
+            <View style={styles.optionalHeader}>
+              <Ionicons name="shuffle" size={18} color={colors.primary} />
+              <Text style={styles.optionalTitle}>Hoy: descanso opcional</Text>
+            </View>
+            <Text style={styles.optionalText}>
+              {todaySession.cycleLabel ? `${todaySession.cycleLabel}. ` : ''}Puedes descansar hoy, o
+              reiniciar el ciclo y entrenar el Día 1 ahora. Tú decides.
+            </Text>
+            <Button
+              title="Entrenar Día 1 ahora"
+              onPress={handleStartCycleToday}
+              style={{ marginTop: spacing.sm }}
+            />
+            <Button
+              title="Descansar hoy"
+              variant="secondary"
+              onPress={() => {
+                setOptionalResolved(true);
+                setRestingToday(true);
+              }}
+              style={{ marginTop: spacing.sm }}
+            />
+          </Card>
+        </FadeIn>
+      ) : showRestingCard ? (
+        <FadeIn>
+          <Card accent style={styles.optionalCard}>
+            <View style={styles.optionalHeader}>
+              <Ionicons name="bed" size={18} color={colors.primary} />
+              <Text style={styles.optionalTitle}>Día de descanso</Text>
+            </View>
+            <Text style={styles.optionalText}>
+              Disfruta tu descanso. El ciclo continuará solo con el Día 1.
+            </Text>
+            <Button
+              title="He cambiado de idea: entrenar Día 1"
+              variant="secondary"
+              onPress={handleStartCycleToday}
+              style={{ marginTop: spacing.sm }}
+            />
+          </Card>
+        </FadeIn>
+      ) : showCompleted && completedTodayLog ? (
         (() => {
           const t = sessionTotals(completedTodayLog.exercises);
           return (
@@ -1228,6 +1306,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+  // ----- Descanso opcional (Día 7 TENA) -----
+  optionalCard: { marginBottom: spacing.md },
+  optionalHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  optionalTitle: { ...typography.h3, color: colors.primaryBright },
+  optionalText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
   // ----- Día ya completado hoy -----
   completedCard: { alignItems: 'stretch', marginBottom: spacing.md },
   completedBadge: {

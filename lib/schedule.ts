@@ -6,6 +6,8 @@ export interface TodaySession {
   day: RoutineDay | null;
   /** true si hoy es un día de descanso (solo relevante si day es null o isRest). */
   isRest: boolean;
+  /** true si hoy es un día de descanso OPCIONAL (el alumno decide, Día 7 TENA). */
+  optionalRest: boolean;
   /** Etiqueta para el Método REIN TENA: "Día 2 de 4". Vacío en modo semanal. */
   cycleLabel?: string;
   /** Posición del día del ciclo (0-based), útil para preseleccionar la pestaña. */
@@ -28,17 +30,24 @@ export function cycleDayIndex(cycleStartDate: number, cycleLength: number, now =
  *    inicio, contando también los días de descanso.
  *  - Semanal (weekly): busca el día asignado al día de la semana de hoy.
  */
-export function resolveTodaySession(routine: Routine | null): TodaySession {
+export function resolveTodaySession(
+  routine: Routine | null,
+  anchorOverride?: number
+): TodaySession {
   if (!routine || routine.days.length === 0) {
-    return { day: null, isRest: false };
+    return { day: null, isRest: false, optionalRest: false };
   }
 
   if (routine.schedule === 'cycle' && routine.cycleStartDate) {
-    const idx = cycleDayIndex(routine.cycleStartDate, routine.days.length);
+    // El ancla más reciente manda: si el alumno reinició su ciclo (override) o
+    // el coach lo reprogramó (cycleStartDate), gana la fecha más nueva.
+    const anchor = Math.max(routine.cycleStartDate, anchorOverride ?? 0);
+    const idx = cycleDayIndex(anchor, routine.days.length);
     const day = routine.days[idx] ?? null;
     return {
       day: day && !day.isRest ? day : null,
       isRest: Boolean(day?.isRest),
+      optionalRest: Boolean(day?.optionalRest),
       cycleLabel: `Día ${idx + 1} de ${routine.days.length}`,
       cycleIndex: idx,
     };
@@ -50,5 +59,6 @@ export function resolveTodaySession(routine: Routine | null): TodaySession {
   return {
     day: todays ?? (usesWeekdays ? null : routine.days[0]),
     isRest: usesWeekdays && !todays,
+    optionalRest: false,
   };
 }

@@ -131,6 +131,17 @@ export default function RoutineEditorScreen() {
     setDays((prev) => prev.filter((d) => d.id !== dayId));
   };
 
+  // Mueve un día una posición arriba o abajo (reordenar la semana / el ciclo).
+  const moveDay = (index: number, delta: -1 | 1) => {
+    setDays((prev) => {
+      const target = index + delta;
+      if (target < 0 || target >= prev.length) return prev;
+      const list = [...prev];
+      [list[index], list[target]] = [list[target], list[index]];
+      return list;
+    });
+  };
+
   // Duplica un día (con ids nuevos) justo debajo, para no rehacerlo.
   const duplicateDay = (dayId: string) => {
     const newId = uid();
@@ -159,7 +170,24 @@ export default function RoutineEditorScreen() {
   // Marca/desmarca un día del ciclo como descanso (Método REIN TENA).
   const toggleRestDay = (dayId: string) => {
     setDays((prev) =>
-      prev.map((d) => (d.id === dayId ? { ...d, isRest: !d.isRest } : d))
+      prev.map((d) =>
+        d.id === dayId
+          ? { ...d, isRest: !d.isRest, optionalRest: !d.isRest ? d.optionalRest : false }
+          : d
+      )
+    );
+  };
+
+  // Marca un descanso como OPCIONAL (Día 7 TENA): implica que sea descanso.
+  const toggleOptionalRest = (dayId: string) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? d.optionalRest
+            ? { ...d, optionalRest: false }
+            : { ...d, optionalRest: true, isRest: true }
+          : d
+      )
     );
   };
 
@@ -515,7 +543,9 @@ export default function RoutineEditorScreen() {
           <>
             <Text style={styles.scheduleHint}>
               Los {days.length} días rotan en ciclo constante (Día 1 → {days.length} → repite), sin
-              depender del día de la semana. La intensidad se ajusta en cada día, abajo.
+              depender del día de la semana. La intensidad se ajusta en cada día, abajo. Marca un
+              día como “Opcional” (p. ej. el último) para que el alumno elija: descansar o reiniciar
+              en el Día 1.
             </Text>
 
             <Pressable
@@ -549,7 +579,8 @@ export default function RoutineEditorScreen() {
         const exCount = day.exercises.length;
         const summaryParts: string[] = [];
         if (schedule === 'cycle') {
-          if (day.isRest) summaryParts.push('Descanso');
+          if (day.optionalRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso opcional');
+          else if (day.isRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso');
           else summaryParts.push(`Día ${dayIndex + 1}`, `Int. ${day.intensity ?? 5}/10`);
         } else if (day.weekday !== undefined) {
           summaryParts.push(WEEKDAY_NAMES[day.weekday]);
@@ -568,6 +599,22 @@ export default function RoutineEditorScreen() {
               <Text style={styles.daySummary} numberOfLines={1}>
                 {summaryParts.join(' · ')}
               </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => moveDay(dayIndex, -1)}
+              disabled={dayIndex === 0}
+              style={[styles.moveDayBtn, dayIndex === 0 && styles.moveDayBtnOff]}
+              hitSlop={6}
+            >
+              <Ionicons name="arrow-up" size={16} color={colors.textMuted} />
+            </Pressable>
+            <Pressable
+              onPress={() => moveDay(dayIndex, 1)}
+              disabled={dayIndex === days.length - 1}
+              style={[styles.moveDayBtn, dayIndex === days.length - 1 && styles.moveDayBtnOff]}
+              hitSlop={6}
+            >
+              <Ionicons name="arrow-down" size={16} color={colors.textMuted} />
             </Pressable>
             <Pressable onPress={() => duplicateDay(day.id)} style={styles.removeDayBtn} hitSlop={8}>
               <Ionicons name="copy-outline" size={17} color={colors.textMuted} />
@@ -599,21 +646,48 @@ export default function RoutineEditorScreen() {
               <View style={styles.cyclePill}>
                 <Text style={styles.cyclePillText}>Día {dayIndex + 1} del ciclo</Text>
               </View>
-              <Pressable
-                onPress={() => toggleRestDay(day.id)}
-                style={[styles.restToggle, day.isRest && styles.restToggleOn]}
-                hitSlop={4}
-              >
-                <Ionicons
-                  name={day.isRest ? 'bed' : 'bed-outline'}
-                  size={14}
-                  color={day.isRest ? colors.onPrimary : colors.textMuted}
-                />
-                <Text style={[styles.restToggleText, day.isRest && styles.restToggleTextOn]}>
-                  Descanso
-                </Text>
-              </Pressable>
+              <View style={styles.restToggles}>
+                <Pressable
+                  onPress={() => toggleRestDay(day.id)}
+                  style={[styles.restToggle, day.isRest && !day.optionalRest && styles.restToggleOn]}
+                  hitSlop={4}
+                >
+                  <Ionicons
+                    name={day.isRest ? 'bed' : 'bed-outline'}
+                    size={14}
+                    color={day.isRest && !day.optionalRest ? colors.onPrimary : colors.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.restToggleText,
+                      day.isRest && !day.optionalRest && styles.restToggleTextOn,
+                    ]}
+                  >
+                    Descanso
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleOptionalRest(day.id)}
+                  style={[styles.restToggle, day.optionalRest && styles.restToggleOn]}
+                  hitSlop={4}
+                >
+                  <Ionicons
+                    name={day.optionalRest ? 'shuffle' : 'shuffle-outline'}
+                    size={14}
+                    color={day.optionalRest ? colors.onPrimary : colors.textMuted}
+                  />
+                  <Text style={[styles.restToggleText, day.optionalRest && styles.restToggleTextOn]}>
+                    Opcional
+                  </Text>
+                </Pressable>
+              </View>
             </View>
+            {day.optionalRest ? (
+              <Text style={styles.optionalHint}>
+                Descanso opcional: el alumno decide cada vez entre descansar o
+                reiniciar el ciclo entrenando el Día 1.
+              </Text>
+            ) : null}
             {!day.isRest ? (
               <View style={styles.dayIntensityRow}>
                 <Text style={styles.dayIntensityLabel}>
@@ -940,9 +1014,19 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
+  restToggles: { flexDirection: 'row', gap: spacing.xs },
   restToggleOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   restToggleText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
   restToggleTextOn: { color: colors.onPrimary },
+  optionalHint: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontSize: 12,
+    marginBottom: spacing.sm,
+    lineHeight: 17,
+  },
+  moveDayBtn: { paddingHorizontal: 4 },
+  moveDayBtnOff: { opacity: 0.3 },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dayNameInput: { flex: 1, marginBottom: 0 },
   removeDayBtn: { paddingHorizontal: spacing.sm },
