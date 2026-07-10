@@ -108,6 +108,7 @@ interface SessionSummary {
   durationMin: number;
   sets: number;
   reps: number;
+  seconds: number;
   volumeKg: number;
   prs: PersonalRecord[];
   streak: number;
@@ -281,7 +282,9 @@ export default function WorkoutScreen() {
     const parts = [
       `Sesión completada en UDECA: ${day?.name ?? routine.name}`,
       summary.durationMin > 0 ? `${summary.durationMin} min` : null,
-      `${summary.sets} series · ${summary.reps} reps`,
+      `${summary.sets} series`,
+      summary.reps > 0 ? `${summary.reps} reps` : null,
+      summary.seconds > 0 ? `${summary.seconds}s isométrico` : null,
       summary.volumeKg > 0 ? `${summary.volumeKg} kg de volumen` : null,
       summary.prs.length > 0
         ? `${summary.prs.length} récord${summary.prs.length > 1 ? 's' : ''} personal${
@@ -332,6 +335,7 @@ export default function WorkoutScreen() {
         durationMin: summary.durationMin,
         sets: summary.sets,
         reps: summary.reps,
+        seconds: summary.seconds,
         volumeKg: summary.volumeKg,
         exercises: summary.exercises,
         prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
@@ -353,6 +357,7 @@ export default function WorkoutScreen() {
         durationMin: logToDownload.durationMin ?? 0,
         sets: totals.sets,
         reps: totals.reps,
+        seconds: totals.seconds,
         volumeKg: totals.volumeKg,
         exercises: logToDownload.exercises,
         streak: currentStreak(history),
@@ -557,7 +562,12 @@ export default function WorkoutScreen() {
             <StatTile icon="time" value={`${summary.durationMin} min`} label="Duración" />
           ) : null}
           <StatTile icon="layers" value={`${summary.sets}`} label="Series" />
-          <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
+          {summary.reps > 0 ? (
+            <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
+          ) : null}
+          {summary.seconds > 0 ? (
+            <StatTile icon="hourglass" value={`${summary.seconds}s`} label="Isométrico" />
+          ) : null}
           {summary.volumeKg > 0 ? (
             <StatTile
               icon="barbell"
@@ -713,7 +723,12 @@ export default function WorkoutScreen() {
                     />
                   ) : null}
                   <StatTile icon="layers" value={`${t.sets}`} label="Series" />
-                  <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
+                  {t.reps > 0 ? (
+                    <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
+                  ) : null}
+                  {t.seconds > 0 ? (
+                    <StatTile icon="hourglass" value={`${t.seconds}s`} label="Isométrico" />
+                  ) : null}
                   {t.volumeKg > 0 ? (
                     <StatTile
                       icon="barbell"

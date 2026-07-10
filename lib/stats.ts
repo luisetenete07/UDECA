@@ -308,17 +308,21 @@ export function detectNewPRs(
 export function sessionTotals(session: LoggedExercise[]) {
   let sets = 0;
   let reps = 0;
+  let seconds = 0;
   let volumeKg = 0;
   for (const ex of session) {
+    const isSeconds = ex.measure === 'seconds';
     for (const set of ex.sets) {
       if (!set.completed) continue;
       const r = parseReps(set.reps);
       sets += 1;
-      reps += r;
+      // Reps de ejercicios por repeticiones; segundos de los isométricos.
+      if (isSeconds) seconds += r;
+      else reps += r;
       volumeKg += (Number(set.weight) || 0) * r;
     }
   }
-  return { sets, reps, volumeKg: Math.round(volumeKg) };
+  return { sets, reps, seconds, volumeKg: Math.round(volumeKg) };
 }
 
 /** Actividad agregada por semana (últimas `weeks`), para gráficas. */

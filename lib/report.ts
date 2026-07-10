@@ -148,6 +148,7 @@ export interface SessionResultData {
   durationMin: number;
   sets: number;
   reps: number;
+  seconds?: number;
   volumeKg: number;
   exercises: LoggedExercise[];
   prs?: { exerciseName: string; label: string }[];
@@ -162,7 +163,10 @@ export function buildSessionResultHtml(data: SessionResultData): string {
   const stats = [
     data.durationMin > 0 ? `<div class="stat"><b>${data.durationMin} min</b>Duración</div>` : '',
     `<div class="stat"><b>${data.sets}</b>Series</div>`,
-    `<div class="stat"><b>${data.reps}</b>Reps</div>`,
+    data.reps > 0 ? `<div class="stat"><b>${data.reps}</b>Reps</div>` : '',
+    data.seconds && data.seconds > 0
+      ? `<div class="stat"><b>${data.seconds}s</b>Isométrico</div>`
+      : '',
     data.volumeKg > 0
       ? `<div class="stat"><b>${data.volumeKg.toLocaleString('es-ES')} kg</b>Volumen</div>`
       : '',
