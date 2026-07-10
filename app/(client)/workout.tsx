@@ -128,6 +128,10 @@ export default function WorkoutScreen() {
   const [log, setLog] = useState<LoggedExercise[]>([]);
   const [lastPerf, setLastPerf] = useState<Record<string, LastPerformance>>({});
   const [videoByExercise, setVideoByExercise] = useState<Record<string, string>>({});
+  // Medida ACTUAL de cada ejercicio en la biblioteca (reps/segundos). Manda
+  // sobre la copia guardada en la rutina por si el coach la cambió después.
+  const [measureByExercise, setMeasureByExercise] =
+    useState<Record<string, import('../../lib/types').ExerciseMeasure>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
@@ -160,8 +164,13 @@ export default function WorkoutScreen() {
             .then((library) => {
               if (cancelled) return;
               const map: Record<string, string> = {};
-              for (const ex of library) if (ex.videoUrl) map[ex.id] = ex.videoUrl;
+              const measures: Record<string, import('../../lib/types').ExerciseMeasure> = {};
+              for (const ex of library) {
+                if (ex.videoUrl) map[ex.id] = ex.videoUrl;
+                measures[ex.id] = ex.measure ?? 'reps';
+              }
               setVideoByExercise(map);
+              setMeasureByExercise(measures);
             })
             .catch(() => {});
         }
@@ -382,10 +391,16 @@ export default function WorkoutScreen() {
         : 0;
       // Si no marcó ninguna serie, damos la sesión por hecha igualmente (para
       // que cuente): marcamos todas las series como completadas.
-      const finalLog =
+      const baseLog =
         doneSets > 0
           ? log
           : log.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s, completed: true })) }));
+      // Sella la medida ACTUAL (reps/segundos) de cada ejercicio para que el
+      // histórico y las estadísticas isométricas queden correctos.
+      const finalLog = baseLog.map((ex) => ({
+        ...ex,
+        measure: measureByExercise[ex.exerciseId] ?? ex.measure ?? 'reps',
+      }));
       const prs = detectNewPRs(history, finalLog);
       const totals = sessionTotals(finalLog);
       // Logros que estaban desbloqueados antes de esta sesión (base entrenos).
@@ -672,7 +687,13 @@ export default function WorkoutScreen() {
         const isDone = exercise.sets.length > 0 && exercise.sets.every((s) => s.completed);
         // Carga del ejercicio: define si hay casilla extra (peso/goma) o ninguna.
         const load = planned ? resolveLoad(planned) : 'none';
-        const isSeconds = planned?.measure === 'seconds';
+        // Medida real: manda la biblioteca actual del coach; si no está, la copia
+        // de la rutina o del propio registro. Reps → se apuntan reps; isométrico
+        // → se apuntan segundos.
+        const isSeconds =
+          (measureByExercise[exercise.exerciseId] ??
+            exercise.measure ??
+            planned?.measure) === 'seconds';
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
@@ -695,7 +716,7 @@ export default function WorkoutScreen() {
                 <View style={styles.metaChip}>
                   <Text style={styles.metaChipText}>
                     {planned.sets} × {planned.reps}
-                    {planned.measure === 'seconds' ? 's' : ''}
+                    {isSeconds ? 's' : ''}
                   </Text>
                 </View>
                 {planned.rir !== undefined && planned.rir !== null ? (
@@ -783,7 +804,8 @@ export default function WorkoutScreen() {
                 <TextField
                   value={set.reps}
                   onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
-                  placeholder={planned?.reps || '—'}
+                  placeholder={planned?.reps || (isSeconds ? 'seg' : 'reps')}
+                  keyboardType="numeric"
                   style={styles.setFieldInput}
                 />
                 {load !== 'none' ? (
