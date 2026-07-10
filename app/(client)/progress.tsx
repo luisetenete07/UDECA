@@ -33,6 +33,7 @@ import {
   topExercises,
   trainingDays,
   weeklyActivity,
+  weeklySetsByGroup,
   workoutsByMonth,
 } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
@@ -63,6 +64,7 @@ export default function ProgressScreen() {
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
+  const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const [weightInput, setWeightInput] = useState('');
@@ -93,9 +95,14 @@ export default function ProgressScreen() {
     if (profile.trainerId) {
       getExercisesForTrainer(profile.trainerId)
         .then((library) => {
-          const map: Record<string, string> = {};
-          for (const ex of library) map[ex.id] = ex.measure ?? 'reps';
-          setMeasureByExercise(map);
+          const mmap: Record<string, string> = {};
+          const gmap: Record<string, string> = {};
+          for (const ex of library) {
+            mmap[ex.id] = ex.measure ?? 'reps';
+            gmap[ex.id] = ex.muscleGroup;
+          }
+          setMeasureByExercise(mmap);
+          setMuscleByExercise(gmap);
         })
         .catch(() => {});
     }
@@ -239,6 +246,10 @@ export default function ProgressScreen() {
   const months = workoutsByMonth(workoutLogs, measureByExercise);
   const toggleSession = (id: string) =>
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const weeklySets = weeklySetsByGroup(workoutLogs, muscleByExercise);
+  const pushPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pushSets }));
+  const pullPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pullSets }));
 
   const waistPoints = measurements
     .filter((m) => m.waistCm !== undefined)
@@ -395,6 +406,25 @@ export default function ProgressScreen() {
                 }))}
                 unit="kg"
                 emptyMessage="Registra entrenamientos con peso para ver tu volumen semanal."
+              />
+            </Card>
+
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Series semanales · Empuje</Text>
+              <Text style={styles.photoHint}>Total de series de empuje completadas cada semana.</Text>
+              <LineChart
+                points={pushPoints}
+                unit="series"
+                emptyMessage="Marca ejercicios como 'Empuje' en tu biblioteca para ver este dato."
+              />
+              <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
+                Series semanales · Tirón
+              </Text>
+              <Text style={styles.photoHint}>Total de series de tirón completadas cada semana.</Text>
+              <LineChart
+                points={pullPoints}
+                unit="series"
+                emptyMessage="Marca ejercicios como 'Tirón' en tu biblioteca para ver este dato."
               />
             </Card>
 
