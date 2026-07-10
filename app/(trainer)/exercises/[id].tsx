@@ -16,17 +16,9 @@ import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   MUSCLE_GROUPS,
-  resolveLoad,
-  type ExerciseLoad,
   type ExerciseMeasure,
   type MuscleGroup,
 } from '../../../lib/types';
-
-const LOAD_OPTIONS: { key: ExerciseLoad; label: string; hint: string }[] = [
-  { key: 'none', label: 'Normal', hint: 'Solo peso corporal' },
-  { key: 'weighted', label: 'Lastrado', hint: 'Se añade peso (kg)' },
-  { key: 'assisted', label: 'Asistido', hint: 'Con goma (banda)' },
-];
 
 export default function ExerciseEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,7 +33,6 @@ export default function ExerciseEditorScreen() {
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
-  const [load, setLoad] = useState<ExerciseLoad>('none');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,7 +45,6 @@ export default function ExerciseEditorScreen() {
         setDescription(exercise.description ?? '');
         setVideoUrl(exercise.videoUrl ?? '');
         setMeasure(exercise.measure ?? 'reps');
-        setLoad(resolveLoad(exercise));
       }
       setLoading(false);
     })();
@@ -77,8 +67,6 @@ export default function ExerciseEditorScreen() {
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
           measure,
-          load,
-          band: load === 'assisted',
         });
       } else if (id) {
         await updateExercise(id, {
@@ -87,8 +75,6 @@ export default function ExerciseEditorScreen() {
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
           measure,
-          load,
-          band: load === 'assisted',
         });
       }
       showToast('Ejercicio guardado');
@@ -153,24 +139,6 @@ export default function ExerciseEditorScreen() {
             Segundos (isométrico)
           </Text>
         </Pressable>
-      </View>
-
-      <Text style={styles.label}>Carga</Text>
-      <View style={styles.loadSegment}>
-        {LOAD_OPTIONS.map((opt) => (
-          <Pressable
-            key={opt.key}
-            onPress={() => setLoad(opt.key)}
-            style={[styles.loadBtn, load === opt.key && styles.loadBtnActive]}
-          >
-            <Text style={[styles.loadLabel, load === opt.key && styles.loadLabelActive]}>
-              {opt.label}
-            </Text>
-            <Text style={[styles.loadHint, load === opt.key && styles.loadHintActive]}>
-              {opt.hint}
-            </Text>
-          </Pressable>
-        ))}
       </View>
 
       <TextField
@@ -247,26 +215,5 @@ const styles = StyleSheet.create({
   segmentBtnActive: { backgroundColor: colors.primary },
   segmentText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   segmentTextActive: { color: colors.onPrimary },
-  loadSegment: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  loadBtn: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    gap: 2,
-  },
-  loadBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  loadLabel: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  loadLabelActive: { color: colors.onPrimary },
-  loadHint: { fontSize: 10, color: colors.textMuted, textAlign: 'center' },
-  loadHintActive: { color: colors.onPrimary },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });

@@ -29,12 +29,20 @@ import {
   WEEKDAY_LABELS,
   WEEKDAY_NAMES,
   type Exercise,
+  type ExerciseLoad,
   type RoutineDay,
   type RoutineExercise,
   type RoutineSchedule,
   type RoutineTemplate,
   type UserProfile,
 } from '../../../../lib/types';
+
+/** Variantes de carga elegibles al montar la rutina (por ejercicio del plan). */
+const LOAD_OPTIONS: { key: ExerciseLoad; label: string }[] = [
+  { key: 'none', label: 'Normal' },
+  { key: 'weighted', label: 'Lastrado' },
+  { key: 'assisted', label: 'Goma' },
+];
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -278,6 +286,23 @@ export default function RoutineEditorScreen() {
               ...d,
               exercises: d.exercises.map((e) =>
                 e.id === exerciseRowId ? { ...e, restSeconds: seconds } : e
+              ),
+            }
+          : d
+      )
+    );
+  };
+
+  // Fija la variante de carga de un ejercicio DENTRO de la rutina (normal /
+  // lastrado / con goma), sin depender de la ficha del ejercicio.
+  const setExerciseLoad = (dayId: string, exerciseRowId: string, load: ExerciseLoad) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) =>
+                e.id === exerciseRowId ? { ...e, load, band: load === 'assisted' } : e
               ),
             }
           : d
@@ -785,6 +810,25 @@ export default function RoutineEditorScreen() {
                 </Pressable>
               </View>
 
+              <Text style={styles.loadLabel}>Carga</Text>
+              <View style={styles.loadRow}>
+                {LOAD_OPTIONS.map((opt) => {
+                  const active = resolveLoad(ex) === opt.key;
+                  return (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => setExerciseLoad(day.id, ex.id, opt.key)}
+                      style={[styles.loadChip, active && styles.loadChipActive]}
+                      hitSlop={4}
+                    >
+                      <Text style={[styles.loadChipText, active && styles.loadChipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
               <View style={styles.exerciseFields}>
                 <TextField
                   label="Series"
@@ -1076,6 +1120,27 @@ const styles = StyleSheet.create({
   },
   exerciseFields: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginTop: spacing.xs },
   smallInput: { flex: 1, marginBottom: 0 },
+  loadLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+    fontSize: 11,
+  },
+  loadRow: { flexDirection: 'row', gap: spacing.xs },
+  loadChip: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+  },
+  loadChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  loadChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
+  loadChipTextActive: { color: colors.onPrimary },
   moveBtn: { padding: spacing.xs },
   deleteBtn: { padding: spacing.xs },
   supersetTag: {
