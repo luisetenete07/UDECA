@@ -24,8 +24,10 @@ import {
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { pickProgressPhoto } from '../../lib/image';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import {
   exerciseProgression,
+  isIsometricExercise,
   listExercisesInLogs,
   sessionTotals,
   topExercises,
@@ -60,6 +62,7 @@ export default function ProgressScreen() {
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const [weightInput, setWeightInput] = useState('');
@@ -85,6 +88,17 @@ export default function ProgressScreen() {
     setMeasurements(measurementData);
     setPhotos(photoData);
     setWorkoutLogs(workoutData);
+    // Medida actual de cada ejercicio (reps/segundos) desde la biblioteca del
+    // coach, para mostrar bien los isométricos aunque el registro sea antiguo.
+    if (profile.trainerId) {
+      getExercisesForTrainer(profile.trainerId)
+        .then((library) => {
+          const map: Record<string, string> = {};
+          for (const ex of library) map[ex.id] = ex.measure ?? 'reps';
+          setMeasureByExercise(map);
+        })
+        .catch(() => {});
+    }
     setLoading(false);
   }, [profile]);
 
@@ -210,7 +224,7 @@ export default function ProgressScreen() {
 
   if (loading) return <LoadingScreen />;
 
-  const months = workoutsByMonth(workoutLogs);
+  const months = workoutsByMonth(workoutLogs, measureByExercise);
   const toggleSession = (id: string) =>
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
 
@@ -292,7 +306,7 @@ export default function ProgressScreen() {
                 </View>
 
                 {m.sessions.map((s) => {
-                  const t = sessionTotals(s.exercises);
+                  const t = sessionTotals(s.exercises, measureByExercise);
                   const open = expandedSessions[s.id];
                   const d = new Date(s.date);
                   const meta = [
@@ -327,7 +341,7 @@ export default function ProgressScreen() {
                       {open ? (
                         <View style={styles.sessionDetail}>
                           {s.exercises.map((ex, i) => {
-                            const isSec = ex.measure === 'seconds';
+                            const isSec = isIsometricExercise(ex, measureByExercise);
                             const done = ex.sets
                               .filter((st) => st.completed && st.reps)
                               .map((st) => `${st.reps}${st.weight ? `×${st.weight}kg` : ''}`)

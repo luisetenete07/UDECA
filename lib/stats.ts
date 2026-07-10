@@ -305,13 +305,28 @@ export function detectNewPRs(
 }
 
 /** Métricas agregadas de una sesión para el resumen post-entreno. */
-export function sessionTotals(session: LoggedExercise[]) {
+/**
+ * Un ejercicio es isométrico si su medida guardada es 'seconds' O si la medida
+ * ACTUAL en la biblioteca del entrenador (mapa opcional) lo es. Así una plancha
+ * marcada como segundos se muestra en segundos aunque el registro sea antiguo.
+ */
+export function isIsometricExercise(
+  ex: LoggedExercise,
+  measureByExercise?: Record<string, string>
+): boolean {
+  return ex.measure === 'seconds' || measureByExercise?.[ex.exerciseId] === 'seconds';
+}
+
+export function sessionTotals(
+  session: LoggedExercise[],
+  measureByExercise?: Record<string, string>
+) {
   let sets = 0;
   let reps = 0;
   let seconds = 0;
   let volumeKg = 0;
   for (const ex of session) {
-    const isSeconds = ex.measure === 'seconds';
+    const isSeconds = isIsometricExercise(ex, measureByExercise);
     for (const set of ex.sets) {
       if (!set.completed) continue;
       const r = parseReps(set.reps);
@@ -341,7 +356,10 @@ export interface MonthlyWorkouts {
  * series, reps, segundos isométricos y volumen de cada mes. Es el "registro de
  * entrenamiento mensual" del alumno.
  */
-export function workoutsByMonth(logs: WorkoutLog[]): MonthlyWorkouts[] {
+export function workoutsByMonth(
+  logs: WorkoutLog[],
+  measureByExercise?: Record<string, string>
+): MonthlyWorkouts[] {
   const map = new Map<string, MonthlyWorkouts>();
   for (const log of logs) {
     const d = new Date(log.date);
@@ -365,7 +383,7 @@ export function workoutsByMonth(logs: WorkoutLog[]): MonthlyWorkouts[] {
       map.set(key, m);
     }
     m.sessions.push(log);
-    const t = sessionTotals(log.exercises);
+    const t = sessionTotals(log.exercises, measureByExercise);
     m.totalSets += t.sets;
     m.totalReps += t.reps;
     m.totalSeconds += t.seconds;

@@ -416,11 +416,15 @@ export default function WorkoutScreen() {
         doneSets > 0
           ? log
           : log.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s, completed: true })) }));
-      // Sella la medida ACTUAL (reps/segundos) de cada ejercicio para que el
-      // histórico y las estadísticas isométricas queden correctos.
-      const finalLog = baseLog.map((ex) => ({
+      // Sella la medida ACTUAL de cada ejercicio: isométrico (segundos) si la
+      // biblioteca o la rutina lo indican; si no, reps. Así el histórico y las
+      // estadísticas isométricas quedan correctos.
+      const finalLog: LoggedExercise[] = baseLog.map((ex) => ({
         ...ex,
-        measure: measureByExercise[ex.exerciseId] ?? ex.measure ?? 'reps',
+        measure:
+          measureByExercise[ex.exerciseId] === 'seconds' || ex.measure === 'seconds'
+            ? 'seconds'
+            : 'reps',
       }));
       const prs = detectNewPRs(history, finalLog);
       const totals = sessionTotals(finalLog);
@@ -708,7 +712,7 @@ export default function WorkoutScreen() {
         </FadeIn>
       ) : showCompleted && completedTodayLog ? (
         (() => {
-          const t = sessionTotals(completedTodayLog.exercises);
+          const t = sessionTotals(completedTodayLog.exercises, measureByExercise);
           return (
             <FadeIn>
               <Card accent style={styles.completedCard}>
@@ -818,13 +822,13 @@ export default function WorkoutScreen() {
         const isDone = exercise.sets.length > 0 && exercise.sets.every((s) => s.completed);
         // Carga del ejercicio: define si hay casilla extra (peso/goma) o ninguna.
         const load = planned ? resolveLoad(planned) : 'none';
-        // Medida real: manda la biblioteca actual del coach; si no está, la copia
-        // de la rutina o del propio registro. Reps → se apuntan reps; isométrico
-        // → se apuntan segundos.
+        // Medida real: isométrico (segundos) si CUALQUIER fuente lo indica —la
+        // biblioteca actual del coach, la copia de la rutina o el registro—. Así
+        // una plancha marcada como segundos nunca se muestra como reps.
         const isSeconds =
-          (measureByExercise[exercise.exerciseId] ??
-            exercise.measure ??
-            planned?.measure) === 'seconds';
+          measureByExercise[exercise.exerciseId] === 'seconds' ||
+          exercise.measure === 'seconds' ||
+          planned?.measure === 'seconds';
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
