@@ -88,8 +88,10 @@ service cloud.firestore {
 
     // Notas privadas del entrenador sobre un alumno (doc id = clientId).
     match /coachNotes/{clientId} {
+      // Si el alumno aún no tiene nota, el documento no existe (resource == null):
+      // se permite la lectura para que el perfil cargue sin nota, sin exponer datos.
       allow read: if request.auth != null
-        && resource.data.trainerId == request.auth.uid;
+        && (resource == null || resource.data.trainerId == request.auth.uid);
       allow create: if request.auth != null
         && request.resource.data.trainerId == request.auth.uid;
       allow update, delete: if request.auth != null

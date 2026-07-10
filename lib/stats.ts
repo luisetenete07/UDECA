@@ -342,6 +342,64 @@ export function weeklyActivity(
   return result;
 }
 
+export interface WeeklyVolumePoint {
+  weekStart: number;
+  /** Volumen en kg (peso × reps) de los ejercicios por repeticiones. */
+  volumeKg: number;
+  /** Segundos totales de trabajo isométrico (ejercicios medidos en segundos). */
+  isoSeconds: number;
+  /** Segundos isométricos de empuje (grupo muscular 'Empuje'). */
+  isoPushSeconds: number;
+  /** Segundos isométricos de tirón (grupo muscular 'Tirón'). */
+  isoPullSeconds: number;
+}
+
+/**
+ * Volumen semanal ampliado. Además del volumen en kg (peso × reps de los
+ * ejercicios por repeticiones), suma los SEGUNDOS totales de trabajo
+ * isométrico (ejercicios medidos en segundos, donde el valor va en `reps`),
+ * separando empuje de tirón según el grupo muscular del ejercicio. El mapa
+ * `muscleByExercise` (exerciseId → grupo muscular) proviene de la biblioteca
+ * del entrenador, ya que el registro de la serie no guarda el grupo.
+ */
+export function weeklyVolume(
+  logs: WorkoutLog[],
+  muscleByExercise: Record<string, string> = {},
+  weeks = 8
+): WeeklyVolumePoint[] {
+  const currentWeek = startOfWeek(Date.now());
+  const result: WeeklyVolumePoint[] = Array.from({ length: weeks }, (_, i) => ({
+    weekStart: addDays(currentWeek, -7 * (weeks - 1 - i)),
+    volumeKg: 0,
+    isoSeconds: 0,
+    isoPushSeconds: 0,
+    isoPullSeconds: 0,
+  }));
+  const index = new Map(result.map((r, i) => [r.weekStart, i]));
+  for (const log of logs) {
+    const i = index.get(startOfWeek(log.date));
+    if (i === undefined) continue;
+    const bucket = result[i];
+    for (const ex of log.exercises) {
+      const group = muscleByExercise[ex.exerciseId];
+      const isIso = ex.measure === 'seconds';
+      for (const set of ex.sets) {
+        if (!set.completed) continue;
+        const n = parseReps(set.reps);
+        if (isIso) {
+          bucket.isoSeconds += n;
+          if (group === 'Empuje') bucket.isoPushSeconds += n;
+          else if (group === 'Tirón') bucket.isoPullSeconds += n;
+        } else {
+          bucket.volumeKg += (Number(set.weight) || 0) * n;
+        }
+      }
+    }
+  }
+  for (const r of result) r.volumeKg = Math.round(r.volumeKg);
+  return result;
+}
+
 /** Ejercicios más entrenados (por nº de sesiones en que aparecen). */
 export function topExercises(logs: WorkoutLog[], n = 5): { name: string; count: number }[] {
   const counts = new Map<string, number>();

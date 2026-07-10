@@ -16,6 +16,7 @@ import { ConsistencyMap } from '../../../../components/ConsistencyMap';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getCheckInsForClient } from '../../../../lib/firestore/checkins';
+import { getExercisesForTrainer } from '../../../../lib/firestore/exercises';
 import {
   createHabit,
   deleteHabit,
@@ -32,7 +33,7 @@ import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNote
 import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
 import { buildClientReportHtml } from '../../../../lib/report';
-import { trainingDays, weeklyActivity } from '../../../../lib/stats';
+import { trainingDays, weeklyVolume } from '../../../../lib/stats';
 import {
   clearClientNextPayment,
   getUserProfile,
@@ -83,6 +84,7 @@ export default function ClientDetailScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
@@ -109,7 +111,7 @@ export default function ClientDetailScreen() {
       const uid = profile.uid;
       (async () => {
         try {
-        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData, habitData, habitLogData, noteData] =
+        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData, habitData, habitLogData, noteData, exerciseData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id, uid),
@@ -122,9 +124,13 @@ export default function ClientDetailScreen() {
             getHabitsForClient(id, uid),
             getHabitLogsForClient(id, uid),
             getCoachNote(id),
+            getExercisesForTrainer(uid),
           ]);
         if (cancelled) return;
         setClient(clientData);
+        setMuscleByExercise(
+          Object.fromEntries(exerciseData.map((e) => [e.id, e.muscleGroup]))
+        );
         setCoachNote(noteData);
         setFeeInput(clientData?.monthlyFeeEur ? String(clientData.monthlyFeeEur) : '');
         setRoutines(routineData);
@@ -285,6 +291,17 @@ export default function ClientDetailScreen() {
   const waistPoints = measurements
     .filter((m) => m.waistCm !== undefined)
     .map((m) => ({ date: m.date, value: m.waistCm as number }));
+
+  const weekly = weeklyVolume(workoutLogs, muscleByExercise);
+  const isoTotals = weekly.reduce(
+    (acc, w) => ({
+      push: acc.push + w.isoPushSeconds,
+      pull: acc.pull + w.isoPullSeconds,
+      total: acc.total + w.isoSeconds,
+    }),
+    { push: 0, pull: 0, total: 0 }
+  );
+  const isoOther = Math.max(0, isoTotals.total - isoTotals.push - isoTotals.pull);
 
   const handleGenerateReport = async () => {
     if (!client) return;
@@ -608,12 +625,36 @@ export default function ClientDetailScreen() {
         </View>
         <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Volumen semanal (kg)</Text>
         <LineChart
-          points={weeklyActivity(workoutLogs).map((w) => ({
-            date: w.weekStart,
-            value: w.volumeKg,
-          }))}
+          points={weekly.map((w) => ({ date: w.weekStart, value: w.volumeKg }))}
           unit="kg"
           emptyMessage="Sin entrenamientos con peso registrados todavía."
+        />
+
+        <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+          Isométricos: segundos por semana
+        </Text>
+        <Text style={styles.mutedText}>
+          Segundos totales de aguante (ejercicios por tiempo), separados por
+          empuje y tirón.
+        </Text>
+        <View style={styles.isoTotalsRow}>
+          <View style={styles.isoStat}>
+            <Text style={styles.isoStatValue}>{isoTotals.push.toLocaleString('es-ES')}s</Text>
+            <Text style={styles.isoStatLabel}>Empuje</Text>
+          </View>
+          <View style={styles.isoStat}>
+            <Text style={styles.isoStatValue}>{isoTotals.pull.toLocaleString('es-ES')}s</Text>
+            <Text style={styles.isoStatLabel}>Tirón</Text>
+          </View>
+          <View style={styles.isoStat}>
+            <Text style={styles.isoStatValue}>{isoOther.toLocaleString('es-ES')}s</Text>
+            <Text style={styles.isoStatLabel}>Otros</Text>
+          </View>
+        </View>
+        <LineChart
+          points={weekly.map((w) => ({ date: w.weekStart, value: w.isoSeconds }))}
+          unit="s"
+          emptyMessage="Sin ejercicios isométricos (por segundos) registrados todavía."
         />
       </Card>
 
@@ -785,6 +826,18 @@ const styles = StyleSheet.create({
   routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
   routineMeta: { ...typography.small, color: colors.textMuted },
   mutedText: { ...typography.small, color: colors.textFaint },
+  isoTotalsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.sm },
+  isoStat: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  isoStatValue: { ...typography.h3, color: colors.primaryBright },
+  isoStatLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fonts.medium, marginTop: 2 },
   habitManageRow: {
     flexDirection: 'row',
     alignItems: 'center',
