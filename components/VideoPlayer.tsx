@@ -2,7 +2,7 @@ import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { parseVimeoUrl, vimeoEmbedUrl } from '../lib/video';
+import { parseVimeoUrl, parseYouTubeId, vimeoEmbedUrl, youTubeEmbedUrl } from '../lib/video';
 import { colors, radius, spacing, typography } from '../lib/theme';
 
 /**
@@ -30,6 +30,11 @@ export function VideoPlayer({ url }: { url?: string }) {
   const vimeo = parseVimeoUrl(url);
   if (vimeo) {
     return <VimeoVideo embedUrl={vimeoEmbedUrl(vimeo)} />;
+  }
+
+  const youtubeId = parseYouTubeId(url);
+  if (youtubeId) {
+    return <VimeoVideo embedUrl={youTubeEmbedUrl(youtubeId)} />;
   }
 
   if (Platform.OS === 'web') {

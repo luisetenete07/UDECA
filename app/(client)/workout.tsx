@@ -22,6 +22,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
 import { RestTimer } from '../../components/RestTimer';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { VideoPlayer } from '../../components/VideoPlayer';
 import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
@@ -129,6 +130,8 @@ export default function WorkoutScreen() {
   const [restored, setRestored] = useState(false);
   // Índice del ejercicio que se muestra en el modo enfocado (1 por pantalla).
   const [viewIndex, setViewIndex] = useState(0);
+  // Índice del ejercicio con el vídeo de técnica desplegado (null = ninguno).
+  const [videoOpenIndex, setVideoOpenIndex] = useState<number | null>(null);
   const startedAt = useRef<number | null>(null);
 
   useFocusEffect(
@@ -674,14 +677,29 @@ export default function WorkoutScreen() {
             ) : null}
             {planned?.notes ? <Text style={styles.coachNotes}>{planned.notes}</Text> : null}
             {videoByExercise[exercise.exerciseId] ? (
-              <Pressable
-                onPress={() => Linking.openURL(videoByExercise[exercise.exerciseId])}
-                style={styles.videoLink}
-                hitSlop={4}
-              >
-                <Ionicons name="play-circle-outline" size={15} color={colors.primary} />
-                <Text style={styles.videoLinkText}>Ver técnica</Text>
-              </Pressable>
+              <>
+                <Pressable
+                  onPress={() =>
+                    setVideoOpenIndex(videoOpenIndex === exerciseIndex ? null : exerciseIndex)
+                  }
+                  style={styles.videoLink}
+                  hitSlop={4}
+                >
+                  <Ionicons
+                    name={videoOpenIndex === exerciseIndex ? 'chevron-up' : 'play-circle-outline'}
+                    size={15}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.videoLinkText}>
+                    {videoOpenIndex === exerciseIndex ? 'Ocultar técnica' : 'Ver técnica'}
+                  </Text>
+                </Pressable>
+                {videoOpenIndex === exerciseIndex ? (
+                  <View style={{ marginBottom: spacing.sm }}>
+                    <VideoPlayer url={videoByExercise[exercise.exerciseId]} />
+                  </View>
+                ) : null}
+              </>
             ) : null}
             {prev ? (
               <View style={styles.prevRow}>
