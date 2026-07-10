@@ -15,7 +15,12 @@ import { updateUserProfile } from '../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { pickAvatar } from '../../lib/image';
-import { cancelWorkoutReminder, scheduleWorkoutReminder } from '../../lib/notifications';
+import {
+  cancelCheckinReminder,
+  cancelWorkoutReminder,
+  scheduleCheckinReminder,
+  scheduleWorkoutReminder,
+} from '../../lib/notifications';
 import {
   activeWeeks,
   computeAchievements,
@@ -49,6 +54,22 @@ export default function ClientProfileScreen() {
   const [reminderOn, setReminderOn] = useState(Boolean(profile?.reminderEnabled));
   const [reminderHour, setReminderHour] = useState(profile?.reminderHour ?? 18);
   const [reminderMinute, setReminderMinute] = useState(profile?.reminderMinute ?? 0);
+  const [checkinOn, setCheckinOn] = useState(Boolean(profile?.checkinReminderEnabled));
+
+  const toggleCheckinReminder = async () => {
+    if (!profile) return;
+    const next = !checkinOn;
+    setCheckinOn(next);
+    if (next) {
+      const ok = await scheduleCheckinReminder();
+      await updateUserProfile(profile.uid, {
+        checkinReminderEnabled: Platform.OS === 'web' ? true : ok,
+      });
+    } else {
+      await cancelCheckinReminder();
+      await updateUserProfile(profile.uid, { checkinReminderEnabled: false });
+    }
+  };
 
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -330,6 +351,26 @@ export default function ClientProfileScreen() {
             </View>
           </>
         ) : null}
+      </Card>
+
+      <Card style={styles.section}>
+        <View style={styles.reminderTopRow}>
+          <View style={styles.reminderHeader}>
+            <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Recordatorio de check-in</Text>
+          </View>
+          <Pressable
+            onPress={toggleCheckinReminder}
+            style={[styles.switch, checkinOn && styles.switchOn]}
+            hitSlop={6}
+          >
+            <View style={[styles.switchKnob, checkinOn && styles.switchKnobOn]} />
+          </Pressable>
+        </View>
+        <Text style={styles.reminderHint}>
+          Aviso los domingos por la tarde para enviar tu check-in semanal.
+          {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
+        </Text>
       </Card>
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={styles.signOut} />

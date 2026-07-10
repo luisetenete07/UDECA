@@ -17,7 +17,7 @@ import {
   endChallenge,
   getActiveChallenge,
 } from '../../lib/firestore/challenges';
-import { getClientsForTrainer } from '../../lib/firestore/users';
+import { getClientsForTrainer, updateClientPaymentStatus } from '../../lib/firestore/users';
 import {
   approveJoinRequest,
   deleteJoinRequest,
@@ -79,6 +79,19 @@ export default function TrainerDashboard() {
           setLogs(logData);
           setChallenge(challengeData);
           setRequests(requestData);
+          // Marca automáticamente como "Vencido" a quien se le pasó la fecha
+          // de pago y no estaba ya marcado (aviso automático de impago).
+          const nowTs = Date.now();
+          const toOverdue = clientData.filter(
+            (c) => c.nextPaymentDate && c.nextPaymentDate < nowTs && c.paymentStatus !== 'overdue'
+          );
+          if (toOverdue.length > 0) {
+            toOverdue.forEach((c) => updateClientPaymentStatus(c.uid, 'overdue').catch(() => {}));
+            const ids = new Set(toOverdue.map((c) => c.uid));
+            setClients((prev) =>
+              prev.map((c) => (ids.has(c.uid) ? { ...c, paymentStatus: 'overdue' } : c))
+            );
+          }
         } catch (e) {
           if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
         } finally {

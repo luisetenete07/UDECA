@@ -25,6 +25,8 @@ export interface UserProfile {
   /** Minuto del recordatorio (0-59). */
   reminderMinute?: number;
   reminderEnabled?: boolean;
+  /** Recordatorio semanal del check-in (domingos). */
+  checkinReminderEnabled?: boolean;
   /** Estado del alumno gestionado por el entrenador. */
   status?: ClientStatus;
   /** Estado de pago del alumno, gestionado por el entrenador. */
