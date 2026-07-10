@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -37,7 +35,6 @@ import { resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
-import { buildSessionResultHtml } from '../../lib/report';
 import {
   computeAchievements,
   currentStreak,
@@ -114,10 +111,6 @@ interface SessionSummary {
   prs: PersonalRecord[];
   streak: number;
   newAchievements: Achievement[];
-  // Para poder descargar/re-visualizar el resultado de la sesión.
-  exercises: LoggedExercise[];
-  dayName: string;
-  date: number;
 }
 
 export default function WorkoutScreen() {
@@ -335,64 +328,6 @@ export default function WorkoutScreen() {
     }
   };
 
-  // Genera el PDF: en web abre el diálogo de imprimir/guardar; en móvil comparte.
-  const printResultsHtml = async (html: string) => {
-    try {
-      if (Platform.OS === 'web') {
-        await Print.printAsync({ html });
-      } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
-        }
-      }
-    } catch {
-      showToast('No se pudo generar el PDF');
-    }
-  };
-
-  // Descarga el resultado de la sesión recién terminada (desde el resumen).
-  const handleDownloadResults = async () => {
-    if (!summary || !routine || !profile) return;
-    await printResultsHtml(
-      buildSessionResultHtml({
-        clientName: profile.name,
-        routineName: routine.name,
-        dayName: summary.dayName,
-        date: summary.date,
-        durationMin: summary.durationMin,
-        sets: summary.sets,
-        reps: summary.reps,
-        seconds: summary.seconds,
-        volumeKg: summary.volumeKg,
-        exercises: summary.exercises,
-        prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
-        streak: summary.streak,
-      })
-    );
-  };
-
-  // Descarga el resultado de una sesión ya guardada (día completado hoy).
-  const handleDownloadLog = async (logToDownload: WorkoutLog) => {
-    if (!profile) return;
-    const totals = sessionTotals(logToDownload.exercises);
-    await printResultsHtml(
-      buildSessionResultHtml({
-        clientName: profile.name,
-        routineName: logToDownload.routineName,
-        dayName: logToDownload.dayName,
-        date: logToDownload.date,
-        durationMin: logToDownload.durationMin ?? 0,
-        sets: totals.sets,
-        reps: totals.reps,
-        seconds: totals.seconds,
-        volumeKg: totals.volumeKg,
-        exercises: logToDownload.exercises,
-        streak: currentStreak(history),
-      })
-    );
-  };
-
   const updateSet = (
     exerciseIndex: number,
     setIndex: number,
@@ -531,9 +466,6 @@ export default function WorkoutScreen() {
         prs,
         streak: currentStreak(freshLogs),
         newAchievements,
-        exercises: finalLog,
-        dayName: day.name,
-        date: Date.now(),
       });
       if (newAchievements.length > 0) {
         showToast(`¡Logro desbloqueado: ${newAchievements[0].title}! 🏅`);
@@ -659,16 +591,13 @@ export default function WorkoutScreen() {
           </View>
         ) : null}
 
-        <Button
-          title="Descargar resultados (PDF)"
-          onPress={handleDownloadResults}
-          style={{ marginTop: spacing.lg }}
-        />
+        <Text style={styles.completedNote}>
+          Guardado en tu progreso · pestaña Entrenos
+        </Text>
         <Button
           title="Compartir mi sesión"
-          variant="secondary"
           onPress={handleShareSummary}
-          style={{ marginTop: spacing.sm }}
+          style={{ marginTop: spacing.md }}
         />
         <Button
           title="Ir a inicio"
@@ -815,9 +744,12 @@ export default function WorkoutScreen() {
                     />
                   ) : null}
                 </View>
+                <Text style={styles.completedNote}>
+                  Guardado en tu progreso · pestaña Entrenos
+                </Text>
                 <Button
-                  title="Descargar resultados (PDF)"
-                  onPress={() => handleDownloadLog(completedTodayLog)}
+                  title="Ver mi progreso"
+                  onPress={() => router.push('/(client)/progress')}
                   style={{ marginTop: spacing.md }}
                 />
                 <Button
@@ -1336,6 +1268,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   completedTiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' },
+  completedNote: {
+    ...typography.small,
+    color: colors.textFaint,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
   retrainLink: { alignSelf: 'center', paddingVertical: spacing.sm, marginTop: spacing.xs },
   retrainText: {
     ...typography.small,

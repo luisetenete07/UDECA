@@ -27,9 +27,11 @@ import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import {
   exerciseProgression,
   listExercisesInLogs,
+  sessionTotals,
   topExercises,
   trainingDays,
   weeklyActivity,
+  workoutsByMonth,
 } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
@@ -42,12 +44,18 @@ import {
   type WorkoutLog,
 } from '../../lib/types';
 
-type Tab = 'weight' | 'measurements' | 'photos' | 'activity' | 'exercises';
+type Tab = 'workouts' | 'weight' | 'measurements' | 'photos' | 'exercises';
+
+/** Pone en mayúscula la primera letra (para "julio 2026" → "Julio 2026"). */
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default function ProgressScreen() {
   const { profile } = useAuth();
-  const [tab, setTab] = useState<Tab>('weight');
+  const [tab, setTab] = useState<Tab>('workouts');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
@@ -202,6 +210,10 @@ export default function ProgressScreen() {
 
   if (loading) return <LoadingScreen />;
 
+  const months = workoutsByMonth(workoutLogs);
+  const toggleSession = (id: string) =>
+    setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
+
   const waistPoints = measurements
     .filter((m) => m.waistCm !== undefined)
     .map((m) => ({ date: m.date, value: m.waistCm as number }));
@@ -229,6 +241,7 @@ export default function ProgressScreen() {
         style={styles.tabsScroll}
         contentContainerStyle={styles.tabs}
       >
+        <TabButton label="Entrenos" active={tab === 'workouts'} onPress={() => setTab('workouts')} />
         <TabButton label="Peso" active={tab === 'weight'} onPress={() => setTab('weight')} />
         <TabButton
           label="Ejercicios"
@@ -241,12 +254,129 @@ export default function ProgressScreen() {
           onPress={() => setTab('measurements')}
         />
         <TabButton label="Fotos" active={tab === 'photos'} onPress={() => setTab('photos')} />
-        <TabButton
-          label="Actividad"
-          active={tab === 'activity'}
-          onPress={() => setTab('activity')}
-        />
       </ScrollView>
+
+      {tab === 'workouts' ? (
+        months.length === 0 ? (
+          <Card style={styles.section}>
+            <EmptyState
+              title="Aún no hay entrenamientos"
+              subtitle="Cuando termines una sesión se guardará aquí, en tu registro mensual."
+            />
+          </Card>
+        ) : (
+          <>
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Constancia (12 semanas)</Text>
+              <Text style={styles.photoHint}>Cada punto dorado es un día entrenado.</Text>
+              <ConsistencyMap days={trainingDays(workoutLogs)} />
+            </Card>
+
+            {months.map((m) => (
+              <Card key={m.key} style={styles.section}>
+                <View style={styles.monthHeader}>
+                  <Text style={styles.monthTitle}>{capitalize(m.label)}</Text>
+                  <Text style={styles.monthCount}>
+                    {m.sessions.length} {m.sessions.length === 1 ? 'sesión' : 'sesiones'}
+                  </Text>
+                </View>
+                <View style={styles.monthStats}>
+                  <MonthStat value={String(m.totalSets)} label="series" />
+                  {m.totalReps > 0 ? <MonthStat value={String(m.totalReps)} label="reps" /> : null}
+                  {m.totalSeconds > 0 ? (
+                    <MonthStat value={`${m.totalSeconds}s`} label="isom." />
+                  ) : null}
+                  {m.volumeKg > 0 ? (
+                    <MonthStat value={m.volumeKg.toLocaleString('es-ES')} label="kg vol." />
+                  ) : null}
+                </View>
+
+                {m.sessions.map((s) => {
+                  const t = sessionTotals(s.exercises);
+                  const open = expandedSessions[s.id];
+                  const d = new Date(s.date);
+                  const meta = [
+                    `${t.sets} series`,
+                    t.reps > 0 ? `${t.reps} reps` : null,
+                    t.seconds > 0 ? `${t.seconds}s` : null,
+                    t.volumeKg > 0 ? `${t.volumeKg.toLocaleString('es-ES')} kg` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ');
+                  return (
+                    <View key={s.id}>
+                      <Pressable style={styles.sessionRow} onPress={() => toggleSession(s.id)}>
+                        <View style={styles.sessionDateBox}>
+                          <Text style={styles.sessionDay}>{d.getDate()}</Text>
+                          <Text style={styles.sessionMon}>
+                            {d.toLocaleDateString('es-ES', { month: 'short' })}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.sessionName} numberOfLines={1}>
+                            {s.dayName}
+                          </Text>
+                          <Text style={styles.sessionMeta}>{meta}</Text>
+                        </View>
+                        <Ionicons
+                          name={open ? 'chevron-up' : 'chevron-down'}
+                          size={18}
+                          color={colors.textFaint}
+                        />
+                      </Pressable>
+                      {open ? (
+                        <View style={styles.sessionDetail}>
+                          {s.exercises.map((ex, i) => {
+                            const isSec = ex.measure === 'seconds';
+                            const done = ex.sets
+                              .filter((st) => st.completed && st.reps)
+                              .map((st) => `${st.reps}${st.weight ? `×${st.weight}kg` : ''}`)
+                              .join(', ');
+                            return (
+                              <View key={i} style={styles.detailRow}>
+                                <Text style={styles.detailName} numberOfLines={1}>
+                                  {ex.name}
+                                </Text>
+                                <Text style={styles.detailSets}>
+                                  {done ? `${done}${isSec ? ' s' : ''}` : '✓'}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </Card>
+            ))}
+
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Volumen semanal (kg)</Text>
+              <LineChart
+                points={weeklyActivity(workoutLogs).map((w) => ({
+                  date: w.weekStart,
+                  value: w.volumeKg,
+                }))}
+                unit="kg"
+                emptyMessage="Registra entrenamientos con peso para ver tu volumen semanal."
+              />
+            </Card>
+
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Ejercicios más entrenados</Text>
+              {topExercises(workoutLogs).map((ex, i) => (
+                <View key={ex.name} style={styles.logRow}>
+                  <Text style={styles.logValue}>
+                    {i + 1}. {ex.name}
+                  </Text>
+                  <Text style={styles.logDate}>{ex.count} sesiones</Text>
+                </View>
+              ))}
+            </Card>
+          </>
+        )
+      ) : null}
 
       {tab === 'weight' ? (
         <>
@@ -365,44 +495,6 @@ export default function ProgressScreen() {
                   <Pressable onPress={() => handleDeleteMeasurement(m.id)} hitSlop={8}>
                     <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
                   </Pressable>
-                </View>
-              ))
-            )}
-          </Card>
-        </>
-      ) : tab === 'activity' ? (
-        <>
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Constancia (12 semanas)</Text>
-            <Text style={styles.photoHint}>
-              Cada punto dorado es un día entrenado. Que no se apague la llama.
-            </Text>
-            <ConsistencyMap days={trainingDays(workoutLogs)} />
-          </Card>
-
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Volumen semanal (kg)</Text>
-            <LineChart
-              points={weeklyActivity(workoutLogs).map((w) => ({
-                date: w.weekStart,
-                value: w.volumeKg,
-              }))}
-              unit="kg"
-              emptyMessage="Registra entrenamientos con peso para ver tu volumen semanal."
-            />
-          </Card>
-
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Tus ejercicios más entrenados</Text>
-            {topExercises(workoutLogs).length === 0 ? (
-              <EmptyState title="Todavía no hay entrenamientos registrados" />
-            ) : (
-              topExercises(workoutLogs).map((ex, i) => (
-                <View key={ex.name} style={styles.logRow}>
-                  <Text style={styles.logValue}>
-                    {i + 1}. {ex.name}
-                  </Text>
-                  <Text style={styles.logDate}>{ex.count} sesiones</Text>
                 </View>
               ))
             )}
@@ -535,6 +627,15 @@ function TabButton({
   );
 }
 
+function MonthStat({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.monthStat}>
+      <Text style={styles.monthStatValue}>{value}</Text>
+      <Text style={styles.monthStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   tabsScroll: { marginBottom: spacing.lg, flexGrow: 0 },
@@ -597,6 +698,62 @@ const styles = StyleSheet.create({
   },
   logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
   logDate: { ...typography.small, color: colors.textMuted },
+  // ----- Registro de entrenamiento mensual -----
+  monthHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  monthTitle: { ...typography.h3, color: colors.text },
+  monthCount: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  monthStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  monthStat: {
+    flex: 1,
+    minWidth: 64,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  monthStatValue: { ...typography.h3, color: colors.primaryBright, fontSize: 18 },
+  monthStatLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fonts.medium, marginTop: 2 },
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  sessionDateBox: {
+    width: 44,
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  sessionDay: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading, fontSize: 16 },
+  sessionMon: { fontSize: 9, color: colors.textMuted, textTransform: 'uppercase' },
+  sessionName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  sessionMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  sessionDetail: {
+    paddingLeft: 52,
+    paddingBottom: spacing.sm,
+    gap: 4,
+  },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+  detailName: { ...typography.small, color: colors.textMuted, flex: 1 },
+  detailSets: { ...typography.small, color: colors.text, fontFamily: fonts.medium },
   photoHint: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md },
   poseRow: { flexDirection: 'row', gap: spacing.sm },
   poseBtn: { flex: 1, paddingHorizontal: spacing.sm },

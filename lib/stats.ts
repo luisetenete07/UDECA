@@ -325,6 +325,57 @@ export function sessionTotals(session: LoggedExercise[]) {
   return { sets, reps, seconds, volumeKg: Math.round(volumeKg) };
 }
 
+export interface MonthlyWorkouts {
+  key: string;
+  label: string;
+  monthStart: number;
+  sessions: WorkoutLog[];
+  totalSets: number;
+  totalReps: number;
+  totalSeconds: number;
+  volumeKg: number;
+}
+
+/**
+ * Agrupa los entrenamientos por mes (más reciente primero), con el total de
+ * series, reps, segundos isométricos y volumen de cada mes. Es el "registro de
+ * entrenamiento mensual" del alumno.
+ */
+export function workoutsByMonth(logs: WorkoutLog[]): MonthlyWorkouts[] {
+  const map = new Map<string, MonthlyWorkouts>();
+  for (const log of logs) {
+    const d = new Date(log.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    let m = map.get(key);
+    if (!m) {
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      m = {
+        key,
+        label: new Date(monthStart).toLocaleDateString('es-ES', {
+          month: 'long',
+          year: 'numeric',
+        }),
+        monthStart,
+        sessions: [],
+        totalSets: 0,
+        totalReps: 0,
+        totalSeconds: 0,
+        volumeKg: 0,
+      };
+      map.set(key, m);
+    }
+    m.sessions.push(log);
+    const t = sessionTotals(log.exercises);
+    m.totalSets += t.sets;
+    m.totalReps += t.reps;
+    m.totalSeconds += t.seconds;
+    m.volumeKg += t.volumeKg;
+  }
+  const months = [...map.values()].sort((a, b) => b.monthStart - a.monthStart);
+  for (const m of months) m.sessions.sort((a, b) => b.date - a.date);
+  return months;
+}
+
 /** Actividad agregada por semana (últimas `weeks`), para gráficas. */
 export function weeklyActivity(
   logs: WorkoutLog[],
