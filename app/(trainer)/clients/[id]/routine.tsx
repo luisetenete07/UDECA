@@ -59,11 +59,12 @@ function parseClock(value: string): number {
   return Math.round(mins * 60);
 }
 
-/** Formatea segundos como minutos para el campo ("1,5" · vacío si no hay). */
+/** Formatea segundos como min:seg para el campo ("3:30" · vacío si no hay). */
 function formatClock(seconds?: number): string {
   if (!seconds) return '';
-  const rounded = Math.round((seconds / 60) * 100) / 100;
-  return String(rounded).replace('.', ',');
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 export default function RoutineEditorScreen() {
@@ -810,14 +811,14 @@ export default function RoutineEditorScreen() {
                   style={styles.smallInput}
                 />
                 <TextField
-                  label="Descanso (min)"
+                  label="Descanso (min:seg)"
                   keyboardType="numbers-and-punctuation"
                   value={restText[ex.id] ?? formatClock(ex.restSeconds)}
                   onChangeText={(v) => {
                     setRestText((prev) => ({ ...prev, [ex.id]: v }));
                     updateRestSeconds(day.id, ex.id, parseClock(v));
                   }}
-                  placeholder="1.5"
+                  placeholder="3:30"
                   style={styles.smallInput}
                 />
               </View>

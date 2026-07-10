@@ -70,11 +70,11 @@ interface WorkoutDraft {
 
 const draftKey = (uid: string) => `udeca-workout-draft-${uid}`;
 
-/** Descanso en minutos para las etiquetas: 90 → "1,5 min", 120 → "2 min". */
+/** Descanso en formato min:seg para las etiquetas: 90 → "1:30", 210 → "3:30". */
 function formatRest(seconds: number): string {
-  const rounded = Math.round((seconds / 60) * 10) / 10;
-  const str = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace('.', ',');
-  return `${str} min`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 /** ¿El timestamp cae en el mismo día natural que la referencia (hoy)? */
