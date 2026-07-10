@@ -23,7 +23,7 @@ import {
 } from '../../lib/firestore/progressPhotos';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { pickProgressPhoto } from '../../lib/image';
-import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import {
   exerciseProgression,
@@ -191,6 +191,18 @@ export default function ProgressScreen() {
     showToast('Registro borrado');
   };
 
+  const handleDeleteWorkout = async (id: string) => {
+    if (!(await confirmDelete('¿Borrar este entrenamiento del registro?'))) return;
+    setWorkoutLogs((prev) => prev.filter((l) => l.id !== id));
+    try {
+      await deleteWorkoutLog(id);
+      showToast('Entrenamiento borrado');
+    } catch (e) {
+      await load(); // si falla, recargamos para no perder el registro de la vista
+      showToast(e instanceof Error ? e.message : 'No se pudo borrar');
+    }
+  };
+
   const handleDeleteMeasurement = async (id: string) => {
     if (!(await confirmDelete('¿Borrar esta medición?'))) return;
     setMeasurements((prev) => prev.filter((m) => m.id !== id));
@@ -319,25 +331,34 @@ export default function ProgressScreen() {
                     .join(' · ');
                   return (
                     <View key={s.id}>
-                      <Pressable style={styles.sessionRow} onPress={() => toggleSession(s.id)}>
-                        <View style={styles.sessionDateBox}>
-                          <Text style={styles.sessionDay}>{d.getDate()}</Text>
-                          <Text style={styles.sessionMon}>
-                            {d.toLocaleDateString('es-ES', { month: 'short' })}
-                          </Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.sessionName} numberOfLines={1}>
-                            {s.dayName}
-                          </Text>
-                          <Text style={styles.sessionMeta}>{meta}</Text>
-                        </View>
-                        <Ionicons
-                          name={open ? 'chevron-up' : 'chevron-down'}
-                          size={18}
-                          color={colors.textFaint}
-                        />
-                      </Pressable>
+                      <View style={styles.sessionRow}>
+                        <Pressable style={styles.sessionMain} onPress={() => toggleSession(s.id)}>
+                          <View style={styles.sessionDateBox}>
+                            <Text style={styles.sessionDay}>{d.getDate()}</Text>
+                            <Text style={styles.sessionMon}>
+                              {d.toLocaleDateString('es-ES', { month: 'short' })}
+                            </Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.sessionName} numberOfLines={1}>
+                              {s.dayName}
+                            </Text>
+                            <Text style={styles.sessionMeta}>{meta}</Text>
+                          </View>
+                          <Ionicons
+                            name={open ? 'chevron-up' : 'chevron-down'}
+                            size={18}
+                            color={colors.textFaint}
+                          />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => handleDeleteWorkout(s.id)}
+                          hitSlop={8}
+                          style={styles.sessionDelete}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
+                        </Pressable>
+                      </View>
                       {open ? (
                         <View style={styles.sessionDetail}>
                           {s.exercises.map((ex, i) => {
@@ -743,10 +764,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  sessionMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  sessionDelete: { padding: spacing.xs },
   sessionDateBox: {
     width: 44,
     alignItems: 'center',

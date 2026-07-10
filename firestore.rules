@@ -134,7 +134,10 @@ service cloud.firestore {
         && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
       allow create: if request.auth != null
         && request.resource.data.clientId == request.auth.uid;
-      allow update, delete: if false;
+      // El alumno puede borrar un entrenamiento pasado suyo; no se editan.
+      allow delete: if request.auth != null
+        && resource.data.clientId == request.auth.uid;
+      allow update: if false;
     }
 
     // Registros de peso de cada cliente.

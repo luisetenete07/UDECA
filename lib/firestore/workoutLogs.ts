@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { WorkoutLog } from '../types';
@@ -38,4 +38,9 @@ export async function createWorkoutLog(
 ): Promise<string> {
   const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
+}
+
+/** Borra un entrenamiento pasado (solo el propio alumno puede hacerlo). */
+export async function deleteWorkoutLog(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'workoutLogs', id));
 }
