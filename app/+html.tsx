@@ -41,7 +41,32 @@ export default function Root({ children }: PropsWithChildren) {
 const swRegistration = (base: string) => `
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('${base}/sw.js').catch(function () {});
+    navigator.serviceWorker.register('${base}/sw.js').then(function (reg) {
+      function showUpdateBanner() {
+        if (document.getElementById('udeca-update-bar')) return;
+        var bar = document.createElement('div');
+        bar.id = 'udeca-update-bar';
+        bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:99999;background:#0D0D0D;border:1px solid #2A2A2A;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;max-width:460px;margin:0 auto;';
+        var txt = document.createElement('div');
+        txt.style.cssText = 'flex:1;color:#fff;font-size:14px;font-weight:600;';
+        txt.textContent = 'Nueva versión disponible';
+        var btn = document.createElement('button');
+        btn.style.cssText = 'border:none;border-radius:10px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#C9BDB0,#A2968B);color:#0A0A0A;';
+        btn.textContent = 'Actualizar';
+        btn.onclick = function () { window.location.reload(); };
+        bar.appendChild(txt); bar.appendChild(btn);
+        document.body.appendChild(bar);
+      }
+      reg.addEventListener('updatefound', function () {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function () {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+          }
+        });
+      });
+    }).catch(function () {});
   });
 }
 `;
