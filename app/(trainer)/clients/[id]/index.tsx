@@ -96,6 +96,7 @@ export default function ClientDetailScreen() {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [feeInput, setFeeInput] = useState('');
+  const [extendDaysInput, setExtendDaysInput] = useState('');
   const [remindingPayment, setRemindingPayment] = useState(false);
   const [paymentReminderSent, setPaymentReminderSent] = useState(false);
   const [coachNote, setCoachNote] = useState('');
@@ -217,15 +218,20 @@ export default function ClientDetailScreen() {
     setTimeout(() => setNoteSaved(false), 2000);
   };
 
-  const handleExtendDays = async (days: number) => {
+  // Añade N días personalizados a la fecha del próximo pago.
+  const handleExtendDays = async () => {
     if (!id || !client) return;
+    const days = parseInt(extendDaysInput, 10);
+    if (!days || days <= 0) return;
     const base =
       client.nextPaymentDate && client.nextPaymentDate > Date.now()
         ? client.nextPaymentDate
         : Date.now();
     const nextPaymentDate = base + days * DAY_MS;
     setClient({ ...client, nextPaymentDate });
+    setExtendDaysInput('');
     await updateClientBilling(id, { nextPaymentDate });
+    showToast(`+${days} días · próximo pago ${fmtDate(nextPaymentDate)}`);
   };
 
   const handleClearNextPayment = async () => {
@@ -429,19 +435,25 @@ export default function ClientDetailScreen() {
           style={{ marginTop: spacing.sm }}
         />
         <View style={styles.payBtnRow}>
+          <TextField
+            value={extendDaysInput}
+            onChangeText={setExtendDaysInput}
+            keyboardType="number-pad"
+            placeholder="Días"
+            style={styles.daysField}
+          />
           <Button
-            title="+15 días"
+            title="+ Añadir días"
             variant="secondary"
-            onPress={() => handleExtendDays(15)}
+            onPress={handleExtendDays}
+            disabled={!(parseInt(extendDaysInput, 10) > 0)}
             style={{ flex: 1 }}
           />
           {client.nextPaymentDate ? (
-            <Button
-              title="Quitar fecha"
-              variant="ghost"
-              onPress={handleClearNextPayment}
-              style={{ flex: 1 }}
-            />
+            <Pressable onPress={handleClearNextPayment} style={styles.clearDateBtn} hitSlop={6}>
+              <Ionicons name="calendar-outline" size={16} color={colors.danger} />
+              <Ionicons name="close" size={12} color={colors.danger} style={styles.clearDateX} />
+            </Pressable>
           ) : null}
         </View>
 
@@ -773,7 +785,19 @@ const styles = StyleSheet.create({
   nextPayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nextPayText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   nextPayOverdue: { color: colors.danger },
-  payBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  payBtnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  daysField: { width: 76, marginBottom: 0, textAlign: 'center' },
+  clearDateBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  clearDateX: { marginLeft: -3, marginTop: -8 },
   payChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
