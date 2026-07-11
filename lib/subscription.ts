@@ -28,7 +28,7 @@ export const ADMIN_EMAILS = ['luisetenete07@gmail.com', 'luistenaf@gmail.com'];
 export const PAYMENT_LINK_URL = '';
 
 /** Correo de contacto para activar/renovar manualmente. */
-export const CONTACT_EMAIL = 'luisetenete07@gmail.com';
+export const CONTACT_EMAIL = 'luistenaf@gmail.com';
 
 export function isAdmin(profile: UserProfile | null): boolean {
   return !!profile?.email && ADMIN_EMAILS.includes(profile.email.toLowerCase());
