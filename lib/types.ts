@@ -147,6 +147,11 @@ export interface RoutineExercise {
   band?: boolean;
   /** RIR objetivo (repeticiones en reserva), 0-5. */
   rir?: number;
+  /**
+   * Objetivo del coach para este ejercicio (opcional): reps o segundos a
+   * alcanzar según su medida (p. ej. "20" reps o "60" seg de aguante).
+   */
+  goal?: string;
 }
 
 export interface RoutineDay {

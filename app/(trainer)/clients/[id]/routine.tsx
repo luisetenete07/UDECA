@@ -106,6 +106,8 @@ export default function RoutineEditorScreen() {
   const [movePicker, setMovePicker] = useState<{ dayId: string; ex: RoutineExercise } | null>(
     null
   );
+  // Ejercicios con el recuadro de objetivo abierto (además de los que ya lo tienen).
+  const [goalOpen, setGoalOpen] = useState<Record<string, boolean>>({});
   // Qué días están desplegados en el editor (compacto por defecto).
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
@@ -245,7 +247,7 @@ export default function RoutineEditorScreen() {
   const updateExerciseField = (
     dayId: string,
     exerciseRowId: string,
-    field: 'sets' | 'reps' | 'restSeconds' | 'notes' | 'rir',
+    field: 'sets' | 'reps' | 'restSeconds' | 'notes' | 'rir' | 'goal',
     value: string
   ) => {
     setDays((prev) =>
@@ -911,20 +913,43 @@ export default function RoutineEditorScreen() {
                 placeholder="Tempo, agarre, técnica..."
                 style={{ marginBottom: 0, marginTop: spacing.xs }}
               />
-              {exIndex > 0 ? (
-                <Pressable onPress={() => toggleSuperset(day.id, ex.id)} style={styles.linkBtn}>
-                  <Ionicons
-                    name={ex.supersetWithPrevious ? 'unlink' : 'link'}
-                    size={14}
-                    color={colors.primary}
-                  />
+              {goalOpen[ex.id] || ex.goal ? (
+                <TextField
+                  label={ex.measure === 'seconds' ? 'Objetivo (segundos)' : 'Objetivo (reps)'}
+                  keyboardType="numeric"
+                  value={ex.goal ?? ''}
+                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'goal', v)}
+                  placeholder={ex.measure === 'seconds' ? 'Ej. 60' : 'Ej. 20'}
+                  style={{ marginBottom: 0, marginTop: spacing.xs }}
+                />
+              ) : null}
+              <View style={styles.linksRow}>
+                <Pressable
+                  onPress={() => setGoalOpen((p) => ({ ...p, [ex.id]: !p[ex.id] }))}
+                  style={styles.linkBtn}
+                >
+                  <Ionicons name="flag-outline" size={14} color={colors.primary} />
                   <Text style={styles.linkBtnText}>
-                    {ex.supersetWithPrevious
-                      ? 'Quitar superserie'
-                      : 'Superserie con el anterior'}
+                    {ex.goal
+                      ? `Objetivo: ${ex.goal}${ex.measure === 'seconds' ? ' seg' : ' reps'}`
+                      : 'Añadir objetivo'}
                   </Text>
                 </Pressable>
-              ) : null}
+                {exIndex > 0 ? (
+                  <Pressable onPress={() => toggleSuperset(day.id, ex.id)} style={styles.linkBtn}>
+                    <Ionicons
+                      name={ex.supersetWithPrevious ? 'unlink' : 'link'}
+                      size={14}
+                      color={colors.primary}
+                    />
+                    <Text style={styles.linkBtnText}>
+                      {ex.supersetWithPrevious
+                        ? 'Quitar superserie'
+                        : 'Superserie con el anterior'}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
           ))}
 
@@ -1257,6 +1282,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     letterSpacing: 1,
     color: colors.primaryBright,
+  },
+  linksRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: spacing.lg,
   },
   linkBtn: {
     flexDirection: 'row',

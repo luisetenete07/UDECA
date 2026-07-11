@@ -915,6 +915,14 @@ export default function WorkoutScreen() {
                     <Text style={styles.metaChipText}>Lastrado</Text>
                   </View>
                 ) : null}
+                {planned?.goal ? (
+                  <View style={[styles.metaChip, styles.metaChipBand]}>
+                    <Text style={styles.metaChipText}>
+                      🎯 Objetivo {planned.goal}
+                      {isSeconds ? ' seg' : ' reps'}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ) : null}
             {planned?.notes ? <Text style={styles.coachNotes}>{planned.notes}</Text> : null}
