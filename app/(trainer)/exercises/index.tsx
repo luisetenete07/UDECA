@@ -9,8 +9,10 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
-import { getExercisesForTrainer } from '../../../lib/firestore/exercises';
+import { createExercise, getExercisesForTrainer } from '../../../lib/firestore/exercises';
 import { getCached, setCached } from '../../../lib/screenCache';
+import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
+import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import { MUSCLE_GROUPS, type Exercise } from '../../../lib/types';
 
@@ -26,6 +28,38 @@ export default function ExercisesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  // Importa el pack UDECA saltando los ejercicios que ya existen (por nombre).
+  const handleImportPack = async () => {
+    if (!profile) return;
+    setImporting(true);
+    try {
+      const existing = new Set(exercises.map((e) => e.name.trim().toLowerCase()));
+      const missing = STARTER_LIBRARY.filter(
+        (s) => !existing.has(s.name.trim().toLowerCase())
+      );
+      if (missing.length === 0) {
+        showToast('Ya tienes todos los ejercicios del pack');
+        return;
+      }
+      await Promise.all(
+        missing.map((s) =>
+          createExercise({
+            trainerId: profile.uid,
+            name: s.name,
+            muscleGroup: s.muscleGroup,
+            measure: s.measure,
+            description: s.description,
+          })
+        )
+      );
+      showToast(`${missing.length} ejercicios añadidos a tu biblioteca`);
+      await load();
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -88,10 +122,20 @@ export default function ExercisesScreen() {
         ))}
       </ScrollView>
 
+      {exercises.length < STARTER_LIBRARY.length ? (
+        <Button
+          title={`Importar pack UDECA (${STARTER_LIBRARY.length} ejercicios de calistenia)`}
+          variant={exercises.length === 0 ? 'primary' : 'secondary'}
+          onPress={handleImportPack}
+          loading={importing}
+          style={{ marginBottom: spacing.md }}
+        />
+      ) : null}
+
       {filtered.length === 0 ? (
         <EmptyState
           title="No hay ejercicios"
-          subtitle="Crea tu primer ejercicio con el botón '+ Nuevo'."
+          subtitle="Importa el pack UDECA o crea el primero con '+ Nuevo'."
         />
       ) : (
         filtered.map((exercise) => (

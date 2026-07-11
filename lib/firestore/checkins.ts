@@ -21,6 +21,15 @@ export async function getCheckInsForClient(
     .sort((a, b) => b.weekStart - a.weekStart);
 }
 
+/** Todos los check-ins del grupo de un entrenador (para el copiloto). */
+export async function getCheckInsForTrainer(trainerId: string): Promise<WeeklyCheckIn[]> {
+  const q = query(collectionRef(), where('trainerId', '==', trainerId));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }) as WeeklyCheckIn)
+    .sort((a, b) => b.weekStart - a.weekStart);
+}
+
 export async function createCheckIn(
   data: Omit<WeeklyCheckIn, 'id' | 'createdAt' | 'weekStart'>
 ): Promise<string> {

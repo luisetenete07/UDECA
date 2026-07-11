@@ -19,6 +19,8 @@ import {
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
+import { getCheckInsForTrainer } from '../../lib/firestore/checkins';
+import { buildCopilotReport, type CopilotReport } from '../../lib/copilot';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
 import { weekComparison } from '../../lib/stats';
@@ -64,6 +66,9 @@ export default function TrainerDashboard() {
   const [loading, setLoading] = useState(cached === undefined);
   const [remindingPays, setRemindingPays] = useState(false);
   const [paysReminded, setPaysReminded] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotReport, setCopilotReport] = useState<CopilotReport | null>(null);
+  const [loadingCopilot, setLoadingCopilot] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -194,6 +199,26 @@ export default function TrainerDashboard() {
     }
   };
 
+  // Copiloto UDECA: análisis semanal del grupo bajo demanda (carga los
+  // check-ins solo al abrirlo para no frenar el panel).
+  const handleOpenCopilot = async () => {
+    if (copilotOpen) {
+      setCopilotOpen(false);
+      return;
+    }
+    if (!profile) return;
+    setCopilotOpen(true);
+    setLoadingCopilot(true);
+    try {
+      const checkIns = await getCheckInsForTrainer(profile.uid);
+      setCopilotReport(buildCopilotReport(clients, logs, checkIns));
+    } catch {
+      setCopilotReport(buildCopilotReport(clients, logs, []));
+    } finally {
+      setLoadingCopilot(false);
+    }
+  };
+
   // Un toque: recordatorio de pago a TODOS los alumnos con pago pendiente.
   const handleRemindAllPayments = async () => {
     if (duePayClients.length === 0) {
@@ -234,6 +259,13 @@ export default function TrainerDashboard() {
       {/* Atajos: lo más usado, a un toque */}
       <View style={styles.quickRow}>
         <Pressable
+          style={[styles.quickBtn, copilotOpen && styles.quickBtnActive]}
+          onPress={handleOpenCopilot}
+        >
+          <Ionicons name="sparkles" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Copiloto</Text>
+        </Pressable>
+        <Pressable
           style={styles.quickBtn}
           onPress={() => router.push('/(trainer)/exercises/new')}
         >
@@ -267,6 +299,50 @@ export default function TrainerDashboard() {
         <Card style={[styles.section, { borderColor: colors.danger }]}>
           <Text style={[styles.sectionTitle, { color: colors.danger }]}>Error al cargar datos</Text>
           <Text style={styles.mutedText}>{loadError}</Text>
+        </Card>
+      ) : null}
+
+      {copilotOpen ? (
+        <Card accent style={styles.section}>
+          <View style={styles.titleRow}>
+            <Ionicons name="sparkles" size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Copiloto · análisis semanal</Text>
+          </View>
+          {loadingCopilot || !copilotReport ? (
+            <Text style={styles.mutedText}>Analizando tu grupo...</Text>
+          ) : (
+            <>
+              <Text style={styles.copilotMeta}>
+                {copilotReport.checkinsThisWeek}/{copilotReport.totalClients} check-ins recibidos
+                esta semana
+              </Text>
+              {copilotReport.highlights.map((h) => (
+                <View key={h} style={styles.copilotHighlight}>
+                  <Ionicons name="trophy-outline" size={14} color={colors.primary} />
+                  <Text style={styles.copilotHighlightText}>{h}</Text>
+                </View>
+              ))}
+              {copilotReport.attention.length === 0 ? (
+                <Text style={styles.mutedText}>
+                  Todo en orden: nadie necesita atención especial esta semana. 👏
+                </Text>
+              ) : (
+                copilotReport.attention.map((a) => (
+                  <Pressable
+                    key={a.uid}
+                    style={styles.copilotRow}
+                    onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.logClient}>{a.name}</Text>
+                      <Text style={styles.copilotReasons}>{a.reasons.join(' · ')}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                  </Pressable>
+                ))
+              )}
+            </>
+          )}
         </Card>
       ) : null}
 
@@ -455,6 +531,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   quickBadgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.semiBold },
+  quickBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  copilotMeta: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    marginBottom: spacing.sm,
+  },
+  copilotHighlight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  copilotHighlightText: { ...typography.small, color: colors.text, flex: 1 },
+  copilotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  copilotReasons: { ...typography.small, color: colors.warning, marginTop: 2, fontSize: 11 },
   section: { marginBottom: spacing.md },
   revenueRow: { flexDirection: 'row', gap: spacing.sm },
   revenueBox: {

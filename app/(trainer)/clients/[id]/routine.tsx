@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
@@ -21,8 +21,9 @@ import {
   deleteRoutineTemplate,
   getRoutineTemplatesForTrainer,
 } from '../../../../lib/firestore/routineTemplates';
-import { getClientsForTrainer } from '../../../../lib/firestore/users';
+import { getClientsForTrainer, getUserProfile } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
+import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
   resolveLoad,
@@ -115,14 +116,21 @@ export default function RoutineEditorScreen() {
     setExpandedDays((prev) => ({ ...prev, [dayId]: !(prev[dayId] ?? fallback) }));
   };
 
+  // Nivel del alumno (para el borrador automático del copiloto).
+  const [clientLevel, setClientLevel] = useState<
+    import('../../../../lib/types').ExperienceLevel | undefined
+  >(undefined);
+
   useEffect(() => {
     if (!clientId || !profile) return;
     (async () => {
-      const [existing, library] = await Promise.all([
+      const [existing, library, clientProfile] = await Promise.all([
         getActiveRoutineForClient(clientId, profile.uid),
         getExercisesForTrainer(profile.uid),
+        getUserProfile(clientId).catch(() => null),
       ]);
       setExercises(library);
+      setClientLevel(clientProfile?.level);
       if (existing) {
         setRoutineId(existing.id);
         setName(existing.name);
@@ -135,6 +143,35 @@ export default function RoutineEditorScreen() {
       setLoading(false);
     })();
   }, [clientId, profile]);
+
+  // Copiloto: genera un borrador de rutina desde la biblioteca según el nivel
+  // del alumno. Pide confirmación si hay días con contenido (los reemplaza).
+  const handleGenerateDraft = async () => {
+    if (exercises.length === 0) {
+      showToast('Tu biblioteca está vacía: añade o importa ejercicios primero');
+      return;
+    }
+    const hasContent = days.some((d) => d.exercises.length > 0);
+    if (hasContent) {
+      const ok =
+        Platform.OS === 'web'
+          ? // eslint-disable-next-line no-alert
+            window.confirm('El borrador reemplazará los días actuales. ¿Continuar?')
+          : await new Promise<boolean>((resolve) => {
+              Alert.alert('Borrador automático', 'Reemplazará los días actuales. ¿Continuar?', [
+                { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Generar', onPress: () => resolve(true) },
+              ]);
+            });
+      if (!ok) return;
+    }
+    const draft = generateRoutineDraft({ library: exercises, level: clientLevel, schedule });
+    setDays(draft);
+    setExpandedDays(draft.length > 0 ? { [draft[0].id]: true } : {});
+    showToast(
+      `Borrador generado (nivel ${clientLevel ?? 'Intermedio'}) · revísalo y ajusta`
+    );
+  };
 
   const addDay = () => {
     const id = uid();
@@ -561,13 +598,19 @@ export default function RoutineEditorScreen() {
       ) : (
         <View style={styles.actionsRow}>
           <Button
+            title="✨ Borrador"
+            variant="secondary"
+            onPress={handleGenerateDraft}
+            style={{ flex: 1 }}
+          />
+          <Button
             title="Plantillas"
             variant="secondary"
             onPress={openTemplates}
             style={{ flex: 1 }}
           />
           <Button
-            title="Copiar de un alumno"
+            title="Copiar alumno"
             variant="secondary"
             onPress={openCopyPicker}
             style={{ flex: 1 }}
