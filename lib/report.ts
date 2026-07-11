@@ -15,57 +15,105 @@ function formatDate(timestamp: number) {
   });
 }
 
+/** Primer número de un texto de reps/segundos ("8-12" → 8, "60s" → 60). */
+function parseNum(v: string): number {
+  const m = String(v).match(/\d+(?:[.,]\d+)?/);
+  return m ? parseFloat(m[0].replace(',', '.')) : 0;
+}
+
 export interface ClientReportData {
   client: UserProfile;
   routine: Routine | null;
   weightLogs: WeightLog[];
   workoutLogs: WorkoutLog[];
   nutritionPlan: NutritionPlan | null;
+  /** exerciseId → grupo muscular (biblioteca del coach), para empuje/tirón. */
+  muscleByExercise?: Record<string, string>;
+  /** exerciseId → medida actual ('reps' | 'seconds') de la biblioteca. */
+  measureByExercise?: Record<string, string>;
 }
 
-/** Genera el HTML de un informe de progreso de cliente, listo para exportar a PDF. */
-export function buildClientReportHtml(data: ClientReportData): string {
-  const { client, routine, weightLogs, workoutLogs, nutritionPlan } = data;
+interface Mark {
+  name: string;
+  value: number;
+}
 
-  const firstWeight = weightLogs[0];
+/** Mejores marcas de un patrón (Empuje/Tirón): mejor reps y mejor isométrico. */
+function bestMarks(
+  logs: WorkoutLog[],
+  group: 'Empuje' | 'Tirón',
+  muscle: Record<string, string>,
+  measure: Record<string, string>
+): { reps: Mark | null; secs: Mark | null } {
+  let reps: Mark | null = null;
+  let secs: Mark | null = null;
+  for (const log of logs) {
+    for (const ex of log.exercises) {
+      if (muscle[ex.exerciseId] !== group) continue;
+      const isSec = measure[ex.exerciseId] === 'seconds' || ex.measure === 'seconds';
+      for (const set of ex.sets) {
+        if (!set.completed) continue;
+        const n = parseNum(set.reps);
+        if (n <= 0) continue;
+        if (isSec) {
+          if (!secs || n > secs.value) secs = { name: ex.name, value: n };
+        } else if (!reps || n > reps.value) {
+          reps = { name: ex.name, value: n };
+        }
+      }
+    }
+  }
+  return { reps, secs };
+}
+
+/**
+ * Informe de progreso con la identidad de UDECA (fondo oscuro, dorado):
+ * entrenamientos, días y horas entrenadas, descanso medio entre sesiones,
+ * mejores marcas de empuje/tirón (reps e isométricos), meses, peso y rutina.
+ */
+export function buildClientReportHtml(data: ClientReportData): string {
+  const {
+    client,
+    routine,
+    weightLogs,
+    workoutLogs,
+    muscleByExercise = {},
+    measureByExercise = {},
+  } = data;
+
+  // ----- Métricas de cabecera -----
+  const totalWorkouts = workoutLogs.length;
+  const dayKeys = [...new Set(workoutLogs.map((l) => new Date(l.date).toDateString()))];
+  const daysTrained = dayKeys.length;
+  const totalMinutes = workoutLogs.reduce((s, l) => s + (l.durationMin ?? 0), 0);
+  const hoursTrained =
+    totalMinutes > 0 ? `${(totalMinutes / 60).toFixed(1).replace('.', ',')} h` : '—';
+  // Descanso medio: media de días entre sesiones (días naturales) menos 1.
+  const dayTimes = dayKeys.map((k) => new Date(k).getTime()).sort((a, b) => a - b);
+  let avgRest = '—';
+  if (dayTimes.length >= 2) {
+    const gaps: number[] = [];
+    for (let i = 1; i < dayTimes.length; i++) {
+      gaps.push((dayTimes[i] - dayTimes[i - 1]) / (24 * 60 * 60 * 1000));
+    }
+    const rest = Math.max(0, gaps.reduce((s, g) => s + g, 0) / gaps.length - 1);
+    avgRest = `${rest.toFixed(1).replace('.', ',')} días`;
+  }
+
   const lastWeight = weightLogs[weightLogs.length - 1];
+  const firstWeight = weightLogs[0];
   const weightChange =
     firstWeight && lastWeight ? (lastWeight.weightKg - firstWeight.weightKg).toFixed(1) : null;
 
-  const routineRows = routine
-    ? routine.days
-        .map(
-          (day) => `
-        <h4>${escapeHtml(day.name)}</h4>
-        <table>
-          <tr><th>Ejercicio</th><th>Series</th><th>Reps</th></tr>
-          ${day.exercises
-            .map(
-              (ex) =>
-                `<tr><td>${escapeHtml(ex.name)}</td><td>${ex.sets}</td><td>${escapeHtml(ex.reps)}</td></tr>`
-            )
-            .join('')}
-        </table>`
-        )
-        .join('')
-    : '<p class="muted">Sin rutina activa.</p>';
+  // ----- Mejores marcas empuje / tirón -----
+  const push = bestMarks(workoutLogs, 'Empuje', muscleByExercise, measureByExercise);
+  const pull = bestMarks(workoutLogs, 'Tirón', muscleByExercise, measureByExercise);
+  const markRow = (label: string, m: Mark | null, unit: string) =>
+    `<div class="mark"><span class="mark-label">${label}</span><span class="mark-value">${
+      m ? `${m.value}${unit}` : '—'
+    }</span><span class="mark-name">${m ? escapeHtml(m.name) : 'Sin registros'}</span></div>`;
 
-  const workoutRows = workoutLogs
-    .slice(0, 12)
-    .map(
-      (log) =>
-        `<tr><td>${formatDate(log.date)}</td><td>${escapeHtml(log.dayName)}</td><td>${log.exercises.length}</td></tr>`
-    )
-    .join('');
-
-  const weightRows = weightLogs
-    .slice()
-    .reverse()
-    .slice(0, 12)
-    .map((log) => `<tr><td>${formatDate(log.date)}</td><td>${log.weightKg} kg</td></tr>`)
-    .join('');
-
-  // Registro de entrenamiento por mes (últimos 6 meses con actividad).
+  // ----- Meses -----
   const monthRows = workoutsByMonth(workoutLogs)
     .slice(0, 6)
     .map((m) => {
@@ -74,34 +122,74 @@ export function buildClientReportHtml(data: ClientReportData): string {
     })
     .join('');
 
+  const routineDays = routine
+    ? routine.days
+        .map(
+          (d) =>
+            `<tr><td>${escapeHtml(d.name)}</td><td>${d.isRest ? 'Descanso' : `${d.exercises.length} ejercicios · ${d.exercises.reduce((a, e) => a + (e.sets || 0), 0)} series`}</td></tr>`
+        )
+        .join('')
+    : '';
+
   return `
     <html>
       <head>
         <meta charset="utf-8" />
         <style>
-          body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #0B1220; padding: 24px; }
-          h1 { font-size: 22px; margin-bottom: 4px; }
-          .brand { color: #B4791E; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
-          h2 { font-size: 16px; margin-top: 28px; border-bottom: 2px solid #C9902B; padding-bottom: 4px; }
-          h4 { font-size: 14px; margin-bottom: 4px; }
-          .muted { color: #64748B; font-size: 13px; }
-          .stats { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0; }
-          .stat { border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 16px; }
-          .stat b { display: block; font-size: 18px; color: #B4791E; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
-          th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #E2E8F0; }
-          th { color: #64748B; font-weight: 600; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+          body { font-family: -apple-system, Helvetica, Arial, sans-serif; background: #0C0D10; color: #ECEDEF; padding: 32px; margin: 0; }
+          .brand { color: #C9902B; font-weight: 800; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; }
+          .rule { height: 2px; width: 56px; background: #C9902B; margin: 10px 0 18px; }
+          h1 { font-size: 24px; margin: 6px 0 2px; color: #FFFFFF; }
+          .muted { color: #9AA0A8; font-size: 12px; }
+          h2 { font-size: 13px; margin: 26px 0 10px; color: #E3B15C; text-transform: uppercase; letter-spacing: 2px; }
+          .tiles { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+          .tile { flex: 1; min-width: 120px; background: #16181D; border: 1px solid #2A2D34; border-radius: 12px; padding: 14px 16px; text-align: center; }
+          .tile b { display: block; font-size: 24px; color: #E3B15C; margin-bottom: 2px; }
+          .tile span { font-size: 10px; color: #9AA0A8; text-transform: uppercase; letter-spacing: 1px; }
+          .cols { display: flex; gap: 10px; }
+          .col { flex: 1; background: #16181D; border: 1px solid #2A2D34; border-radius: 12px; padding: 14px 16px; }
+          .col h3 { margin: 0 0 10px; font-size: 12px; color: #FFFFFF; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #2A2D34; padding-bottom: 8px; }
+          .mark { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; }
+          .mark-label { font-size: 11px; color: #9AA0A8; width: 82px; }
+          .mark-value { font-size: 16px; font-weight: 800; color: #E3B15C; }
+          .mark-name { font-size: 11px; color: #C6CAD1; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; background: #16181D; border: 1px solid #2A2D34; border-radius: 12px; overflow: hidden; }
+          th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #22252B; }
+          th { color: #9AA0A8; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; background: #121418; }
+          tr:last-child td { border-bottom: none; }
+          .weight-line { font-size: 13px; color: #C6CAD1; }
+          .weight-line b { color: #E3B15C; }
+          .foot { margin-top: 30px; font-size: 10px; color: #6B7078; letter-spacing: 1px; text-transform: uppercase; text-align: center; }
         </style>
       </head>
       <body>
         <div class="brand">UDECA — Universidad de Calistenia</div>
-        <h1>Informe de progreso — ${escapeHtml(client.name)}</h1>
-        <p class="muted">Generado el ${formatDate(Date.now())}</p>
+        <div class="rule"></div>
+        <h1>${escapeHtml(client.name)}</h1>
+        <p class="muted">Informe de progreso · ${formatDate(Date.now())}${
+          client.level ? ` · Nivel: ${escapeHtml(client.level)}` : ''
+        }${client.goal ? ` · Objetivo: ${escapeHtml(client.goal)}` : ''}</p>
 
-        <div class="stats">
-          <div class="stat"><b>${lastWeight ? `${lastWeight.weightKg} kg` : '—'}</b>Peso actual</div>
-          <div class="stat"><b>${weightChange !== null ? `${Number(weightChange) >= 0 ? '+' : ''}${weightChange} kg` : '—'}</b>Cambio de peso</div>
-          <div class="stat"><b>${workoutLogs.length}</b>Entrenos registrados</div>
+        <div class="tiles">
+          <div class="tile"><b>${totalWorkouts}</b><span>Entrenamientos</span></div>
+          <div class="tile"><b>${daysTrained}</b><span>Días entrenados</span></div>
+          <div class="tile"><b>${hoursTrained}</b><span>Horas entrenadas</span></div>
+          <div class="tile"><b>${avgRest}</b><span>Descanso medio</span></div>
+        </div>
+
+        <h2>Mejores marcas</h2>
+        <div class="cols">
+          <div class="col">
+            <h3>Empuje</h3>
+            ${markRow('Isométrico', push.secs, 's')}
+            ${markRow('Repeticiones', push.reps, ' reps')}
+          </div>
+          <div class="col">
+            <h3>Tirón</h3>
+            ${markRow('Isométrico', pull.secs, 's')}
+            ${markRow('Repeticiones', pull.reps, ' reps')}
+          </div>
         </div>
 
         <h2>Entrenamiento por mes</h2>
@@ -111,29 +199,23 @@ export function buildClientReportHtml(data: ClientReportData): string {
             : '<p class="muted">Sin entrenamientos registrados.</p>'
         }
 
-        <h2>Rutina actual</h2>
-        ${routineRows}
-
-        <h2>Plan nutricional</h2>
         ${
-          nutritionPlan
-            ? `<p>${escapeHtml(nutritionPlan.name)} — ${nutritionPlan.dailyCalories} kcal/día (P${nutritionPlan.proteinG}g · C${nutritionPlan.carbsG}g · G${nutritionPlan.fatG}g)</p>`
-            : '<p class="muted">Sin plan nutricional activo.</p>'
+          lastWeight
+            ? `<h2>Peso</h2><p class="weight-line">Actual: <b>${lastWeight.weightKg} kg</b>${
+                weightChange !== null
+                  ? ` · Cambio desde el inicio: <b>${Number(weightChange) >= 0 ? '+' : ''}${weightChange} kg</b>`
+                  : ''
+              }</p>`
+            : ''
         }
 
-        <h2>Historial de peso</h2>
         ${
-          weightRows
-            ? `<table><tr><th>Fecha</th><th>Peso</th></tr>${weightRows}</table>`
-            : '<p class="muted">Sin registros de peso.</p>'
+          routine
+            ? `<h2>Rutina actual · ${escapeHtml(routine.name)}</h2><table><tr><th>Día</th><th>Contenido</th></tr>${routineDays}</table>`
+            : ''
         }
 
-        <h2>Últimos entrenamientos</h2>
-        ${
-          workoutRows
-            ? `<table><tr><th>Fecha</th><th>Sesión</th><th>Ejercicios</th></tr>${workoutRows}</table>`
-            : '<p class="muted">Sin entrenamientos registrados.</p>'
-        }
+        <div class="foot">Generado por UDECA · udeca.luistenafit.com</div>
       </body>
     </html>
   `;

@@ -83,6 +83,7 @@ export default function ClientDetailScreen() {
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
+  const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [checkIns, setCheckIns] = useState<WeeklyCheckIn[]>([]);
@@ -127,6 +128,9 @@ export default function ClientDetailScreen() {
         setClient(clientData);
         setMuscleByExercise(
           Object.fromEntries(exerciseData.map((e) => [e.id, e.muscleGroup]))
+        );
+        setMeasureByExercise(
+          Object.fromEntries(exerciseData.map((e) => [e.id, e.measure ?? 'reps']))
         );
         setCoachNote(noteData);
         setFeeInput(clientData?.monthlyFeeEur ? String(clientData.monthlyFeeEur) : '');
@@ -311,6 +315,8 @@ export default function ClientDetailScreen() {
         weightLogs,
         workoutLogs,
         nutritionPlan,
+        muscleByExercise,
+        measureByExercise,
       });
 
       if (Platform.OS === 'web') {
@@ -502,14 +508,6 @@ export default function ClientDetailScreen() {
         />
         {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
       </Card>
-
-      <Button
-        title="Generar informe PDF"
-        variant="secondary"
-        onPress={handleGenerateReport}
-        loading={generatingReport}
-        style={{ marginBottom: spacing.md }}
-      />
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Rutina asignada</Text>
@@ -704,6 +702,13 @@ export default function ClientDetailScreen() {
           ))
         )}
       </Card>
+
+      <Button
+        title="Generar informe PDF"
+        onPress={handleGenerateReport}
+        loading={generatingReport}
+        style={{ marginBottom: spacing.md }}
+      />
 
       <Card style={[styles.section, styles.dangerZone]}>
         <Text style={styles.sectionTitle}>Gestión del alumno</Text>
