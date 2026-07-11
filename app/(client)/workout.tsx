@@ -686,6 +686,16 @@ export default function WorkoutScreen() {
         })}
       </ScrollView>
 
+      {routine.schedule === 'cycle' ? (
+        <Pressable onPress={handleStartCycleToday} style={styles.resetCycleBtn} hitSlop={6}>
+          <Ionicons name="refresh" size={13} color={colors.primary} />
+          <Text style={styles.resetCycleText}>
+            {todaySession.cycleLabel ? `Hoy: ${todaySession.cycleLabel} · ` : ''}
+            Reiniciar ciclo (hoy pasa a ser el Día 1)
+          </Text>
+        </Pressable>
+      ) : null}
+
       {day?.intensity ? (
         <View style={styles.intensityBanner}>
           <Ionicons name="flame" size={15} color={colors.primary} />
@@ -1102,6 +1112,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   intensityBannerText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  resetCycleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.md,
+    marginTop: -spacing.xs,
+  },
+  resetCycleText: {
+    ...typography.small,
+    color: colors.primary,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+  },
   progressWrap: {
     flexDirection: 'row',
     alignItems: 'center',
