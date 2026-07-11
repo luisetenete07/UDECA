@@ -102,6 +102,10 @@ export default function RoutineEditorScreen() {
     return d.getTime();
   });
   const [restText, setRestText] = useState<Record<string, string>>({});
+  // Ejercicio pendiente de mover/copiar a otro día (abre el selector de día).
+  const [movePicker, setMovePicker] = useState<{ dayId: string; ex: RoutineExercise } | null>(
+    null
+  );
   // Qué días están desplegados en el editor (compacto por defecto).
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
@@ -326,6 +330,31 @@ export default function RoutineEditorScreen() {
           : d
       )
     );
+  };
+
+  // Mueve o copia un ejercicio a OTRO día sin tener que volver a montarlo
+  // (mantiene series, reps, RIR, descanso, carga y notas).
+  const moveOrCopyExercise = (targetDayId: string, keepOriginal: boolean) => {
+    if (!movePicker) return;
+    const { dayId, ex } = movePicker;
+    setDays((prev) =>
+      prev.map((d) => {
+        let exercises = d.exercises;
+        // Quitar del día de origen (solo al MOVER).
+        if (!keepOriginal && d.id === dayId) {
+          exercises = exercises.filter((e) => e.id !== ex.id);
+        }
+        // Añadir al final del día de destino (id nuevo, sin superserie heredada).
+        if (d.id === targetDayId) {
+          exercises = [...exercises, { ...ex, id: uid(), supersetWithPrevious: false }];
+        }
+        return exercises === d.exercises ? d : { ...d, exercises };
+      })
+    );
+    // Deja el día de destino desplegado para verlo al instante.
+    setExpandedDays((p) => ({ ...p, [targetDayId]: true }));
+    setMovePicker(null);
+    showToast(keepOriginal ? 'Ejercicio copiado' : 'Ejercicio movido');
   };
 
   // Mueve un ejercicio una posición arriba o abajo dentro de su día.
@@ -787,6 +816,15 @@ export default function RoutineEditorScreen() {
                   {ex.name}
                   {resolveLoad(ex) === 'assisted' ? '  🟡' : resolveLoad(ex) === 'weighted' ? '  🏋️' : ''}
                 </Text>
+                {days.length > 1 ? (
+                  <Pressable
+                    onPress={() => setMovePicker({ dayId: day.id, ex })}
+                    style={styles.moveBtn}
+                    hitSlop={4}
+                  >
+                    <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
+                  </Pressable>
+                ) : null}
                 <Pressable
                   onPress={() => moveExercise(day.id, exIndex, -1)}
                   style={styles.moveBtn}
@@ -957,6 +995,61 @@ export default function RoutineEditorScreen() {
                   ))}
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={movePicker !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setMovePicker(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Mover o copiar</Text>
+                <Text style={styles.moveExName} numberOfLines={1}>
+                  {movePicker?.ex.name}
+                </Text>
+              </View>
+              <Pressable onPress={() => setMovePicker(null)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.modalList}>
+              {days.map((d, i) => {
+                const isSource = d.id === movePicker?.dayId;
+                return (
+                  <View key={d.id} style={styles.moveDayRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pickerRowText}>
+                        {d.name || `Día ${i + 1}`}
+                        {isSource ? '  · actual' : ''}
+                      </Text>
+                      <Text style={styles.pickerRowMuscle}>
+                        {d.exercises.length} ejercicio(s)
+                        {d.isRest ? ' · descanso' : ''}
+                      </Text>
+                    </View>
+                    <Button
+                      title="Copiar"
+                      variant="secondary"
+                      onPress={() => moveOrCopyExercise(d.id, true)}
+                      style={styles.moveActionBtn}
+                    />
+                    {!isSource ? (
+                      <Button
+                        title="Mover"
+                        onPress={() => moveOrCopyExercise(d.id, false)}
+                        style={styles.moveActionBtn}
+                      />
+                    ) : null}
+                  </View>
+                );
+              })}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -1143,6 +1236,16 @@ const styles = StyleSheet.create({
   loadChipTextActive: { color: colors.onPrimary },
   moveBtn: { padding: spacing.xs },
   deleteBtn: { padding: spacing.xs },
+  moveExName: { ...typography.small, color: colors.primaryBright, marginTop: 2 },
+  moveDayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  moveActionBtn: { paddingHorizontal: spacing.md, paddingVertical: 10 },
   supersetTag: {
     flexDirection: 'row',
     alignItems: 'center',
