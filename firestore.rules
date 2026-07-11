@@ -98,8 +98,10 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid)).data.clientId == userId
         )
       );
-      // El propio usuario puede borrar su cuenta (su documento de perfil).
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      // El propio usuario puede borrar su cuenta (su documento de perfil);
+      // el admin de UDECA puede eliminar cuentas desde su panel.
+      allow delete: if request.auth != null
+        && (request.auth.uid == userId || isUdecaAdmin());
     }
 
     // Biblioteca de ejercicios de cada entrenador.

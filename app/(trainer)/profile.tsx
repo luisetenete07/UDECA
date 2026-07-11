@@ -10,6 +10,7 @@ import { showToast } from '../../components/Toast';
 import { DeleteAccountButton } from '../../components/DeleteAccountButton';
 import { useAuth } from '../../lib/auth-context';
 import {
+  deleteCoachAccount,
   getAllCoaches,
   normalizeInviteCode,
   setCoachSubscription,
@@ -55,6 +56,64 @@ export default function TrainerProfileScreen() {
       showToast(e instanceof Error ? e.message : 'No se pudo cargar');
     } finally {
       setLoadingCoaches(false);
+    }
+  };
+
+  // Confirmación multiplataforma para acciones destructivas del admin.
+  const confirmAdmin = (message: string): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      return Promise.resolve(window.confirm(message));
+    }
+    return new Promise((resolve) => {
+      Alert.alert('Admin UDECA', message, [
+        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Confirmar', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+  };
+
+  // Quita la suscripción de un coach (queda CADUCADO y ve el muro de pago).
+  const revokeCoach = async (coach: UserProfile) => {
+    if (
+      !(await confirmAdmin(
+        `¿Quitar la suscripción de ${coach.name}? Verá el muro de pago hasta reactivarla.`
+      ))
+    )
+      return;
+    setUpdatingCoach(coach.uid);
+    try {
+      await setCoachSubscription(coach.uid, 0);
+      setCoaches((prev) =>
+        prev.map((c) =>
+          c.uid === coach.uid ? { ...c, subscriptionUntil: 0, subscriptionPlan: 'annual' } : c
+        )
+      );
+      showToast('Suscripción retirada');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo retirar');
+    } finally {
+      setUpdatingCoach(null);
+    }
+  };
+
+  // Elimina la cuenta (perfil) de un coach de la plataforma.
+  const deleteCoach = async (coach: UserProfile) => {
+    if (
+      !(await confirmAdmin(
+        `¿ELIMINAR la cuenta de ${coach.name} (${coach.email})? Perderá el acceso y desaparecerá de la plataforma. Esta acción no se puede deshacer.`
+      ))
+    )
+      return;
+    setUpdatingCoach(coach.uid);
+    try {
+      await deleteCoachAccount(coach.uid);
+      setCoaches((prev) => prev.filter((c) => c.uid !== coach.uid));
+      showToast('Cuenta eliminada');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo eliminar');
+    } finally {
+      setUpdatingCoach(null);
     }
   };
 
@@ -273,13 +332,33 @@ export default function TrainerProfileScreen() {
                     </Text>
                   </View>
                   {!isAdmin(c) ? (
-                    <Button
-                      title="+1 año"
-                      variant="secondary"
-                      onPress={() => extendCoach(c, 365)}
-                      loading={updatingCoach === c.uid}
-                      style={styles.coachBtn}
-                    />
+                    <View style={styles.coachActions}>
+                      <Button
+                        title="+1 año"
+                        variant="secondary"
+                        onPress={() => extendCoach(c, 365)}
+                        loading={updatingCoach === c.uid}
+                        style={styles.coachBtn}
+                      />
+                      {s.active || s.legacy ? (
+                        <Pressable
+                          onPress={() => revokeCoach(c)}
+                          disabled={updatingCoach === c.uid}
+                          style={styles.coachIconBtn}
+                          hitSlop={6}
+                        >
+                          <Ionicons name="remove-circle-outline" size={18} color={colors.warning} />
+                        </Pressable>
+                      ) : null}
+                      <Pressable
+                        onPress={() => deleteCoach(c)}
+                        disabled={updatingCoach === c.uid}
+                        style={[styles.coachIconBtn, styles.coachIconDanger]}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                      </Pressable>
+                    </View>
                   ) : null}
                 </View>
               );
@@ -362,6 +441,17 @@ const styles = StyleSheet.create({
   coachEmail: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   coachSub: { ...typography.small, color: colors.primaryBright, fontSize: 11, marginTop: 2 },
   coachBtn: { paddingHorizontal: spacing.md },
+  coachActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  coachIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coachIconDanger: { borderColor: colors.danger },
   helperText: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
   codeBox: {
     backgroundColor: colors.surfaceAlt,

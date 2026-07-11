@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -58,6 +59,15 @@ export async function setCoachSubscription(coachId: string, untilMs: number) {
     subscriptionUntil: untilMs,
     subscriptionPlan: 'annual',
   });
+}
+
+/**
+ * Admin UDECA: elimina el perfil de un coach de la plataforma (pierde el
+ * acceso y desaparece del panel). Su credencial de login en Firebase Auth
+ * solo puede borrarla él mismo o el admin desde la consola de Firebase.
+ */
+export async function deleteCoachAccount(coachId: string) {
+  await deleteDoc(doc(db, 'users', coachId));
 }
 
 /** Actualiza campos editables del propio perfil (foto, nombre, bio, etc.). */
