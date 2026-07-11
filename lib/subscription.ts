@@ -15,8 +15,11 @@ import type { UserProfile } from './types';
 export const ANNUAL_PRICE_EUR = 180;
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Correos con poderes de administración de UDECA (gestión de suscripciones). */
-export const ADMIN_EMAILS = ['luisetenete07@gmail.com'];
+/**
+ * Correos con poderes de administración de UDECA (gestión de suscripciones).
+ * Los admins tienen acceso completo de por vida (nunca pagan ni caducan).
+ */
+export const ADMIN_EMAILS = ['luisetenete07@gmail.com', 'luistenaf@gmail.com'];
 
 /**
  * Enlace de pago (Stripe Payment Link). Se crea en el panel de Stripe sin

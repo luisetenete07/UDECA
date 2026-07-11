@@ -40,7 +40,10 @@ service cloud.firestore {
       // coaches (modelo SaaS). Identificado por su correo verificado.
       function isUdecaAdmin() {
         return request.auth != null
-          && request.auth.token.email in ['luisetenete07@gmail.com'];
+          && request.auth.token.email in [
+            'luisetenete07@gmail.com',
+            'luistenaf@gmail.com'
+          ];
       }
       allow read: if request.auth != null
         && (
