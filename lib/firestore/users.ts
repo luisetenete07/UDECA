@@ -43,6 +43,23 @@ export async function updateClientGoal(clientId: string, goal: string) {
   await setDoc(doc(db, 'users', clientId), { goal }, { merge: true });
 }
 
+/** Admin UDECA: lista de todos los coaches (para gestionar suscripciones). */
+export async function getAllCoaches(): Promise<UserProfile[]> {
+  const q = query(collection(db, 'users'), where('role', '==', 'trainer'));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => d.data() as UserProfile)
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+}
+
+/** Admin UDECA: fija el fin de suscripción de un coach (reglas: solo admin). */
+export async function setCoachSubscription(coachId: string, untilMs: number) {
+  await updateDoc(doc(db, 'users', coachId), {
+    subscriptionUntil: untilMs,
+    subscriptionPlan: 'annual',
+  });
+}
+
 /** Actualiza campos editables del propio perfil (foto, nombre, bio, etc.). */
 export async function updateUserProfile(uid: string, data: Partial<UserProfile>) {
   await setDoc(doc(db, 'users', uid), stripUndefined(data), { merge: true });

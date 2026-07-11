@@ -36,6 +36,12 @@ service cloud.firestore {
 
     // Perfiles de usuario (entrenadores y clientes).
     match /users/{userId} {
+      // Admin de la plataforma UDECA: gestiona las suscripciones de los
+      // coaches (modelo SaaS). Identificado por su correo verificado.
+      function isUdecaAdmin() {
+        return request.auth != null
+          && request.auth.token.email in ['luisetenete07@gmail.com'];
+      }
       allow read: if request.auth != null
         && (
           request.auth.uid == userId
@@ -43,12 +49,31 @@ service cloud.firestore {
           // El alumno puede leer el perfil de SU entrenador (p. ej. para
           // enviarle una notificación al completar una sesión).
           || userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
+          || isUdecaAdmin()
         );
-      allow create: if request.auth != null && request.auth.uid == userId;
-      // El propio usuario edita su perfil; el entrenador puede cambiar el
-      // `status` de sus clientes o sacarlos de su grupo (quitar `trainerId`).
+      // Al crearse, un coach solo puede darse a sí mismo la prueba gratuita
+      // (máx. 31 días); ampliaciones posteriores, solo el admin.
+      allow create: if request.auth != null && request.auth.uid == userId
+        && (
+          request.resource.data.role != 'trainer'
+          || !('subscriptionUntil' in request.resource.data)
+          || request.resource.data.subscriptionUntil
+            <= request.time.toMillis() + 31 * 24 * 60 * 60 * 1000
+        );
+      // El propio usuario edita su perfil (sin tocar su suscripción); el
+      // entrenador puede cambiar el `status` de sus clientes o sacarlos de su
+      // grupo (quitar `trainerId`); el admin gestiona suscripciones.
       allow update: if request.auth != null && (
-        request.auth.uid == userId
+        (
+          request.auth.uid == userId
+          && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['subscriptionUntil', 'subscriptionPlan'])
+        )
+        || (
+          isUdecaAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['subscriptionUntil', 'subscriptionPlan'])
+        )
         || (
           resource.data.trainerId == request.auth.uid
           && (
@@ -152,18 +177,6 @@ service cloud.firestore {
       allow update: if false;
     }
 
-    // Medidas corporales de cada cliente.
-    match /bodyMeasurements/{measurementId} {
-      allow read: if request.auth != null
-        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
-      allow create: if request.auth != null
-        && request.resource.data.clientId == request.auth.uid;
-      // El alumno puede borrar una medición errónea suya; no se editan.
-      allow delete: if request.auth != null
-        && resource.data.clientId == request.auth.uid;
-      allow update: if false;
-    }
-
     // Planes nutricionales asignados a cada cliente.
     match /nutritionPlans/{planId} {
       allow read: if request.auth != null
@@ -192,20 +205,6 @@ service cloud.firestore {
       allow delete: if request.auth != null
         && resource.data.clientId == request.auth.uid;
       allow update: if false;
-    }
-
-    // Anuncios del entrenador: los gestiona él; los leen sus alumnos.
-    match /announcements/{announcementId} {
-      allow read: if request.auth != null
-        && (
-          resource.data.trainerId == request.auth.uid
-          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
-            == resource.data.trainerId
-        );
-      allow create: if request.auth != null
-        && request.resource.data.trainerId == request.auth.uid;
-      allow update, delete: if request.auth != null
-        && resource.data.trainerId == request.auth.uid;
     }
 
     // Hábitos diarios asignados por el entrenador a un alumno.

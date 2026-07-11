@@ -1,6 +1,5 @@
 import { workoutsByMonth } from './stats';
 import type {
-  BodyMeasurement,
   NutritionPlan,
   Routine,
   UserProfile,
@@ -21,13 +20,12 @@ export interface ClientReportData {
   routine: Routine | null;
   weightLogs: WeightLog[];
   workoutLogs: WorkoutLog[];
-  measurements: BodyMeasurement[];
   nutritionPlan: NutritionPlan | null;
 }
 
 /** Genera el HTML de un informe de progreso de cliente, listo para exportar a PDF. */
 export function buildClientReportHtml(data: ClientReportData): string {
-  const { client, routine, weightLogs, workoutLogs, measurements, nutritionPlan } = data;
+  const { client, routine, weightLogs, workoutLogs, nutritionPlan } = data;
 
   const firstWeight = weightLogs[0];
   const lastWeight = weightLogs[weightLogs.length - 1];
@@ -66,8 +64,6 @@ export function buildClientReportHtml(data: ClientReportData): string {
     .slice(0, 12)
     .map((log) => `<tr><td>${formatDate(log.date)}</td><td>${log.weightKg} kg</td></tr>`)
     .join('');
-
-  const lastMeasurement = measurements[measurements.length - 1];
 
   // Registro de entrenamiento por mes (últimos 6 meses con actividad).
   const monthRows = workoutsByMonth(workoutLogs)
@@ -123,21 +119,6 @@ export function buildClientReportHtml(data: ClientReportData): string {
           nutritionPlan
             ? `<p>${escapeHtml(nutritionPlan.name)} — ${nutritionPlan.dailyCalories} kcal/día (P${nutritionPlan.proteinG}g · C${nutritionPlan.carbsG}g · G${nutritionPlan.fatG}g)</p>`
             : '<p class="muted">Sin plan nutricional activo.</p>'
-        }
-
-        <h2>Últimas medidas corporales</h2>
-        ${
-          lastMeasurement
-            ? `<p>${formatDate(lastMeasurement.date)} — ${[
-                lastMeasurement.chestCm ? `Pecho ${lastMeasurement.chestCm}cm` : null,
-                lastMeasurement.waistCm ? `Cintura ${lastMeasurement.waistCm}cm` : null,
-                lastMeasurement.hipsCm ? `Cadera ${lastMeasurement.hipsCm}cm` : null,
-                lastMeasurement.armCm ? `Brazo ${lastMeasurement.armCm}cm` : null,
-                lastMeasurement.thighCm ? `Muslo ${lastMeasurement.thighCm}cm` : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}</p>`
-            : '<p class="muted">Sin medidas registradas.</p>'
         }
 
         <h2>Historial de peso</h2>

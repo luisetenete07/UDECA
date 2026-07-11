@@ -39,6 +39,14 @@ export interface UserProfile {
   pushToken?: string;
   /** true en cuentas creadas con verificación de correo obligatoria. */
   emailVerificationRequired?: boolean;
+  /**
+   * SaaS UDECA (solo coaches): fin de la suscripción o del periodo de prueba
+   * (timestamp ms). Sin valor = cuenta fundadora (acceso completo, anterior a
+   * la monetización). Solo el admin de UDECA puede modificarlo (reglas).
+   */
+  subscriptionUntil?: number;
+  /** Plan contratado. De momento solo existe el anual (180 €/año). */
+  subscriptionPlan?: 'annual';
 }
 
 export const CLIENT_STATUSES = ['active', 'paused', 'inactive'] as const;
@@ -267,20 +275,6 @@ export interface WeightLog {
   createdAt: number;
 }
 
-export interface BodyMeasurement {
-  id: string;
-  trainerId: string;
-  clientId: string;
-  date: number;
-  chestCm?: number;
-  waistCm?: number;
-  hipsCm?: number;
-  armCm?: number;
-  thighCm?: number;
-  notes?: string;
-  createdAt: number;
-}
-
 export interface NutritionPlan {
   id: string;
   trainerId: string;
@@ -355,15 +349,6 @@ export const CHECKIN_FIELDS: { key: 'energy' | 'sleep' | 'adherence' | 'soreness
   { key: 'adherence', label: 'Dieta y adherencia' },
   { key: 'soreness', label: 'Sensaciones físicas' },
 ];
-
-/** Anuncio del entrenador para todo su grupo (tablón, no chat). */
-export interface Announcement {
-  id: string;
-  trainerId: string;
-  title: string;
-  body: string;
-  createdAt: number;
-}
 
 /**
  * Solicitud de un alumno para unirse al grupo de un entrenador. Se crea al

@@ -9,9 +9,25 @@ import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { DeleteAccountButton } from '../../components/DeleteAccountButton';
 import { useAuth } from '../../lib/auth-context';
-import { normalizeInviteCode, setTrainerInviteCode, updateUserProfile } from '../../lib/firestore/users';
+import {
+  getAllCoaches,
+  normalizeInviteCode,
+  setCoachSubscription,
+  setTrainerInviteCode,
+  updateUserProfile,
+} from '../../lib/firestore/users';
 import { pickAvatar } from '../../lib/image';
+import {
+  ANNUAL_PRICE_EUR,
+  DAY_MS,
+  isAdmin,
+  subscriptionState,
+} from '../../lib/subscription';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
+import type { UserProfile } from '../../lib/types';
+
+const fmtDate = (ts: number) =>
+  new Date(ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export default function TrainerProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
@@ -21,6 +37,52 @@ export default function TrainerProfileScreen() {
   const [codeInput, setCodeInput] = useState('');
   const [savingCode, setSavingCode] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
+  // Panel admin UDECA (solo cuentas administradoras).
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [coaches, setCoaches] = useState<UserProfile[]>([]);
+  const [loadingCoaches, setLoadingCoaches] = useState(false);
+  const [updatingCoach, setUpdatingCoach] = useState<string | null>(null);
+
+  const sub = subscriptionState(profile);
+  const admin = isAdmin(profile);
+
+  const openAdmin = async () => {
+    setAdminOpen(true);
+    setLoadingCoaches(true);
+    try {
+      setCoaches(await getAllCoaches());
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo cargar');
+    } finally {
+      setLoadingCoaches(false);
+    }
+  };
+
+  // Extiende la suscripción de un coach: +365 días desde hoy o desde su fecha
+  // futura (renovación anticipada no pierde días).
+  const extendCoach = async (coach: UserProfile, days: number) => {
+    setUpdatingCoach(coach.uid);
+    try {
+      const base =
+        coach.subscriptionUntil && coach.subscriptionUntil > Date.now()
+          ? coach.subscriptionUntil
+          : Date.now();
+      const until = base + days * DAY_MS;
+      await setCoachSubscription(coach.uid, until);
+      setCoaches((prev) =>
+        prev.map((c) =>
+          c.uid === coach.uid
+            ? { ...c, subscriptionUntil: until, subscriptionPlan: 'annual' }
+            : c
+        )
+      );
+      showToast(`${coach.name.split(' ')[0]}: activo hasta ${fmtDate(until)}`);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo actualizar');
+    } finally {
+      setUpdatingCoach(null);
+    }
+  };
 
   const handleSaveCode = async () => {
     if (!profile) return;
@@ -149,6 +211,89 @@ export default function TrainerProfileScreen() {
         )}
       </Card>
 
+      <Card style={styles.section}>
+        <View style={styles.subHeader}>
+          <Text style={styles.sectionTitle}>Suscripción</Text>
+          <View style={[styles.subBadge, !sub.active && styles.subBadgeOff]}>
+            <Text style={styles.subBadgeText}>
+              {admin
+                ? 'ADMIN'
+                : sub.legacy
+                  ? 'FUNDADOR'
+                  : sub.onTrial
+                    ? 'PRUEBA'
+                    : 'PRO'}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.helperText}>
+          {admin
+            ? 'Cuenta administradora de UDECA: acceso completo sin caducidad.'
+            : sub.legacy
+              ? 'Cuenta fundadora: acceso completo a UDECA Pro.'
+              : sub.onTrial
+                ? `Prueba gratuita: te quedan ${sub.daysLeft} día(s). Después, UDECA Pro por ${ANNUAL_PRICE_EUR} €/año.`
+                : `Plan anual (${ANNUAL_PRICE_EUR} €/año) · activo hasta ${
+                    profile?.subscriptionUntil ? fmtDate(profile.subscriptionUntil) : '—'
+                  }.`}
+        </Text>
+      </Card>
+
+      {admin ? (
+        <Card accent style={styles.section}>
+          <View style={styles.subHeader}>
+            <Text style={styles.sectionTitle}>Admin UDECA · coaches</Text>
+            <Pressable onPress={adminOpen ? () => setAdminOpen(false) : openAdmin} hitSlop={8}>
+              <Ionicons
+                name={adminOpen ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.textMuted}
+              />
+            </Pressable>
+          </View>
+          {!adminOpen ? (
+            <Text style={styles.helperText}>
+              Gestiona las suscripciones de los coaches de la plataforma.
+            </Text>
+          ) : loadingCoaches ? (
+            <Text style={styles.helperText}>Cargando coaches...</Text>
+          ) : (
+            coaches.map((c) => {
+              const s = subscriptionState(c);
+              const label = isAdmin(c)
+                ? 'Admin'
+                : s.legacy
+                  ? 'Fundador'
+                  : `${s.active ? (s.onTrial ? 'Prueba' : 'Activo') : 'CADUCADO'}${
+                      c.subscriptionUntil ? ` · hasta ${fmtDate(c.subscriptionUntil)}` : ''
+                    }`;
+              return (
+                <View key={c.uid} style={styles.coachRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.coachName}>{c.name}</Text>
+                    <Text style={styles.coachEmail} numberOfLines={1}>
+                      {c.email}
+                    </Text>
+                    <Text style={[styles.coachSub, !s.active && { color: colors.danger }]}>
+                      {label}
+                    </Text>
+                  </View>
+                  {!isAdmin(c) ? (
+                    <Button
+                      title="+1 año"
+                      variant="secondary"
+                      onPress={() => extendCoach(c, 365)}
+                      loading={updatingCoach === c.uid}
+                      style={styles.coachBtn}
+                    />
+                  ) : null}
+                </View>
+              );
+            })
+          )}
+        </Card>
+      ) : null}
+
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={{ marginTop: spacing.lg }} />
       <DeleteAccountButton />
     </ScreenContainer>
@@ -189,6 +334,40 @@ const styles = StyleSheet.create({
   },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
+  subHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  subBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryMuted,
+  },
+  subBadgeOff: { borderColor: colors.danger, backgroundColor: colors.dangerMuted },
+  subBadgeText: {
+    ...typography.label,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  coachRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  coachName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  coachEmail: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  coachSub: { ...typography.small, color: colors.primaryBright, fontSize: 11, marginTop: 2 },
+  coachBtn: { paddingHorizontal: spacing.md },
   helperText: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
   codeBox: {
     backgroundColor: colors.surfaceAlt,

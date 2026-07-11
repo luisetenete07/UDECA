@@ -13,11 +13,6 @@ import { WeightChart } from '../../components/WeightChart';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
 import {
-  createMeasurement,
-  deleteMeasurement,
-  getMeasurementsForClient,
-} from '../../lib/firestore/measurements';
-import {
   createProgressPhoto,
   getProgressPhotosForClient,
 } from '../../lib/firestore/progressPhotos';
@@ -41,14 +36,13 @@ import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   PHOTO_POSES,
-  type BodyMeasurement,
   type PhotoPose,
   type ProgressPhoto,
   type WeightLog,
   type WorkoutLog,
 } from '../../lib/types';
 
-type Tab = 'workouts' | 'weight' | 'measurements' | 'photos' | 'exercises';
+type Tab = 'workouts' | 'weight' | 'photos' | 'exercises';
 
 /** Pone en mayúscula la primera letra (para "julio 2026" → "Julio 2026"). */
 function capitalize(s: string): string {
@@ -57,7 +51,6 @@ function capitalize(s: string): string {
 
 interface ProgressData {
   weightLogs: WeightLog[];
-  measurements: BodyMeasurement[];
   photos: ProgressPhoto[];
   workoutLogs: WorkoutLog[];
 }
@@ -71,7 +64,6 @@ export default function ProgressScreen() {
   const cacheKey = `progress-${profile?.uid ?? ''}`;
   const cached = getCached<ProgressData>(cacheKey);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>(cached?.weightLogs ?? []);
-  const [measurements, setMeasurements] = useState<BodyMeasurement[]>(cached?.measurements ?? []);
   const [photos, setPhotos] = useState<ProgressPhoto[]>(cached?.photos ?? []);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
@@ -81,30 +73,22 @@ export default function ProgressScreen() {
 
   const [weightInput, setWeightInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
-  const [chest, setChest] = useState('');
-  const [waist, setWaist] = useState('');
-  const [hips, setHips] = useState('');
-  const [arm, setArm] = useState('');
-  const [thigh, setThigh] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [weightData, measurementData, photoData, workoutData] = await Promise.all([
+    const [weightData, photoData, workoutData] = await Promise.all([
       getWeightLogsForClient(profile.uid),
-      getMeasurementsForClient(profile.uid),
       getProgressPhotosForClient(profile.uid),
       getWorkoutLogsForClient(profile.uid),
     ]);
     setWeightLogs(weightData);
-    setMeasurements(measurementData);
     setPhotos(photoData);
     setWorkoutLogs(workoutData);
     setCached(cacheKey, {
       weightLogs: weightData,
-      measurements: measurementData,
       photos: photoData,
       workoutLogs: workoutData,
     } satisfies ProgressData);
@@ -162,41 +146,6 @@ export default function ProgressScreen() {
     }
   };
 
-  const handleAddMeasurement = async () => {
-    if (!profile) return;
-    const values = { chestCm: chest, waistCm: waist, hipsCm: hips, armCm: arm, thighCm: thigh };
-    const hasAny = Object.values(values).some((v) => v.trim() !== '');
-    if (!hasAny) {
-      setError('Rellena al menos una medida.');
-      return;
-    }
-    setError(null);
-    setSaving(true);
-    try {
-      await createMeasurement({
-        trainerId: profile.trainerId ?? '',
-        clientId: profile.uid,
-        date: Date.now(),
-        chestCm: chest ? Number(chest) : undefined,
-        waistCm: waist ? Number(waist) : undefined,
-        hipsCm: hips ? Number(hips) : undefined,
-        armCm: arm ? Number(arm) : undefined,
-        thighCm: thigh ? Number(thigh) : undefined,
-      });
-      setChest('');
-      setWaist('');
-      setHips('');
-      setArm('');
-      setThigh('');
-      await load();
-      showToast('Medidas guardadas');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar. Inténtalo de nuevo.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const confirmDelete = (message: string): Promise<boolean> => {
     if (Platform.OS === 'web') {
       // eslint-disable-next-line no-alert
@@ -227,13 +176,6 @@ export default function ProgressScreen() {
       await load(); // si falla, recargamos para no perder el registro de la vista
       showToast(e instanceof Error ? e.message : 'No se pudo borrar');
     }
-  };
-
-  const handleDeleteMeasurement = async (id: string) => {
-    if (!(await confirmDelete('¿Borrar esta medición?'))) return;
-    setMeasurements((prev) => prev.filter((m) => m.id !== id));
-    await deleteMeasurement(id);
-    showToast('Medición borrada');
   };
 
   const handleAddPhoto = async (pose: PhotoPose) => {
@@ -270,10 +212,6 @@ export default function ProgressScreen() {
   const pushPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pushSets }));
   const pullPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pullSets }));
 
-  const waistPoints = measurements
-    .filter((m) => m.waistCm !== undefined)
-    .map((m) => ({ date: m.date, value: m.waistCm as number }));
-
   // Datos del historial por ejercicio (tab "Ejercicios").
   const exercisesInLogs = listExercisesInLogs(workoutLogs);
   const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
@@ -309,11 +247,6 @@ export default function ProgressScreen() {
           label="Ejercicios"
           active={tab === 'exercises'}
           onPress={() => setTab('exercises')}
-        />
-        <TabButton
-          label="Medidas"
-          active={tab === 'measurements'}
-          onPress={() => setTab('measurements')}
         />
         <TabButton label="Fotos" active={tab === 'photos'} onPress={() => setTab('photos')} />
       </ScrollView>
@@ -500,89 +433,6 @@ export default function ProgressScreen() {
                     {new Date(log.date).toLocaleDateString('es-ES')}
                   </Text>
                   <Pressable onPress={() => handleDeleteWeight(log.id)} hitSlop={8}>
-                    <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
-                  </Pressable>
-                </View>
-              ))
-            )}
-          </Card>
-        </>
-      ) : tab === 'measurements' ? (
-        <>
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Evolución de cintura</Text>
-            <LineChart
-              points={waistPoints}
-              unit="cm"
-              emptyMessage="Registra al menos dos medidas de cintura para ver tu evolución."
-            />
-          </Card>
-
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Registrar medidas (cm)</Text>
-            <View style={styles.row}>
-              <TextField
-                placeholder="Pecho"
-                keyboardType="numeric"
-                value={chest}
-                onChangeText={setChest}
-                style={styles.smallField}
-              />
-              <TextField
-                placeholder="Cintura"
-                keyboardType="numeric"
-                value={waist}
-                onChangeText={setWaist}
-                style={styles.smallField}
-              />
-            </View>
-            <View style={styles.row}>
-              <TextField
-                placeholder="Cadera"
-                keyboardType="numeric"
-                value={hips}
-                onChangeText={setHips}
-                style={styles.smallField}
-              />
-              <TextField
-                placeholder="Brazo"
-                keyboardType="numeric"
-                value={arm}
-                onChangeText={setArm}
-                style={styles.smallField}
-              />
-              <TextField
-                placeholder="Muslo"
-                keyboardType="numeric"
-                value={thigh}
-                onChangeText={setThigh}
-                style={styles.smallField}
-              />
-            </View>
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            <Button title="Guardar medidas" onPress={handleAddMeasurement} loading={saving} />
-          </Card>
-
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Historial</Text>
-            {measurements.length === 0 ? (
-              <EmptyState title="Todavía no has registrado medidas" />
-            ) : (
-              [...measurements].reverse().map((m) => (
-                <View key={m.id} style={styles.logRow}>
-                  <Text style={styles.logValue}>
-                    {[
-                      m.chestCm ? `Pecho ${m.chestCm}` : null,
-                      m.waistCm ? `Cintura ${m.waistCm}` : null,
-                      m.hipsCm ? `Cadera ${m.hipsCm}` : null,
-                      m.armCm ? `Brazo ${m.armCm}` : null,
-                      m.thighCm ? `Muslo ${m.thighCm}` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </Text>
-                  <Text style={styles.logDate}>{new Date(m.date).toLocaleDateString('es-ES')}</Text>
-                  <Pressable onPress={() => handleDeleteMeasurement(m.id)} hitSlop={8}>
                     <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
                   </Pressable>
                 </View>

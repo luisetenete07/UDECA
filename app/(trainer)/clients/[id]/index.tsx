@@ -23,7 +23,6 @@ import {
   getHabitLogsForClient,
   getHabitsForClient,
 } from '../../../../lib/firestore/habits';
-import { getMeasurementsForClient } from '../../../../lib/firestore/measurements';
 import { getActiveNutritionPlanForClient } from '../../../../lib/firestore/nutrition';
 import { getProgressPhotosForClient } from '../../../../lib/firestore/progressPhotos';
 import { getRoutinesForClient } from '../../../../lib/firestore/routines';
@@ -52,7 +51,6 @@ import {
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUS_TONE,
   type PaymentStatus,
-  type BodyMeasurement,
   type ClientStatus,
   type NutritionPlan,
   type ProgressPhoto,
@@ -85,7 +83,6 @@ export default function ClientDetailScreen() {
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
-  const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [checkIns, setCheckIns] = useState<WeeklyCheckIn[]>([]);
@@ -111,13 +108,12 @@ export default function ClientDetailScreen() {
       const uid = profile.uid;
       (async () => {
         try {
-        const [clientData, routineData, weightData, workoutData, measurementData, planData, photoData, checkInData, habitData, habitLogData, noteData, exerciseData] =
+        const [clientData, routineData, weightData, workoutData, planData, photoData, checkInData, habitData, habitLogData, noteData, exerciseData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id, uid),
             getWeightLogsForClient(id, uid),
             getWorkoutLogsForClient(id, uid),
-            getMeasurementsForClient(id, uid),
             getActiveNutritionPlanForClient(id, uid),
             getProgressPhotosForClient(id, uid),
             getCheckInsForClient(id, uid),
@@ -136,7 +132,6 @@ export default function ClientDetailScreen() {
         setRoutines(routineData);
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
-        setMeasurements(measurementData);
         setNutritionPlan(planData);
         setPhotos(photoData);
         setCheckIns(checkInData);
@@ -288,9 +283,6 @@ export default function ClientDetailScreen() {
 
   const activeRoutine = routines.find((r) => r.active);
   const currentStatus: ClientStatus = client.status ?? 'active';
-  const waistPoints = measurements
-    .filter((m) => m.waistCm !== undefined)
-    .map((m) => ({ date: m.date, value: m.waistCm as number }));
 
   const weekly = weeklyVolume(workoutLogs, muscleByExercise);
   const isoTotals = weekly.reduce(
@@ -312,7 +304,6 @@ export default function ClientDetailScreen() {
         routine: activeRoutine ?? null,
         weightLogs,
         workoutLogs,
-        measurements,
         nutritionPlan,
       });
 
@@ -552,15 +543,6 @@ export default function ClientDetailScreen() {
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Evolución del peso</Text>
         <WeightChart logs={weightLogs} />
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Medidas corporales — cintura</Text>
-        <LineChart
-          points={waistPoints}
-          unit="cm"
-          emptyMessage="El cliente todavía no ha registrado al menos dos medidas de cintura."
-        />
       </Card>
 
       <Card style={styles.section}>
