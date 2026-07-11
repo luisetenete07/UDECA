@@ -2,18 +2,17 @@ import type { UserProfile } from './types';
 
 /**
  * Modelo SaaS de UDECA: los COACHES pagan la plataforma; sus alumnos entran
- * gratis con el código del coach. Un único plan anual de momento.
+ * gratis con el código del coach. Un único plan anual, sin prueba gratuita.
  *
- *  - Al registrarse, cada coach recibe una prueba gratuita (TRIAL_DAYS).
- *  - Al caducar, el área del coach muestra el muro de suscripción (Paywall);
- *    sus datos NUNCA se tocan, solo se bloquea el acceso hasta renovar.
+ *  - Un coach recién registrado ve el muro de suscripción (Paywall) hasta que
+ *    el admin activa su plan; sus datos NUNCA se tocan, solo se bloquea el
+ *    acceso mientras no esté activo.
  *  - Cuentas sin `subscriptionUntil` = fundadoras (anteriores a la
  *    monetización): acceso completo para no romper nada.
  *  - La activación la hace el admin de UDECA desde su panel (y las reglas de
  *    Firestore impiden que un coach se la extienda a sí mismo).
  */
 export const ANNUAL_PRICE_EUR = 180;
-export const TRIAL_DAYS = 30;
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Correos con poderes de administración de UDECA (gestión de suscripciones). */
@@ -39,28 +38,20 @@ export interface SubscriptionState {
   daysLeft: number | null;
   /** true si la cuenta es anterior a la monetización (sin fecha). */
   legacy: boolean;
-  /** true si está dentro del periodo de prueba (nunca ha pagado un plan). */
-  onTrial: boolean;
 }
 
 export function subscriptionState(profile: UserProfile | null): SubscriptionState {
   if (!profile || profile.role !== 'trainer') {
-    return { active: true, daysLeft: null, legacy: true, onTrial: false };
+    return { active: true, daysLeft: null, legacy: true };
   }
-  if (isAdmin(profile)) return { active: true, daysLeft: null, legacy: false, onTrial: false };
+  if (isAdmin(profile)) return { active: true, daysLeft: null, legacy: false };
   if (profile.subscriptionUntil === undefined) {
-    return { active: true, daysLeft: null, legacy: true, onTrial: false };
+    return { active: true, daysLeft: null, legacy: true };
   }
   const msLeft = profile.subscriptionUntil - Date.now();
   return {
     active: msLeft > 0,
     daysLeft: Math.max(0, Math.ceil(msLeft / DAY_MS)),
     legacy: false,
-    onTrial: profile.subscriptionPlan !== 'annual',
   };
-}
-
-/** Fecha de fin de prueba para un coach recién registrado. */
-export function trialEnd(): number {
-  return Date.now() + TRIAL_DAYS * DAY_MS;
 }

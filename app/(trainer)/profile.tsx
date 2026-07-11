@@ -216,13 +216,7 @@ export default function TrainerProfileScreen() {
           <Text style={styles.sectionTitle}>Suscripción</Text>
           <View style={[styles.subBadge, !sub.active && styles.subBadgeOff]}>
             <Text style={styles.subBadgeText}>
-              {admin
-                ? 'ADMIN'
-                : sub.legacy
-                  ? 'FUNDADOR'
-                  : sub.onTrial
-                    ? 'PRUEBA'
-                    : 'PRO'}
+              {admin ? 'ADMIN' : sub.legacy ? 'FUNDADOR' : 'PRO'}
             </Text>
           </View>
         </View>
@@ -231,11 +225,9 @@ export default function TrainerProfileScreen() {
             ? 'Cuenta administradora de UDECA: acceso completo sin caducidad.'
             : sub.legacy
               ? 'Cuenta fundadora: acceso completo a UDECA Pro.'
-              : sub.onTrial
-                ? `Prueba gratuita: te quedan ${sub.daysLeft} día(s). Después, UDECA Pro por ${ANNUAL_PRICE_EUR} €/año.`
-                : `Plan anual (${ANNUAL_PRICE_EUR} €/año) · activo hasta ${
-                    profile?.subscriptionUntil ? fmtDate(profile.subscriptionUntil) : '—'
-                  }.`}
+              : `Plan anual (${ANNUAL_PRICE_EUR} €/año) · activo hasta ${
+                  profile?.subscriptionUntil ? fmtDate(profile.subscriptionUntil) : '—'
+                }.`}
         </Text>
       </Card>
 
@@ -264,9 +256,11 @@ export default function TrainerProfileScreen() {
                 ? 'Admin'
                 : s.legacy
                   ? 'Fundador'
-                  : `${s.active ? (s.onTrial ? 'Prueba' : 'Activo') : 'CADUCADO'}${
-                      c.subscriptionUntil ? ` · hasta ${fmtDate(c.subscriptionUntil)}` : ''
-                    }`;
+                  : s.active
+                    ? `Activo · hasta ${c.subscriptionUntil ? fmtDate(c.subscriptionUntil) : '—'}`
+                    : c.subscriptionUntil
+                      ? `CADUCADO · desde ${fmtDate(c.subscriptionUntil)}`
+                      : 'SIN ACTIVAR';
               return (
                 <View key={c.uid} style={styles.coachRow}>
                   <View style={{ flex: 1 }}>

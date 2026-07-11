@@ -51,14 +51,13 @@ service cloud.firestore {
           || userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
           || isUdecaAdmin()
         );
-      // Al crearse, un coach solo puede darse a sí mismo la prueba gratuita
-      // (máx. 31 días); ampliaciones posteriores, solo el admin.
+      // Sin prueba gratuita: al crearse, un coach no puede darse a sí mismo
+      // NINGÚN tiempo de suscripción (nace caducada); solo el admin la activa.
       allow create: if request.auth != null && request.auth.uid == userId
         && (
           request.resource.data.role != 'trainer'
           || !('subscriptionUntil' in request.resource.data)
-          || request.resource.data.subscriptionUntil
-            <= request.time.toMillis() + 31 * 24 * 60 * 60 * 1000
+          || request.resource.data.subscriptionUntil <= request.time.toMillis()
         );
       // El propio usuario edita su perfil (sin tocar su suscripción); el
       // entrenador puede cambiar el `status` de sus clientes o sacarlos de su

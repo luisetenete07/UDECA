@@ -41,10 +41,10 @@ export function Paywall() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <Image source={require('../assets/icon.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Tu prueba ha terminado</Text>
+        <Text style={styles.title}>Activa UDECA Pro</Text>
         <Text style={styles.subtitle}>
-          Sigue entrenando a tus alumnos con UDECA Pro. Tus datos están a salvo
-          y te esperan tal y como los dejaste.
+          Para entrenar a tus alumnos como coach necesitas la suscripción
+          anual. Tus datos están a salvo y te esperan.
         </Text>
 
         <Card accent style={styles.planCard}>
