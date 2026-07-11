@@ -340,6 +340,32 @@ export function sessionTotals(
   return { sets, reps, seconds, volumeKg: Math.round(volumeKg) };
 }
 
+/**
+ * Resumen semanal del grupo para el coach: sesiones de esta semana vs la
+ * anterior y cuántos alumnos distintos han entrenado esta semana.
+ */
+export function weekComparison(logs: WorkoutLog[]): {
+  thisWeek: number;
+  lastWeek: number;
+  activeClients: number;
+} {
+  const currentWeek = startOfWeek(Date.now());
+  const previousWeek = addDays(currentWeek, -7);
+  let thisWeek = 0;
+  let lastWeek = 0;
+  const active = new Set<string>();
+  for (const log of logs) {
+    const week = startOfWeek(log.date);
+    if (week === currentWeek) {
+      thisWeek += 1;
+      active.add(log.clientId);
+    } else if (week === previousWeek) {
+      lastWeek += 1;
+    }
+  }
+  return { thisWeek, lastWeek, activeClients: active.size };
+}
+
 export interface WeeklySetsByGroup {
   weekStart: number;
   pushSets: number;

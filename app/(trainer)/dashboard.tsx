@@ -27,7 +27,7 @@ import {
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
-import { sessionsThisWeek } from '../../lib/stats';
+import { weekComparison } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   PAYMENT_STATUSES,
@@ -72,6 +72,8 @@ export default function TrainerDashboard() {
   const [loading, setLoading] = useState(cached === undefined);
   const [remindersSent, setRemindersSent] = useState<Set<string>>(new Set());
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
+  const [remindingPays, setRemindingPays] = useState(false);
+  const [paysReminded, setPaysReminded] = useState(false);
   const [challenge, setChallenge] = useState<Challenge | null>(cached?.challenge ?? null);
   const [challengeTitle, setChallengeTitle] = useState('');
   const [challengeWeeks, setChallengeWeeks] = useState('4');
@@ -144,8 +146,12 @@ export default function TrainerDashboard() {
     return (now - last) / (1000 * 60 * 60 * 24) > INACTIVE_DAYS_THRESHOLD;
   });
 
-  const weekSessions = sessionsThisWeek(logs);
+  const wk = weekComparison(logs);
   const byId = (id: string) => clients.find((c) => c.uid === id);
+  // Alumnos con pago pendiente o vencido (para el atajo "Recordar pagos").
+  const duePayClients = clients.filter(
+    (c) => c.paymentStatus === 'pending' || c.paymentStatus === 'overdue'
+  );
 
   // ----- Resumen de cobros -----
   const feeOf = (c: UserProfile) => c.monthlyFeeEur ?? 0;
@@ -231,6 +237,30 @@ export default function TrainerDashboard() {
     }
   };
 
+  // Un toque: recordatorio de pago a TODOS los alumnos con pago pendiente.
+  const handleRemindAllPayments = async () => {
+    if (duePayClients.length === 0) {
+      showToast('No hay pagos pendientes 🎉');
+      return;
+    }
+    setRemindingPays(true);
+    try {
+      await Promise.all(
+        duePayClients.map((c) =>
+          notifyUser(
+            c.uid,
+            'Recordatorio de pago',
+            `Hola ${c.name.split(' ')[0]}, tienes un pago pendiente de tu suscripción. ¡Gracias!`
+          )
+        )
+      );
+      setPaysReminded(true);
+      showToast(`Recordatorio enviado a ${duePayClients.length} alumno(s)`);
+    } finally {
+      setRemindingPays(false);
+    }
+  };
+
   const handleSendReminder = async (client: UserProfile) => {
     if (!profile) return;
     setSendingReminder(client.uid);
@@ -256,6 +286,38 @@ export default function TrainerDashboard() {
         </View>
         <Pressable onPress={() => router.push('/(trainer)/profile')}>
           <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
+        </Pressable>
+      </View>
+
+      {/* Atajos: lo más usado, a un toque */}
+      <View style={styles.quickRow}>
+        <Pressable
+          style={styles.quickBtn}
+          onPress={() => router.push('/(trainer)/exercises/new')}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Nuevo ejercicio</Text>
+        </Pressable>
+        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/courses/new')}>
+          <Ionicons name="videocam-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Nuevo curso</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.quickBtn, paysReminded && { opacity: 0.5 }]}
+          onPress={handleRemindAllPayments}
+          disabled={remindingPays || paysReminded}
+        >
+          <View>
+            <Ionicons name="cash-outline" size={20} color={colors.primary} />
+            {duePayClients.length > 0 && !paysReminded ? (
+              <View style={styles.quickBadge}>
+                <Text style={styles.quickBadgeText}>{duePayClients.length}</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.quickLabel}>
+            {paysReminded ? 'Pagos avisados ✓' : 'Recordar pagos'}
+          </Text>
         </Pressable>
       </View>
 
@@ -311,9 +373,9 @@ export default function TrainerDashboard() {
         <StatTile icon="people" value={String(clients.length)} label="Clientes" />
         <StatTile
           icon="barbell"
-          value={String(weekSessions)}
+          value={String(wk.thisWeek)}
           label="Entrenos (semana)"
-          highlight={weekSessions > 0}
+          highlight={wk.thisWeek > 0}
         />
         <StatTile
           icon="alert-circle"
@@ -321,6 +383,14 @@ export default function TrainerDashboard() {
           label="Inactivos"
         />
       </View>
+      {wk.thisWeek > 0 || wk.lastWeek > 0 ? (
+        <Text style={styles.weekLine}>
+          {wk.lastWeek > 0
+            ? `${wk.thisWeek >= wk.lastWeek ? '▲' : '▼'} Semana pasada: ${wk.lastWeek} · `
+            : ''}
+          {wk.activeClients} alumno(s) han entrenado esta semana
+        </Text>
+      ) : null}
 
       {showBilling ? (
         <Pressable onPress={() => router.push('/(trainer)/clients')}>
@@ -481,6 +551,44 @@ const styles = StyleSheet.create({
   greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
   greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  weekLine: {
+    ...typography.small,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: -spacing.xs,
+    marginBottom: spacing.md,
+  },
+  quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  quickBtn: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  quickLabel: {
+    ...typography.small,
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  quickBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -10,
+    minWidth: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  quickBadgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.semiBold },
   section: { marginBottom: spacing.md },
   revenueRow: { flexDirection: 'row', gap: spacing.sm },
   revenueBox: {

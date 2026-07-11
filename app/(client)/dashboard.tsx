@@ -24,6 +24,7 @@ import {
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { quoteOfTheDay } from '../../lib/quotes';
+import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { resolveTodaySession } from '../../lib/schedule';
@@ -72,6 +73,8 @@ export default function ClientDashboard() {
   const load = useCallback(
     async (isActive?: () => boolean) => {
       if (!profile) return;
+      // Sube entrenos que quedaron pendientes por falta de conexión.
+      await flushPendingWorkouts().catch(() => {});
       const [routineData, weightData, workoutData, checkIns, habitData, habitLogData] =
         await Promise.all([
           getActiveRoutineForClient(profile.uid),
@@ -336,6 +339,9 @@ export default function ClientDashboard() {
             <Text style={styles.firstStepsCount}>
               {stepsDone}/{firstSteps.length}
             </Text>
+          </View>
+          <View style={{ marginBottom: spacing.sm }}>
+            <ProgressBar progress={stepsDone / firstSteps.length} height={5} />
           </View>
           {firstSteps.map((step) => (
             <Pressable

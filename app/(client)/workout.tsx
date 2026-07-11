@@ -35,6 +35,7 @@ import { resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
+import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
 import {
   computeAchievements,
   currentStreak,
@@ -165,6 +166,9 @@ export default function WorkoutScreen() {
       if (!profile) return;
       let cancelled = false;
       (async () => {
+        // Sube entrenos que quedaron pendientes por falta de conexión.
+        const uploaded = await flushPendingWorkouts().catch(() => 0);
+        if (uploaded > 0) showToast(`${uploaded} entreno(s) pendiente(s) subido(s) ✓`);
         const [data, logs] = await Promise.all([
           getActiveRoutineForClient(profile.uid),
           getWorkoutLogsForClient(profile.uid),
@@ -433,7 +437,7 @@ export default function WorkoutScreen() {
         computeAchievements(history, []).filter((a) => a.unlocked).map((a) => a.id)
       );
 
-      await createWorkoutLog({
+      const payload = {
         trainerId: routine.trainerId,
         clientId: profile.uid,
         routineId: routine.id,
@@ -442,21 +446,35 @@ export default function WorkoutScreen() {
         date: Date.now(),
         exercises: finalLog,
         ...(durationMin > 0 ? { durationMin } : {}),
-      });
+      };
 
-      const freshLogs = await getWorkoutLogsForClient(profile.uid);
+      let freshLogs: WorkoutLog[];
+      let savedOffline = false;
+      try {
+        await createWorkoutLog(payload);
+        freshLogs = await getWorkoutLogsForClient(profile.uid);
+        syncMySocialStats(profile, freshLogs).catch(() => {});
+        // Aviso al coach en tiempo real (nunca bloquea el guardado).
+        notifyUser(
+          routine.trainerId,
+          'Sesión completada',
+          `${profile.name.split(' ')[0]} ha terminado ${day.name} (${totals.sets} series${
+            prs.length > 0 ? `, ${prs.length} récord${prs.length > 1 ? 's' : ''}` : ''
+          }).`
+        ).catch(() => {});
+      } catch {
+        // Sin conexión (o Firestore caído): el entreno se encola en el
+        // dispositivo y se subirá solo. La sesión NUNCA se pierde.
+        await enqueueWorkout(payload);
+        savedOffline = true;
+        freshLogs = [
+          { id: `pending-${Date.now()}`, ...payload, createdAt: Date.now() } as WorkoutLog,
+          ...history,
+        ];
+      }
       const newAchievements = computeAchievements(freshLogs, []).filter(
         (a) => a.unlocked && !beforeUnlocked.has(a.id)
       );
-      await syncMySocialStats(profile, freshLogs);
-      // Aviso al coach en tiempo real (nunca bloquea el guardado).
-      notifyUser(
-        routine.trainerId,
-        'Sesión completada',
-        `${profile.name.split(' ')[0]} ha terminado ${day.name} (${totals.sets} series${
-          prs.length > 0 ? `, ${prs.length} récord${prs.length > 1 ? 's' : ''}` : ''
-        }).`
-      ).catch(() => {});
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
@@ -471,7 +489,9 @@ export default function WorkoutScreen() {
         streak: currentStreak(freshLogs),
         newAchievements,
       });
-      if (newAchievements.length > 0) {
+      if (savedOffline) {
+        showToast('Sin conexión: la sesión se subirá sola al recuperarla 📶');
+      } else if (newAchievements.length > 0) {
         showToast(`¡Logro desbloqueado: ${newAchievements[0].title}! 🏅`);
       }
       setHistory(freshLogs);
