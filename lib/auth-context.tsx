@@ -14,6 +14,7 @@ import { auth, db, isFirebaseConfigured } from './firebase';
 import { getTrainerIdForInviteCode, registerTrainerInviteCode } from './firestore/users';
 import { sendJoinRequest } from './firestore/joinRequests';
 import { registerForPushNotificationsAsync } from './notifications';
+import { clearCache } from './screenCache';
 import type { UserProfile, UserRole } from './types';
 
 interface AuthContextValue {
@@ -144,6 +145,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await firebaseSignOut(auth);
     setProfile(null);
+    // Vacía la caché de pantallas para no mostrar datos de otra cuenta.
+    clearCache();
   };
 
   // Borra la cuenta: primero el perfil en Firestore y luego el usuario de

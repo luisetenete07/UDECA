@@ -967,7 +967,9 @@ export default function WorkoutScreen() {
                   <TextField
                     value={set.weight}
                     onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'weight', v)}
-                    placeholder="—"
+                    // Precarga visual con el peso de la última vez: cero tecleo
+                    // si repites carga (solo escribes si cambias de peso).
+                    placeholder={prev?.weight || '—'}
                     keyboardType="numeric"
                     style={styles.setFieldInput}
                   />

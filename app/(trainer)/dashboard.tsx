@@ -26,6 +26,7 @@ import {
 } from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
+import { getCached, setCached } from '../../lib/screenCache';
 import { sessionsThisWeek } from '../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
@@ -47,18 +48,31 @@ const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
   muted: colors.textFaint,
 };
 
+interface DashboardData {
+  clients: UserProfile[];
+  logs: WorkoutLog[];
+  requests: JoinRequest[];
+  payments: import('../../lib/types').Payment[];
+  challenge: Challenge | null;
+}
+
 export default function TrainerDashboard() {
   const { profile } = useAuth();
   const router = useRouter();
-  const [clients, setClients] = useState<UserProfile[]>([]);
-  const [logs, setLogs] = useState<WorkoutLog[]>([]);
-  const [requests, setRequests] = useState<JoinRequest[]>([]);
-  const [payments, setPayments] = useState<import('../../lib/types').Payment[]>([]);
+  // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
+  const cacheKey = `trainer-dash-${profile?.uid ?? ''}`;
+  const cached = getCached<DashboardData>(cacheKey);
+  const [clients, setClients] = useState<UserProfile[]>(cached?.clients ?? []);
+  const [logs, setLogs] = useState<WorkoutLog[]>(cached?.logs ?? []);
+  const [requests, setRequests] = useState<JoinRequest[]>(cached?.requests ?? []);
+  const [payments, setPayments] = useState<import('../../lib/types').Payment[]>(
+    cached?.payments ?? []
+  );
   const [processingReq, setProcessingReq] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cached === undefined);
   const [remindersSent, setRemindersSent] = useState<Set<string>>(new Set());
   const [sendingReminder, setSendingReminder] = useState<string | null>(null);
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [challenge, setChallenge] = useState<Challenge | null>(cached?.challenge ?? null);
   const [challengeTitle, setChallengeTitle] = useState('');
   const [challengeWeeks, setChallengeWeeks] = useState('4');
   const [savingChallenge, setSavingChallenge] = useState(false);
@@ -83,6 +97,13 @@ export default function TrainerDashboard() {
           setChallenge(challengeData);
           setRequests(requestData);
           setPayments(paymentData);
+          setCached(cacheKey, {
+            clients: clientData,
+            logs: logData,
+            requests: requestData,
+            payments: paymentData,
+            challenge: challengeData,
+          } satisfies DashboardData);
           // Marca automáticamente como "Vencido" a quien se le pasó la fecha
           // de pago y no estaba ya marcado (aviso automático de impago).
           const nowTs = Date.now();

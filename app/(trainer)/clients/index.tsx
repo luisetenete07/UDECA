@@ -11,6 +11,8 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
 import { getClientsForTrainer } from '../../../lib/firestore/users';
+import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
+import { getCached, setCached } from '../../../lib/screenCache';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
   CLIENT_STATUS_LABEL,
@@ -28,11 +30,30 @@ const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
   muted: colors.textFaint,
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Última actividad como texto + tono: hoy/ayer verde, <7d ámbar, resto rojo. */
+function activityInfo(last?: number): { label: string; color: string } {
+  if (!last) return { label: 'Sin entrenos aún', color: colors.textFaint };
+  const days = Math.floor((Date.now() - last) / DAY_MS);
+  if (days <= 0) return { label: 'Entrenó hoy', color: '#2E7D5B' };
+  if (days === 1) return { label: 'Entrenó ayer', color: '#2E7D5B' };
+  if (days < 7) return { label: `Entrenó hace ${days} días`, color: '#C9902B' };
+  return { label: `Sin entrenar ${days} días`, color: colors.danger };
+}
+
 export default function ClientsScreen() {
   const { profile } = useAuth();
   const router = useRouter();
-  const [clients, setClients] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
+  const cacheKey = `clients-${profile?.uid ?? ''}`;
+  const [clients, setClients] = useState<UserProfile[]>(
+    () => getCached<UserProfile[]>(cacheKey) ?? []
+  );
+  const [lastTrained, setLastTrained] = useState<Record<string, number>>(
+    () => getCached<Record<string, number>>(`${cacheKey}-last`) ?? {}
+  );
+  const [loading, setLoading] = useState(() => getCached(cacheKey) === undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [payFilter, setPayFilter] = useState<PaymentStatus | 'all'>('all');
@@ -42,15 +63,26 @@ export default function ClientsScreen() {
     if (!profile) return;
     try {
       setError(null);
-      const data = await getClientsForTrainer(profile.uid);
+      const [data, logs] = await Promise.all([
+        getClientsForTrainer(profile.uid),
+        getWorkoutLogsForTrainer(profile.uid),
+      ]);
+      // Última sesión de cada alumno, para ver de un vistazo quién entrena.
+      const last: Record<string, number> = {};
+      for (const log of logs) {
+        if (!last[log.clientId] || log.date > last[log.clientId]) last[log.clientId] = log.date;
+      }
       setClients(data);
+      setLastTrained(last);
+      setCached(cacheKey, data);
+      setCached(`${cacheKey}-last`, last);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [profile]);
+  }, [profile, cacheKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -147,7 +179,9 @@ export default function ClientsScreen() {
       ) : filtered.length === 0 ? (
         <EmptyState title="Sin resultados" subtitle="Prueba con otro nombre." />
       ) : (
-        filtered.map((client) => (
+        filtered.map((client) => {
+          const activity = activityInfo(lastTrained[client.uid]);
+          return (
           <Pressable
             key={client.uid}
             onPress={() => router.push(`/(trainer)/clients/${client.uid}`)}
@@ -157,19 +191,26 @@ export default function ClientsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.clientName}>{client.name}</Text>
                 <Text style={styles.clientGoal}>{client.goal || 'Sin objetivo definido'}</Text>
-                {client.paymentStatus ? (
-                  <View style={styles.payBadgeRow}>
-                    <View
-                      style={[
-                        styles.dot,
-                        { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[client.paymentStatus]] },
-                      ]}
-                    />
-                    <Text style={styles.payBadgeText}>
-                      {PAYMENT_STATUS_LABEL[client.paymentStatus]}
-                    </Text>
-                  </View>
-                ) : null}
+                <View style={styles.payBadgeRow}>
+                  <View style={[styles.dot, { backgroundColor: activity.color }]} />
+                  <Text style={[styles.payBadgeText, { color: activity.color }]}>
+                    {activity.label}
+                  </Text>
+                  {client.paymentStatus ? (
+                    <>
+                      <Text style={styles.badgeSep}>·</Text>
+                      <View
+                        style={[
+                          styles.dot,
+                          { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[client.paymentStatus]] },
+                        ]}
+                      />
+                      <Text style={styles.payBadgeText}>
+                        {PAYMENT_STATUS_LABEL[client.paymentStatus]}
+                      </Text>
+                    </>
+                  ) : null}
+                </View>
               </View>
               {client.status && client.status !== 'active' ? (
                 <View style={styles.statusDot}>
@@ -179,7 +220,8 @@ export default function ClientsScreen() {
               <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
             </Card>
           </Pressable>
-        ))
+          );
+        })
       )}
     </ScreenContainer>
   );
@@ -205,8 +247,9 @@ const styles = StyleSheet.create({
   filterText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
   filterTextActive: { color: colors.onPrimary },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  payBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
+  payBadgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 4 },
   payBadgeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.medium, fontSize: 11 },
+  badgeSep: { color: colors.textFaint, fontSize: 11 },
   inviteCard: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   inviteTitle: { ...typography.h3, color: colors.text },
   inviteText: {

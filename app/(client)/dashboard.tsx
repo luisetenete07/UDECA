@@ -24,6 +24,7 @@ import {
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { quoteOfTheDay } from '../../lib/quotes';
+import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
@@ -40,49 +41,83 @@ import {
 
 const WEIGHT_REMINDER_DAYS = 7;
 
+interface ClientDashData {
+  routine: Routine | null;
+  weightLogs: WeightLog[];
+  workoutLogs: WorkoutLog[];
+  needsCheckIn: boolean;
+  hasAnyCheckIn: boolean;
+  habits: Habit[];
+  habitLogs: HabitLog[];
+  cycleAnchor: number | null;
+}
+
 export default function ClientDashboard() {
   const { profile } = useAuth();
   const router = useRouter();
-  const [routine, setRoutine] = useState<Routine | null>(null);
-  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
-  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
-  const [needsCheckIn, setNeedsCheckIn] = useState(false);
-  const [hasAnyCheckIn, setHasAnyCheckIn] = useState(true);
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
-  const [cycleAnchor, setCycleAnchor] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
+  const cacheKey = `client-dash-${profile?.uid ?? ''}`;
+  const cached = getCached<ClientDashData>(cacheKey);
+  const [routine, setRoutine] = useState<Routine | null>(cached?.routine ?? null);
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>(cached?.weightLogs ?? []);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
+  const [needsCheckIn, setNeedsCheckIn] = useState(cached?.needsCheckIn ?? false);
+  const [hasAnyCheckIn, setHasAnyCheckIn] = useState(cached?.hasAnyCheckIn ?? true);
+  const [habits, setHabits] = useState<Habit[]>(cached?.habits ?? []);
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>(cached?.habitLogs ?? []);
+  const [cycleAnchor, setCycleAnchor] = useState<number | null>(cached?.cycleAnchor ?? null);
+  const [loading, setLoading] = useState(cached === undefined);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(
+    async (isActive?: () => boolean) => {
+      if (!profile) return;
+      const [routineData, weightData, workoutData, checkIns, habitData, habitLogData] =
+        await Promise.all([
+          getActiveRoutineForClient(profile.uid),
+          getWeightLogsForClient(profile.uid),
+          getWorkoutLogsForClient(profile.uid),
+          getCheckInsForClient(profile.uid),
+          getHabitsForClient(profile.uid),
+          getHabitLogsForClient(profile.uid),
+        ]);
+      const anchor = routineData ? await getCycleAnchor(routineData.id) : null;
+      if (isActive && !isActive()) return;
+      setCycleAnchor(anchor);
+      setRoutine(routineData);
+      setWeightLogs(weightData);
+      setWorkoutLogs(workoutData);
+      setNeedsCheckIn(!hasCheckInThisWeek(checkIns));
+      setHasAnyCheckIn(checkIns.length > 0);
+      setHabits(habitData);
+      setHabitLogs(habitLogData);
+      setCached(cacheKey, {
+        routine: routineData,
+        weightLogs: weightData,
+        workoutLogs: workoutData,
+        needsCheckIn: !hasCheckInThisWeek(checkIns),
+        hasAnyCheckIn: checkIns.length > 0,
+        habits: habitData,
+        habitLogs: habitLogData,
+        cycleAnchor: anchor,
+      } satisfies ClientDashData);
+      setLoading(false);
+      setRefreshing(false);
+    },
+    [profile, cacheKey]
+  );
 
   useFocusEffect(
     useCallback(() => {
-      if (!profile) return;
-      let cancelled = false;
-      (async () => {
-        const [routineData, weightData, workoutData, checkIns, habitData, habitLogData] =
-          await Promise.all([
-            getActiveRoutineForClient(profile.uid),
-            getWeightLogsForClient(profile.uid),
-            getWorkoutLogsForClient(profile.uid),
-            getCheckInsForClient(profile.uid),
-            getHabitsForClient(profile.uid),
-            getHabitLogsForClient(profile.uid),
-          ]);
-        if (cancelled) return;
-        setCycleAnchor(routineData ? await getCycleAnchor(routineData.id) : null);
-        if (cancelled) return;
-        setRoutine(routineData);
-        setWeightLogs(weightData);
-        setWorkoutLogs(workoutData);
-        setNeedsCheckIn(!hasCheckInThisWeek(checkIns));
-        setHasAnyCheckIn(checkIns.length > 0);
-        setHabits(habitData);
-        setHabitLogs(habitLogData);
+      let active = true;
+      load(() => active).catch(() => {
         setLoading(false);
-      })();
+        setRefreshing(false);
+      });
       return () => {
-        cancelled = true;
+        active = false;
       };
-    }, [profile])
+    }, [load])
   );
 
   if (loading) return <LoadingScreen />;
@@ -149,7 +184,13 @@ export default function ClientDashboard() {
   const stepsDone = firstSteps.filter((s) => s.done).length;
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      refreshing={refreshing}
+      onRefresh={() => {
+        setRefreshing(true);
+        load();
+      }}
+    >
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greetingLabel}>Bienvenido de nuevo</Text>

@@ -23,6 +23,7 @@ import {
 } from '../../lib/firestore/progressPhotos';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { pickProgressPhoto } from '../../lib/image';
+import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import {
@@ -54,18 +55,29 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+interface ProgressData {
+  weightLogs: WeightLog[];
+  measurements: BodyMeasurement[];
+  photos: ProgressPhoto[];
+  workoutLogs: WorkoutLog[];
+}
+
 export default function ProgressScreen() {
   const { profile } = useAuth();
   const [tab, setTab] = useState<Tab>('workouts');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
-  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
-  const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
-  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
-  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
+  const cacheKey = `progress-${profile?.uid ?? ''}`;
+  const cached = getCached<ProgressData>(cacheKey);
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>(cached?.weightLogs ?? []);
+  const [measurements, setMeasurements] = useState<BodyMeasurement[]>(cached?.measurements ?? []);
+  const [photos, setPhotos] = useState<ProgressPhoto[]>(cached?.photos ?? []);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cached === undefined);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [weightInput, setWeightInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
@@ -90,6 +102,12 @@ export default function ProgressScreen() {
     setMeasurements(measurementData);
     setPhotos(photoData);
     setWorkoutLogs(workoutData);
+    setCached(cacheKey, {
+      weightLogs: weightData,
+      measurements: measurementData,
+      photos: photoData,
+      workoutLogs: workoutData,
+    } satisfies ProgressData);
     // Medida actual de cada ejercicio (reps/segundos) desde la biblioteca del
     // coach, para mostrar bien los isométricos aunque el registro sea antiguo.
     if (profile.trainerId) {
@@ -107,7 +125,8 @@ export default function ProgressScreen() {
         .catch(() => {});
     }
     setLoading(false);
-  }, [profile]);
+    setRefreshing(false);
+  }, [profile, cacheKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -269,7 +288,13 @@ export default function ProgressScreen() {
   const progBest = progPoints.reduce((m, p) => Math.max(m, p.value), 0);
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      refreshing={refreshing}
+      onRefresh={() => {
+        setRefreshing(true);
+        load();
+      }}
+    >
       <Text style={styles.title}>Mi progreso</Text>
 
       <ScrollView

@@ -10,14 +10,19 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
 import { getExercisesForTrainer } from '../../../lib/firestore/exercises';
+import { getCached, setCached } from '../../../lib/screenCache';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import { MUSCLE_GROUPS, type Exercise } from '../../../lib/types';
 
 export default function ExercisesScreen() {
   const { profile } = useAuth();
   const router = useRouter();
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
+  const cacheKey = `exercises-${profile?.uid ?? ''}`;
+  const [exercises, setExercises] = useState<Exercise[]>(
+    () => getCached<Exercise[]>(cacheKey) ?? []
+  );
+  const [loading, setLoading] = useState(() => getCached(cacheKey) === undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
@@ -26,9 +31,10 @@ export default function ExercisesScreen() {
     if (!profile) return;
     const data = await getExercisesForTrainer(profile.uid);
     setExercises(data);
+    setCached(cacheKey, data);
     setLoading(false);
     setRefreshing(false);
-  }, [profile]);
+  }, [profile, cacheKey]);
 
   useFocusEffect(
     useCallback(() => {
