@@ -643,6 +643,9 @@ export default function RoutineEditorScreen() {
           summaryParts.push(WEEKDAY_NAMES[day.weekday]);
         }
         summaryParts.push(`${exCount} ${exCount === 1 ? 'ejercicio' : 'ejercicios'}`);
+        // Series totales del día (suma de las series de todos sus ejercicios).
+        const totalSets = day.exercises.reduce((acc, e) => acc + (e.sets || 0), 0);
+        if (totalSets > 0) summaryParts.push(`${totalSets} series`);
         return (
         <Card key={day.id} style={styles.dayCard}>
           <View style={styles.dayHeaderRow}>
