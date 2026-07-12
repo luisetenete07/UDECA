@@ -1,14 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Redirect, Tabs } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TabIcon } from '../../components/TabIcon';
 import { LinkTrainerScreen } from '../../components/LinkTrainerScreen';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { Onboarding } from '../../components/Onboarding';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { tabScreenOptions } from '../../lib/navTheme';
 
+const onboardingKey = (uid: string) => `udeca-onboarding-${uid}`;
+
 export default function ClientLayout() {
   const { loading, firebaseUser, profile, emailVerified } = useAuth();
+  // null = comprobando; true = ya visto; false = mostrar bienvenida.
+  const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!profile) return;
+    AsyncStorage.getItem(onboardingKey(profile.uid))
+      .then((v) => setOnboardingSeen(v === '1'))
+      .catch(() => setOnboardingSeen(true));
+  }, [profile]);
 
   if (loading) return <LoadingScreen />;
   if (!firebaseUser || !profile) return <Redirect href="/(auth)/login" />;
@@ -17,6 +30,19 @@ export default function ClientLayout() {
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
   // Alumno sin entrenador: pantalla para enviar/esperar la solicitud.
   if (!profile.trainerId) return <LinkTrainerScreen />;
+  // Bienvenida de primer uso (una vez por dispositivo).
+  if (onboardingSeen === null) return <LoadingScreen />;
+  if (!onboardingSeen) {
+    return (
+      <Onboarding
+        name={profile.name}
+        onDone={() => {
+          setOnboardingSeen(true);
+          AsyncStorage.setItem(onboardingKey(profile.uid), '1').catch(() => {});
+        }}
+      />
+    );
+  }
 
   return (
     <Tabs
