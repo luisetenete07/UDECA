@@ -7,6 +7,7 @@ import { FadeIn } from '../../../components/FadeIn';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
+import { ListSkeleton } from '../../../components/Skeleton';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
@@ -87,7 +88,15 @@ export default function ExercisesScreen() {
     [exercises, search, muscleFilter]
   );
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <Text style={styles.title}>Biblioteca</Text>
+        <Text style={styles.subtitle}>Cargando ejercicios...</Text>
+        <ListSkeleton rows={7} />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer

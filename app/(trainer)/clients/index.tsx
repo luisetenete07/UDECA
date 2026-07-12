@@ -8,6 +8,7 @@ import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { ErrorState } from '../../../components/ErrorState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
+import { ListSkeleton } from '../../../components/Skeleton';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
@@ -58,6 +59,9 @@ export default function ClientsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [payFilter, setPayFilter] = useState<PaymentStatus | 'all'>('all');
+  // Orden: alfabético o por actividad (los que llevan más tiempo sin entrenar
+  // primero, para actuar rápido con grupos grandes).
+  const [sortMode, setSortMode] = useState<'name' | 'activity'>('name');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -96,7 +100,15 @@ export default function ClientsScreen() {
     load();
   };
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <Text style={styles.title}>Tus clientes</Text>
+        <Text style={styles.subtitle}>Cargando tu grupo...</Text>
+        <ListSkeleton rows={6} />
+      </ScreenContainer>
+    );
+  }
 
   if (error) {
     return (
@@ -114,11 +126,17 @@ export default function ClientsScreen() {
     );
   }
 
-  const filtered = clients.filter(
-    (c) =>
-      (c.name ?? '').toLowerCase().includes(search.toLowerCase().trim()) &&
-      (payFilter === 'all' || c.paymentStatus === payFilter)
-  );
+  const filtered = clients
+    .filter(
+      (c) =>
+        (c.name ?? '').toLowerCase().includes(search.toLowerCase().trim()) &&
+        (payFilter === 'all' || c.paymentStatus === payFilter)
+    )
+    .sort((a, b) =>
+      sortMode === 'activity'
+        ? (lastTrained[a.uid] ?? 0) - (lastTrained[b.uid] ?? 0)
+        : (a.name ?? '').localeCompare(b.name ?? '')
+    );
   // Cuántos alumnos hay en cada estado de pago (para las pastillas de filtro).
   const payCounts = PAYMENT_STATUSES.reduce(
     (acc, p) => ({ ...acc, [p]: clients.filter((c) => c.paymentStatus === p).length }),
@@ -146,6 +164,21 @@ export default function ClientsScreen() {
           style={styles.filterRow}
           contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.sm }}
         >
+          <Pressable
+            onPress={() => setSortMode((m) => (m === 'name' ? 'activity' : 'name'))}
+            style={[styles.filterChip, sortMode === 'activity' && styles.filterChipActive]}
+          >
+            <Ionicons
+              name="swap-vertical"
+              size={13}
+              color={sortMode === 'activity' ? colors.onPrimary : colors.textMuted}
+            />
+            <Text
+              style={[styles.filterText, sortMode === 'activity' && styles.filterTextActive]}
+            >
+              {sortMode === 'activity' ? 'Menos activos primero' : 'A-Z'}
+            </Text>
+          </Pressable>
           <Pressable
             onPress={() => setPayFilter('all')}
             style={[styles.filterChip, payFilter === 'all' && styles.filterChipActive]}

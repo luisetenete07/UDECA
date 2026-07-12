@@ -32,7 +32,13 @@ import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNote
 import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
 import { buildClientReportHtml } from '../../../../lib/report';
-import { trainingDays, weeklyVolume } from '../../../../lib/stats';
+import {
+  exerciseProgression,
+  listExercisesInLogs,
+  trainingDays,
+  trendPerMonth,
+  weeklyVolume,
+} from '../../../../lib/stats';
 import {
   clearClientNextPayment,
   getUserProfile,
@@ -648,6 +654,54 @@ export default function ClientDetailScreen() {
           unit="s"
           emptyMessage="Sin ejercicios isométricos (por segundos) registrados todavía."
         />
+
+        {(() => {
+          // Ritmo de progreso proyectado de sus ejercicios más recientes.
+          const trends = listExercisesInLogs(workoutLogs)
+            .slice(0, 4)
+            .map((e) => {
+              const prog = exerciseProgression(workoutLogs, e.exerciseId);
+              const unit = prog.measure === 'seconds' ? 's' : prog.hasWeight ? 'kg' : 'reps';
+              const slope = trendPerMonth(
+                prog.points.map((p) => ({
+                  date: p.date,
+                  value: prog.hasWeight ? p.weight : p.reps,
+                }))
+              );
+              return { name: prog.name, unit, slope };
+            })
+            .filter((t) => t.slope !== null);
+          if (trends.length === 0) return null;
+          return (
+            <>
+              <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                Ritmo de progreso
+              </Text>
+              <Text style={styles.mutedText}>Tendencia al mes según sus últimas sesiones.</Text>
+              {trends.map((t) => {
+                const v = t.slope as number;
+                const flat = Math.abs(v) < 0.3;
+                const color = flat ? colors.textMuted : v > 0 ? '#2E7D5B' : colors.danger;
+                const label = flat
+                  ? 'estable'
+                  : `${v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} ${t.unit}/mes`;
+                return (
+                  <View key={t.name} style={styles.trendRow}>
+                    <Text style={styles.trendName} numberOfLines={1}>
+                      {t.name}
+                    </Text>
+                    <Ionicons
+                      name={flat ? 'remove' : v > 0 ? 'trending-up' : 'trending-down'}
+                      size={14}
+                      color={color}
+                    />
+                    <Text style={[styles.trendValue, { color }]}>{label}</Text>
+                  </View>
+                );
+              })}
+            </>
+          );
+        })()}
       </Card>
 
       <Card style={styles.section}>
@@ -837,6 +891,15 @@ const styles = StyleSheet.create({
   routineName: { ...typography.body, color: colors.text, fontFamily: fonts.heading, },
   routineMeta: { ...typography.small, color: colors.textMuted },
   mutedText: { ...typography.small, color: colors.textFaint },
+  trendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  trendName: { ...typography.small, color: colors.text, flex: 1, fontFamily: fonts.medium },
+  trendValue: { ...typography.small, fontFamily: fonts.semiBold, fontSize: 12 },
   isoTotalsRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.sm },
   isoStat: {
     flex: 1,

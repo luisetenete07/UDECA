@@ -560,6 +560,26 @@ export function trainingDays(logs: WorkoutLog[]): Set<number> {
 }
 
 /** Ejercicios que aparecen en el historial (id + nombre), más recientes primero. */
+/**
+ * Ritmo de progreso: pendiente (unidades por mes de 30 días) por regresión
+ * lineal simple sobre los puntos de un ejercicio. null si no hay base (<3).
+ */
+export function trendPerMonth(points: { date: number; value: number }[]): number | null {
+  if (points.length < 3) return null;
+  const MONTH = 30 * 24 * 60 * 60 * 1000;
+  const t0 = points[0].date;
+  const xs = points.map((p) => (p.date - t0) / MONTH);
+  const ys = points.map((p) => p.value);
+  const n = points.length;
+  const sx = xs.reduce((a, b) => a + b, 0);
+  const sy = ys.reduce((a, b) => a + b, 0);
+  const sxy = xs.reduce((a, x, i) => a + x * ys[i], 0);
+  const sxx = xs.reduce((a, x) => a + x * x, 0);
+  const den = n * sxx - sx * sx;
+  if (Math.abs(den) < 1e-9) return null;
+  return (n * sxy - sx * sy) / den;
+}
+
 export function listExercisesInLogs(logs: WorkoutLog[]): { exerciseId: string; name: string }[] {
   const map = new Map<string, string>();
   const sorted = [...logs].sort((a, b) => b.date - a.date);
