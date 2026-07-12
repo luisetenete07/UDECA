@@ -35,6 +35,7 @@ import { getCycleAnchor, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
+import { shareRecordImage } from '../../lib/recordCard';
 import { startRest, stopRest } from '../../lib/restTimerStore';
 import {
   computeAchievements,
@@ -329,9 +330,22 @@ export default function WorkoutScreen() {
     }
   };
 
-  // Comparte el récord (tarjeta de texto con marca UDECA, ideal para stories).
+  // Comparte el récord como IMAGEN de marca (canvas 1080×1350, para stories).
+  // Si la imagen no es posible (nativo antiguo, canvas no disponible), texto.
   const handleShareRecord = async () => {
     if (!summary || summary.prs.length === 0) return;
+    if (Platform.OS === 'web') {
+      try {
+        const result = await shareRecordImage({
+          prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
+          streak: summary.streak,
+        });
+        if (result === 'downloaded') showToast('Imagen del récord descargada 🏆');
+        if (result) return;
+      } catch {
+        // Caemos al texto.
+      }
+    }
     const lines = summary.prs.map((pr) => `🏆 ${pr.exerciseName}: ${pr.label}`);
     const message = `NUEVO RÉCORD PERSONAL 💥\n\n${lines.join('\n')}\n\n${
       summary.streak > 1 ? `Racha de ${summary.streak} días 🔥\n` : ''
