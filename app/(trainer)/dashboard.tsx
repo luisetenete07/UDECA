@@ -176,6 +176,15 @@ export default function TrainerDashboard() {
   const incomeThisMonth = payments
     .filter((p) => p.date >= monthStart.getTime())
     .reduce((s, p) => s + (p.amountEur || 0), 0);
+  // Proyección: renovaciones con fecha en los próximos 30 días (cuota fijada).
+  const upcoming = clients.filter(
+    (c) =>
+      c.nextPaymentDate &&
+      c.nextPaymentDate >= now &&
+      c.nextPaymentDate < now + 30 * DAY_MS &&
+      (c.monthlyFeeEur ?? 0) > 0
+  );
+  const projected30 = upcoming.reduce((s, c) => s + (c.monthlyFeeEur ?? 0), 0);
 
 
   const handleApproveRequest = async (req: JoinRequest) => {
@@ -479,6 +488,16 @@ export default function TrainerDashboard() {
                 <Text style={[styles.revenueValue, { color: '#C9902B' }]}>{pendingAmount} €</Text>
                 <Text style={styles.revenueLabel}>Pendiente</Text>
               </View>
+              {projected30 > 0 ? (
+                <View style={styles.revenueBox}>
+                  <Text style={[styles.revenueValue, { color: colors.textMuted }]}>
+                    {projected30} €
+                  </Text>
+                  <Text style={styles.revenueLabel}>
+                    Previsto 30 días ({upcoming.length})
+                  </Text>
+                </View>
+              ) : null}
             </View>
             <View style={styles.countsRow}>
               {PAYMENT_STATUSES.filter((p) => payCounts[p]).map((p) => (

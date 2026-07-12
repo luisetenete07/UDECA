@@ -560,6 +560,47 @@ export function trainingDays(logs: WorkoutLog[]): Set<number> {
 }
 
 /** Ejercicios que aparecen en el historial (id + nombre), más recientes primero. */
+export interface PeriodSnapshot {
+  sessions: number;
+  sets: number;
+  volumeKg: number;
+  weightKg: number | null;
+}
+
+/**
+ * Comparador "tú hace 3 meses → hoy": últimos 28 días frente a la misma
+ * ventana de 28 días hace 3 meses. null si entonces no había datos (alumno
+ * nuevo): la tarjeta simplemente no se muestra.
+ */
+export function thenVsNow(
+  logs: WorkoutLog[],
+  weights: WeightLog[]
+): { then: PeriodSnapshot; now: PeriodSnapshot } | null {
+  const DAY = 24 * 60 * 60 * 1000;
+  const nowTs = Date.now();
+  const snapshot = (from: number, to: number): PeriodSnapshot => {
+    let sessions = 0;
+    let sets = 0;
+    let volumeKg = 0;
+    for (const log of logs) {
+      if (log.date < from || log.date > to) continue;
+      sessions += 1;
+      const t = sessionTotals(log.exercises);
+      sets += t.sets;
+      volumeKg += t.volumeKg;
+    }
+    // Peso corporal al final de la ventana (último registro hasta esa fecha).
+    let weightKg: number | null = null;
+    for (const w of weights) {
+      if (w.date <= to) weightKg = w.weightKg;
+    }
+    return { sessions, sets, volumeKg: Math.round(volumeKg), weightKg };
+  };
+  const then = snapshot(nowTs - 112 * DAY, nowTs - 84 * DAY);
+  if (then.sessions === 0) return null;
+  return { then, now: snapshot(nowTs - 28 * DAY, nowTs) };
+}
+
 /**
  * Ritmo de progreso: pendiente (unidades por mes de 30 días) por regresión
  * lineal simple sobre los puntos de un ejercicio. null si no hay base (<3).

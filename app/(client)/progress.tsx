@@ -30,6 +30,7 @@ import {
   trainingDays,
   weeklyActivity,
   weeklySetsByGroup,
+  thenVsNow,
   workoutsByMonth,
 } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
@@ -209,6 +210,7 @@ export default function ProgressScreen() {
   const toggleSession = (id: string) =>
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
 
+  const comparison = thenVsNow(workoutLogs, weightLogs);
   const weeklySets = weeklySetsByGroup(workoutLogs, muscleByExercise);
   const pushPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pushSets }));
   const pullPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pullSets }));
@@ -267,6 +269,40 @@ export default function ProgressScreen() {
               <Text style={styles.photoHint}>Cada punto dorado es un día entrenado.</Text>
               <ConsistencyMap days={trainingDays(workoutLogs)} />
             </Card>
+
+            {comparison ? (
+              <Card accent style={styles.section}>
+                <Text style={styles.sectionTitle}>Hace 3 meses → hoy</Text>
+                <Text style={styles.photoHint}>
+                  Tus últimos 28 días frente a los mismos días de hace 3 meses.
+                </Text>
+                <CompareRow
+                  label="Sesiones"
+                  then={comparison.then.sessions}
+                  now={comparison.now.sessions}
+                />
+                <CompareRow
+                  label="Series"
+                  then={comparison.then.sets}
+                  now={comparison.now.sets}
+                />
+                {comparison.then.volumeKg > 0 || comparison.now.volumeKg > 0 ? (
+                  <CompareRow
+                    label="Volumen (kg)"
+                    then={comparison.then.volumeKg}
+                    now={comparison.now.volumeKg}
+                  />
+                ) : null}
+                {comparison.then.weightKg != null && comparison.now.weightKg != null ? (
+                  <CompareRow
+                    label="Peso corporal"
+                    then={comparison.then.weightKg}
+                    now={comparison.now.weightKg}
+                    neutral
+                  />
+                ) : null}
+              </Card>
+            ) : null}
 
             {months.map((m, mi) => (
               <FadeIn key={m.key} delay={Math.min(mi * 60, 240)}>
@@ -570,6 +606,35 @@ function TabButton({
   );
 }
 
+/** Fila del comparador 3 meses → hoy, con delta coloreado. */
+function CompareRow({
+  label,
+  then,
+  now,
+  neutral,
+}: {
+  label: string;
+  then: number;
+  now: number;
+  neutral?: boolean;
+}) {
+  const delta = now - then;
+  const flat = Math.abs(delta) < 0.05;
+  const color = neutral || flat ? colors.textMuted : delta > 0 ? '#2E7D5B' : colors.danger;
+  const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ','));
+  return (
+    <View style={styles.compareRow}>
+      <Text style={styles.compareLabel}>{label}</Text>
+      <Text style={styles.compareThen}>{fmt(then)}</Text>
+      <Ionicons name="arrow-forward" size={13} color={colors.textFaint} />
+      <Text style={styles.compareNow}>{fmt(now)}</Text>
+      <Text style={[styles.compareDelta, { color }]}>
+        {flat ? '=' : `${delta > 0 ? '+' : ''}${fmt(delta)}`}
+      </Text>
+    </View>
+  );
+}
+
 function MonthStat({ value, label }: { value: string; label: string }) {
   return (
     <View style={styles.monthStat}>
@@ -641,6 +706,17 @@ const styles = StyleSheet.create({
   },
   logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
   logDate: { ...typography.small, color: colors.textMuted },
+  // ----- Comparador 3 meses → hoy -----
+  compareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  compareLabel: { ...typography.small, color: colors.textMuted, flex: 1 },
+  compareThen: { ...typography.body, color: colors.textFaint, fontFamily: fonts.medium },
+  compareNow: { ...typography.body, color: colors.text, fontFamily: fonts.heading },
+  compareDelta: { ...typography.small, fontFamily: fonts.semiBold, width: 52, textAlign: 'right' },
   // ----- Registro de entrenamiento mensual -----
   monthHeader: {
     flexDirection: 'row',
