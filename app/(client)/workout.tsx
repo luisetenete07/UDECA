@@ -151,6 +151,8 @@ export default function WorkoutScreen() {
   const [viewIndex, setViewIndex] = useState(0);
   // Índice del ejercicio con el vídeo de técnica desplegado (null = ninguno).
   const [videoOpenIndex, setVideoOpenIndex] = useState<number | null>(null);
+  // Índice del ejercicio con el campo de nota abierto (null = ninguno).
+  const [noteOpenIndex, setNoteOpenIndex] = useState<number | null>(null);
   // Día para el que el alumno ha pulsado "Entrenar otra vez" pese a haberlo
   // completado hoy: mientras coincida con el día visible, se muestra el entreno.
   const [retrainDayId, setRetrainDayId] = useState<string | null>(null);
@@ -385,6 +387,13 @@ export default function WorkoutScreen() {
         }, 900);
       }
     }
+  };
+
+  // Nota escrita del alumno sobre un ejercicio (p. ej. "hice la variante X").
+  const updateExerciseNote = (exerciseIndex: number, value: string) => {
+    setLog((prev) =>
+      prev.map((ex, i) => (i === exerciseIndex ? { ...ex, notes: value } : ex))
+    );
   };
 
   const totalSets = log.reduce((acc, ex) => acc + ex.sets.length, 0);
@@ -1014,6 +1023,30 @@ export default function WorkoutScreen() {
                 ) : null}
               </View>
             ))}
+            {noteOpenIndex === exerciseIndex || exercise.notes ? (
+              <TextField
+                value={exercise.notes ?? ''}
+                onChangeText={(v) => updateExerciseNote(exerciseIndex, v)}
+                placeholder="Ej. Hice la variante con goma, molestia en hombro..."
+                style={styles.noteField}
+              />
+            ) : null}
+            <Pressable
+              onPress={() =>
+                setNoteOpenIndex(noteOpenIndex === exerciseIndex ? null : exerciseIndex)
+              }
+              style={styles.noteBtn}
+              hitSlop={6}
+            >
+              <Ionicons
+                name={exercise.notes ? 'create' : 'create-outline'}
+                size={13}
+                color={colors.textMuted}
+              />
+              <Text style={styles.noteBtnText}>
+                {exercise.notes ? 'Editar nota' : 'Añadir nota'}
+              </Text>
+            </Pressable>
           </Card>
           </FadeIn>
         );
@@ -1302,6 +1335,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     textAlign: 'center',
   },
+  noteField: { marginTop: spacing.sm, marginBottom: 0 },
+  noteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+  },
+  noteBtnText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
   checkButton: {
     width: 40,
     height: 40,

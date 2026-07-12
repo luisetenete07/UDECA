@@ -104,12 +104,18 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
     return () => sub.remove();
   }, []);
 
+  // Suma o RESTA tiempo al descanso; si al restar llega a cero, termina.
   const addTime = (extra: number) => {
-    total.current += extra;
-    endsAt.current += extra * 1000;
+    total.current = Math.max(1, total.current + extra);
+    endsAt.current = Math.max(Date.now(), endsAt.current + extra * 1000);
     firedRef.current = false;
-    setRemaining(remainingNow());
-    scheduleRestEndNotification(remainingNow());
+    const rem = remainingNow();
+    setRemaining(rem);
+    if (rem <= 0) {
+      finish();
+    } else {
+      scheduleRestEndNotification(rem);
+    }
   };
 
   const handleSkip = () => {
@@ -152,9 +158,9 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
           <Ionicons name="add" size={14} color={colors.text} />
           <Text style={styles.actionText}>15s</Text>
         </Pressable>
-        <Pressable onPress={() => addTime(30)} style={styles.action} hitSlop={8}>
-          <Ionicons name="add" size={14} color={colors.text} />
-          <Text style={styles.actionText}>30s</Text>
+        <Pressable onPress={() => addTime(-15)} style={styles.action} hitSlop={8}>
+          <Ionicons name="remove" size={14} color={colors.text} />
+          <Text style={styles.actionText}>15s</Text>
         </Pressable>
         <Pressable onPress={handleSkip} style={[styles.action, styles.actionSkip]} hitSlop={8}>
           <Text style={[styles.actionText, styles.actionSkipText]}>Saltar descanso</Text>
