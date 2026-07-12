@@ -1,3 +1,4 @@
+import { analyzeClient } from './insights';
 import { startOfWeek } from './stats';
 import { PAYMENT_STATUS_LABEL, type UserProfile, type WeeklyCheckIn, type WorkoutLog } from './types';
 
@@ -31,7 +32,8 @@ export interface CopilotReport {
 export function buildCopilotReport(
   clients: UserProfile[],
   logs: WorkoutLog[],
-  checkIns: WeeklyCheckIn[]
+  checkIns: WeeklyCheckIn[],
+  muscleByExercise: Record<string, string> = {}
 ): CopilotReport {
   const now = Date.now();
   const week = startOfWeek(now);
@@ -78,6 +80,18 @@ export function buildCopilotReport(
 
     // Pagos.
     if (client.paymentStatus === 'overdue') reasons.push(PAYMENT_STATUS_LABEL.overdue);
+
+    // Análisis de entrenamiento: estancamiento, deload y desequilibrio.
+    const clientLogs = logs.filter((l) => l.clientId === client.uid);
+    if (clientLogs.length > 0) {
+      const clientCheckIns = checkIns.filter((c) => c.clientId === client.uid);
+      const insights = analyzeClient(clientLogs, clientCheckIns, muscleByExercise);
+      if (insights.stagnated.length > 0) {
+        reasons.push(`Estancado en ${insights.stagnated.join(', ')}`);
+      }
+      if (insights.deloadSuggested) reasons.push('Le vendría un deload');
+      if (insights.imbalance) reasons.push(`Exceso de ${insights.imbalance} este mes`);
+    }
 
     if (reasons.length > 0) attention.push({ uid: client.uid, name: client.name, reasons });
   }

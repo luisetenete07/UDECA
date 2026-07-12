@@ -19,6 +19,7 @@ import {
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
+import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import { getCheckInsForTrainer } from '../../lib/firestore/checkins';
 import { buildCopilotReport, type CopilotReport } from '../../lib/copilot';
 import { notifyUser } from '../../lib/notifications';
@@ -136,6 +137,12 @@ export default function TrainerDashboard() {
 
   const wk = weekComparison(logs);
   const byId = (id: string) => clients.find((c) => c.uid === id);
+  // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const trainedToday = new Set(
+    logs.filter((l) => l.date >= todayStart.getTime()).map((l) => l.clientId)
+  ).size;
   // Alumnos con pago pendiente o vencido (para el atajo "Recordar pagos").
   const duePayClients = clients.filter(
     (c) => c.paymentStatus === 'pending' || c.paymentStatus === 'overdue'
@@ -210,8 +217,12 @@ export default function TrainerDashboard() {
     setCopilotOpen(true);
     setLoadingCopilot(true);
     try {
-      const checkIns = await getCheckInsForTrainer(profile.uid);
-      setCopilotReport(buildCopilotReport(clients, logs, checkIns));
+      const [checkIns, library] = await Promise.all([
+        getCheckInsForTrainer(profile.uid),
+        getExercisesForTrainer(profile.uid),
+      ]);
+      const muscleMap = Object.fromEntries(library.map((e) => [e.id, e.muscleGroup]));
+      setCopilotReport(buildCopilotReport(clients, logs, checkIns, muscleMap));
     } catch {
       setCopilotReport(buildCopilotReport(clients, logs, []));
     } finally {
@@ -255,6 +266,48 @@ export default function TrainerDashboard() {
           <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
         </Pressable>
       </View>
+
+      {/* Panel "Hoy": qué requiere acción, en 10 segundos. Solo aparece si
+          hay algo que hacer (cero ruido cuando todo está al día). */}
+      {requests.length > 0 || overdueCount > 0 || inactiveClients.length > 0 || trainedToday > 0 ? (
+        <View style={styles.todayStrip}>
+          {trainedToday > 0 ? (
+            <View style={[styles.todayChip, styles.todayChipGood]}>
+              <Ionicons name="checkmark-circle" size={13} color="#2E7D5B" />
+              <Text style={[styles.todayChipText, { color: '#2E7D5B' }]}>
+                {trainedToday} entrenó hoy
+              </Text>
+            </View>
+          ) : null}
+          {requests.length > 0 ? (
+            <View style={[styles.todayChip, styles.todayChipWarn]}>
+              <Ionicons name="person-add" size={13} color={colors.primary} />
+              <Text style={[styles.todayChipText, { color: colors.primaryBright }]}>
+                {requests.length} solicitud(es)
+              </Text>
+            </View>
+          ) : null}
+          {overdueCount > 0 ? (
+            <Pressable
+              style={[styles.todayChip, styles.todayChipBad]}
+              onPress={() => router.push('/(trainer)/clients')}
+            >
+              <Ionicons name="cash" size={13} color={colors.danger} />
+              <Text style={[styles.todayChipText, { color: colors.danger }]}>
+                {overdueCount} vencido(s)
+              </Text>
+            </Pressable>
+          ) : null}
+          {inactiveClients.length > 0 ? (
+            <Pressable style={styles.todayChip} onPress={handleOpenCopilot}>
+              <Ionicons name="alert-circle" size={13} color={colors.warning} />
+              <Text style={[styles.todayChipText, { color: colors.warning }]}>
+                {inactiveClients.length} en riesgo
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {/* Atajos: lo más usado, a un toque */}
       <View style={styles.quickRow}>
@@ -501,6 +554,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  todayStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  todayChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  todayChipGood: { borderColor: '#2E7D5B' },
+  todayChipWarn: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  todayChipBad: { borderColor: colors.danger },
+  todayChipText: { ...typography.small, fontFamily: fonts.semiBold, fontSize: 11 },
   quickBtn: {
     flex: 1,
     alignItems: 'center',

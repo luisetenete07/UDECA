@@ -329,6 +329,25 @@ export default function WorkoutScreen() {
     }
   };
 
+  // Comparte el récord (tarjeta de texto con marca UDECA, ideal para stories).
+  const handleShareRecord = async () => {
+    if (!summary || summary.prs.length === 0) return;
+    const lines = summary.prs.map((pr) => `🏆 ${pr.exerciseName}: ${pr.label}`);
+    const message = `NUEVO RÉCORD PERSONAL 💥\n\n${lines.join('\n')}\n\n${
+      summary.streak > 1 ? `Racha de ${summary.streak} días 🔥\n` : ''
+    }Entrenando con UDECA — Universidad de Calistenia\nudeca.luistenafit.com`;
+    try {
+      await Share.share({ message });
+    } catch {
+      try {
+        await navigator.clipboard.writeText(message);
+        showToast('Récord copiado, pégalo donde quieras');
+      } catch {
+        showToast('No se pudo compartir');
+      }
+    }
+  };
+
   const updateSet = (
     exerciseIndex: number,
     setIndex: number,
@@ -588,6 +607,12 @@ export default function WorkoutScreen() {
                 <Text style={styles.prLabel}>{pr.label}</Text>
               </View>
             ))}
+            <Button
+              title="Compartir récord 🏆"
+              variant="secondary"
+              onPress={handleShareRecord}
+              style={{ marginTop: spacing.sm }}
+            />
           </Card>
           </FadeIn>
         ) : null}
