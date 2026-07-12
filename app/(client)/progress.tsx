@@ -33,6 +33,7 @@ import {
   workoutsByMonth,
 } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
+import { FadeIn } from '../../components/FadeIn';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   PHOTO_POSES,
@@ -267,8 +268,9 @@ export default function ProgressScreen() {
               <ConsistencyMap days={trainingDays(workoutLogs)} />
             </Card>
 
-            {months.map((m) => (
-              <Card key={m.key} style={styles.section}>
+            {months.map((m, mi) => (
+              <FadeIn key={m.key} delay={Math.min(mi * 60, 240)}>
+              <Card style={styles.section}>
                 <View style={styles.monthHeader}>
                   <Text style={styles.monthTitle}>{capitalize(m.label)}</Text>
                   <Text style={styles.monthCount}>
@@ -353,6 +355,7 @@ export default function ProgressScreen() {
                   );
                 })}
               </Card>
+              </FadeIn>
             ))}
 
             <Card style={styles.section}>

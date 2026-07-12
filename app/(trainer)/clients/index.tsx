@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../components/Avatar';
+import { FadeIn } from '../../../components/FadeIn';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { ErrorState } from '../../../components/ErrorState';
@@ -179,13 +180,11 @@ export default function ClientsScreen() {
       ) : filtered.length === 0 ? (
         <EmptyState title="Sin resultados" subtitle="Prueba con otro nombre." />
       ) : (
-        filtered.map((client) => {
+        filtered.map((client, index) => {
           const activity = activityInfo(lastTrained[client.uid]);
           return (
-          <Pressable
-            key={client.uid}
-            onPress={() => router.push(`/(trainer)/clients/${client.uid}`)}
-          >
+          <FadeIn key={client.uid} delay={Math.min(index * 40, 280)}>
+          <Pressable onPress={() => router.push(`/(trainer)/clients/${client.uid}`)}>
             <Card style={styles.clientCard}>
               <Avatar name={client.name} photoURL={client.photoURL} size={44} />
               <View style={{ flex: 1 }}>
@@ -220,6 +219,7 @@ export default function ClientsScreen() {
               <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
             </Card>
           </Pressable>
+          </FadeIn>
           );
         })
       )}

@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
+import { FadeIn } from '../../../components/FadeIn';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
@@ -138,11 +139,9 @@ export default function ExercisesScreen() {
           subtitle="Importa el pack UDECA o crea el primero con '+ Nuevo'."
         />
       ) : (
-        filtered.map((exercise) => (
-          <Pressable
-            key={exercise.id}
-            onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}
-          >
+        filtered.map((exercise, index) => (
+          <FadeIn key={exercise.id} delay={Math.min(index * 30, 240)}>
+          <Pressable onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}>
             <Card style={styles.exerciseCard}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
@@ -156,6 +155,7 @@ export default function ExercisesScreen() {
               ) : null}
             </Card>
           </Pressable>
+          </FadeIn>
         ))
       )}
     </ScreenContainer>
