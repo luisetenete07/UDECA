@@ -49,12 +49,14 @@ export function vimeoEmbedUrl(ref: VimeoRef): string {
 /** Extrae el id de un vídeo de YouTube de sus formatos habituales. */
 export function parseYouTubeId(url: string): string | null {
   try {
-    const u = new URL(url.trim());
+    // Tolerante a enlaces pegados sin protocolo ("youtube.com/watch?v=...").
+    const raw = url.trim();
+    const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
     const host = u.hostname.replace(/^www\./, '');
-    if (host === 'youtu.be') return u.pathname.slice(1) || null;
+    if (host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
     if (host.endsWith('youtube.com')) {
       if (u.pathname === '/watch') return u.searchParams.get('v');
-      const m = u.pathname.match(/^\/(embed|shorts)\/([\w-]+)/);
+      const m = u.pathname.match(/^\/(embed|shorts|live|v)\/([\w-]+)/);
       if (m) return m[2];
     }
     return null;
@@ -63,9 +65,13 @@ export function parseYouTubeId(url: string): string | null {
   }
 }
 
-/** URL de embed de YouTube (sin vídeos relacionados, marca discreta). */
+/**
+ * URL de embed de YouTube para reproducir DENTRO de la app. Dominio
+ * youtube-nocookie.com (menos avisos de cookies en la UE) y playsinline para
+ * que en iPhone se reproduzca en la propia pantalla, sin salir de la app.
+ */
 export function youTubeEmbedUrl(id: string): string {
-  return `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
+  return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
 }
 
 /** Devuelve la URL de reproductor embebido (Vimeo o YouTube), o null. */

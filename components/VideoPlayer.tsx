@@ -37,11 +37,15 @@ export function VideoPlayer({ url }: { url?: string }) {
     return <VimeoVideo embedUrl={youTubeEmbedUrl(youtubeId)} />;
   }
 
-  if (Platform.OS === 'web') {
-    return <WebVideo url={url} />;
+  // Archivo de vídeo directo (mp4, HLS...): reproductor propio.
+  const looksLikeFile = /\.(mp4|webm|mov|m4v|m3u8)(\?|#|$)/i.test(url);
+  if (looksLikeFile) {
+    return Platform.OS === 'web' ? <WebVideo url={url} /> : <NativeVideo url={url} />;
   }
 
-  return <NativeVideo url={url} />;
+  // Cualquier otro enlace (Drive, Dropbox, etc.): se muestra embebido DENTRO
+  // de la app (iframe/WebView) para que el usuario nunca salga de UDECA.
+  return <VimeoVideo embedUrl={url} />;
 }
 
 function VimeoVideo({ embedUrl }: { embedUrl: string }) {
