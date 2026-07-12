@@ -659,17 +659,18 @@ export default function ClientDetailScreen() {
           // Ritmo de progreso proyectado de sus ejercicios más recientes.
           const trends = listExercisesInLogs(workoutLogs)
             .slice(0, 4)
-            .map((e) => {
-              const prog = exerciseProgression(workoutLogs, e.exerciseId);
-              const unit = prog.measure === 'seconds' ? 's' : prog.hasWeight ? 'kg' : 'reps';
-              const slope = trendPerMonth(
+            .map((e) => exerciseProgression(workoutLogs, e.exerciseId))
+            .filter((prog): prog is NonNullable<typeof prog> => prog !== null)
+            .map((prog) => ({
+              name: prog.name,
+              unit: prog.measure === 'seconds' ? 's' : prog.hasWeight ? 'kg' : 'reps',
+              slope: trendPerMonth(
                 prog.points.map((p) => ({
                   date: p.date,
                   value: prog.hasWeight ? p.weight : p.reps,
                 }))
-              );
-              return { name: prog.name, unit, slope };
-            })
+              ),
+            }))
             .filter((t) => t.slope !== null);
           if (trends.length === 0) return null;
           return (
