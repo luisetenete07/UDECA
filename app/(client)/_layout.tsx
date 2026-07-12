@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View } from 'react-native';
 import { TabIcon } from '../../components/TabIcon';
+import { GlobalRestTimer } from '../../components/GlobalRestTimer';
 import { LinkTrainerScreen } from '../../components/LinkTrainerScreen';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Onboarding } from '../../components/Onboarding';
@@ -45,6 +47,7 @@ export default function ClientLayout() {
   }
 
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={tabScreenOptions}
     >
@@ -102,5 +105,8 @@ export default function ClientLayout() {
           barra para no saturarla con demasiadas pestañas. */}
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
+    {/* Crono de descanso global: sigue corriendo y visible en cualquier pestaña. */}
+    <GlobalRestTimer />
+    </View>
   );
 }

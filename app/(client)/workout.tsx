@@ -20,7 +20,6 @@ import { FadeIn, PopIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
-import { RestTimer } from '../../components/RestTimer';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { StatTile } from '../../components/StatTile';
@@ -36,6 +35,7 @@ import { getCycleAnchor, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
+import { startRest, stopRest } from '../../lib/restTimerStore';
 import {
   computeAchievements,
   currentStreak,
@@ -143,9 +143,6 @@ export default function WorkoutScreen() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
-  const [restKey, setRestKey] = useState(0);
-  const [restSeconds, setRestSeconds] = useState<number | null>(null);
-  const [restLabel, setRestLabel] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
   // Índice del ejercicio que se muestra en el modo enfocado (1 por pantalla).
   const [viewIndex, setViewIndex] = useState(0);
@@ -236,7 +233,6 @@ export default function WorkoutScreen() {
             startedAt.current = draft.startedAt;
             setRestored(true);
             setSummary(null);
-            setRestSeconds(null);
             // Retoma en el primer ejercicio con series pendientes.
             const resume = draft.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
             setViewIndex(resume >= 0 ? resume : 0);
@@ -250,7 +246,6 @@ export default function WorkoutScreen() {
       setLog(buildLog(day));
       setRestored(false);
       setSummary(null);
-      setRestSeconds(null);
       setViewIndex(0);
       startedAt.current = null;
     })();
@@ -371,9 +366,7 @@ export default function WorkoutScreen() {
             : nextEx
               ? `Ahora: ${nextEx.name}`
               : 'Última serie hecha · guarda la sesión';
-        setRestLabel(nextLabel);
-        setRestSeconds(rest);
-        setRestKey((k) => k + 1);
+        startRest(rest, nextLabel);
       }
 
       // Autoavance: si al marcar esta serie el ejercicio queda COMPLETO, pasa
@@ -487,7 +480,7 @@ export default function WorkoutScreen() {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-      setRestSeconds(null);
+      stopRest();
       if (profile) AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
       setRestored(false);
       setRetrainDayId(null);
@@ -861,15 +854,6 @@ export default function WorkoutScreen() {
             <Text style={styles.restoredAction}>Empezar de cero</Text>
           </Pressable>
         </View>
-      ) : null}
-
-      {restSeconds !== null ? (
-        <RestTimer
-          key={restKey}
-          seconds={restSeconds}
-          title={restLabel ?? undefined}
-          onDone={() => setRestSeconds(null)}
-        />
       ) : null}
 
       {(() => {
