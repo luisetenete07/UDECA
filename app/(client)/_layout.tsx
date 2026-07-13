@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View } from 'react-native';
@@ -19,9 +19,12 @@ export default function ClientLayout() {
   const { loading, firebaseUser, profile, emailVerified, refreshProfile } = useAuth();
   // null = comprobando; true = ya visto; false = mostrar bienvenida.
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
+  // Una vez terminado en esta sesión, no dejamos que un refresco del perfil lo
+  // vuelva a evaluar (evita que el botón "Guardar y empezar" parezca no hacer nada).
+  const doneRef = useRef(false);
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || doneRef.current) return;
     // La cuenta manda: si ya se completó en cualquier dispositivo, no se repite.
     if (profile.onboardingCompleted) {
       setOnboardingSeen(true);
@@ -54,6 +57,7 @@ export default function ClientLayout() {
       <Onboarding
         name={profile.name}
         onDone={(targets, goal) => {
+          doneRef.current = true;
           setOnboardingSeen(true);
           AsyncStorage.setItem(onboardingKey(profile.uid), '1').catch(() => {});
           markOnboardingComplete(profile.uid).catch(() => {});

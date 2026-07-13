@@ -33,6 +33,7 @@ export function MacroCalculator({
   const [weight, setWeight] = useState(initialWeightKg ? String(initialWeightKg) : '');
   const [activity, setActivity] = useState(1.55);
   const [goal, setGoal] = useState<Goal>('maintain');
+  const [error, setError] = useState<string | null>(null);
 
   const num = (s: string) => Number(s.replace(',', '.'));
   const input = {
@@ -134,10 +135,21 @@ export function MacroCalculator({
         <Text style={styles.hint}>Rellena tus datos para ver tus calorías y macros.</Text>
       )}
 
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
       <Button
         title={submitLabel}
-        onPress={() => result && onDone(result, goal)}
-        disabled={!result}
+        onPress={() => {
+          // Botón SIEMPRE activo: si algo falta, se explica en vez de no hacer nada.
+          if (!result) {
+            setError(
+              'Revisa tus datos: edad (10+), altura en cm (100+) y peso en kg (30+).'
+            );
+            return;
+          }
+          setError(null);
+          onDone(result, goal);
+        }}
         style={{ marginTop: spacing.md }}
       />
     </View>
@@ -236,4 +248,5 @@ const styles = StyleSheet.create({
   resultMacroValue: { ...typography.h3, color: colors.text, fontFamily: fonts.semiBold },
   resultMacroLabel: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   hint: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.lg },
+  error: { ...typography.small, color: colors.danger, textAlign: 'center', marginTop: spacing.sm },
 });
