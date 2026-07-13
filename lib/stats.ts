@@ -1,5 +1,14 @@
 import type { LoggedExercise, WeightLog, WorkoutLog } from './types';
 
+/**
+ * Convierte a número tolerando la coma decimal española (66,4 → 66.4). Sin
+ * esto, `Number("66,4")` da NaN y el peso se perdería en volúmenes y marcas.
+ */
+export function toNum(value: string | number | undefined | null): number {
+  if (value == null) return NaN;
+  return Number(String(value).replace(',', '.'));
+}
+
 export interface LastPerformance {
   weight?: string;
   reps?: string;
@@ -25,7 +34,7 @@ export function lastPerformanceByExercise(
       let best: { weight?: string; reps?: string } | null = null;
       let bestWeight = -1;
       for (const set of ex.sets) {
-        const w = Number(set.weight);
+        const w = toNum(set.weight);
         if (set.weight && !Number.isNaN(w) && w > bestWeight) {
           bestWeight = w;
           best = { weight: set.weight, reps: set.reps };
@@ -258,7 +267,7 @@ export function bestsByExercise(logs: WorkoutLog[]): Record<string, ExerciseBest
       const b = (bests[ex.exerciseId] ??= { bestWeightKg: 0, bestRepsAtWeight: 0, bestReps: 0 });
       for (const set of ex.sets) {
         if (!set.completed) continue;
-        const w = Number(set.weight) || 0;
+        const w = toNum(set.weight) || 0;
         const r = parseReps(set.reps);
         if (w > b.bestWeightKg || (w === b.bestWeightKg && r > b.bestRepsAtWeight)) {
           if (w > 0) {
@@ -297,7 +306,7 @@ export function detectNewPRs(
     let record: PersonalRecord | null = null;
     for (const set of ex.sets) {
       if (!set.completed) continue;
-      const w = Number(set.weight) || 0;
+      const w = toNum(set.weight) || 0;
       const r = parseReps(set.reps);
       if (w > 0 && (w > b.bestWeightKg || (w === b.bestWeightKg && r > b.bestRepsAtWeight))) {
         record = { exerciseName: ex.name, label: `${w} kg × ${r || '—'}` };
@@ -340,7 +349,7 @@ export function sessionTotals(
       // Reps de ejercicios por repeticiones; segundos de los isométricos.
       if (isSeconds) seconds += r;
       else reps += r;
-      volumeKg += (Number(set.weight) || 0) * r;
+      volumeKg += (toNum(set.weight) || 0) * r;
     }
   }
   return { sets, reps, seconds, volumeKg: Math.round(volumeKg) };
@@ -558,7 +567,7 @@ export function weeklyVolume(
           if (group === 'Empuje') bucket.isoPushSeconds += n;
           else if (group === 'Tirón') bucket.isoPullSeconds += n;
         } else {
-          bucket.volumeKg += (Number(set.weight) || 0) * n;
+          bucket.volumeKg += (toNum(set.weight) || 0) * n;
         }
       }
     }
@@ -699,7 +708,7 @@ export function exerciseProgression(
       if (!set.completed) continue;
       const r = parseInt(set.reps, 10);
       if (!Number.isNaN(r)) bestReps = Math.max(bestReps, r);
-      const w = Number(set.weight);
+      const w = toNum(set.weight);
       if (set.weight && !Number.isNaN(w)) {
         bestWeight = Math.max(bestWeight, w);
         if (w > 0) hasWeight = true;

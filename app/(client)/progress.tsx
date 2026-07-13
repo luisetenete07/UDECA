@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -12,12 +12,7 @@ import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
-import {
-  createProgressPhoto,
-  getProgressPhotosForClient,
-} from '../../lib/firestore/progressPhotos';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
-import { pickProgressPhoto } from '../../lib/image';
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExercisesForTrainer } from '../../lib/firestore/exercises';
@@ -39,14 +34,11 @@ import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
-  PHOTO_POSES,
-  type PhotoPose,
-  type ProgressPhoto,
   type WeightLog,
   type WorkoutLog,
 } from '../../lib/types';
 
-type Tab = 'workouts' | 'weight' | 'photos' | 'exercises';
+type Tab = 'workouts' | 'weight' | 'exercises';
 
 /** Pone en mayúscula la primera letra (para "julio 2026" → "Julio 2026"). */
 function capitalize(s: string): string {
@@ -55,7 +47,6 @@ function capitalize(s: string): string {
 
 interface ProgressData {
   weightLogs: WeightLog[];
-  photos: ProgressPhoto[];
   workoutLogs: WorkoutLog[];
 }
 
@@ -68,7 +59,6 @@ export default function ProgressScreen() {
   const cacheKey = `progress-${profile?.uid ?? ''}`;
   const cached = getCached<ProgressData>(cacheKey);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>(cached?.weightLogs ?? []);
-  const [photos, setPhotos] = useState<ProgressPhoto[]>(cached?.photos ?? []);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
@@ -80,23 +70,19 @@ export default function ProgressScreen() {
   const [notesInput, setNotesInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [weightData, photoData, workoutData, testData] = await Promise.all([
+    const [weightData, workoutData, testData] = await Promise.all([
       getWeightLogsForClient(profile.uid),
-      getProgressPhotosForClient(profile.uid),
       getWorkoutLogsForClient(profile.uid),
       getLevelTestsForClient(profile.uid).catch(() => []),
     ]);
     setWeightLogs(weightData);
-    setPhotos(photoData);
     setWorkoutLogs(workoutData);
     setLevelTests(testData);
     setCached(cacheKey, {
       weightLogs: weightData,
-      photos: photoData,
       workoutLogs: workoutData,
     } satisfies ProgressData);
     // Medida actual de cada ejercicio (reps/segundos) desde la biblioteca del
@@ -185,30 +171,6 @@ export default function ProgressScreen() {
     }
   };
 
-  const handleAddPhoto = async (pose: PhotoPose) => {
-    if (!profile) return;
-    setUploadingPose(pose);
-    try {
-      const imageURL = await pickProgressPhoto();
-      if (imageURL) {
-        await createProgressPhoto({
-          trainerId: profile.trainerId ?? '',
-          clientId: profile.uid,
-          pose,
-          imageURL,
-          date: Date.now(),
-        });
-        await load();
-        showToast('Foto subida');
-      }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'No se pudo subir la foto.';
-      if (Platform.OS !== 'web') Alert.alert('Foto de progreso', message);
-    } finally {
-      setUploadingPose(null);
-    }
-  };
-
   if (loading) return <LoadingScreen />;
 
   const months = workoutsByMonth(workoutLogs, measureByExercise);
@@ -258,7 +220,6 @@ export default function ProgressScreen() {
           active={tab === 'exercises'}
           onPress={() => setTab('exercises')}
         />
-        <TabButton label="Fotos" active={tab === 'photos'} onPress={() => setTab('photos')} />
       </ScrollView>
 
       {tab === 'workouts' ? (
@@ -481,8 +442,8 @@ export default function ProgressScreen() {
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Registrar peso</Text>
             <TextField
-              placeholder="Peso en kg"
-              keyboardType="numeric"
+              placeholder="Peso en kg (ej. 66,4)"
+              keyboardType="decimal-pad"
               value={weightInput}
               onChangeText={setWeightInput}
             />
@@ -588,55 +549,7 @@ export default function ProgressScreen() {
           </>
           )}
         </>
-      ) : (
-        <>
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Añadir foto</Text>
-            <Text style={styles.photoHint}>
-              Sube fotos de frente, perfil y espalda. Solo tú y tu entrenador las veréis.
-            </Text>
-            <View style={styles.poseRow}>
-              {PHOTO_POSES.map((pose) => (
-                <Button
-                  key={pose.key}
-                  title={pose.label}
-                  variant="secondary"
-                  onPress={() => handleAddPhoto(pose.key)}
-                  loading={uploadingPose === pose.key}
-                  style={styles.poseBtn}
-                />
-              ))}
-            </View>
-          </Card>
-
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Galería</Text>
-            {photos.length === 0 ? (
-              <EmptyState title="Todavía no has subido fotos de progreso" />
-            ) : (
-              <View style={styles.photoGrid}>
-                {photos.map((p) => (
-                  <View key={p.id} style={styles.photoCard}>
-                    <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
-                    <View style={styles.photoInfo}>
-                      <Text style={styles.photoPose}>
-                        {PHOTO_POSES.find((x) => x.key === p.pose)?.label ?? p.pose}
-                      </Text>
-                      <Text style={styles.photoDate}>
-                        {new Date(p.date).toLocaleDateString('es-ES', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </Card>
-        </>
-      )}
+      ) : null}
     </ScreenContainer>
   );
 }

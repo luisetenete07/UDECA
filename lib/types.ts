@@ -169,6 +169,13 @@ export interface RoutineDay {
   optionalRest?: boolean;
   /** Intensidad 1-10 de este entrenamiento (Método REIN TENA), la fija el coach. */
   intensity?: number;
+  /** El coach activa el temporizador de intervalos (EMOM/Tabata) para este día. */
+  showIntervalTimer?: boolean;
+  /**
+   * Texto de las "aproximaciones" del calentamiento para este día, editable por
+   * el coach (paso 3 del calentamiento). Vacío = usa el texto por defecto.
+   */
+  approachesNote?: string;
   exercises: RoutineExercise[];
 }
 
@@ -297,6 +304,20 @@ export interface WeightLog {
   createdAt: number;
 }
 
+/**
+ * Ejemplo de comida que el entrenador sube al plan (p. ej. "Desayuno") con una
+ * foto de referencia y una descripción, para que el alumno vea qué comer.
+ */
+export interface MealExample {
+  id: string;
+  /** Momento del día: "Desayuno", "Comida", "Cena", "Snack"... */
+  name: string;
+  /** Foto de ejemplo (data URL comprimida). */
+  imageURL: string;
+  /** Descripción opcional (ingredientes, cantidades). */
+  description?: string;
+}
+
 export interface NutritionPlan {
   id: string;
   trainerId: string;
@@ -308,6 +329,8 @@ export interface NutritionPlan {
   carbsG: number;
   fatG: number;
   notes?: string;
+  /** Fotos de ejemplo de comidas subidas por el entrenador. */
+  mealExamples?: MealExample[];
   createdAt: number;
   updatedAt: number;
 }

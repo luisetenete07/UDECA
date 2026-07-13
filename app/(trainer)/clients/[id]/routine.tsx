@@ -320,6 +320,16 @@ export default function RoutineEditorScreen() {
     );
   };
 
+  const toggleIntervalTimer = (dayId: string) => {
+    setDays((prev) =>
+      prev.map((d) => (d.id === dayId ? { ...d, showIntervalTimer: !d.showIntervalTimer } : d))
+    );
+  };
+
+  const updateApproaches = (dayId: string, value: string) => {
+    setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, approachesNote: value } : d)));
+  };
+
   // Descanso en formato mm:ss; se guarda en segundos.
   const updateRestSeconds = (dayId: string, exerciseRowId: string, seconds: number) => {
     setDays((prev) =>
@@ -848,6 +858,31 @@ export default function RoutineEditorScreen() {
           </View>
           )}
 
+          {!day.isRest ? (
+            <View style={styles.dayTools}>
+              <Pressable
+                onPress={() => toggleIntervalTimer(day.id)}
+                style={styles.checkRow}
+                hitSlop={6}
+              >
+                <Ionicons
+                  name={day.showIntervalTimer ? 'checkbox' : 'square-outline'}
+                  size={20}
+                  color={day.showIntervalTimer ? colors.primary : colors.textMuted}
+                />
+                <Text style={styles.checkLabel}>
+                  Temporizador de intervalos (EMOM/Tabata) este día
+                </Text>
+              </Pressable>
+              <TextField
+                label="Aproximaciones (calentamiento · paso 3)"
+                placeholder="Ej. 2 series al 60% y 70% del peso de trabajo"
+                value={day.approachesNote ?? ''}
+                onChangeText={(v) => updateApproaches(day.id, v)}
+              />
+            </View>
+          ) : null}
+
           {day.exercises.map((ex, exIndex) => (
             <View
               key={ex.id}
@@ -1152,6 +1187,16 @@ const styles = StyleSheet.create({
   modeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   modeTextActive: { color: colors.onPrimary },
   scheduleHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
+  dayTools: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.sm,
+  },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  checkLabel: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   dayIntensityRow: { marginBottom: spacing.sm },
   dayIntensityLabel: {
     ...typography.label,

@@ -53,3 +53,11 @@ export function pickAvatar(): Promise<string | null> {
 export function pickProgressPhoto(): Promise<string | null> {
   return pickImage({ maxSize: 720, compress: 0.6 });
 }
+
+/**
+ * Foto de ejemplo de comida: se guarda embebida en el plan, así que la
+ * mantenemos ligera (varias caben en un doc de Firestore de 1 MB).
+ */
+export function pickMealPhoto(): Promise<string | null> {
+  return pickImage({ maxSize: 500, compress: 0.5 });
+}

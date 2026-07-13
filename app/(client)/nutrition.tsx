@@ -1,21 +1,28 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { MacroBar } from '../../components/MacroBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
+import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import {
   createMealLog,
   getActiveNutritionPlanForClient,
   getMealLogsForClient,
 } from '../../lib/firestore/nutrition';
-import { fonts, colors, spacing, typography } from '../../lib/theme';
-import type { MealLog, NutritionPlan } from '../../lib/types';
+import {
+  createProgressPhoto,
+  deleteProgressPhoto,
+  getProgressPhotosForClient,
+} from '../../lib/firestore/progressPhotos';
+import { pickProgressPhoto } from '../../lib/image';
+import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
+import { PHOTO_POSES, type MealLog, type NutritionPlan, type PhotoPose, type ProgressPhoto } from '../../lib/types';
 
 function isToday(timestamp: number) {
   const d = new Date(timestamp);
@@ -31,6 +38,7 @@ export default function NutritionScreen() {
   const { profile } = useAuth();
   const [plan, setPlan] = useState<NutritionPlan | null>(null);
   const [meals, setMeals] = useState<MealLog[]>([]);
+  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [mealName, setMealName] = useState('');
@@ -40,15 +48,18 @@ export default function NutritionScreen() {
   const [fat, setFat] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [planData, mealData] = await Promise.all([
+    const [planData, mealData, photoData] = await Promise.all([
       getActiveNutritionPlanForClient(profile.uid),
       getMealLogsForClient(profile.uid),
+      getProgressPhotosForClient(profile.uid),
     ]);
     setPlan(planData);
     setMeals(mealData);
+    setPhotos(photoData);
     setLoading(false);
   }, [profile]);
 
@@ -100,112 +111,270 @@ export default function NutritionScreen() {
     }
   };
 
-  if (loading) return <LoadingScreen />;
+  const handleAddPhoto = async (pose: PhotoPose) => {
+    if (!profile) return;
+    setUploadingPose(pose);
+    try {
+      const imageURL = await pickProgressPhoto();
+      if (imageURL) {
+        await createProgressPhoto({
+          trainerId: profile.trainerId ?? '',
+          clientId: profile.uid,
+          pose,
+          imageURL,
+          date: Date.now(),
+        });
+        await load();
+        showToast('Foto subida');
+      }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'No se pudo subir la foto.';
+      if (Platform.OS !== 'web') Alert.alert('Foto de progreso', message);
+      else showToast(message);
+    } finally {
+      setUploadingPose(null);
+    }
+  };
 
-  if (!plan) {
-    return (
-      <ScreenContainer>
-        <Text style={styles.title}>Mi nutrición</Text>
-        <EmptyState
-          title="Sin plan nutricional"
-          subtitle="Tu entrenador todavía no te ha asignado un plan de nutrición."
-        />
-      </ScreenContainer>
-    );
-  }
+  const confirmDelete = (message: string): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      return Promise.resolve(window.confirm(message));
+    }
+    return new Promise((resolve) => {
+      Alert.alert('Borrar', message, [
+        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Borrar', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+  };
+
+  const handleDeletePhoto = async (id: string) => {
+    if (!(await confirmDelete('¿Borrar esta foto de progreso?'))) return;
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await deleteProgressPhoto(id);
+      showToast('Foto borrada');
+    } catch (e) {
+      await load();
+      showToast(e instanceof Error ? e.message : 'No se pudo borrar');
+    }
+  };
+
+  if (loading) return <LoadingScreen />;
 
   return (
     <ScreenContainer>
       <Text style={styles.title}>Mi nutrición</Text>
 
-      <Card accent style={styles.section}>
-        <View style={styles.hoyHeader}>
-          <Text style={styles.sectionTitle}>Hoy</Text>
-          {plan.name ? <Text style={styles.planName}>{plan.name}</Text> : null}
-        </View>
-
-        <View style={styles.calSummary}>
-          <Text style={styles.calBig}>
-            {Math.max(0, plan.dailyCalories - totals.calories)}
-          </Text>
-          <Text style={styles.calUnit}>
-            {totals.calories > plan.dailyCalories ? 'kcal de más' : 'kcal restantes'}
-          </Text>
-          <Text style={styles.calSub}>
-            {totals.calories} / {plan.dailyCalories} kcal consumidas
-          </Text>
-        </View>
-
-        <MacroBar label="Proteína" consumed={totals.proteinG} target={plan.proteinG} unit="g" />
-        <MacroBar label="Carbohidratos" consumed={totals.carbsG} target={plan.carbsG} unit="g" />
-        <MacroBar label="Grasas" consumed={totals.fatG} target={plan.fatG} unit="g" />
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Registrar comida</Text>
-        <TextField placeholder="Ej. Desayuno" value={mealName} onChangeText={setMealName} />
-        <View style={styles.row}>
-          <TextField
-            placeholder="Kcal"
-            keyboardType="numeric"
-            value={calories}
-            onChangeText={setCalories}
-            style={styles.smallField}
-          />
-          <TextField
-            placeholder="Prot. (g)"
-            keyboardType="numeric"
-            value={protein}
-            onChangeText={setProtein}
-            style={styles.smallField}
-          />
-        </View>
-        <View style={styles.row}>
-          <TextField
-            placeholder="Carbs (g)"
-            keyboardType="numeric"
-            value={carbs}
-            onChangeText={setCarbs}
-            style={styles.smallField}
-          />
-          <TextField
-            placeholder="Grasas (g)"
-            keyboardType="numeric"
-            value={fat}
-            onChangeText={setFat}
-            style={styles.smallField}
-          />
-        </View>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button title="Añadir comida" onPress={handleAddMeal} loading={saving} />
-      </Card>
-
-      <Card style={styles.section}>
-        <View style={styles.hoyHeader}>
-          <Text style={styles.sectionTitle}>Comidas de hoy</Text>
-          {todayMeals.length > 0 ? (
-            <Text style={styles.mealCount}>
-              {todayMeals.length} · {totals.calories} kcal
-            </Text>
-          ) : null}
-        </View>
-        {todayMeals.length === 0 ? (
-          <Text style={styles.mutedText}>Todavía no has registrado comidas hoy.</Text>
-        ) : (
-          todayMeals.map((meal) => (
-            <View key={meal.id} style={styles.mealRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealMacros}>
-                  P{meal.proteinG} · C{meal.carbsG} · G{meal.fatG}
-                </Text>
-              </View>
-              <Text style={styles.mealKcal}>{meal.calories} kcal</Text>
+      {!plan ? (
+        <EmptyState
+          icon="restaurant-outline"
+          title="Sin plan nutricional"
+          subtitle="Tu entrenador todavía no te ha asignado un plan de nutrición."
+        />
+      ) : (
+        <>
+          <Card accent style={styles.section}>
+            <View style={styles.hoyHeader}>
+              <Text style={styles.sectionTitle}>Hoy</Text>
+              {plan.name ? <Text style={styles.planName}>{plan.name}</Text> : null}
             </View>
-          ))
+
+            <View style={styles.calSummary}>
+              <Text style={styles.calBig}>{Math.max(0, plan.dailyCalories - totals.calories)}</Text>
+              <Text style={styles.calUnit}>
+                {totals.calories > plan.dailyCalories ? 'kcal de más' : 'kcal restantes'}
+              </Text>
+              <Text style={styles.calSub}>
+                {totals.calories} / {plan.dailyCalories} kcal consumidas
+              </Text>
+            </View>
+
+            {/* Macros en rejilla 2x2: nunca se recortan en móvil. */}
+            <View style={styles.macroGrid}>
+              <MacroTile label="Calorías" consumed={totals.calories} target={plan.dailyCalories} unit="kcal" />
+              <MacroTile label="Proteína" consumed={totals.proteinG} target={plan.proteinG} unit="g" />
+              <MacroTile label="Carbohidratos" consumed={totals.carbsG} target={plan.carbsG} unit="g" />
+              <MacroTile label="Grasas" consumed={totals.fatG} target={plan.fatG} unit="g" />
+            </View>
+          </Card>
+
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Registrar comida</Text>
+            <TextField placeholder="Ej. Desayuno" value={mealName} onChangeText={setMealName} />
+            <View style={styles.row}>
+              <TextField
+                placeholder="Kcal"
+                keyboardType="numeric"
+                value={calories}
+                onChangeText={setCalories}
+                style={styles.smallField}
+              />
+              <TextField
+                placeholder="Proteína (g)"
+                keyboardType="numeric"
+                value={protein}
+                onChangeText={setProtein}
+                style={styles.smallField}
+              />
+            </View>
+            <View style={styles.row}>
+              <TextField
+                placeholder="Carbos (g)"
+                keyboardType="numeric"
+                value={carbs}
+                onChangeText={setCarbs}
+                style={styles.smallField}
+              />
+              <TextField
+                placeholder="Grasas (g)"
+                keyboardType="numeric"
+                value={fat}
+                onChangeText={setFat}
+                style={styles.smallField}
+              />
+            </View>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <Button title="Añadir comida" onPress={handleAddMeal} loading={saving} />
+          </Card>
+
+          {plan.mealExamples && plan.mealExamples.length > 0 ? (
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Ejemplos de comidas de tu coach</Text>
+              <Text style={styles.hint}>Fotos de referencia para saber qué preparar.</Text>
+              {plan.mealExamples.map((ex) => (
+                <View key={ex.id} style={styles.exampleRow}>
+                  <Image source={{ uri: ex.imageURL }} style={styles.examplePhoto} resizeMode="cover" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.exampleName}>{ex.name}</Text>
+                    {ex.description ? (
+                      <Text style={styles.exampleDesc}>{ex.description}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </Card>
+          ) : null}
+
+          <Card style={styles.section}>
+            <View style={styles.hoyHeader}>
+              <Text style={styles.sectionTitle}>Comidas de hoy</Text>
+              {todayMeals.length > 0 ? (
+                <Text style={styles.mealCount}>
+                  {todayMeals.length} · {totals.calories} kcal
+                </Text>
+              ) : null}
+            </View>
+            {todayMeals.length === 0 ? (
+              <Text style={styles.mutedText}>Todavía no has registrado comidas hoy.</Text>
+            ) : (
+              todayMeals.map((meal) => (
+                <View key={meal.id} style={styles.mealRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mealName}>{meal.name}</Text>
+                    <Text style={styles.mealMacros}>
+                      P{meal.proteinG} · C{meal.carbsG} · G{meal.fatG}
+                    </Text>
+                  </View>
+                  <Text style={styles.mealKcal}>{meal.calories} kcal</Text>
+                </View>
+              ))
+            )}
+          </Card>
+        </>
+      )}
+
+      {/* Fotos de progreso (antes en la pestaña Progreso). */}
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Fotos de progreso</Text>
+        <Text style={styles.hint}>
+          Sube fotos de frente, perfil y espalda. Solo tú y tu entrenador las veréis.
+        </Text>
+        <View style={styles.poseRow}>
+          {PHOTO_POSES.map((pose) => (
+            <Button
+              key={pose.key}
+              title={pose.label}
+              variant="secondary"
+              onPress={() => handleAddPhoto(pose.key)}
+              loading={uploadingPose === pose.key}
+              style={styles.poseBtn}
+            />
+          ))}
+        </View>
+        {photos.length === 0 ? (
+          <Text style={styles.mutedText}>Todavía no has subido fotos de progreso.</Text>
+        ) : (
+          <View style={styles.photoGrid}>
+            {photos.map((p) => (
+              <Pressable
+                key={p.id}
+                style={styles.photoCard}
+                onLongPress={() => handleDeletePhoto(p.id)}
+                delayLongPress={350}
+              >
+                <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
+                <View style={styles.photoInfo}>
+                  <Text style={styles.photoPose}>
+                    {PHOTO_POSES.find((x) => x.key === p.pose)?.label ?? p.pose}
+                  </Text>
+                  <Text style={styles.photoDate}>
+                    {new Date(p.date).toLocaleDateString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
         )}
+        {photos.length > 0 ? (
+          <Text style={styles.deleteHint}>Mantén pulsada una foto para borrarla.</Text>
+        ) : null}
       </Card>
     </ScreenContainer>
+  );
+}
+
+/** Casilla de macro para la rejilla 2x2, con mini barra de progreso. */
+function MacroTile({
+  label,
+  consumed,
+  target,
+  unit,
+}: {
+  label: string;
+  consumed: number;
+  target: number;
+  unit: string;
+}) {
+  const ratio = target > 0 ? Math.min(consumed / target, 1) : 0;
+  const over = target > 0 && consumed > target;
+  return (
+    <View style={styles.macroTile}>
+      <Text style={styles.macroLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={styles.macroValue}>
+        <Text style={[styles.macroConsumed, over && { color: colors.danger }]}>
+          {Math.round(consumed)}
+        </Text>
+        <Text style={styles.macroTarget}>
+          {' '}/ {Math.round(target)} {unit}
+        </Text>
+      </Text>
+      <View style={styles.macroTrack}>
+        <View
+          style={[
+            styles.macroFill,
+            { width: `${ratio * 100}%`, backgroundColor: over ? colors.danger : colors.primary },
+          ]}
+        />
+      </View>
+    </View>
   );
 }
 
@@ -213,6 +382,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  hint: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm, lineHeight: 18 },
   hoyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -224,6 +394,30 @@ const styles = StyleSheet.create({
   calBig: { ...typography.h1, color: colors.primaryBright, fontFamily: fonts.heading, fontSize: 44, lineHeight: 48 },
   calUnit: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
   calSub: { ...typography.small, color: colors.textFaint, marginTop: 4 },
+  macroGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  macroTile: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    minWidth: 130,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+  },
+  macroLabel: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  macroValue: { marginTop: 2, marginBottom: spacing.xs },
+  macroConsumed: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  macroTarget: { ...typography.small, color: colors.textFaint },
+  macroTrack: {
+    height: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  macroFill: { height: '100%', borderRadius: radius.full },
   row: { flexDirection: 'row', gap: spacing.sm },
   smallField: { flex: 1 },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
@@ -241,4 +435,24 @@ const styles = StyleSheet.create({
   mealName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   mealMacros: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   mealKcal: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
+  exampleRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  examplePhoto: { width: 64, height: 64, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  exampleName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  exampleDesc: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
+  poseRow: { flexDirection: 'row', gap: spacing.sm },
+  poseBtn: { flex: 1, paddingHorizontal: spacing.sm },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  photoCard: { width: '31%' },
+  photo: { width: '100%', aspectRatio: 0.8, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  photoInfo: { marginTop: 4 },
+  photoPose: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, fontSize: 11 },
+  photoDate: { ...typography.small, color: colors.textFaint, fontSize: 10 },
+  deleteHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm, textAlign: 'center' },
 });

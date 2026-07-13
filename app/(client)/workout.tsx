@@ -38,7 +38,6 @@ import { notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
 import { shareRecordImage } from '../../lib/recordCard';
 import { startRest, stopRest } from '../../lib/restTimerStore';
-import { suggestWarmup } from '../../lib/warmup';
 import {
   computeAchievements,
   currentStreak,
@@ -207,10 +206,20 @@ export default function WorkoutScreen() {
         if (cancelled) return;
         setCycleAnchor(anchor);
         if (data && data.days.length > 0) {
-          // Preselecciona el día que toca hoy (Método REIN TENA o semanal).
+          // Preselecciona el día que toca hoy. Si el alumno YA entrenó hoy,
+          // abrimos ese mismo día (aunque esté completado) para que vea su
+          // resumen del día, no el primer día de la rutina.
           const session = resolveTodaySession(data, anchor ?? undefined);
+          const doneToday = logs.find(
+            (l) => l.routineId === data.id && isSameDay(l.date)
+          );
+          const doneTodayDay = doneToday
+            ? data.days.find((d) => d.name === doneToday.dayName)
+            : undefined;
           const fallback = data.days.find((d) => !d.isRest) ?? data.days[0];
-          setSelectedDayId((prev) => prev ?? session.day?.id ?? fallback.id);
+          setSelectedDayId(
+            (prev) => prev ?? doneTodayDay?.id ?? session.day?.id ?? fallback.id
+          );
         }
         setLoading(false);
       })();
@@ -914,7 +923,7 @@ export default function WorkoutScreen() {
         <View style={styles.warmupCard}>
           <Pressable onPress={() => setWarmupOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
             <Ionicons name="flame-outline" size={15} color={colors.primary} />
-            <Text style={styles.warmupTitle}>Calentamiento sugerido</Text>
+            <Text style={styles.warmupTitle}>Calentamiento</Text>
             <Ionicons
               name={warmupOpen ? 'chevron-up' : 'chevron-down'}
               size={16}
@@ -923,11 +932,17 @@ export default function WorkoutScreen() {
           </Pressable>
           {warmupOpen ? (
             <View style={styles.warmupList}>
-              {suggestWarmup(
-                day.exercises.map((e) => muscleByExercise[e.exerciseId]).filter(Boolean)
-              ).map((item) => (
-                <View key={item} style={styles.warmupItem}>
-                  <Text style={styles.warmupDot}>·</Text>
+              {[
+                'Cardio suave · 5 min',
+                'Movilidad con gomas y activación',
+                day.approachesNote?.trim()
+                  ? `Aproximaciones · ${day.approachesNote.trim()}`
+                  : 'Aproximaciones (series progresivas hacia tu peso de trabajo)',
+              ].map((item, i) => (
+                <View key={i} style={styles.warmupStep}>
+                  <View style={styles.warmupNum}>
+                    <Text style={styles.warmupNumText}>{i + 1}</Text>
+                  </View>
                   <Text style={styles.warmupText}>{item}</Text>
                 </View>
               ))}
@@ -936,7 +951,7 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
-      {day && !day.isRest ? (
+      {day && !day.isRest && day.showIntervalTimer ? (
         <View style={styles.warmupCard}>
           <Pressable
             onPress={() => setIntervalOpen((o) => !o)}
@@ -1104,7 +1119,7 @@ export default function WorkoutScreen() {
                     // Precarga visual con el peso de la última vez: cero tecleo
                     // si repites carga (solo escribes si cambias de peso).
                     placeholder={prev?.weight || '—'}
-                    keyboardType="numeric"
+                    keyboardType="decimal-pad"
                     style={styles.setFieldInput}
                   />
                 ) : null}
@@ -1357,9 +1372,19 @@ const styles = StyleSheet.create({
   },
   warmupHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
-  warmupList: { marginTop: spacing.sm, gap: 4 },
-  warmupItem: { flexDirection: 'row', gap: spacing.xs },
-  warmupDot: { color: colors.primary, fontFamily: fonts.heading },
+  warmupList: { marginTop: spacing.sm, gap: spacing.sm },
+  warmupStep: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  warmupNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warmupNumText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
   warmupText: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 18 },
   restoredAction: {
     ...typography.small,
