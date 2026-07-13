@@ -126,9 +126,6 @@ export function Onboarding({
               onDone={(result, goal) => onDone(result, goal)}
             />
           </View>
-          <Pressable onPress={() => onDone()} hitSlop={8} style={styles.skip}>
-            <Text style={styles.skipText}>Lo haré más tarde</Text>
-          </Pressable>
         </ScrollView>
       </SafeAreaView>
     );

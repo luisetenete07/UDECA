@@ -67,29 +67,28 @@ export function MacroCalculator({
         ))}
       </View>
 
-      <View style={styles.row}>
-        <TextField
-          placeholder="Edad"
-          keyboardType="numeric"
-          value={age}
-          onChangeText={setAge}
-          style={styles.field}
-        />
-        <TextField
-          placeholder="Altura (cm)"
-          keyboardType="numeric"
-          value={height}
-          onChangeText={setHeight}
-          style={styles.field}
-        />
-        <TextField
-          placeholder="Peso (kg)"
-          keyboardType="decimal-pad"
-          value={weight}
-          onChangeText={setWeight}
-          style={styles.field}
-        />
-      </View>
+      {/* Campos apilados: en móvil los tres caben y se ven siempre. */}
+      <TextField
+        label="Edad"
+        placeholder="años"
+        keyboardType="numeric"
+        value={age}
+        onChangeText={setAge}
+      />
+      <TextField
+        label="Altura (cm)"
+        placeholder="Ej. 178"
+        keyboardType="numeric"
+        value={height}
+        onChangeText={setHeight}
+      />
+      <TextField
+        label="Peso (kg)"
+        placeholder="Ej. 72,5"
+        keyboardType="decimal-pad"
+        value={weight}
+        onChangeText={setWeight}
+      />
 
       <Text style={styles.secLabel}>Nivel de actividad</Text>
       {ACTIVITY_OPTIONS.map((opt) => (
