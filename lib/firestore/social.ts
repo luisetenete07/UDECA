@@ -10,7 +10,11 @@ const collectionRef = () => collection(db, 'socialStats');
  * Escribe/actualiza el documento público de estadísticas del propio usuario
  * a partir de sus entrenamientos. Solo incluye métricas no sensibles.
  */
-export async function syncMySocialStats(profile: UserProfile, workoutLogs: WorkoutLog[]) {
+export async function syncMySocialStats(
+  profile: UserProfile,
+  workoutLogs: WorkoutLog[],
+  lastPR?: { exerciseName: string; label: string; date: number }
+) {
   if (!profile.trainerId) return;
 
   // Sesiones dentro del periodo del reto activo del grupo (si lo hay).
@@ -35,14 +39,17 @@ export async function syncMySocialStats(profile: UserProfile, workoutLogs: Worko
     currentStreak: currentStreak(workoutLogs),
     sessionsThisWeek: sessionsThisWeek(workoutLogs),
     totalWorkouts: workoutLogs.length,
-    challengeSessions,
+    challengeSessions: challengeSessions ?? 0,
+    // Nuevo récord de esta sesión; si no lo hay, merge conserva el anterior.
+    lastPR,
     updatedAt: Date.now(),
   };
   // Firestore rechaza campos `undefined`; los omitimos.
   const clean = Object.fromEntries(
     Object.entries(stats).filter(([, v]) => v !== undefined)
   ) as SocialStats;
-  await setDoc(doc(db, 'socialStats', profile.uid), clean);
+  // merge: los campos no incluidos (p. ej. lastPR previo) se conservan.
+  await setDoc(doc(db, 'socialStats', profile.uid), clean, { merge: true });
 }
 
 /** Ranking de miembros del mismo entrenador, ordenado por racha y sesiones. */

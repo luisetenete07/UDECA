@@ -82,19 +82,25 @@ export function startOfWeek(ts: number): number {
  * hoy o ayer) en los que se registró al menos una sesión. Es la métrica de
  * constancia que usan apps como Strava, Duolingo o Future.
  */
+/**
+ * Racha con protector: cuenta DÍAS ENTRENADOS y tolera un día de descanso
+ * entre sesiones (el descanso forma parte del plan — en el Método REIN TENA
+ * se entrena a días alternos). Se rompe con 2+ días seguidos sin entrenar.
+ */
 export function currentStreak(logs: WorkoutLog[]): number {
   if (logs.length === 0) return 0;
-  const days = new Set(logs.map((l) => startOfDay(l.date)));
+  const DAY = 24 * 60 * 60 * 1000;
+  const days = [...new Set(logs.map((l) => startOfDay(l.date)))].sort((a, b) => b - a);
   const today = startOfDay(Date.now());
 
-  // La racha sigue viva si entrenó hoy o ayer.
-  let cursor = days.has(today) ? today : addDays(today, -1);
-  if (!days.has(cursor)) return 0;
+  // Viva si entrenó hoy, ayer o anteayer (un descanso de por medio cuenta).
+  if (today - days[0] > 2 * DAY) return 0;
 
-  let streak = 0;
-  while (days.has(cursor)) {
-    streak += 1;
-    cursor = addDays(cursor, -1);
+  let streak = 1;
+  for (let i = 1; i < days.length; i++) {
+    const gapDays = Math.round((days[i - 1] - days[i]) / DAY);
+    if (gapDays <= 2) streak += 1;
+    else break;
   }
   return streak;
 }

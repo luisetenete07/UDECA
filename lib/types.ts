@@ -325,6 +325,8 @@ export interface SocialStats {
   totalWorkouts: number;
   /** Sesiones dentro del periodo del reto activo (para el ranking del reto). */
   challengeSessions?: number;
+  /** Último récord personal (para el tablón de récords del grupo). */
+  lastPR?: { exerciseName: string; label: string; date: number };
   updatedAt: number;
 }
 

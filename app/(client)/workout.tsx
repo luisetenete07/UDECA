@@ -488,7 +488,13 @@ export default function WorkoutScreen() {
       try {
         await createWorkoutLog(payload);
         freshLogs = await getWorkoutLogsForClient(profile.uid);
-        syncMySocialStats(profile, freshLogs).catch(() => {});
+        syncMySocialStats(
+          profile,
+          freshLogs,
+          prs.length > 0
+            ? { exerciseName: prs[0].exerciseName, label: prs[0].label, date: Date.now() }
+            : undefined
+        ).catch(() => {});
         // Aviso al coach en tiempo real (nunca bloquea el guardado).
         notifyUser(
           routine.trainerId,

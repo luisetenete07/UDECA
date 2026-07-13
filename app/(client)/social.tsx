@@ -128,6 +128,34 @@ export default function SocialScreen() {
         </Card>
       ) : null}
 
+      {(() => {
+        // Tablón de récords: PRs del grupo conseguidos esta semana.
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const weekPRs = members
+          .filter((m) => m.lastPR && m.lastPR.date >= weekAgo)
+          .sort((a, b) => (b.lastPR?.date ?? 0) - (a.lastPR?.date ?? 0));
+        if (weekPRs.length === 0) return null;
+        return (
+          <>
+            <Text style={styles.sectionTitle}>Récords de la semana 🏆</Text>
+            <Card accent style={{ marginBottom: spacing.lg }}>
+              {weekPRs.map((m) => (
+                <View key={m.uid} style={styles.prBoardRow}>
+                  <Avatar name={m.name} photoURL={m.photoURL} size={34} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name}>{m.name.split(' ')[0]}</Text>
+                    <Text style={styles.prBoardDetail} numberOfLines={1}>
+                      {m.lastPR?.exerciseName}
+                    </Text>
+                  </View>
+                  <Text style={styles.prBoardValue}>{m.lastPR?.label}</Text>
+                </View>
+              ))}
+            </Card>
+          </>
+        );
+      })()}
+
       <Text style={styles.sectionTitle}>Ranking de racha</Text>
 
       {members.length === 0 ? (
@@ -174,6 +202,14 @@ export default function SocialScreen() {
 }
 
 const styles = StyleSheet.create({
+  prBoardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  prBoardDetail: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  prBoardValue: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   summaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
