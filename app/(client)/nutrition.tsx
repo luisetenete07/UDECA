@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -21,7 +21,9 @@ import {
   getProgressPhotosForClient,
 } from '../../lib/firestore/progressPhotos';
 import { getMealBooksForTrainer } from '../../lib/firestore/mealBooks';
+import { updateUserProfile } from '../../lib/firestore/users';
 import { pickProgressPhoto } from '../../lib/image';
+import { MacroCalculator } from '../../components/MacroCalculator';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   PHOTO_POSES,
@@ -43,7 +45,7 @@ function isToday(timestamp: number) {
 }
 
 export default function NutritionScreen() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [plan, setPlan] = useState<NutritionPlan | null>(null);
   const [meals, setMeals] = useState<MealLog[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
@@ -58,6 +60,8 @@ export default function NutritionScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
+  const [zoomPhoto, setZoomPhoto] = useState<string | null>(null);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -91,8 +95,51 @@ export default function NutritionScreen() {
     { calories: 0, proteinG: 0, carbsG: 0, fatG: 0 }
   );
 
+  // Objetivos del día: el plan del coach manda; si no hay, los macros que el
+  // propio alumno calculó (onboarding/calculadora) guardados en su perfil.
+  const nt = profile?.nutritionTargets;
+  const targets = plan
+    ? {
+        name: plan.name,
+        dailyCalories: plan.dailyCalories,
+        proteinG: plan.proteinG,
+        carbsG: plan.carbsG,
+        fatG: plan.fatG,
+        fromCoach: true,
+      }
+    : nt
+      ? {
+          name: 'Mis macros',
+          dailyCalories: nt.dailyCalories,
+          proteinG: nt.proteinG,
+          carbsG: nt.carbsG,
+          fatG: nt.fatG,
+          fromCoach: false,
+        }
+      : null;
+  const mealTrainerId = plan?.trainerId ?? profile?.trainerId ?? '';
+
+  const handleSaveMacros = async (result: {
+    dailyCalories: number;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+  }, goal: string) => {
+    if (!profile) return;
+    setCalcOpen(false);
+    try {
+      await updateUserProfile(profile.uid, {
+        nutritionTargets: { ...result, goal, updatedAt: Date.now() },
+      });
+      await refreshProfile();
+      showToast('Macros actualizados');
+    } catch {
+      showToast('No se pudieron guardar los macros');
+    }
+  };
+
   const handleAddMeal = async () => {
-    if (!profile || !plan) return;
+    if (!profile) return;
     const cal = Number(calories) || 0;
     if (!mealName.trim() || cal <= 0) {
       setError('Indica un nombre y las calorías de la comida.');
@@ -102,7 +149,7 @@ export default function NutritionScreen() {
     setSaving(true);
     try {
       await createMealLog({
-        trainerId: plan.trainerId,
+        trainerId: mealTrainerId,
         clientId: profile.uid,
         date: Date.now(),
         name: mealName.trim(),
@@ -178,37 +225,47 @@ export default function NutritionScreen() {
     <ScreenContainer>
       <Text style={styles.title}>Mi nutrición</Text>
 
-      {!plan ? (
-        <EmptyState
-          icon="restaurant-outline"
-          title="Sin plan nutricional"
-          subtitle="Tu entrenador todavía no te ha asignado un plan de nutrición."
-        />
+      {!targets ? (
+        <Card style={styles.section}>
+          <EmptyState
+            icon="restaurant-outline"
+            title="Aún no tienes objetivos"
+            subtitle="Calcula tus calorías y macros en 30 segundos, o espera a que tu entrenador te asigne un plan."
+          />
+          <Button title="Calcular mis macros" onPress={() => setCalcOpen(true)} />
+        </Card>
       ) : (
         <>
           <Card accent style={styles.section}>
             <View style={styles.hoyHeader}>
               <Text style={styles.sectionTitle}>Hoy</Text>
-              {plan.name ? <Text style={styles.planName}>{plan.name}</Text> : null}
+              <Text style={styles.planName}>{targets.name}</Text>
             </View>
 
             <View style={styles.calSummary}>
-              <Text style={styles.calBig}>{Math.max(0, plan.dailyCalories - totals.calories)}</Text>
+              <Text style={styles.calBig}>{Math.max(0, targets.dailyCalories - totals.calories)}</Text>
               <Text style={styles.calUnit}>
-                {totals.calories > plan.dailyCalories ? 'kcal de más' : 'kcal restantes'}
+                {totals.calories > targets.dailyCalories ? 'kcal de más' : 'kcal restantes'}
               </Text>
               <Text style={styles.calSub}>
-                {totals.calories} / {plan.dailyCalories} kcal consumidas
+                {totals.calories} / {targets.dailyCalories} kcal consumidas
               </Text>
             </View>
 
             {/* Macros en rejilla 2x2: nunca se recortan en móvil. */}
             <View style={styles.macroGrid}>
-              <MacroTile label="Calorías" consumed={totals.calories} target={plan.dailyCalories} unit="kcal" />
-              <MacroTile label="Proteína" consumed={totals.proteinG} target={plan.proteinG} unit="g" />
-              <MacroTile label="Carbohidratos" consumed={totals.carbsG} target={plan.carbsG} unit="g" />
-              <MacroTile label="Grasas" consumed={totals.fatG} target={plan.fatG} unit="g" />
+              <MacroTile label="Calorías" consumed={totals.calories} target={targets.dailyCalories} unit="kcal" />
+              <MacroTile label="Proteína" consumed={totals.proteinG} target={targets.proteinG} unit="g" />
+              <MacroTile label="Carbohidratos" consumed={totals.carbsG} target={targets.carbsG} unit="g" />
+              <MacroTile label="Grasas" consumed={totals.fatG} target={targets.fatG} unit="g" />
             </View>
+
+            {!targets.fromCoach ? (
+              <Pressable onPress={() => setCalcOpen(true)} style={styles.recalcBtn} hitSlop={6}>
+                <Ionicons name="calculator-outline" size={14} color={colors.primary} />
+                <Text style={styles.recalcText}>Recalcular mis macros</Text>
+              </Pressable>
+            ) : null}
           </Card>
 
           <Card style={styles.section}>
@@ -291,10 +348,14 @@ export default function NutritionScreen() {
               ) : (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {book.photos.map((p) => (
-                    <View key={p.id} style={styles.bookPhotoWrap}>
+                    <Pressable
+                      key={p.id}
+                      style={styles.bookPhotoWrap}
+                      onPress={() => setZoomPhoto(p.imageURL)}
+                    >
                       <Image source={{ uri: p.imageURL }} style={styles.bookPhoto} resizeMode="cover" />
                       {p.caption ? <Text style={styles.bookCaption}>{p.caption}</Text> : null}
-                    </View>
+                    </Pressable>
                   ))}
                 </ScrollView>
               )}
@@ -353,6 +414,31 @@ export default function NutritionScreen() {
           <Text style={styles.deleteHint}>Mantén pulsada una foto para borrarla.</Text>
         ) : null}
       </Card>
+
+      {/* Foto ampliada (lightbox): pulsa fuera o la X para cerrar. */}
+      <Modal visible={!!zoomPhoto} transparent animationType="fade" onRequestClose={() => setZoomPhoto(null)}>
+        <Pressable style={styles.zoomBackdrop} onPress={() => setZoomPhoto(null)}>
+          {zoomPhoto ? (
+            <Image source={{ uri: zoomPhoto }} style={styles.zoomImage} resizeMode="contain" />
+          ) : null}
+          <Pressable style={styles.zoomClose} onPress={() => setZoomPhoto(null)} hitSlop={8}>
+            <Ionicons name="close" size={26} color="#fff" />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Calculadora de macros (recalcular). */}
+      <Modal visible={calcOpen} animationType="slide" onRequestClose={() => setCalcOpen(false)}>
+        <ScreenContainer>
+          <View style={styles.calcHeader}>
+            <Text style={styles.title}>Calcular mis macros</Text>
+            <Pressable onPress={() => setCalcOpen(false)} hitSlop={8}>
+              <Ionicons name="close" size={24} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <MacroCalculator submitLabel="Guardar mis macros" onDone={handleSaveMacros} />
+        </ScreenContainer>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -412,11 +498,37 @@ const styles = StyleSheet.create({
   calBig: { ...typography.h1, color: colors.primaryBright, fontFamily: fonts.heading, fontSize: 44, lineHeight: 48 },
   calUnit: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
   calSub: { ...typography.small, color: colors.textFaint, marginTop: 4 },
-  macroGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  recalcBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: spacing.md,
+  },
+  recalcText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  calcHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  zoomBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomImage: { width: '92%', height: '80%' },
+  zoomClose: { position: 'absolute', top: 44, right: 20 },
+  // Rejilla 2x2 fiable en móvil: dos columnas al 48% con hueco entre ellas.
+  macroGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: spacing.sm,
+  },
   macroTile: {
-    flexGrow: 1,
-    flexBasis: '47%',
-    minWidth: 130,
+    width: '48%',
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
     borderColor: colors.border,

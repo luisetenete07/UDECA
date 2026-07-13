@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
 import { FadeIn } from './FadeIn';
+import { MacroCalculator } from './MacroCalculator';
+import type { Goal, MacroResult } from '../lib/nutritionCalc';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
 
 /**
@@ -38,7 +40,14 @@ function isIOSWeb(): boolean {
   }
 }
 
-export function Onboarding({ name, onDone }: { name?: string; onDone: () => void }) {
+export function Onboarding({
+  name,
+  onDone,
+}: {
+  name?: string;
+  /** Se llama al terminar; con los macros calculados si el alumno los rellenó. */
+  onDone: (targets?: MacroResult, goal?: Goal) => void;
+}) {
   const slides = useMemo<Slide[]>(() => {
     const base: Slide[] = [
       {
@@ -84,10 +93,48 @@ export function Onboarding({ name, onDone }: { name?: string; onDone: () => void
     return base;
   }, [name]);
 
+  // El último paso es la calculadora de macros (deja el plan listo desde ya).
+  const totalSteps = slides.length + 1;
   const [step, setStep] = useState(0);
-  const isLast = step === slides.length - 1;
-  const slide = slides[step];
+  const isCalculator = step === slides.length;
+  const isLastSlide = step === slides.length - 1;
 
+  const Dots = (
+    <View style={styles.dots}>
+      {Array.from({ length: totalSteps }).map((_, i) => (
+        <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
+      ))}
+    </View>
+  );
+
+  if (isCalculator) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView contentContainerStyle={styles.calcContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="nutrition" size={30} color={colors.primary} />
+          </View>
+          <Text style={styles.title}>Tus macros en 30 segundos</Text>
+          <Text style={styles.line}>
+            Calcula tus calorías y macros y los tendrás listos en Nutrición. Podrás
+            recalcularlos cuando quieras.
+          </Text>
+          {Dots}
+          <View style={{ alignSelf: 'stretch' }}>
+            <MacroCalculator
+              submitLabel="Guardar y empezar"
+              onDone={(result, goal) => onDone(result, goal)}
+            />
+          </View>
+          <Pressable onPress={() => onDone()} hitSlop={8} style={styles.skip}>
+            <Text style={styles.skipText}>Lo haré más tarde</Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  const slide = slides[step];
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
@@ -105,22 +152,16 @@ export function Onboarding({ name, onDone }: { name?: string; onDone: () => void
           ))}
         </FadeIn>
 
-        <View style={styles.dots}>
-          {slides.map((_, i) => (
-            <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
-          ))}
-        </View>
+        {Dots}
 
         <Button
-          title={isLast ? '¡A entrenar!' : 'Siguiente'}
-          onPress={() => (isLast ? onDone() : setStep((s) => s + 1))}
+          title={isLastSlide ? 'Calcular mis macros' : 'Siguiente'}
+          onPress={() => setStep((s) => s + 1)}
           style={{ alignSelf: 'stretch' }}
         />
-        {!isLast ? (
-          <Pressable onPress={onDone} hitSlop={8} style={styles.skip}>
-            <Text style={styles.skipText}>Saltar</Text>
-          </Pressable>
-        ) : null}
+        <Pressable onPress={() => onDone()} hitSlop={8} style={styles.skip}>
+          <Text style={styles.skipText}>Saltar</Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -133,6 +174,11 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  calcContent: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    paddingBottom: 48,
   },
   logo: { width: 64, height: 64, borderRadius: 16, marginBottom: spacing.xl, ...shadows.glowGold },
   slide: { alignItems: 'center', minHeight: 240 },

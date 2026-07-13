@@ -10,12 +10,13 @@ import { Onboarding } from '../../components/Onboarding';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
+import { updateUserProfile } from '../../lib/firestore/users';
 import { tabScreenOptions } from '../../lib/navTheme';
 
 const onboardingKey = (uid: string) => `udeca-onboarding-${uid}`;
 
 export default function ClientLayout() {
-  const { loading, firebaseUser, profile, emailVerified } = useAuth();
+  const { loading, firebaseUser, profile, emailVerified, refreshProfile } = useAuth();
   // null = comprobando; true = ya visto; false = mostrar bienvenida.
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
 
@@ -52,9 +53,19 @@ export default function ClientLayout() {
     return (
       <Onboarding
         name={profile.name}
-        onDone={() => {
+        onDone={(targets, goal) => {
           setOnboardingSeen(true);
           AsyncStorage.setItem(onboardingKey(profile.uid), '1').catch(() => {});
+          markOnboardingComplete(profile.uid).catch(() => {});
+          // Si el alumno calculó sus macros, los dejamos guardados en su perfil
+          // para que Nutrición los muestre aunque su coach no le asigne plan.
+          if (targets) {
+            updateUserProfile(profile.uid, {
+              nutritionTargets: { ...targets, goal, updatedAt: Date.now() },
+            })
+              .then(() => refreshProfile())
+              .catch(() => {});
+          }
         }}
       />
     );

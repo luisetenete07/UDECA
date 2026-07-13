@@ -50,6 +50,18 @@ export interface UserProfile {
   /** Onboarding completado (una vez por cuenta, sincronizado entre dispositivos). */
   onboardingCompleted?: boolean;
   /**
+   * Objetivo de macros que el propio alumno calculó (en el onboarding o en la
+   * calculadora): se usa en Nutrición si su coach aún no le asignó un plan.
+   */
+  nutritionTargets?: {
+    dailyCalories: number;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+    goal?: string;
+    updatedAt: number;
+  };
+  /**
    * Sesión de entrenamiento en curso, para sincronizar entre dispositivos de la
    * misma cuenta (series, reps, marcas). Se limpia al terminar o descartar.
    */
