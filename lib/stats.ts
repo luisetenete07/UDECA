@@ -410,6 +410,30 @@ export function weeklySetsByGroup(
   return result;
 }
 
+/**
+ * Mapa muscular: series completadas por grupo muscular en los últimos `days`
+ * días, ordenado de mayor a menor. Grupos sin biblioteca → "Otros".
+ */
+export function setsByMuscleGroup(
+  logs: WorkoutLog[],
+  muscleByExercise: Record<string, string>,
+  days = 28
+): { group: string; sets: number }[] {
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const totals = new Map<string, number>();
+  for (const log of logs) {
+    if (log.date < since) continue;
+    for (const ex of log.exercises) {
+      const group = muscleByExercise[ex.exerciseId] ?? 'Otros';
+      const done = ex.sets.filter((s) => s.completed).length;
+      if (done > 0) totals.set(group, (totals.get(group) ?? 0) + done);
+    }
+  }
+  return [...totals]
+    .map(([group, sets]) => ({ group, sets }))
+    .sort((a, b) => b.sets - a.sets);
+}
+
 export interface MonthlyWorkouts {
   key: string;
   label: string;

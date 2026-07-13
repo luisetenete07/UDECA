@@ -147,6 +147,17 @@ service cloud.firestore {
         && resource.data.trainerId == request.auth.uid;
     }
 
+    // Tests de nivel: marcas verificadas por el entrenador (el alumno las lee).
+    match /levelTests/{testId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+      allow update: if false;
+    }
+
     // Rutinas asignadas a cada cliente.
     match /routines/{routineId} {
       allow read: if request.auth != null

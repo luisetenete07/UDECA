@@ -26,6 +26,7 @@ import {
   isIsometricExercise,
   listExercisesInLogs,
   sessionTotals,
+  setsByMuscleGroup,
   topExercises,
   trainingDays,
   weeklyActivity,
@@ -211,6 +212,8 @@ export default function ProgressScreen() {
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const comparison = thenVsNow(workoutLogs, weightLogs);
+  const muscleMap = setsByMuscleGroup(workoutLogs, muscleByExercise);
+  const muscleMax = muscleMap.length > 0 ? muscleMap[0].sets : 0;
   const weeklySets = weeklySetsByGroup(workoutLogs, muscleByExercise);
   const pushPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pushSets }));
   const pullPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pullSets }));
@@ -424,6 +427,29 @@ export default function ProgressScreen() {
                 emptyMessage="Marca ejercicios como 'Tirón' en tu biblioteca para ver este dato."
               />
             </Card>
+
+            {muscleMap.length > 0 ? (
+              <Card style={styles.section}>
+                <Text style={styles.sectionTitle}>Mapa muscular (28 días)</Text>
+                <Text style={styles.photoHint}>Series completadas por patrón de movimiento.</Text>
+                {muscleMap.map((m) => (
+                  <View key={m.group} style={styles.muscleRow}>
+                    <Text style={styles.muscleLabel} numberOfLines={1}>
+                      {m.group}
+                    </Text>
+                    <View style={styles.muscleTrack}>
+                      <View
+                        style={[
+                          styles.muscleFill,
+                          { width: `${Math.max(6, (m.sets / muscleMax) * 100)}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.muscleValue}>{m.sets}</Text>
+                  </View>
+                ))}
+              </Card>
+            ) : null}
 
             <Card style={styles.section}>
               <Text style={styles.sectionTitle}>Ejercicios más entrenados</Text>
@@ -706,6 +732,31 @@ const styles = StyleSheet.create({
   },
   logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
   logDate: { ...typography.small, color: colors.textMuted },
+  // ----- Mapa muscular -----
+  muscleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  muscleLabel: { ...typography.small, color: colors.text, width: 104, fontFamily: fonts.medium },
+  muscleTrack: {
+    flex: 1,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  muscleFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 5 },
+  muscleValue: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    width: 30,
+    textAlign: 'right',
+  },
   // ----- Comparador 3 meses → hoy -----
   compareRow: {
     flexDirection: 'row',

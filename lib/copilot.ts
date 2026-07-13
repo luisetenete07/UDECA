@@ -119,6 +119,20 @@ export function buildCopilotReport(
     }
   }
 
+  // Aniversarios: alumnos que cumplen un múltiplo de 3 meses contigo esta
+  // semana (momento perfecto para felicitar... y para fidelizar).
+  for (const client of clients) {
+    if (!client.createdAt) continue;
+    const months = Math.floor((now - client.createdAt) / (30 * DAY_MS));
+    if (months < 3 || months % 3 !== 0) continue;
+    const anniversary = client.createdAt + months * 30 * DAY_MS;
+    if (anniversary >= week && anniversary < week + 7 * DAY_MS) {
+      highlights.push(
+        `🎉 ${client.name.split(' ')[0]} cumple ${months} meses entrenando contigo esta semana`
+      );
+    }
+  }
+
   return {
     attention,
     highlights,

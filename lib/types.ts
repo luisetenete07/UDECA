@@ -228,6 +228,23 @@ export interface RoutineTemplate {
   createdAt: number;
 }
 
+/**
+ * Test de nivel: marca máxima verificada por el coach en un hito de
+ * calistenia (máx. dominadas, aguante de planche...). Historial objetivo del
+ * nivel real del alumno, separado del día a día de las rutinas.
+ */
+export interface LevelTest {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  /** Nombre del test (p. ej. "Dominadas máximas", "Planche hold"). */
+  name: string;
+  value: number;
+  unit: 'reps' | 'seconds';
+  date: number;
+  createdAt: number;
+}
+
 /** Pago registrado por el entrenador (para el historial de ingresos). */
 export interface Payment {
   id: string;
