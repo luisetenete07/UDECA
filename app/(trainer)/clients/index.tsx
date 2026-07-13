@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../components/Avatar';
 import { FadeIn } from '../../../components/FadeIn';
@@ -11,9 +11,11 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ListSkeleton } from '../../../components/Skeleton';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
+import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
 import { getClientsForTrainer } from '../../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
+import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
@@ -143,10 +145,41 @@ export default function ClientsScreen() {
     {} as Record<PaymentStatus, number>
   );
 
+  const handleExportCsv = () => {
+    const fmt = (ts?: number) => (ts ? new Date(ts).toLocaleDateString('es-ES') : '');
+    const rows = clients.map((c) => [
+      c.name,
+      c.email,
+      c.paymentStatus ? PAYMENT_STATUS_LABEL[c.paymentStatus] : '',
+      c.monthlyFeeEur ?? '',
+      fmt(c.nextPaymentDate),
+      fmt(lastTrained[c.uid]),
+      c.goal ?? '',
+    ]);
+    const csv = buildCsv(
+      ['Nombre', 'Email', 'Pago', 'Cuota (€)', 'Próximo pago', 'Última sesión', 'Objetivo'],
+      rows
+    );
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (!downloadCsv(`udeca-clientes-${stamp}.csv`, csv)) {
+      showToast('La exportación solo está disponible en la versión web');
+    }
+  };
+
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={onRefresh}>
-      <Text style={styles.title}>Tus clientes</Text>
-      <Text style={styles.subtitle}>{clients.length} cliente(s) activos</Text>
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Tus clientes</Text>
+          <Text style={styles.subtitle}>{clients.length} cliente(s) activos</Text>
+        </View>
+        {clients.length > 0 && Platform.OS === 'web' ? (
+          <Pressable onPress={handleExportCsv} style={styles.exportBtn} hitSlop={6}>
+            <Ionicons name="download-outline" size={15} color={colors.primary} />
+            <Text style={styles.exportText}>Exportar</Text>
+          </Pressable>
+        ) : null}
+      </View>
 
       {clients.length > 0 ? (
         <TextField
@@ -261,8 +294,22 @@ export default function ClientsScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg },
   title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
+  subtitle: { ...typography.body, color: colors.textMuted },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: spacing.xs,
+  },
+  exportText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
   search: { marginBottom: spacing.sm },
   filterRow: { marginBottom: spacing.sm },
   filterChip: {

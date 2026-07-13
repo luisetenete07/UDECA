@@ -114,6 +114,8 @@ export default function ClientDetailScreen() {
   const [paymentReminderSent, setPaymentReminderSent] = useState(false);
   const [coachNote, setCoachNote] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
+  const [sendingTemplate, setSendingTemplate] = useState<string | null>(null);
+  const [sentTemplate, setSentTemplate] = useState<string | null>(null);
   // Tests de nivel (marcas verificadas por el coach).
   const [levelTests, setLevelTests] = useState<LevelTest[]>([]);
   const [testName, setTestName] = useState('');
@@ -280,6 +282,21 @@ export default function ClientDetailScreen() {
       showToast(e instanceof Error ? e.message : 'No se pudo enviar');
     } finally {
       setRemindingPayment(false);
+    }
+  };
+
+  // Envía una plantilla de mensaje al alumno (push), con su nombre.
+  const handleSendTemplate = async (template: { key: string; title: string; body: string }) => {
+    if (!id) return;
+    setSendingTemplate(template.key);
+    try {
+      await notifyUser(id, template.title, template.body);
+      setSentTemplate(template.key);
+      showToast('Mensaje enviado');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo enviar');
+    } finally {
+      setSendingTemplate(null);
     }
   };
 
@@ -558,6 +575,58 @@ export default function ClientDetailScreen() {
           style={{ height: 96, textAlignVertical: 'top', marginTop: spacing.sm, marginBottom: 0 }}
         />
         {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
+      </Card>
+
+      <Card style={styles.section}>
+        <View style={styles.titleRow}>
+          <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Mensajes rápidos</Text>
+        </View>
+        <Text style={styles.mutedText}>Envíale un aviso al móvil en un toque.</Text>
+        <View style={styles.templateRow}>
+          {[
+            {
+              key: 'motivate',
+              chip: '💪 Ánimo',
+              title: '¡A darlo todo!',
+              body: `${client.name.split(' ')[0]}, hoy toca sesión. Confío en ti, ¡a por ella! 💪`,
+            },
+            {
+              key: 'great',
+              chip: '🔥 Buen trabajo',
+              title: '¡Gran trabajo!',
+              body: `${client.name.split(' ')[0]}, estás rindiendo genial esta semana. Sigue así. 🔥`,
+            },
+            {
+              key: 'checkin',
+              chip: '📋 Check-in',
+              title: 'Tu check-in semanal',
+              body: `${client.name.split(' ')[0]}, cuéntame cómo ha ido tu semana con el check-in. 🙌`,
+            },
+            {
+              key: 'comeback',
+              chip: '👋 Te echo de menos',
+              title: 'Retomemos el ritmo',
+              body: `${client.name.split(' ')[0]}, hace unos días que no entrenas. ¿Retomamos? Aquí estoy. 👋`,
+            },
+          ].map((t) => (
+            <Pressable
+              key={t.key}
+              onPress={() => handleSendTemplate(t)}
+              disabled={sendingTemplate !== null}
+              style={[styles.templateChip, sentTemplate === t.key && styles.templateChipSent]}
+            >
+              <Text
+                style={[
+                  styles.templateChipText,
+                  sentTemplate === t.key && styles.templateChipTextSent,
+                ]}
+              >
+                {sentTemplate === t.key ? 'Enviado ✓' : t.chip}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       </Card>
 
       <Card style={styles.section}>
@@ -1051,6 +1120,18 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   testValue: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
+  templateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
+  templateChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  templateChipSent: { borderColor: '#2E7D5B', backgroundColor: colors.primaryMuted },
+  templateChipText: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, fontSize: 12 },
+  templateChipTextSent: { color: '#2E7D5B' },
   habitAddRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
