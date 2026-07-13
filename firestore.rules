@@ -202,6 +202,20 @@ service cloud.firestore {
         && resource.data.trainerId == request.auth.uid;
     }
 
+    // Libretas de comida del entrenador (recetas/fotos). Las sube el coach y
+    // las leen TODOS sus alumnos (igual que la biblioteca de ejercicios).
+    match /mealBooks/{bookId} {
+      allow read: if request.auth != null
+        && (
+          resource.data.trainerId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId == resource.data.trainerId
+        );
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
     // Comidas registradas por cada cliente.
     match /mealLogs/{logId} {
       allow read: if request.auth != null

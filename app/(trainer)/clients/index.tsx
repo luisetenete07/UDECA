@@ -181,6 +181,20 @@ export default function ClientsScreen() {
         ) : null}
       </View>
 
+      <Pressable
+        onPress={() => router.push('/(trainer)/clients/meal-books')}
+        style={styles.navEntry}
+      >
+        <View style={styles.navEntryIcon}>
+          <Ionicons name="book-outline" size={18} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.navEntryTitle}>Libretas de comida</Text>
+          <Text style={styles.navEntrySub}>Recetas y platos por foto para todos tus alumnos</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
+
       {clients.length > 0 ? (
         <TextField
           placeholder="Buscar cliente..."
@@ -310,6 +324,29 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   exportText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
+  navEntry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: spacing.md,
+  },
+  navEntryIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navEntryTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  navEntrySub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   search: { marginBottom: spacing.sm },
   filterRow: { marginBottom: spacing.sm },
   filterChip: {

@@ -325,20 +325,6 @@ export interface WeightLog {
   createdAt: number;
 }
 
-/**
- * Ejemplo de comida que el entrenador sube al plan (p. ej. "Desayuno") con una
- * foto de referencia y una descripción, para que el alumno vea qué comer.
- */
-export interface MealExample {
-  id: string;
-  /** Momento del día: "Desayuno", "Comida", "Cena", "Snack"... */
-  name: string;
-  /** Foto de ejemplo (data URL comprimida). */
-  imageURL: string;
-  /** Descripción opcional (ingredientes, cantidades). */
-  description?: string;
-}
-
 export interface NutritionPlan {
   id: string;
   trainerId: string;
@@ -350,8 +336,29 @@ export interface NutritionPlan {
   carbsG: number;
   fatG: number;
   notes?: string;
-  /** Fotos de ejemplo de comidas subidas por el entrenador. */
-  mealExamples?: MealExample[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Una foto dentro de una libreta de comida del entrenador. */
+export interface MealBookPhoto {
+  id: string;
+  /** Foto (data URL comprimida). */
+  imageURL: string;
+  /** Pie de foto opcional (nombre del plato, ingredientes...). */
+  caption?: string;
+}
+
+/**
+ * "Libreta" / cuaderno de comidas que el entrenador sube UNA vez y comparten
+ * TODOS sus alumnos (recetas, ejemplos de platos por foto). Se ve dentro de la
+ * app, al final de la sección de nutrición del alumno.
+ */
+export interface MealBook {
+  id: string;
+  trainerId: string;
+  title: string;
+  photos: MealBookPhoto[];
   createdAt: number;
   updatedAt: number;
 }

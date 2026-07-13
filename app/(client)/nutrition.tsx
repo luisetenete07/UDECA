@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -20,9 +20,17 @@ import {
   deleteProgressPhoto,
   getProgressPhotosForClient,
 } from '../../lib/firestore/progressPhotos';
+import { getMealBooksForTrainer } from '../../lib/firestore/mealBooks';
 import { pickProgressPhoto } from '../../lib/image';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
-import { PHOTO_POSES, type MealLog, type NutritionPlan, type PhotoPose, type ProgressPhoto } from '../../lib/types';
+import {
+  PHOTO_POSES,
+  type MealBook,
+  type MealLog,
+  type NutritionPlan,
+  type PhotoPose,
+  type ProgressPhoto,
+} from '../../lib/types';
 
 function isToday(timestamp: number) {
   const d = new Date(timestamp);
@@ -39,6 +47,7 @@ export default function NutritionScreen() {
   const [plan, setPlan] = useState<NutritionPlan | null>(null);
   const [meals, setMeals] = useState<MealLog[]>([]);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
+  const [books, setBooks] = useState<MealBook[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [mealName, setMealName] = useState('');
@@ -52,14 +61,16 @@ export default function NutritionScreen() {
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [planData, mealData, photoData] = await Promise.all([
+    const [planData, mealData, photoData, bookData] = await Promise.all([
       getActiveNutritionPlanForClient(profile.uid),
       getMealLogsForClient(profile.uid),
       getProgressPhotosForClient(profile.uid),
+      profile.trainerId ? getMealBooksForTrainer(profile.trainerId).catch(() => []) : Promise.resolve([]),
     ]);
     setPlan(planData);
     setMeals(mealData);
     setPhotos(photoData);
+    setBooks(bookData);
     setLoading(false);
   }, [profile]);
 
@@ -239,24 +250,6 @@ export default function NutritionScreen() {
             <Button title="Añadir comida" onPress={handleAddMeal} loading={saving} />
           </Card>
 
-          {plan.mealExamples && plan.mealExamples.length > 0 ? (
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Ejemplos de comidas de tu coach</Text>
-              <Text style={styles.hint}>Fotos de referencia para saber qué preparar.</Text>
-              {plan.mealExamples.map((ex) => (
-                <View key={ex.id} style={styles.exampleRow}>
-                  <Image source={{ uri: ex.imageURL }} style={styles.examplePhoto} resizeMode="cover" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.exampleName}>{ex.name}</Text>
-                    {ex.description ? (
-                      <Text style={styles.exampleDesc}>{ex.description}</Text>
-                    ) : null}
-                  </View>
-                </View>
-              ))}
-            </Card>
-          ) : null}
-
           <Card style={styles.section}>
             <View style={styles.hoyHeader}>
               <Text style={styles.sectionTitle}>Comidas de hoy</Text>
@@ -284,6 +277,31 @@ export default function NutritionScreen() {
           </Card>
         </>
       )}
+
+      {/* Libretas de comida del coach: recetas y platos por foto, dentro de la app. */}
+      {books.length > 0 ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Libretas de tu coach</Text>
+          <Text style={styles.hint}>Recetas y ejemplos de platos que ha preparado tu entrenador.</Text>
+          {books.map((book) => (
+            <View key={book.id} style={styles.bookBlock}>
+              <Text style={styles.bookTitle}>{book.title}</Text>
+              {book.photos.length === 0 ? (
+                <Text style={styles.mutedText}>Sin fotos todavía.</Text>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {book.photos.map((p) => (
+                    <View key={p.id} style={styles.bookPhotoWrap}>
+                      <Image source={{ uri: p.imageURL }} style={styles.bookPhoto} resizeMode="cover" />
+                      {p.caption ? <Text style={styles.bookCaption}>{p.caption}</Text> : null}
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          ))}
+        </Card>
+      ) : null}
 
       {/* Fotos de progreso (antes en la pestaña Progreso). */}
       <Card style={styles.section}>
@@ -435,17 +453,16 @@ const styles = StyleSheet.create({
   mealName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   mealMacros: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   mealKcal: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
-  exampleRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
+  bookBlock: {
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    marginTop: spacing.sm,
   },
-  examplePhoto: { width: 64, height: 64, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
-  exampleName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  exampleDesc: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
+  bookTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: spacing.sm },
+  bookPhotoWrap: { marginRight: spacing.sm, width: 130 },
+  bookPhoto: { width: 130, height: 165, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  bookCaption: { ...typography.small, color: colors.textMuted, marginTop: 4, fontSize: 11 },
   poseRow: { flexDirection: 'row', gap: spacing.sm },
   poseBtn: { flex: 1, paddingHorizontal: spacing.sm },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
