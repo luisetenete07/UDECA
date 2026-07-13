@@ -18,6 +18,7 @@ import { Card } from '../../components/Card';
 import { Confetti } from '../../components/Confetti';
 import { FadeIn, PopIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
+import { IntervalTimer } from '../../components/IntervalTimer';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -145,6 +146,7 @@ export default function WorkoutScreen() {
   // Grupo muscular de cada ejercicio (para el calentamiento sugerido del día).
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
   const [warmupOpen, setWarmupOpen] = useState(false);
+  const [intervalOpen, setIntervalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
@@ -929,6 +931,29 @@ export default function WorkoutScreen() {
                   <Text style={styles.warmupText}>{item}</Text>
                 </View>
               ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {day && !day.isRest ? (
+        <View style={styles.warmupCard}>
+          <Pressable
+            onPress={() => setIntervalOpen((o) => !o)}
+            style={styles.warmupHead}
+            hitSlop={6}
+          >
+            <Ionicons name="timer-outline" size={15} color={colors.primary} />
+            <Text style={styles.warmupTitle}>Temporizador de intervalos</Text>
+            <Ionicons
+              name={intervalOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={colors.textMuted}
+            />
+          </Pressable>
+          {intervalOpen ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <IntervalTimer />
             </View>
           ) : null}
         </View>

@@ -244,7 +244,7 @@ export default function ClientsScreen() {
           </Text>
         </Card>
       ) : filtered.length === 0 ? (
-        <EmptyState title="Sin resultados" subtitle="Prueba con otro nombre." />
+        <EmptyState icon="search-outline" title="Sin resultados" subtitle="Prueba con otro nombre o cambia el filtro." />
       ) : (
         filtered.map((client, index) => {
           const activity = activityInfo(lastTrained[client.uid]);

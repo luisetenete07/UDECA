@@ -532,7 +532,7 @@ export default function TrainerDashboard() {
           <Text style={styles.sectionTitle}>Actividad reciente</Text>
         </View>
         {logs.length === 0 ? (
-          <EmptyState title="Todavía no hay entrenamientos registrados" />
+          <EmptyState icon="pulse-outline" title="Aún no hay actividad" subtitle="Cuando tus alumnos entrenen, sus sesiones aparecerán aquí." />
         ) : (
           logs.slice(0, 6).map((log) => {
             const client = byId(log.clientId);

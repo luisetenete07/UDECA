@@ -265,6 +265,7 @@ export default function ProgressScreen() {
         months.length === 0 ? (
           <Card style={styles.section}>
             <EmptyState
+              icon="barbell-outline"
               title="Aún no hay entrenamientos"
               subtitle="Cuando termines una sesión se guardará aquí, en tu registro mensual."
             />
