@@ -33,6 +33,12 @@ import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/w
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor, setCycleAnchorToday } from '../../lib/cycleAnchor';
+import {
+  clearActiveSession,
+  fetchSyncState,
+  saveActiveSession,
+  setCycleAnchorRemote,
+} from '../../lib/firestore/sync';
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
@@ -165,6 +171,11 @@ export default function WorkoutScreen() {
   const [optionalResolved, setOptionalResolved] = useState(false);
   const [restingToday, setRestingToday] = useState(false);
   const startedAt = useRef<number | null>(null);
+  // Sesión en curso traída de la cuenta (otro dispositivo). Se compara con el
+  // borrador local para recuperar siempre la versión más reciente.
+  const remoteDraftRef = useRef<WorkoutDraft | null>(null);
+  // Temporizador para no escribir en Firestore en cada tecla (debounce).
+  const remoteSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -201,15 +212,29 @@ export default function WorkoutScreen() {
             })
             .catch(() => {});
         }
-        // Ancla local del ciclo (si el alumno reinició su Método REIN TENA).
-        const anchor = data ? await getCycleAnchor(data.id) : null;
+        // Estado sincronizado de la cuenta (sesión en curso + ancla del ciclo),
+        // para que cualquier dispositivo con la misma cuenta vaya al día.
+        const sync = await fetchSyncState(profile.uid);
+        if (cancelled) return;
+        remoteDraftRef.current = sync.activeSession ?? null;
+        // El ancla del ciclo es la más reciente entre la de la cuenta (otro
+        // dispositivo) y la local de este dispositivo.
+        const localAnchor = data ? await getCycleAnchor(data.id) : null;
+        const remoteAnchor = data ? sync.cycleAnchors[data.id] ?? null : null;
+        const anchor = Math.max(localAnchor ?? 0, remoteAnchor ?? 0) || null;
         if (cancelled) return;
         setCycleAnchor(anchor);
         if (data && data.days.length > 0) {
-          // Preselecciona el día que toca hoy. Si el alumno YA entrenó hoy,
-          // abrimos ese mismo día (aunque esté completado) para que vea su
-          // resumen del día, no el primer día de la rutina.
+          // Preselecciona el día que toca hoy. Prioridad: sesión en curso en
+          // otro dispositivo → día ya entrenado hoy → día que toca → primero.
           const session = resolveTodaySession(data, anchor ?? undefined);
+          const remoteFresh =
+            sync.activeSession &&
+            sync.activeSession.routineId === data.id &&
+            Date.now() - sync.activeSession.savedAt < DRAFT_TTL_MS &&
+            sync.activeSession.log.some((ex) => ex.sets.some((st) => st.completed))
+              ? data.days.find((d) => d.id === sync.activeSession!.dayId)
+              : undefined;
           const doneToday = logs.find(
             (l) => l.routineId === data.id && isSameDay(l.date)
           );
@@ -218,7 +243,7 @@ export default function WorkoutScreen() {
             : undefined;
           const fallback = data.days.find((d) => !d.isRest) ?? data.days[0];
           setSelectedDayId(
-            (prev) => prev ?? doneTodayDay?.id ?? session.day?.id ?? fallback.id
+            (prev) => prev ?? remoteFresh?.id ?? doneTodayDay?.id ?? session.day?.id ?? fallback.id
           );
         }
         setLoading(false);
@@ -235,31 +260,37 @@ export default function WorkoutScreen() {
     if (!day) return;
     let cancelled = false;
     (async () => {
-      // Si hay una sesión a medias de este mismo día, se recupera.
+      // Recupera una sesión a medias de este mismo día: se compara el borrador
+      // local con el de la cuenta (otro dispositivo) y gana el más reciente.
+      let draft: WorkoutDraft | null = null;
       try {
         const raw = await AsyncStorage.getItem(draftKey(profile.uid));
-        if (raw) {
-          const draft: WorkoutDraft = JSON.parse(raw);
-          const fresh = Date.now() - draft.savedAt < DRAFT_TTL_MS;
-          if (
-            fresh &&
-            draft.routineId === routine.id &&
-            draft.dayId === selectedDayId &&
-            draft.log.some((ex) => ex.sets.some((st) => st.completed))
-          ) {
-            if (cancelled) return;
-            setLog(draft.log);
-            startedAt.current = draft.startedAt;
-            setRestored(true);
-            setSummary(null);
-            // Retoma en el primer ejercicio con series pendientes.
-            const resume = draft.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
-            setViewIndex(resume >= 0 ? resume : 0);
-            return;
-          }
-        }
+        if (raw) draft = JSON.parse(raw) as WorkoutDraft;
       } catch {
-        // Borrador ilegible: se ignora y se empieza limpio.
+        // Borrador local ilegible: se ignora.
+      }
+      const remote = remoteDraftRef.current;
+      if (remote && (!draft || remote.savedAt > draft.savedAt)) {
+        draft = remote;
+      }
+      if (draft) {
+        const fresh = Date.now() - draft.savedAt < DRAFT_TTL_MS;
+        if (
+          fresh &&
+          draft.routineId === routine.id &&
+          draft.dayId === selectedDayId &&
+          draft.log.some((ex) => ex.sets.some((st) => st.completed))
+        ) {
+          if (cancelled) return;
+          setLog(draft.log);
+          startedAt.current = draft.startedAt;
+          setRestored(true);
+          setSummary(null);
+          // Retoma en el primer ejercicio con series pendientes.
+          const resume = draft.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
+          setViewIndex(resume >= 0 ? resume : 0);
+          return;
+        }
       }
       if (cancelled) return;
       setLog(buildLog(day));
@@ -273,7 +304,8 @@ export default function WorkoutScreen() {
     };
   }, [routine, selectedDayId, profile]);
 
-  // Guarda el borrador en el dispositivo con cada cambio de la sesión.
+  // Guarda el borrador con cada cambio: al instante en el dispositivo y, con un
+  // pequeño retardo, en la cuenta (Firestore) para sincronizar entre móviles.
   useEffect(() => {
     if (!profile || !routine || !selectedDayId) return;
     const hasProgress = log.some((ex) => ex.sets.some((st) => st.completed));
@@ -286,12 +318,30 @@ export default function WorkoutScreen() {
       savedAt: Date.now(),
     };
     AsyncStorage.setItem(draftKey(profile.uid), JSON.stringify(draft)).catch(() => {});
+    remoteDraftRef.current = draft;
+    // Debounce: sube a la cuenta como mucho ~1,5 s después del último cambio.
+    if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
+    remoteSaveTimer.current = setTimeout(() => {
+      saveActiveSession(profile.uid, draft);
+    }, 1500);
   }, [log, profile, routine, selectedDayId]);
+
+  // Al salir de la pantalla, cancela cualquier subida pendiente en cola.
+  useEffect(() => {
+    return () => {
+      if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
+    };
+  }, []);
 
   const discardDraft = () => {
     if (!routine || !selectedDayId) return;
     const day = routine.days.find((d) => d.id === selectedDayId);
-    if (profile) AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+    if (profile) {
+      AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+      clearActiveSession(profile.uid);
+    }
+    remoteDraftRef.current = null;
+    if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
     if (day) setLog(buildLog(day));
     startedAt.current = null;
     setRestored(false);
@@ -305,6 +355,8 @@ export default function WorkoutScreen() {
     if (!routine || routine.days.length === 0) return;
     const ts = await setCycleAnchorToday(routine.id);
     setCycleAnchor(ts);
+    // Sincroniza el día del ciclo con el resto de dispositivos de la cuenta.
+    if (profile) setCycleAnchorRemote(profile.uid, routine.id, ts);
     setOptionalResolved(true);
     setRestingToday(false);
     const firstDay = routine.days[0];
@@ -538,7 +590,12 @@ export default function WorkoutScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       stopRest();
-      if (profile) AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+      if (profile) {
+        AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+        clearActiveSession(profile.uid);
+      }
+      remoteDraftRef.current = null;
+      if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
       setRestored(false);
       setRetrainDayId(null);
       setSummary({

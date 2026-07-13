@@ -47,6 +47,27 @@ export interface UserProfile {
   subscriptionUntil?: number;
   /** Plan contratado. De momento solo existe el anual (180 €/año). */
   subscriptionPlan?: 'annual';
+  /** Onboarding completado (una vez por cuenta, sincronizado entre dispositivos). */
+  onboardingCompleted?: boolean;
+  /**
+   * Sesión de entrenamiento en curso, para sincronizar entre dispositivos de la
+   * misma cuenta (series, reps, marcas). Se limpia al terminar o descartar.
+   */
+  activeSession?: ActiveSession;
+  /**
+   * Ancla del ciclo (Método REIN TENA) por rutina: routineId → timestamp del
+   * Día 1. Sincroniza el día del ciclo entre dispositivos.
+   */
+  cycleAnchors?: Record<string, number>;
+}
+
+/** Sesión de entrenamiento a medias, sincronizable entre dispositivos. */
+export interface ActiveSession {
+  routineId: string;
+  dayId: string;
+  log: LoggedExercise[];
+  startedAt: number | null;
+  savedAt: number;
 }
 
 export const CLIENT_STATUSES = ['active', 'paused', 'inactive'] as const;

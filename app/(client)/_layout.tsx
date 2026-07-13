@@ -9,6 +9,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { Onboarding } from '../../components/Onboarding';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
+import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { tabScreenOptions } from '../../lib/navTheme';
 
 const onboardingKey = (uid: string) => `udeca-onboarding-${uid}`;
@@ -20,8 +21,21 @@ export default function ClientLayout() {
 
   useEffect(() => {
     if (!profile) return;
+    // La cuenta manda: si ya se completó en cualquier dispositivo, no se repite.
+    if (profile.onboardingCompleted) {
+      setOnboardingSeen(true);
+      return;
+    }
     AsyncStorage.getItem(onboardingKey(profile.uid))
-      .then((v) => setOnboardingSeen(v === '1'))
+      .then((v) => {
+        if (v === '1') {
+          setOnboardingSeen(true);
+          // Este dispositivo ya lo vio: propágalo a la cuenta para el resto.
+          markOnboardingComplete(profile.uid).catch(() => {});
+        } else {
+          setOnboardingSeen(false);
+        }
+      })
       .catch(() => setOnboardingSeen(true));
   }, [profile]);
 

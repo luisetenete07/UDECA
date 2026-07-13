@@ -327,7 +327,7 @@ export default function ClientDashboard() {
         <StatTile icon="checkmark-done" value={String(sessions)} label="Esta semana" />
         <StatTile
           icon="body"
-          value={currentWeight ? `${currentWeight}` : '—'}
+          value={currentWeight != null ? currentWeight.toLocaleString('es-ES') : '—'}
           label="Peso (kg)"
         />
       </View>

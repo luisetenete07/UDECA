@@ -6,46 +6,25 @@ import { playBeep, primeAudio } from '../lib/sound';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /**
- * Temporizador de intervalos para acondicionamiento (EMOM/Tabata y libre).
- * Cuenta contra el reloj real (Date.now) para no desincronizarse al bloquear
- * la pantalla, avisa con sonido/háptica en cada cambio de fase y muestra la
- * ronda actual. Herramienta desplegable dentro del entreno.
+ * Temporizador EMOM (Every Minute On the Minute): cada intervalo arranca una
+ * ronda nueva. Cuenta contra el reloj real (Date.now) para no desincronizarse
+ * al bloquear la pantalla y avisa con sonido/háptica en cada ronda. El coach
+ * decide por día si aparece esta herramienta dentro del entreno.
  */
-
-type Mode = 'emom' | 'tabata' | 'custom';
-
-interface Preset {
-  work: number;
-  rest: number;
-  rounds: number;
-}
-const PRESETS: Record<Mode, Preset> = {
-  emom: { work: 60, rest: 0, rounds: 10 },
-  tabata: { work: 20, rest: 10, rounds: 8 },
-  custom: { work: 40, rest: 20, rounds: 6 },
-};
-
 export function IntervalTimer() {
-  const [mode, setMode] = useState<Mode>('tabata');
+  const [interval, setIntervalSec] = useState(60); // segundos por ronda
+  const [rounds, setRounds] = useState(10);
   const [running, setRunning] = useState(false);
-  const [phase, setPhase] = useState<'work' | 'rest'>('work');
   const [round, setRound] = useState(1);
-  const [remaining, setRemaining] = useState(PRESETS.tabata.work);
+  const [remaining, setRemaining] = useState(60);
 
-  const cfg = PRESETS[mode];
   const endsAt = useRef(0);
-  const phaseRef = useRef<'work' | 'rest'>('work');
   const roundRef = useRef(1);
 
-  // Reinicia al cambiar de modo (si no está corriendo).
+  // Reajusta la cuenta si se cambia la config estando parado.
   useEffect(() => {
-    if (running) return;
-    setPhase('work');
-    setRound(1);
-    setRemaining(PRESETS[mode].work);
-    phaseRef.current = 'work';
-    roundRef.current = 1;
-  }, [mode, running]);
+    if (!running) setRemaining(interval);
+  }, [interval, running]);
 
   const cue = () => {
     if (Platform.OS !== 'web') {
@@ -57,21 +36,17 @@ export function IntervalTimer() {
 
   const stop = () => {
     setRunning(false);
-    setPhase('work');
     setRound(1);
-    setRemaining(PRESETS[mode].work);
-    phaseRef.current = 'work';
     roundRef.current = 1;
+    setRemaining(interval);
   };
 
   const start = () => {
     primeAudio();
-    phaseRef.current = 'work';
     roundRef.current = 1;
-    setPhase('work');
     setRound(1);
-    endsAt.current = Date.now() + PRESETS[mode].work * 1000;
-    setRemaining(PRESETS[mode].work);
+    endsAt.current = Date.now() + interval * 1000;
+    setRemaining(interval);
     setRunning(true);
   };
 
@@ -81,62 +56,48 @@ export function IntervalTimer() {
       const rem = Math.max(0, Math.round((endsAt.current - Date.now()) / 1000));
       setRemaining(rem);
       if (rem > 0) return;
-      // Fin de fase: avanzar.
-      const c = PRESETS[mode];
       cue();
-      if (phaseRef.current === 'work' && c.rest > 0) {
-        phaseRef.current = 'rest';
-        setPhase('rest');
-        endsAt.current = Date.now() + c.rest * 1000;
-      } else {
-        // Siguiente ronda (o fin).
-        if (roundRef.current >= c.rounds) {
-          clearInterval(id);
-          setRunning(false);
-          setRemaining(0);
-          return;
-        }
-        roundRef.current += 1;
-        setRound(roundRef.current);
-        phaseRef.current = 'work';
-        setPhase('work');
-        endsAt.current = Date.now() + c.work * 1000;
+      if (roundRef.current >= rounds) {
+        clearInterval(id);
+        setRunning(false);
+        setRemaining(0);
+        return;
       }
+      roundRef.current += 1;
+      setRound(roundRef.current);
+      endsAt.current = Date.now() + interval * 1000;
     }, 250);
     return () => clearInterval(id);
-  }, [running, mode]);
+  }, [running, interval, rounds]);
 
   const mm = Math.floor(remaining / 60);
   const ss = remaining % 60;
-  const isWork = phase === 'work';
+  const done = !running && remaining === 0;
 
   return (
     <View style={styles.card}>
-      <View style={styles.modeRow}>
-        {(['tabata', 'emom', 'custom'] as Mode[]).map((m) => (
-          <Pressable
-            key={m}
-            onPress={() => !running && setMode(m)}
-            style={[styles.modeBtn, mode === m && styles.modeBtnActive]}
-          >
-            <Text style={[styles.modeText, mode === m && styles.modeTextActive]}>
-              {m === 'tabata' ? 'Tabata' : m === 'emom' ? 'EMOM' : 'Libre'}
-            </Text>
-          </Pressable>
-        ))}
+      <Text style={styles.mode}>EMOM · cada ronda arranca al minuto</Text>
+
+      <View style={styles.configRow}>
+        <Stepper
+          label="Intervalo"
+          value={`${interval}s`}
+          onMinus={() => !running && setIntervalSec((v) => Math.max(10, v - 5))}
+          onPlus={() => !running && setIntervalSec((v) => Math.min(300, v + 5))}
+        />
+        <Stepper
+          label="Rondas"
+          value={String(rounds)}
+          onMinus={() => !running && setRounds((v) => Math.max(1, v - 1))}
+          onPlus={() => !running && setRounds((v) => Math.min(60, v + 1))}
+        />
       </View>
 
-      <Text style={styles.config}>
-        {cfg.work}s trabajo{cfg.rest > 0 ? ` · ${cfg.rest}s descanso` : ''} · {cfg.rounds} rondas
-      </Text>
-
-      <Text style={[styles.time, { color: isWork ? colors.primaryBright : colors.textMuted }]}>
+      <Text style={[styles.time, { color: running ? colors.primaryBright : colors.textMuted }]}>
         {mm}:{ss.toString().padStart(2, '0')}
       </Text>
-      <Text style={[styles.phase, { color: isWork ? colors.primary : colors.textMuted }]}>
-        {running || remaining > 0
-          ? `${isWork ? 'TRABAJO' : 'DESCANSO'} · Ronda ${round}/${cfg.rounds}`
-          : '¡Completado! 🎉'}
+      <Text style={[styles.phase, { color: running ? colors.primary : colors.textMuted }]}>
+        {done ? '¡Completado! 🎉' : `Ronda ${round}/${rounds}`}
       </Text>
 
       <Pressable onPress={running ? stop : start} style={styles.action}>
@@ -153,6 +114,33 @@ export function IntervalTimer() {
   );
 }
 
+function Stepper({
+  label,
+  value,
+  onMinus,
+  onPlus,
+}: {
+  label: string;
+  value: string;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <View style={styles.stepper}>
+      <Text style={styles.stepperLabel}>{label}</Text>
+      <View style={styles.stepperControls}>
+        <Pressable onPress={onMinus} style={styles.stepBtn} hitSlop={6}>
+          <Ionicons name="remove" size={16} color={colors.text} />
+        </Pressable>
+        <Text style={styles.stepperValue}>{value}</Text>
+        <Pressable onPress={onPlus} style={styles.stepBtn} hitSlop={6}>
+          <Ionicons name="add" size={16} color={colors.text} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
@@ -163,20 +151,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  modeRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: spacing.xs,
+  mode: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm },
+  configRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm },
+  stepper: { alignItems: 'center', gap: 4 },
+  stepperLabel: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  stepperControls: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  stepBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  modeBtn: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.sm },
-  modeBtnActive: { backgroundColor: colors.primary },
-  modeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  modeTextActive: { color: colors.onPrimary },
-  config: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm },
+  stepperValue: {
+    ...typography.body,
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    minWidth: 44,
+    textAlign: 'center',
+  },
   time: { fontSize: 52, lineHeight: 58, fontFamily: fonts.heading, fontVariant: ['tabular-nums'] },
   phase: { ...typography.small, fontFamily: fonts.semiBold, letterSpacing: 1, marginBottom: spacing.sm },
   action: {
