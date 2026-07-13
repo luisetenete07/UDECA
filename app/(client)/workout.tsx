@@ -37,6 +37,7 @@ import { notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
 import { shareRecordImage } from '../../lib/recordCard';
 import { startRest, stopRest } from '../../lib/restTimerStore';
+import { suggestWarmup } from '../../lib/warmup';
 import {
   computeAchievements,
   currentStreak,
@@ -141,6 +142,9 @@ export default function WorkoutScreen() {
   // sobre la copia guardada en la rutina por si el coach la cambió después.
   const [measureByExercise, setMeasureByExercise] =
     useState<Record<string, import('../../lib/types').ExerciseMeasure>>({});
+  // Grupo muscular de cada ejercicio (para el calentamiento sugerido del día).
+  const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
+  const [warmupOpen, setWarmupOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
@@ -184,12 +188,15 @@ export default function WorkoutScreen() {
               if (cancelled) return;
               const map: Record<string, string> = {};
               const measures: Record<string, import('../../lib/types').ExerciseMeasure> = {};
+              const muscles: Record<string, string> = {};
               for (const ex of library) {
                 if (ex.videoUrl) map[ex.id] = ex.videoUrl;
                 measures[ex.id] = ex.measure ?? 'reps';
+                muscles[ex.id] = ex.muscleGroup;
               }
               setVideoByExercise(map);
               setMeasureByExercise(measures);
+              setMuscleByExercise(muscles);
             })
             .catch(() => {});
         }
@@ -901,6 +908,32 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
+      {safeIndex === 0 && doneSets === 0 && day && !day.isRest ? (
+        <View style={styles.warmupCard}>
+          <Pressable onPress={() => setWarmupOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
+            <Ionicons name="flame-outline" size={15} color={colors.primary} />
+            <Text style={styles.warmupTitle}>Calentamiento sugerido</Text>
+            <Ionicons
+              name={warmupOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={colors.textMuted}
+            />
+          </Pressable>
+          {warmupOpen ? (
+            <View style={styles.warmupList}>
+              {suggestWarmup(
+                day.exercises.map((e) => muscleByExercise[e.exerciseId]).filter(Boolean)
+              ).map((item) => (
+                <View key={item} style={styles.warmupItem}>
+                  <Text style={styles.warmupDot}>·</Text>
+                  <Text style={styles.warmupText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
       {(() => {
         const exerciseIndex = safeIndex;
         const exercise = log[exerciseIndex];
@@ -1288,6 +1321,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   restoredText: { ...typography.small, color: colors.primaryBright, flex: 1 },
+  warmupCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  warmupHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  warmupTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
+  warmupList: { marginTop: spacing.sm, gap: 4 },
+  warmupItem: { flexDirection: 'row', gap: spacing.xs },
+  warmupDot: { color: colors.primary, fontFamily: fonts.heading },
+  warmupText: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 18 },
   restoredAction: {
     ...typography.small,
     color: colors.primary,

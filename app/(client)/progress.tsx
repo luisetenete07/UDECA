@@ -21,6 +21,7 @@ import { pickProgressPhoto } from '../../lib/image';
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExercisesForTrainer } from '../../lib/firestore/exercises';
+import { getLevelTestsForClient } from '../../lib/firestore/levelTests';
 import {
   exerciseProgression,
   isIsometricExercise,
@@ -71,6 +72,7 @@ export default function ProgressScreen() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
+  const [levelTests, setLevelTests] = useState<import('../../lib/types').LevelTest[]>([]);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -82,14 +84,16 @@ export default function ProgressScreen() {
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [weightData, photoData, workoutData] = await Promise.all([
+    const [weightData, photoData, workoutData, testData] = await Promise.all([
       getWeightLogsForClient(profile.uid),
       getProgressPhotosForClient(profile.uid),
       getWorkoutLogsForClient(profile.uid),
+      getLevelTestsForClient(profile.uid).catch(() => []),
     ]);
     setWeightLogs(weightData);
     setPhotos(photoData);
     setWorkoutLogs(workoutData);
+    setLevelTests(testData);
     setCached(cacheKey, {
       weightLogs: weightData,
       photos: photoData,
@@ -506,14 +510,33 @@ export default function ProgressScreen() {
           </Card>
         </>
       ) : tab === 'exercises' ? (
-        exercisesInLogs.length === 0 ? (
-          <Card style={styles.section}>
-            <EmptyState
-              title="Aún no hay datos por ejercicio"
-              subtitle="Cuando completes entrenamientos verás aquí cómo mejoras en cada ejercicio."
-            />
-          </Card>
-        ) : (
+        <>
+          {levelTests.length > 0 ? (
+            <Card accent style={styles.section}>
+              <View style={styles.exHeader}>
+                <Text style={styles.sectionTitle}>Tus marcas verificadas 🎖️</Text>
+              </View>
+              <Text style={styles.photoHint}>Tests de nivel confirmados por tu entrenador.</Text>
+              {levelTests.slice(0, 8).map((t) => (
+                <View key={t.id} style={styles.logRow}>
+                  <Text style={styles.logValue}>{t.name}</Text>
+                  <Text style={styles.testMark}>
+                    {t.value} {t.unit === 'reps' ? 'reps' : 's'}
+                  </Text>
+                </View>
+              ))}
+            </Card>
+          ) : null}
+          {exercisesInLogs.length === 0 ? (
+            levelTests.length === 0 ? (
+              <Card style={styles.section}>
+                <EmptyState
+                  title="Aún no hay datos por ejercicio"
+                  subtitle="Cuando completes entrenamientos verás aquí cómo mejoras en cada ejercicio."
+                />
+              </Card>
+            ) : null
+          ) : (
           <>
             <ScrollView
               horizontal
@@ -562,7 +585,8 @@ export default function ProgressScreen() {
               />
             </Card>
           </>
-        )
+          )}
+        </>
       ) : (
         <>
           <Card style={styles.section}>
@@ -731,6 +755,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
+  testMark: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
   logDate: { ...typography.small, color: colors.textMuted },
   // ----- Mapa muscular -----
   muscleRow: {
