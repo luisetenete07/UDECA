@@ -9,7 +9,7 @@ import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
 import { showToast } from '../../../../components/Toast';
 import { useAuth } from '../../../../lib/auth-context';
-import { getExercisesForTrainer } from '../../../../lib/firestore/exercises';
+import { createExercise, getExercisesForTrainer } from '../../../../lib/firestore/exercises';
 import {
   createRoutine,
   getActiveRoutineForClient,
@@ -26,11 +26,14 @@ import { notifyUser } from '../../../../lib/notifications';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
+  MUSCLE_GROUPS,
   resolveLoad,
   WEEKDAY_LABELS,
   WEEKDAY_NAMES,
   type Exercise,
   type ExerciseLoad,
+  type ExerciseMeasure,
+  type MuscleGroup,
   type RoutineDay,
   type RoutineExercise,
   type RoutineSchedule,
@@ -96,6 +99,13 @@ export default function RoutineEditorScreen() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState('');
+  // Crear un ejercicio nuevo sin salir del selector (agiliza montar la rutina).
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newGroup, setNewGroup] = useState<MuscleGroup>('Empuje');
+  const [newMeasure, setNewMeasure] = useState<ExerciseMeasure>('reps');
+  const [newLoad, setNewLoad] = useState<ExerciseLoad>('none');
+  const [savingNew, setSavingNew] = useState(false);
   const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
   const [cycleStartDate, setCycleStartDate] = useState<number>(() => {
     const d = new Date();
@@ -269,6 +279,36 @@ export default function RoutineEditorScreen() {
       )
     );
     showToast(`${exercise.name} añadido`);
+  };
+
+  // Crea el ejercicio en la biblioteca del coach y lo añade al día de una vez.
+  const handleCreateAndAdd = async () => {
+    if (!profile || !pickerForDay || !newName.trim()) return;
+    const dayId = pickerForDay;
+    setSavingNew(true);
+    try {
+      const data = {
+        trainerId: profile.uid,
+        name: newName.trim(),
+        muscleGroup: newGroup,
+        measure: newMeasure,
+        load: newLoad,
+      };
+      const id = await createExercise(data);
+      const ex: Exercise = { id, createdAt: Date.now(), ...data };
+      setExercises((prev) => [...prev, ex]);
+      addExerciseToDay(dayId, ex);
+      setCreatingNew(false);
+      setNewName('');
+      setNewMeasure('reps');
+      setNewLoad('none');
+      setExerciseSearch('');
+      setPickerForDay(null);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo crear el ejercicio');
+    } finally {
+      setSavingNew(false);
+    }
   };
 
   const removeExercise = (dayId: string, exerciseRowId: string) => {
@@ -1039,6 +1079,7 @@ export default function RoutineEditorScreen() {
             variant="secondary"
             onPress={() => {
               setExerciseSearch('');
+              setCreatingNew(false);
               setPickerForDay(day.id);
             }}
             style={{ marginTop: spacing.sm }}
@@ -1058,48 +1099,139 @@ export default function RoutineEditorScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Añadir ejercicio</Text>
-              <Pressable onPress={() => setPickerForDay(null)} hitSlop={8}>
+              <Text style={styles.modalTitle}>
+                {creatingNew ? 'Nuevo ejercicio' : 'Añadir ejercicio'}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setPickerForDay(null);
+                  setCreatingNew(false);
+                }}
+                hitSlop={8}
+              >
                 <Ionicons name="close" size={22} color={colors.textMuted} />
               </Pressable>
             </View>
-            <TextField
-              placeholder="Buscar ejercicio..."
-              value={exerciseSearch}
-              onChangeText={setExerciseSearch}
-              autoCapitalize="none"
-              style={{ marginBottom: spacing.sm }}
-            />
-            {exercises.length === 0 ? (
-              <Text style={styles.mutedText}>
-                No tienes ejercicios en tu biblioteca todavía. Créalos en la pestaña Ejercicios.
-              </Text>
-            ) : (
+
+            {creatingNew ? (
               <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
-                {exercises
-                  .filter((ex) =>
-                    ex.name.toLowerCase().includes(exerciseSearch.toLowerCase().trim())
-                  )
-                  .map((ex) => (
+                <TextField
+                  label="Nombre del ejercicio"
+                  placeholder="Ej. Muscle up"
+                  value={newName}
+                  onChangeText={setNewName}
+                />
+                <Text style={styles.loadLabel}>Grupo muscular</Text>
+                <View style={styles.groupWrap}>
+                  {MUSCLE_GROUPS.map((g) => (
                     <Pressable
-                      key={ex.id}
-                      onPress={() => pickerForDay && addExerciseToDay(pickerForDay, ex)}
-                      style={styles.pickerRow}
+                      key={g}
+                      onPress={() => setNewGroup(g)}
+                      style={[styles.loadChip, newGroup === g && styles.loadChipActive]}
                     >
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.pickerRowText}>
-                          {ex.name}
-                          {resolveLoad(ex) === 'assisted' ? '  🟡' : resolveLoad(ex) === 'weighted' ? '  🏋️' : ''}
-                        </Text>
-                        <Text style={styles.pickerRowMuscle}>
-                          {ex.muscleGroup}
-                          {ex.measure === 'seconds' ? ' · isométrico' : ''}
-                        </Text>
-                      </View>
-                      <Ionicons name="add-circle" size={22} color={colors.primary} />
+                      <Text style={[styles.loadChipText, newGroup === g && styles.loadChipTextActive]}>
+                        {g}
+                      </Text>
                     </Pressable>
                   ))}
+                </View>
+                <Text style={styles.loadLabel}>Medida</Text>
+                <View style={styles.loadRow}>
+                  {(['reps', 'seconds'] as ExerciseMeasure[]).map((m) => (
+                    <Pressable
+                      key={m}
+                      onPress={() => setNewMeasure(m)}
+                      style={[styles.loadChip, newMeasure === m && styles.loadChipActive]}
+                    >
+                      <Text style={[styles.loadChipText, newMeasure === m && styles.loadChipTextActive]}>
+                        {m === 'reps' ? 'Repeticiones' : 'Segundos'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.loadLabel}>Carga</Text>
+                <View style={styles.loadRow}>
+                  {LOAD_OPTIONS.map((opt) => (
+                    <Pressable
+                      key={opt.key}
+                      onPress={() => setNewLoad(opt.key)}
+                      style={[styles.loadChip, newLoad === opt.key && styles.loadChipActive]}
+                    >
+                      <Text style={[styles.loadChipText, newLoad === opt.key && styles.loadChipTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Button
+                  title="Crear y añadir al día"
+                  onPress={handleCreateAndAdd}
+                  loading={savingNew}
+                  disabled={!newName.trim()}
+                  style={{ marginTop: spacing.md }}
+                />
+                <Button
+                  title="Volver a la biblioteca"
+                  variant="ghost"
+                  onPress={() => setCreatingNew(false)}
+                  style={{ marginTop: spacing.xs }}
+                />
               </ScrollView>
+            ) : (
+              <>
+                <TextField
+                  placeholder="Buscar ejercicio..."
+                  value={exerciseSearch}
+                  onChangeText={setExerciseSearch}
+                  autoCapitalize="none"
+                  style={{ marginBottom: spacing.sm }}
+                />
+                <Pressable
+                  onPress={() => {
+                    setNewName(exerciseSearch.trim());
+                    setCreatingNew(true);
+                  }}
+                  style={styles.createNewBtn}
+                >
+                  <Ionicons name="add-circle" size={18} color={colors.primary} />
+                  <Text style={styles.createNewText}>
+                    Crear ejercicio nuevo
+                    {exerciseSearch.trim() ? ` “${exerciseSearch.trim()}”` : ''}
+                  </Text>
+                </Pressable>
+                {exercises.length === 0 ? (
+                  <Text style={styles.mutedText}>
+                    No tienes ejercicios en tu biblioteca todavía. Crea el primero con el botón de
+                    arriba.
+                  </Text>
+                ) : (
+                  <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
+                    {exercises
+                      .filter((ex) =>
+                        ex.name.toLowerCase().includes(exerciseSearch.toLowerCase().trim())
+                      )
+                      .map((ex) => (
+                        <Pressable
+                          key={ex.id}
+                          onPress={() => pickerForDay && addExerciseToDay(pickerForDay, ex)}
+                          style={styles.pickerRow}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.pickerRowText}>
+                              {ex.name}
+                              {resolveLoad(ex) === 'assisted' ? '  🟡' : resolveLoad(ex) === 'weighted' ? '  🏋️' : ''}
+                            </Text>
+                            <Text style={styles.pickerRowMuscle}>
+                              {ex.muscleGroup}
+                              {ex.measure === 'seconds' ? ' · isométrico' : ''}
+                            </Text>
+                          </View>
+                          <Ionicons name="add-circle" size={22} color={colors.primary} />
+                        </Pressable>
+                      ))}
+                  </ScrollView>
+                )}
+              </>
             )}
           </View>
         </View>
@@ -1338,6 +1470,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   loadRow: { flexDirection: 'row', gap: spacing.xs },
+  groupWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  createNewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderStyle: 'dashed',
+    backgroundColor: colors.primaryMuted,
+    marginBottom: spacing.sm,
+  },
+  createNewText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, flex: 1 },
   loadChip: {
     flex: 1,
     paddingVertical: spacing.sm,
