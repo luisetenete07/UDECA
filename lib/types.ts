@@ -202,7 +202,7 @@ export interface RoutineDay {
   optionalRest?: boolean;
   /** Intensidad 1-10 de este entrenamiento (Método REIN TENA), la fija el coach. */
   intensity?: number;
-  /** El coach activa el temporizador de intervalos (EMOM/Tabata) para este día. */
+  /** El coach activa el temporizador de intervalos (EMOM) para este día. */
   showIntervalTimer?: boolean;
   /**
    * Texto de las "aproximaciones" del calentamiento para este día, editable por

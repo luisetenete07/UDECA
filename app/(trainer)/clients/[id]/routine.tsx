@@ -911,7 +911,7 @@ export default function RoutineEditorScreen() {
                   color={day.showIntervalTimer ? colors.primary : colors.textMuted}
                 />
                 <Text style={styles.checkLabel}>
-                  Temporizador de intervalos (EMOM/Tabata) este día
+                  Temporizador de intervalos (EMOM) este día
                 </Text>
               </Pressable>
               <TextField
