@@ -29,11 +29,6 @@ import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNotes';
-import {
-  createLevelTest,
-  deleteLevelTest,
-  getLevelTestsForClient,
-} from '../../../../lib/firestore/levelTests';
 import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
 import { buildClientReportHtml } from '../../../../lib/report';
@@ -68,7 +63,6 @@ import {
   type Routine,
   type Habit,
   type HabitLog,
-  type LevelTest,
   type UserProfile,
   type WeeklyCheckIn,
   type WeightLog,
@@ -114,12 +108,6 @@ export default function ClientDetailScreen() {
   const [paymentReminderSent, setPaymentReminderSent] = useState(false);
   const [coachNote, setCoachNote] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
-  // Tests de nivel (marcas verificadas por el coach).
-  const [levelTests, setLevelTests] = useState<LevelTest[]>([]);
-  const [testName, setTestName] = useState('');
-  const [testValue, setTestValue] = useState('');
-  const [testUnit, setTestUnit] = useState<'reps' | 'seconds'>('reps');
-  const [savingTest, setSavingTest] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -128,7 +116,7 @@ export default function ClientDetailScreen() {
       const uid = profile.uid;
       (async () => {
         try {
-        const [clientData, routineData, weightData, workoutData, planData, photoData, checkInData, habitData, habitLogData, noteData, exerciseData, testData] =
+        const [clientData, routineData, weightData, workoutData, planData, photoData, checkInData, habitData, habitLogData, noteData, exerciseData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id, uid),
@@ -141,7 +129,6 @@ export default function ClientDetailScreen() {
             getHabitLogsForClient(id, uid),
             getCoachNote(id),
             getExercisesForTrainer(uid),
-            getLevelTestsForClient(id, uid),
           ]);
         if (cancelled) return;
         setClient(clientData);
@@ -161,7 +148,6 @@ export default function ClientDetailScreen() {
         setCheckIns(checkInData);
         setHabits(habitData);
         setHabitLogs(habitLogData);
-        setLevelTests(testData);
         } catch (e) {
           if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
         } finally {
@@ -281,37 +267,6 @@ export default function ClientDetailScreen() {
     } finally {
       setRemindingPayment(false);
     }
-  };
-
-  // Registra un test de nivel verificado (marca objetiva del alumno).
-  const handleAddTest = async () => {
-    if (!id || !profile) return;
-    const value = Number(testValue.replace(',', '.'));
-    if (!testName.trim() || !value || value <= 0) return;
-    setSavingTest(true);
-    try {
-      await createLevelTest({
-        trainerId: profile.uid,
-        clientId: id,
-        name: testName.trim(),
-        value,
-        unit: testUnit,
-        date: Date.now(),
-      });
-      setTestName('');
-      setTestValue('');
-      setLevelTests(await getLevelTestsForClient(id, profile.uid));
-      showToast('Test registrado');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo guardar el test');
-    } finally {
-      setSavingTest(false);
-    }
-  };
-
-  const handleDeleteTest = async (testId: string) => {
-    setLevelTests((prev) => prev.filter((t) => t.id !== testId));
-    await deleteLevelTest(testId).catch(() => {});
   };
 
   const handleRemoveFromGroup = async () => {
@@ -759,61 +714,6 @@ export default function ClientDetailScreen() {
             </>
           );
         })()}
-      </Card>
-
-      <Card style={styles.section}>
-        <View style={styles.titleRow}>
-          <Ionicons name="ribbon-outline" size={16} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Tests de nivel</Text>
-        </View>
-        <Text style={styles.mutedText}>
-          Marcas máximas verificadas por ti (máx. dominadas, aguante de
-          planche...). El historial objetivo del nivel real del alumno.
-        </Text>
-        <View style={styles.testAddRow}>
-          <TextField
-            placeholder="Test (ej. Dominadas máx.)"
-            value={testName}
-            onChangeText={setTestName}
-            style={{ flex: 1, marginBottom: 0 }}
-          />
-          <TextField
-            placeholder="0"
-            keyboardType="numeric"
-            value={testValue}
-            onChangeText={setTestValue}
-            style={styles.testValueField}
-          />
-          <Pressable
-            onPress={() => setTestUnit((u) => (u === 'reps' ? 'seconds' : 'reps'))}
-            style={styles.testUnitBtn}
-            hitSlop={6}
-          >
-            <Text style={styles.testUnitText}>{testUnit === 'reps' ? 'reps' : 'seg'}</Text>
-          </Pressable>
-        </View>
-        <Button
-          title="Registrar test"
-          variant="secondary"
-          onPress={handleAddTest}
-          loading={savingTest}
-          disabled={!testName.trim() || !(Number(testValue.replace(',', '.')) > 0)}
-          style={{ marginTop: spacing.sm }}
-        />
-        {levelTests.slice(0, 8).map((t) => (
-          <View key={t.id} style={styles.testRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.logTitle}>{t.name}</Text>
-              <Text style={styles.logDate}>{fmtDate(t.date)}</Text>
-            </View>
-            <Text style={styles.testValue}>
-              {t.value} {t.unit === 'reps' ? 'reps' : 's'}
-            </Text>
-            <Pressable onPress={() => handleDeleteTest(t.id)} hitSlop={8}>
-              <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
-            </Pressable>
-          </View>
-        ))}
       </Card>
 
       <Card style={styles.section}>
