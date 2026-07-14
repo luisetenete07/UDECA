@@ -105,6 +105,7 @@ export default function RoutineEditorScreen() {
   const [newGroup, setNewGroup] = useState<MuscleGroup>('Empuje');
   const [newMeasure, setNewMeasure] = useState<ExerciseMeasure>('reps');
   const [newLoad, setNewLoad] = useState<ExerciseLoad>('none');
+  const [newVideo, setNewVideo] = useState('');
   const [savingNew, setSavingNew] = useState(false);
   const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
   const [cycleStartDate, setCycleStartDate] = useState<number>(() => {
@@ -293,6 +294,7 @@ export default function RoutineEditorScreen() {
         muscleGroup: newGroup,
         measure: newMeasure,
         load: newLoad,
+        videoUrl: newVideo.trim() || undefined,
       };
       const id = await createExercise(data);
       const ex: Exercise = { id, createdAt: Date.now(), ...data };
@@ -302,6 +304,7 @@ export default function RoutineEditorScreen() {
       setNewName('');
       setNewMeasure('reps');
       setNewLoad('none');
+      setNewVideo('');
       setExerciseSearch('');
       setPickerForDay(null);
     } catch (e) {
@@ -1163,6 +1166,15 @@ export default function RoutineEditorScreen() {
                     </Pressable>
                   ))}
                 </View>
+                <TextField
+                  label="Vídeo de técnica (opcional)"
+                  placeholder="Pega el enlace de YouTube"
+                  value={newVideo}
+                  onChangeText={setNewVideo}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                  style={{ marginTop: spacing.sm }}
+                />
                 <Button
                   title="Crear y añadir al día"
                   onPress={handleCreateAndAdd}

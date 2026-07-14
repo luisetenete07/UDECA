@@ -590,6 +590,17 @@ export default function ClientDetailScreen() {
               {nutritionPlan.carbsG}g G{nutritionPlan.fatG}g
             </Text>
           </>
+        ) : client.nutritionTargets ? (
+          <>
+            <Text style={styles.routineName}>Macros del alumno (calculadora)</Text>
+            <Text style={styles.routineMeta}>
+              {client.nutritionTargets.dailyCalories} kcal · P{client.nutritionTargets.proteinG}g C
+              {client.nutritionTargets.carbsG}g G{client.nutritionTargets.fatG}g
+            </Text>
+            <Text style={[styles.mutedText, { marginTop: spacing.xs }]}>
+              Los calculó el alumno en el onboarding. Crea un plan para fijar sus objetivos oficiales.
+            </Text>
+          </>
         ) : (
           <Text style={styles.mutedText}>Este cliente no tiene un plan nutricional activo.</Text>
         )}
