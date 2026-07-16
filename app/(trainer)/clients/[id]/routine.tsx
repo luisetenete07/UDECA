@@ -651,7 +651,7 @@ export default function RoutineEditorScreen() {
       ) : (
         <View style={styles.actionsRow}>
           <Button
-            title="✨ Borrador"
+            title="Borrador"
             variant="secondary"
             onPress={handleGenerateDraft}
             style={{ flex: 1 }}
@@ -940,7 +940,7 @@ export default function RoutineEditorScreen() {
               <View style={styles.exerciseTitleRow}>
                 <Text style={styles.exerciseName}>
                   {ex.name}
-                  {resolveLoad(ex) === 'assisted' ? '  🟡' : resolveLoad(ex) === 'weighted' ? '  🏋️' : ''}
+                  {resolveLoad(ex) === 'assisted' ? ' · goma' : resolveLoad(ex) === 'weighted' ? ' · lastrado' : ''}
                 </Text>
                 {days.length > 1 ? (
                   <Pressable
@@ -1231,7 +1231,7 @@ export default function RoutineEditorScreen() {
                           <View style={{ flex: 1 }}>
                             <Text style={styles.pickerRowText}>
                               {ex.name}
-                              {resolveLoad(ex) === 'assisted' ? '  🟡' : resolveLoad(ex) === 'weighted' ? '  🏋️' : ''}
+                              {resolveLoad(ex) === 'assisted' ? ' · goma' : resolveLoad(ex) === 'weighted' ? ' · lastrado' : ''}
                             </Text>
                             <Text style={styles.pickerRowMuscle}>
                               {ex.muscleGroup}

@@ -20,11 +20,11 @@ export const ACTIVITY_OPTIONS: ActivityOption[] = [
   { value: 1.9, label: 'Muy activo · dobles sesiones o trabajo físico' },
 ];
 
-export const GOAL_OPTIONS: { value: Goal; label: string; emoji: string }[] = [
-  { value: 'cut', label: 'Definición', emoji: '🔥' },
-  { value: 'maintain', label: 'Mantenimiento', emoji: '⚖️' },
-  { value: 'lean', label: 'Volumen limpio', emoji: '💪' },
-  { value: 'bulk', label: 'Volumen agresivo', emoji: '🏋️' },
+export const GOAL_OPTIONS: { value: Goal; label: string }[] = [
+  { value: 'cut', label: 'Definición' },
+  { value: 'maintain', label: 'Mantenimiento' },
+  { value: 'lean', label: 'Volumen limpio' },
+  { value: 'bulk', label: 'Volumen agresivo' },
 ];
 
 const GOAL_MULTIPLIER: Record<Goal, number> = {

@@ -296,7 +296,7 @@ export default function ClientDashboard() {
             </View>
             <Text style={styles.weekHint}>
               {sessions >= targetSessions
-                ? '¡Objetivo de la semana cumplido! 🔥'
+                ? '¡Objetivo de la semana cumplido!'
                 : `Te faltan ${targetSessions - sessions} sesión(es) para cumplir tu semana.`}
             </Text>
           </>

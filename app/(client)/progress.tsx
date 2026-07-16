@@ -476,7 +476,7 @@ export default function ProgressScreen() {
           {levelTests.length > 0 ? (
             <Card accent style={styles.section}>
               <View style={styles.exHeader}>
-                <Text style={styles.sectionTitle}>Tus marcas verificadas 🎖️</Text>
+                <Text style={styles.sectionTitle}>Tus marcas verificadas</Text>
               </View>
               <Text style={styles.photoHint}>Tests de nivel confirmados por tu entrenador.</Text>
               {levelTests.slice(0, 8).map((t) => (

@@ -97,7 +97,7 @@ export function IntervalTimer() {
         {mm}:{ss.toString().padStart(2, '0')}
       </Text>
       <Text style={[styles.phase, { color: running ? colors.primary : colors.textMuted }]}>
-        {done ? '¡Completado! 🎉' : `Ronda ${round}/${rounds}`}
+        {done ? '¡Completado!' : `Ronda ${round}/${rounds}`}
       </Text>
 
       <Pressable onPress={running ? stop : start} style={styles.action}>

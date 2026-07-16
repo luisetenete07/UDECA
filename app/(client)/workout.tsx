@@ -410,15 +410,15 @@ export default function WorkoutScreen() {
           prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
           streak: summary.streak,
         });
-        if (result === 'downloaded') showToast('Imagen del récord descargada 🏆');
+        if (result === 'downloaded') showToast('Imagen del récord descargada');
         if (result) return;
       } catch {
         // Caemos al texto.
       }
     }
-    const lines = summary.prs.map((pr) => `🏆 ${pr.exerciseName}: ${pr.label}`);
-    const message = `NUEVO RÉCORD PERSONAL 💥\n\n${lines.join('\n')}\n\n${
-      summary.streak > 1 ? `Racha de ${summary.streak} días 🔥\n` : ''
+    const lines = summary.prs.map((pr) => `${pr.exerciseName}: ${pr.label}`);
+    const message = `NUEVO RÉCORD PERSONAL\n\n${lines.join('\n')}\n\n${
+      summary.streak > 1 ? `Racha de ${summary.streak} días\n` : ''
     }Entrenando con UDECA — Universidad de Calistenia\nudeca.luistenafit.com`;
     try {
       await Share.share({ message });
@@ -606,9 +606,9 @@ export default function WorkoutScreen() {
         newAchievements,
       });
       if (savedOffline) {
-        showToast('Sin conexión: la sesión se subirá sola al recuperarla 📶');
+        showToast('Sin conexión: la sesión se subirá sola al recuperarla');
       } else if (newAchievements.length > 0) {
-        showToast(`¡Logro desbloqueado: ${newAchievements[0].title}! 🏅`);
+        showToast(`¡Logro desbloqueado: ${newAchievements[0].title}!`);
       }
       setHistory(freshLogs);
     } catch (e) {
@@ -703,7 +703,7 @@ export default function WorkoutScreen() {
               </View>
             ))}
             <Button
-              title="Compartir récord 🏆"
+              title="Compartir récord"
               variant="secondary"
               onPress={handleShareRecord}
               style={{ marginTop: spacing.sm }}
@@ -1096,7 +1096,7 @@ export default function WorkoutScreen() {
                 {planned?.goal ? (
                   <View style={[styles.metaChip, styles.metaChipBand]}>
                     <Text style={styles.metaChipText}>
-                      🎯 Objetivo {planned.goal}
+                      Objetivo {planned.goal}
                       {isSeconds ? ' seg' : ' reps'}
                     </Text>
                   </View>

@@ -108,7 +108,7 @@ export function buildCopilotReport(
     }
   }
   if (topSessions >= 2 && topName) {
-    highlights.push(`${topName} lidera la semana con ${topSessions} sesiones 🔥`);
+    highlights.push(`${topName} lidera la semana con ${topSessions} sesiones`);
   }
   for (const [clientId, ci] of weekCheckinByClient) {
     const avg = (ci.energy + ci.sleep + ci.adherence + ci.soreness) / 4;
@@ -128,7 +128,7 @@ export function buildCopilotReport(
     const anniversary = client.createdAt + months * 30 * DAY_MS;
     if (anniversary >= week && anniversary < week + 7 * DAY_MS) {
       highlights.push(
-        `🎉 ${client.name.split(' ')[0]} cumple ${months} meses entrenando contigo esta semana`
+        `${client.name.split(' ')[0]} cumple ${months} meses entrenando contigo esta semana`
       );
     }
   }

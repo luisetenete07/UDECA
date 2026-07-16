@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { CopilotMark } from '../../components/CopilotMark';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -242,7 +243,7 @@ export default function TrainerDashboard() {
   // Un toque: recordatorio de pago a TODOS los alumnos con pago pendiente.
   const handleRemindAllPayments = async () => {
     if (duePayClients.length === 0) {
-      showToast('No hay pagos pendientes 🎉');
+      showToast('No hay pagos pendientes');
       return;
     }
     setRemindingPays(true);
@@ -324,7 +325,7 @@ export default function TrainerDashboard() {
           style={[styles.quickBtn, copilotOpen && styles.quickBtnActive]}
           onPress={handleOpenCopilot}
         >
-          <Ionicons name="sparkles" size={20} color={colors.primary} />
+          <CopilotMark size={20} />
           <Text style={styles.quickLabel}>Copiloto</Text>
         </Pressable>
         <Pressable
@@ -367,7 +368,7 @@ export default function TrainerDashboard() {
       {copilotOpen ? (
         <Card accent style={styles.section}>
           <View style={styles.titleRow}>
-            <Ionicons name="sparkles" size={16} color={colors.primary} />
+            <CopilotMark size={16} />
             <Text style={styles.sectionTitle}>Copiloto · análisis semanal</Text>
           </View>
           {loadingCopilot || !copilotReport ? (
@@ -386,7 +387,7 @@ export default function TrainerDashboard() {
               ))}
               {copilotReport.attention.length === 0 ? (
                 <Text style={styles.mutedText}>
-                  Todo en orden: nadie necesita atención especial esta semana. 👏
+                  Todo en orden: nadie necesita atención especial esta semana.
                 </Text>
               ) : (
                 copilotReport.attention.map((a) => (

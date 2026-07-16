@@ -137,7 +137,7 @@ export default function SocialScreen() {
         if (weekPRs.length === 0) return null;
         return (
           <>
-            <Text style={styles.sectionTitle}>Récords de la semana 🏆</Text>
+            <Text style={styles.sectionTitle}>Récords de la semana</Text>
             <Card accent style={{ marginBottom: spacing.lg }}>
               {weekPRs.map((m) => (
                 <View key={m.uid} style={styles.prBoardRow}>

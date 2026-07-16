@@ -115,7 +115,7 @@ export function MacroCalculator({
             style={[styles.goalChip, goal === g.value && styles.goalChipOn]}
           >
             <Text style={[styles.goalText, goal === g.value && styles.goalTextOn]}>
-              {g.emoji} {g.label}
+              {g.label}
             </Text>
           </Pressable>
         ))}

@@ -119,7 +119,7 @@ export async function scheduleRestEndNotification(seconds: number): Promise<void
       identifier: REST_END_ID,
       content: {
         title: '¡Descanso terminado!',
-        body: 'A por la siguiente serie. 💪',
+        body: 'A por la siguiente serie.',
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

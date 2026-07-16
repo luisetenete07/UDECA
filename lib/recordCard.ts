@@ -50,9 +50,21 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
   ctx.fillStyle = '#C9902B';
   ctx.fillRect(W / 2 - 44, 272, 88, 4);
 
-  // Trofeo y titular.
-  ctx.font = '120px sans-serif';
-  ctx.fillText('🏆', W / 2, 470);
+  // Insignia PR (anilla dorada con monograma) y titular. Dibujada a mano en
+  // vez de un emoji: se ve idéntica y profesional en cualquier dispositivo.
+  ctx.strokeStyle = '#C9902B';
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.arc(W / 2, 420, 78, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(W / 2, 420, 92, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(201, 144, 43, 0.35)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#E3B15C';
+  ctx.font = '900 64px sans-serif';
+  ctx.fillText('PR', W / 2, 443);
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '900 64px sans-serif';
   ctx.fillText('NUEVO RÉCORD PERSONAL', W / 2, 590);
@@ -75,7 +87,7 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
   if (data.streak && data.streak > 1) {
     ctx.fillStyle = '#ECEDEF';
     ctx.font = '600 40px sans-serif';
-    ctx.fillText(`🔥 Racha de ${data.streak} días`, W / 2, 1170);
+    ctx.fillText(`Racha de ${data.streak} días`, W / 2, 1170);
   }
 
   // Pie con la web.
