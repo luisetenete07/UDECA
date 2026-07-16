@@ -38,6 +38,12 @@ export function resolveTodaySession(
     return { day: null, isRest: false, optionalRest: false };
   }
 
+  // Modo flexible ("Sensaciones"): no hay día programado; el alumno elige la
+  // rutina cada día según cómo se encuentre.
+  if (routine.schedule === 'flex') {
+    return { day: null, isRest: false, optionalRest: false };
+  }
+
   if (routine.schedule === 'cycle' && routine.cycleStartDate) {
     // El ancla más reciente manda: si el alumno reinició su ciclo (override) o
     // el coach lo reprogramó (cycleStartDate), gana la fecha más nueva.

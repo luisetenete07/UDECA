@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import {
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -32,7 +33,7 @@ import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { resolveTodaySession } from '../../lib/schedule';
-import { getCycleAnchor, setCycleAnchorToday } from '../../lib/cycleAnchor';
+import { getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import {
   clearActiveSession,
   fetchSyncState,
@@ -43,6 +44,7 @@ import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
 import { shareRecordImage } from '../../lib/recordCard';
+import { shareSessionImage } from '../../lib/brandCards';
 import { startRest, stopRest } from '../../lib/restTimerStore';
 import {
   computeAchievements,
@@ -170,6 +172,7 @@ export default function WorkoutScreen() {
   // Elección del descanso opcional (Día 7 TENA): pendiente hasta que decide.
   const [optionalResolved, setOptionalResolved] = useState(false);
   const [restingToday, setRestingToday] = useState(false);
+  const [dayPickerOpen, setDayPickerOpen] = useState(false);
   const startedAt = useRef<number | null>(null);
   // Sesión en curso traída de la cuenta (otro dispositivo). Se compara con el
   // borrador local para recuperar siempre la versión más reciente.
@@ -241,10 +244,17 @@ export default function WorkoutScreen() {
           const doneTodayDay = doneToday
             ? data.days.find((d) => d.name === doneToday.dayName)
             : undefined;
-          const fallback = data.days.find((d) => !d.isRest) ?? data.days[0];
-          setSelectedDayId(
-            (prev) => prev ?? remoteFresh?.id ?? doneTodayDay?.id ?? session.day?.id ?? fallback.id
-          );
+          if (data.schedule === 'flex') {
+            // Modo a elección ("Sensaciones"): el alumno elige rutina antes de
+            // empezar; solo preseleccionamos si hay sesión en curso o ya entrenó.
+            setSelectedDayId((prev) => prev ?? remoteFresh?.id ?? doneTodayDay?.id ?? null);
+          } else {
+            const fallback = data.days.find((d) => !d.isRest) ?? data.days[0];
+            setSelectedDayId(
+              (prev) =>
+                prev ?? remoteFresh?.id ?? doneTodayDay?.id ?? session.day?.id ?? fallback.id
+            );
+          }
         }
         setLoading(false);
       })();
@@ -366,12 +376,46 @@ export default function WorkoutScreen() {
     showToast('Ciclo reiniciado · hoy es el Día 1');
   };
 
+  // Fija qué día del ciclo es HOY (plan desfasado o entreno pospuesto).
+  const handleSetTodayIndex = async (index: number) => {
+    if (!routine || routine.days.length === 0) return;
+    const ts = await setCycleAnchorForIndex(routine.id, index, routine.days.length);
+    setCycleAnchor(ts);
+    if (profile) setCycleAnchorRemote(profile.uid, routine.id, ts);
+    setOptionalResolved(true);
+    setRestingToday(false);
+    setSelectedDayId(routine.days[index].id);
+    setViewIndex(0);
+    setDayPickerOpen(false);
+    showToast(`Hoy es el Día ${index + 1}`);
+  };
+
   const isOptionalRestToday = routine?.schedule === 'cycle' && todaySession.optionalRest;
   const showOptionalChoice = isOptionalRestToday && !optionalResolved;
   const showRestingCard = isOptionalRestToday && optionalResolved && restingToday;
 
   const handleShareSummary = async () => {
     if (!summary || !routine) return;
+    // En web/PWA: imagen de marca (mucho más vistosa que el texto).
+    if (Platform.OS === 'web') {
+      try {
+        const result = await shareSessionImage({
+          routineName: routine.name,
+          dayName: day?.name,
+          durationMin: summary.durationMin,
+          sets: summary.sets,
+          reps: summary.reps,
+          seconds: summary.seconds,
+          volumeKg: summary.volumeKg,
+          streak: summary.streak,
+          prCount: summary.prs.length,
+        });
+        if (result === 'downloaded') showToast('Imagen de la sesión descargada');
+        if (result) return;
+      } catch {
+        // Caemos al texto.
+      }
+    }
     const parts = [
       `Sesión completada en UDECA: ${day?.name ?? routine.name}`,
       summary.durationMin > 0 ? `${summary.durationMin} min` : null,
@@ -809,14 +853,77 @@ export default function WorkoutScreen() {
       </ScrollView>
 
       {routine.schedule === 'cycle' ? (
-        <Pressable onPress={handleStartCycleToday} style={styles.resetCycleBtn} hitSlop={6}>
-          <Ionicons name="refresh" size={13} color={colors.primary} />
-          <Text style={styles.resetCycleText}>
-            {todaySession.cycleLabel ? `Hoy: ${todaySession.cycleLabel} · ` : ''}
-            Reiniciar ciclo (hoy pasa a ser el Día 1)
-          </Text>
-        </Pressable>
+        <View style={styles.cycleActionsRow}>
+          <Pressable onPress={handleStartCycleToday} style={styles.resetCycleBtn} hitSlop={6}>
+            <Ionicons name="refresh" size={13} color={colors.primary} />
+            <Text style={styles.resetCycleText}>
+              {todaySession.cycleLabel ? `Hoy: ${todaySession.cycleLabel} · ` : ''}
+              Reiniciar ciclo
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => setDayPickerOpen(true)} style={styles.resetCycleBtn} hitSlop={6}>
+            <Ionicons name="calendar-outline" size={13} color={colors.primary} />
+            <Text style={styles.resetCycleText}>Fijar día actual</Text>
+          </Pressable>
+        </View>
       ) : null}
+
+      {routine.schedule === 'flex' && !day ? (
+        <FadeIn>
+          <Card accent style={styles.optionalCard}>
+            <View style={styles.optionalHeader}>
+              <Ionicons name="options-outline" size={18} color={colors.primary} />
+              <Text style={styles.optionalTitle}>
+                {routine.scheduleLabel ?? 'Sensaciones'}
+              </Text>
+            </View>
+            <Text style={styles.optionalText}>
+              ¿Cómo te encuentras hoy? Elige la rutina que quieres hacer:
+            </Text>
+            {routine.days.map((d) => (
+              <Button
+                key={d.id}
+                title={d.name || 'Rutina'}
+                variant="secondary"
+                onPress={() => setSelectedDayId(d.id)}
+                style={{ marginTop: spacing.sm }}
+              />
+            ))}
+          </Card>
+        </FadeIn>
+      ) : null}
+
+      {/* Fijar qué día del ciclo es HOY (plan desactualizado o día pospuesto). */}
+      <Modal
+        visible={dayPickerOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setDayPickerOpen(false)}
+      >
+        <View style={styles.dayPickerBackdrop}>
+          <View style={styles.dayPickerSheet}>
+            <View style={styles.dayPickerHeader}>
+              <Text style={styles.dayPickerTitle}>¿Qué día del plan es hoy?</Text>
+              <Pressable onPress={() => setDayPickerOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <Text style={styles.dayPickerHint}>
+              Si pospusiste un entreno o el plan va desfasado, elige el día que te toca hoy y toda
+              la programación se recoloca desde ahí.
+            </Text>
+            {routine.days.map((d, i) => (
+              <Button
+                key={d.id}
+                title={`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? ' (descanso)' : ''}`}
+                variant={todaySession.cycleIndex === i ? 'primary' : 'secondary'}
+                onPress={() => handleSetTodayIndex(i)}
+                style={{ marginTop: spacing.sm }}
+              />
+            ))}
+          </View>
+        </View>
+      </Modal>
 
       {day?.intensity ? (
         <View style={styles.intensityBanner}>
@@ -1318,14 +1425,41 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   intensityBannerText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  cycleActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    marginTop: -spacing.xs,
+  },
   resetCycleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     alignSelf: 'flex-start',
-    marginBottom: spacing.md,
-    marginTop: -spacing.xs,
   },
+  dayPickerBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  dayPickerSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderTopWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    maxHeight: '80%',
+  },
+  dayPickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  dayPickerTitle: { ...typography.h3, color: colors.text },
+  dayPickerHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
   resetCycleText: {
     ...typography.small,
     color: colors.primary,

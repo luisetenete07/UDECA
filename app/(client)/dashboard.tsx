@@ -232,13 +232,15 @@ export default function ClientDashboard() {
         >
           <View style={{ flex: 1 }}>
             <Text style={styles.todayLabel}>
-              {isCycle
-                ? `REIN TENA · ${todaySession.cycleLabel ?? ''}${
-                    todaySession.day?.intensity ? ` · Int. ${todaySession.day.intensity}/10` : ''
-                  }`
-                : todaysDay
-                  ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}`
-                  : 'Tu entrenamiento'}
+              {routine?.schedule === 'flex'
+                ? `${routine.scheduleLabel ?? 'Sensaciones'} · eliges tú`
+                : isCycle
+                  ? `Días sueltos · ${todaySession.cycleLabel ?? ''}${
+                      todaySession.day?.intensity ? ` · Int. ${todaySession.day.intensity}/10` : ''
+                    }`
+                  : todaysDay
+                    ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}`
+                    : 'Tu entrenamiento'}
             </Text>
             {routine && optionalRest ? (
               <>

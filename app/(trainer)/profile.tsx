@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Alert, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
@@ -24,8 +25,10 @@ import {
   isAdmin,
   subscriptionState,
 } from '../../lib/subscription';
+import { getSocialLeaderboard } from '../../lib/firestore/social';
+import { isOnline } from '../../lib/presence';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
-import type { UserProfile } from '../../lib/types';
+import type { SocialStats, UserProfile } from '../../lib/types';
 
 const fmtDate = (ts: number) =>
   new Date(ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -41,6 +44,17 @@ export default function TrainerProfileScreen() {
   // Panel admin UDECA (solo cuentas administradoras).
   const [adminOpen, setAdminOpen] = useState(false);
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
+  // Clasificación y presencia del grupo (socialStats de sus alumnos).
+  const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile) return;
+      getSocialLeaderboard(profile.uid)
+        .then(setLeaderboard)
+        .catch(() => {});
+    }, [profile])
+  );
+  const onlineCount = leaderboard.filter((s) => isOnline(s.lastSeen)).length;
   const [loadingCoaches, setLoadingCoaches] = useState(false);
   const [updatingCoach, setUpdatingCoach] = useState<string | null>(null);
 
@@ -271,6 +285,42 @@ export default function TrainerProfileScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <View style={styles.groupHeadRow}>
+          <Text style={styles.sectionTitle}>Clasificación del grupo</Text>
+          {onlineCount > 0 ? (
+            <View style={styles.onlinePill}>
+              <View style={styles.onlineDot} />
+              <Text style={styles.onlinePillText}>{onlineCount} en línea</Text>
+            </View>
+          ) : null}
+        </View>
+        {leaderboard.length === 0 ? (
+          <Text style={styles.mutedSmall}>
+            Aparecerá cuando tus alumnos empiecen a entrenar con la app.
+          </Text>
+        ) : (
+          leaderboard.slice(0, 10).map((s, i) => (
+            <View key={s.uid} style={styles.rankRow}>
+              <Text style={styles.rankPos}>{i + 1}</Text>
+              <Avatar name={s.name} photoURL={s.photoURL} size={34} />
+              <View style={{ flex: 1 }}>
+                <View style={styles.rankNameRow}>
+                  <Text style={styles.rankName} numberOfLines={1}>
+                    {s.name}
+                  </Text>
+                  {isOnline(s.lastSeen) ? <View style={styles.onlineDot} /> : null}
+                </View>
+                <Text style={styles.rankMeta}>
+                  {s.sessionsThisWeek} esta semana · {s.totalWorkouts} totales
+                  {s.currentStreak > 1 ? ` · racha ${s.currentStreak}` : ''}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
+      </Card>
+
+      <Card style={styles.section}>
         <View style={styles.subHeader}>
           <Text style={styles.sectionTitle}>Suscripción</Text>
           <View style={[styles.subBadge, !sub.active && styles.subBadgeOff]}>
@@ -407,6 +457,38 @@ const styles = StyleSheet.create({
   },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
+  groupHeadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  onlinePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(46,125,91,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(46,125,91,0.45)',
+  },
+  onlinePillText: { ...typography.small, color: '#4CAF7D', fontFamily: fonts.semiBold, fontSize: 12 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF7D' },
+  mutedSmall: { ...typography.small, color: colors.textFaint },
+  rankRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  rankPos: { ...typography.h3, color: colors.primaryBright, width: 24, textAlign: 'center' },
+  rankNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  rankName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flexShrink: 1 },
+  rankMeta: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   subHeader: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -61,3 +61,8 @@ export function pickProgressPhoto(): Promise<string | null> {
 export function pickMealPhoto(): Promise<string | null> {
   return pickImage({ maxSize: 500, compress: 0.5 });
 }
+
+/** Portada de curso/sección (16:9, ligera; se guarda embebida en el curso). */
+export function pickCoverPhoto(): Promise<string | null> {
+  return pickImage({ maxSize: 640, compress: 0.55, aspect: [16, 9] });
+}

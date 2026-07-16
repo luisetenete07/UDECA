@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
+import { markPresence } from '../../lib/presence';
 import { TabIcon } from '../../components/TabIcon';
 import { GlobalRestTimer } from '../../components/GlobalRestTimer';
 import { LinkTrainerScreen } from '../../components/LinkTrainerScreen';
@@ -22,6 +23,21 @@ export default function ClientLayout() {
   // Una vez terminado en esta sesión, no dejamos que un refresco del perfil lo
   // vuelva a evaluar (evita que el botón "Guardar y empezar" parezca no hacer nada).
   const doneRef = useRef(false);
+
+  // Presencia "en línea" para el coach: latido al abrir y al volver a la app,
+  // más un tic periódico mientras está abierta (limitado dentro de markPresence).
+  useEffect(() => {
+    if (!profile || profile.role !== 'client') return;
+    markPresence(profile);
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') markPresence(profile);
+    });
+    const tick = setInterval(() => markPresence(profile), 4 * 60 * 1000 + 500);
+    return () => {
+      sub.remove();
+      clearInterval(tick);
+    };
+  }, [profile]);
 
   useEffect(() => {
     if (!profile || doneRef.current) return;

@@ -15,7 +15,14 @@ import { colors, radius, spacing, typography } from '../lib/theme';
  * Nota: ningún reproductor web puede impedir al 100% la grabación de
  * pantalla; esto disuade la descarga y el reparto de enlaces.
  */
-export function VideoPlayer({ url }: { url?: string }) {
+export function VideoPlayer({
+  url,
+  protectedContent = false,
+}: {
+  url?: string;
+  /** Cursos: refuerza las protecciones (sin PiP, sin menú contextual). */
+  protectedContent?: boolean;
+}) {
   if (!url) {
     return (
       <View style={styles.placeholder}>
@@ -29,12 +36,14 @@ export function VideoPlayer({ url }: { url?: string }) {
   // respeta la privacidad "solo donde esté incrustado" configurada en Vimeo.
   const vimeo = parseVimeoUrl(url);
   if (vimeo) {
-    return <VimeoVideo embedUrl={vimeoEmbedUrl(vimeo)} />;
+    return <VimeoVideo embedUrl={vimeoEmbedUrl(vimeo)} protectedContent={protectedContent} />;
   }
 
   const youtubeId = parseYouTubeId(url);
   if (youtubeId) {
-    return <VimeoVideo embedUrl={youTubeEmbedUrl(youtubeId)} />;
+    return (
+      <VimeoVideo embedUrl={youTubeEmbedUrl(youtubeId)} protectedContent={protectedContent} />
+    );
   }
 
   // Archivo de vídeo directo (mp4, HLS...): reproductor propio.
@@ -45,16 +54,25 @@ export function VideoPlayer({ url }: { url?: string }) {
 
   // Cualquier otro enlace (Drive, Dropbox, etc.): se muestra embebido DENTRO
   // de la app (iframe/WebView) para que el usuario nunca salga de UDECA.
-  return <VimeoVideo embedUrl={url} />;
+  return <VimeoVideo embedUrl={url} protectedContent={protectedContent} />;
 }
 
-function VimeoVideo({ embedUrl }: { embedUrl: string }) {
+function VimeoVideo({
+  embedUrl,
+  protectedContent = false,
+}: {
+  embedUrl: string;
+  protectedContent?: boolean;
+}) {
   if (Platform.OS === 'web') {
     return React.createElement('iframe', {
       src: embedUrl,
-      allow: 'autoplay; fullscreen; picture-in-picture',
+      // Contenido protegido: sin Picture-in-Picture (no se puede "sacar" el
+      // vídeo de la app) ni menú contextual sobre el marco.
+      allow: protectedContent ? 'autoplay; fullscreen' : 'autoplay; fullscreen; picture-in-picture',
       allowFullScreen: true,
       frameBorder: '0',
+      onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
       style: {
         width: '100%',
         aspectRatio: '16 / 9',

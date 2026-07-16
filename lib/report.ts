@@ -39,7 +39,7 @@ interface Mark {
 }
 
 /** Mejores marcas de un patrón (Empuje/Tirón): mejor reps y mejor isométrico. */
-function bestMarks(
+export function bestMarks(
   logs: WorkoutLog[],
   group: 'Empuje' | 'Tirón',
   muscle: Record<string, string>,

@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
@@ -28,6 +28,7 @@ export default function ClientCoursesScreen() {
       return;
     }
     const data = await getPublishedCourses(profile.trainerId);
+    data.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.createdAt - b.createdAt);
     setCourses(data);
     setLoading(false);
     setRefreshing(false);
@@ -61,9 +62,13 @@ export default function ClientCoursesScreen() {
         courses.map((course) => (
           <Pressable key={course.id} onPress={() => router.push(`/(client)/courses/${course.id}`)}>
             <Card style={styles.card}>
-              <View style={styles.thumb}>
-                <Ionicons name="play-circle" size={30} color={colors.primary} />
-              </View>
+              {course.coverURL ? (
+                <Image source={{ uri: course.coverURL }} style={styles.coverThumb} resizeMode="cover" />
+              ) : (
+                <View style={styles.thumb}>
+                  <Ionicons name="play-circle" size={30} color={colors.primary} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.courseTitle}>{course.title}</Text>
                 {course.description ? (
@@ -88,6 +93,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
+  coverThumb: { width: 84, height: 52, borderRadius: radius.sm },
   thumb: {
     width: 56,
     height: 56,

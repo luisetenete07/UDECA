@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -14,6 +14,8 @@ import {
   getCourse,
   updateCourse,
 } from '../../../lib/firestore/courses';
+import { pickCoverPhoto } from '../../../lib/image';
+import { showToast } from '../../../components/Toast';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { CourseSection, Lesson } from '../../../lib/types';
 
@@ -32,6 +34,7 @@ export default function CourseEditorScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [published, setPublished] = useState(false);
+  const [coverURL, setCoverURL] = useState<string | undefined>(undefined);
   const [sections, setSections] = useState<CourseSection[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +46,7 @@ export default function CourseEditorScreen() {
         setTitle(course.title);
         setDescription(course.description ?? '');
         setPublished(course.published);
+        setCoverURL(course.coverURL);
         setSections(course.sections);
       }
       setLoading(false);
@@ -79,10 +83,24 @@ export default function CourseEditorScreen() {
     );
   };
 
+  const handlePickCover = async (target: 'course' | string) => {
+    try {
+      const url = await pickCoverPhoto();
+      if (!url) return;
+      if (target === 'course') setCoverURL(url);
+      else
+        setSections((prev) =>
+          prev.map((s) => (s.id === target ? { ...s, coverURL: url } : s))
+        );
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo cargar la imagen');
+    }
+  };
+
   const updateLesson = (
     sectionId: string,
     lessonId: string,
-    field: 'title' | 'videoUrl' | 'durationLabel',
+    field: 'title' | 'videoUrl' | 'durationLabel' | 'unlockAfterDays',
     value: string
   ) => {
     setSections((prev) =>
@@ -91,7 +109,11 @@ export default function CourseEditorScreen() {
           ? {
               ...s,
               lessons: s.lessons.map((l) =>
-                l.id === lessonId ? { ...l, [field]: value } : l
+                l.id === lessonId
+                  ? field === 'unlockAfterDays'
+                    ? { ...l, unlockAfterDays: parseInt(value, 10) || undefined }
+                    : { ...l, [field]: value }
+                  : l
               ),
             }
           : s
@@ -113,6 +135,7 @@ export default function CourseEditorScreen() {
         title: title.trim(),
         description: description.trim() || undefined,
         published,
+        coverURL,
         sections,
       };
       if (isNew) {
@@ -157,6 +180,17 @@ export default function CourseEditorScreen() {
         style={styles.textarea}
       />
 
+      <Pressable onPress={() => handlePickCover('course')} style={styles.coverPicker}>
+        {coverURL ? (
+          <Image source={{ uri: coverURL }} style={styles.coverImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.coverEmpty}>
+            <Ionicons name="image-outline" size={22} color={colors.primary} />
+            <Text style={styles.coverEmptyText}>Añadir portada del curso</Text>
+          </View>
+        )}
+      </Pressable>
+
       <Card style={styles.publishRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.publishTitle}>Publicado</Text>
@@ -187,6 +221,21 @@ export default function CourseEditorScreen() {
             </Pressable>
           </View>
 
+          <Pressable onPress={() => handlePickCover(section.id)} style={styles.sectionCoverBtn}>
+            {section.coverURL ? (
+              <Image
+                source={{ uri: section.coverURL }}
+                style={styles.sectionCoverImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <>
+                <Ionicons name="image-outline" size={15} color={colors.primary} />
+                <Text style={styles.sectionCoverText}>Portada de la sección</Text>
+              </>
+            )}
+          </Pressable>
+
           {section.lessons.map((lesson, i) => (
             <View key={lesson.id} style={styles.lessonBlock}>
               <View style={styles.lessonHeader}>
@@ -210,6 +259,13 @@ export default function CourseEditorScreen() {
                 value={lesson.durationLabel ?? ''}
                 onChangeText={(v) => updateLesson(section.id, lesson.id, 'durationLabel', v)}
                 placeholder="Duración (ej. 12 min)"
+              />
+              <TextField
+                label="Candado: desbloquear a los X días del alumno en tu grupo (vacío = libre)"
+                value={lesson.unlockAfterDays ? String(lesson.unlockAfterDays) : ''}
+                onChangeText={(v) => updateLesson(section.id, lesson.id, 'unlockAfterDays', v)}
+                placeholder="Ej. 30"
+                keyboardType="numeric"
               />
             </View>
           ))}
@@ -243,6 +299,29 @@ export default function CourseEditorScreen() {
 
 const styles = StyleSheet.create({
   textarea: { height: 78, textAlignVertical: 'top' },
+  coverPicker: { marginBottom: spacing.md },
+  coverImage: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.md },
+  coverEmpty: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.hairline,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  coverEmptyText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  sectionCoverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  sectionCoverImage: { width: 120, height: 68, borderRadius: radius.sm },
+  sectionCoverText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   publishRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
   publishTitle: { ...typography.h3, color: colors.text },
   publishHint: { ...typography.small, color: colors.textMuted, marginTop: 2 },

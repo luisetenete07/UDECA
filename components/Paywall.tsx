@@ -14,7 +14,7 @@ import { colors, fonts, radius, shadows, spacing, typography } from '../lib/them
 
 const BENEFITS = [
   'Alumnos ilimitados con tu código de coach',
-  'Rutinas, plantillas y Método REIN TENA',
+  'Rutinas, plantillas y programaciones a medida',
   'Gestión de cobros y pagos de tus alumnos',
   'Progreso, estadísticas y informes PDF',
   'Tus cursos y vídeos de técnica propios',

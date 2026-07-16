@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -8,7 +8,7 @@ import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { useAuth } from '../../../lib/auth-context';
-import { getCoursesForTrainer } from '../../../lib/firestore/courses';
+import { getCoursesForTrainer, updateCourse } from '../../../lib/firestore/courses';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { Course } from '../../../lib/types';
 
@@ -26,10 +26,23 @@ export default function TrainerCoursesScreen() {
   const load = useCallback(async () => {
     if (!profile) return;
     const data = await getCoursesForTrainer(profile.uid);
+    data.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.createdAt - b.createdAt);
     setCourses(data);
     setLoading(false);
     setRefreshing(false);
   }, [profile]);
+
+  // Reordena el curso (intercambio con el vecino) y persiste el orden.
+  const moveCourse = (index: number, delta: -1 | 1) => {
+    const j = index + delta;
+    if (j < 0 || j >= courses.length) return;
+    const next = [...courses];
+    [next[index], next[j]] = [next[j], next[index]];
+    setCourses(next);
+    next.forEach((c, i) => {
+      if ((c.order ?? -1) !== i) updateCourse(c.id, { order: i }).catch(() => {});
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -61,12 +74,16 @@ export default function TrainerCoursesScreen() {
           subtitle="Crea tu primer curso, organízalo en secciones y sube tus lecciones en vídeo."
         />
       ) : (
-        courses.map((course) => (
+        courses.map((course, index) => (
           <Pressable key={course.id} onPress={() => router.push(`/(trainer)/courses/${course.id}`)}>
             <Card style={styles.card}>
-              <View style={styles.cardIcon}>
-                <Ionicons name="play-circle" size={26} color={colors.primary} />
-              </View>
+              {course.coverURL ? (
+                <Image source={{ uri: course.coverURL }} style={styles.cover} resizeMode="cover" />
+              ) : (
+                <View style={styles.cardIcon}>
+                  <Ionicons name="play-circle" size={26} color={colors.primary} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={styles.courseTitle}>{course.title}</Text>
                 <Text style={styles.courseMeta}>
@@ -77,6 +94,22 @@ export default function TrainerCoursesScreen() {
                 <Text style={[styles.badgeText, course.published && styles.badgeTextOn]}>
                   {course.published ? 'Publicado' : 'Borrador'}
                 </Text>
+              </View>
+              <View style={styles.orderCol}>
+                <Pressable onPress={() => moveCourse(index, -1)} hitSlop={6}>
+                  <Ionicons
+                    name="chevron-up"
+                    size={18}
+                    color={index === 0 ? colors.border : colors.textMuted}
+                  />
+                </Pressable>
+                <Pressable onPress={() => moveCourse(index, 1)} hitSlop={6}>
+                  <Ionicons
+                    name="chevron-down"
+                    size={18}
+                    color={index === courses.length - 1 ? colors.border : colors.textMuted}
+                  />
+                </Pressable>
               </View>
             </Card>
           </Pressable>
@@ -99,6 +132,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cover: { width: 68, height: 44, borderRadius: radius.sm },
+  orderCol: { gap: 2 },
   courseTitle: { ...typography.h3, color: colors.text },
   courseMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   badge: {

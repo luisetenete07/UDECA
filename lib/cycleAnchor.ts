@@ -30,3 +30,25 @@ export async function setCycleAnchorToday(routineId: string): Promise<number> {
   }
   return ts;
 }
+
+/**
+ * Fija qué día del ciclo (0-based) es HOY. Se calcula un ancla futura para que
+ * gane siempre a la fecha del coach en `resolveTodaySession` (que usa la más
+ * reciente): hoy + (len - index) días hace que el índice de hoy sea `index`.
+ */
+export async function setCycleAnchorForIndex(
+  routineId: string,
+  index: number,
+  cycleLength: number
+): Promise<number> {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const offsetDays = ((cycleLength - index) % cycleLength + cycleLength) % cycleLength;
+  const ts = d.getTime() + offsetDays * 24 * 60 * 60 * 1000;
+  try {
+    await AsyncStorage.setItem(key(routineId), String(ts));
+  } catch {
+    // Sin persistencia local: el cambio dura la sesión; el remoto lo respalda.
+  }
+  return ts;
+}

@@ -218,7 +218,7 @@ export interface RoutineDay {
  *  - 'cycle' (Método REIN TENA): los días rotan en un ciclo constante
  *    (Día 1 → 2 → 3 → ... → repite) independientemente del día de la semana.
  */
-export type RoutineSchedule = 'weekly' | 'cycle';
+export type RoutineSchedule = 'weekly' | 'cycle' | 'flex';
 
 export const WEEKDAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const;
 export const WEEKDAY_NAMES = [
@@ -246,6 +246,11 @@ export interface Routine {
   days: RoutineDay[];
   /** Modo de programación ('weekly' por defecto). */
   schedule?: RoutineSchedule;
+  /**
+   * Nombre del modo 'flex' que el coach muestra al alumno (p. ej.
+   * "Sensaciones"): el alumno elige qué rutina hacer cada día según se sienta.
+   */
+  scheduleLabel?: string;
   /** Método REIN TENA: fecha (medianoche) en que el ciclo empieza por el Día 1. */
   cycleStartDate?: number;
   /** (Obsoleto) intensidad global; ahora se define por día en RoutineDay. */
@@ -263,6 +268,7 @@ export interface RoutineTemplate {
   trainerId: string;
   name: string;
   schedule?: RoutineSchedule;
+  scheduleLabel?: string;
   cycleStartDate?: number;
   days: RoutineDay[];
   createdAt: number;
@@ -407,6 +413,8 @@ export interface SocialStats {
   challengeSessions?: number;
   /** Último récord personal (para el tablón de récords del grupo). */
   lastPR?: { exerciseName: string; label: string; date: number };
+  /** Última vez con la app abierta (presencia "en línea" para el coach). */
+  lastSeen?: number;
   updatedAt: number;
 }
 
@@ -492,11 +500,18 @@ export interface Lesson {
   videoUrl?: string;
   durationLabel?: string;
   description?: string;
+  /**
+   * Candado por antigüedad: días que el alumno debe llevar en el grupo para
+   * desbloquear esta lección. Vacío/0 = disponible desde el primer día.
+   */
+  unlockAfterDays?: number;
 }
 
 export interface CourseSection {
   id: string;
   title: string;
+  /** Portada de la sección (data URL comprimida), opcional. */
+  coverURL?: string;
   lessons: Lesson[];
 }
 
@@ -508,6 +523,8 @@ export interface Course {
   coverURL?: string;
   /** Solo los cursos publicados son visibles para los alumnos. */
   published: boolean;
+  /** Posición del curso en la lista (el coach los reordena). */
+  order?: number;
   sections: CourseSection[];
   createdAt: number;
   updatedAt: number;

@@ -108,6 +108,7 @@ export default function RoutineEditorScreen() {
   const [newVideo, setNewVideo] = useState('');
   const [savingNew, setSavingNew] = useState(false);
   const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
+  const [scheduleLabel, setScheduleLabel] = useState('Sensaciones');
   const [cycleStartDate, setCycleStartDate] = useState<number>(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -147,6 +148,7 @@ export default function RoutineEditorScreen() {
         setName(existing.name);
         setDays(existing.days);
         setSchedule(existing.schedule ?? 'weekly');
+        if (existing.scheduleLabel) setScheduleLabel(existing.scheduleLabel);
         if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
       } else {
         setDays([{ id: uid(), name: 'Día 1', exercises: [] }]);
@@ -505,6 +507,7 @@ export default function RoutineEditorScreen() {
   const applyTemplate = (t: RoutineTemplate) => {
     setName(t.name);
     setSchedule(t.schedule ?? 'weekly');
+    if (t.scheduleLabel) setScheduleLabel(t.scheduleLabel);
     if (t.cycleStartDate) setCycleStartDate(t.cycleStartDate);
     setDays(
       t.days.map((d) => ({
@@ -531,6 +534,7 @@ export default function RoutineEditorScreen() {
         name: name.trim() || 'Plantilla',
         schedule,
         cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
+        scheduleLabel: schedule === 'flex' ? scheduleLabel.trim() || 'Sensaciones' : undefined,
         days,
       });
       setTemplates(await getRoutineTemplatesForTrainer(profile.uid));
@@ -552,6 +556,7 @@ export default function RoutineEditorScreen() {
       const scheduleFields = {
         schedule,
         cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
+        scheduleLabel: schedule === 'flex' ? scheduleLabel.trim() || 'Sensaciones' : undefined,
       };
       if (routineId) {
         await updateRoutine(routineId, { name, days, ...scheduleFields });
@@ -687,12 +692,34 @@ export default function RoutineEditorScreen() {
             style={[styles.modeBtn, schedule === 'cycle' && styles.modeBtnActive]}
           >
             <Text style={[styles.modeText, schedule === 'cycle' && styles.modeTextActive]}>
-              Método REIN TENA
+              Días sueltos
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setSchedule('flex')}
+            style={[styles.modeBtn, schedule === 'flex' && styles.modeBtnActive]}
+          >
+            <Text style={[styles.modeText, schedule === 'flex' && styles.modeTextActive]}>
+              {scheduleLabel.trim() || 'Sensaciones'}
             </Text>
           </Pressable>
         </View>
 
-        {schedule === 'cycle' ? (
+        {schedule === 'flex' ? (
+          <>
+            <Text style={styles.scheduleHint}>
+              Modo a elección: creas varias rutinas (los "días" de abajo) y el alumno, antes de
+              entrenar, elige cuál hacer según cómo se encuentre ese día. Sin calendario fijo.
+            </Text>
+            <TextField
+              label="Nombre de esta programación (lo ve el alumno)"
+              placeholder="Ej. Sensaciones"
+              value={scheduleLabel}
+              onChangeText={setScheduleLabel}
+              style={{ marginTop: spacing.sm, marginBottom: 0 }}
+            />
+          </>
+        ) : schedule === 'cycle' ? (
           <>
             <Text style={styles.scheduleHint}>
               Los {days.length} días rotan en ciclo constante (Día 1 → {days.length} → repite), sin
@@ -876,7 +903,7 @@ export default function RoutineEditorScreen() {
               </View>
             ) : null}
             </>
-          ) : (
+          ) : schedule === 'flex' ? null : (
           <View style={styles.weekdayRow}>
             <Text style={styles.weekdayLabel}>Día de la semana</Text>
             <View style={styles.weekdayChips}>

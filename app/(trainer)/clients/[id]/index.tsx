@@ -31,7 +31,8 @@ import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNotes';
 import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
-import { buildClientReportHtml } from '../../../../lib/report';
+import { bestMarks, buildClientReportHtml } from '../../../../lib/report';
+import { shareReportImage } from '../../../../lib/brandCards';
 import {
   exerciseProgression,
   listExercisesInLogs,
@@ -315,6 +316,36 @@ export default function ClientDetailScreen() {
     if (!client) return;
     setGeneratingReport(true);
     try {
+      // En web/PWA: imagen PNG de marca (lista para enviar por WhatsApp).
+      if (Platform.OS === 'web') {
+        const push = bestMarks(workoutLogs, 'Empuje', muscleByExercise, measureByExercise);
+        const pull = bestMarks(workoutLogs, 'Tirón', muscleByExercise, measureByExercise);
+        const daysSet = new Set(workoutLogs.map((l) => new Date(l.date).toDateString()));
+        const totalMin = workoutLogs.reduce((acc, l) => acc + (l.durationMin ?? 0), 0);
+        const weightChange =
+          weightLogs.length >= 2
+            ? Math.round(
+                (weightLogs[weightLogs.length - 1].weightKg - weightLogs[0].weightKg) * 10
+              ) / 10
+            : undefined;
+        const result = await shareReportImage({
+          clientName: client.name,
+          totalWorkouts: workoutLogs.length,
+          daysTrained: daysSet.size,
+          totalHours: Math.round((totalMin / 60) * 10) / 10,
+          bestPushIso: push.secs ? `${push.secs.name}: ${push.secs.value}s` : undefined,
+          bestPullIso: pull.secs ? `${pull.secs.name}: ${pull.secs.value}s` : undefined,
+          bestPushReps: push.reps ? `${push.reps.name}: ${push.reps.value} reps` : undefined,
+          bestPullReps: pull.reps ? `${pull.reps.name}: ${pull.reps.value} reps` : undefined,
+          weightChangeKg: weightChange,
+          periodLabel: new Date().toLocaleDateString('es-ES', {
+            month: 'long',
+            year: 'numeric',
+          }),
+        });
+        if (result === 'downloaded') showToast('Informe descargado');
+        if (result) return;
+      }
       const html = buildClientReportHtml({
         client,
         routine: activeRoutine ?? null,
