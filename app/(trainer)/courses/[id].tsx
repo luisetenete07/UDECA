@@ -83,6 +83,16 @@ export default function CourseEditorScreen() {
     );
   };
 
+  const setLessonKind = (sectionId: string, lessonId: string, kind: 'video' | 'pdf') => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? { ...s, lessons: s.lessons.map((l) => (l.id === lessonId ? { ...l, kind } : l)) }
+          : s
+      )
+    );
+  };
+
   const handlePickCover = async (target: 'course' | string) => {
     try {
       const url = await pickCoverPhoto();
@@ -249,23 +259,52 @@ export default function CourseEditorScreen() {
                 onChangeText={(v) => updateLesson(section.id, lesson.id, 'title', v)}
                 placeholder="Título de la lección"
               />
-              <TextField
-                value={lesson.videoUrl ?? ''}
-                onChangeText={(v) => updateLesson(section.id, lesson.id, 'videoUrl', v)}
-                placeholder="Enlace de Vimeo (ej. vimeo.com/123456789/abc123) o URL .mp4"
-                autoCapitalize="none"
-              />
-              <TextField
-                value={lesson.durationLabel ?? ''}
-                onChangeText={(v) => updateLesson(section.id, lesson.id, 'durationLabel', v)}
-                placeholder="Duración (ej. 12 min)"
-              />
-              <TextField
-                value={lesson.pdfUrl ?? ''}
-                onChangeText={(v) => updateLesson(section.id, lesson.id, 'pdfUrl', v)}
-                placeholder="E-book/PDF (enlace de Drive, Dropbox...) · opcional"
-                autoCapitalize="none"
-              />
+
+              {/* Tipo de contenido: vídeo o e-book/PDF. */}
+              <View style={styles.kindRow}>
+                {(['video', 'pdf'] as const).map((k) => {
+                  const on = (lesson.kind ?? 'video') === k;
+                  return (
+                    <Pressable
+                      key={k}
+                      onPress={() => setLessonKind(section.id, lesson.id, k)}
+                      style={[styles.kindChip, on && styles.kindChipOn]}
+                    >
+                      <Ionicons
+                        name={k === 'video' ? 'videocam-outline' : 'document-text-outline'}
+                        size={15}
+                        color={on ? colors.onPrimary : colors.textMuted}
+                      />
+                      <Text style={[styles.kindText, on && styles.kindTextOn]}>
+                        {k === 'video' ? 'Vídeo' : 'E-book / PDF'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {(lesson.kind ?? 'video') === 'video' ? (
+                <>
+                  <TextField
+                    value={lesson.videoUrl ?? ''}
+                    onChangeText={(v) => updateLesson(section.id, lesson.id, 'videoUrl', v)}
+                    placeholder="Enlace de Vimeo (ej. vimeo.com/123456789/abc123) o URL .mp4"
+                    autoCapitalize="none"
+                  />
+                  <TextField
+                    value={lesson.durationLabel ?? ''}
+                    onChangeText={(v) => updateLesson(section.id, lesson.id, 'durationLabel', v)}
+                    placeholder="Duración (ej. 12 min)"
+                  />
+                </>
+              ) : (
+                <TextField
+                  value={lesson.pdfUrl ?? ''}
+                  onChangeText={(v) => updateLesson(section.id, lesson.id, 'pdfUrl', v)}
+                  placeholder="E-book/PDF: enlace de Drive, Dropbox o URL .pdf"
+                  autoCapitalize="none"
+                />
+              )}
               <TextField
                 label="Candado: desbloquear a los X días del alumno en tu grupo (vacío = libre)"
                 value={lesson.unlockAfterDays ? String(lesson.unlockAfterDays) : ''}
@@ -349,6 +388,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   lessonNumber: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
+  kindRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  kindChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  kindChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  kindText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  kindTextOn: { color: colors.onPrimary },
   addSection: { marginBottom: spacing.lg },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });

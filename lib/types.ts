@@ -501,6 +501,8 @@ export interface Challenge {
 export interface Lesson {
   id: string;
   title: string;
+  /** Tipo de contenido: vídeo (por defecto) o e-book/PDF. */
+  kind?: 'video' | 'pdf';
   /** URL del vídeo (Firebase Storage, Vimeo privado, etc.). Puede estar vacío. */
   videoUrl?: string;
   durationLabel?: string;

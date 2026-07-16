@@ -58,7 +58,18 @@ export default function ClientCourseDetailScreen() {
 
   return (
     <ScreenContainer>
-      <VideoPlayer url={activeLesson?.videoUrl} protectedContent />
+      {activeLesson && (activeLesson.kind === 'pdf' || (!activeLesson.videoUrl && activeLesson.pdfUrl)) ? (
+        activeLesson.pdfUrl ? (
+          <EmbeddedDoc url={activeLesson.pdfUrl} />
+        ) : (
+          <View style={styles.docPlaceholder}>
+            <Ionicons name="document-text-outline" size={28} color={colors.textFaint} />
+            <Text style={styles.metaText}>E-book próximamente</Text>
+          </View>
+        )
+      ) : (
+        <VideoPlayer url={activeLesson?.videoUrl} protectedContent />
+      )}
 
       <Text style={styles.lessonTitle}>{activeLesson?.title || course.title}</Text>
       {activeLesson?.durationLabel ? (
@@ -71,7 +82,8 @@ export default function ClientCourseDetailScreen() {
         <Text style={styles.lessonDesc}>{activeLesson.description}</Text>
       ) : null}
 
-      {activeLesson?.pdfUrl ? (
+      {/* E-book adjunto a una lección de VÍDEO (material de apoyo). */}
+      {activeLesson?.kind !== 'pdf' && activeLesson?.videoUrl && activeLesson?.pdfUrl ? (
         <View style={styles.pdfBlock}>
           <View style={styles.pdfHead}>
             <Ionicons name="document-text-outline" size={15} color={colors.primary} />
@@ -108,6 +120,8 @@ export default function ClientCourseDetailScreen() {
               const isActive = lesson.id === activeLessonId;
               const locked = isLocked(lesson);
               const daysLeft = locked ? lesson.unlockAfterDays! - memberDays : 0;
+              const isPdf = lesson.kind === 'pdf' || (!lesson.videoUrl && !!lesson.pdfUrl);
+              const hasContent = isPdf ? !!lesson.pdfUrl : !!lesson.videoUrl;
               return (
                 <Pressable
                   key={lesson.id}
@@ -132,9 +146,11 @@ export default function ClientCourseDetailScreen() {
                       name={
                         locked
                           ? 'lock-closed'
-                          : isActive
-                            ? 'pause-circle'
-                            : 'play-circle-outline'
+                          : isPdf
+                            ? 'document-text-outline'
+                            : isActive
+                              ? 'pause-circle'
+                              : 'play-circle-outline'
                       }
                       size={22}
                       color={locked ? colors.textFaint : isActive ? colors.primary : colors.textMuted}
@@ -157,7 +173,10 @@ export default function ClientCourseDetailScreen() {
                         <Text style={styles.lessonMeta}>{lesson.durationLabel}</Text>
                       ) : null}
                     </View>
-                    {!locked && !lesson.videoUrl ? <Text style={styles.soon}>Pronto</Text> : null}
+                    {!locked && !hasContent ? <Text style={styles.soon}>Pronto</Text> : null}
+                    {!locked && isPdf && hasContent ? (
+                      <Text style={styles.pdfTag}>PDF</Text>
+                    ) : null}
                   </Card>
                 </Pressable>
               );
@@ -206,6 +225,23 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },
   metaText: { ...typography.small, color: colors.textMuted },
   lessonDesc: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm },
+  docPlaceholder: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  pdfTag: {
+    ...typography.small,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
+  },
   pdfBlock: { marginTop: spacing.md },
   pdfHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
   pdfTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
