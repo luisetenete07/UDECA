@@ -409,6 +409,23 @@ export default function WorkoutScreen() {
     }
   };
 
+  // Sensaciones: cancela el entreno en curso y vuelve a la selección de rutinas.
+  const cancelFlexSession = () => {
+    setCombinedDay(null);
+    setFlexSelection([]);
+    setFlexResting(false);
+    setLog([]);
+    setViewIndex(0);
+    setRestored(false);
+    startedAt.current = null;
+    if (profile) {
+      AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+      clearActiveSession(profile.uid);
+    }
+    remoteDraftRef.current = null;
+    stopRest();
+  };
+
   // Sensaciones: alumno añade/quita una serie a un ejercicio según se sienta.
   const addSet = (exerciseIndex: number) => {
     setLog((prev) =>
@@ -420,11 +437,17 @@ export default function WorkoutScreen() {
     );
   };
   const removeSet = (exerciseIndex: number) => {
-    setLog((prev) =>
-      prev.map((ex, i) =>
-        i === exerciseIndex && ex.sets.length > 1 ? { ...ex, sets: ex.sets.slice(0, -1) } : ex
-      )
-    );
+    setLog((prev) => {
+      const ex = prev[exerciseIndex];
+      if (!ex) return prev;
+      // Sensaciones: si se quita la única serie, el ejercicio sale del día.
+      if (ex.sets.length <= 1) {
+        const next = prev.filter((_, i) => i !== exerciseIndex);
+        setViewIndex((v) => Math.max(0, Math.min(v, next.length - 1)));
+        return next;
+      }
+      return prev.map((e, i) => (i === exerciseIndex ? { ...e, sets: e.sets.slice(0, -1) } : e));
+    });
   };
 
   // Historial de los últimos 7 días (para decidir qué toca hoy en Sensaciones).
@@ -918,18 +941,26 @@ export default function WorkoutScreen() {
   // ---------- Modo entreno ----------
   return (
     <ScreenContainer>
-      <Pressable
-        onPress={() => {
-          // Con la sesión en marcha no se sale a la ligera: confirmación.
-          if (inProgress) setExitConfirmOpen(true);
-          else router.push('/(client)/dashboard');
-        }}
-        style={styles.exitBtn}
-        hitSlop={8}
-      >
-        <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
-        <Text style={styles.exitText}>Salir del entreno</Text>
-      </Pressable>
+      <View style={styles.topBarRow}>
+        <Pressable
+          onPress={() => {
+            // Con la sesión en marcha no se sale a la ligera: confirmación.
+            if (inProgress) setExitConfirmOpen(true);
+            else router.push('/(client)/dashboard');
+          }}
+          style={styles.exitBtn}
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
+          <Text style={styles.exitText}>Salir del entreno</Text>
+        </Pressable>
+        {isFlex && combinedDay ? (
+          <Pressable onPress={cancelFlexSession} style={styles.cancelFlexBtn} hitSlop={8}>
+            <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
+            <Text style={styles.cancelFlexText}>Cancelar entreno</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <Text style={styles.title}>{routine.name}</Text>
 
       <Modal
@@ -1611,6 +1642,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   exitText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  topBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  cancelFlexBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: spacing.xs },
+  cancelFlexText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold },
   dayTabs: { marginBottom: spacing.md },
   dayTab: {
     paddingHorizontal: spacing.md,
