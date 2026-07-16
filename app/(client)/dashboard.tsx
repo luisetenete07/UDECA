@@ -127,7 +127,11 @@ export default function ClientDashboard() {
 
   const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
   const sessions = weekSessions(workoutLogs);
-  const streak = currentStreak(workoutLogs, { routine, cycleAnchor });
+  const streak = currentStreak(workoutLogs, {
+    routine,
+    cycleAnchor,
+    restDays: profile?.flexRestDays,
+  });
   // Qué toca hoy según el modo (semanal o Método REIN TENA por ciclo).
   const todaySession = resolveTodaySession(routine, cycleAnchor ?? undefined);
   const todaysDay = todaySession.day;

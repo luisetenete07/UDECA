@@ -1,4 +1,4 @@
-import { deleteField, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, deleteField, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { stripUndefined } from './clean';
 import type { ActiveSession } from '../types';
@@ -69,5 +69,14 @@ export async function markOnboardingComplete(uid: string): Promise<void> {
     await updateDoc(doc(db, 'users', uid), { onboardingCompleted: true });
   } catch {
     // Ignorado: el flag local evita repetirlo en este dispositivo igualmente.
+  }
+}
+
+/** Modo Sensaciones: registra un día como descanso elegido por el alumno. */
+export async function addFlexRestDay(uid: string, dayTs: number): Promise<void> {
+  try {
+    await updateDoc(doc(db, 'users', uid), { flexRestDays: arrayUnion(dayTs) });
+  } catch {
+    // Ignorado: la racha tolera 1 hueco igualmente en modo flexible.
   }
 }

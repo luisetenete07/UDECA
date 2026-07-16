@@ -11,6 +11,7 @@ import { useAuth } from '../../lib/auth-context';
 import { getActiveChallenge } from '../../lib/firestore/challenges';
 import { getSocialLeaderboard, syncMySocialStats } from '../../lib/firestore/social';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { isOnline } from '../../lib/presence';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { Challenge, SocialStats } from '../../lib/types';
 
@@ -178,10 +179,13 @@ export default function SocialScreen() {
               </View>
               <Avatar name={member.name} photoURL={member.photoURL} size={44} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.name}>
-                  {member.name}
-                  {isMe ? <Text style={styles.youTag}>  · Tú</Text> : null}
-                </Text>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}>
+                    {member.name}
+                    {isMe ? <Text style={styles.youTag}>  · Tú</Text> : null}
+                  </Text>
+                  {isOnline(member.lastSeen) ? <View style={styles.onlineDot} /> : null}
+                </View>
                 <Text style={styles.meta}>
                   {member.totalWorkouts} entrenos · {member.sessionsThisWeek} esta semana
                 </Text>
@@ -202,6 +206,8 @@ export default function SocialScreen() {
 }
 
 const styles = StyleSheet.create({
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF7D' },
   prBoardRow: {
     flexDirection: 'row',
     alignItems: 'center',

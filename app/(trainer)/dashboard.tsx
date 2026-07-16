@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
@@ -68,6 +68,7 @@ export default function TrainerDashboard() {
   const [loading, setLoading] = useState(cached === undefined);
   const [remindingPays, setRemindingPays] = useState(false);
   const [paysReminded, setPaysReminded] = useState(false);
+  const [payListOpen, setPayListOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotReport, setCopilotReport] = useState<CopilotReport | null>(null);
   const [loadingCopilot, setLoadingCopilot] = useState(false);
@@ -513,15 +514,21 @@ export default function TrainerDashboard() {
               ))}
             </View>
             {overdueCount > 0 || dueSoonCount > 0 ? (
-              <View style={styles.dueBanner}>
-                <Ionicons name="alert-circle-outline" size={15} color={colors.warning} />
+              <Pressable
+                onPress={() => setPayListOpen(true)}
+                style={styles.dueBanner}
+                hitSlop={6}
+              >
+                <Ionicons name="alert-circle" size={15} color={colors.danger} />
                 <Text style={styles.dueText}>
                   {overdueCount > 0
                     ? `${overdueCount} pago(s) vencido(s)`
                     : `${dueSoonCount} pago(s) esta semana`}
                   {overdueCount > 0 && dueSoonCount > 0 ? ` · ${dueSoonCount} esta semana` : ''}
+                  {' · ver quién'}
                 </Text>
-              </View>
+                <Ionicons name="chevron-forward" size={14} color={colors.danger} />
+              </Pressable>
             ) : null}
           </Card>
         </Pressable>
@@ -558,6 +565,60 @@ export default function TrainerDashboard() {
           })
         )}
       </Card>
+
+      {/* Lista de alumnos con pago pendiente/vencido (desde la alerta roja). */}
+      <Modal
+        visible={payListOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPayListOpen(false)}
+      >
+        <View style={styles.payBackdrop}>
+          <View style={styles.paySheet}>
+            <View style={styles.payHeader}>
+              <Text style={styles.sectionTitle}>Pagos pendientes ({duePayClients.length})</Text>
+              <Pressable onPress={() => setPayListOpen(false)} hitSlop={8}>
+                <Ionicons name="close" size={22} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            {duePayClients.length === 0 ? (
+              <Text style={styles.mutedText}>No hay pagos pendientes.</Text>
+            ) : (
+              duePayClients.map((c) => (
+                <Pressable
+                  key={c.uid}
+                  onPress={() => {
+                    setPayListOpen(false);
+                    router.push(`/(trainer)/clients/${c.uid}`);
+                  }}
+                  style={styles.payRow}
+                >
+                  <Avatar name={c.name} photoURL={c.photoURL} size={38} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.logClient}>{c.name}</Text>
+                    <Text style={styles.payMeta}>
+                      {c.paymentStatus ? PAYMENT_STATUS_LABEL[c.paymentStatus] : 'Pendiente'}
+                      {c.monthlyFeeEur ? ` · ${c.monthlyFeeEur} €` : ''}
+                      {c.nextPaymentDate
+                        ? ` · vence ${new Date(c.nextPaymentDate).toLocaleDateString('es-ES')}`
+                        : ''}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                </Pressable>
+              ))
+            )}
+            <Button
+              title="Avisar a todos"
+              onPress={() => {
+                setPayListOpen(false);
+                handleRemindAllPayments();
+              }}
+              style={{ marginTop: spacing.md }}
+            />
+          </View>
+        </View>
+      </Modal>
 
     </ScreenContainer>
   );
@@ -676,7 +737,32 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  dueText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold },
+  dueText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold, flex: 1 },
+  payBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  paySheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    borderTopWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    maxHeight: '80%',
+  },
+  payHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  payRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  payMeta: { ...typography.small, color: colors.danger, marginTop: 1 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
   sectionTitle: { ...typography.h3, color: colors.text },

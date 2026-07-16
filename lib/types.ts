@@ -71,6 +71,11 @@ export interface UserProfile {
    * Día 1. Sincroniza el día del ciclo entre dispositivos.
    */
   cycleAnchors?: Record<string, number>;
+  /**
+   * Modo Sensaciones: días (timestamp a medianoche) que el alumno marcó como
+   * descanso a propósito; no rompen la racha.
+   */
+  flexRestDays?: number[];
 }
 
 /** Sesión de entrenamiento a medias, sincronizable entre dispositivos. */

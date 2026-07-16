@@ -30,22 +30,23 @@ export function lastPerformanceByExercise(
   for (const log of sorted) {
     for (const ex of log.exercises) {
       if (result[ex.exerciseId]) continue; // ya tenemos el más reciente
-      // Serie con más peso registrado en esa sesión.
+      // Solo series COMPLETADAS con marca apuntada: si en la última sesión el
+      // ejercicio quedó sin hacer, se sigue buscando en sesiones anteriores
+      // para no mostrar "última vez" en blanco.
+      const done = ex.sets.filter((s) => s.completed && s.reps.trim() !== '');
+      if (done.length === 0) continue;
+      // Serie con más peso registrado; si ninguna tiene peso, la última hecha.
       let best: { weight?: string; reps?: string } | null = null;
       let bestWeight = -1;
-      for (const set of ex.sets) {
+      for (const set of done) {
         const w = toNum(set.weight);
         if (set.weight && !Number.isNaN(w) && w > bestWeight) {
           bestWeight = w;
           best = { weight: set.weight, reps: set.reps };
         }
       }
-      if (!best && ex.sets.length > 0) {
-        best = { reps: ex.sets[0].reps };
-      }
-      if (best) {
-        result[ex.exerciseId] = { ...best, date: log.date };
-      }
+      if (!best) best = { reps: done[done.length - 1].reps };
+      result[ex.exerciseId] = { ...best, date: log.date };
     }
   }
 
@@ -104,6 +105,8 @@ export interface StreakPlan {
     days: { weekday?: number; isRest?: boolean }[];
   } | null;
   cycleAnchor?: number | null;
+  /** Días (a medianoche) marcados como descanso en modo Sensaciones. */
+  restDays?: number[];
 }
 
 /** Índice de día de la semana con lunes=0 para un timestamp. */
@@ -150,6 +153,8 @@ export function currentStreak(logs: WorkoutLog[], plan?: StreakPlan): number {
       continue;
     }
     if (d === today) continue; // hoy aún puede entrenar: no rompe.
+    // Descanso elegido por el alumno (Sensaciones): no cuenta ni rompe.
+    if (plan?.restDays?.includes(d)) continue;
     const s = scheduled(d);
     if (s === true) break; // se saltó un entrenamiento programado.
     if (s === false) continue; // descanso programado: no cuenta ni rompe.

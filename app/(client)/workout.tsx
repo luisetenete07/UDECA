@@ -35,6 +35,7 @@ import { syncMySocialStats } from '../../lib/firestore/social';
 import { resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import {
+  addFlexRestDay,
   clearActiveSession,
   fetchSyncState,
   saveActiveSession,
@@ -97,6 +98,13 @@ function isSameDay(ts: number, ref = Date.now()): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+
+/** Timestamp a medianoche local (para agrupar por día natural). */
+function startOfDayLocal(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
 }
 
 function buildLog(day: RoutineDay): LoggedExercise[] {
@@ -174,6 +182,10 @@ export default function WorkoutScreen() {
   const [restingToday, setRestingToday] = useState(false);
   const [dayPickerOpen, setDayPickerOpen] = useState(false);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  // Modo "Sensaciones": selección múltiple de rutinas (en orden) y descanso.
+  const [flexSelection, setFlexSelection] = useState<string[]>([]);
+  const [combinedDay, setCombinedDay] = useState<RoutineDay | null>(null);
+  const [flexResting, setFlexResting] = useState(false);
   const startedAt = useRef<number | null>(null);
   // Sesión en curso traída de la cuenta (otro dispositivo). Se compara con el
   // borrador local para recuperar siempre la versión más reciente.
@@ -358,8 +370,93 @@ export default function WorkoutScreen() {
     setRestored(false);
   };
 
-  const day = routine?.days.find((d) => d.id === selectedDayId) ?? null;
+  const isFlex = routine?.schedule === 'flex';
+  const day =
+    (isFlex ? combinedDay : null) ?? routine?.days.find((d) => d.id === selectedDayId) ?? null;
   const todaySession = resolveTodaySession(routine, cycleAnchor ?? undefined);
+
+  // Sensaciones: alterna una rutina en la selección (guarda el orden de elección).
+  const toggleFlexRoutine = (id: string) => {
+    setFlexSelection((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  // Sensaciones: monta el entreno combinando las rutinas elegidas, en orden.
+  const startFlexSession = () => {
+    if (!routine || flexSelection.length === 0) return;
+    const chosen = flexSelection
+      .map((id) => routine.days.find((d) => d.id === id))
+      .filter((d): d is RoutineDay => !!d);
+    const combined: RoutineDay = {
+      id: `flex-${Date.now()}`,
+      name: chosen.map((d) => d.name || 'Rutina').join(' + '),
+      exercises: chosen.flatMap((d) => d.exercises),
+    };
+    setCombinedDay(combined);
+    setLog(buildLog(combined));
+    setViewIndex(0);
+    startedAt.current = null;
+  };
+
+  // Sensaciones: marca hoy como descanso (no afecta a la racha).
+  const chooseFlexRest = async () => {
+    setFlexResting(true);
+    if (profile) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      addFlexRestDay(profile.uid, today.getTime()).catch(() => {});
+    }
+  };
+
+  // Sensaciones: alumno añade/quita una serie a un ejercicio según se sienta.
+  const addSet = (exerciseIndex: number) => {
+    setLog((prev) =>
+      prev.map((ex, i) => {
+        if (i !== exerciseIndex) return ex;
+        const last = ex.sets[ex.sets.length - 1];
+        return { ...ex, sets: [...ex.sets, { reps: last?.reps ?? '', weight: '', completed: false }] };
+      })
+    );
+  };
+  const removeSet = (exerciseIndex: number) => {
+    setLog((prev) =>
+      prev.map((ex, i) =>
+        i === exerciseIndex && ex.sets.length > 1 ? { ...ex, sets: ex.sets.slice(0, -1) } : ex
+      )
+    );
+  };
+
+  // Historial de los últimos 7 días (para decidir qué toca hoy en Sensaciones).
+  const last7FlexDays = (() => {
+    const out: { ts: number; label: string; what: string }[] = [];
+    const rest = new Set((profile?.flexRestDays ?? []).map((t) => startOfDayLocal(t)));
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const ts = d.getTime();
+      const logsThatDay = history.filter(
+        (l) => routine && l.routineId === routine.id && startOfDayLocal(l.date) === ts
+      );
+      const what = logsThatDay.length
+        ? logsThatDay.map((l) => l.dayName).join(', ')
+        : rest.has(ts)
+          ? 'Descanso'
+          : '—';
+      out.push({
+        ts,
+        label:
+          i === 0
+            ? 'Hoy'
+            : i === 1
+              ? 'Ayer'
+              : d.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit' }),
+        what,
+      });
+    }
+    return out;
+  })();
 
   // Descanso opcional (Día 7 TENA): reinicia el ciclo entrenando el Día 1 hoy.
   const handleStartCycleToday = async () => {
@@ -643,11 +740,20 @@ export default function WorkoutScreen() {
       if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
       setRestored(false);
       setRetrainDayId(null);
+      // Deja el estado detrás del resumen "limpio": el día queda como completado
+      // (doneSets 0), de modo que nunca se vuelven a mostrar sus ejercicios.
+      if (day) setLog(buildLog(day));
+      setViewIndex(0);
+      startedAt.current = null;
       setSummary({
         durationMin,
         ...totals,
         prs,
-        streak: currentStreak(freshLogs, { routine, cycleAnchor }),
+        streak: currentStreak(freshLogs, {
+          routine,
+          cycleAnchor,
+          restDays: profile?.flexRestDays,
+        }),
         newAchievements,
       });
       if (savedOffline) {
@@ -858,36 +964,38 @@ export default function WorkoutScreen() {
         </View>
       </Modal>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayTabs}>
-        {routine.days.map((d, i) => {
-          const isCycle = routine.schedule === 'cycle';
-          const isToday = isCycle
-            ? todaySession.cycleIndex === i
-            : d.weekday === todayWeekday();
-          return (
-            <Pressable
-              key={d.id}
-              onPress={() => {
-                setSelectedDayId(d.id);
-                // Tocar un día resuelve el descanso opcional: se entrena ese día.
-                setOptionalResolved(true);
-                setRestingToday(false);
-              }}
-              style={[styles.dayTab, selectedDayId === d.id && styles.dayTabSelected]}
-            >
-              <Text
-                style={[styles.dayTabText, selectedDayId === d.id && styles.dayTabTextSelected]}
+      {isFlex ? null : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayTabs}>
+          {routine.days.map((d, i) => {
+            const isCycle = routine.schedule === 'cycle';
+            const isToday = isCycle
+              ? todaySession.cycleIndex === i
+              : d.weekday === todayWeekday();
+            return (
+              <Pressable
+                key={d.id}
+                onPress={() => {
+                  setSelectedDayId(d.id);
+                  // Tocar un día resuelve el descanso opcional: se entrena ese día.
+                  setOptionalResolved(true);
+                  setRestingToday(false);
+                }}
+                style={[styles.dayTab, selectedDayId === d.id && styles.dayTabSelected]}
               >
-                {isCycle
-                  ? `Día ${i + 1}`
-                  : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`}
-                {d.optionalRest ? ' · descanso opcional' : d.isRest ? ' · descanso' : ''}
-                {isToday ? '  ·  HOY' : ''}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                <Text
+                  style={[styles.dayTabText, selectedDayId === d.id && styles.dayTabTextSelected]}
+                >
+                  {isCycle
+                    ? `Día ${i + 1}`
+                    : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`}
+                  {d.optionalRest ? ' · descanso opcional' : d.isRest ? ' · descanso' : ''}
+                  {isToday ? '  ·  HOY' : ''}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {routine.schedule === 'cycle' ? (
         <View style={styles.cycleActionsRow}>
@@ -905,27 +1013,82 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
-      {routine.schedule === 'flex' && !day ? (
+      {isFlex && flexResting ? (
+        <FadeIn>
+          <Card accent style={styles.optionalCard}>
+            <View style={styles.optionalHeader}>
+              <Ionicons name="bed" size={18} color={colors.primary} />
+              <Text style={styles.optionalTitle}>Día de descanso</Text>
+            </View>
+            <Text style={styles.optionalText}>
+              Hoy descansas. No cuenta contra tu racha. Vuelve mañana con todo.
+            </Text>
+            <Button
+              title="Mejor entrenar"
+              variant="secondary"
+              onPress={() => setFlexResting(false)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </Card>
+        </FadeIn>
+      ) : isFlex && !combinedDay ? (
         <FadeIn>
           <Card accent style={styles.optionalCard}>
             <View style={styles.optionalHeader}>
               <Ionicons name="options-outline" size={18} color={colors.primary} />
-              <Text style={styles.optionalTitle}>
-                {routine.scheduleLabel ?? 'Sensaciones'}
-              </Text>
+              <Text style={styles.optionalTitle}>{routine.scheduleLabel ?? 'Sensaciones'}</Text>
             </View>
             <Text style={styles.optionalText}>
-              ¿Cómo te encuentras hoy? Elige la rutina que quieres hacer:
+              ¿Cómo te sientes hoy? Marca una o varias rutinas (en el orden que quieras hacerlas):
             </Text>
-            {routine.days.map((d) => (
-              <Button
-                key={d.id}
-                title={d.name || 'Rutina'}
-                variant="secondary"
-                onPress={() => setSelectedDayId(d.id)}
-                style={{ marginTop: spacing.sm }}
-              />
-            ))}
+            {routine.days.map((d) => {
+              const pos = flexSelection.indexOf(d.id);
+              const on = pos >= 0;
+              return (
+                <Pressable
+                  key={d.id}
+                  onPress={() => toggleFlexRoutine(d.id)}
+                  style={[styles.flexPick, on && styles.flexPickOn]}
+                >
+                  <View style={[styles.flexCheck, on && styles.flexCheckOn]}>
+                    {on ? <Text style={styles.flexCheckNum}>{pos + 1}</Text> : null}
+                  </View>
+                  <Text style={[styles.flexPickText, on && styles.flexPickTextOn]}>
+                    {d.name || 'Rutina'}
+                    {d.exercises.length ? ` · ${d.exercises.length} ejercicios` : ''}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            <Button
+              title={
+                flexSelection.length > 1
+                  ? `Empezar (${flexSelection.length} rutinas)`
+                  : 'Empezar'
+              }
+              onPress={startFlexSession}
+              disabled={flexSelection.length === 0}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Hoy descanso"
+              variant="ghost"
+              onPress={chooseFlexRest}
+              style={{ marginTop: spacing.xs }}
+            />
+
+            {/* Últimos 7 días para saber qué te toca hoy. */}
+            <View style={styles.flexHistory}>
+              <Text style={styles.flexHistoryLabel}>Tus últimos 7 días</Text>
+              {last7FlexDays.map((h) => (
+                <View key={h.ts} style={styles.flexHistoryRow}>
+                  <Text style={styles.flexHistoryDate}>{h.label}</Text>
+                  <Text style={styles.flexHistoryWhat} numberOfLines={1}>
+                    {h.what}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </Card>
         </FadeIn>
       ) : null}
@@ -1109,7 +1272,7 @@ export default function WorkoutScreen() {
             </FadeIn>
           );
         })()
-      ) : (
+      ) : isFlex && (!combinedDay || flexResting) ? null : (
       <>
       {totalSets > 0 ? (
         <View style={styles.progressBlock}>
@@ -1340,6 +1503,18 @@ export default function WorkoutScreen() {
                 ) : null}
               </View>
             ))}
+            {isFlex ? (
+              <View style={styles.setEditRow}>
+                <Pressable onPress={() => removeSet(exerciseIndex)} style={styles.setEditBtn} hitSlop={6}>
+                  <Ionicons name="remove" size={16} color={colors.textMuted} />
+                  <Text style={styles.setEditText}>Quitar serie</Text>
+                </Pressable>
+                <Pressable onPress={() => addSet(exerciseIndex)} style={styles.setEditBtn} hitSlop={6}>
+                  <Ionicons name="add" size={16} color={colors.primary} />
+                  <Text style={[styles.setEditText, { color: colors.primary }]}>Añadir serie</Text>
+                </Pressable>
+              </View>
+            ) : null}
             {noteOpenIndex === exerciseIndex || exercise.notes ? (
               <TextField
                 value={exercise.notes ?? ''}
@@ -1504,6 +1679,56 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.7)',
   },
   exitCard: { paddingVertical: spacing.lg },
+  flexPick: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    marginTop: spacing.sm,
+  },
+  flexPickOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  flexCheck: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flexCheckOn: { borderColor: colors.primary, backgroundColor: colors.primary },
+  flexCheckNum: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.heading, fontSize: 12 },
+  flexPickText: { ...typography.body, color: colors.textMuted, flex: 1 },
+  flexPickTextOn: { color: colors.text, fontFamily: fonts.semiBold },
+  flexHistory: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  flexHistoryLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.xs,
+  },
+  flexHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, paddingVertical: 3 },
+  flexHistoryDate: { ...typography.small, color: colors.textFaint, width: 74 },
+  flexHistoryWhat: { ...typography.small, color: colors.textMuted, flex: 1, textAlign: 'right' },
+  setEditRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  setEditBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  setEditText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   exitTitle: { ...typography.h2, color: colors.text, textAlign: 'center', marginTop: spacing.sm },
   exitMsg: {
     ...typography.small,
