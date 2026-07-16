@@ -940,7 +940,11 @@ export default function RoutineEditorScreen() {
               <View style={styles.exerciseTitleRow}>
                 <Text style={styles.exerciseName}>
                   {ex.name}
-                  {resolveLoad(ex) === 'assisted' ? ' · goma' : resolveLoad(ex) === 'weighted' ? ' · lastrado' : ''}
+                  {resolveLoad(ex) === 'assisted' ? (
+                    <Text style={styles.markAssisted}> · goma</Text>
+                  ) : resolveLoad(ex) === 'weighted' ? (
+                    <Text style={styles.markWeighted}> · lastre</Text>
+                  ) : null}
                 </Text>
                 {days.length > 1 ? (
                   <Pressable
@@ -1039,11 +1043,12 @@ export default function RoutineEditorScreen() {
               />
               {goalOpen[ex.id] || ex.goal ? (
                 <TextField
-                  label={ex.measure === 'seconds' ? 'Objetivo (segundos)' : 'Objetivo (reps)'}
-                  keyboardType="numeric"
+                  label="Objetivo (texto libre)"
                   value={ex.goal ?? ''}
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'goal', v)}
-                  placeholder={ex.measure === 'seconds' ? 'Ej. 60' : 'Ej. 20'}
+                  placeholder={
+                    ex.measure === 'seconds' ? 'Ej. 20 segundos con 5 kg' : 'Ej. 3x10 con 5 kg'
+                  }
                   style={{ marginBottom: 0, marginTop: spacing.xs }}
                 />
               ) : null}
@@ -1054,9 +1059,7 @@ export default function RoutineEditorScreen() {
                 >
                   <Ionicons name="flag-outline" size={14} color={colors.primary} />
                   <Text style={styles.linkBtnText}>
-                    {ex.goal
-                      ? `Objetivo: ${ex.goal}${ex.measure === 'seconds' ? ' seg' : ' reps'}`
-                      : 'Añadir objetivo'}
+                    {ex.goal ? `Objetivo: ${ex.goal}` : 'Añadir objetivo'}
                   </Text>
                 </Pressable>
                 {exIndex > 0 ? (
@@ -1231,7 +1234,11 @@ export default function RoutineEditorScreen() {
                           <View style={{ flex: 1 }}>
                             <Text style={styles.pickerRowText}>
                               {ex.name}
-                              {resolveLoad(ex) === 'assisted' ? ' · goma' : resolveLoad(ex) === 'weighted' ? ' · lastrado' : ''}
+                              {resolveLoad(ex) === 'assisted' ? (
+                                <Text style={styles.markAssisted}> · goma</Text>
+                              ) : resolveLoad(ex) === 'weighted' ? (
+                                <Text style={styles.markWeighted}> · lastre</Text>
+                              ) : null}
                             </Text>
                             <Text style={styles.pickerRowMuscle}>
                               {ex.muscleGroup}
@@ -1482,6 +1489,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   loadRow: { flexDirection: 'row', gap: spacing.xs },
+  // Marcadores de carga en color (sin emojis): azul = lastre, dorado = goma.
+  markWeighted: { color: '#5B9BD5', fontFamily: fonts.semiBold, fontSize: 13 },
+  markAssisted: { color: colors.primary, fontFamily: fonts.semiBold, fontSize: 13 },
   groupWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   createNewBtn: {
     flexDirection: 'row',

@@ -872,6 +872,21 @@ export default function WorkoutScreen() {
             />
           </Card>
         </FadeIn>
+      ) : day?.isRest ? (
+        // Día de descanso normal: solo informa. No hay nada que completar y
+        // no afecta a la racha (la racha cuenta días entrenados).
+        <FadeIn>
+          <Card accent style={styles.optionalCard}>
+            <View style={styles.optionalHeader}>
+              <Ionicons name="bed" size={18} color={colors.primary} />
+              <Text style={styles.optionalTitle}>Día de descanso</Text>
+            </View>
+            <Text style={styles.optionalText}>
+              Hoy toca recuperar: el descanso también es parte del entrenamiento. No tienes que
+              marcar nada.
+            </Text>
+          </Card>
+        </FadeIn>
       ) : showCompleted && completedTodayLog ? (
         (() => {
           const t = sessionTotals(completedTodayLog.exercises, measureByExercise);
@@ -1089,16 +1104,15 @@ export default function WorkoutScreen() {
                     <Text style={styles.metaChipText}>Con goma</Text>
                   </View>
                 ) : load === 'weighted' ? (
-                  <View style={[styles.metaChip, styles.metaChipBand]}>
-                    <Text style={styles.metaChipText}>Lastrado</Text>
+                  <View style={[styles.metaChip, styles.metaChipWeighted]}>
+                    <Text style={[styles.metaChipText, styles.metaChipWeightedText]}>
+                      Lastrado
+                    </Text>
                   </View>
                 ) : null}
                 {planned?.goal ? (
                   <View style={[styles.metaChip, styles.metaChipBand]}>
-                    <Text style={styles.metaChipText}>
-                      Objetivo {planned.goal}
-                      {isSeconds ? ' seg' : ' reps'}
-                    </Text>
+                    <Text style={styles.metaChipText}>Objetivo: {planned.goal}</Text>
                   </View>
                 ) : null}
               </View>
@@ -1476,6 +1490,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   metaChipBand: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  // Lastre en azul (distinto de la goma dorada), sin emojis.
+  metaChipWeighted: { borderColor: 'rgba(91,155,213,0.5)', backgroundColor: 'rgba(91,155,213,0.14)' },
+  metaChipWeightedText: { color: '#7FB3E0' },
   metaChipText: { ...typography.small, color: colors.primaryBright, fontSize: 11, fontFamily: fonts.semiBold },
   videoLink: {
     flexDirection: 'row',

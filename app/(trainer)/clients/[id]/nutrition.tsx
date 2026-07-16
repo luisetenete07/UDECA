@@ -12,6 +12,7 @@ import {
   setActiveNutritionPlan,
   updateNutritionPlan,
 } from '../../../../lib/firestore/nutrition';
+import { getUserProfile } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
 import { colors, spacing, typography } from '../../../../lib/theme';
 
@@ -43,6 +44,18 @@ export default function NutritionEditorScreen() {
         setCarbs(String(existing.carbsG));
         setFat(String(existing.fatG));
         setNotes(existing.notes ?? '');
+      } else {
+        // Sin plan del coach: se precarga el plan OFICIAL que el alumno
+        // calculó en el onboarding, para verlo (y ajustarlo si hace falta).
+        const clientProfile = await getUserProfile(clientId).catch(() => null);
+        const t = clientProfile?.nutritionTargets;
+        if (t) {
+          setName('Plan del alumno (onboarding)');
+          setCalories(String(t.dailyCalories));
+          setProtein(String(t.proteinG));
+          setCarbs(String(t.carbsG));
+          setFat(String(t.fatG));
+        }
       }
       setLoading(false);
     })();

@@ -547,20 +547,21 @@ export default function ClientDetailScreen() {
           </>
         ) : client.nutritionTargets ? (
           <>
-            <Text style={styles.routineName}>Macros del alumno (calculadora)</Text>
+            <Text style={styles.routineName}>Plan del alumno (onboarding)</Text>
             <Text style={styles.routineMeta}>
               {client.nutritionTargets.dailyCalories} kcal · P{client.nutritionTargets.proteinG}g C
               {client.nutritionTargets.carbsG}g G{client.nutritionTargets.fatG}g
             </Text>
             <Text style={[styles.mutedText, { marginTop: spacing.xs }]}>
-              Los calculó el alumno en el onboarding. Crea un plan para fijar sus objetivos oficiales.
+              Plan oficial calculado por el alumno en el onboarding. Puedes ajustarlo si lo ves
+              necesario.
             </Text>
           </>
         ) : (
           <Text style={styles.mutedText}>Este cliente no tiene un plan nutricional activo.</Text>
         )}
         <Button
-          title={nutritionPlan ? 'Editar plan' : 'Crear plan'}
+          title={nutritionPlan ? 'Editar plan' : client.nutritionTargets ? 'Ver plan' : 'Crear plan'}
           variant="secondary"
           onPress={() => router.push(`/(trainer)/clients/${id}/nutrition`)}
           style={{ marginTop: spacing.md }}

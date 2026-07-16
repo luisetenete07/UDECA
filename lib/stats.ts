@@ -1,4 +1,4 @@
-import type { LoggedExercise, WeightLog, WorkoutLog } from './types';
+import { resolveLoad, type LoggedExercise, type WeightLog, type WorkoutLog } from './types';
 
 /**
  * Convierte a número tolerando la coma decimal española (66,4 → 66.4). Sin
@@ -342,6 +342,9 @@ export function sessionTotals(
   let volumeKg = 0;
   for (const ex of session) {
     const isSeconds = isIsometricExercise(ex, measureByExercise);
+    // La goma ASISTE (resta carga), no se levanta: sus kg no suman volumen.
+    // Solo cuenta el peso añadido (lastre, mancuernas, máquinas).
+    const weightCounts = resolveLoad(ex) !== 'assisted';
     for (const set of ex.sets) {
       if (!set.completed) continue;
       const r = parseReps(set.reps);
@@ -349,7 +352,7 @@ export function sessionTotals(
       // Reps de ejercicios por repeticiones; segundos de los isométricos.
       if (isSeconds) seconds += r;
       else reps += r;
-      volumeKg += (toNum(set.weight) || 0) * r;
+      if (weightCounts) volumeKg += (toNum(set.weight) || 0) * r;
     }
   }
   return { sets, reps, seconds, volumeKg: Math.round(volumeKg) };
@@ -559,6 +562,8 @@ export function weeklyVolume(
     for (const ex of log.exercises) {
       const group = muscleByExercise[ex.exerciseId];
       const isIso = ex.measure === 'seconds';
+      // Kg de goma no cuentan como volumen: la goma resta carga, no la añade.
+      const weightCounts = resolveLoad(ex) !== 'assisted';
       for (const set of ex.sets) {
         if (!set.completed) continue;
         const n = parseReps(set.reps);
@@ -566,7 +571,7 @@ export function weeklyVolume(
           bucket.isoSeconds += n;
           if (group === 'Empuje') bucket.isoPushSeconds += n;
           else if (group === 'Tirón') bucket.isoPullSeconds += n;
-        } else {
+        } else if (weightCounts) {
           bucket.volumeKg += (toNum(set.weight) || 0) * n;
         }
       }
