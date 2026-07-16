@@ -173,6 +173,7 @@ export default function WorkoutScreen() {
   const [optionalResolved, setOptionalResolved] = useState(false);
   const [restingToday, setRestingToday] = useState(false);
   const [dayPickerOpen, setDayPickerOpen] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const startedAt = useRef<number | null>(null);
   // Sesión en curso traída de la cuenta (otro dispositivo). Se compara con el
   // borrador local para recuperar siempre la versión más reciente.
@@ -646,7 +647,7 @@ export default function WorkoutScreen() {
         durationMin,
         ...totals,
         prs,
-        streak: currentStreak(freshLogs),
+        streak: currentStreak(freshLogs, { routine, cycleAnchor }),
         newAchievements,
       });
       if (savedOffline) {
@@ -812,7 +813,11 @@ export default function WorkoutScreen() {
   return (
     <ScreenContainer>
       <Pressable
-        onPress={() => router.push('/(client)/dashboard')}
+        onPress={() => {
+          // Con la sesión en marcha no se sale a la ligera: confirmación.
+          if (inProgress) setExitConfirmOpen(true);
+          else router.push('/(client)/dashboard');
+        }}
         style={styles.exitBtn}
         hitSlop={8}
       >
@@ -820,6 +825,38 @@ export default function WorkoutScreen() {
         <Text style={styles.exitText}>Salir del entreno</Text>
       </Pressable>
       <Text style={styles.title}>{routine.name}</Text>
+
+      <Modal
+        visible={exitConfirmOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setExitConfirmOpen(false)}
+      >
+        <View style={styles.exitBackdrop}>
+          <Card accent style={styles.exitCard}>
+            <Ionicons name="barbell" size={26} color={colors.primary} style={{ alignSelf: 'center' }} />
+            <Text style={styles.exitTitle}>Estás entrenando</Text>
+            <Text style={styles.exitMsg}>
+              Termina tu sesión antes de salir: tu progreso lo merece. Si sales, la sesión queda
+              guardada y podrás retomarla.
+            </Text>
+            <Button
+              title="Seguir entrenando"
+              onPress={() => setExitConfirmOpen(false)}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Salir (emergencia)"
+              variant="ghost"
+              onPress={() => {
+                setExitConfirmOpen(false);
+                router.push('/(client)/dashboard');
+              }}
+              style={{ marginTop: spacing.xs }}
+            />
+          </Card>
+        </View>
+      </Modal>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayTabs}>
         {routine.days.map((d, i) => {
@@ -1460,6 +1497,21 @@ const styles = StyleSheet.create({
   },
   dayPickerTitle: { ...typography.h3, color: colors.text },
   dayPickerHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
+  exitBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  exitCard: { paddingVertical: spacing.lg },
+  exitTitle: { ...typography.h2, color: colors.text, textAlign: 'center', marginTop: spacing.sm },
+  exitMsg: {
+    ...typography.small,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginTop: spacing.xs,
+  },
   resetCycleText: {
     ...typography.small,
     color: colors.primary,

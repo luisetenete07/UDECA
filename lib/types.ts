@@ -505,6 +505,8 @@ export interface Lesson {
    * desbloquear esta lección. Vacío/0 = disponible desde el primer día.
    */
   unlockAfterDays?: number;
+  /** E-book/PDF de apoyo (enlace a Drive, Dropbox...); se ve dentro de la app. */
+  pdfUrl?: string;
 }
 
 export interface CourseSection {

@@ -100,7 +100,7 @@ export default function CourseEditorScreen() {
   const updateLesson = (
     sectionId: string,
     lessonId: string,
-    field: 'title' | 'videoUrl' | 'durationLabel' | 'unlockAfterDays',
+    field: 'title' | 'videoUrl' | 'durationLabel' | 'unlockAfterDays' | 'pdfUrl',
     value: string
   ) => {
     setSections((prev) =>
@@ -259,6 +259,12 @@ export default function CourseEditorScreen() {
                 value={lesson.durationLabel ?? ''}
                 onChangeText={(v) => updateLesson(section.id, lesson.id, 'durationLabel', v)}
                 placeholder="Duración (ej. 12 min)"
+              />
+              <TextField
+                value={lesson.pdfUrl ?? ''}
+                onChangeText={(v) => updateLesson(section.id, lesson.id, 'pdfUrl', v)}
+                placeholder="E-book/PDF (enlace de Drive, Dropbox...) · opcional"
+                autoCapitalize="none"
               />
               <TextField
                 label="Candado: desbloquear a los X días del alumno en tu grupo (vacío = libre)"

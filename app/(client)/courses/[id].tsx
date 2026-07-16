@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
@@ -69,6 +69,16 @@ export default function ClientCourseDetailScreen() {
       ) : null}
       {activeLesson?.description ? (
         <Text style={styles.lessonDesc}>{activeLesson.description}</Text>
+      ) : null}
+
+      {activeLesson?.pdfUrl ? (
+        <View style={styles.pdfBlock}>
+          <View style={styles.pdfHead}>
+            <Ionicons name="document-text-outline" size={15} color={colors.primary} />
+            <Text style={styles.pdfTitle}>E-book de la lección</Text>
+          </View>
+          <EmbeddedDoc url={activeLesson.pdfUrl} />
+        </View>
       ) : null}
 
       <View style={styles.privateBadge}>
@@ -159,11 +169,47 @@ export default function ClientCourseDetailScreen() {
   );
 }
 
+/** Convierte enlaces de Drive/Dropbox a su versión embebible. */
+function toEmbeddablePdf(url: string): string {
+  if (url.includes('drive.google.com')) return url.replace(/\/view.*$/, '/preview');
+  if (url.includes('dropbox.com')) return url.replace('?dl=0', '?raw=1');
+  return url;
+}
+
+/** Visor de PDF/e-book DENTRO de la app (iframe en web, WebView en nativo). */
+function EmbeddedDoc({ url }: { url: string }) {
+  const src = toEmbeddablePdf(url);
+  if (Platform.OS === 'web') {
+    return React.createElement('iframe', {
+      src,
+      style: {
+        width: '100%',
+        height: 480,
+        backgroundColor: '#000',
+        borderRadius: radius.md,
+        border: `1px solid ${colors.border}`,
+      },
+      onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+    });
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { WebView } = require('react-native-webview');
+  return (
+    <View style={styles.pdfNative}>
+      <WebView source={{ uri: src }} style={{ flex: 1, borderRadius: radius.md }} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   lessonTitle: { ...typography.h2, color: colors.text, marginTop: spacing.md },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },
   metaText: { ...typography.small, color: colors.textMuted },
   lessonDesc: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm },
+  pdfBlock: { marginTop: spacing.md },
+  pdfHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
+  pdfTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  pdfNative: { height: 480, borderRadius: radius.md, overflow: 'hidden' },
   privateBadge: {
     flexDirection: 'row',
     alignItems: 'center',

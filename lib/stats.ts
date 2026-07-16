@@ -96,22 +96,74 @@ export function startOfWeek(ts: number): number {
  * entre sesiones (el descanso forma parte del plan — en el Método REIN TENA
  * se entrena a días alternos). Se rompe con 2+ días seguidos sin entrenar.
  */
-export function currentStreak(logs: WorkoutLog[]): number {
+/** Contexto de plan para la racha: rutina activa y ancla del ciclo del alumno. */
+export interface StreakPlan {
+  routine?: {
+    schedule?: 'weekly' | 'cycle' | 'flex';
+    cycleStartDate?: number;
+    days: { weekday?: number; isRest?: boolean }[];
+  } | null;
+  cycleAnchor?: number | null;
+}
+
+/** Índice de día de la semana con lunes=0 para un timestamp. */
+function weekdayOf(ts: number): number {
+  const d = new Date(ts).getDay();
+  return d === 0 ? 6 : d - 1;
+}
+
+/**
+ * Racha de entrenos CONSCIENTE del plan: los días de descanso programados por
+ * el coach (aunque sean varios seguidos) no cuentan ni la rompen; la racha
+ * solo se rompe al saltarse UN día de entrenamiento programado. Si no se
+ * conoce el plan (modo flexible o sin rutina), se tolera 1 día de hueco.
+ */
+export function currentStreak(logs: WorkoutLog[], plan?: StreakPlan): number {
   if (logs.length === 0) return 0;
   const DAY = 24 * 60 * 60 * 1000;
-  const days = [...new Set(logs.map((l) => startOfDay(l.date)))].sort((a, b) => b - a);
+  const trained = new Set(logs.map((l) => startOfDay(l.date)));
+  const oldest = Math.min(...trained);
   const today = startOfDay(Date.now());
 
-  // Viva si entrenó hoy, ayer o anteayer (un descanso de por medio cuenta).
-  if (today - days[0] > 2 * DAY) return 0;
+  const r = plan?.routine;
+  // ¿Tocaba entrenar el día d? true/false según el plan; null = plan desconocido.
+  const scheduled = (d: number): boolean | null => {
+    if (!r || r.days.length === 0) return null;
+    if (r.schedule === 'cycle' && (r.cycleStartDate || plan?.cycleAnchor)) {
+      const anchor = Math.max(r.cycleStartDate ?? 0, plan?.cycleAnchor ?? 0);
+      const idx = cycleDayIndexForStreak(anchor, r.days.length, d);
+      const day = r.days[idx];
+      return day ? !day.isRest : null;
+    }
+    if (r.schedule === 'flex') return null;
+    const usesWeekdays = r.days.some((day) => day.weekday !== undefined);
+    if (!usesWeekdays) return null;
+    return r.days.some((day) => day.weekday === weekdayOf(d) && !day.isRest);
+  };
 
-  let streak = 1;
-  for (let i = 1; i < days.length; i++) {
-    const gapDays = Math.round((days[i - 1] - days[i]) / DAY);
-    if (gapDays <= 2) streak += 1;
-    else break;
+  let streak = 0;
+  let unknownGap = 0;
+  for (let d = today, i = 0; d >= oldest && i < 400; d -= DAY, i++) {
+    if (trained.has(d)) {
+      streak += 1;
+      unknownGap = 0;
+      continue;
+    }
+    if (d === today) continue; // hoy aún puede entrenar: no rompe.
+    const s = scheduled(d);
+    if (s === true) break; // se saltó un entrenamiento programado.
+    if (s === false) continue; // descanso programado: no cuenta ni rompe.
+    // Plan desconocido: tolerancia clásica de 1 día de hueco.
+    unknownGap += 1;
+    if (unknownGap >= 2) break;
   }
   return streak;
+}
+
+/** cycleDayIndex local (evita dependencia circular con lib/schedule). */
+function cycleDayIndexForStreak(anchor: number, len: number, now: number): number {
+  const elapsed = dayDiff(anchor, now);
+  return ((elapsed % len) + len) % len;
 }
 
 /** Número de sesiones registradas en la semana en curso (lunes-domingo). */

@@ -540,7 +540,9 @@ export default function TrainerDashboard() {
             return (
               <Pressable
                 key={log.id}
-                onPress={() => router.push(`/(trainer)/clients/${log.clientId}`)}
+                onPress={() =>
+                  router.push(`/(trainer)/clients/${log.clientId}/session?logId=${log.id}`)
+                }
                 style={styles.activityRow}
               >
                 <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
