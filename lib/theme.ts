@@ -35,6 +35,8 @@ export const colors = {
 export const gradients = {
   gold: ['#C9BDB0', '#A2968B', '#8A7E73'] as const,
   goldSubtle: ['rgba(162,150,139,0.22)', 'rgba(162,150,139,0.06)'] as const,
+  // Halo ambiental: se funde a totalmente transparente (sin corte contra el negro).
+  goldHalo: ['rgba(162,150,139,0.20)', 'rgba(162,150,139,0)'] as const,
   surface: ['#141414', '#0A0A0A'] as const,
 };
 

@@ -55,12 +55,12 @@ export default function LoginScreen() {
 
   return (
     <ScreenContainer contentStyle={styles.content}>
-      <LinearGradient
-        colors={gradients.goldSubtle}
-        style={styles.heroGlow}
-        pointerEvents="none"
-      />
       <View style={styles.header}>
+        <LinearGradient
+          colors={gradients.goldHalo}
+          style={styles.heroGlow}
+          pointerEvents="none"
+        />
         <Logo />
         <Text style={styles.title}>Bienvenido de nuevo</Text>
         <Text style={styles.subtitle}>Inicia sesión para continuar con tu entrenamiento</Text>
@@ -117,11 +117,11 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 220,
-    opacity: 0.5,
+    alignSelf: 'center',
+    top: -70,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
   },
   header: {
     alignItems: 'center',

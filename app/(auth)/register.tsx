@@ -53,12 +53,12 @@ export default function RegisterScreen() {
 
   return (
     <ScreenContainer contentStyle={styles.content}>
-      <LinearGradient
-        colors={gradients.goldSubtle}
-        style={styles.heroGlow}
-        pointerEvents="none"
-      />
       <View style={styles.header}>
+        <LinearGradient
+          colors={gradients.goldHalo}
+          style={styles.heroGlow}
+          pointerEvents="none"
+        />
         <Logo compact />
         <Text style={styles.title}>Crea tu cuenta</Text>
         <Text style={styles.subtitle}>Elige cómo quieres usar la app</Text>
@@ -155,11 +155,11 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 220,
-    opacity: 0.5,
+    alignSelf: 'center',
+    top: -60,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
   },
   header: {
     alignItems: 'center',
