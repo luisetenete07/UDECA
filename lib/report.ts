@@ -215,7 +215,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
             : ''
         }
 
-        <div class="foot">Generado por UDECA · udeca.luistenafit.com</div>
+        <div class="foot">Generado por UDECA · www.udeca.app</div>
       </body>
     </html>
   `;

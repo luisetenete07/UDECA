@@ -584,7 +584,7 @@ export default function WorkoutScreen() {
     const lines = summary.prs.map((pr) => `${pr.exerciseName}: ${pr.label}`);
     const message = `NUEVO RÉCORD PERSONAL\n\n${lines.join('\n')}\n\n${
       summary.streak > 1 ? `Racha de ${summary.streak} días\n` : ''
-    }Entrenando con UDECA — Universidad de Calistenia\nudeca.luistenafit.com`;
+    }Entrenando con UDECA — Universidad de Calistenia\nwww.udeca.app`;
     try {
       await Share.share({ message });
     } catch {

@@ -10,7 +10,7 @@ Construida con **Expo (React Native + React Native Web)** y **Firebase**
 
 ## Producción
 
-- **Web/PWA en vivo**: https://udeca.luistenafit.com (dominio propio con
+- **Web/PWA en vivo**: https://www.udeca.app (dominio propio con
   HTTPS; instalable en el móvil desde "Añadir a pantalla de inicio").
 - **Despliegue automático**: cada push a la rama de desarrollo compila la
   web y la publica en GitHub Pages vía `.github/workflows/deploy.yml`.

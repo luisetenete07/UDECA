@@ -2,7 +2,7 @@
 #
 # Cada push a la rama de desarrollo compila la app web (Expo) y publica el
 # resultado en la rama gh-pages, que GitHub Pages sirve en el dominio
-# udeca.luistenafit.com. Así no hace falta desplegar a mano nunca más.
+# www.udeca.app. Así no hace falta desplegar a mano nunca más.
 #
 # Nota sobre las variables EXPO_PUBLIC_FIREBASE_*: son la configuración
 # PÚBLICA de cliente de Firebase (van incrustadas en el JavaScript que
@@ -53,7 +53,7 @@ jobs:
       - name: Prepare Pages artifacts
         run: |
           touch dist/.nojekyll
-          echo "udeca.luistenafit.com" > dist/CNAME
+          echo "www.udeca.app" > dist/CNAME
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
