@@ -258,6 +258,13 @@ export default function ClientDashboard() {
                 <Text style={styles.todayTitle}>Día de descanso</Text>
                 <Text style={styles.todaySub}>Hoy no toca sesión. Recupera y vuelve con todo.</Text>
               </>
+            ) : routine && routine.schedule === 'flex' ? (
+              <>
+                <Text style={styles.todayTitle}>
+                  {routine.scheduleLabel ?? 'Rutina personalizada'}
+                </Text>
+                <Text style={styles.todaySub}>Tú eliges qué hacer hoy. Entra y empieza.</Text>
+              </>
             ) : routine && nextDay ? (
               <>
                 <Text style={styles.todayTitle}>{nextDay.name}</Text>
@@ -272,13 +279,18 @@ export default function ClientDashboard() {
               </>
             )}
           </View>
-          <View style={routine && !restDay && nextDay ? styles.todayPlay : styles.todayRest}>
-            <Ionicons
-              name={routine && !restDay && nextDay ? 'play' : 'bed-outline'}
-              size={routine && !restDay && nextDay ? 26 : 24}
-              color={routine && !restDay && nextDay ? colors.onPrimary : colors.primaryBright}
-            />
-          </View>
+          {(() => {
+            const canTrain = !!routine && !restDay && (!!nextDay || routine.schedule === 'flex');
+            return (
+              <View style={canTrain ? styles.todayPlay : styles.todayRest}>
+                <Ionicons
+                  name={canTrain ? 'play' : 'bed-outline'}
+                  size={canTrain ? 26 : 24}
+                  color={canTrain ? colors.onPrimary : colors.primaryBright}
+                />
+              </View>
+            );
+          })()}
         </LinearGradient>
       </Pressable>
 
