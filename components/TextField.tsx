@@ -1,17 +1,35 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type StyleProp,
+  type TextInputProps,
+  type ViewStyle,
+} from 'react-native';
 import { colors, radius, spacing, typography } from '../lib/theme';
 
 interface TextFieldProps extends TextInputProps {
   label?: string;
   error?: string;
+  /** Estilo del contenedor exterior (p. ej. flex:1 para repartir una fila). */
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
-export function TextField({ label, error, style, onFocus, onBlur, ...rest }: TextFieldProps) {
+export function TextField({
+  label,
+  error,
+  style,
+  containerStyle,
+  onFocus,
+  onBlur,
+  ...rest
+}: TextFieldProps) {
   const [focused, setFocused] = useState(false);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         placeholderTextColor={colors.textFaint}

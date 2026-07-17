@@ -277,14 +277,14 @@ export default function NutritionScreen() {
                 keyboardType="numeric"
                 value={calories}
                 onChangeText={setCalories}
-                style={styles.smallField}
+                containerStyle={styles.smallField}
               />
               <TextField
                 placeholder="Proteína (g)"
                 keyboardType="numeric"
                 value={protein}
                 onChangeText={setProtein}
-                style={styles.smallField}
+                containerStyle={styles.smallField}
               />
             </View>
             <View style={styles.row}>
@@ -293,14 +293,14 @@ export default function NutritionScreen() {
                 keyboardType="numeric"
                 value={carbs}
                 onChangeText={setCarbs}
-                style={styles.smallField}
+                containerStyle={styles.smallField}
               />
               <TextField
                 placeholder="Grasas (g)"
                 keyboardType="numeric"
                 value={fat}
                 onChangeText={setFat}
-                style={styles.smallField}
+                containerStyle={styles.smallField}
               />
             </View>
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   },
   macroFill: { height: '100%', borderRadius: radius.full },
   row: { flexDirection: 'row', gap: spacing.sm },
-  smallField: { flex: 1 },
+  smallField: { flex: 1, minWidth: 0 },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
   mutedText: { ...typography.small, color: colors.textFaint },
   mealCount: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },

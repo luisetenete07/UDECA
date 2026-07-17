@@ -123,21 +123,21 @@ export default function NutritionEditorScreen() {
           keyboardType="numeric"
           value={protein}
           onChangeText={setProtein}
-          style={styles.smallField}
+          containerStyle={styles.smallField}
         />
         <TextField
           label="Carbs (g)"
           keyboardType="numeric"
           value={carbs}
           onChangeText={setCarbs}
-          style={styles.smallField}
+          containerStyle={styles.smallField}
         />
         <TextField
           label="Grasas (g)"
           keyboardType="numeric"
           value={fat}
           onChangeText={setFat}
-          style={styles.smallField}
+          containerStyle={styles.smallField}
         />
       </View>
 
@@ -159,7 +159,7 @@ export default function NutritionEditorScreen() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.sm },
-  smallField: { flex: 1 },
+  smallField: { flex: 1, minWidth: 0 },
   textarea: { height: 100, textAlignVertical: 'top' },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });
