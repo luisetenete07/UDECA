@@ -1,6 +1,21 @@
 import { dayDiff } from './stats';
 import { todayWeekday, type Routine, type RoutineDay } from './types';
 
+/** Nombres heredados del modo "Sensaciones" que ya no queremos mostrar. */
+const LEGACY_FLEX_LABELS = ['rein tena', 'reintena', 'rein-tena', 'método rein tena', 'metodo rein tena'];
+
+/**
+ * Etiqueta visible de una programación "a sensaciones". Si no hay nombre, o si
+ * es uno de los nombres antiguos (p. ej. "Rein Tena"), devuelve el fallback
+ * ("Sensaciones" por defecto). Así ninguna pantalla muestra ya "Rein Tena".
+ */
+export function flexLabel(label?: string, fallback = 'Sensaciones'): string {
+  const t = (label ?? '').trim();
+  if (!t) return fallback;
+  if (LEGACY_FLEX_LABELS.includes(t.toLowerCase())) return 'Sensaciones';
+  return t;
+}
+
 export interface TodaySession {
   /** Día de rutina que toca hoy, o null si no hay ninguno programado. */
   day: RoutineDay | null;

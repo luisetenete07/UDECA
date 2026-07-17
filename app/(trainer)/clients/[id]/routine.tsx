@@ -23,6 +23,7 @@ import {
 } from '../../../../lib/firestore/routineTemplates';
 import { getClientsForTrainer, getUserProfile } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
+import { flexLabel } from '../../../../lib/schedule';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
@@ -148,7 +149,7 @@ export default function RoutineEditorScreen() {
         setName(existing.name);
         setDays(existing.days);
         setSchedule(existing.schedule ?? 'weekly');
-        if (existing.scheduleLabel) setScheduleLabel(existing.scheduleLabel);
+        if (existing.scheduleLabel) setScheduleLabel(flexLabel(existing.scheduleLabel));
         if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
       } else {
         setDays([{ id: uid(), name: 'Día 1', exercises: [] }]);
@@ -507,7 +508,7 @@ export default function RoutineEditorScreen() {
   const applyTemplate = (t: RoutineTemplate) => {
     setName(t.name);
     setSchedule(t.schedule ?? 'weekly');
-    if (t.scheduleLabel) setScheduleLabel(t.scheduleLabel);
+    if (t.scheduleLabel) setScheduleLabel(flexLabel(t.scheduleLabel));
     if (t.cycleStartDate) setCycleStartDate(t.cycleStartDate);
     setDays(
       t.days.map((d) => ({
@@ -534,7 +535,7 @@ export default function RoutineEditorScreen() {
         name: name.trim() || 'Plantilla',
         schedule,
         cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
-        scheduleLabel: schedule === 'flex' ? scheduleLabel.trim() || 'Sensaciones' : undefined,
+        scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
         days,
       });
       setTemplates(await getRoutineTemplatesForTrainer(profile.uid));
@@ -556,7 +557,7 @@ export default function RoutineEditorScreen() {
       const scheduleFields = {
         schedule,
         cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
-        scheduleLabel: schedule === 'flex' ? scheduleLabel.trim() || 'Sensaciones' : undefined,
+        scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
       };
       if (routineId) {
         await updateRoutine(routineId, { name, days, ...scheduleFields });
@@ -700,7 +701,7 @@ export default function RoutineEditorScreen() {
             style={[styles.modeBtn, schedule === 'flex' && styles.modeBtnActive]}
           >
             <Text style={[styles.modeText, schedule === 'flex' && styles.modeTextActive]}>
-              {scheduleLabel.trim() || 'Sensaciones'}
+              {flexLabel(scheduleLabel)}
             </Text>
           </Pressable>
         </View>

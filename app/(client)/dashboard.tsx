@@ -27,7 +27,7 @@ import { quoteOfTheDay } from '../../lib/quotes';
 import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
-import { resolveTodaySession } from '../../lib/schedule';
+import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
@@ -237,7 +237,7 @@ export default function ClientDashboard() {
           <View style={{ flex: 1 }}>
             <Text style={styles.todayLabel}>
               {routine?.schedule === 'flex'
-                ? `${routine.scheduleLabel ?? 'Sensaciones'} · eliges tú`
+                ? `${flexLabel(routine.scheduleLabel)} · eliges tú`
                 : isCycle
                   ? `Días sueltos · ${todaySession.cycleLabel ?? ''}${
                       todaySession.day?.intensity ? ` · Int. ${todaySession.day.intensity}/10` : ''
@@ -261,7 +261,7 @@ export default function ClientDashboard() {
             ) : routine && routine.schedule === 'flex' ? (
               <>
                 <Text style={styles.todayTitle}>
-                  {routine.scheduleLabel ?? 'Rutina personalizada'}
+                  {flexLabel(routine.scheduleLabel, 'Rutina personalizada')}
                 </Text>
                 <Text style={styles.todaySub}>Tú eliges qué hacer hoy. Entra y empieza.</Text>
               </>

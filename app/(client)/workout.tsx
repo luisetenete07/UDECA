@@ -32,7 +32,7 @@ import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
-import { resolveTodaySession } from '../../lib/schedule';
+import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import {
   addFlexRestDay,
@@ -1067,7 +1067,7 @@ export default function WorkoutScreen() {
           <Card accent style={styles.optionalCard}>
             <View style={styles.optionalHeader}>
               <Ionicons name="options-outline" size={18} color={colors.primary} />
-              <Text style={styles.optionalTitle}>{routine.scheduleLabel ?? 'Sensaciones'}</Text>
+              <Text style={styles.optionalTitle}>{flexLabel(routine.scheduleLabel)}</Text>
             </View>
             <Text style={styles.optionalText}>
               ¿Cómo te sientes hoy? Marca una o varias rutinas (en el orden que quieras hacerlas):
