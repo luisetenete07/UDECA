@@ -567,6 +567,19 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Planificación por ciclos</Text>
+        <Text style={styles.mutedText}>
+          Opcional. Agrupa el trabajo en macro, meso o microciclos y ve la evolución del alumno.
+        </Text>
+        <Button
+          title="Ver planificación"
+          variant="secondary"
+          onPress={() => router.push(`/(trainer)/clients/${id}/planning`)}
+          style={{ marginTop: spacing.md }}
+        />
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Plan nutricional</Text>
         {nutritionPlan ? (
           <>

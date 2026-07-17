@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,14 +28,18 @@ import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
+import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
+import { activeCycle, computeCycleStats } from '../../lib/cycleStats';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
+  CYCLE_LEVEL_LABEL,
   todayWeekday,
   WEEKDAY_NAMES,
   type Habit,
   type HabitLog,
   type Routine,
+  type TrainingCycle,
   type WeightLog,
   type WorkoutLog,
 } from '../../lib/types';
@@ -69,6 +73,10 @@ export default function ClientDashboard() {
   const [cycleAnchor, setCycleAnchor] = useState<number | null>(cached?.cycleAnchor ?? null);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
+  // Ciclo en curso (si el coach usa planificación). Best-effort: si las reglas
+  // de ciclos aún no están publicadas, la consulta falla en silencio y no se
+  // muestra la tarjeta — nunca rompe el resto del inicio.
+  const [activeCyc, setActiveCyc] = useState<TrainingCycle | null>(null);
 
   const load = useCallback(
     async (isActive?: () => boolean) => {
@@ -122,6 +130,15 @@ export default function ClientDashboard() {
       };
     }, [load])
   );
+
+  // Ciclo en curso (best-effort). Si las reglas de ciclos aún no están
+  // publicadas, la consulta falla en silencio y no se muestra la tarjeta.
+  useEffect(() => {
+    if (!profile) return;
+    getCyclesForClientSelf(profile.uid)
+      .then((cs) => setActiveCyc(activeCycle(cs)))
+      .catch(() => {});
+  }, [profile]);
 
   if (loading) return <LoadingScreen />;
 
@@ -294,6 +311,41 @@ export default function ClientDashboard() {
         </LinearGradient>
       </Pressable>
 
+      {/* Ciclo en curso (solo si el coach usa planificación) */}
+      {activeCyc
+        ? (() => {
+            const cs = computeCycleStats(activeCyc, workoutLogs);
+            return (
+              <View style={styles.cycleCard}>
+                <View style={styles.cycleTop}>
+                  <Text style={styles.cycleLevel}>{CYCLE_LEVEL_LABEL[activeCyc.level]}</Text>
+                  {activeCyc.isDeload ? (
+                    <Text style={styles.cycleDeload}>Semana de descarga</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.cycleName}>{activeCyc.name}</Text>
+                {cs.pctComplete != null ? (
+                  <View style={{ marginTop: spacing.sm }}>
+                    <ProgressBar progress={cs.pctComplete} height={7} />
+                  </View>
+                ) : null}
+                <Text style={styles.cycleMeta}>
+                  {cs.sessionsDone}
+                  {activeCyc.targetSessions ? `/${activeCyc.targetSessions}` : ''} sesiones
+                  {cs.pctComplete != null ? ` · ${Math.round(cs.pctComplete * 100)}%` : ''}
+                  {activeCyc.endDate
+                    ? ` · hasta ${new Date(activeCyc.endDate).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}`
+                    : ''}
+                </Text>
+                {activeCyc.goal ? <Text style={styles.cycleGoal}>{activeCyc.goal}</Text> : null}
+              </View>
+            );
+          })()
+        : null}
+
       {/* Plan semanal: tira de días + objetivo, todo junto y ordenado */}
       <Card style={styles.section}>
         <View style={styles.weekHeader}>
@@ -450,6 +502,20 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  cycleCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  cycleTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  cycleLevel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
+  cycleDeload: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, fontSize: 11 },
+  cycleName: { ...typography.h3, color: colors.text, marginTop: 4 },
+  cycleMeta: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm },
+  cycleGoal: { ...typography.small, color: colors.textFaint, marginTop: 4, fontStyle: 'italic' },
   sectionLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   section: { marginBottom: spacing.md },
   // ----- Hero "Hoy toca" -----

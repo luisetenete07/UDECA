@@ -13,6 +13,8 @@ export default function ClientsLayout() {
       <Stack.Screen name="[id]/routine" options={{ title: 'Rutina' }} />
       <Stack.Screen name="[id]/nutrition" options={{ title: 'Nutrición' }} />
       <Stack.Screen name="[id]/session" options={{ title: 'Sesión' }} />
+      <Stack.Screen name="[id]/planning" options={{ title: 'Planificación' }} />
+      <Stack.Screen name="[id]/cycles/[cycleId]" options={{ title: 'Ciclo' }} />
     </Stack>
   );
 }

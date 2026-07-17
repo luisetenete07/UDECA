@@ -296,6 +296,49 @@ export interface LevelTest {
   createdAt: number;
 }
 
+/**
+ * Ciclos de entrenamiento (planificación). Los tres niveles son OPCIONALES e
+ * independientes: el coach decide si usa alguno, y cuáles, para cada alumno.
+ * Un ciclo es solo un contenedor con fechas; las estadísticas se derivan de
+ * los entrenos que el alumno registra dentro de ese rango. Si el coach no crea
+ * ninguno, la app funciona exactamente igual que ahora.
+ */
+export type CycleLevel = 'macro' | 'meso' | 'micro';
+
+export const CYCLE_LEVEL_LABEL: Record<CycleLevel, string> = {
+  macro: 'Macrociclo',
+  meso: 'Mesociclo',
+  micro: 'Microciclo',
+};
+
+/** Semanas por defecto que dura cada nivel al crearlo (editable). */
+export const CYCLE_DEFAULT_WEEKS: Record<CycleLevel, number> = {
+  macro: 12,
+  meso: 4,
+  micro: 1,
+};
+
+export interface TrainingCycle {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  level: CycleLevel;
+  name: string;
+  /** Fechas (medianoche). Opcionales: un ciclo puede quedar abierto. */
+  startDate?: number;
+  endDate?: number;
+  /** Objetivo del ciclo (texto libre). */
+  goal?: string;
+  /** Notas privadas del coach. */
+  notes?: string;
+  /** Meta de sesiones para el % completado y avisos (opcional). */
+  targetSessions?: number;
+  /** Solo microciclo: semana de descarga (deload). */
+  isDeload?: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Pago registrado por el entrenador (para el historial de ingresos). */
 export interface Payment {
   id: string;
