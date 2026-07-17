@@ -14,12 +14,13 @@ export const tabScreenOptions = {
     backgroundColor: '#050505',
     borderTopWidth: 1,
     borderTopColor: colors.hairlineFaint,
-    height: Platform.OS === 'web' ? 60 : 84,
+    height: Platform.OS === 'web' ? 62 : 84,
     paddingTop: 6,
   },
   tabBarLabelStyle: {
     fontFamily: fonts.medium,
     fontSize: 11,
+    letterSpacing: 0.2,
     marginBottom: Platform.OS === 'web' ? 6 : 0,
   },
 } as const;

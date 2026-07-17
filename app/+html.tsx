@@ -72,7 +72,19 @@ if ('serviceWorker' in navigator) {
 `;
 
 const backgroundStyle = `
-html, body { background-color: #000000; }
+html, body {
+  background-color: #000000;
+  overflow-x: hidden;
+  max-width: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+#root { overflow-x: hidden; }
+* { -webkit-tap-highlight-color: transparent; }
+::selection { background: rgba(162,150,139,0.35); color: #fff; }
+input, textarea, button, select { font-family: inherit; }
+/* Enfoque accesible y premium: aro dorado suave en vez del contorno del navegador. */
+:focus-visible { outline: 2px solid rgba(162,150,139,0.6); outline-offset: 2px; }
 @media (prefers-color-scheme: light) {
   html, body { background-color: #000000; }
 }

@@ -53,9 +53,11 @@ export function Button({
     <Pressable
       onPress={handlePress}
       disabled={isDisabled}
-      style={({ pressed }) => [
+      role="button"
+      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.outer,
         isDisabled && styles.disabled,
+        hovered && !isDisabled && styles.hovered,
         pressed && !isDisabled && styles.pressed,
         style,
       ]}
@@ -84,12 +86,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   base: {
+    minHeight: 52,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    gap: spacing.sm,
   },
   sheen: {
     position: 'absolute',
@@ -102,6 +106,9 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
+  },
+  hovered: {
+    opacity: 0.92,
   },
   disabled: {
     opacity: 0.5,
