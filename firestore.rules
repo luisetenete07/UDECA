@@ -316,5 +316,16 @@ service cloud.firestore {
       allow update, delete: if request.auth != null
         && resource.data.trainerId == request.auth.uid;
     }
+
+    // Ciclos de planificación (macro/meso/microciclos). Los gestiona el
+    // entrenador para cada alumno; el alumno solo puede leer los suyos.
+    match /trainingCycles/{cycleId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
   }
 }
