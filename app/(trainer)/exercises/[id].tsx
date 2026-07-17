@@ -152,7 +152,7 @@ export default function ExerciseEditorScreen() {
       />
 
       <TextField
-        label="URL del vídeo (opcional)"
+        label="URL del vídeo"
         value={videoUrl}
         onChangeText={setVideoUrl}
         placeholder="https://..."

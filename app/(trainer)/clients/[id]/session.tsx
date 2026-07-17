@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
@@ -11,9 +11,24 @@ import { colors, fonts, spacing, typography } from '../../../../lib/theme';
 import type { WorkoutLog } from '../../../../lib/types';
 
 export default function SessionDetailScreen() {
-  const { logId } = useLocalSearchParams<{ logId: string }>();
+  const { logId, id } = useLocalSearchParams<{ logId: string; id: string }>();
+  const router = useRouter();
   const [log, setLog] = useState<WorkoutLog | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Al llegar desde la actividad del panel, la pila de Clientes se abre sin
+  // historial y no habría flecha para volver. Forzamos un botón que lleva a la
+  // ficha del cliente (sección Clientes) siempre.
+  const goToClient = () => {
+    if (id) router.replace(`/(trainer)/clients/${id}`);
+    else router.replace('/(trainer)/clients');
+  };
+  const backButton = () => (
+    <Pressable onPress={goToClient} hitSlop={10} style={styles.backBtn}>
+      <Ionicons name="chevron-back" size={24} color={colors.primary} />
+      <Text style={styles.backText}>Cliente</Text>
+    </Pressable>
+  );
 
   useEffect(() => {
     if (!logId) return;
@@ -23,11 +38,24 @@ export default function SessionDetailScreen() {
     });
   }, [logId]);
 
-  if (loading) return <LoadingScreen />;
-  if (!log) return <EmptyState title="Sesión no encontrada" />;
+  if (loading)
+    return (
+      <>
+        <Stack.Screen options={{ headerLeft: backButton }} />
+        <LoadingScreen />
+      </>
+    );
+  if (!log)
+    return (
+      <>
+        <Stack.Screen options={{ headerLeft: backButton }} />
+        <EmptyState title="Sesión no encontrada" />
+      </>
+    );
 
   return (
     <ScreenContainer>
+      <Stack.Screen options={{ headerLeft: backButton }} />
       <Text style={styles.title}>{log.dayName}</Text>
       <Text style={styles.subtitle}>
         {log.routineName} · {new Date(log.date).toLocaleDateString('es-ES', {
@@ -85,6 +113,8 @@ export default function SessionDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingRight: spacing.sm },
+  backText: { ...typography.body, color: colors.primary, fontFamily: fonts.medium },
   title: { ...typography.h1, color: colors.text },
   subtitle: {
     ...typography.body,
