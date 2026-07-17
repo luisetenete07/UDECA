@@ -552,7 +552,6 @@ export default function TrainerDashboard() {
                     ? `${overdueCount} pago(s) vencido(s)`
                     : `${dueSoonCount} pago(s) esta semana`}
                   {overdueCount > 0 && dueSoonCount > 0 ? ` · ${dueSoonCount} esta semana` : ''}
-                  {' · ver quién'}
                 </Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.danger} />
               </Pressable>
