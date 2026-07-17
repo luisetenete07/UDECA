@@ -28,7 +28,13 @@ export const tabScreenOptions = {
 export const stackScreenOptions = {
   headerStyle: { backgroundColor: colors.background },
   headerTintColor: colors.primary,
-  headerTitleStyle: { fontFamily: fonts.heading, fontSize: 17, color: colors.text },
+  headerTitleStyle: {
+    fontFamily: fonts.heading,
+    fontSize: 17,
+    color: colors.text,
+    letterSpacing: 0.2,
+  },
+  headerTitleAlign: 'center' as const,
   headerShadowVisible: false,
   headerBackButtonDisplayMode: 'minimal' as const,
   contentStyle: { backgroundColor: colors.background },

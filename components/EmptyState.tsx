@@ -59,15 +59,14 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h3,
-    color: colors.textMuted,
+    color: colors.text,
     textAlign: 'center',
   },
   subtitle: {
     ...typography.small,
-    color: colors.textFaint,
+    color: colors.textMuted,
     textAlign: 'center',
-    lineHeight: 19,
-    maxWidth: 300,
+    maxWidth: 320,
   },
   action: {
     flexDirection: 'row',

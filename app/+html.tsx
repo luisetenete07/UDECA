@@ -85,6 +85,18 @@ html, body {
 input, textarea, button, select { font-family: inherit; }
 /* Enfoque accesible y premium: aro dorado suave en vez del contorno del navegador. */
 :focus-visible { outline: 2px solid rgba(162,150,139,0.6); outline-offset: 2px; }
+/* Barra de scroll discreta a juego con el tema oscuro. */
+* { scrollbar-width: thin; scrollbar-color: #2A2A2A transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #262626; border-radius: 8px; border: 2px solid #000;
+}
+::-webkit-scrollbar-thumb:hover { background: #3A3A3A; }
+/* Tipografía nítida en pantallas de alta densidad. */
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+/* Las imágenes nunca se arrastran como fantasma al hacer clic. */
+img { -webkit-user-drag: none; }
 @media (prefers-color-scheme: light) {
   html, body { background-color: #000000; }
 }

@@ -75,10 +75,10 @@ export const radius = {
 };
 
 export const typography = {
-  h1: { fontSize: 28, fontFamily: fonts.display, letterSpacing: 0.4 },
-  h2: { fontSize: 21, fontFamily: fonts.displaySemiBold, letterSpacing: 0.3 },
-  h3: { fontSize: 17, fontFamily: fonts.heading },
-  body: { fontSize: 15, fontFamily: fonts.body },
-  small: { fontSize: 13, fontFamily: fonts.body },
-  label: { fontSize: 12, fontFamily: fonts.semiBold, letterSpacing: 1.4 },
+  h1: { fontSize: 28, fontFamily: fonts.display, letterSpacing: 0.4, lineHeight: 36 },
+  h2: { fontSize: 21, fontFamily: fonts.displaySemiBold, letterSpacing: 0.3, lineHeight: 28 },
+  h3: { fontSize: 17, fontFamily: fonts.heading, lineHeight: 23 },
+  body: { fontSize: 15, fontFamily: fonts.body, lineHeight: 22 },
+  small: { fontSize: 13, fontFamily: fonts.body, lineHeight: 19 },
+  label: { fontSize: 12, fontFamily: fonts.semiBold, letterSpacing: 1.4, lineHeight: 16 },
 };
