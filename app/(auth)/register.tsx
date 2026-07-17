@@ -52,7 +52,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScreenContainer contentStyle={styles.content}>
+    <ScreenContainer contentStyle={styles.content} maxWidth={560}>
       <View style={styles.header}>
         <LinearGradient
           colors={gradients.goldHalo}

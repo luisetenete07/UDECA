@@ -18,14 +18,16 @@ interface ScreenContainerProps {
   refreshing?: boolean;
   onRefresh?: () => void;
   contentStyle?: ViewStyle;
-  /** Ancho máximo del contenido centrado (columna de lectura). */
+  /**
+   * Ancho máximo opcional del contenido (columna centrada). Sin valor, la
+   * pantalla usa todo el ancho disponible (pantalla completa en escritorio).
+   */
   maxWidth?: number;
 }
 
 /**
- * Contenedor base de pantalla. Centra el contenido en una columna de ancho
- * máximo (para que en tablet/escritorio no se estire de borde a borde) y
- * aplica un padding horizontal coherente en todas las vistas.
+ * Contenedor base de pantalla: padding coherente en todas las vistas y, si
+ * se pide, columna centrada de ancho máximo (p. ej. formularios de acceso).
  */
 export function ScreenContainer({
   children,
@@ -33,13 +35,15 @@ export function ScreenContainer({
   refreshing,
   onRefresh,
   contentStyle,
-  maxWidth = 640,
+  maxWidth,
 }: ScreenContainerProps) {
   if (!scroll) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.centerRow}>
-          <FadeIn style={[styles.column, { maxWidth }, contentStyle]}>{children}</FadeIn>
+          <FadeIn style={[styles.column, maxWidth ? { maxWidth } : null, contentStyle]}>
+            {children}
+          </FadeIn>
         </View>
       </SafeAreaView>
     );
@@ -66,7 +70,9 @@ export function ScreenContainer({
             ) : undefined
           }
         >
-          <FadeIn style={[styles.column, { maxWidth }, contentStyle]}>{children}</FadeIn>
+          <FadeIn style={[styles.column, maxWidth ? { maxWidth } : null, contentStyle]}>
+            {children}
+          </FadeIn>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

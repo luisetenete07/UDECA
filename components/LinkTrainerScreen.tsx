@@ -87,7 +87,7 @@ export function LinkTrainerScreen() {
   };
 
   return (
-    <ScreenContainer contentStyle={styles.content}>
+    <ScreenContainer contentStyle={styles.content} maxWidth={560}>
       <View style={styles.header}>
         <Logo compact />
       </View>
