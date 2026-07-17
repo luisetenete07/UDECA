@@ -187,6 +187,11 @@ export default function TrainerDashboard() {
       (c.monthlyFeeEur ?? 0) > 0
   );
   const projected30 = upcoming.reduce((s, c) => s + (c.monthlyFeeEur ?? 0), 0);
+  // El próximo cobro que se avecina (aún no vencido): el alumno con la fecha
+  // de renovación más cercana. Se muestra con nombre para saber de quién es.
+  const nextPayment = clients
+    .filter((c) => c.nextPaymentDate && c.nextPaymentDate >= now)
+    .sort((a, b) => (a.nextPaymentDate ?? 0) - (b.nextPaymentDate ?? 0))[0] ?? null;
 
 
   const handleApproveRequest = async (req: JoinRequest) => {
@@ -501,6 +506,28 @@ export default function TrainerDashboard() {
                 </View>
               ) : null}
             </View>
+            {nextPayment ? (
+              <Pressable
+                onPress={() => router.push(`/(trainer)/clients/${nextPayment.uid}`)}
+                style={styles.nextPayRow}
+                hitSlop={4}
+              >
+                <Avatar name={nextPayment.name} photoURL={nextPayment.photoURL} size={30} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nextPayLabel}>Próximo cobro</Text>
+                  <Text style={styles.nextPayName} numberOfLines={1}>
+                    {nextPayment.name}
+                    {nextPayment.monthlyFeeEur ? ` · ${nextPayment.monthlyFeeEur} €` : ''}
+                  </Text>
+                </View>
+                <Text style={styles.nextPayDate}>
+                  {new Date(nextPayment.nextPaymentDate!).toLocaleDateString('es-ES', {
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </Text>
+              </Pressable>
+            ) : null}
             <View style={styles.countsRow}>
               {PAYMENT_STATUSES.filter((p) => payCounts[p]).map((p) => (
                 <View key={p} style={styles.countChip}>
@@ -724,6 +751,18 @@ const styles = StyleSheet.create({
   },
   revenueValue: { ...typography.h2, color: '#2E7D5B', fontFamily: fonts.heading },
   revenueLabel: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  nextPayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  nextPayLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
+  nextPayName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginTop: 1 },
+  nextPayDate: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   countsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
   countChip: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   countText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
