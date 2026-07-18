@@ -14,6 +14,7 @@ import { auth, db, isFirebaseConfigured } from './firebase';
 import { getTrainerIdForInviteCode, registerTrainerInviteCode } from './firestore/users';
 import { sendJoinRequest } from './firestore/joinRequests';
 import { registerForPushNotificationsAsync } from './notifications';
+import { rememberAccount } from './rememberedAccounts';
 import { clearCache } from './screenCache';
 import type { UserProfile, UserRole } from './types';
 
@@ -61,7 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadProfile = async (uid: string) => {
     const snap = await getDoc(doc(db, 'users', uid));
     if (snap.exists()) {
-      setProfile(snap.data() as UserProfile);
+      const p = snap.data() as UserProfile;
+      setProfile(p);
+      // Recuerda esta cuenta en el dispositivo para el selector de acceso.
+      rememberAccount({ email: p.email, name: p.name, role: p.role, photoURL: p.photoURL });
     } else {
       setProfile(null);
     }

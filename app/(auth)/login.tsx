@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
@@ -11,7 +13,12 @@ import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { auth } from '../../lib/firebase';
 import { friendlyAuthError } from '../../lib/firebase-errors';
-import { colors, fonts, gradients, spacing, typography } from '../../lib/theme';
+import {
+  forgetAccount,
+  getRememberedAccounts,
+  type RememberedAccount,
+} from '../../lib/rememberedAccounts';
+import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -20,6 +27,31 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [accounts, setAccounts] = useState<RememberedAccount[]>([]);
+  // Modo selector: si hay cuentas guardadas y aún no se ha elegido ninguna,
+  // mostramos las cuentas en vez del formulario para que solo haya que elegir.
+  const [picking, setPicking] = useState(true);
+
+  useEffect(() => {
+    getRememberedAccounts().then((list) => {
+      setAccounts(list);
+      setPicking(list.length > 0);
+    });
+  }, []);
+
+  const pickAccount = (acc: RememberedAccount) => {
+    setEmail(acc.email);
+    setPassword('');
+    setError(null);
+    setPicking(false);
+  };
+
+  const removeAccount = async (acc: RememberedAccount) => {
+    await forgetAccount(acc.email);
+    const list = await getRememberedAccounts();
+    setAccounts(list);
+    if (list.length === 0) setPicking(false);
+  };
 
   const handleForgotPassword = async () => {
     setError(null);
@@ -66,39 +98,78 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>Inicia sesión para continuar con tu entrenamiento</Text>
       </View>
 
-      <Card accent style={styles.formCard}>
-        <TextField
-          label="Correo electrónico"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="tucorreo@ejemplo.com"
-        />
-        <TextField
-          label="Contraseña"
-          secureTextEntry
-          autoComplete="password"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-        />
+      {picking && accounts.length > 0 ? (
+        <Card accent style={styles.formCard}>
+          <Text style={styles.pickTitle}>Elige tu cuenta</Text>
+          {accounts.map((acc) => (
+            <Pressable key={acc.email} style={styles.accRow} onPress={() => pickAccount(acc)}>
+              <Avatar name={acc.name} photoURL={acc.photoURL} size={40} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.accName} numberOfLines={1}>
+                  {acc.name}
+                </Text>
+                <Text style={styles.accMeta} numberOfLines={1}>
+                  {acc.role === 'trainer' ? 'Entrenador' : 'Alumno'} · {acc.email}
+                </Text>
+              </View>
+              <Pressable onPress={() => removeAccount(acc)} hitSlop={10} style={styles.accRemove}>
+                <Ionicons name="close" size={16} color={colors.textFaint} />
+              </Pressable>
+            </Pressable>
+          ))}
+          <Pressable
+            onPress={() => {
+              setEmail('');
+              setPassword('');
+              setPicking(false);
+            }}
+            style={styles.otherAcc}
+          >
+            <Ionicons name="add" size={18} color={colors.primary} />
+            <Text style={styles.otherAccText}>Usar otra cuenta</Text>
+          </Pressable>
+        </Card>
+      ) : (
+        <Card accent style={styles.formCard}>
+          {accounts.length > 0 ? (
+            <Pressable onPress={() => setPicking(true)} style={styles.backToAccounts} hitSlop={6}>
+              <Ionicons name="chevron-back" size={16} color={colors.primary} />
+              <Text style={styles.otherAccText}>Cuentas guardadas</Text>
+            </Pressable>
+          ) : null}
+          <TextField
+            label="Correo electrónico"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="tucorreo@ejemplo.com"
+          />
+          <TextField
+            label="Contraseña"
+            secureTextEntry
+            autoComplete="password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="••••••••"
+          />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        {info ? <Text style={styles.info}>{info}</Text> : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {info ? <Text style={styles.info}>{info}</Text> : null}
 
-        <Button
-          title="Iniciar sesión"
-          onPress={handleSubmit}
-          loading={loading}
-          style={styles.submit}
-        />
+          <Button
+            title="Iniciar sesión"
+            onPress={handleSubmit}
+            loading={loading}
+            style={styles.submit}
+          />
 
-        <Pressable onPress={handleForgotPassword} hitSlop={6}>
-          <Text style={styles.forgot}>¿Has olvidado tu contraseña?</Text>
-        </Pressable>
-      </Card>
+          <Pressable onPress={handleForgotPassword} hitSlop={6}>
+            <Text style={styles.forgot}>¿Has olvidado tu contraseña?</Text>
+          </Pressable>
+        </Card>
+      )}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>¿No tienes cuenta?</Text>
@@ -126,6 +197,41 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: spacing.xl,
+  },
+  pickTitle: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+  },
+  accRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  accName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  accMeta: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  accRemove: { padding: 6 },
+  otherAcc: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  otherAccText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  backToAccounts: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginBottom: spacing.md,
   },
   title: {
     ...typography.h2,
