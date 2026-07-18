@@ -765,11 +765,14 @@ export default function RoutineEditorScreen() {
           else summaryParts.push(`Día ${dayIndex + 1}`, `Int. ${day.intensity ?? 5}/10`);
         } else if (day.weekday !== undefined) {
           summaryParts.push(WEEKDAY_NAMES[day.weekday]);
+          if (day.isRest) summaryParts.push('Descanso');
         }
-        summaryParts.push(`${exCount} ${exCount === 1 ? 'ejercicio' : 'ejercicios'}`);
-        // Series totales del día (suma de las series de todos sus ejercicios).
-        const totalSets = day.exercises.reduce((acc, e) => acc + (e.sets || 0), 0);
-        if (totalSets > 0) summaryParts.push(`${totalSets} series`);
+        if (!day.isRest) {
+          summaryParts.push(`${exCount} ${exCount === 1 ? 'ejercicio' : 'ejercicios'}`);
+          // Series totales del día (suma de las series de todos sus ejercicios).
+          const totalSets = day.exercises.reduce((acc, e) => acc + (e.sets || 0), 0);
+          if (totalSets > 0) summaryParts.push(`${totalSets} series`);
+        }
         return (
         <Card key={day.id} style={styles.dayCard}>
           <View style={styles.dayHeaderRow}>
@@ -906,7 +909,23 @@ export default function RoutineEditorScreen() {
             </>
           ) : schedule === 'flex' ? null : (
           <View style={styles.weekdayRow}>
-            <Text style={styles.weekdayLabel}>Día de la semana</Text>
+            <View style={styles.weekdayHeadRow}>
+              <Text style={styles.weekdayLabel}>Día de la semana</Text>
+              <Pressable
+                onPress={() => toggleRestDay(day.id)}
+                style={[styles.restToggle, day.isRest && styles.restToggleOn]}
+                hitSlop={4}
+              >
+                <Ionicons
+                  name={day.isRest ? 'bed' : 'bed-outline'}
+                  size={14}
+                  color={day.isRest ? colors.onPrimary : colors.textMuted}
+                />
+                <Text style={[styles.restToggleText, day.isRest && styles.restToggleTextOn]}>
+                  Descanso
+                </Text>
+              </Pressable>
+            </View>
             <View style={styles.weekdayChips}>
               {WEEKDAY_LABELS.map((label, i) => (
                 <Pressable
@@ -926,6 +945,12 @@ export default function RoutineEditorScreen() {
                 </Pressable>
               ))}
             </View>
+            {day.isRest ? (
+              <Text style={styles.optionalHint}>
+                Día de descanso: en el día de la semana elegido, el alumno verá “Descanso”, no
+                registra nada y no afecta a su racha.
+              </Text>
+            ) : null}
           </View>
           )}
 
@@ -1469,6 +1494,12 @@ const styles = StyleSheet.create({
   daySummary: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   removeDayText: { ...typography.small, color: colors.danger },
   weekdayRow: { marginTop: spacing.sm, marginBottom: spacing.sm },
+  weekdayHeadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
   weekdayLabel: {
     ...typography.label,
     color: colors.textMuted,

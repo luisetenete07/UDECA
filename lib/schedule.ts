@@ -77,6 +77,11 @@ export function resolveTodaySession(
   // Modo semanal (por defecto).
   const todays = routine.days.find((d) => d.weekday === todayWeekday());
   const usesWeekdays = routine.days.some((d) => d.weekday !== undefined);
+  // Día de la semana marcado como descanso por el coach: el alumno descansa,
+  // no registra nada y su racha no se ve afectada.
+  if (todays?.isRest) {
+    return { day: null, isRest: true, optionalRest: false };
+  }
   return {
     day: todays ?? (usesWeekdays ? null : routine.days[0]),
     isRest: usesWeekdays && !todays,
