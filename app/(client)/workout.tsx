@@ -108,17 +108,25 @@ function startOfDayLocal(ts: number): number {
 }
 
 function buildLog(day: RoutineDay): LoggedExercise[] {
-  return day.exercises.map((ex) => ({
-    exerciseId: ex.exerciseId,
-    name: ex.name,
-    measure: ex.measure ?? 'reps',
-    load: resolveLoad(ex),
-    sets: Array.from({ length: ex.sets || 1 }, () => ({
-      reps: ex.reps,
-      weight: '',
-      completed: false,
-    })),
-  }));
+  return day.exercises.map((ex) => {
+    // Si el coach fijó un número exacto (p. ej. "10"), lo precargamos para
+    // ahorrar tecleo. Si puso un RANGO ("8-12") o texto ("AMRAP"), dejamos el
+    // campo VACÍO y mostramos ese objetivo como pista: así el alumno escribe
+    // las repeticiones que de verdad ha hecho.
+    const target = (ex.reps ?? '').trim();
+    const prefill = /^\d+$/.test(target) ? target : '';
+    return {
+      exerciseId: ex.exerciseId,
+      name: ex.name,
+      measure: ex.measure ?? 'reps',
+      load: resolveLoad(ex),
+      sets: Array.from({ length: ex.sets || 1 }, () => ({
+        reps: prefill,
+        weight: '',
+        completed: false,
+      })),
+    };
+  });
 }
 
 interface SessionSummary {

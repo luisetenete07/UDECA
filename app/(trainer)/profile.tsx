@@ -72,6 +72,17 @@ export default function TrainerProfileScreen() {
   const onlineCount = leaderboard.filter((s) => isOnline(s.lastSeen)).length;
   const [loadingCoaches, setLoadingCoaches] = useState(false);
   const [updatingCoach, setUpdatingCoach] = useState<string | null>(null);
+  const [daysInput, setDaysInput] = useState<Record<string, string>>({});
+
+  const applyDays = async (coach: UserProfile, sign: 1 | -1) => {
+    const n = Math.abs(parseInt(daysInput[coach.uid] ?? '', 10) || 0);
+    if (n === 0) {
+      showToast('Escribe cuántos días');
+      return;
+    }
+    setDaysInput((p) => ({ ...p, [coach.uid]: '' }));
+    await extendCoach(coach, sign * n);
+  };
 
   const sub = subscriptionState(profile);
   const admin = isAdmin(profile);
@@ -429,42 +440,73 @@ export default function TrainerProfileScreen() {
                       ? `CADUCADO · desde ${fmtDate(c.subscriptionUntil)}`
                       : 'SIN ACTIVAR';
               return (
-                <View key={c.uid} style={styles.coachRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.coachName}>{c.name}</Text>
-                    <Text style={styles.coachEmail} numberOfLines={1}>
-                      {c.email}
-                    </Text>
-                    <Text style={[styles.coachSub, !s.active && { color: colors.danger }]}>
-                      {label}
-                    </Text>
-                  </View>
-                  {!isAdmin(c) ? (
-                    <View style={styles.coachActions}>
-                      <Button
-                        title="+1 año"
-                        variant="secondary"
-                        onPress={() => extendCoach(c, 365)}
-                        loading={updatingCoach === c.uid}
-                        style={styles.coachBtn}
-                      />
-                      {s.active || s.legacy ? (
+                <View key={c.uid} style={styles.coachCard}>
+                  <View style={styles.coachRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.coachName}>{c.name}</Text>
+                      <Text style={styles.coachEmail} numberOfLines={1}>
+                        {c.email}
+                      </Text>
+                      <Text style={[styles.coachSub, !s.active && { color: colors.danger }]}>
+                        {label}
+                      </Text>
+                    </View>
+                    {!isAdmin(c) ? (
+                      <View style={styles.coachActions}>
+                        <Button
+                          title="+1 año"
+                          variant="secondary"
+                          onPress={() => extendCoach(c, 365)}
+                          loading={updatingCoach === c.uid}
+                          style={styles.coachBtn}
+                        />
+                        {s.active || s.legacy ? (
+                          <Pressable
+                            onPress={() => revokeCoach(c)}
+                            disabled={updatingCoach === c.uid}
+                            style={styles.coachIconBtn}
+                            hitSlop={6}
+                          >
+                            <Ionicons name="remove-circle-outline" size={18} color={colors.warning} />
+                          </Pressable>
+                        ) : null}
                         <Pressable
-                          onPress={() => revokeCoach(c)}
+                          onPress={() => deleteCoach(c)}
                           disabled={updatingCoach === c.uid}
-                          style={styles.coachIconBtn}
+                          style={[styles.coachIconBtn, styles.coachIconDanger]}
                           hitSlop={6}
                         >
-                          <Ionicons name="remove-circle-outline" size={18} color={colors.warning} />
+                          <Ionicons name="trash-outline" size={18} color={colors.danger} />
                         </Pressable>
-                      ) : null}
+                      </View>
+                    ) : null}
+                  </View>
+                  {!isAdmin(c) ? (
+                    <View style={styles.customDaysRow}>
+                      <TextField
+                        value={daysInput[c.uid] ?? ''}
+                        onChangeText={(v) => setDaysInput((p) => ({ ...p, [c.uid]: v }))}
+                        placeholder="Nº de días"
+                        keyboardType="numeric"
+                        containerStyle={styles.customDaysField}
+                      />
                       <Pressable
-                        onPress={() => deleteCoach(c)}
+                        onPress={() => applyDays(c, 1)}
                         disabled={updatingCoach === c.uid}
-                        style={[styles.coachIconBtn, styles.coachIconDanger]}
-                        hitSlop={6}
+                        style={styles.daysBtn}
+                        hitSlop={4}
                       >
-                        <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                        <Ionicons name="add" size={15} color={colors.primary} />
+                        <Text style={styles.daysBtnText}>Añadir</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => applyDays(c, -1)}
+                        disabled={updatingCoach === c.uid}
+                        style={styles.daysBtn}
+                        hitSlop={4}
+                      >
+                        <Ionicons name="remove" size={15} color={colors.warning} />
+                        <Text style={[styles.daysBtnText, { color: colors.warning }]}>Quitar</Text>
                       </Pressable>
                     </View>
                   ) : null}
@@ -590,14 +632,32 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1,
   },
+  coachCard: { borderTopWidth: 1, borderTopColor: colors.border },
   coachRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
+  customDaysRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  customDaysField: { flex: 1, marginBottom: 0 },
+  daysBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  daysBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   coachName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   coachEmail: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   coachSub: { ...typography.small, color: colors.primaryBright, fontSize: 11, marginTop: 2 },

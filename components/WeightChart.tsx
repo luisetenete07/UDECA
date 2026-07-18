@@ -7,6 +7,7 @@ export function WeightChart({ logs }: { logs: WeightLog[] }) {
     <LineChart
       points={logs.map((log) => ({ date: log.date, value: log.weightKg }))}
       unit="kg"
+      labeled
       emptyMessage="Registra al menos dos pesajes para ver tu gráfica de evolución."
     />
   );

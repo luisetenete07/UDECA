@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -85,6 +85,18 @@ export default function ClientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { profile } = useAuth();
+  // Botón de volver siempre presente: al entrar desde el panel o el ranking la
+  // pila de Clientes se abre sin historial y no habría flecha para volver.
+  const backToClients = () => (
+    <Pressable
+      onPress={() => router.replace('/(trainer)/clients')}
+      hitSlop={10}
+      style={styles.backBtn}
+    >
+      <Ionicons name="chevron-back" size={24} color={colors.primary} />
+      <Text style={styles.backText}>Clientes</Text>
+    </Pressable>
+  );
   const [client, setClient] = useState<UserProfile | null>(null);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
@@ -288,15 +300,28 @@ export default function ClientDetailScreen() {
     }
   };
 
-  if (loading) return <LoadingScreen />;
+  if (loading)
+    return (
+      <>
+        <Stack.Screen options={{ headerLeft: backToClients }} />
+        <LoadingScreen />
+      </>
+    );
   if (loadError) {
     return (
       <ScreenContainer>
+        <Stack.Screen options={{ headerLeft: backToClients }} />
         <EmptyState title="No se pudo cargar el cliente" subtitle={loadError} />
       </ScreenContainer>
     );
   }
-  if (!client) return <EmptyState title="Cliente no encontrado" />;
+  if (!client)
+    return (
+      <>
+        <Stack.Screen options={{ headerLeft: backToClients }} />
+        <EmptyState title="Cliente no encontrado" />
+      </>
+    );
 
   const activeRoutine = routines.find((r) => r.active);
   const currentStatus: ClientStatus = client.status ?? 'active';
@@ -371,6 +396,7 @@ export default function ClientDetailScreen() {
 
   return (
     <ScreenContainer>
+      <Stack.Screen options={{ headerLeft: backToClients }} />
       <View style={styles.header}>
         <Avatar name={client.name} photoURL={client.photoURL} size={64} />
         <View style={{ flex: 1 }}>
@@ -854,6 +880,8 @@ export default function ClientDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingRight: spacing.sm },
+  backText: { ...typography.body, color: colors.primary, fontFamily: fonts.medium },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   name: { ...typography.h2, color: colors.text },
   email: { ...typography.small, color: colors.textMuted },
