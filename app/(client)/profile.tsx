@@ -42,6 +42,9 @@ const two = (n: number) => String(n).padStart(2, '0');
 
 export default function ClientProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
+  const [name, setName] = useState(profile?.name ?? '');
+  const [savingName, setSavingName] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
   const [goal, setGoal] = useState(profile?.goal ?? '');
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [level, setLevel] = useState<ExperienceLevel | undefined>(profile?.level);
@@ -117,6 +120,21 @@ export default function ClientProfileScreen() {
     }
   };
 
+  const handleSaveName = async () => {
+    if (!profile) return;
+    const clean = name.trim();
+    if (!clean || clean === profile.name) return;
+    setSavingName(true);
+    try {
+      await updateUserProfile(profile.uid, { name: clean, nameChangedAt: Date.now() });
+      await refreshProfile();
+      setNameSaved(true);
+      setTimeout(() => setNameSaved(false), 2500);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!profile) return;
     setSaving(true);
@@ -186,6 +204,15 @@ export default function ClientProfileScreen() {
     : '';
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
+  // Nombre: se puede cambiar como máximo una vez cada 30 días.
+  const NAME_COOLDOWN = 30 * 24 * 60 * 60 * 1000;
+  const msSinceNameChange = Date.now() - (profile?.nameChangedAt ?? 0);
+  const canChangeName = !profile?.nameChangedAt || msSinceNameChange >= NAME_COOLDOWN;
+  const nameDaysLeft = canChangeName
+    ? 0
+    : Math.ceil((NAME_COOLDOWN - msSinceNameChange) / (24 * 60 * 60 * 1000));
+  const nameChanged = name.trim() !== '' && name.trim() !== profile?.name;
+
   return (
     <ScreenContainer>
       <View style={styles.hero}>
@@ -241,6 +268,42 @@ export default function ClientProfileScreen() {
             </View>
           ))}
         </View>
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Tu nombre</Text>
+        <TextField
+          label="Nombre"
+          value={name}
+          onChangeText={setName}
+          placeholder="Tu nombre"
+          editable={canChangeName}
+          style={!canChangeName ? styles.inputLocked : undefined}
+        />
+        <View style={styles.nameHintRow}>
+          <Ionicons
+            name={canChangeName ? 'information-circle-outline' : 'lock-closed'}
+            size={14}
+            color={canChangeName ? colors.textMuted : colors.textFaint}
+          />
+          <Text style={styles.nameHint}>
+            {canChangeName
+              ? 'Solo puedes cambiar tu nombre una vez cada 30 días.'
+              : `Ya lo cambiaste hace poco. Podrás volver a cambiarlo en ${nameDaysLeft} día${
+                  nameDaysLeft === 1 ? '' : 's'
+                }.`}
+          </Text>
+        </View>
+        {nameSaved ? <Text style={styles.savedText}>Nombre actualizado</Text> : null}
+        {canChangeName ? (
+          <Button
+            title="Cambiar nombre"
+            variant="secondary"
+            onPress={handleSaveName}
+            loading={savingName}
+            disabled={!nameChanged}
+          />
+        ) : null}
       </Card>
 
       <Card style={styles.section}>
@@ -462,6 +525,9 @@ const styles = StyleSheet.create({
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   chipTextSelected: { color: colors.onPrimary },
   savedText: { ...typography.small, color: colors.primary, marginBottom: spacing.sm },
+  inputLocked: { opacity: 0.55 },
+  nameHintRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.md },
+  nameHint: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 17 },
   reminderTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reminderHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   reminderHint: { ...typography.small, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.md },

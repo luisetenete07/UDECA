@@ -6,6 +6,8 @@ export interface UserProfile {
   name: string;
   email: string;
   createdAt: number;
+  /** Última vez que el alumno cambió su nombre (límite: 1 vez cada 30 días). */
+  nameChangedAt?: number;
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /** Solo en clientes: uid del entrenador al que pertenecen. */
