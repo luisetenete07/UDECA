@@ -11,19 +11,10 @@ import { getCoachTasks } from '../../lib/firestore/coachTasks';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import { CYCLE_LEVEL_LABEL, type TrainingCycle, type UserProfile } from '../../lib/types';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
 function startOfDay(ts: number): number {
   const d = new Date(ts);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
-}
-
-/** Lunes=0 para un timestamp. */
-function weekdayMon0(ts: number): number {
-  const d = new Date(ts).getDay();
-  return d === 0 ? 6 : d - 1;
 }
 
 type EventType = 'payment' | 'cycle-start' | 'cycle-end' | 'task';
@@ -61,7 +52,6 @@ export default function CalendarScreen() {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   });
-  const [selected, setSelected] = useState(startOfDay(Date.now()));
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -82,7 +72,6 @@ export default function CalendarScreen() {
     }, [load])
   );
 
-  // Agrupa todos los eventos del negocio por día.
   const eventsByDay = useMemo(() => {
     const map = new Map<number, CalEvent[]>();
     const add = (e: CalEvent) => {
@@ -96,7 +85,7 @@ export default function CalendarScreen() {
           day: startOfDay(c.nextPaymentDate),
           type: 'payment',
           title: `Cobro · ${c.name}`,
-          subtitle: c.monthlyFeeEur ? `${c.monthlyFeeEur} €` : undefined,
+          subtitle: c.monthlyFeeEur ? `${c.monthlyFeeEur} €` : 'Renovación',
           onPress: () => router.push(`/(trainer)/clients/${c.uid}`),
         });
       }
@@ -134,27 +123,20 @@ export default function CalendarScreen() {
     return map;
   }, [clients, cycles, taskCount, router]);
 
-  // 42 celdas (6 semanas) empezando en el lunes de la semana del día 1.
-  const cells = useMemo(() => {
-    const first = new Date(monthAnchor);
-    const offset = weekdayMon0(monthAnchor);
-    const gridStart = startOfDay(first.getTime()) - offset * DAY_MS;
-    return Array.from({ length: 42 }, (_, i) => gridStart + i * DAY_MS);
-  }, [monthAnchor]);
-
   if (loading) return <LoadingScreen />;
 
-  const monthLabel = new Date(monthAnchor).toLocaleDateString('es-ES', {
-    month: 'long',
-    year: 'numeric',
-  });
-  const thisMonth = new Date(monthAnchor).getMonth();
+  const anchor = new Date(monthAnchor);
+  const monthLabel = anchor.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1).getTime();
   const today = startOfDay(Date.now());
-  const selectedEvents = eventsByDay.get(selected) ?? [];
+
+  const days = [...eventsByDay.keys()]
+    .filter((d) => d >= monthAnchor && d < monthEnd)
+    .sort((a, b) => a - b);
+  const monthCount = days.reduce((n, d) => n + (eventsByDay.get(d)?.length ?? 0), 0);
 
   const shiftMonth = (delta: number) => {
-    const d = new Date(monthAnchor);
-    setMonthAnchor(new Date(d.getFullYear(), d.getMonth() + delta, 1).getTime());
+    setMonthAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + delta, 1).getTime());
   };
 
   return (
@@ -166,84 +148,68 @@ export default function CalendarScreen() {
         <Pressable onPress={() => shiftMonth(-1)} style={styles.monthNav} hitSlop={8}>
           <Ionicons name="chevron-back" size={20} color={colors.primary} />
         </Pressable>
-        <Text style={styles.monthLabel}>{monthLabel}</Text>
+        <View style={styles.monthCenter}>
+          <Text style={styles.monthLabel}>{monthLabel}</Text>
+          <Text style={styles.monthCount}>
+            {monthCount === 0 ? 'Sin eventos' : `${monthCount} evento${monthCount === 1 ? '' : 's'}`}
+          </Text>
+        </View>
         <Pressable onPress={() => shiftMonth(1)} style={styles.monthNav} hitSlop={8}>
           <Ionicons name="chevron-forward" size={20} color={colors.primary} />
         </Pressable>
       </View>
 
-      <View style={styles.weekRow}>
-        {WEEKDAYS.map((w) => (
-          <Text key={w} style={styles.weekLabel}>
-            {w}
+      {days.length === 0 ? (
+        <View style={styles.empty}>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="calendar-clear-outline" size={26} color={colors.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>Mes despejado</Text>
+          <Text style={styles.emptySub}>
+            No hay cobros, ciclos ni tareas este mes. Cuando pongas fechas a los pagos o a los
+            ciclos de tus alumnos, aparecerán aquí.
           </Text>
-        ))}
-      </View>
-
-      <View style={styles.grid}>
-        {cells.map((day) => {
-          const inMonth = new Date(day).getMonth() === thisMonth;
+        </View>
+      ) : (
+        days.map((day) => {
+          const d = new Date(day);
           const isToday = day === today;
-          const isSelected = day === selected;
-          const evs = eventsByDay.get(day) ?? [];
-          const dots = Array.from(new Set(evs.map((e) => e.type))).slice(0, 3);
+          const isPast = day < today;
           return (
-            <Pressable
-              key={day}
-              onPress={() => setSelected(day)}
-              style={[styles.cell, isSelected && styles.cellSelected]}
-            >
-              <View style={[styles.cellNumWrap, isToday && styles.cellToday]}>
-                <Text
-                  style={[
-                    styles.cellNum,
-                    !inMonth && styles.cellNumMuted,
-                    isToday && styles.cellNumToday,
-                  ]}
-                >
-                  {new Date(day).getDate()}
+            <View key={day} style={styles.dayGroup}>
+              <View style={styles.dayCol}>
+                <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>{d.getDate()}</Text>
+                <Text style={[styles.dayWk, isToday && styles.dayWkToday]}>
+                  {d.toLocaleDateString('es-ES', { weekday: 'short' })}
                 </Text>
               </View>
-              <View style={styles.dotRow}>
-                {dots.map((t) => (
-                  <View key={t} style={[styles.dot, { backgroundColor: TONE[t] }]} />
+              <View style={styles.dayEvents}>
+                {isToday ? <Text style={styles.todayTag}>HOY</Text> : null}
+                {(eventsByDay.get(day) ?? []).map((e, i) => (
+                  <Pressable
+                    key={i}
+                    onPress={e.onPress}
+                    style={[styles.event, isPast && styles.eventPast]}
+                  >
+                    <View style={[styles.eventBar, { backgroundColor: TONE[e.type] }]} />
+                    <View style={[styles.eventIcon, { borderColor: TONE[e.type] }]}>
+                      <Ionicons name={TYPE_ICON[e.type]} size={15} color={TONE[e.type]} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.eventTitle} numberOfLines={1}>
+                        {e.title}
+                      </Text>
+                      {e.subtitle ? <Text style={styles.eventSub}>{e.subtitle}</Text> : null}
+                    </View>
+                    {e.onPress ? (
+                      <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                    ) : null}
+                  </Pressable>
                 ))}
               </View>
-            </Pressable>
+            </View>
           );
-        })}
-      </View>
-
-      <View style={styles.dayHeaderRow}>
-        <Text style={styles.dayHeader}>
-          {new Date(selected).toLocaleDateString('es-ES', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}
-        </Text>
-      </View>
-
-      {selectedEvents.length === 0 ? (
-        <Text style={styles.emptyDay}>Nada programado este día.</Text>
-      ) : (
-        selectedEvents.map((e, i) => (
-          <Pressable key={i} style={styles.eventRow} onPress={e.onPress}>
-            <View style={[styles.eventBar, { backgroundColor: TONE[e.type] }]} />
-            <View style={[styles.eventIcon, { borderColor: TONE[e.type] }]}>
-              <Ionicons name={TYPE_ICON[e.type]} size={15} color={TONE[e.type]} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.eventTitle} numberOfLines={1}>
-                {e.title}
-              </Text>
-              {e.subtitle ? <Text style={styles.eventSub}>{e.subtitle}</Text> : null}
-            </View>
-            {e.onPress ? (
-              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-            ) : null}
-          </Pressable>
-        ))
+        })
       )}
 
       <View style={styles.legend}>
@@ -259,7 +225,7 @@ export default function CalendarScreen() {
 function Legend({ tone, label }: { tone: string; label: string }) {
   return (
     <View style={styles.legendItem}>
-      <View style={[styles.dot, { backgroundColor: tone }]} />
+      <View style={[styles.legendDot, { backgroundColor: tone }]} />
       <Text style={styles.legendText}>{label}</Text>
     </View>
   );
@@ -272,11 +238,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   monthNav: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -284,50 +250,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  monthCenter: { alignItems: 'center' },
   monthLabel: { ...typography.h3, color: colors.text, textTransform: 'capitalize' },
-  weekRow: { flexDirection: 'row', marginBottom: spacing.xs },
-  weekLabel: {
-    flex: 1,
-    textAlign: 'center',
+  monthCount: { ...typography.small, color: colors.textFaint, marginTop: 1 },
+  dayGroup: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  dayCol: { width: 40, alignItems: 'center', paddingTop: 2 },
+  dayNum: { ...typography.h2, color: colors.text, fontFamily: fonts.heading, fontSize: 22 },
+  dayNumToday: { color: colors.primaryBright },
+  dayWk: { ...typography.small, color: colors.textFaint, fontSize: 11, textTransform: 'uppercase' },
+  dayWkToday: { color: colors.primary },
+  dayEvents: { flex: 1, gap: spacing.sm },
+  todayTag: {
     ...typography.small,
-    color: colors.textFaint,
+    color: colors.primary,
     fontFamily: fonts.semiBold,
-    fontSize: 11,
+    fontSize: 10,
+    letterSpacing: 1,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: {
-    width: `${100 / 7}%`,
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    paddingTop: 2,
-  },
-  cellSelected: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.hairline },
-  cellNumWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cellToday: { backgroundColor: colors.primary },
-  cellNum: { ...typography.body, color: colors.text, fontSize: 14 },
-  cellNumMuted: { color: colors.textFaint, opacity: 0.5 },
-  cellNumToday: { color: colors.onPrimary, fontFamily: fonts.semiBold },
-  dotRow: { flexDirection: 'row', gap: 3, height: 6, marginTop: 2 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  dayHeaderRow: { marginTop: spacing.lg, marginBottom: spacing.sm, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  dayHeader: { ...typography.h3, color: colors.text, textTransform: 'capitalize' },
-  emptyDay: { ...typography.small, color: colors.textFaint, paddingVertical: spacing.sm },
-  eventRow: {
+  event: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
     paddingRight: spacing.sm,
+    overflow: 'hidden',
   },
-  eventBar: { width: 3, alignSelf: 'stretch', borderRadius: 2 },
+  eventPast: { opacity: 0.55 },
+  eventBar: { width: 4, alignSelf: 'stretch' },
   eventIcon: {
     width: 34,
     height: 34,
@@ -335,10 +293,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceAlt,
+    marginVertical: spacing.sm,
   },
   eventTitle: { ...typography.body, color: colors.text, fontFamily: fonts.medium },
   eventSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  empty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  emptyTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
+  emptySub: { ...typography.small, color: colors.textMuted, textAlign: 'center', maxWidth: 320, lineHeight: 19 },
   legend: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -349,5 +322,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
 });
