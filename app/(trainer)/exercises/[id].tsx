@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
+import { updateUserProfile } from '../../../lib/firestore/users';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
@@ -24,12 +26,23 @@ export default function ExerciseEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === 'new';
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
+
+  // Categorías del coach: las suyas si las tiene, si no las de por defecto.
+  const categories = useMemo(
+    () =>
+      profile?.exerciseCategories && profile.exerciseCategories.length > 0
+        ? profile.exerciseCategories
+        : [...MUSCLE_GROUPS],
+    [profile?.exerciseCategories]
+  );
+  const [editCats, setEditCats] = useState(false);
+  const [newCat, setNewCat] = useState('');
 
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
-  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>(MUSCLE_GROUPS[0]);
+  const [muscleGroup, setMuscleGroup] = useState<string>(MUSCLE_GROUPS[0]);
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
@@ -95,6 +108,37 @@ export default function ExerciseEditorScreen() {
     }
   };
 
+  const saveCategories = async (list: string[]) => {
+    if (!profile) return;
+    try {
+      await updateUserProfile(profile.uid, { exerciseCategories: list });
+      await refreshProfile();
+    } catch {
+      showToast('No se pudieron guardar las categorías');
+    }
+  };
+
+  const addCategory = () => {
+    const c = newCat.trim();
+    if (!c) return;
+    if (categories.some((g) => g.toLowerCase() === c.toLowerCase())) {
+      showToast('Esa categoría ya existe');
+      return;
+    }
+    setNewCat('');
+    saveCategories([...categories, c]);
+  };
+
+  const removeCategory = (group: string) => {
+    const list = categories.filter((g) => g !== group);
+    if (list.length === 0) {
+      showToast('Deja al menos una categoría');
+      return;
+    }
+    if (muscleGroup === group) setMuscleGroup(list[0]);
+    saveCategories(list);
+  };
+
   if (loading) return <LoadingScreen />;
 
   return (
@@ -106,20 +150,47 @@ export default function ExerciseEditorScreen() {
         placeholder="Ej. Dominadas estrictas"
       />
 
-      <Text style={styles.label}>Grupo muscular</Text>
+      <View style={styles.catHeader}>
+        <Text style={styles.label}>Categoría</Text>
+        <Pressable onPress={() => setEditCats((v) => !v)} hitSlop={6}>
+          <Text style={styles.catEdit}>{editCats ? 'Listo' : 'Editar categorías'}</Text>
+        </Pressable>
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
-        {MUSCLE_GROUPS.map((group) => (
+        {categories.map((group) => (
           <Pressable
             key={group}
-            onPress={() => setMuscleGroup(group)}
-            style={[styles.chip, muscleGroup === group && styles.chipSelected]}
+            onPress={() => !editCats && setMuscleGroup(group)}
+            style={[styles.chip, muscleGroup === group && !editCats && styles.chipSelected]}
           >
-            <Text style={[styles.chipText, muscleGroup === group && styles.chipTextSelected]}>
+            <Text style={[styles.chipText, muscleGroup === group && !editCats && styles.chipTextSelected]}>
               {group}
             </Text>
+            {editCats ? (
+              <Pressable onPress={() => removeCategory(group)} hitSlop={8} style={styles.chipX}>
+                <Ionicons name="close-circle" size={16} color={colors.danger} />
+              </Pressable>
+            ) : null}
           </Pressable>
         ))}
       </ScrollView>
+      {editCats ? (
+        <View style={styles.addCatRow}>
+          <TextInput
+            value={newCat}
+            onChangeText={setNewCat}
+            placeholder="Nueva categoría…"
+            placeholderTextColor={colors.textFaint}
+            style={styles.addCatInput}
+            onSubmitEditing={addCategory}
+            returnKeyType="done"
+          />
+          <Pressable onPress={addCategory} style={styles.addCatBtn} hitSlop={6}>
+            <Ionicons name="add" size={16} color={colors.primary} />
+            <Text style={styles.addCatText}>Añadir</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <Text style={styles.label}>Se mide en</Text>
       <View style={styles.segment}>
@@ -184,6 +255,9 @@ const styles = StyleSheet.create({
   },
   chips: { marginBottom: spacing.md },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
@@ -192,6 +266,38 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginRight: spacing.sm,
   },
+  chipX: { marginLeft: -2, marginRight: -4 },
+  catHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  catEdit: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  addCatRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  addCatInput: {
+    flex: 1,
+    minHeight: 44,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    color: colors.text,
+    fontSize: 15,
+  },
+  addCatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+  },
+  addCatText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
   chipTextSelected: { color: colors.onPrimary },

@@ -12,7 +12,6 @@ import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { MuscleMap } from '../../components/MuscleMap';
 import { muscleLoad } from '../../lib/muscles';
-import type { MuscleGroup } from '../../lib/types';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
@@ -186,7 +185,7 @@ export default function ProgressScreen() {
   // Mapa corporal: intensidad por músculo según lo trabajado en la última
   // sesión o en los últimos 7 días. `muscleByExercise` (grupo del ejercicio)
   // refina la clasificación por nombre.
-  const groupByEx = muscleByExercise as Record<string, MuscleGroup>;
+  const groupByEx = muscleByExercise;
   const startOfDayTs = (ts: number) => {
     const d = new Date(ts);
     d.setHours(0, 0, 0, 0);

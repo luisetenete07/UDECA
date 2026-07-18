@@ -8,6 +8,9 @@ export interface UserProfile {
   createdAt: number;
   /** Última vez que el alumno cambió su nombre (límite: 1 vez cada 30 días). */
   nameChangedAt?: number;
+  /** Solo entrenadores: categorías propias de ejercicios (crea/borra las suyas).
+   * Sin valor = usa las de por defecto (MUSCLE_GROUPS). */
+  exerciseCategories?: string[];
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /** Solo en clientes: uid del entrenador al que pertenecen. */
@@ -156,7 +159,9 @@ export interface Exercise {
   id: string;
   trainerId: string;
   name: string;
-  muscleGroup: MuscleGroup;
+  /** Categoría del ejercicio. Por defecto una de MUSCLE_GROUPS, pero el coach
+   * puede crear las suyas propias, así que es texto libre. */
+  muscleGroup: string;
   description?: string;
   videoUrl?: string;
   /** 'reps' (por defecto) o 'seconds' para isométricos (planchas, L-sit...). */

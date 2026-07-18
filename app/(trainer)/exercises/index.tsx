@@ -88,6 +88,17 @@ export default function ExercisesScreen() {
     [exercises, search, muscleFilter]
   );
 
+  // Filtros: las categorías del coach (o las de por defecto) más cualquier otra
+  // que ya use algún ejercicio, para no ocultar ninguno.
+  const filterCategories = useMemo(() => {
+    const base =
+      profile?.exerciseCategories && profile.exerciseCategories.length > 0
+        ? profile.exerciseCategories
+        : [...MUSCLE_GROUPS];
+    const extra = exercises.map((e) => e.muscleGroup).filter((g) => g && !base.includes(g));
+    return [...base, ...Array.from(new Set(extra))];
+  }, [profile?.exerciseCategories, exercises]);
+
   if (loading) {
     return (
       <ScreenContainer>
@@ -122,7 +133,7 @@ export default function ExercisesScreen() {
           selected={muscleFilter === null}
           onPress={() => setMuscleFilter(null)}
         />
-        {MUSCLE_GROUPS.map((group) => (
+        {filterCategories.map((group) => (
           <FilterChip
             key={group}
             label={group}

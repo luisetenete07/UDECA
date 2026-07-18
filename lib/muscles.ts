@@ -85,7 +85,7 @@ const GROUP_FALLBACK: Record<MuscleGroup, Weights> = {
 };
 
 /** Músculos que trabaja un ejercicio, por nombre (y grupo opcional de apoyo). */
-export function musclesForExercise(name: string, group?: MuscleGroup): Weights {
+export function musclesForExercise(name: string, group?: string): Weights {
   const n = (name || '').toLowerCase();
   const acc: Weights = {};
   let matched = false;
@@ -97,8 +97,9 @@ export function musclesForExercise(name: string, group?: MuscleGroup): Weights {
       }
     }
   }
-  if (!matched && group && GROUP_FALLBACK[group]) {
-    return { ...GROUP_FALLBACK[group] };
+  const fallback = group ? GROUP_FALLBACK[group as MuscleGroup] : undefined;
+  if (!matched && fallback) {
+    return { ...fallback };
   }
   return acc;
 }
@@ -112,7 +113,7 @@ export function musclesForExercise(name: string, group?: MuscleGroup): Weights {
 export function muscleLoad(
   logs: WorkoutLog[],
   sinceTs?: number,
-  groupByExerciseId?: Record<string, MuscleGroup>
+  groupByExerciseId?: Record<string, string>
 ): Record<MuscleId, number> {
   const raw = {} as Record<MuscleId, number>;
   (Object.keys(MUSCLE_LABEL) as MuscleId[]).forEach((m) => (raw[m] = 0));
