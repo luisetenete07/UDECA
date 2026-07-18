@@ -30,6 +30,7 @@ import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '.
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { activeCycle, computeCycleStats } from '../../lib/cycleStats';
+import { CycleProgress } from '../../components/CycleProgress';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
@@ -341,6 +342,8 @@ export default function ClientDashboard() {
                     : ''}
                 </Text>
                 {activeCyc.goal ? <Text style={styles.cycleGoal}>{activeCyc.goal}</Text> : null}
+                <View style={styles.cycleDivider} />
+                <CycleProgress cycle={activeCyc} logs={workoutLogs} />
               </View>
             );
           })()
@@ -516,6 +519,12 @@ const styles = StyleSheet.create({
   cycleName: { ...typography.h3, color: colors.text, marginTop: 4 },
   cycleMeta: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm },
   cycleGoal: { ...typography.small, color: colors.textFaint, marginTop: 4, fontStyle: 'italic' },
+  cycleDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+  },
   sectionLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   section: { marginBottom: spacing.md },
   // ----- Hero "Hoy toca" -----

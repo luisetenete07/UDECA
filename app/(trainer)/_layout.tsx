@@ -58,9 +58,9 @@ export default function TrainerLayout() {
       <Tabs.Screen
         name="agenda"
         options={{
-          title: 'Agenda',
+          title: 'Calendario',
           tabBarIcon: (props) => (
-            <TabIcon {...props} outline="checkbox-outline" filled="checkbox" />
+            <TabIcon {...props} outline="calendar-outline" filled="calendar" />
           ),
         }}
       />
@@ -73,8 +73,6 @@ export default function TrainerLayout() {
           ),
         }}
       />
-      {/* Calendario del negocio: se abre desde Inicio/Agenda, no ocupa pestaña. */}
-      <Tabs.Screen name="calendar" options={{ href: null }} />
     </Tabs>
   );
 }

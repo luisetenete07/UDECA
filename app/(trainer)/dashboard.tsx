@@ -327,10 +327,6 @@ export default function TrainerDashboard() {
 
       {/* Atajos: lo más usado, a un toque */}
       <View style={styles.quickRow}>
-        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/calendar')}>
-          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Calendario</Text>
-        </Pressable>
         <Pressable
           style={[styles.quickBtn, copilotOpen && styles.quickBtnActive]}
           onPress={handleOpenCopilot}

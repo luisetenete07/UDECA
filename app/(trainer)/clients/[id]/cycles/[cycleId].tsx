@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../../../components/Button';
 import { Card } from '../../../../../components/Card';
+import { CycleProgress } from '../../../../../components/CycleProgress';
 import { CycleSheet } from '../../../../../components/CycleSheet';
 import { EmptyState } from '../../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../../components/LoadingScreen';
@@ -130,6 +131,11 @@ export default function CycleDashboardScreen() {
           label="Volumen (kg)"
         />
       </View>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionLabel}>Progreso del mesociclo</Text>
+        <CycleProgress cycle={cycle} logs={logs} />
+      </Card>
 
       {cycle.goal ? (
         <Card style={styles.section}>

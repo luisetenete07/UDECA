@@ -415,41 +415,6 @@ export default function ProgressScreen() {
               />
             </Card>
 
-            <Card style={styles.section}>
-              <View style={styles.muscleHeader}>
-                <Text style={styles.sectionTitle}>Músculos trabajados</Text>
-                <View style={styles.muscleToggle}>
-                  <Pressable
-                    onPress={() => setMuscleMode('session')}
-                    style={[styles.muscleTab, muscleMode === 'session' && styles.muscleTabOn]}
-                  >
-                    <Text
-                      style={[
-                        styles.muscleTabText,
-                        muscleMode === 'session' && styles.muscleTabTextOn,
-                      ]}
-                    >
-                      Última sesión
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setMuscleMode('week')}
-                    style={[styles.muscleTab, muscleMode === 'week' && styles.muscleTabOn]}
-                  >
-                    <Text
-                      style={[
-                        styles.muscleTabText,
-                        muscleMode === 'week' && styles.muscleTabTextOn,
-                      ]}
-                    >
-                      Semana
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-              <MuscleMap intensity={muscleIntensity} hasData={muscleHasData} />
-            </Card>
-
             {muscleMap.length > 0 ? (
               <Card style={styles.section}>
                 <Text style={styles.sectionTitle}>Mapa muscular (28 días)</Text>
@@ -529,6 +494,40 @@ export default function ProgressScreen() {
         </>
       ) : tab === 'exercises' ? (
         <>
+          <Card style={styles.section}>
+            <View style={styles.muscleHeader}>
+              <Text style={styles.sectionTitle}>Músculos trabajados</Text>
+              <View style={styles.muscleToggle}>
+                <Pressable
+                  onPress={() => setMuscleMode('session')}
+                  style={[styles.muscleTab, muscleMode === 'session' && styles.muscleTabOn]}
+                >
+                  <Text
+                    style={[
+                      styles.muscleTabText,
+                      muscleMode === 'session' && styles.muscleTabTextOn,
+                    ]}
+                  >
+                    Última sesión
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setMuscleMode('week')}
+                  style={[styles.muscleTab, muscleMode === 'week' && styles.muscleTabOn]}
+                >
+                  <Text
+                    style={[
+                      styles.muscleTabText,
+                      muscleMode === 'week' && styles.muscleTabTextOn,
+                    ]}
+                  >
+                    Semana
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+            <MuscleMap intensity={muscleIntensity} hasData={muscleHasData} />
+          </Card>
           {levelTests.length > 0 ? (
             <Card accent style={styles.section}>
               <View style={styles.exHeader}>

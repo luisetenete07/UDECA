@@ -20,19 +20,26 @@ import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import {
   createCoachTask,
-  deleteCoachTask,
   getCoachTasks,
   updateCoachTask,
 } from '../../lib/firestore/coachTasks';
+import { getClientsForTrainer } from '../../lib/firestore/users';
+import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
-import { TASK_SCOPE_LABEL, type CoachTask, type TaskScope } from '../../lib/types';
+import {
+  CYCLE_LEVEL_LABEL,
+  TASK_SCOPE_LABEL,
+  type CoachTask,
+  type TaskScope,
+  type TrainingCycle,
+  type UserProfile,
+} from '../../lib/types';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const SCOPES: TaskScope[] = ['day', 'week', 'month', 'goal'];
-
 const PLACEHOLDER: Record<TaskScope, string> = {
   day: 'Añade algo para hoy…',
   week: 'Algo para esta semana…',
@@ -43,22 +50,67 @@ const PLACEHOLDER: Record<TaskScope, string> = {
 function animate() {
   LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
 }
+function startOfDay(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
 
-export default function AgendaScreen() {
+type EventType = 'payment' | 'cycle-start' | 'cycle-end' | 'task';
+interface CalEvent {
+  day: number;
+  type: EventType;
+  title: string;
+  subtitle?: string;
+  onPress?: () => void;
+}
+const TONE: Record<EventType, string> = {
+  payment: colors.danger,
+  'cycle-start': colors.primary,
+  'cycle-end': colors.primaryBright,
+  task: colors.textMuted,
+};
+const TYPE_ICON: Record<EventType, keyof typeof Ionicons.glyphMap> = {
+  payment: 'card-outline',
+  'cycle-start': 'play-outline',
+  'cycle-end': 'flag-outline',
+  task: 'checkbox-outline',
+};
+
+export default function CoachCalendarScreen() {
   const { profile } = useAuth();
   const router = useRouter();
-  const [tasks, setTasks] = useState<CoachTask[]>([]);
+  const [view, setView] = useState<'calendar' | 'tasks'>('calendar');
   const [loading, setLoading] = useState(true);
+
+  // --- Datos ---
+  const [tasks, setTasks] = useState<CoachTask[]>([]);
+  const [clients, setClients] = useState<UserProfile[]>([]);
+  const [cycles, setCycles] = useState<TrainingCycle[]>([]);
+
+  // --- Tareas ---
   const [scope, setScope] = useState<TaskScope>('day');
   const [draft, setDraft] = useState('');
   const [showDone, setShowDone] = useState(false);
   const [editing, setEditing] = useState<CoachTask | null>(null);
   const inputRef = useRef<TextInput>(null);
 
+  // --- Calendario ---
+  const [monthAnchor, setMonthAnchor] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  });
+
   const load = useCallback(async () => {
     if (!profile) return;
-    const data = await getCoachTasks(profile.uid);
-    setTasks(data);
+    const [taskData, clientData, cycleData] = await Promise.all([
+      getCoachTasks(profile.uid).catch(() => []),
+      getClientsForTrainer(profile.uid).catch(() => []),
+      getCyclesForTrainer(profile.uid).catch(() => []),
+    ]);
+    setTasks(taskData);
+    setClients(clientData);
+    setCycles(cycleData);
     setLoading(false);
   }, [profile]);
 
@@ -68,6 +120,7 @@ export default function AgendaScreen() {
     }, [load])
   );
 
+  // ---------- TAREAS: derivados y acciones ----------
   const inScope = useMemo(() => tasks.filter((t) => t.scope === scope), [tasks, scope]);
   const active = useMemo(
     () =>
@@ -80,10 +133,8 @@ export default function AgendaScreen() {
     () => inScope.filter((t) => t.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)),
     [inScope]
   );
-
   const pendingCount = (s: TaskScope) => tasks.filter((t) => t.scope === s && !t.done).length;
 
-  // Progreso de la cabecera según el cubo activo.
   const header = useMemo(() => {
     if (scope === 'goal') {
       const goals = inScope;
@@ -94,10 +145,9 @@ export default function AgendaScreen() {
       return { progress: avg / 100, text: `${Math.round(avg)}% de media`, total: goals.length };
     }
     const total = inScope.length;
-    const doneN = done.length;
     return {
-      progress: total > 0 ? doneN / total : 0,
-      text: total > 0 ? `${doneN} de ${total} hechas` : 'Sin tareas',
+      progress: total > 0 ? done.length / total : 0,
+      text: total > 0 ? `${done.length} de ${total} hechas` : 'Sin tareas',
       total,
     };
   }, [scope, inScope, done]);
@@ -124,7 +174,6 @@ export default function AgendaScreen() {
     animate();
     setTasks((prev) => [...prev, temp]);
     haptic();
-    // Mantén el foco para capturar varias seguidas.
     inputRef.current?.focus();
     try {
       const id = await createCoachTask({
@@ -142,7 +191,7 @@ export default function AgendaScreen() {
     }
   };
 
-  const toggleDone = async (task: CoachTask) => {
+  const toggleDone = (task: CoachTask) => {
     haptic();
     animate();
     const next = !task.done;
@@ -151,158 +200,252 @@ export default function AgendaScreen() {
     );
     updateCoachTask(task.id, { done: next, doneAt: next ? Date.now() : undefined }).catch(() => {});
   };
-
-  const toggleFlag = async (task: CoachTask) => {
+  const toggleFlag = (task: CoachTask) => {
     haptic();
     animate();
     const next = !task.flagged;
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, flagged: next } : t)));
     updateCoachTask(task.id, { flagged: next || undefined }).catch(() => {});
   };
-
-  const setGoalProgress = async (task: CoachTask, value: number) => {
+  const setGoalProgress = (task: CoachTask, value: number) => {
     haptic();
     const v = Math.max(0, Math.min(100, value));
-    setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, progress: v, done: v >= 100 } : t))
-    );
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, progress: v, done: v >= 100 } : t)));
     updateCoachTask(task.id, { progress: v, done: v >= 100 }).catch(() => {});
   };
 
+  // ---------- CALENDARIO: eventos ----------
+  const dayTaskCount = tasks.filter((t) => t.scope === 'day' && !t.done).length;
+  const eventsByDay = useMemo(() => {
+    const map = new Map<number, CalEvent[]>();
+    const add = (e: CalEvent) => map.set(e.day, [...(map.get(e.day) ?? []), e]);
+    for (const c of clients) {
+      if (c.nextPaymentDate) {
+        add({
+          day: startOfDay(c.nextPaymentDate),
+          type: 'payment',
+          title: `Cobro · ${c.name}`,
+          subtitle: c.monthlyFeeEur ? `${c.monthlyFeeEur} €` : 'Renovación',
+          onPress: () => router.push(`/(trainer)/clients/${c.uid}`),
+        });
+      }
+    }
+    for (const cy of cycles) {
+      const who = clients.find((c) => c.uid === cy.clientId)?.name ?? 'alumno';
+      if (cy.startDate)
+        add({
+          day: startOfDay(cy.startDate),
+          type: 'cycle-start',
+          title: `Empieza ${cy.name}`,
+          subtitle: `${CYCLE_LEVEL_LABEL[cy.level]} · ${who}`,
+          onPress: () => router.push(`/(trainer)/clients/${cy.clientId}/cycles/${cy.id}`),
+        });
+      if (cy.endDate)
+        add({
+          day: startOfDay(cy.endDate),
+          type: 'cycle-end',
+          title: `Termina ${cy.name}`,
+          subtitle: `${CYCLE_LEVEL_LABEL[cy.level]} · ${who}`,
+          onPress: () => router.push(`/(trainer)/clients/${cy.clientId}/cycles/${cy.id}`),
+        });
+    }
+    if (dayTaskCount > 0)
+      add({
+        day: startOfDay(Date.now()),
+        type: 'task',
+        title: `${dayTaskCount} tarea${dayTaskCount === 1 ? '' : 's'} para hoy`,
+        subtitle: 'Ver tareas',
+        onPress: () => setView('tasks'),
+      });
+    return map;
+  }, [clients, cycles, dayTaskCount, router]);
+
   if (loading) return <LoadingScreen />;
 
-  const today = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  const today = startOfDay(Date.now());
+  const anchor = new Date(monthAnchor);
+  const monthLabel = anchor.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1).getTime();
+  const days = [...eventsByDay.keys()].filter((d) => d >= monthAnchor && d < monthEnd).sort((a, b) => a - b);
+  const monthCount = days.reduce((n, d) => n + (eventsByDay.get(d)?.length ?? 0), 0);
+  const shiftMonth = (delta: number) =>
+    setMonthAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + delta, 1).getTime());
+
   const allDone = scope !== 'goal' && header.total > 0 && active.length === 0;
 
   return (
     <ScreenContainer>
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Mi agenda</Text>
-          <Text style={styles.date}>{today}</Text>
-        </View>
-        <Pressable
-          onPress={() => router.push('/(trainer)/calendar')}
-          style={styles.calBtn}
-          hitSlop={6}
-        >
-          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-          <Text style={styles.calBtnText}>Calendario</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.progressWrap}>
-        <View style={styles.progressTop}>
-          <Text style={styles.progressText}>{header.text}</Text>
-          {allDone ? (
-            <View style={styles.donePill}>
-              <Ionicons name="checkmark" size={13} color={colors.onPrimary} />
-              <Text style={styles.donePillText}>Al día</Text>
-            </View>
-          ) : null}
-        </View>
-        <ProgressBar progress={header.progress} height={8} />
-      </View>
-
-      {/* Cubos */}
-      <View style={styles.segments}>
-        {SCOPES.map((s) => {
-          const count = pendingCount(s);
-          const isActive = scope === s;
-          return (
-            <Pressable
-              key={s}
-              onPress={() => {
-                animate();
-                setScope(s);
-                setShowDone(false);
-              }}
-              style={[styles.segment, isActive && styles.segmentActive]}
-            >
-              <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-                {TASK_SCOPE_LABEL[s]}
-              </Text>
-              {count > 0 ? (
-                <View style={[styles.badge, isActive && styles.badgeActive]}>
-                  <Text style={[styles.badgeText, isActive && styles.badgeTextActive]}>{count}</Text>
-                </View>
-              ) : null}
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Captura rápida */}
-      <View style={styles.addRow}>
-        <Ionicons name="add" size={20} color={colors.primary} />
-        <TextInput
-          ref={inputRef}
-          style={styles.addInput}
-          placeholder={PLACEHOLDER[scope]}
-          placeholderTextColor={colors.textFaint}
-          value={draft}
-          onChangeText={setDraft}
-          onSubmitEditing={addTask}
-          returnKeyType="done"
-          blurOnSubmit={false}
-        />
-        {draft.trim() ? (
-          <Pressable onPress={addTask} style={styles.addBtn} hitSlop={6}>
-            <Text style={styles.addBtnText}>Añadir</Text>
+      {/* Conmutador principal */}
+      <View style={styles.topSeg}>
+        {(['calendar', 'tasks'] as const).map((v) => (
+          <Pressable
+            key={v}
+            onPress={() => {
+              animate();
+              setView(v);
+            }}
+            style={[styles.topSegBtn, view === v && styles.topSegBtnOn]}
+          >
+            <Ionicons
+              name={v === 'calendar' ? 'calendar-outline' : 'checkbox-outline'}
+              size={16}
+              color={view === v ? colors.onPrimary : colors.textMuted}
+            />
+            <Text style={[styles.topSegText, view === v && styles.topSegTextOn]}>
+              {v === 'calendar' ? 'Calendario' : 'Tareas'}
+            </Text>
           </Pressable>
-        ) : null}
+        ))}
       </View>
 
-      {/* Lista */}
-      {scope === 'goal' ? (
-        <GoalsList
-          goals={active.concat(done)}
-          onEdit={setEditing}
-          onProgress={setGoalProgress}
-        />
-      ) : (
+      {view === 'calendar' ? (
         <>
-          {active.length === 0 && done.length === 0 ? (
+          <View style={styles.monthHeader}>
+            <Pressable onPress={() => shiftMonth(-1)} style={styles.monthNav} hitSlop={8}>
+              <Ionicons name="chevron-back" size={20} color={colors.primary} />
+            </Pressable>
+            <View style={styles.monthCenter}>
+              <Text style={styles.monthLabel}>{monthLabel}</Text>
+              <Text style={styles.monthCount}>
+                {monthCount === 0 ? 'Sin eventos' : `${monthCount} evento${monthCount === 1 ? '' : 's'}`}
+              </Text>
+            </View>
+            <Pressable onPress={() => shiftMonth(1)} style={styles.monthNav} hitSlop={8}>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </Pressable>
+          </View>
+
+          {days.length === 0 ? (
             <View style={styles.empty}>
               <View style={styles.emptyIcon}>
-                <Ionicons name="sunny-outline" size={26} color={colors.primary} />
+                <Ionicons name="calendar-clear-outline" size={26} color={colors.primary} />
               </View>
-              <Text style={styles.emptyTitle}>Nada por aquí</Text>
+              <Text style={styles.emptyTitle}>Mes despejado</Text>
               <Text style={styles.emptySub}>
-                Apunta lo que quieras sacar adelante {TASK_SCOPE_LABEL[scope].toLowerCase()}. Escribe
-                arriba y pulsa intro.
+                Los cobros, ciclos y tareas de tus alumnos aparecerán aquí en su día.
               </Text>
             </View>
-          ) : null}
+          ) : (
+            days.map((day) => {
+              const d = new Date(day);
+              const isToday = day === today;
+              const isPast = day < today;
+              return (
+                <View key={day} style={styles.dayGroup}>
+                  <View style={styles.dayCol}>
+                    <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>{d.getDate()}</Text>
+                    <Text style={[styles.dayWk, isToday && styles.dayWkToday]}>
+                      {d.toLocaleDateString('es-ES', { weekday: 'short' })}
+                    </Text>
+                  </View>
+                  <View style={styles.dayEvents}>
+                    {isToday ? <Text style={styles.todayTag}>HOY</Text> : null}
+                    {(eventsByDay.get(day) ?? []).map((e, i) => (
+                      <Pressable key={i} onPress={e.onPress} style={[styles.event, isPast && styles.eventPast]}>
+                        <View style={[styles.eventBar, { backgroundColor: TONE[e.type] }]} />
+                        <View style={[styles.eventIcon, { borderColor: TONE[e.type] }]}>
+                          <Ionicons name={TYPE_ICON[e.type]} size={15} color={TONE[e.type]} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.eventTitle} numberOfLines={1}>
+                            {e.title}
+                          </Text>
+                          {e.subtitle ? <Text style={styles.eventSub}>{e.subtitle}</Text> : null}
+                        </View>
+                        {e.onPress ? <Ionicons name="chevron-forward" size={16} color={colors.textFaint} /> : null}
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              );
+            })
+          )}
 
-          {active.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              onToggle={() => toggleDone(task)}
-              onFlag={() => toggleFlag(task)}
-              onEdit={() => setEditing(task)}
+          <View style={styles.legend}>
+            <Legend tone={TONE.payment} label="Cobro" />
+            <Legend tone={TONE['cycle-start']} label="Empieza ciclo" />
+            <Legend tone={TONE['cycle-end']} label="Termina ciclo" />
+            <Legend tone={TONE.task} label="Tareas" />
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.progressWrap}>
+            <View style={styles.progressTop}>
+              <Text style={styles.progressText}>{header.text}</Text>
+              {allDone ? (
+                <View style={styles.donePill}>
+                  <Ionicons name="checkmark" size={13} color={colors.onPrimary} />
+                  <Text style={styles.donePillText}>Al día</Text>
+                </View>
+              ) : null}
+            </View>
+            <ProgressBar progress={header.progress} height={8} />
+          </View>
+
+          <View style={styles.segments}>
+            {SCOPES.map((s) => {
+              const count = pendingCount(s);
+              const isActive = scope === s;
+              return (
+                <Pressable
+                  key={s}
+                  onPress={() => {
+                    animate();
+                    setScope(s);
+                    setShowDone(false);
+                  }}
+                  style={[styles.segment, isActive && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
+                    {TASK_SCOPE_LABEL[s]}
+                  </Text>
+                  {count > 0 ? (
+                    <View style={[styles.badge, isActive && styles.badgeActive]}>
+                      <Text style={[styles.badgeText, isActive && styles.badgeTextActive]}>{count}</Text>
+                    </View>
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.addRow}>
+            <Ionicons name="add" size={20} color={colors.primary} />
+            <TextInput
+              ref={inputRef}
+              style={styles.addInput}
+              placeholder={PLACEHOLDER[scope]}
+              placeholderTextColor={colors.textFaint}
+              value={draft}
+              onChangeText={setDraft}
+              onSubmitEditing={addTask}
+              returnKeyType="done"
+              blurOnSubmit={false}
             />
-          ))}
+            {draft.trim() ? (
+              <Pressable onPress={addTask} style={styles.addBtn} hitSlop={6}>
+                <Text style={styles.addBtnText}>Añadir</Text>
+              </Pressable>
+            ) : null}
+          </View>
 
-          {done.length > 0 ? (
-            <Pressable
-              style={styles.doneHeader}
-              onPress={() => {
-                animate();
-                setShowDone((v) => !v);
-              }}
-            >
-              <Text style={styles.doneHeaderText}>Completadas · {done.length}</Text>
-              <Ionicons
-                name={showDone ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color={colors.textFaint}
-              />
-            </Pressable>
-          ) : null}
-          {showDone
-            ? done.map((task) => (
+          {scope === 'goal' ? (
+            <GoalsList goals={active.concat(done)} onEdit={setEditing} onProgress={setGoalProgress} />
+          ) : (
+            <>
+              {active.length === 0 && done.length === 0 ? (
+                <View style={styles.empty}>
+                  <View style={styles.emptyIcon}>
+                    <Ionicons name="sunny-outline" size={26} color={colors.primary} />
+                  </View>
+                  <Text style={styles.emptyTitle}>Nada por aquí</Text>
+                  <Text style={styles.emptySub}>
+                    Apunta lo que quieras sacar adelante {TASK_SCOPE_LABEL[scope].toLowerCase()}.
+                  </Text>
+                </View>
+              ) : null}
+              {active.map((task) => (
                 <TaskRow
                   key={task.id}
                   task={task}
@@ -310,13 +453,46 @@ export default function AgendaScreen() {
                   onFlag={() => toggleFlag(task)}
                   onEdit={() => setEditing(task)}
                 />
-              ))
-            : null}
+              ))}
+              {done.length > 0 ? (
+                <Pressable
+                  style={styles.doneHeader}
+                  onPress={() => {
+                    animate();
+                    setShowDone((v) => !v);
+                  }}
+                >
+                  <Text style={styles.doneHeaderText}>Completadas · {done.length}</Text>
+                  <Ionicons name={showDone ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textFaint} />
+                </Pressable>
+              ) : null}
+              {showDone
+                ? done.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={() => toggleDone(task)}
+                      onFlag={() => toggleFlag(task)}
+                      onEdit={() => setEditing(task)}
+                    />
+                  ))
+                : null}
+            </>
+          )}
         </>
       )}
 
       <TaskEditSheet task={editing} onClose={() => setEditing(null)} onChanged={load} />
     </ScreenContainer>
+  );
+}
+
+function Legend({ tone, label }: { tone: string; label: string }) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendDot, { backgroundColor: tone }]} />
+      <Text style={styles.legendText}>{label}</Text>
+    </View>
   );
 }
 
@@ -376,8 +552,7 @@ function GoalsList({
         </View>
         <Text style={styles.emptyTitle}>Tus objetivos como coach</Text>
         <Text style={styles.emptySub}>
-          Marca metas de negocio (alumnos, ingresos, contenido…) y ve su avance. Escribe arriba para
-          crear la primera.
+          Marca metas de negocio (alumnos, ingresos, contenido…) y ve su avance.
         </Text>
       </View>
     );
@@ -410,19 +585,11 @@ function GoalsList({
                 <ProgressBar progress={p / 100} height={8} />
               </View>
               <View style={styles.goalControls}>
-                <Pressable
-                  onPress={() => onProgress(goal, p - 25)}
-                  style={styles.goalStep}
-                  hitSlop={6}
-                >
+                <Pressable onPress={() => onProgress(goal, p - 25)} style={styles.goalStep} hitSlop={6}>
                   <Ionicons name="remove" size={18} color={colors.primary} />
                 </Pressable>
                 <Text style={styles.goalStepHint}>Ajusta el avance</Text>
-                <Pressable
-                  onPress={() => onProgress(goal, p + 25)}
-                  style={styles.goalStep}
-                  hitSlop={6}
-                >
+                <Pressable onPress={() => onProgress(goal, p + 25)} style={styles.goalStep} hitSlop={6}>
                   <Ionicons name="add" size={18} color={colors.primary} />
                 </Pressable>
               </View>
@@ -434,23 +601,88 @@ function GoalsList({
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  title: { ...typography.h1, color: colors.text },
-  date: { ...typography.small, color: colors.textMuted, marginTop: 2, textTransform: 'capitalize' },
-  calBtn: {
+  topSeg: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    padding: 4,
+    marginBottom: spacing.lg,
+  },
+  topSegBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-    marginTop: 4,
+    borderRadius: radius.sm,
   },
-  calBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  progressWrap: { marginTop: spacing.lg, marginBottom: spacing.lg },
+  topSegBtnOn: { backgroundColor: colors.primary },
+  topSegText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  topSegTextOn: { color: colors.onPrimary },
+  // Calendario
+  monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg },
+  monthNav: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthCenter: { alignItems: 'center' },
+  monthLabel: { ...typography.h3, color: colors.text, textTransform: 'capitalize' },
+  monthCount: { ...typography.small, color: colors.textFaint, marginTop: 1 },
+  dayGroup: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  dayCol: { width: 40, alignItems: 'center', paddingTop: 2 },
+  dayNum: { ...typography.h2, color: colors.text, fontFamily: fonts.heading, fontSize: 22 },
+  dayNumToday: { color: colors.primaryBright },
+  dayWk: { ...typography.small, color: colors.textFaint, fontSize: 11, textTransform: 'uppercase' },
+  dayWkToday: { color: colors.primary },
+  dayEvents: { flex: 1, gap: spacing.sm },
+  todayTag: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 10, letterSpacing: 1 },
+  event: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingRight: spacing.sm,
+    overflow: 'hidden',
+  },
+  eventPast: { opacity: 0.55 },
+  eventBar: { width: 4, alignSelf: 'stretch' },
+  eventIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+    marginVertical: spacing.sm,
+  },
+  eventTitle: { ...typography.body, color: colors.text, fontFamily: fonts.medium },
+  eventSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
+  // Tareas
+  progressWrap: { marginBottom: spacing.lg },
   progressTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   progressText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   donePill: {
@@ -509,12 +741,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   addInput: { flex: 1, color: colors.text, fontSize: 15, fontFamily: fonts.body, paddingVertical: spacing.sm },
-  addBtn: {
-    backgroundColor: colors.primaryMuted,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-  },
+  addBtn: { backgroundColor: colors.primaryMuted, borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: 6 },
   addBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   row: {
     flexDirection: 'row',
@@ -539,15 +766,8 @@ const styles = StyleSheet.create({
   rowTitleDone: { color: colors.textFaint, textDecorationLine: 'line-through' },
   rowNotes: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   flagBtn: { padding: 4 },
-  doneHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    marginTop: spacing.xs,
-  },
+  doneHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, marginTop: spacing.xs },
   doneHeaderText: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
-  // Objetivos
   goalCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -571,12 +791,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   reachedText: { ...typography.small, color: colors.onPrimary, fontSize: 11, fontFamily: fonts.semiBold },
-  goalControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.md,
-  },
+  goalControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.md },
   goalStep: {
     width: 40,
     height: 40,
@@ -588,7 +803,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   goalStepHint: { ...typography.small, color: colors.textFaint },
-  // Vacío
   empty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
   emptyIcon: {
     width: 64,
