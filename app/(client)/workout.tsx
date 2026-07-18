@@ -46,7 +46,7 @@ import { notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
 import { shareRecordImage } from '../../lib/recordCard';
 import { shareSessionImage } from '../../lib/brandCards';
-import { startRest, stopRest } from '../../lib/restTimerStore';
+import { startRest, stopRest, useActiveRest } from '../../lib/restTimerStore';
 import {
   computeAchievements,
   currentStreak,
@@ -174,15 +174,15 @@ export default function WorkoutScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [restored, setRestored] = useState(false);
+  // Descanso activo: cuando corre, el crono flota abajo; añadimos hueco al
+  // final para que no tape los botones Anterior/Siguiente ni el de Terminar.
+  const activeRest = useActiveRest();
   // Índice del ejercicio que se muestra en el modo enfocado (1 por pantalla).
   const [viewIndex, setViewIndex] = useState(0);
   // Índice del ejercicio con el vídeo de técnica desplegado (null = ninguno).
   const [videoOpenIndex, setVideoOpenIndex] = useState<number | null>(null);
   // Índice del ejercicio con el campo de nota abierto (null = ninguno).
   const [noteOpenIndex, setNoteOpenIndex] = useState<number | null>(null);
-  // Día para el que el alumno ha pulsado "Entrenar otra vez" pese a haberlo
-  // completado hoy: mientras coincida con el día visible, se muestra el entreno.
-  const [retrainDayId, setRetrainDayId] = useState<string | null>(null);
   // Ancla local del ciclo (Método REIN TENA): el alumno puede reiniciar en Día 1.
   const [cycleAnchor, setCycleAnchor] = useState<number | null>(null);
   // Elección del descanso opcional (Día 7 TENA): pendiente hasta que decide.
@@ -439,8 +439,9 @@ export default function WorkoutScreen() {
     setLog((prev) =>
       prev.map((ex, i) => {
         if (i !== exerciseIndex) return ex;
-        const last = ex.sets[ex.sets.length - 1];
-        return { ...ex, sets: [...ex.sets, { reps: last?.reps ?? '', weight: '', completed: false }] };
+        // La casilla de la marca a apuntar arranca siempre vacía (no hereda la
+        // marca de la serie anterior).
+        return { ...ex, sets: [...ex.sets, { reps: '', weight: '', completed: false }] };
       })
     );
   };
@@ -573,6 +574,51 @@ export default function WorkoutScreen() {
     }
   };
 
+  // Comparte una sesión YA guardada hoy (pantalla "entrenamiento terminado"),
+  // reconstruyendo las estadísticas desde el registro guardado.
+  const handleShareCompleted = async (logToShare: WorkoutLog) => {
+    if (!routine) return;
+    const t = sessionTotals(logToShare.exercises, measureByExercise);
+    if (Platform.OS === 'web') {
+      try {
+        const result = await shareSessionImage({
+          routineName: logToShare.routineName ?? routine.name,
+          dayName: logToShare.dayName,
+          durationMin: logToShare.durationMin ?? 0,
+          sets: t.sets,
+          reps: t.reps,
+          seconds: t.seconds,
+          volumeKg: t.volumeKg,
+          streak: 0,
+          prCount: 0,
+        });
+        if (result === 'downloaded') showToast('Imagen de la sesión descargada');
+        if (result) return;
+      } catch {
+        // Caemos al texto.
+      }
+    }
+    const parts = [
+      `Sesión completada en UDECA: ${logToShare.dayName ?? routine.name}`,
+      logToShare.durationMin ? `${logToShare.durationMin} min` : null,
+      `${t.sets} series`,
+      t.reps > 0 ? `${t.reps} reps` : null,
+      t.seconds > 0 ? `${t.seconds}s isométrico` : null,
+      t.volumeKg > 0 ? `${t.volumeKg} kg de volumen` : null,
+    ].filter(Boolean);
+    const message = `${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    try {
+      await Share.share({ message });
+    } catch {
+      try {
+        await navigator.clipboard.writeText(message);
+        showToast('Resumen copiado, pégalo donde quieras');
+      } catch {
+        showToast('No se pudo compartir');
+      }
+    }
+  };
+
   // Comparte el récord como IMAGEN de marca (canvas 1080×1350, para stories).
   // Si la imagen no es posible (nativo antiguo, canvas no disponible), texto.
   const handleShareRecord = async () => {
@@ -672,17 +718,15 @@ export default function WorkoutScreen() {
   const safeIndex = Math.min(viewIndex, Math.max(0, log.length - 1));
   const isLastExercise = safeIndex >= log.length - 1;
 
-  // ¿El día visible ya se ha entrenado HOY? Si es así (y no hay una sesión en
-  // curso), mostramos "día completado" con descarga en vez de los ejercicios.
-  const completedTodayLog =
-    day && routine
-      ? history.find(
-          (l) => l.routineId === routine.id && l.dayName === day.name && isSameDay(l.date)
-        )
-      : undefined;
+  // ¿Ya se ha entrenado HOY (rutina semanal, ciclo o Sensaciones)? Si hay una
+  // sesión guardada hoy y no hay otra en curso, mostramos "entrenamiento
+  // terminado" con estadísticas y compartir, sin dejar entrenar de nuevo hasta
+  // el día siguiente.
+  const completedTodayLog = routine
+    ? history.find((l) => l.routineId === routine.id && isSameDay(l.date))
+    : undefined;
   const inProgress = doneSets > 0 || restored;
-  const showCompleted =
-    !!completedTodayLog && !inProgress && retrainDayId !== selectedDayId;
+  const showCompleted = !!completedTodayLog && !inProgress;
 
   const handleSave = async () => {
     if (!profile || !routine || !day) return;
@@ -770,7 +814,6 @@ export default function WorkoutScreen() {
       remoteDraftRef.current = null;
       if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
       setRestored(false);
-      setRetrainDayId(null);
       // Deja el estado detrás del resumen "limpio": el día queda como completado
       // (doneSets 0), de modo que nunca se vuelven a mostrar sus ejercicios.
       if (day) setLog(buildLog(day));
@@ -948,7 +991,7 @@ export default function WorkoutScreen() {
 
   // ---------- Modo entreno ----------
   return (
-    <ScreenContainer>
+    <ScreenContainer contentStyle={activeRest ? styles.restSpacer : undefined}>
       <View style={styles.topBarRow}>
         <Pressable
           onPress={() => {
@@ -1052,7 +1095,7 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
-      {isFlex && flexResting ? (
+      {!showCompleted && isFlex && flexResting ? (
         <FadeIn>
           <Card accent style={styles.optionalCard}>
             <View style={styles.optionalHeader}>
@@ -1070,7 +1113,7 @@ export default function WorkoutScreen() {
             />
           </Card>
         </FadeIn>
-      ) : isFlex && !combinedDay ? (
+      ) : !showCompleted && isFlex && !combinedDay ? (
         <FadeIn>
           <Card accent style={styles.optionalCard}>
             <View style={styles.optionalHeader}>
@@ -1244,9 +1287,10 @@ export default function WorkoutScreen() {
                     <Ionicons name="checkmark" size={38} color={colors.onPrimary} />
                   </View>
                 </PopIn>
-                <Text style={styles.completedTitle}>Entrenamiento de hoy completado</Text>
+                <Text style={styles.completedTitle}>Entrenamiento terminado</Text>
                 <Text style={styles.completedSubtitle}>
-                  {routine.name} · {day?.name}
+                  {completedTodayLog.routineName || routine.name}
+                  {completedTodayLog.dayName ? ` · ${completedTodayLog.dayName}` : ''}
                 </Text>
                 <View style={styles.completedTiles}>
                   {completedTodayLog.durationMin ? (
@@ -1282,31 +1326,25 @@ export default function WorkoutScreen() {
                   ) : null}
                 </View>
                 <Text style={styles.completedNote}>
-                  Guardado en tu progreso · pestaña Entrenos
+                  Guardado en tu progreso · pestaña Entrenos. Vuelve mañana para tu próxima sesión.
                 </Text>
                 <Button
-                  title="Ver mi progreso"
-                  onPress={() => router.push('/(client)/progress')}
+                  title="Compartir sesión"
+                  onPress={() => handleShareCompleted(completedTodayLog)}
                   style={{ marginTop: spacing.md }}
                 />
                 <Button
-                  title="Ir a inicio"
+                  title="Ver mi progreso"
                   variant="secondary"
+                  onPress={() => router.push('/(client)/progress')}
+                  style={{ marginTop: spacing.sm }}
+                />
+                <Button
+                  title="Ir a inicio"
+                  variant="ghost"
                   onPress={() => router.push('/(client)/dashboard')}
                   style={{ marginTop: spacing.sm }}
                 />
-                <Pressable
-                  onPress={() => {
-                    setRetrainDayId(selectedDayId);
-                    if (day) setLog(buildLog(day));
-                    startedAt.current = null;
-                    setViewIndex(0);
-                  }}
-                  style={styles.retrainLink}
-                  hitSlop={6}
-                >
-                  <Text style={styles.retrainText}>Entrenar otra vez</Text>
-                </Pressable>
               </Card>
             </FadeIn>
           );
@@ -1641,6 +1679,8 @@ export default function WorkoutScreen() {
 
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
+  // Hueco al pie para que el crono flotante de descanso no tape la navegación.
+  restSpacer: { paddingBottom: 210 },
   exitBtn: {
     flexDirection: 'row',
     alignItems: 'center',

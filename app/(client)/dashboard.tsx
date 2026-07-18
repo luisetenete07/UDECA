@@ -29,8 +29,7 @@ import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
-import { activeCycle, computeCycleStats } from '../../lib/cycleStats';
-import { CycleProgress } from '../../components/CycleProgress';
+import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
@@ -316,10 +315,18 @@ export default function ClientDashboard() {
       {activeCyc
         ? (() => {
             const cs = computeCycleStats(activeCyc, workoutLogs);
+            const wk = cycleWeekInfo(activeCyc);
             return (
               <View style={styles.cycleCard}>
                 <View style={styles.cycleTop}>
                   <Text style={styles.cycleLevel}>{CYCLE_LEVEL_LABEL[activeCyc.level]}</Text>
+                  <View style={styles.cycleWeekBadge}>
+                    <Ionicons name="calendar-outline" size={12} color={colors.primaryBright} />
+                    <Text style={styles.cycleWeekText}>
+                      Semana {wk.week}
+                      {wk.totalWeeks ? ` de ${wk.totalWeeks}` : ''}
+                    </Text>
+                  </View>
                   {activeCyc.isDeload ? (
                     <Text style={styles.cycleDeload}>Semana de descarga</Text>
                   ) : null}
@@ -342,8 +349,6 @@ export default function ClientDashboard() {
                     : ''}
                 </Text>
                 {activeCyc.goal ? <Text style={styles.cycleGoal}>{activeCyc.goal}</Text> : null}
-                <View style={styles.cycleDivider} />
-                <CycleProgress cycle={activeCyc} logs={workoutLogs} />
               </View>
             );
           })()
@@ -519,11 +524,23 @@ const styles = StyleSheet.create({
   cycleName: { ...typography.h3, color: colors.text, marginTop: 4 },
   cycleMeta: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm },
   cycleGoal: { ...typography.small, color: colors.textFaint, marginTop: 4, fontStyle: 'italic' },
-  cycleDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
+  cycleWeekBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 'auto',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+  },
+  cycleWeekText: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
   },
   sectionLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   section: { marginBottom: spacing.md },
