@@ -5,6 +5,8 @@
  * Mismo lenguaje visual que la tarjeta de récord: fondo oscuro, oro y marca.
  */
 
+import { UDECA_LOGO_DATA_URI } from './udecaLogo';
+
 const W = 1080;
 const H = 1350;
 
@@ -24,7 +26,21 @@ function newCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D
   return { canvas, ctx };
 }
 
-function drawFrame(ctx: CanvasRenderingContext2D) {
+// Logo UDECA (emblema) cacheado: se carga una vez desde el data URI embebido.
+let logoPromise: Promise<HTMLImageElement | null> | null = null;
+function loadLogo(): Promise<HTMLImageElement | null> {
+  if (logoPromise) return logoPromise;
+  logoPromise = new Promise((resolve) => {
+    if (typeof Image === 'undefined') return resolve(null);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = UDECA_LOGO_DATA_URI;
+  });
+  return logoPromise;
+}
+
+function drawFrame(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null) {
   ctx.fillStyle = '#0B0C10';
   ctx.fillRect(0, 0, W, H);
   const glow = ctx.createRadialGradient(W / 2, 220, 0, W / 2, 220, 760);
@@ -37,22 +53,27 @@ function drawFrame(ctx: CanvasRenderingContext2D) {
   roundRect(ctx, 40, 40, W - 80, H - 80, 44);
   ctx.stroke();
   ctx.textAlign = 'center';
+  // Emblema UDECA (logo real) sobre el nombre de marca.
+  if (logo) {
+    const s = 104;
+    ctx.drawImage(logo, W / 2 - s / 2, 44, s, s);
+  }
   // Marca.
   ctx.fillStyle = GOLD;
   ctx.font = '800 52px sans-serif';
-  ctx.fillText('U D E C A', W / 2, 170);
+  ctx.fillText('U D E C A', W / 2, 196);
   ctx.fillStyle = MUTED;
   ctx.font = '600 24px sans-serif';
-  ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 216);
+  ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 238);
   ctx.fillStyle = GOLD;
-  ctx.fillRect(W / 2 - 44, 246, 88, 4);
+  ctx.fillRect(W / 2 - 44, 262, 88, 4);
 }
 
 function drawFooter(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = FAINT;
   ctx.font = '600 30px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('u d e c a . l u i s t e n a f i t . c o m', W / 2, 1265);
+  ctx.fillText('w w w . u d e c a . a p p', W / 2, 1265);
 }
 
 /** Casilla de estadística: caja redondeada con valor grande y etiqueta. */
@@ -133,7 +154,7 @@ export async function shareSessionImage(
   const c = newCanvas();
   if (!c) return null;
   const { canvas, ctx } = c;
-  drawFrame(ctx);
+  drawFrame(ctx, await loadLogo());
 
   ctx.fillStyle = TEXT;
   ctx.font = '900 58px sans-serif';
@@ -142,11 +163,12 @@ export async function shareSessionImage(
   ctx.font = '700 38px sans-serif';
   ctx.fillText(fit(ctx, `${data.routineName}${data.dayName ? ` · ${data.dayName}` : ''}`, W - 200), W / 2, 424);
 
-  // Rejilla de estadísticas 2×2 (solo las que tienen valor).
+  // Rejilla de estadísticas 2×2. Las repeticiones se muestran siempre (salvo
+  // sesión puramente isométrica) para completar el cuadro de 4.
   const stats: [string, string][] = [];
   if (data.durationMin > 0) stats.push([`${data.durationMin} min`, 'Duración']);
   stats.push([String(data.sets), 'Series']);
-  if (data.reps > 0) stats.push([String(data.reps), 'Repeticiones']);
+  if (data.reps > 0 || data.seconds === 0) stats.push([String(data.reps), 'Repeticiones']);
   if (data.seconds > 0) stats.push([`${data.seconds}s`, 'Isométrico']);
   if (data.volumeKg > 0) stats.push([`${data.volumeKg.toLocaleString('es-ES')} kg`, 'Volumen']);
   const shown = stats.slice(0, 4);
@@ -205,7 +227,7 @@ export async function shareReportImage(
   const c = newCanvas();
   if (!c) return null;
   const { canvas, ctx } = c;
-  drawFrame(ctx);
+  drawFrame(ctx, await loadLogo());
 
   ctx.fillStyle = TEXT;
   ctx.font = '900 56px sans-serif';

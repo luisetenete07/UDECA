@@ -29,12 +29,30 @@ export async function getRememberedAccounts(): Promise<RememberedAccount[]> {
   }
 }
 
-/** Añade o actualiza una cuenta recordada (por correo). */
-export async function rememberAccount(acc: Omit<RememberedAccount, 'lastUsed'>): Promise<void> {
+/**
+ * Añade o actualiza una cuenta recordada (por correo). Fusiona con lo ya
+ * guardado: así se puede recordar el correo en cuanto hay sesión (aunque el
+ * perfil aún no haya cargado) y completar nombre/rol/foto después sin perder
+ * los datos anteriores.
+ */
+export async function rememberAccount(acc: {
+  email: string;
+  name?: string;
+  role?: UserRole;
+  photoURL?: string;
+}): Promise<void> {
   try {
     const list = await getRememberedAccounts();
     const email = acc.email.trim().toLowerCase();
-    const next: RememberedAccount = { ...acc, email, lastUsed: Date.now() };
+    if (!email) return;
+    const prev = list.find((a) => a.email === email);
+    const next: RememberedAccount = {
+      email,
+      name: acc.name?.trim() || prev?.name || email.split('@')[0],
+      role: acc.role || prev?.role || 'client',
+      photoURL: acc.photoURL ?? prev?.photoURL,
+      lastUsed: Date.now(),
+    };
     const filtered = list.filter((a) => a.email !== email);
     const merged = [next, ...filtered].slice(0, MAX);
     await AsyncStorage.setItem(KEY, JSON.stringify(merged));

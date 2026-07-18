@@ -60,14 +60,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadProfile = async (uid: string) => {
-    const snap = await getDoc(doc(db, 'users', uid));
-    if (snap.exists()) {
-      const p = snap.data() as UserProfile;
-      setProfile(p);
-      // Recuerda esta cuenta en el dispositivo para el selector de acceso.
-      rememberAccount({ email: p.email, name: p.name, role: p.role, photoURL: p.photoURL });
-    } else {
-      setProfile(null);
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      if (snap.exists()) {
+        const p = snap.data() as UserProfile;
+        setProfile(p);
+        // Recuerda esta cuenta en el dispositivo para el selector de acceso
+        // (con nombre, rol y foto completos).
+        rememberAccount({ email: p.email, name: p.name, role: p.role, photoURL: p.photoURL });
+      } else {
+        setProfile(null);
+      }
+    } catch {
+      // Si la lectura del perfil falla (sin red), no rompemos el arranque: el
+      // correo ya se recordó al detectar la sesión.
     }
   };
 
@@ -80,6 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFirebaseUser(user);
       setEmailVerified(user?.emailVerified ?? false);
       if (user) {
+        // Recuerda la cuenta en cuanto hay sesión (aunque el perfil tarde o
+        // falle en cargar): así el selector de acceso nunca la pierde.
+        if (user.email) {
+          rememberAccount({ email: user.email, name: user.displayName || undefined });
+        }
         await loadProfile(user.uid);
         // No bloquea el arranque: si falla (sin proyecto EAS, web, etc.) se ignora.
         registerForPushNotificationsAsync(user.uid);

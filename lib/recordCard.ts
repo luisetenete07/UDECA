@@ -4,6 +4,8 @@
  * Se dibuja en un canvas al vuelo (solo web/PWA; sin librerías externas).
  */
 
+import { UDECA_LOGO_DATA_URI } from './udecaLogo';
+
 export interface RecordCardData {
   prs: { exerciseName: string; label: string }[];
   streak?: number;
@@ -13,6 +15,19 @@ export interface RecordCardData {
 const W = 1080;
 const H = 1350;
 
+let logoPromise: Promise<HTMLImageElement | null> | null = null;
+function loadLogo(): Promise<HTMLImageElement | null> {
+  if (logoPromise) return logoPromise;
+  logoPromise = new Promise((resolve) => {
+    if (typeof Image === 'undefined') return resolve(null);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = UDECA_LOGO_DATA_URI;
+  });
+  return logoPromise;
+}
+
 export async function buildRecordImage(data: RecordCardData): Promise<Blob | null> {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
@@ -20,6 +35,7 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
   canvas.height = H;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
+  const logo = await loadLogo();
 
   // Fondo oscuro de marca.
   ctx.fillStyle = '#0B0C10';
@@ -40,10 +56,15 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
 
   ctx.textAlign = 'center';
 
+  // Emblema UDECA (logo real) sobre el nombre de marca.
+  if (logo) {
+    const s = 104;
+    ctx.drawImage(logo, W / 2 - s / 2, 44, s, s);
+  }
   // Marca.
   ctx.fillStyle = '#C9902B';
   ctx.font = '800 52px sans-serif';
-  ctx.fillText('U D E C A', W / 2, 190);
+  ctx.fillText('U D E C A', W / 2, 196);
   ctx.fillStyle = '#9AA0A8';
   ctx.font = '600 26px sans-serif';
   ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 240);
@@ -93,7 +114,7 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
   // Pie con la web.
   ctx.fillStyle = '#6B7078';
   ctx.font = '600 30px sans-serif';
-  ctx.fillText('u d e c a . l u i s t e n a f i t . c o m', W / 2, 1265);
+  ctx.fillText('w w w . u d e c a . a p p', W / 2, 1265);
 
   return await new Promise((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
 }
