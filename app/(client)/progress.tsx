@@ -10,6 +10,9 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
+import { MuscleMap } from '../../components/MuscleMap';
+import { muscleLoad } from '../../lib/muscles';
+import type { MuscleGroup } from '../../lib/types';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
@@ -53,6 +56,7 @@ interface ProgressData {
 export default function ProgressScreen() {
   const { profile } = useAuth();
   const [tab, setTab] = useState<Tab>('workouts');
+  const [muscleMode, setMuscleMode] = useState<'session' | 'week'>('week');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
@@ -178,6 +182,24 @@ export default function ProgressScreen() {
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const comparison = thenVsNow(workoutLogs, weightLogs);
+
+  // Mapa corporal: intensidad por músculo según lo trabajado en la última
+  // sesión o en los últimos 7 días. `muscleByExercise` (grupo del ejercicio)
+  // refina la clasificación por nombre.
+  const groupByEx = muscleByExercise as Record<string, MuscleGroup>;
+  const startOfDayTs = (ts: number) => {
+    const d = new Date(ts);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  const lastSessionDay = workoutLogs.length > 0 ? startOfDayTs(workoutLogs[0].date) : 0;
+  const sessionLogs = workoutLogs.filter((l) => startOfDayTs(l.date) === lastSessionDay);
+  const muscleIntensity =
+    muscleMode === 'session'
+      ? muscleLoad(sessionLogs, undefined, groupByEx)
+      : muscleLoad(workoutLogs, Date.now() - 7 * 24 * 60 * 60 * 1000, groupByEx);
+  const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
+
   const muscleMap = setsByMuscleGroup(workoutLogs, muscleByExercise);
   const muscleMax = muscleMap.length > 0 ? muscleMap[0].sets : 0;
   const weeklySets = weeklySetsByGroup(workoutLogs, muscleByExercise);
@@ -392,6 +414,41 @@ export default function ProgressScreen() {
                 unit="series"
                 emptyMessage="Marca ejercicios como 'Tirón' en tu biblioteca para ver este dato."
               />
+            </Card>
+
+            <Card style={styles.section}>
+              <View style={styles.muscleHeader}>
+                <Text style={styles.sectionTitle}>Músculos trabajados</Text>
+                <View style={styles.muscleToggle}>
+                  <Pressable
+                    onPress={() => setMuscleMode('session')}
+                    style={[styles.muscleTab, muscleMode === 'session' && styles.muscleTabOn]}
+                  >
+                    <Text
+                      style={[
+                        styles.muscleTabText,
+                        muscleMode === 'session' && styles.muscleTabTextOn,
+                      ]}
+                    >
+                      Última sesión
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setMuscleMode('week')}
+                    style={[styles.muscleTab, muscleMode === 'week' && styles.muscleTabOn]}
+                  >
+                    <Text
+                      style={[
+                        styles.muscleTabText,
+                        muscleMode === 'week' && styles.muscleTabTextOn,
+                      ]}
+                    >
+                      Semana
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+              <MuscleMap intensity={muscleIntensity} hasData={muscleHasData} />
             </Card>
 
             {muscleMap.length > 0 ? (
@@ -672,6 +729,26 @@ const styles = StyleSheet.create({
   testMark: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
   logDate: { ...typography.small, color: colors.textMuted },
   // ----- Mapa muscular -----
+  muscleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  muscleToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  muscleTab: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.sm - 2 },
+  muscleTabOn: { backgroundColor: colors.primary },
+  muscleTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
+  muscleTabTextOn: { color: colors.onPrimary },
   muscleRow: {
     flexDirection: 'row',
     alignItems: 'center',
