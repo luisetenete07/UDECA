@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   LayoutAnimation,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -93,6 +94,8 @@ export default function CoachCalendarScreen() {
   const [draft, setDraft] = useState('');
   const [showDone, setShowDone] = useState(false);
   const [editing, setEditing] = useState<CoachTask | null>(null);
+  // Tarea que el coach está reubicando en el calendario (abre el selector de día).
+  const [movingTask, setMovingTask] = useState<CoachTask | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   // --- Calendario ---
@@ -213,9 +216,18 @@ export default function CoachCalendarScreen() {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, progress: v, done: v >= 100 } : t)));
     updateCoachTask(task.id, { progress: v, done: v >= 100 }).catch(() => {});
   };
+  // Mueve una tarea a otro día del calendario (fija su fecha a las 00:00).
+  const moveTask = (task: CoachTask, dayTs: number) => {
+    haptic();
+    const dueDate = startOfDay(dayTs);
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, dueDate } : t)));
+    updateCoachTask(task.id, { dueDate }).catch(() => {});
+    setMovingTask(null);
+    showToast('Tarea movida');
+  };
 
   // ---------- CALENDARIO: eventos ----------
-  const dayTaskCount = tasks.filter((t) => t.scope === 'day' && !t.done).length;
+  const dayTasks = useMemo(() => tasks.filter((t) => t.scope === 'day' && !t.done), [tasks]);
   const eventsByDay = useMemo(() => {
     const map = new Map<number, CalEvent[]>();
     const add = (e: CalEvent) => map.set(e.day, [...(map.get(e.day) ?? []), e]);
@@ -249,16 +261,17 @@ export default function CoachCalendarScreen() {
           onPress: () => router.push(`/(trainer)/clients/${cy.clientId}/cycles/${cy.id}`),
         });
     }
-    if (dayTaskCount > 0)
+    for (const t of dayTasks) {
       add({
-        day: startOfDay(Date.now()),
+        day: startOfDay(t.dueDate ?? Date.now()),
         type: 'task',
-        title: `${dayTaskCount} tarea${dayTaskCount === 1 ? '' : 's'} para hoy`,
-        subtitle: 'Ver tareas',
-        onPress: () => setView('tasks'),
+        title: t.title,
+        subtitle: 'Tarea · toca para mover de día',
+        onPress: () => setMovingTask(t),
       });
+    }
     return map;
-  }, [clients, cycles, dayTaskCount, router]);
+  }, [clients, cycles, dayTasks, router]);
 
   if (loading) return <LoadingScreen />;
 
@@ -482,8 +495,127 @@ export default function CoachCalendarScreen() {
         </>
       )}
 
+      <MoveTaskModal
+        task={movingTask}
+        onClose={() => setMovingTask(null)}
+        onPick={(dayTs) => movingTask && moveTask(movingTask, dayTs)}
+      />
+
       <TaskEditSheet task={editing} onClose={() => setEditing(null)} onChanged={load} />
     </ScreenContainer>
+  );
+}
+
+const WEEKDAY_HEADS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+/** Selector de día (mini-calendario mensual) para reubicar una tarea. */
+function MoveTaskModal({
+  task,
+  onClose,
+  onPick,
+}: {
+  task: CoachTask | null;
+  onClose: () => void;
+  onPick: (dayTs: number) => void;
+}) {
+  const [anchor, setAnchor] = useState(() => {
+    const base = task?.dueDate ?? Date.now();
+    const d = new Date(base);
+    return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  });
+  // Reancla el mes al abrir con otra tarea (o su fecha).
+  const taskKey = task?.id ?? '';
+  const lastKey = useRef(taskKey);
+  if (taskKey && taskKey !== lastKey.current) {
+    lastKey.current = taskKey;
+    const d = new Date(task?.dueDate ?? Date.now());
+    const first = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    if (first !== anchor) setAnchor(first);
+  }
+
+  if (!task) return null;
+  const a = new Date(anchor);
+  const monthLabel = a.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const daysInMonth = new Date(a.getFullYear(), a.getMonth() + 1, 0).getDate();
+  const leadRaw = new Date(a.getFullYear(), a.getMonth(), 1).getDay(); // 0=domingo
+  const lead = (leadRaw + 6) % 7; // 0 = lunes
+  const today = startOfDay(Date.now());
+  const current = task.dueDate ? startOfDay(task.dueDate) : today;
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push(new Date(a.getFullYear(), a.getMonth(), day).getTime());
+  }
+  const shift = (delta: number) =>
+    setAnchor(new Date(a.getFullYear(), a.getMonth() + delta, 1).getTime());
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.moveBackdrop} onPress={onClose}>
+        <Pressable style={styles.moveSheet} onPress={() => {}}>
+          <Text style={styles.moveTitle} numberOfLines={2}>
+            Mover “{task.title}”
+          </Text>
+          <Text style={styles.moveHint}>Elige el nuevo día para esta tarea.</Text>
+
+          <View style={styles.moveMonthRow}>
+            <Pressable onPress={() => shift(-1)} style={styles.moveNav} hitSlop={8}>
+              <Ionicons name="chevron-back" size={18} color={colors.primary} />
+            </Pressable>
+            <Text style={styles.moveMonthLabel}>{monthLabel}</Text>
+            <Pressable onPress={() => shift(1)} style={styles.moveNav} hitSlop={8}>
+              <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+            </Pressable>
+          </View>
+
+          <View style={styles.moveGridHead}>
+            {WEEKDAY_HEADS.map((w, i) => (
+              <Text key={i} style={styles.moveHeadCell}>
+                {w}
+              </Text>
+            ))}
+          </View>
+          <View style={styles.moveGrid}>
+            {cells.map((ts, i) => {
+              if (ts == null) return <View key={`b${i}`} style={styles.moveCell} />;
+              const isToday = ts === today;
+              const isCurrent = ts === current;
+              return (
+                <Pressable key={ts} style={styles.moveCell} onPress={() => onPick(ts)}>
+                  <View
+                    style={[
+                      styles.moveCellInner,
+                      isToday && styles.moveCellToday,
+                      isCurrent && styles.moveCellCurrent,
+                    ]}
+                  >
+                    <Text style={[styles.moveCellText, isCurrent && styles.moveCellTextOn]}>
+                      {new Date(ts).getDate()}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.moveQuickRow}>
+            <Pressable style={styles.moveQuick} onPress={() => onPick(today)} hitSlop={6}>
+              <Text style={styles.moveQuickText}>Hoy</Text>
+            </Pressable>
+            <Pressable
+              style={styles.moveQuick}
+              onPress={() => onPick(today + 24 * 60 * 60 * 1000)}
+              hitSlop={6}
+            >
+              <Text style={styles.moveQuickText}>Mañana</Text>
+            </Pressable>
+            <Pressable style={[styles.moveQuick, styles.moveCancel]} onPress={onClose} hitSlop={6}>
+              <Text style={styles.moveCancelText}>Cancelar</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -817,4 +949,70 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
   emptySub: { ...typography.small, color: colors.textMuted, textAlign: 'center', maxWidth: 320, lineHeight: 19 },
+  // Mover tarea a otro día
+  moveBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  moveSheet: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+  },
+  moveTitle: { ...typography.h3, color: colors.text },
+  moveHint: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
+  moveMonthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  moveNav: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moveMonthLabel: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, textTransform: 'capitalize' },
+  moveGridHead: { flexDirection: 'row', marginBottom: 4 },
+  moveHeadCell: { flex: 1, textAlign: 'center', ...typography.small, color: colors.textFaint, fontSize: 11 },
+  moveGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  moveCell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', padding: 2 },
+  moveCellInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  moveCellToday: { borderColor: colors.border, backgroundColor: colors.surfaceAlt },
+  moveCellCurrent: { backgroundColor: colors.primary, borderColor: colors.primary },
+  moveCellText: { ...typography.small, color: colors.text, fontFamily: fonts.medium },
+  moveCellTextOn: { color: colors.onPrimary, fontFamily: fonts.semiBold },
+  moveQuickRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  moveQuick: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+  },
+  moveQuickText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  moveCancel: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+  moveCancelText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
 });

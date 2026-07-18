@@ -372,6 +372,11 @@ export interface CoachTask {
   notes?: string;
   /** Solo objetivos: progreso 0-100. */
   progress?: number;
+  /**
+   * Solo tareas de día: fecha concreta en el calendario (00:00). Si falta, la
+   * tarea se entiende "para hoy". El coach puede moverla a otro día.
+   */
+  dueDate?: number;
   /** Orden estable dentro de su lista (por defecto, momento de creación). */
   order: number;
   createdAt: number;
