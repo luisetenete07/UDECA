@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
@@ -25,7 +25,7 @@ import {
   isAdmin,
   subscriptionState,
 } from '../../lib/subscription';
-import { getSocialLeaderboard } from '../../lib/firestore/social';
+import { deleteSocialStats, getSocialLeaderboard } from '../../lib/firestore/social';
 import { isOnline } from '../../lib/presence';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
@@ -46,6 +46,7 @@ export default function TrainerProfileScreen() {
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
   // Clasificación y presencia del grupo (socialStats de sus alumnos).
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<SocialStats | null>(null);
   useFocusEffect(
     useCallback(() => {
       if (!profile) return;
@@ -54,6 +55,20 @@ export default function TrainerProfileScreen() {
         .catch(() => {});
     }, [profile])
   );
+
+  const confirmDeleteEntry = async () => {
+    if (!deleteTarget) return;
+    const uid = deleteTarget.uid;
+    setLeaderboard((prev) => prev.filter((s) => s.uid !== uid));
+    setDeleteTarget(null);
+    try {
+      await deleteSocialStats(uid);
+      showToast('Perfil eliminado de la clasificación');
+    } catch {
+      showToast('No se pudo eliminar');
+      if (profile) getSocialLeaderboard(profile.uid).then(setLeaderboard).catch(() => {});
+    }
+  };
   const onlineCount = leaderboard.filter((s) => isOnline(s.lastSeen)).length;
   const [loadingCoaches, setLoadingCoaches] = useState(false);
   const [updatingCoach, setUpdatingCoach] = useState<string | null>(null);
@@ -315,10 +330,53 @@ export default function TrainerProfileScreen() {
                   {s.currentStreak > 1 ? ` · racha ${s.currentStreak}` : ''}
                 </Text>
               </View>
+              <Pressable
+                onPress={() => setDeleteTarget(s)}
+                hitSlop={8}
+                style={styles.rankDelete}
+              >
+                <Ionicons name="trash-outline" size={17} color={colors.textFaint} />
+              </Pressable>
             </View>
           ))
         )}
+        {leaderboard.length > 0 ? (
+          <Text style={styles.rankHint}>
+            Mantén la lista limpia: elimina perfiles antiguos o de prueba con la papelera.
+          </Text>
+        ) : null}
       </Card>
+
+      <Modal
+        visible={!!deleteTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteTarget(null)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>¿Quitar de la clasificación?</Text>
+            <Text style={styles.confirmText}>
+              Se eliminará a {deleteTarget?.name} de la tabla. Sus entrenos e historial no se tocan.
+              Si sigue usando la app y entrena, volverá a aparecer.
+            </Text>
+            <View style={styles.confirmActions}>
+              <Button
+                title="Cancelar"
+                variant="ghost"
+                onPress={() => setDeleteTarget(null)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Eliminar"
+                variant="danger"
+                onPress={confirmDeleteEntry}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Card style={styles.section}>
         <View style={styles.subHeader}>
@@ -489,6 +547,27 @@ const styles = StyleSheet.create({
   rankNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   rankName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flexShrink: 1 },
   rankMeta: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  rankDelete: { padding: 6 },
+  rankHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm, lineHeight: 17 },
+  confirmBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: spacing.lg,
+  },
+  confirmCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 420,
+  },
+  confirmTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
+  confirmText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
+  confirmActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
   subHeader: {
     flexDirection: 'row',
     alignItems: 'center',

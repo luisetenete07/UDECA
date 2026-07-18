@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getActiveChallenge } from './challenges';
 import { currentStreak, sessionsThisWeek } from '../stats';
@@ -50,6 +50,15 @@ export async function syncMySocialStats(
   ) as SocialStats;
   // merge: los campos no incluidos (p. ej. lastPR previo) se conservan.
   await setDoc(doc(db, 'socialStats', profile.uid), clean, { merge: true });
+}
+
+/**
+ * El entrenador elimina la entrada de un alumno de la clasificación (borra su
+ * doc de socialStats). Útil para limpiar perfiles antiguos o de prueba. Si el
+ * alumno sigue activo y vuelve a abrir la app, reaparecerá con la presencia.
+ */
+export async function deleteSocialStats(uid: string): Promise<void> {
+  await deleteDoc(doc(db, 'socialStats', uid));
 }
 
 /** Ranking de miembros del mismo entrenador, ordenado por racha y sesiones. */
