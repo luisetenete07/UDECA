@@ -339,6 +339,38 @@ export interface TrainingCycle {
   updatedAt: number;
 }
 
+/**
+ * Agenda del coach: tareas de negocio organizadas por horizonte (hoy / esta
+ * semana / este mes) y objetivos de emprendimiento con progreso. Privadas del
+ * entrenador; no tienen nada que ver con las rutinas de los alumnos.
+ */
+export type TaskScope = 'day' | 'week' | 'month' | 'goal';
+
+export const TASK_SCOPE_LABEL: Record<TaskScope, string> = {
+  day: 'Hoy',
+  week: 'Semana',
+  month: 'Mes',
+  goal: 'Objetivos',
+};
+
+export interface CoachTask {
+  id: string;
+  trainerId: string;
+  title: string;
+  scope: TaskScope;
+  done: boolean;
+  doneAt?: number;
+  /** Destacada (prioridad): sube arriba y se marca en oro. */
+  flagged?: boolean;
+  notes?: string;
+  /** Solo objetivos: progreso 0-100. */
+  progress?: number;
+  /** Orden estable dentro de su lista (por defecto, momento de creación). */
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Pago registrado por el entrenador (para el historial de ingresos). */
 export interface Payment {
   id: string;

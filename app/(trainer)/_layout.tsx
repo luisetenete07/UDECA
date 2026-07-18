@@ -56,6 +56,15 @@ export default function TrainerLayout() {
         }}
       />
       <Tabs.Screen
+        name="agenda"
+        options={{
+          title: 'Agenda',
+          tabBarIcon: (props) => (
+            <TabIcon {...props} outline="checkbox-outline" filled="checkbox" />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',
