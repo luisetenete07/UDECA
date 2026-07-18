@@ -57,11 +57,33 @@ export async function getSocialLeaderboard(trainerId: string): Promise<SocialSta
   const q = query(collectionRef(), where('trainerId', '==', trainerId));
   const snap = await getDocs(q);
   return snap.docs
-    .map((d) => d.data() as SocialStats)
-    .sort(
-      (a, b) =>
-        b.currentStreak - a.currentStreak ||
-        b.sessionsThisWeek - a.sessionsThisWeek ||
-        b.totalWorkouts - a.totalWorkouts
-    );
+    .map((d) => {
+      const s = d.data() as SocialStats;
+      // Normaliza: los docs creados solo por la presencia no traen métricas de
+      // entreno. Sin esto, "undefined" rompe el orden y se ve en la lista.
+      return {
+        ...s,
+        currentStreak: s.currentStreak ?? 0,
+        sessionsThisWeek: s.sessionsThisWeek ?? 0,
+        totalWorkouts: s.totalWorkouts ?? 0,
+        challengeSessions: s.challengeSessions ?? 0,
+      } as SocialStats;
+    })
+    .sort(compareLeaderboard);
+}
+
+/**
+ * Orden del ranking: racha → sesiones de la semana → entrenos totales, y por
+ * nombre para desempatar (orden estable). Los campos que aún no se hayan
+ * sincronizado (p. ej. un alumno que abrió la app pero no ha entrenado, cuyo
+ * doc solo tiene la presencia) cuentan como 0, de modo que quien no ha
+ * entrenado nunca queda por encima de quien sí lo ha hecho.
+ */
+function compareLeaderboard(a: SocialStats, b: SocialStats): number {
+  return (
+    (b.currentStreak ?? 0) - (a.currentStreak ?? 0) ||
+    (b.sessionsThisWeek ?? 0) - (a.sessionsThisWeek ?? 0) ||
+    (b.totalWorkouts ?? 0) - (a.totalWorkouts ?? 0) ||
+    (a.name ?? '').localeCompare(b.name ?? '')
+  );
 }
