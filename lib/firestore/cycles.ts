@@ -30,6 +30,13 @@ export async function getCyclesForClient(
     .sort(sortCycles);
 }
 
+/** Todos los ciclos del entrenador (para el calendario del negocio). */
+export async function getCyclesForTrainer(trainerId: string): Promise<TrainingCycle[]> {
+  const q = query(collectionRef(), where('trainerId', '==', trainerId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as TrainingCycle).sort(sortCycles);
+}
+
 /** Ciclos del propio alumno (vista del alumno: filtra por su clientId). */
 export async function getCyclesForClientSelf(clientId: string): Promise<TrainingCycle[]> {
   const q = query(collectionRef(), where('clientId', '==', clientId));

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   LayoutAnimation,
   Platform,
@@ -46,6 +46,7 @@ function animate() {
 
 export default function AgendaScreen() {
   const { profile } = useAuth();
+  const router = useRouter();
   const [tasks, setTasks] = useState<CoachTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState<TaskScope>('day');
@@ -175,8 +176,20 @@ export default function AgendaScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Mi agenda</Text>
-      <Text style={styles.date}>{today}</Text>
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Mi agenda</Text>
+          <Text style={styles.date}>{today}</Text>
+        </View>
+        <Pressable
+          onPress={() => router.push('/(trainer)/calendar')}
+          style={styles.calBtn}
+          hitSlop={6}
+        >
+          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+          <Text style={styles.calBtnText}>Calendario</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.progressWrap}>
         <View style={styles.progressTop}>
@@ -421,8 +434,22 @@ function GoalsList({
 }
 
 const styles = StyleSheet.create({
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   title: { ...typography.h1, color: colors.text },
   date: { ...typography.small, color: colors.textMuted, marginTop: 2, textTransform: 'capitalize' },
+  calBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    marginTop: 4,
+  },
+  calBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   progressWrap: { marginTop: spacing.lg, marginBottom: spacing.lg },
   progressTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   progressText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },

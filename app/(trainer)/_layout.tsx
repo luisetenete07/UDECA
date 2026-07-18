@@ -73,6 +73,8 @@ export default function TrainerLayout() {
           ),
         }}
       />
+      {/* Calendario del negocio: se abre desde Inicio/Agenda, no ocupa pestaña. */}
+      <Tabs.Screen name="calendar" options={{ href: null }} />
     </Tabs>
   );
 }
