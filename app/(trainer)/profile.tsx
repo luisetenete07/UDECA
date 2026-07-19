@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Alert, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
@@ -35,6 +35,7 @@ const fmtDate = (ts: number) =>
 
 export default function TrainerProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [editingCode, setEditingCode] = useState(false);
@@ -234,6 +235,14 @@ export default function TrainerProfileScreen() {
 
   return (
     <ScreenContainer>
+      <Pressable
+        onPress={() => router.push('/(trainer)/dashboard')}
+        style={styles.backBtn}
+        hitSlop={8}
+      >
+        <Ionicons name="chevron-back" size={22} color={colors.text} />
+      </Pressable>
+
       <View style={styles.hero}>
         <Pressable onPress={handleChangePhoto} style={styles.avatarWrap}>
           <Avatar name={profile?.name} photoURL={profile?.photoURL} size={104} />
@@ -524,6 +533,18 @@ export default function TrainerProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  backBtn: {
+    alignSelf: 'flex-start',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
   hero: { alignItems: 'center', marginBottom: spacing.lg },
   avatarWrap: { marginBottom: spacing.md },
   cameraBadge: {
