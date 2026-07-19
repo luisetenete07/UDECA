@@ -60,6 +60,17 @@ interface ClientDashData {
   cycleAnchor: number | null;
 }
 
+/**
+ * Enlace de pago listo para abrir. Si es un enlace de Stripe, le añade el
+ * client_reference_id (uid del alumno) para que el webhook sepa QUIÉN pagó y
+ * confirme el cobro automáticamente. Otros enlaces (Bizum/PayPal) se abren tal cual.
+ */
+function buildPayUrl(link: string, clientId: string): string {
+  if (!clientId || !/stripe\.com/i.test(link)) return link;
+  const sep = link.includes('?') ? '&' : '?';
+  return `${link}${sep}client_reference_id=${encodeURIComponent(clientId)}`;
+}
+
 export default function ClientDashboard() {
   const { profile, refreshProfile } = useAuth();
   const [reporting, setReporting] = useState(false);
@@ -332,7 +343,11 @@ export default function ClientDashboard() {
               <View style={styles.payActions}>
                 {trainerPayLink ? (
                   <Pressable
-                    onPress={() => Linking.openURL(trainerPayLink).catch(() => {})}
+                    onPress={() =>
+                      Linking.openURL(buildPayUrl(trainerPayLink, profile?.uid ?? '')).catch(
+                        () => {}
+                      )
+                    }
                     style={styles.payBtn}
                   >
                     <Ionicons name="card" size={15} color={colors.onPrimary} />

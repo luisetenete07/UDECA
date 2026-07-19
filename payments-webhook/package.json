@@ -1,0 +1,11 @@
+{
+  "name": "udeca-payments-webhook",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Webhook de Stripe para confirmar cobros de UDECA automáticamente (desplegable gratis en Vercel).",
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "stripe": "^17.5.0"
+  }
+}
