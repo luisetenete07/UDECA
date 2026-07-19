@@ -11,12 +11,14 @@ import { ListSkeleton } from '../../../components/Skeleton';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
+import { isAdmin } from '../../../lib/subscription';
 import { createExercise, getExercisesForTrainer } from '../../../lib/firestore/exercises';
+import { getTemplateExercises } from '../../../lib/firestore/templateExercises';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
-import { MUSCLE_GROUPS, type Exercise } from '../../../lib/types';
+import { MUSCLE_GROUPS, type Exercise, type TemplateExercise } from '../../../lib/types';
 
 export default function ExercisesScreen() {
   const { profile } = useAuth();
@@ -31,32 +33,61 @@ export default function ExercisesScreen() {
   const [search, setSearch] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
+  const [template, setTemplate] = useState<TemplateExercise[]>([]);
+
+  // Pack a precargar: la plantilla oficial de UDECA (editada por el CEO) si
+  // existe; si no, el pack estático de calistenia. Cada ejercicio arrastra sus
+  // músculos para el cuerpo anatómico.
+  const packItems = useMemo(
+    () =>
+      template.length > 0
+        ? template.map((t) => ({
+            name: t.name,
+            muscleGroup: t.muscleGroup,
+            measure: t.measure ?? ('reps' as const),
+            description: t.description ?? '',
+            videoUrl: t.videoUrl,
+            muscles: t.muscles,
+          }))
+        : STARTER_LIBRARY.map((s) => ({
+            name: s.name,
+            muscleGroup: s.muscleGroup as string,
+            measure: s.measure,
+            description: s.description,
+            videoUrl: undefined as string | undefined,
+            muscles: undefined as import('../../../lib/muscles').MuscleId[] | undefined,
+          })),
+    [template]
+  );
+
+  const missingPack = useMemo(() => {
+    const existing = new Set(exercises.map((e) => e.name.trim().toLowerCase()));
+    return packItems.filter((p) => !existing.has(p.name.trim().toLowerCase()));
+  }, [packItems, exercises]);
 
   // Importa el pack UDECA saltando los ejercicios que ya existen (por nombre).
   const handleImportPack = async () => {
     if (!profile) return;
     setImporting(true);
     try {
-      const existing = new Set(exercises.map((e) => e.name.trim().toLowerCase()));
-      const missing = STARTER_LIBRARY.filter(
-        (s) => !existing.has(s.name.trim().toLowerCase())
-      );
-      if (missing.length === 0) {
+      if (missingPack.length === 0) {
         showToast('Ya tienes todos los ejercicios del pack');
         return;
       }
       await Promise.all(
-        missing.map((s) =>
+        missingPack.map((s) =>
           createExercise({
             trainerId: profile.uid,
             name: s.name,
             muscleGroup: s.muscleGroup,
             measure: s.measure,
-            description: s.description,
+            description: s.description || undefined,
+            videoUrl: s.videoUrl,
+            muscles: s.muscles,
           })
         )
       );
-      showToast(`${missing.length} ejercicios añadidos a tu biblioteca`);
+      showToast(`${missingPack.length} ejercicios añadidos a tu biblioteca`);
       await load();
     } finally {
       setImporting(false);
@@ -68,6 +99,10 @@ export default function ExercisesScreen() {
     const data = await getExercisesForTrainer(profile.uid);
     setExercises(data);
     setCached(cacheKey, data);
+    // La plantilla oficial (para precargar). Silenciosa si falla.
+    getTemplateExercises()
+      .then(setTemplate)
+      .catch(() => {});
     setLoading(false);
     setRefreshing(false);
   }, [profile, cacheKey]);
@@ -125,6 +160,22 @@ export default function ExercisesScreen() {
         <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
       </View>
 
+      {isAdmin(profile) ? (
+        <Pressable
+          onPress={() => router.push('/(trainer)/exercises/template')}
+          style={styles.adminBanner}
+        >
+          <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.adminBannerTitle}>Plantilla UDECA (CEO)</Text>
+            <Text style={styles.adminBannerText}>
+              Edita el pack oficial y los músculos de cada ejercicio.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </Pressable>
+      ) : null}
+
       <TextField placeholder="Buscar ejercicio..." value={search} onChangeText={setSearch} />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}>
@@ -143,9 +194,11 @@ export default function ExercisesScreen() {
         ))}
       </ScrollView>
 
-      {exercises.length < STARTER_LIBRARY.length ? (
+      {missingPack.length > 0 ? (
         <Button
-          title={`Importar pack UDECA (${STARTER_LIBRARY.length} ejercicios de calistenia)`}
+          title={`Importar pack UDECA (${missingPack.length} ejercicio${
+            missingPack.length === 1 ? '' : 's'
+          })`}
           variant={exercises.length === 0 ? 'primary' : 'secondary'}
           onPress={handleImportPack}
           loading={importing}
@@ -200,6 +253,19 @@ function FilterChip({
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+  adminBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    marginBottom: spacing.md,
+  },
+  adminBannerTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  adminBannerText: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted },
   filters: { marginVertical: spacing.md },

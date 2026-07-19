@@ -66,6 +66,9 @@ export default function ProgressScreen() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
+  const [musclesByExercise, setMusclesByExercise] = useState<
+    Record<string, import('../../lib/muscles').MuscleId[]>
+  >({});
   const [levelTests, setLevelTests] = useState<import('../../lib/types').LevelTest[]>([]);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
@@ -96,12 +99,15 @@ export default function ProgressScreen() {
         .then((library) => {
           const mmap: Record<string, string> = {};
           const gmap: Record<string, string> = {};
+          const musMap: Record<string, import('../../lib/muscles').MuscleId[]> = {};
           for (const ex of library) {
             mmap[ex.id] = ex.measure ?? 'reps';
             gmap[ex.id] = ex.muscleGroup;
+            if (ex.muscles && ex.muscles.length > 0) musMap[ex.id] = ex.muscles;
           }
           setMeasureByExercise(mmap);
           setMuscleByExercise(gmap);
+          setMusclesByExercise(musMap);
         })
         .catch(() => {});
     }
@@ -240,8 +246,8 @@ export default function ProgressScreen() {
   const sessionLogs = workoutLogs.filter((l) => startOfDayTs(l.date) === lastSessionDay);
   const muscleIntensity =
     muscleMode === 'session'
-      ? muscleLoad(sessionLogs, undefined, groupByEx)
-      : muscleLoad(workoutLogs, Date.now() - 7 * 24 * 60 * 60 * 1000, groupByEx);
+      ? muscleLoad(sessionLogs, undefined, groupByEx, musclesByExercise)
+      : muscleLoad(workoutLogs, Date.now() - 7 * 24 * 60 * 60 * 1000, groupByEx, musclesByExercise);
   const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
 
   const muscleMap = setsByMuscleGroup(workoutLogs, muscleByExercise);

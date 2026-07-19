@@ -113,7 +113,8 @@ export function musclesForExercise(name: string, group?: string): Weights {
 export function muscleLoad(
   logs: WorkoutLog[],
   sinceTs?: number,
-  groupByExerciseId?: Record<string, string>
+  groupByExerciseId?: Record<string, string>,
+  musclesByExerciseId?: Record<string, MuscleId[]>
 ): Record<MuscleId, number> {
   const raw = {} as Record<MuscleId, number>;
   (Object.keys(MUSCLE_LABEL) as MuscleId[]).forEach((m) => (raw[m] = 0));
@@ -123,8 +124,13 @@ export function muscleLoad(
     for (const ex of log.exercises) {
       const completed = ex.sets.filter((s) => s.completed).length;
       if (completed === 0) continue;
-      const group = groupByExerciseId?.[ex.exerciseId];
-      const map = musclesForExercise(ex.name, group);
+      // Si el ejercicio define músculos explícitos (plantilla UDECA), mandan
+      // ellos; si no, se clasifica por nombre y grupo.
+      const explicit = musclesByExerciseId?.[ex.exerciseId];
+      const map =
+        explicit && explicit.length > 0
+          ? (Object.fromEntries(explicit.map((m) => [m, 1])) as Weights)
+          : musclesForExercise(ex.name, groupByExerciseId?.[ex.exerciseId]);
       for (const [m, w] of Object.entries(map)) {
         raw[m as MuscleId] += completed * (w as number);
       }

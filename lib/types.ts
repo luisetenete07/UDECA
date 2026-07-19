@@ -1,3 +1,5 @@
+import type { MuscleId } from './muscles';
+
 export type UserRole = 'trainer' | 'client';
 
 export interface UserProfile {
@@ -170,7 +172,34 @@ export interface Exercise {
   load?: ExerciseLoad;
   /** (Obsoleto) se conserva por compatibilidad; equivale a load='assisted'. */
   band?: boolean;
+  /**
+   * Músculos que trabaja el ejercicio (para colorear el cuerpo anatómico). Si
+   * está definido, tiene prioridad sobre la clasificación automática por nombre.
+   * Se hereda de la plantilla UDECA al importar el pack.
+   */
+  muscles?: MuscleId[];
   createdAt: number;
+}
+
+/**
+ * Plantilla maestra de ejercicios de UDECA. La edita SOLO el admin (CEO) y
+ * cualquier entrenador nuevo puede precargarla en su biblioteca. Cada ejercicio
+ * define qué músculos trabaja para el gráfico del cuerpo anatómico.
+ */
+export interface TemplateExercise {
+  id: string;
+  name: string;
+  /** Categoría (una de MUSCLE_GROUPS o libre). */
+  muscleGroup: string;
+  description?: string;
+  videoUrl?: string;
+  measure?: ExerciseMeasure;
+  /** Músculos que trabaja (alimenta el cuerpo anatómico). */
+  muscles?: MuscleId[];
+  /** Orden de aparición en la lista (menor primero). */
+  order?: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface RoutineExercise {
