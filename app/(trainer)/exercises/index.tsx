@@ -28,6 +28,7 @@ import {
   getExercisesForTrainer,
 } from '../../../lib/firestore/exercises';
 import { getTemplateExercises } from '../../../lib/firestore/templateExercises';
+import { updateUserProfile } from '../../../lib/firestore/users';
 import {
   buildExerciseTemplate,
   parseExerciseTemplate,
@@ -40,7 +41,7 @@ import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import { MUSCLE_GROUPS, type Exercise, type TemplateExercise } from '../../../lib/types';
 
 export default function ExercisesScreen() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const router = useRouter();
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
   const cacheKey = `exercises-${profile?.uid ?? ''}`;
@@ -59,6 +60,47 @@ export default function ExercisesScreen() {
   // Importar por pegado de texto (móvil, donde no hay selector de archivos).
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
+  // Gestión de categorías del entrenador (Tren superior, Empuje…).
+  const [editCats, setEditCats] = useState(false);
+  const [newCat, setNewCat] = useState('');
+
+  // Categorías propias del coach (las suyas si las tiene, si no las de por defecto).
+  const myCategories = useMemo(
+    () =>
+      profile?.exerciseCategories && profile.exerciseCategories.length > 0
+        ? profile.exerciseCategories
+        : [...MUSCLE_GROUPS],
+    [profile?.exerciseCategories]
+  );
+
+  const saveCategories = async (list: string[]) => {
+    if (!profile) return;
+    try {
+      await updateUserProfile(profile.uid, { exerciseCategories: list });
+      await refreshProfile();
+    } catch {
+      showToast('No se pudieron guardar las categorías');
+    }
+  };
+  const addCategory = () => {
+    const c = newCat.trim();
+    if (!c) return;
+    if (myCategories.some((g) => g.toLowerCase() === c.toLowerCase())) {
+      showToast('Esa categoría ya existe');
+      return;
+    }
+    setNewCat('');
+    saveCategories([...myCategories, c]);
+  };
+  const removeCategory = (group: string) => {
+    const list = myCategories.filter((g) => g !== group);
+    if (list.length === 0) {
+      showToast('Deja al menos una categoría');
+      return;
+    }
+    if (muscleFilter === group) setMuscleFilter(null);
+    saveCategories(list);
+  };
 
   // Pack a precargar: la plantilla oficial de UDECA (editada por el CEO) si
   // existe; si no, el pack estático de calistenia. Cada ejercicio arrastra sus
@@ -307,21 +349,58 @@ export default function ExercisesScreen() {
 
       <TextField placeholder="Buscar ejercicio..." value={search} onChangeText={setSearch} />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}>
-        <FilterChip
-          label="Todos"
-          selected={muscleFilter === null}
-          onPress={() => setMuscleFilter(null)}
-        />
-        {filterCategories.map((group) => (
+      <View style={styles.catHeader}>
+        <Text style={styles.catLabel}>Categorías</Text>
+        <Pressable onPress={() => setEditCats((v) => !v)} hitSlop={6}>
+          <Text style={styles.catEdit}>{editCats ? 'Listo' : 'Editar categorías'}</Text>
+        </Pressable>
+      </View>
+
+      {editCats ? (
+        <>
+          <View style={styles.catWrap}>
+            {myCategories.map((group) => (
+              <View key={group} style={styles.catChip}>
+                <Text style={styles.catChipText}>{group}</Text>
+                <Pressable onPress={() => removeCategory(group)} hitSlop={8} style={styles.catX}>
+                  <Ionicons name="close-circle" size={16} color={colors.danger} />
+                </Pressable>
+              </View>
+            ))}
+          </View>
+          <View style={styles.addCatRow}>
+            <TextInput
+              value={newCat}
+              onChangeText={setNewCat}
+              placeholder="Nueva categoría…"
+              placeholderTextColor={colors.textFaint}
+              style={styles.addCatInput}
+              onSubmitEditing={addCategory}
+              returnKeyType="done"
+            />
+            <Pressable onPress={addCategory} style={styles.addCatBtn} hitSlop={6}>
+              <Ionicons name="add" size={16} color={colors.primary} />
+              <Text style={styles.addCatText}>Añadir</Text>
+            </Pressable>
+          </View>
+        </>
+      ) : (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}>
           <FilterChip
-            key={group}
-            label={group}
-            selected={muscleFilter === group}
-            onPress={() => setMuscleFilter(group)}
+            label="Todos"
+            selected={muscleFilter === null}
+            onPress={() => setMuscleFilter(null)}
           />
-        ))}
-      </ScrollView>
+          {filterCategories.map((group) => (
+            <FilterChip
+              key={group}
+              label={group}
+              selected={muscleFilter === group}
+              onPress={() => setMuscleFilter(group)}
+            />
+          ))}
+        </ScrollView>
+      )}
 
       {missingPack.length > 0 ? (
         <Button
@@ -477,6 +556,53 @@ const styles = StyleSheet.create({
   },
   adminBannerTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   adminBannerText: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  catHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  catLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
+  catEdit: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  catWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  catChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  catChipText: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  catX: { marginLeft: -2, marginRight: -4 },
+  addCatRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  addCatInput: {
+    flex: 1,
+    minHeight: 44,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    color: colors.text,
+    fontSize: 15,
+  },
+  addCatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+  },
+  addCatText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   toolsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   toolBtn: {
     flex: 1,
