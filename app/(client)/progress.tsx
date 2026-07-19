@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -11,6 +11,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { MuscleMap } from '../../components/MuscleMap';
+import { shareSessionImage } from '../../lib/brandCards';
 import { muscleLoad } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
@@ -160,6 +161,50 @@ export default function ProgressScreen() {
     setWeightLogs((prev) => prev.filter((l) => l.id !== id));
     await deleteWeightLog(id);
     showToast('Registro borrado');
+  };
+
+  // Comparte una sesión concreta del registro mensual como imagen de marca
+  // UDECA (web/PWA); en nativo cae a texto compartible.
+  const handleShareSession = async (log: WorkoutLog) => {
+    const t = sessionTotals(log.exercises, measureByExercise);
+    if (Platform.OS === 'web') {
+      try {
+        const result = await shareSessionImage({
+          routineName: log.routineName ?? 'UDECA',
+          dayName: log.dayName,
+          durationMin: log.durationMin ?? 0,
+          sets: t.sets,
+          reps: t.reps,
+          seconds: t.seconds,
+          volumeKg: t.volumeKg,
+          streak: 0,
+          prCount: 0,
+        });
+        if (result === 'downloaded') showToast('Imagen de la sesión descargada');
+        if (result) return;
+      } catch {
+        // Caemos al texto.
+      }
+    }
+    const parts = [
+      `Sesión completada en UDECA: ${log.dayName ?? log.routineName ?? ''}`.trim(),
+      log.durationMin ? `${log.durationMin} min` : null,
+      `${t.sets} series`,
+      t.reps > 0 ? `${t.reps} reps` : null,
+      t.seconds > 0 ? `${t.seconds}s isométrico` : null,
+      t.volumeKg > 0 ? `${t.volumeKg} kg de volumen` : null,
+    ].filter(Boolean);
+    const message = `${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    try {
+      await Share.share({ message });
+    } catch {
+      try {
+        await navigator.clipboard.writeText(message);
+        showToast('Resumen copiado, pégalo donde quieras');
+      } catch {
+        showToast('No se pudo compartir');
+      }
+    }
   };
 
   const handleDeleteWorkout = async (id: string) => {
@@ -348,6 +393,15 @@ export default function ProgressScreen() {
                             color={colors.textFaint}
                           />
                         </Pressable>
+                        {t.sets > 0 || t.seconds > 0 ? (
+                          <Pressable
+                            onPress={() => handleShareSession(s)}
+                            hitSlop={8}
+                            style={styles.sessionShare}
+                          >
+                            <Ionicons name="share-outline" size={16} color={colors.primary} />
+                          </Pressable>
+                        ) : null}
                         <Pressable
                           onPress={() => handleDeleteWorkout(s.id)}
                           hitSlop={8}
@@ -823,6 +877,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.sm,
   },
+  sessionShare: { padding: spacing.xs },
   sessionDelete: { padding: spacing.xs },
   sessionDateBox: {
     width: 44,
