@@ -15,6 +15,11 @@ export interface UserProfile {
   exerciseCategories?: string[];
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
+  /**
+   * Solo en entrenadores: enlace de cobro (Stripe Payment Link, Bizum, PayPal.me…)
+   * que sus alumnos abren para pagar la cuota con un toque desde el aviso de cobro.
+   */
+  paymentLink?: string;
   /** Solo en clientes: uid del entrenador al que pertenecen. */
   trainerId?: string;
   /** Solo en clientes: objetivo principal del cliente. */

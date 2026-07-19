@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
@@ -29,6 +29,7 @@ import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
+import { getUserProfile } from '../../lib/firestore/users';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
@@ -77,6 +78,7 @@ export default function ClientDashboard() {
   // de ciclos aún no están publicadas, la consulta falla en silencio y no se
   // muestra la tarjeta — nunca rompe el resto del inicio.
   const [activeCyc, setActiveCyc] = useState<TrainingCycle | null>(null);
+  const [trainerPayLink, setTrainerPayLink] = useState<string | null>(null);
 
   const load = useCallback(
     async (isActive?: () => boolean) => {
@@ -139,6 +141,14 @@ export default function ClientDashboard() {
       .then((cs) => setActiveCyc(activeCycle(cs)))
       .catch(() => {});
   }, [profile]);
+
+  // Enlace de cobro del entrenador (para el botón "Pagar ahora" del alumno).
+  useEffect(() => {
+    if (!profile?.trainerId) return;
+    getUserProfile(profile.trainerId)
+      .then((t) => setTrainerPayLink(t?.paymentLink ?? null))
+      .catch(() => {});
+  }, [profile?.trainerId]);
 
   if (loading) return <LoadingScreen />;
 
@@ -288,6 +298,15 @@ export default function ClientDashboard() {
               {paymentAlert.title}
             </Text>
             <Text style={styles.payText}>{paymentAlert.text}</Text>
+            {trainerPayLink ? (
+              <Pressable
+                onPress={() => Linking.openURL(trainerPayLink).catch(() => {})}
+                style={styles.payBtn}
+              >
+                <Ionicons name="card" size={15} color={colors.onPrimary} />
+                <Text style={styles.payBtnText}>Pagar ahora</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -573,6 +592,18 @@ const styles = StyleSheet.create({
   payCardBad: { backgroundColor: colors.dangerMuted, borderColor: colors.danger },
   payTitle: { ...typography.body, fontFamily: fonts.semiBold },
   payText: { ...typography.small, color: colors.textMuted, marginTop: 1, lineHeight: 18 },
+  payBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+  },
+  payBtnText: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.heading },
   reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },
   quoteWrap: {
     flexDirection: 'row',

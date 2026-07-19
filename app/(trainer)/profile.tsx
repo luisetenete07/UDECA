@@ -42,6 +42,10 @@ export default function TrainerProfileScreen() {
   const [codeInput, setCodeInput] = useState('');
   const [savingCode, setSavingCode] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
+  // Enlace de cobro (Stripe/Bizum/PayPal…) que verán los alumnos para pagar.
+  const [payLink, setPayLink] = useState(profile?.paymentLink ?? '');
+  const [savingPayLink, setSavingPayLink] = useState(false);
+  const [payLinkSaved, setPayLinkSaved] = useState(false);
   // Panel admin UDECA (solo cuentas administradoras).
   const [adminOpen, setAdminOpen] = useState(false);
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
@@ -184,6 +188,26 @@ export default function TrainerProfileScreen() {
     }
   };
 
+  const handleSavePayLink = async () => {
+    if (!profile) return;
+    const url = payLink.trim();
+    if (url && !/^https?:\/\//i.test(url)) {
+      showToast('El enlace debe empezar por https://');
+      return;
+    }
+    setSavingPayLink(true);
+    try {
+      await updateUserProfile(profile.uid, { paymentLink: url || undefined });
+      await refreshProfile();
+      setPayLinkSaved(true);
+      setTimeout(() => setPayLinkSaved(false), 2500);
+    } catch {
+      showToast('No se pudo guardar el enlace');
+    } finally {
+      setSavingPayLink(false);
+    }
+  };
+
   const handleSaveCode = async () => {
     if (!profile) return;
     setCodeError(null);
@@ -317,6 +341,31 @@ export default function TrainerProfileScreen() {
             />
           </>
         )}
+      </Card>
+
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Cobros</Text>
+        <Text style={styles.helperText}>
+          Pega tu enlace de pago (Stripe, Bizum, PayPal.me, Revolut…). Tus alumnos verán un botón
+          "Pagar ahora" en su aviso de cobro y podrán pagarte de un toque.
+        </Text>
+        <TextField
+          label="Enlace de pago"
+          value={payLink}
+          onChangeText={setPayLink}
+          placeholder="https://buy.stripe.com/…"
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+        />
+        {payLinkSaved ? <Text style={styles.savedText}>Enlace guardado</Text> : null}
+        <Button
+          title="Guardar enlace de pago"
+          variant="secondary"
+          onPress={handleSavePayLink}
+          loading={savingPayLink}
+          disabled={payLink.trim() === (profile?.paymentLink ?? '')}
+        />
       </Card>
 
       <Card style={styles.section}>
@@ -695,6 +744,7 @@ const styles = StyleSheet.create({
   },
   coachIconDanger: { borderColor: colors.danger },
   helperText: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
+  savedText: { ...typography.small, color: colors.primaryBright, marginBottom: spacing.sm },
   codeBox: {
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
