@@ -17,6 +17,7 @@ import {
   getTemplateExercises,
   updateTemplateExercise,
 } from '../../../lib/firestore/templateExercises';
+import { getExercisesForTrainer } from '../../../lib/firestore/exercises';
 import { MUSCLE_LABEL, musclesForExercise, type MuscleId } from '../../../lib/muscles';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
@@ -63,6 +64,7 @@ export default function TemplateExercisesScreen() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [addingMine, setAddingMine] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -166,6 +168,40 @@ export default function TemplateExercisesScreen() {
     }
   };
 
+  // Añade a la plantilla todos los ejercicios de MI cuenta de coach (con sus
+  // características actuales), saltando los que ya estén por nombre.
+  const addMyCoachExercises = async () => {
+    if (!profile) return;
+    setAddingMine(true);
+    try {
+      const mine = await getExercisesForTrainer(profile.uid);
+      const existing = new Set(items.map((i) => i.name.trim().toLowerCase()));
+      const missing = mine.filter((e) => !existing.has(e.name.trim().toLowerCase()));
+      if (missing.length === 0) {
+        showToast('Tus ejercicios ya están en la plantilla');
+        return;
+      }
+      let order = items.length;
+      for (const e of missing) {
+        await createTemplateExercise({
+          name: e.name,
+          muscleGroup: e.muscleGroup,
+          measure: e.measure ?? 'reps',
+          description: e.description,
+          videoUrl: e.videoUrl,
+          muscles: e.muscles,
+          order: order++,
+        });
+      }
+      await load();
+      showToast(`${missing.length} ejercicios añadidos desde tu cuenta`);
+    } catch {
+      showToast('No se pudieron añadir');
+    } finally {
+      setAddingMine(false);
+    }
+  };
+
   const remove = async () => {
     if (!draft?.id) return;
     setSaving(true);
@@ -197,6 +233,13 @@ export default function TemplateExercisesScreen() {
         Solo tú (CEO) editas esta plantilla. Cada entrenador nuevo puede precargarla en su
         biblioteca. Elige los músculos de cada ejercicio para el cuerpo anatómico.
       </Text>
+
+      <Button
+        title="Añadir mis ejercicios de coach"
+        onPress={addMyCoachExercises}
+        loading={addingMine}
+        style={{ marginBottom: spacing.sm }}
+      />
 
       {STARTER_LIBRARY.some(
         (s) => !items.some((i) => i.name.trim().toLowerCase() === s.name.trim().toLowerCase())

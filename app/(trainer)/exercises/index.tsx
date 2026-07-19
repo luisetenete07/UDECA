@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { FadeIn } from '../../../components/FadeIn';
@@ -12,8 +12,17 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
 import { isAdmin } from '../../../lib/subscription';
-import { createExercise, getExercisesForTrainer } from '../../../lib/firestore/exercises';
+import {
+  createExercise,
+  deleteExercise,
+  getExercisesForTrainer,
+} from '../../../lib/firestore/exercises';
 import { getTemplateExercises } from '../../../lib/firestore/templateExercises';
+import {
+  buildExerciseTemplate,
+  parseExerciseTemplate,
+  type ExportedExercise,
+} from '../../../lib/exerciseTemplateIO';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { showToast } from '../../../components/Toast';
@@ -34,6 +43,9 @@ export default function ExercisesScreen() {
   const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [template, setTemplate] = useState<TemplateExercise[]>([]);
+  // Import/export de plantillas entre entrenadores.
+  const [pendingImport, setPendingImport] = useState<ExportedExercise[] | null>(null);
+  const [replacing, setReplacing] = useState(false);
 
   // Pack a precargar: la plantilla oficial de UDECA (editada por el CEO) si
   // existe; si no, el pack estático de calistenia. Cada ejercicio arrastra sus
@@ -91,6 +103,97 @@ export default function ExercisesScreen() {
       await load();
     } finally {
       setImporting(false);
+    }
+  };
+
+  // Exporta la biblioteca actual como archivo JSON (web) o texto (nativo) para
+  // pasársela a otro entrenador.
+  const handleExport = async () => {
+    if (exercises.length === 0) {
+      showToast('No tienes ejercicios que exportar');
+      return;
+    }
+    const json = buildExerciseTemplate(exercises);
+    const filename = `plantilla-ejercicios-udeca-${new Date().toISOString().slice(0, 10)}.json`;
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Plantilla exportada');
+    } else {
+      try {
+        await Share.share({ message: json });
+      } catch {
+        showToast('No se pudo exportar');
+      }
+    }
+  };
+
+  // Elige un archivo .json en la web y lo lee como texto.
+  const pickJsonFile = (): Promise<string | null> =>
+    new Promise((resolve) => {
+      if (typeof document === 'undefined') return resolve(null);
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json,.json';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) return resolve(null);
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => resolve(null);
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+
+  const handleImportTemplate = async () => {
+    if (Platform.OS !== 'web') {
+      showToast('Importar plantillas está disponible en la versión web');
+      return;
+    }
+    const text = await pickJsonFile();
+    if (!text) return;
+    const list = parseExerciseTemplate(text);
+    if (!list) {
+      showToast('El archivo no es una plantilla de ejercicios válida');
+      return;
+    }
+    setPendingImport(list); // abre el aviso de confirmación
+  };
+
+  // Sustituye TODA la biblioteca por la plantilla importada.
+  const confirmReplace = async () => {
+    if (!profile || !pendingImport) return;
+    setReplacing(true);
+    try {
+      await Promise.all(exercises.map((e) => deleteExercise(e.id)));
+      await Promise.all(
+        pendingImport.map((e) =>
+          createExercise({
+            trainerId: profile.uid,
+            name: e.name,
+            muscleGroup: e.muscleGroup,
+            measure: e.measure,
+            description: e.description,
+            videoUrl: e.videoUrl,
+            muscles: e.muscles,
+            load: e.load,
+            band: e.band,
+          })
+        )
+      );
+      setPendingImport(null);
+      await load();
+      showToast('Plantilla importada');
+    } catch {
+      showToast('No se pudo importar la plantilla');
+    } finally {
+      setReplacing(false);
     }
   };
 
@@ -206,6 +309,18 @@ export default function ExercisesScreen() {
         />
       ) : null}
 
+      {/* Exportar/importar plantilla entre entrenadores */}
+      <View style={styles.toolsRow}>
+        <Pressable onPress={handleExport} style={styles.toolBtn} hitSlop={4}>
+          <Ionicons name="download-outline" size={16} color={colors.primary} />
+          <Text style={styles.toolText}>Exportar plantilla</Text>
+        </Pressable>
+        <Pressable onPress={handleImportTemplate} style={styles.toolBtn} hitSlop={4}>
+          <Ionicons name="cloud-upload-outline" size={16} color={colors.primary} />
+          <Text style={styles.toolText}>Importar plantilla</Text>
+        </Pressable>
+      </View>
+
       {filtered.length === 0 ? (
         <EmptyState
           title="No hay ejercicios"
@@ -231,6 +346,40 @@ export default function ExercisesScreen() {
           </FadeIn>
         ))
       )}
+
+      {/* Aviso de confirmación al importar (sustituye TODA la biblioteca) */}
+      <Modal
+        visible={!!pendingImport}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingImport(null)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmIcon}>
+              <Ionicons name="warning-outline" size={26} color={colors.danger} />
+            </View>
+            <Text style={styles.confirmTitle}>¿Sustituir tu plantilla actual?</Text>
+            <Text style={styles.confirmText}>
+              Esto borrará tus {exercises.length} ejercicio(s) actuales y los reemplazará por los{' '}
+              {pendingImport?.length ?? 0} de la plantilla importada. No se puede deshacer.
+            </Text>
+            <Button
+              title={`Sustituir por ${pendingImport?.length ?? 0} ejercicios`}
+              variant="danger"
+              onPress={confirmReplace}
+              loading={replacing}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setPendingImport(null)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -266,6 +415,54 @@ const styles = StyleSheet.create({
   },
   adminBannerTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   adminBannerText: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  toolsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  toolBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.surfaceAlt,
+  },
+  toolText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
+  confirmBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: spacing.lg,
+  },
+  confirmCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 420,
+    alignItems: 'center',
+  },
+  confirmIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.dangerMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  confirmTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
+  confirmText: {
+    ...typography.small,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginTop: spacing.xs,
+  },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted },
   filters: { marginVertical: spacing.md },
