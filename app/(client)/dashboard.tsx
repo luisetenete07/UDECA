@@ -207,6 +207,55 @@ export default function ClientDashboard() {
   const showFirstSteps = firstSteps.some((s) => !s.done);
   const stepsDone = firstSteps.filter((s) => s.done).length;
 
+  // Aviso de pago para el alumno (dato en su propio perfil, lo fija el coach):
+  // cobro próximo (ámbar) o cobro pendiente/vencido (rojo). Ayuda a que el
+  // alumno renueve pronto y le facilita el trabajo al entrenador.
+  const paymentAlert = (() => {
+    const fee = profile?.monthlyFeeEur ? `${profile.monthlyFeeEur} €` : 'tu cuota';
+    const startDay = (ts: number) => {
+      const d = new Date(ts);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    };
+    const fmt = (ts: number) =>
+      new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+    const due = profile?.nextPaymentDate;
+    const status = profile?.paymentStatus;
+    if (due) {
+      const days = Math.round((startDay(due) - startDay(Date.now())) / (24 * 60 * 60 * 1000));
+      if (days < 0)
+        return {
+          bad: true,
+          title: 'Cobro pendiente',
+          text: `Tu cuota de ${fee} venció el ${fmt(due)}. Renueva con tu entrenador para no perder el acceso.`,
+        };
+      if (days <= 5)
+        return {
+          bad: false,
+          title: 'Cobro próximo',
+          text:
+            days === 0
+              ? `Hoy vence tu cuota de ${fee}. Ponte al día con tu entrenador.`
+              : `Tu cuota de ${fee} vence ${days === 1 ? 'mañana' : `en ${days} días`} (${fmt(due)}).`,
+        };
+      return null;
+    }
+    // Sin fecha, pero el coach marcó el estado a mano.
+    if (status === 'overdue')
+      return {
+        bad: true,
+        title: 'Cobro pendiente',
+        text: `Tienes un pago pendiente de ${fee}. Renueva con tu entrenador.`,
+      };
+    if (status === 'pending')
+      return {
+        bad: false,
+        title: 'Cobro próximo',
+        text: `Tu entrenador espera el pago de ${fee}. Ponte al día cuando puedas.`,
+      };
+    return null;
+  })();
+
   return (
     <ScreenContainer
       refreshing={refreshing}
@@ -224,6 +273,24 @@ export default function ClientDashboard() {
           <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
         </Pressable>
       </View>
+
+      {paymentAlert ? (
+        <View style={[styles.payCard, paymentAlert.bad ? styles.payCardBad : styles.payCardWarn]}>
+          <Ionicons
+            name={paymentAlert.bad ? 'alert-circle' : 'card-outline'}
+            size={20}
+            color={paymentAlert.bad ? colors.danger : colors.primaryBright}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[styles.payTitle, { color: paymentAlert.bad ? colors.danger : colors.primaryBright }]}
+            >
+              {paymentAlert.title}
+            </Text>
+            <Text style={styles.payText}>{paymentAlert.text}</Text>
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.quoteWrap}>
         <View style={styles.quoteRule} />
@@ -493,6 +560,19 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
   },
+  payCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  payCardWarn: { backgroundColor: colors.primaryMuted, borderColor: colors.hairline },
+  payCardBad: { backgroundColor: colors.dangerMuted, borderColor: colors.danger },
+  payTitle: { ...typography.body, fontFamily: fonts.semiBold },
+  payText: { ...typography.small, color: colors.textMuted, marginTop: 1, lineHeight: 18 },
   reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },
   quoteWrap: {
     flexDirection: 'row',

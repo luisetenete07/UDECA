@@ -1,6 +1,16 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Modal, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { FadeIn } from '../../../components/FadeIn';
@@ -46,6 +56,9 @@ export default function ExercisesScreen() {
   // Import/export de plantillas entre entrenadores.
   const [pendingImport, setPendingImport] = useState<ExportedExercise[] | null>(null);
   const [replacing, setReplacing] = useState(false);
+  // Importar por pegado de texto (móvil, donde no hay selector de archivos).
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
 
   // Pack a precargar: la plantilla oficial de UDECA (editada por el CEO) si
   // existe; si no, el pack estático de calistenia. Cada ejercicio arrastra sus
@@ -152,8 +165,10 @@ export default function ExercisesScreen() {
     });
 
   const handleImportTemplate = async () => {
+    // Móvil: sin selector de archivos, se pega el texto de la plantilla.
     if (Platform.OS !== 'web') {
-      showToast('Importar plantillas está disponible en la versión web');
+      setPasteText('');
+      setPasteOpen(true);
       return;
     }
     const text = await pickJsonFile();
@@ -164,6 +179,17 @@ export default function ExercisesScreen() {
       return;
     }
     setPendingImport(list); // abre el aviso de confirmación
+  };
+
+  // Confirma el texto pegado (móvil): valida y abre el aviso de sustitución.
+  const handlePasteImport = () => {
+    const list = parseExerciseTemplate(pasteText);
+    if (!list) {
+      showToast('El texto no es una plantilla de ejercicios válida');
+      return;
+    }
+    setPasteOpen(false);
+    setPendingImport(list);
   };
 
   // Sustituye TODA la biblioteca por la plantilla importada.
@@ -347,6 +373,42 @@ export default function ExercisesScreen() {
         ))
       )}
 
+      {/* Importar por pegado de texto (móvil) */}
+      <Modal
+        visible={pasteOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPasteOpen(false)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
+            <Text style={styles.confirmTitle}>Pegar plantilla</Text>
+            <Text style={[styles.confirmText, { textAlign: 'left' }]}>
+              Pega aquí el texto de la plantilla que te ha compartido otro entrenador.
+            </Text>
+            <TextInput
+              value={pasteText}
+              onChangeText={setPasteText}
+              placeholder="Pega el contenido JSON…"
+              placeholderTextColor={colors.textFaint}
+              multiline
+              style={styles.pasteInput}
+            />
+            <Button
+              title="Continuar"
+              onPress={handlePasteImport}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setPasteOpen(false)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        </View>
+      </Modal>
+
       {/* Aviso de confirmación al importar (sustituye TODA la biblioteca) */}
       <Modal
         visible={!!pendingImport}
@@ -462,6 +524,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 19,
     marginTop: spacing.xs,
+  },
+  pasteInput: {
+    marginTop: spacing.md,
+    minHeight: 140,
+    maxHeight: 240,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    color: colors.text,
+    fontSize: 13,
+    textAlignVertical: 'top',
   },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted },

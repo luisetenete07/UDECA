@@ -185,28 +185,44 @@ export async function shareSessionImage(
   const cols = shown.length === 1 ? 1 : 2;
   const rows = Math.ceil(shown.length / cols);
   const x0 = (W - (cols * bw + (cols - 1) * gap)) / 2;
-  const y0 = 510;
+
+  // Bloque central (rejilla + récord + racha) CENTRADO verticalmente entre la
+  // cabecera y el pie, para que la tarjeta tenga márgenes homogéneos arriba y
+  // abajo sea cual sea el nº de casillas.
+  const gridH = rows * bh + (rows - 1) * gap;
+  const extras: { text: string; color: string; font: string; gapBefore: number }[] = [];
+  if (data.prCount > 0)
+    extras.push({
+      text: data.prCount === 1 ? 'NUEVO RÉCORD PERSONAL' : `${data.prCount} RÉCORDS PERSONALES`,
+      color: GOLD_SOFT,
+      font: '800 40px sans-serif',
+      gapBefore: 70,
+    });
+  if (data.streak > 1)
+    extras.push({
+      text: `Racha de ${data.streak} días`,
+      color: '#ECEDEF',
+      font: '600 36px sans-serif',
+      gapBefore: extras.length > 0 ? 56 : 70,
+    });
+  const extrasH = extras.reduce((h, e) => h + e.gapBefore, 0);
+  const REGION_TOP = 470;
+  const REGION_BOTTOM = 1210;
+  const blockH = gridH + extrasH;
+  const y0 = Math.round(REGION_TOP + Math.max(0, (REGION_BOTTOM - REGION_TOP - blockH) / 2));
+
   shown.forEach(([v, l], i) => {
     const cx = x0 + (i % cols) * (bw + gap);
     const cy = y0 + Math.floor(i / cols) * (bh + gap);
     drawStat(ctx, cx, cy, bw, bh, v, l);
   });
 
-  let footY = y0 + rows * (bh + gap) + 60;
-  if (data.prCount > 0) {
-    ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '800 40px sans-serif';
-    ctx.fillText(
-      data.prCount === 1 ? 'NUEVO RÉCORD PERSONAL' : `${data.prCount} RÉCORDS PERSONALES`,
-      W / 2,
-      footY
-    );
-    footY += 70;
-  }
-  if (data.streak > 1) {
-    ctx.fillStyle = '#ECEDEF';
-    ctx.font = '600 36px sans-serif';
-    ctx.fillText(`Racha de ${data.streak} días`, W / 2, footY);
+  let footY = y0 + gridH;
+  for (const e of extras) {
+    footY += e.gapBefore;
+    ctx.fillStyle = e.color;
+    ctx.font = e.font;
+    ctx.fillText(e.text, W / 2, footY);
   }
 
   drawFooter(ctx);
