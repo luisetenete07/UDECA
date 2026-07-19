@@ -36,6 +36,7 @@ import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import {
   addFlexRestDay,
+  removeFlexRestDay,
   clearActiveSession,
   fetchSyncState,
   saveActiveSession,
@@ -193,7 +194,12 @@ export default function WorkoutScreen() {
   // Modo "Sensaciones": selección múltiple de rutinas (en orden) y descanso.
   const [flexSelection, setFlexSelection] = useState<string[]>([]);
   const [combinedDay, setCombinedDay] = useState<RoutineDay | null>(null);
-  const [flexResting, setFlexResting] = useState(false);
+  // Sensaciones: "hoy descanso" se recuerda entre sesiones (persistido en
+  // flexRestDays), así al cerrar y reabrir la app el día sigue como descanso.
+  const [flexResting, setFlexResting] = useState<boolean>(() => {
+    const today = startOfDayLocal(Date.now());
+    return (profile?.flexRestDays ?? []).some((d) => startOfDayLocal(d) === today);
+  });
   const startedAt = useRef<number | null>(null);
   // Sesión en curso traída de la cuenta (otro dispositivo). Se compara con el
   // borrador local para recuperar siempre la versión más reciente.
@@ -1106,7 +1112,11 @@ export default function WorkoutScreen() {
             <Button
               title="Mejor entrenar"
               variant="secondary"
-              onPress={() => setFlexResting(false)}
+              onPress={() => {
+                setFlexResting(false);
+                // Deshace el descanso persistido para que no reaparezca al volver.
+                if (profile) removeFlexRestDay(profile.uid, startOfDayLocal(Date.now())).catch(() => {});
+              }}
               style={{ marginTop: spacing.sm }}
             />
           </Card>

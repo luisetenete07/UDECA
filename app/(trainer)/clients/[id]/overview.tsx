@@ -8,7 +8,7 @@ import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { useAuth } from '../../../../lib/auth-context';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
-import { weeklyExerciseMatrix, type MatrixCell } from '../../../../lib/stats';
+import { startOfWeek, weeklyExerciseMatrix, type MatrixCell } from '../../../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import type { WorkoutLog } from '../../../../lib/types';
 
@@ -27,7 +27,7 @@ export default function ClientOverviewScreen() {
   const { profile } = useAuth();
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [weeks, setWeeks] = useState(8);
+  const [range, setRange] = useState<4 | 8 | 12 | 'total'>(8);
 
   const load = useCallback(async () => {
     if (!profile || !id) return;
@@ -45,7 +45,24 @@ export default function ClientOverviewScreen() {
     }, [load])
   );
 
+  // Semanas totales desde que el alumno entrena (primer registro → hoy), para
+  // la opción "Desde el inicio".
+  const totalWeeks = useMemo(() => {
+    if (logs.length === 0) return 4;
+    const earliest = Math.min(...logs.map((l) => l.date));
+    const w = Math.floor((startOfWeek(Date.now()) - startOfWeek(earliest)) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    return Math.max(1, w);
+  }, [logs]);
+
+  const weeks = range === 'total' ? totalWeeks : range;
   const matrix = useMemo(() => weeklyExerciseMatrix(logs, weeks), [logs, weeks]);
+
+  const OPTIONS: { v: 4 | 8 | 12 | 'total'; label: string }[] = [
+    { v: 4, label: '4 sem' },
+    { v: 8, label: '8 sem' },
+    { v: 12, label: '12 sem' },
+    { v: 'total', label: 'Desde el inicio' },
+  ];
 
   if (loading) return <LoadingScreen />;
 
@@ -58,14 +75,15 @@ export default function ClientOverviewScreen() {
       </Text>
 
       <View style={styles.weekToggle}>
-        {[8, 12].map((w) => (
+        {OPTIONS.map((o) => (
           <Pressable
-            key={w}
-            onPress={() => setWeeks(w)}
-            style={[styles.weekBtn, weeks === w && styles.weekBtnOn]}
+            key={String(o.v)}
+            onPress={() => setRange(o.v)}
+            style={[styles.weekBtn, range === o.v && styles.weekBtnOn]}
           >
-            <Text style={[styles.weekBtnText, weeks === w && styles.weekBtnTextOn]}>
-              {w} semanas
+            <Text style={[styles.weekBtnText, range === o.v && styles.weekBtnTextOn]}>
+              {o.label}
+              {o.v === 'total' ? ` (${totalWeeks})` : ''}
             </Text>
           </Pressable>
         ))}
@@ -183,7 +201,8 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
   weekToggle: {
     flexDirection: 'row',
-    alignSelf: 'flex-start',
+    flexWrap: 'wrap',
+    alignSelf: 'stretch',
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
     padding: 4,

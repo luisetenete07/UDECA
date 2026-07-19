@@ -1,4 +1,4 @@
-import { arrayUnion, deleteField, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { arrayRemove, arrayUnion, deleteField, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { stripUndefined } from './clean';
 import type { ActiveSession } from '../types';
@@ -78,5 +78,14 @@ export async function addFlexRestDay(uid: string, dayTs: number): Promise<void> 
     await updateDoc(doc(db, 'users', uid), { flexRestDays: arrayUnion(dayTs) });
   } catch {
     // Ignorado: la racha tolera 1 hueco igualmente en modo flexible.
+  }
+}
+
+/** Modo Sensaciones: deshace el descanso de un día (el alumno decide entrenar). */
+export async function removeFlexRestDay(uid: string, dayTs: number): Promise<void> {
+  try {
+    await updateDoc(doc(db, 'users', uid), { flexRestDays: arrayRemove(dayTs) });
+  } catch {
+    // Ignorado.
   }
 }

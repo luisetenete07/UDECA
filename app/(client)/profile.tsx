@@ -204,13 +204,10 @@ export default function ClientProfileScreen() {
     : '';
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
-  // Nombre: se puede cambiar como máximo una vez cada 30 días.
-  const NAME_COOLDOWN = 30 * 24 * 60 * 60 * 1000;
+  // Nombre: se puede cambiar como máximo una vez cada 90 días.
+  const NAME_COOLDOWN = 90 * 24 * 60 * 60 * 1000;
   const msSinceNameChange = Date.now() - (profile?.nameChangedAt ?? 0);
   const canChangeName = !profile?.nameChangedAt || msSinceNameChange >= NAME_COOLDOWN;
-  const nameDaysLeft = canChangeName
-    ? 0
-    : Math.ceil((NAME_COOLDOWN - msSinceNameChange) / (24 * 60 * 60 * 1000));
   const nameChanged = name.trim() !== '' && name.trim() !== profile?.name;
 
   return (
@@ -270,32 +267,25 @@ export default function ClientProfileScreen() {
         </View>
       </Card>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Tu nombre</Text>
-        <TextField
-          label="Nombre"
-          value={name}
-          onChangeText={setName}
-          placeholder="Tu nombre"
-          editable={canChangeName}
-          style={!canChangeName ? styles.inputLocked : undefined}
-        />
-        <View style={styles.nameHintRow}>
-          <Ionicons
-            name={canChangeName ? 'information-circle-outline' : 'lock-closed'}
-            size={14}
-            color={canChangeName ? colors.textMuted : colors.textFaint}
+      {/* Tarjeta de cambio de nombre: solo visible si NO se ha consumido el
+          límite de una vez cada 90 días. Al gastarlo, desaparece hasta que
+          expire el plazo. */}
+      {canChangeName ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Tu nombre</Text>
+          <TextField
+            label="Nombre"
+            value={name}
+            onChangeText={setName}
+            placeholder="Tu nombre"
           />
-          <Text style={styles.nameHint}>
-            {canChangeName
-              ? 'Solo puedes cambiar tu nombre una vez cada 30 días.'
-              : `Ya lo cambiaste hace poco. Podrás volver a cambiarlo en ${nameDaysLeft} día${
-                  nameDaysLeft === 1 ? '' : 's'
-                }.`}
-          </Text>
-        </View>
-        {nameSaved ? <Text style={styles.savedText}>Nombre actualizado</Text> : null}
-        {canChangeName ? (
+          <View style={styles.nameHintRow}>
+            <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.nameHint}>
+              Solo puedes cambiar tu nombre una vez cada 90 días.
+            </Text>
+          </View>
+          {nameSaved ? <Text style={styles.savedText}>Nombre actualizado</Text> : null}
           <Button
             title="Cambiar nombre"
             variant="secondary"
@@ -303,8 +293,8 @@ export default function ClientProfileScreen() {
             loading={savingName}
             disabled={!nameChanged}
           />
-        ) : null}
-      </Card>
+        </Card>
+      ) : null}
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Sobre mí</Text>
