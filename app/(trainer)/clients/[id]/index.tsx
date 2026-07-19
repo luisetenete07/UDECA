@@ -44,6 +44,7 @@ import {
   clearClientNextPayment,
   getUserProfile,
   removeClientFromTrainer,
+  registerClientPayment,
   updateClientBilling,
   updateClientPaymentStatus,
   updateClientStatus,
@@ -222,8 +223,8 @@ export default function ClientDetailScreen() {
         ? client.nextPaymentDate
         : Date.now();
     const nextPaymentDate = addMonths(base, 1);
-    setClient({ ...client, paymentStatus: 'paid', nextPaymentDate });
-    await updateClientBilling(id, { paymentStatus: 'paid', nextPaymentDate });
+    setClient({ ...client, paymentStatus: 'paid', nextPaymentDate, paymentReportedAt: undefined });
+    await registerClientPayment(id, nextPaymentDate);
     // Registro del cobro para el historial de ingresos (con la cuota actual).
     createPayment({
       trainerId: profile.uid,
@@ -431,6 +432,16 @@ export default function ClientDetailScreen() {
           <Ionicons name="card-outline" size={16} color={colors.primary} />
           <Text style={styles.sectionTitle}>Pagos</Text>
         </View>
+
+        {client.paymentReportedAt ? (
+          <View style={styles.reportedBanner}>
+            <Ionicons name="notifications" size={16} color={colors.primaryBright} />
+            <Text style={styles.reportedText}>
+              {client.name.split(' ')[0]} declaró que ya ha pagado ({fmtDate(client.paymentReportedAt)}).
+              Confírmalo con "Registrar pago".
+            </Text>
+          </View>
+        ) : null}
 
         <Text style={styles.paymentLabel}>Estado de pago</Text>
         <View style={styles.paymentRow}>
@@ -928,6 +939,18 @@ const styles = StyleSheet.create({
   statusChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   statusText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   statusTextActive: { color: colors.onPrimary },
+  reportedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+  },
+  reportedText: { ...typography.small, color: colors.primaryBright, flex: 1, lineHeight: 18 },
   paymentLabel: {
     ...typography.label,
     color: colors.textMuted,

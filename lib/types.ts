@@ -32,6 +32,11 @@ export interface UserProfile {
   level?: ExperienceLevel;
   /** Peso objetivo del alumno en kg. */
   targetWeightKg?: number;
+  /**
+   * Solo en clientes: momento en que el alumno declaró "ya he pagado" (pendiente
+   * de que el entrenador lo confirme). Se limpia al registrar el cobro.
+   */
+  paymentReportedAt?: number;
   /** Recordatorio diario de entrenamiento (hora local, 0-23). */
   reminderHour?: number;
   /** Minuto del recordatorio (0-59). */

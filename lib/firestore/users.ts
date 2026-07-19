@@ -116,6 +116,23 @@ export async function clearClientNextPayment(clientId: string) {
   await updateDoc(doc(db, 'users', clientId), { nextPaymentDate: deleteField() });
 }
 
+/**
+ * El entrenador confirma el cobro: marca "Pagado", fija la próxima renovación y
+ * limpia el aviso de "pago declarado" del alumno (todo en una escritura).
+ */
+export async function registerClientPayment(clientId: string, nextPaymentDate: number) {
+  await setDoc(
+    doc(db, 'users', clientId),
+    { paymentStatus: 'paid', nextPaymentDate, paymentReportedAt: deleteField() },
+    { merge: true }
+  );
+}
+
+/** El alumno declara que ya ha pagado (pendiente de que el coach lo confirme). */
+export async function reportClientPayment(clientId: string) {
+  await setDoc(doc(db, 'users', clientId), { paymentReportedAt: Date.now() }, { merge: true });
+}
+
 /** Normaliza un código: mayúsculas, solo A-Z y 0-9 (sin espacios ni símbolos). */
 export function normalizeInviteCode(raw: string): string {
   return raw.toUpperCase().replace(/[^A-Z0-9]/g, '');

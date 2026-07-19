@@ -29,7 +29,9 @@ import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
-import { getUserProfile } from '../../lib/firestore/users';
+import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
+import { notifyUser } from '../../lib/notifications';
+import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
@@ -59,7 +61,8 @@ interface ClientDashData {
 }
 
 export default function ClientDashboard() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
+  const [reporting, setReporting] = useState(false);
   const router = useRouter();
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
   const cacheKey = `client-dash-${profile?.uid ?? ''}`;
@@ -217,6 +220,28 @@ export default function ClientDashboard() {
   const showFirstSteps = firstSteps.some((s) => !s.done);
   const stepsDone = firstSteps.filter((s) => s.done).length;
 
+  // El alumno declara que ya ha pagado: lo registra y avisa al entrenador.
+  const handleReportPayment = async () => {
+    if (!profile) return;
+    setReporting(true);
+    try {
+      await reportClientPayment(profile.uid);
+      if (profile.trainerId) {
+        notifyUser(
+          profile.trainerId,
+          'Pago declarado',
+          `${profile.name?.split(' ')[0] ?? 'Un alumno'} dice que ya ha pagado su cuota. Revísalo y confírmalo.`
+        ).catch(() => {});
+      }
+      await refreshProfile();
+      showToast('Tu entrenador recibirá el aviso');
+    } catch {
+      showToast('No se pudo enviar el aviso');
+    } finally {
+      setReporting(false);
+    }
+  };
+
   // Aviso de pago para el alumno (dato en su propio perfil, lo fija el coach):
   // cobro próximo (ámbar) o cobro pendiente/vencido (rojo). Ayuda a que el
   // alumno renueve pronto y le facilita el trabajo al entrenador.
@@ -298,15 +323,31 @@ export default function ClientDashboard() {
               {paymentAlert.title}
             </Text>
             <Text style={styles.payText}>{paymentAlert.text}</Text>
-            {trainerPayLink ? (
-              <Pressable
-                onPress={() => Linking.openURL(trainerPayLink).catch(() => {})}
-                style={styles.payBtn}
-              >
-                <Ionicons name="card" size={15} color={colors.onPrimary} />
-                <Text style={styles.payBtnText}>Pagar ahora</Text>
-              </Pressable>
-            ) : null}
+            {profile?.paymentReportedAt ? (
+              <View style={styles.payReported}>
+                <Ionicons name="checkmark-circle" size={15} color={colors.primaryBright} />
+                <Text style={styles.payReportedText}>Pago informado · pendiente de confirmar</Text>
+              </View>
+            ) : (
+              <View style={styles.payActions}>
+                {trainerPayLink ? (
+                  <Pressable
+                    onPress={() => Linking.openURL(trainerPayLink).catch(() => {})}
+                    style={styles.payBtn}
+                  >
+                    <Ionicons name="card" size={15} color={colors.onPrimary} />
+                    <Text style={styles.payBtnText}>Pagar ahora</Text>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  onPress={handleReportPayment}
+                  disabled={reporting}
+                  style={styles.payReportBtn}
+                >
+                  <Text style={styles.payReportBtnText}>Ya he pagado</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         </View>
       ) : null}
@@ -604,6 +645,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   payBtnText: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.heading },
+  payActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  payReportBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  payReportBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  payReported: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
+  payReportedText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },
   quoteWrap: {
     flexDirection: 'row',
