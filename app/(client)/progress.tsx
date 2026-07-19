@@ -1,6 +1,17 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -72,6 +83,11 @@ export default function ProgressScreen() {
   const [levelTests, setLevelTests] = useState<import('../../lib/types').LevelTest[]>([]);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Borrado de entrenamiento con confirmación por palabra (evita borrados sin querer).
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [confirmWord, setConfirmWord] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const [weightInput, setWeightInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
@@ -213,15 +229,26 @@ export default function ProgressScreen() {
     }
   };
 
-  const handleDeleteWorkout = async (id: string) => {
-    if (!(await confirmDelete('¿Borrar este entrenamiento del registro?'))) return;
-    setWorkoutLogs((prev) => prev.filter((l) => l.id !== id));
+  // Abre el diálogo que pide escribir CONFIRMAR para borrar el entrenamiento.
+  const requestDeleteWorkout = (id: string) => {
+    setConfirmWord('');
+    setDeleteId(id);
+  };
+
+  const doDeleteWorkout = async () => {
+    if (!deleteId || confirmWord.trim().toUpperCase() !== 'CONFIRMAR') return;
+    const id = deleteId;
+    setDeleting(true);
     try {
+      setWorkoutLogs((prev) => prev.filter((l) => l.id !== id));
       await deleteWorkoutLog(id);
       showToast('Entrenamiento borrado');
+      setDeleteId(null);
     } catch (e) {
       await load(); // si falla, recargamos para no perder el registro de la vista
       showToast(e instanceof Error ? e.message : 'No se pudo borrar');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -409,7 +436,7 @@ export default function ProgressScreen() {
                           </Pressable>
                         ) : null}
                         <Pressable
-                          onPress={() => handleDeleteWorkout(s.id)}
+                          onPress={() => requestDeleteWorkout(s.id)}
                           hitSlop={8}
                           style={styles.sessionDelete}
                         >
@@ -665,6 +692,50 @@ export default function ProgressScreen() {
           )}
         </>
       ) : null}
+
+      {/* Borrar entrenamiento: hay que escribir CONFIRMAR (evita borrados por error) */}
+      <Modal
+        visible={!!deleteId}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteId(null)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmIcon}>
+              <Ionicons name="trash-outline" size={24} color={colors.danger} />
+            </View>
+            <Text style={styles.confirmTitle}>Borrar entrenamiento</Text>
+            <Text style={styles.confirmText}>
+              Esta acción no se puede deshacer. Para confirmar, escribe{' '}
+              <Text style={styles.confirmWordHint}>CONFIRMAR</Text> abajo.
+            </Text>
+            <TextInput
+              value={confirmWord}
+              onChangeText={setConfirmWord}
+              placeholder="CONFIRMAR"
+              placeholderTextColor={colors.textFaint}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={styles.confirmInput}
+            />
+            <Button
+              title="Borrar entrenamiento"
+              variant="danger"
+              onPress={doDeleteWorkout}
+              loading={deleting}
+              disabled={confirmWord.trim().toUpperCase() !== 'CONFIRMAR'}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setDeleteId(null)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -885,6 +956,56 @@ const styles = StyleSheet.create({
   },
   sessionShare: { padding: spacing.xs },
   sessionDelete: { padding: spacing.xs },
+  confirmBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: spacing.lg,
+  },
+  confirmCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 420,
+    alignItems: 'center',
+  },
+  confirmIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.dangerMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  confirmTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
+  confirmText: {
+    ...typography.small,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginTop: spacing.xs,
+  },
+  confirmWordHint: { color: colors.danger, fontFamily: fonts.heading },
+  confirmInput: {
+    alignSelf: 'stretch',
+    marginTop: spacing.md,
+    minHeight: 48,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    color: colors.text,
+    fontSize: 15,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
   sessionDateBox: {
     width: 44,
     alignItems: 'center',
