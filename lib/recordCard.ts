@@ -38,18 +38,18 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
   const logo = await loadLogo();
 
   // Fondo oscuro de marca.
-  ctx.fillStyle = '#0B0C10';
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, W, H);
 
   // Halo dorado superior, muy sutil.
   const glow = ctx.createRadialGradient(W / 2, 220, 0, W / 2, 220, 760);
-  glow.addColorStop(0, 'rgba(201, 144, 43, 0.22)');
-  glow.addColorStop(1, 'rgba(201, 144, 43, 0)');
+  glow.addColorStop(0, 'rgba(162, 150, 139, 0.20)');
+  glow.addColorStop(1, 'rgba(162, 150, 139, 0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
   // Marco redondeado dorado.
-  ctx.strokeStyle = 'rgba(201, 144, 43, 0.55)';
+  ctx.strokeStyle = 'rgba(162, 150, 139, 0.45)';
   ctx.lineWidth = 5;
   roundRect(ctx, 40, 40, W - 80, H - 80, 44);
   ctx.stroke();
@@ -61,29 +61,29 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
     const s = 104;
     ctx.drawImage(logo, W / 2 - s / 2, 44, s, s);
   }
-  // Marca.
-  ctx.fillStyle = '#C9902B';
-  ctx.font = '800 52px sans-serif';
-  ctx.fillText('U D E C A', W / 2, 196);
-  ctx.fillStyle = '#9AA0A8';
+  // Marca: logotipo en serif (esencia Cinzel de la marca).
+  ctx.fillStyle = '#C9BDB0';
+  ctx.font = '600 54px Georgia, "Times New Roman", serif';
+  ctx.fillText('U D E C A', W / 2, 198);
+  ctx.fillStyle = '#ADADAD';
   ctx.font = '600 26px sans-serif';
   ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 240);
-  ctx.fillStyle = '#C9902B';
+  ctx.fillStyle = '#A2968B';
   ctx.fillRect(W / 2 - 44, 272, 88, 4);
 
   // Insignia PR (anilla dorada con monograma) y titular. Dibujada a mano en
   // vez de un emoji: se ve idéntica y profesional en cualquier dispositivo.
-  ctx.strokeStyle = '#C9902B';
+  ctx.strokeStyle = '#A2968B';
   ctx.lineWidth = 7;
   ctx.beginPath();
   ctx.arc(W / 2, 420, 78, 0, Math.PI * 2);
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(W / 2, 420, 92, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(201, 144, 43, 0.35)';
+  ctx.strokeStyle = 'rgba(162, 150, 139, 0.35)';
   ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.fillStyle = '#E3B15C';
+  ctx.fillStyle = '#C9BDB0';
   ctx.font = '900 64px sans-serif';
   ctx.fillText('PR', W / 2, 443);
   ctx.fillStyle = '#FFFFFF';
@@ -95,7 +95,7 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
   const compact = prs.length > 1;
   let y = prs.length === 1 ? 790 : 730;
   for (const pr of prs) {
-    ctx.fillStyle = '#E3B15C';
+    ctx.fillStyle = '#C9BDB0';
     ctx.font = `700 ${compact ? 40 : 46}px sans-serif`;
     ctx.fillText(fit(ctx, pr.exerciseName.toUpperCase(), W - 200), W / 2, y);
     ctx.fillStyle = '#FFFFFF';
@@ -112,7 +112,7 @@ export async function buildRecordImage(data: RecordCardData): Promise<Blob | nul
   }
 
   // Pie con la web.
-  ctx.fillStyle = '#6B7078';
+  ctx.fillStyle = '#666666';
   ctx.font = '600 30px sans-serif';
   ctx.fillText('w w w . u d e c a . a p p', W / 2, 1265);
 

@@ -593,6 +593,19 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Progreso semanal</Text>
+        <Text style={styles.mutedText}>
+          Vista general estilo hoja de cálculo: la mejor serie de cada ejercicio semana a semana,
+          para ver de un vistazo la evolución y reestructurar la rutina.
+        </Text>
+        <Button
+          title="Ver progreso semanal"
+          onPress={() => router.push(`/(trainer)/clients/${id}/overview`)}
+          style={{ marginTop: spacing.md }}
+        />
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Planificación por ciclos</Text>
         <Text style={styles.mutedText}>
           Opcional. Agrupa el trabajo en macro, meso o microciclos y ve la evolución del alumno.

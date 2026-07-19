@@ -733,6 +733,102 @@ export function listExercisesInLogs(logs: WorkoutLog[]): { exerciseId: string; n
   return Array.from(map, ([exerciseId, name]) => ({ exerciseId, name }));
 }
 
+/** Una celda de la matriz semanal: la mejor serie de ese ejercicio esa semana. */
+export interface MatrixCell {
+  /** Texto compacto para la celda: "12", "8×20", "45s". */
+  label: string;
+  /** Puntuación numérica para comparar semanas (tendencia). */
+  score: number;
+}
+export interface MatrixRow {
+  exerciseId: string;
+  name: string;
+  measure: 'reps' | 'seconds';
+  /** Nº de semanas con datos (para ordenar por relevancia). */
+  weeksActive: number;
+  /** Una celda por semana (de más antigua a más reciente); null = sin datos. */
+  cells: (MatrixCell | null)[];
+}
+export interface WeeklyMatrix {
+  /** Lunes de cada semana, de más antigua a más reciente. */
+  weekStarts: number[];
+  rows: MatrixRow[];
+}
+
+/**
+ * Matriz de progreso semanal por ejercicio (estilo hoja de cálculo). Por cada
+ * ejercicio y semana, la MEJOR serie: reps, reps×lastre o segundos. Pensada para
+ * que el coach vea de un vistazo la evolución y reestructure la rutina.
+ */
+export function weeklyExerciseMatrix(
+  logs: WorkoutLog[],
+  weeks = 8,
+  measureByExercise?: Record<string, string>
+): WeeklyMatrix {
+  const currentWeek = startOfWeek(Date.now());
+  const weekStarts = Array.from({ length: weeks }, (_, i) => addDays(currentWeek, -7 * (weeks - 1 - i)));
+  const colOf = new Map(weekStarts.map((w, i) => [w, i]));
+
+  // exerciseId -> { name, measure, cells }
+  const rows = new Map<string, MatrixRow>();
+
+  for (const log of logs) {
+    const col = colOf.get(startOfWeek(log.date));
+    if (col === undefined) continue;
+    for (const ex of log.exercises) {
+      const measure: 'reps' | 'seconds' =
+        ex.measure === 'seconds' || measureByExercise?.[ex.exerciseId] === 'seconds'
+          ? 'seconds'
+          : 'reps';
+      // Mejor serie de ESTA sesión para este ejercicio.
+      let bestReps = 0;
+      let bestWeight = 0;
+      for (const set of ex.sets) {
+        if (!set.completed) continue;
+        const r = parseInt(set.reps, 10);
+        if (!Number.isNaN(r)) bestReps = Math.max(bestReps, r);
+        const w = toNum(set.weight);
+        if (set.weight && !Number.isNaN(w)) bestWeight = Math.max(bestWeight, w);
+      }
+      if (bestReps === 0 && bestWeight === 0) continue;
+
+      let label: string;
+      let score: number;
+      if (measure === 'seconds') {
+        label = `${bestReps}s`;
+        score = bestReps;
+      } else if (bestWeight > 0) {
+        label = `${bestReps}×${bestWeight}`;
+        score = bestWeight * 1000 + bestReps; // el lastre manda; reps desempata
+      } else {
+        label = `${bestReps}`;
+        score = bestReps;
+      }
+
+      let row = rows.get(ex.exerciseId);
+      if (!row) {
+        row = {
+          exerciseId: ex.exerciseId,
+          name: ex.name,
+          measure,
+          weeksActive: 0,
+          cells: Array(weeks).fill(null),
+        };
+        rows.set(ex.exerciseId, row);
+      }
+      const prev = row.cells[col];
+      // Nos quedamos con la mejor serie de la semana (mayor puntuación).
+      if (!prev || score > prev.score) row.cells[col] = { label, score };
+    }
+  }
+
+  const result = [...rows.values()];
+  for (const r of result) r.weeksActive = r.cells.filter(Boolean).length;
+  // Orden: primero los ejercicios con más semanas de datos, luego alfabético.
+  result.sort((a, b) => b.weeksActive - a.weeksActive || a.name.localeCompare(b.name));
+  return { weekStarts, rows: result };
+}
+
 export interface ExerciseProgressPoint {
   date: number;
   reps: number;

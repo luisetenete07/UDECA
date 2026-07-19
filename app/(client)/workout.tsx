@@ -891,11 +891,9 @@ export default function WorkoutScreen() {
           <View style={styles.tileHalf}>
             <StatTile icon="layers" value={`${summary.sets}`} label="Series" />
           </View>
-          {summary.reps > 0 || summary.seconds === 0 ? (
-            <View style={styles.tileHalf}>
-              <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
-            </View>
-          ) : null}
+          <View style={styles.tileHalf}>
+            <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
+          </View>
           {summary.seconds > 0 ? (
             <View style={styles.tileHalf}>
               <StatTile icon="hourglass" value={`${summary.seconds}s`} label="Isométrico" />
@@ -1305,11 +1303,9 @@ export default function WorkoutScreen() {
                   <View style={styles.tileHalf}>
                     <StatTile icon="layers" value={`${t.sets}`} label="Series" />
                   </View>
-                  {t.reps > 0 || t.seconds === 0 ? (
-                    <View style={styles.tileHalf}>
-                      <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
-                    </View>
-                  ) : null}
+                  <View style={styles.tileHalf}>
+                    <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
+                  </View>
                   {t.seconds > 0 ? (
                     <View style={styles.tileHalf}>
                       <StatTile icon="hourglass" value={`${t.seconds}s`} label="Isométrico" />

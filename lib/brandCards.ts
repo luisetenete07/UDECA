@@ -10,11 +10,18 @@ import { UDECA_LOGO_DATA_URI } from './udecaLogo';
 const W = 1080;
 const H = 1350;
 
-const GOLD = '#C9902B';
-const GOLD_SOFT = '#E3B15C';
+// Paleta de marca UDECA (misma esencia que la app: negro absoluto + oro taupe).
+const BG = '#000000';
+const GOLD = '#A2968B'; // oro apagado de marca (colors.primary)
+const GOLD_SOFT = '#C9BDB0'; // oro claro (colors.primaryBright)
 const TEXT = '#FFFFFF';
-const MUTED = '#9AA0A8';
-const FAINT = '#6B7078';
+const MUTED = '#ADADAD';
+const FAINT = '#666666';
+const GLOW = 'rgba(162, 150, 139, 0.20)';
+const HAIRLINE = 'rgba(162, 150, 139, 0.45)';
+const STAT_BORDER = 'rgba(162, 150, 139, 0.28)';
+// Serif elegante para el logotipo/títulos (evoca la Cinzel de la marca).
+const DISPLAY = 'Georgia, "Times New Roman", serif';
 
 function newCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null {
   if (typeof document === 'undefined') return null;
@@ -41,15 +48,15 @@ function loadLogo(): Promise<HTMLImageElement | null> {
 }
 
 function drawFrame(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null) {
-  ctx.fillStyle = '#0B0C10';
+  ctx.fillStyle = BG;
   ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W / 2, 220, 0, W / 2, 220, 760);
-  glow.addColorStop(0, 'rgba(201, 144, 43, 0.22)');
-  glow.addColorStop(1, 'rgba(201, 144, 43, 0)');
+  const glow = ctx.createRadialGradient(W / 2, 220, 0, W / 2, 220, 780);
+  glow.addColorStop(0, GLOW);
+  glow.addColorStop(1, 'rgba(162, 150, 139, 0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = 'rgba(201, 144, 43, 0.55)';
-  ctx.lineWidth = 5;
+  ctx.strokeStyle = HAIRLINE;
+  ctx.lineWidth = 4;
   roundRect(ctx, 40, 40, W - 80, H - 80, 44);
   ctx.stroke();
   ctx.textAlign = 'center';
@@ -58,15 +65,15 @@ function drawFrame(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null)
     const s = 104;
     ctx.drawImage(logo, W / 2 - s / 2, 44, s, s);
   }
-  // Marca.
-  ctx.fillStyle = GOLD;
-  ctx.font = '800 52px sans-serif';
-  ctx.fillText('U D E C A', W / 2, 196);
+  // Marca: logotipo en serif (esencia Cinzel) con amplio interletrado.
+  ctx.fillStyle = GOLD_SOFT;
+  ctx.font = `600 54px ${DISPLAY}`;
+  ctx.fillText('U D E C A', W / 2, 198);
   ctx.fillStyle = MUTED;
-  ctx.font = '600 24px sans-serif';
+  ctx.font = '600 23px sans-serif';
   ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 238);
   ctx.fillStyle = GOLD;
-  ctx.fillRect(W / 2 - 44, 262, 88, 4);
+  ctx.fillRect(W / 2 - 40, 262, 80, 3);
 }
 
 function drawFooter(ctx: CanvasRenderingContext2D) {
@@ -86,19 +93,19 @@ function drawStat(
   value: string,
   label: string
 ) {
-  ctx.fillStyle = 'rgba(255,255,255,0.045)';
+  ctx.fillStyle = 'rgba(162, 150, 139, 0.07)';
   roundRect(ctx, x, y, w, h, 26);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(201, 144, 43, 0.3)';
+  ctx.strokeStyle = STAT_BORDER;
   ctx.lineWidth = 2;
   roundRect(ctx, x, y, w, h, 26);
   ctx.stroke();
   ctx.textAlign = 'center';
   ctx.fillStyle = TEXT;
-  ctx.font = '900 64px sans-serif';
+  ctx.font = '800 64px sans-serif';
   ctx.fillText(fit(ctx, value, w - 50), x + w / 2, y + h / 2 + 4);
-  ctx.fillStyle = MUTED;
-  ctx.font = '600 26px sans-serif';
+  ctx.fillStyle = GOLD_SOFT;
+  ctx.font = '600 25px sans-serif';
   ctx.fillText(label.toUpperCase(), x + w / 2, y + h - 32);
 }
 
@@ -157,18 +164,18 @@ export async function shareSessionImage(
   drawFrame(ctx, await loadLogo());
 
   ctx.fillStyle = TEXT;
-  ctx.font = '900 58px sans-serif';
-  ctx.fillText('SESIÓN COMPLETADA', W / 2, 360);
+  ctx.font = `600 62px ${DISPLAY}`;
+  ctx.fillText('SESIÓN COMPLETADA', W / 2, 362);
   ctx.fillStyle = GOLD_SOFT;
   ctx.font = '700 38px sans-serif';
   ctx.fillText(fit(ctx, `${data.routineName}${data.dayName ? ` · ${data.dayName}` : ''}`, W - 200), W / 2, 424);
 
-  // Rejilla de estadísticas 2×2. Las repeticiones se muestran siempre (salvo
-  // sesión puramente isométrica) para completar el cuadro de 4.
+  // Rejilla de estadísticas 2×2. Las repeticiones se muestran SIEMPRE (aunque
+  // sean 0), junto a duración, series e isométrico/volumen.
   const stats: [string, string][] = [];
   if (data.durationMin > 0) stats.push([`${data.durationMin} min`, 'Duración']);
   stats.push([String(data.sets), 'Series']);
-  if (data.reps > 0 || data.seconds === 0) stats.push([String(data.reps), 'Repeticiones']);
+  stats.push([String(data.reps), 'Repeticiones']);
   if (data.seconds > 0) stats.push([`${data.seconds}s`, 'Isométrico']);
   if (data.volumeKg > 0) stats.push([`${data.volumeKg.toLocaleString('es-ES')} kg`, 'Volumen']);
   const shown = stats.slice(0, 4);
@@ -230,7 +237,7 @@ export async function shareReportImage(
   drawFrame(ctx, await loadLogo());
 
   ctx.fillStyle = TEXT;
-  ctx.font = '900 56px sans-serif';
+  ctx.font = `600 56px ${DISPLAY}`;
   ctx.fillText('INFORME DE PROGRESO', W / 2, 350);
   ctx.fillStyle = GOLD_SOFT;
   ctx.font = '700 40px sans-serif';
