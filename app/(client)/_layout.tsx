@@ -72,17 +72,18 @@ export default function ClientLayout() {
     return (
       <Onboarding
         name={profile.name}
-        onDone={(targets, goal) => {
+        onDone={(targets, goal, mainGoal) => {
           doneRef.current = true;
           setOnboardingSeen(true);
           AsyncStorage.setItem(onboardingKey(profile.uid), '1').catch(() => {});
           markOnboardingComplete(profile.uid).catch(() => {});
-          // Si el alumno calculó sus macros, los dejamos guardados en su perfil
-          // para que Nutrición los muestre aunque su coach no le asigne plan.
-          if (targets) {
-            updateUserProfile(profile.uid, {
-              nutritionTargets: { ...targets, goal, updatedAt: Date.now() },
-            })
+          // Guardamos lo que el alumno haya definido: sus macros (si los calculó)
+          // y su objetivo principal (editable luego desde el perfil).
+          const updates: Parameters<typeof updateUserProfile>[1] = {};
+          if (targets) updates.nutritionTargets = { ...targets, goal, updatedAt: Date.now() };
+          if (mainGoal) updates.goal = mainGoal;
+          if (Object.keys(updates).length > 0) {
+            updateUserProfile(profile.uid, updates)
               .then(() => refreshProfile())
               .catch(() => {});
           }

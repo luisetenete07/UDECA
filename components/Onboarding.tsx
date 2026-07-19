@@ -5,8 +5,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
 import { FadeIn } from './FadeIn';
 import { MacroCalculator } from './MacroCalculator';
+import { TextField } from './TextField';
 import type { Goal, MacroResult } from '../lib/nutritionCalc';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
+
+/** Sugerencias rápidas de objetivo (calistenia) para el paso del onboarding. */
+const GOAL_SUGGESTIONS = [
+  'Mi primera dominada',
+  'Ganar músculo',
+  'Perder grasa',
+  'Front lever',
+  'Handstand',
+  'Más resistencia',
+];
 
 /**
  * Bienvenida del alumno (se muestra UNA vez por dispositivo): 4 pasos breves
@@ -45,8 +56,11 @@ export function Onboarding({
   onDone,
 }: {
   name?: string;
-  /** Se llama al terminar; con los macros calculados si el alumno los rellenó. */
-  onDone: (targets?: MacroResult, goal?: Goal) => void;
+  /**
+   * Se llama al terminar; con los macros calculados (si los rellenó), el objetivo
+   * de nutrición y el objetivo principal en texto libre (si lo definió).
+   */
+  onDone: (targets?: MacroResult, goal?: Goal, mainGoal?: string) => void;
 }) {
   const slides = useMemo<Slide[]>(() => {
     const base: Slide[] = [
@@ -93,11 +107,14 @@ export function Onboarding({
     return base;
   }, [name]);
 
-  // El último paso es la calculadora de macros (deja el plan listo desde ya).
-  const totalSteps = slides.length + 1;
+  // Pasos finales: definir el objetivo principal y calcular los macros.
+  const totalSteps = slides.length + 2;
   const [step, setStep] = useState(0);
-  const isCalculator = step === slides.length;
+  const [mainGoal, setMainGoal] = useState('');
+  const isGoalStep = step === slides.length;
+  const isCalculator = step === slides.length + 1;
   const isLastSlide = step === slides.length - 1;
+  const goalArg = mainGoal.trim() || undefined;
 
   const Dots = (
     <View style={styles.dots}>
@@ -123,8 +140,49 @@ export function Onboarding({
           <View style={{ alignSelf: 'stretch' }}>
             <MacroCalculator
               submitLabel="Guardar y empezar"
-              onDone={(result, goal) => onDone(result, goal)}
+              onDone={(result, goal) => onDone(result, goal, goalArg)}
             />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (isGoalStep) {
+    return (
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <ScrollView contentContainerStyle={styles.calcContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.iconWrap}>
+            <Ionicons name="flag" size={30} color={colors.primary} />
+          </View>
+          <Text style={styles.title}>¿Cuál es tu objetivo?</Text>
+          <Text style={styles.line}>
+            Defínelo para que tu entrenador lo tenga presente. Podrás cambiarlo cuando quieras
+            desde tu perfil.
+          </Text>
+          {Dots}
+          <View style={{ alignSelf: 'stretch', maxWidth: 420, width: '100%' }}>
+            <TextField
+              label="Mi objetivo"
+              value={mainGoal}
+              onChangeText={setMainGoal}
+              placeholder="Ej. Conseguir mi primera dominada"
+            />
+            <View style={styles.goalChips}>
+              {GOAL_SUGGESTIONS.map((g) => (
+                <Pressable key={g} onPress={() => setMainGoal(g)} style={styles.goalChip}>
+                  <Text style={styles.goalChipText}>{g}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Button
+              title="Siguiente"
+              onPress={() => setStep((s) => s + 1)}
+              style={{ marginTop: spacing.md }}
+            />
+            <Pressable onPress={() => setStep((s) => s + 1)} hitSlop={8} style={styles.skip}>
+              <Text style={styles.skipText}>Definirlo más tarde</Text>
+            </Pressable>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -152,11 +210,11 @@ export function Onboarding({
         {Dots}
 
         <Button
-          title={isLastSlide ? 'Calcular mis macros' : 'Siguiente'}
+          title={isLastSlide ? 'Definir mi objetivo' : 'Siguiente'}
           onPress={() => setStep((s) => s + 1)}
           style={{ alignSelf: 'stretch' }}
         />
-        <Pressable onPress={() => onDone()} hitSlop={8} style={styles.skip}>
+        <Pressable onPress={() => onDone(undefined, undefined, goalArg)} hitSlop={8} style={styles.skip}>
           <Text style={styles.skipText}>Saltar</Text>
         </Pressable>
       </View>
@@ -204,6 +262,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     maxWidth: 340,
   },
+  goalChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  goalChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  goalChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   dots: { flexDirection: 'row', gap: 8, marginVertical: spacing.lg },
   dot: {
     width: 8,
