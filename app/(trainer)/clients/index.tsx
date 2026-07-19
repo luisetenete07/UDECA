@@ -36,10 +36,21 @@ const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Última actividad como texto + tono: hoy/ayer verde, <7d ámbar, resto rojo. */
+/** Medianoche local del timestamp (para contar por días de calendario). */
+function startOfDay(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/**
+ * Última actividad como texto + tono: hoy/ayer verde, <7d ámbar, resto rojo.
+ * Se cuenta por DÍAS DE CALENDARIO (no por periodos de 24 h), así "hoy" y
+ * "ayer" cuadran con el día real aunque hayan pasado más o menos de 24 horas.
+ */
 function activityInfo(last?: number): { label: string; color: string } {
   if (!last) return { label: 'Sin entrenos aún', color: colors.textFaint };
-  const days = Math.floor((Date.now() - last) / DAY_MS);
+  const days = Math.round((startOfDay(Date.now()) - startOfDay(last)) / DAY_MS);
   if (days <= 0) return { label: 'Entrenó hoy', color: '#2E7D5B' };
   if (days === 1) return { label: 'Entrenó ayer', color: '#2E7D5B' };
   if (days < 7) return { label: `Entrenó hace ${days} días`, color: '#C9902B' };

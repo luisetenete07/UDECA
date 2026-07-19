@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   UIManager,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,6 +104,9 @@ export default function CoachCalendarScreen() {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   });
+  const [selectedDay, setSelectedDay] = useState<number>(() => startOfDay(Date.now()));
+  const { width } = useWindowDimensions();
+  const isWide = width >= 820;
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -284,10 +288,25 @@ export default function CoachCalendarScreen() {
   const shiftMonth = (delta: number) =>
     setMonthAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + delta, 1).getTime());
 
+  // Celdas de la rejilla mensual (lunes→domingo), con huecos de relleno.
+  const firstDow = (new Date(anchor.getFullYear(), anchor.getMonth(), 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0).getDate();
+  const gridCells: (number | null)[] = [];
+  for (let i = 0; i < firstDow; i++) gridCells.push(null);
+  for (let d = 1; d <= daysInMonth; d++)
+    gridCells.push(new Date(anchor.getFullYear(), anchor.getMonth(), d).getTime());
+  while (gridCells.length % 7 !== 0) gridCells.push(null);
+  const selectedEvents = eventsByDay.get(selectedDay) ?? [];
+  const goToday = () => {
+    const now = new Date();
+    setMonthAnchor(new Date(now.getFullYear(), now.getMonth(), 1).getTime());
+    setSelectedDay(startOfDay(Date.now()));
+  };
+
   const allDone = scope !== 'goal' && header.total > 0 && active.length === 0;
 
   return (
-    <ScreenContainer>
+    <ScreenContainer maxWidth={isWide ? 760 : undefined}>
       {/* Conmutador principal */}
       <View style={styles.topSeg}>
         {(['calendar', 'tasks'] as const).map((v) => (
@@ -328,50 +347,88 @@ export default function CoachCalendarScreen() {
             </Pressable>
           </View>
 
-          {days.length === 0 ? (
-            <View style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="calendar-clear-outline" size={26} color={colors.primary} />
-              </View>
-              <Text style={styles.emptyTitle}>Mes despejado</Text>
-              <Text style={styles.emptySub}>
-                Los cobros, ciclos y tareas de tus alumnos aparecerán aquí en su día.
+          <Pressable onPress={goToday} style={styles.todayBtn} hitSlop={6}>
+            <Ionicons name="today-outline" size={14} color={colors.primary} />
+            <Text style={styles.todayBtnText}>Hoy</Text>
+          </Pressable>
+
+          {/* Cabecera L-D */}
+          <View style={styles.weekHead}>
+            {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((w) => (
+              <Text key={w} style={styles.weekHeadCell}>
+                {w}
               </Text>
-            </View>
-          ) : (
-            days.map((day) => {
-              const d = new Date(day);
-              const isToday = day === today;
-              const isPast = day < today;
+            ))}
+          </View>
+
+          {/* Rejilla del mes con puntos por tipo de evento */}
+          <View style={styles.grid}>
+            {gridCells.map((ts, i) => {
+              if (ts == null) return <View key={`b${i}`} style={styles.cell} />;
+              const evs = eventsByDay.get(ts) ?? [];
+              const isToday = ts === today;
+              const isSel = ts === selectedDay;
+              const types = [...new Set(evs.map((e) => e.type))].slice(0, 4);
               return (
-                <View key={day} style={styles.dayGroup}>
-                  <View style={styles.dayCol}>
-                    <Text style={[styles.dayNum, isToday && styles.dayNumToday]}>{d.getDate()}</Text>
-                    <Text style={[styles.dayWk, isToday && styles.dayWkToday]}>
-                      {d.toLocaleDateString('es-ES', { weekday: 'short' })}
+                <Pressable key={ts} style={styles.cell} onPress={() => setSelectedDay(ts)}>
+                  <View
+                    style={[
+                      styles.cellInner,
+                      isToday && !isSel && styles.cellToday,
+                      isSel && styles.cellSel,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.cellNum,
+                        isToday && styles.cellNumToday,
+                        isSel && styles.cellNumSel,
+                      ]}
+                    >
+                      {new Date(ts).getDate()}
                     </Text>
+                    <View style={styles.dots}>
+                      {types.map((t) => (
+                        <View key={t} style={[styles.dot, { backgroundColor: TONE[t] }]} />
+                      ))}
+                    </View>
                   </View>
-                  <View style={styles.dayEvents}>
-                    {isToday ? <Text style={styles.todayTag}>HOY</Text> : null}
-                    {(eventsByDay.get(day) ?? []).map((e, i) => (
-                      <Pressable key={i} onPress={e.onPress} style={[styles.event, isPast && styles.eventPast]}>
-                        <View style={[styles.eventBar, { backgroundColor: TONE[e.type] }]} />
-                        <View style={[styles.eventIcon, { borderColor: TONE[e.type] }]}>
-                          <Ionicons name={TYPE_ICON[e.type]} size={15} color={TONE[e.type]} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.eventTitle} numberOfLines={1}>
-                            {e.title}
-                          </Text>
-                          {e.subtitle ? <Text style={styles.eventSub}>{e.subtitle}</Text> : null}
-                        </View>
-                        {e.onPress ? <Ionicons name="chevron-forward" size={16} color={colors.textFaint} /> : null}
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
+                </Pressable>
               );
-            })
+            })}
+          </View>
+
+          {/* Eventos del día seleccionado */}
+          <View style={styles.selectedHead}>
+            <Text style={styles.selectedDate}>
+              {new Date(selectedDay).toLocaleDateString('es-ES', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}
+            </Text>
+            {selectedDay === today ? <Text style={styles.todayTag}>HOY</Text> : null}
+          </View>
+          {selectedEvents.length === 0 ? (
+            <Text style={styles.noEvents}>Sin eventos este día.</Text>
+          ) : (
+            selectedEvents.map((e, i) => (
+              <Pressable key={i} onPress={e.onPress} style={styles.event}>
+                <View style={[styles.eventBar, { backgroundColor: TONE[e.type] }]} />
+                <View style={[styles.eventIcon, { borderColor: TONE[e.type] }]}>
+                  <Ionicons name={TYPE_ICON[e.type]} size={15} color={TONE[e.type]} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.eventTitle} numberOfLines={1}>
+                    {e.title}
+                  </Text>
+                  {e.subtitle ? <Text style={styles.eventSub}>{e.subtitle}</Text> : null}
+                </View>
+                {e.onPress ? (
+                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                ) : null}
+              </Pressable>
+            ))
           )}
 
           <View style={styles.legend}>
@@ -768,6 +825,56 @@ const styles = StyleSheet.create({
   monthCenter: { alignItems: 'center' },
   monthLabel: { ...typography.h3, color: colors.text, textTransform: 'capitalize' },
   monthCount: { ...typography.small, color: colors.textFaint, marginTop: 1 },
+  todayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    marginBottom: spacing.md,
+  },
+  todayBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  weekHead: { flexDirection: 'row', marginBottom: 6 },
+  weekHeadCell: {
+    flex: 1,
+    textAlign: 'center',
+    ...typography.small,
+    color: colors.textFaint,
+    fontSize: 11,
+    fontFamily: fonts.semiBold,
+  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 3 },
+  cellInner: {
+    flex: 1,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    paddingTop: 6,
+  },
+  cellToday: { borderColor: colors.border },
+  cellSel: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  cellNum: { ...typography.small, color: colors.text, fontFamily: fonts.medium, fontSize: 13 },
+  cellNumToday: { color: colors.primaryBright, fontFamily: fonts.heading },
+  cellNumSel: { color: colors.primaryBright },
+  dots: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 3, marginTop: 4 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  selectedHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  selectedDate: { ...typography.h3, color: colors.text, textTransform: 'capitalize', flexShrink: 1 },
+  noEvents: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
   dayGroup: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   dayCol: { width: 40, alignItems: 'center', paddingTop: 2 },
   dayNum: { ...typography.h2, color: colors.text, fontFamily: fonts.heading, fontSize: 22 },

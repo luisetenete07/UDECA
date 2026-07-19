@@ -62,6 +62,7 @@ export default function TemplateExercisesScreen() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [seeding, setSeeding] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -136,7 +137,6 @@ export default function TemplateExercisesScreen() {
 
   // Carga el pack base de calistenia en la plantilla (con músculos por defecto)
   // para que el CEO tenga un punto de partida que editar. Salta los repetidos.
-  const [seeding, setSeeding] = useState(false);
   const seedBasePack = async () => {
     const existing = new Set(items.map((i) => i.name.trim().toLowerCase()));
     const missing = STARTER_LIBRARY.filter((s) => !existing.has(s.name.trim().toLowerCase()));
