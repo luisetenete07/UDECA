@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { playBeep, primeAudio } from '../lib/sound';
 import { cancelRestEndNotification, scheduleRestEndNotification } from '../lib/notifications';
+import { showToast } from './Toast';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
 
 interface RestTimerProps {
@@ -42,6 +43,9 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
     } else {
       playBeep();
     }
+    // Aviso rápido en pantalla: se cierra solo en ~2 s (se desvanece al seguir
+    // con la siguiente serie sin estorbar).
+    showToast('Descanso terminado · a por la siguiente serie');
     setTimeout(() => doneRef.current(), 600);
   };
 

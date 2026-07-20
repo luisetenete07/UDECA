@@ -1175,9 +1175,7 @@ export default function WorkoutScreen() {
               {last7FlexDays.map((h) => (
                 <View key={h.ts} style={styles.flexHistoryRow}>
                   <Text style={styles.flexHistoryDate}>{h.label}</Text>
-                  <Text style={styles.flexHistoryWhat} numberOfLines={1}>
-                    {h.what}
-                  </Text>
+                  <Text style={styles.flexHistoryWhat}>{h.what}</Text>
                 </View>
               ))}
             </View>
@@ -1813,7 +1811,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: spacing.xs,
   },
-  flexHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, paddingVertical: 3 },
+  flexHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md, paddingVertical: 3 },
   flexHistoryDate: { ...typography.small, color: colors.textFaint, width: 74 },
   flexHistoryWhat: { ...typography.small, color: colors.textMuted, flex: 1, textAlign: 'right' },
   setEditRow: {
