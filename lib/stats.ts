@@ -735,8 +735,15 @@ export function listExercisesInLogs(logs: WorkoutLog[]): { exerciseId: string; n
 
 /** Una celda de la matriz semanal: la mejor serie de ese ejercicio esa semana. */
 export interface MatrixCell {
-  /** Texto compacto para la celda: "12", "8×20", "45s". */
+  /** Serie REAL principal (la más pesada): "12", "8×20", "45s". */
   label: string;
+  /**
+   * Segunda serie REAL (la de más repeticiones) cuando NO coincide con la más
+   * pesada. Nunca se mezclan datos de series distintas en un solo número.
+   */
+  alt?: string;
+  /** Ese día logró su máx. de peso y su máx. de reps en series distintas. */
+  mark?: boolean;
   /** Puntuación numérica para comparar semanas (tendencia). */
   score: number;
 }
@@ -780,29 +787,41 @@ export function weeklyExerciseMatrix(
         ex.measure === 'seconds' || measureByExercise?.[ex.exerciseId] === 'seconds'
           ? 'seconds'
           : 'reps';
-      // Mejor serie de ESTA sesión para este ejercicio.
-      let bestReps = 0;
-      let bestWeight = 0;
+      // De ESTA sesión tomamos DOS series REALES, sin mezclar sus datos:
+      // la más pesada y la de más repeticiones. Si son la misma serie, se
+      // muestra una sola; si difieren, ambas + una "marca" del día.
+      let heavy: { r: number; w: number } | null = null; // serie con más lastre
+      let topReps: { r: number; w: number } | null = null; // serie con más reps
       for (const set of ex.sets) {
         if (!set.completed) continue;
-        const r = parseInt(set.reps, 10);
-        if (!Number.isNaN(r)) bestReps = Math.max(bestReps, r);
-        const w = toNum(set.weight);
-        if (set.weight && !Number.isNaN(w)) bestWeight = Math.max(bestWeight, w);
+        const rp = parseInt(set.reps, 10);
+        const wn = toNum(set.weight);
+        const r = Number.isNaN(rp) ? 0 : rp;
+        const w = set.weight && !Number.isNaN(wn) ? wn : 0;
+        if (r === 0 && w === 0) continue;
+        if (!heavy || w > heavy.w || (w === heavy.w && r > heavy.r)) heavy = { r, w };
+        if (!topReps || r > topReps.r || (r === topReps.r && w > topReps.w)) topReps = { r, w };
       }
-      if (bestReps === 0 && bestWeight === 0) continue;
+      if (!heavy || !topReps) continue;
 
+      const fmt = (s: { r: number; w: number }) => (s.w > 0 ? `${s.r}×${s.w}` : `${s.r}`);
       let label: string;
+      let alt: string | undefined;
+      let mark = false;
       let score: number;
       if (measure === 'seconds') {
-        label = `${bestReps}s`;
-        score = bestReps;
-      } else if (bestWeight > 0) {
-        label = `${bestReps}×${bestWeight}`;
-        score = bestWeight * 1000 + bestReps; // el lastre manda; reps desempata
+        // En isométricos la "mejor serie" es la de más segundos (guardados en reps).
+        label = `${topReps.r}s`;
+        score = topReps.r;
       } else {
-        label = `${bestReps}`;
-        score = bestReps;
+        // Serie principal = la más pesada (una serie real, tal cual se hizo).
+        label = fmt(heavy);
+        score = heavy.w > 0 ? heavy.w * 1000 + heavy.r : heavy.r;
+        // Si la de más reps es OTRA serie distinta, se muestra aparte + marca.
+        if (heavy.r !== topReps.r || heavy.w !== topReps.w) {
+          alt = fmt(topReps);
+          mark = true;
+        }
       }
 
       let row = rows.get(ex.exerciseId);
@@ -818,7 +837,7 @@ export function weeklyExerciseMatrix(
       }
       const prev = row.cells[col];
       // Nos quedamos con la mejor serie de la semana (mayor puntuación).
-      if (!prev || score > prev.score) row.cells[col] = { label, score };
+      if (!prev || score > prev.score) row.cells[col] = { label, alt, mark, score };
     }
   }
 

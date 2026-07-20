@@ -138,10 +138,21 @@ export default function ClientOverviewScreen() {
                       return (
                         <View key={i} style={styles.dataCell}>
                           {cell ? (
-                            <>
-                              <Text style={styles.cellValue}>{cell.label}</Text>
-                              <Trend current={cell} prev={prev} />
-                            </>
+                            <View style={styles.cellInner}>
+                              <View style={styles.cellLine}>
+                                <Text style={styles.cellValue}>{cell.label}</Text>
+                                <Trend current={cell} prev={prev} />
+                              </View>
+                              {cell.alt ? (
+                                <View style={styles.cellLine}>
+                                  <Text style={styles.cellAlt}>{cell.alt}</Text>
+                                  <View style={styles.markBadge}>
+                                    <Ionicons name="star" size={8} color={colors.primary} />
+                                    <Text style={styles.markText}>+1</Text>
+                                  </View>
+                                </View>
+                              ) : null}
+                            </View>
                           ) : (
                             <Text style={styles.cellEmpty}>·</Text>
                           )}
@@ -170,7 +181,14 @@ export default function ClientOverviewScreen() {
             <Ionicons name="remove" size={13} color={colors.textFaint} />
             <Text style={styles.legendText}>Igual</Text>
           </View>
-          <Text style={styles.legendNote}>reps · reps×lastre · segundos</Text>
+          <View style={styles.legendItem}>
+            <View style={styles.markBadge}>
+              <Ionicons name="star" size={8} color={colors.primary} />
+              <Text style={styles.markText}>+1</Text>
+            </View>
+            <Text style={styles.legendText}>Marca: más peso y más reps en series distintas</Text>
+          </View>
+          <Text style={styles.legendNote}>Serie real: reps · reps×lastre · segundos</Text>
         </View>
       ) : null}
     </ScreenContainer>
@@ -252,7 +270,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  cellInner: { alignItems: 'center', justifyContent: 'center', gap: 1 },
+  cellLine: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   cellValue: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, fontSize: 13 },
+  cellAlt: { ...typography.small, color: colors.textMuted, fontSize: 11 },
+  markBadge: { flexDirection: 'row', alignItems: 'center', gap: 1 },
+  markText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 9 },
   cellEmpty: { ...typography.small, color: colors.textFaint },
   trendSpace: { width: 12 },
   legend: {
