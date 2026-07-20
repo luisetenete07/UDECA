@@ -1,4 +1,13 @@
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { Payment } from '../types';
@@ -19,4 +28,14 @@ export async function getPaymentsForTrainer(trainerId: string): Promise<Payment[
   return snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Omit<Payment, 'id'>) }))
     .sort((a, b) => b.date - a.date);
+}
+
+/** Ajusta el importe de un pago registrado (corrección de errores). */
+export async function updatePayment(id: string, amountEur: number): Promise<void> {
+  await updateDoc(doc(db, 'payments', id), { amountEur });
+}
+
+/** Elimina un pago registrado. */
+export async function deletePayment(id: string): Promise<void> {
+  await deleteDoc(doc(db, 'payments', id));
 }

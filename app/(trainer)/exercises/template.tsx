@@ -118,7 +118,8 @@ export default function TemplateExercisesScreen() {
       muscleGroup: draft.muscleGroup,
       measure: draft.measure,
       description: draft.description.trim() || undefined,
-      videoUrl: draft.videoUrl.trim() || undefined,
+      // La plantilla UDECA nunca guarda vídeo: cada entrenador pone el suyo.
+      videoUrl: undefined,
       muscles: draft.muscles.length > 0 ? draft.muscles : undefined,
     };
     try {
@@ -188,7 +189,8 @@ export default function TemplateExercisesScreen() {
           muscleGroup: e.muscleGroup,
           measure: e.measure ?? 'reps',
           description: e.description,
-          videoUrl: e.videoUrl,
+          // Nunca copiamos el vídeo del coach a la plantilla oficial.
+          videoUrl: undefined,
           muscles: e.muscles,
           order: order++,
         });
@@ -381,13 +383,9 @@ export default function TemplateExercisesScreen() {
                     numberOfLines={4}
                     style={styles.textarea}
                   />
-                  <TextField
-                    label="URL del vídeo"
-                    value={draft.videoUrl}
-                    onChangeText={(v) => setDraft({ ...draft, videoUrl: v })}
-                    placeholder="https://..."
-                    autoCapitalize="none"
-                  />
+                  <Text style={styles.videoNote}>
+                    La plantilla no lleva vídeo: cada entrenador añadirá el suyo al importarla.
+                  </Text>
 
                   <Button
                     title="Guardar"
@@ -490,6 +488,13 @@ const styles = StyleSheet.create({
   muscleChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   muscleChipTextOn: { color: colors.onPrimary },
   textarea: { height: 100, textAlignVertical: 'top' },
+  videoNote: {
+    ...typography.small,
+    color: colors.textFaint,
+    fontStyle: 'italic',
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.surface,

@@ -113,7 +113,8 @@ export default function ExercisesScreen() {
             muscleGroup: t.muscleGroup,
             measure: t.measure ?? ('reps' as const),
             description: t.description ?? '',
-            videoUrl: t.videoUrl,
+            // La plantilla nunca trae vídeo: el entrenador lo pone luego.
+            videoUrl: undefined as string | undefined,
             muscles: t.muscles,
           }))
         : STARTER_LIBRARY.map((s) => ({

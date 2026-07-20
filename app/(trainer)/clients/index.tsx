@@ -15,6 +15,7 @@ import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
 import { getClientsForTrainer } from '../../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
+import { getActiveRoutineForClient } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
@@ -23,8 +24,11 @@ import {
   PAYMENT_STATUSES,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUS_TONE,
+  todayWeekday,
   type PaymentStatus,
+  type Routine,
   type UserProfile,
+  type WorkoutLog,
 } from '../../../lib/types';
 
 const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
@@ -57,6 +61,37 @@ function activityInfo(last?: number): { label: string; color: string } {
   return { label: `Sin entrenar ${days} días`, color: colors.danger };
 }
 
+/** Medianoche local del lunes de la semana que contiene ts (lunes=inicio). */
+function mondayStart(ts: number): number {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  const wd = d.getDay() === 0 ? 6 : d.getDay() - 1;
+  d.setDate(d.getDate() - wd);
+  return d.getTime();
+}
+
+/**
+ * Entrenamientos que el alumno se ha SALTADO esta semana: días de entreno
+ * (no descanso) con día de la semana asignado que ya han pasado (antes de hoy)
+ * y en los que no registró ninguna sesión. Solo aplica a rutinas semanales
+ * (en ciclo/sensaciones no hay día fijo, así que no se puede "saltar" uno).
+ */
+function skippedThisWeek(routine: Routine | null | undefined, trainedDays: Set<number>): number {
+  if (!routine || (routine.schedule ?? 'weekly') !== 'weekly') return 0;
+  const monday = mondayStart(Date.now());
+  const todayWd = todayWeekday();
+  let skipped = 0;
+  for (const day of routine.days) {
+    if (day.isRest || day.optionalRest || day.weekday == null) continue;
+    if (day.weekday >= todayWd) continue; // hoy o futuro: aún no cuenta
+    const d = new Date(monday);
+    d.setDate(d.getDate() + day.weekday);
+    d.setHours(0, 0, 0, 0);
+    if (!trainedDays.has(d.getTime())) skipped++;
+  }
+  return skipped;
+}
+
 export default function ClientsScreen() {
   const { profile } = useAuth();
   const router = useRouter();
@@ -67,6 +102,9 @@ export default function ClientsScreen() {
   );
   const [lastTrained, setLastTrained] = useState<Record<string, number>>(
     () => getCached<Record<string, number>>(`${cacheKey}-last`) ?? {}
+  );
+  const [skipped, setSkipped] = useState<Record<string, number>>(
+    () => getCached<Record<string, number>>(`${cacheKey}-skip`) ?? {}
   );
   const [loading, setLoading] = useState(() => getCached(cacheKey) === undefined);
   const [refreshing, setRefreshing] = useState(false);
@@ -94,6 +132,30 @@ export default function ClientsScreen() {
       setLastTrained(last);
       setCached(cacheKey, data);
       setCached(`${cacheKey}-last`, last);
+      // Entrenamientos saltados esta semana: requiere la rutina activa de cada
+      // alumno + los días que entrenó esta semana. Se calcula en segundo plano
+      // para no frenar el pintado de la lista.
+      const monday = mondayStart(Date.now());
+      const trainedByClient: Record<string, Set<number>> = {};
+      for (const log of logs as WorkoutLog[]) {
+        if (log.date < monday) continue;
+        (trainedByClient[log.clientId] ??= new Set()).add(startOfDay(log.date));
+      }
+      Promise.all(
+        data.map((c) =>
+          getActiveRoutineForClient(c.uid, profile.uid).catch(() => null)
+        )
+      )
+        .then((routines) => {
+          const skip: Record<string, number> = {};
+          data.forEach((c, i) => {
+            const n = skippedThisWeek(routines[i], trainedByClient[c.uid] ?? new Set());
+            if (n > 0) skip[c.uid] = n;
+          });
+          setSkipped(skip);
+          setCached(`${cacheKey}-skip`, skip);
+        })
+        .catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -301,6 +363,15 @@ export default function ClientsScreen() {
                     </>
                   ) : null}
                 </View>
+                {skipped[client.uid] ? (
+                  <View style={styles.skipRow}>
+                    <Ionicons name="close-circle" size={13} color={colors.danger} />
+                    <Text style={styles.skipText}>
+                      Se saltó {skipped[client.uid]} entrenamiento
+                      {skipped[client.uid] === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
               {client.status && client.status !== 'active' ? (
                 <View style={styles.statusDot}>
@@ -378,6 +449,8 @@ const styles = StyleSheet.create({
   payBadgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 4 },
   payBadgeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.medium, fontSize: 11 },
   badgeSep: { color: colors.textFaint, fontSize: 11 },
+  skipRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  skipText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold, fontSize: 11 },
   inviteCard: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   inviteTitle: { ...typography.h3, color: colors.text },
   inviteText: {

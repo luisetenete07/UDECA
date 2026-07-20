@@ -153,6 +153,19 @@ export interface SessionCardData {
   volumeKg: number;
   streak: number;
   prCount: number;
+  /** Fecha de la sesión (timestamp); se muestra bajo las estadísticas. */
+  date?: number;
+}
+
+/** "Lunes 13/07/2026" a partir de un timestamp. */
+function formatSessionDate(ts: number): string {
+  const wd = new Date(ts).toLocaleDateString('es-ES', { weekday: 'long' });
+  const dmy = new Date(ts).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  return `${wd.charAt(0).toUpperCase()}${wd.slice(1)} ${dmy}`;
 }
 
 export async function shareSessionImage(
@@ -204,6 +217,14 @@ export async function shareSessionImage(
       color: '#ECEDEF',
       font: '600 36px sans-serif',
       gapBefore: extras.length > 0 ? 56 : 70,
+    });
+  // Fecha de la sesión, bajo las estadísticas.
+  if (data.date)
+    extras.push({
+      text: formatSessionDate(data.date),
+      color: MUTED,
+      font: '600 32px sans-serif',
+      gapBefore: extras.length > 0 ? 54 : 70,
     });
   const extrasH = extras.reduce((h, e) => h + e.gapBefore, 0);
   const REGION_TOP = 470;

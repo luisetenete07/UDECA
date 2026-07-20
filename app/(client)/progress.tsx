@@ -201,6 +201,7 @@ export default function ProgressScreen() {
           volumeKg: t.volumeKg,
           streak: 0,
           prCount: 0,
+          date: log.date,
         });
         if (result === 'downloaded') showToast('Imagen de la sesión descargada');
         if (result) return;

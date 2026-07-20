@@ -545,6 +545,7 @@ export default function WorkoutScreen() {
           volumeKg: summary.volumeKg,
           streak: summary.streak,
           prCount: summary.prs.length,
+          date: Date.now(),
         });
         if (result === 'downloaded') showToast('Imagen de la sesión descargada');
         if (result) return;
@@ -597,6 +598,7 @@ export default function WorkoutScreen() {
           volumeKg: t.volumeKg,
           streak: 0,
           prCount: 0,
+          date: logToShare.date,
         });
         if (result === 'downloaded') showToast('Imagen de la sesión descargada');
         if (result) return;
