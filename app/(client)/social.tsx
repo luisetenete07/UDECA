@@ -32,12 +32,25 @@ export default function SocialScreen() {
     }
     // Nos aseguramos de que nuestras propias métricas estén al día antes de leer.
     const myLogs = await getWorkoutLogsForClient(profile.uid);
-    await syncMySocialStats(profile, myLogs);
+    const mine = await syncMySocialStats(profile, myLogs);
     const [data, challengeData] = await Promise.all([
       getSocialLeaderboard(profile.trainerId),
       getActiveChallenge(profile.trainerId),
     ]);
-    setMembers(data);
+    // Superponemos nuestras métricas recién calculadas sobre la lista leída, así
+    // nuestra fila nunca sale desactualizada por la latencia de la lectura.
+    const merged = mine
+      ? data
+          .map((m) => (m.uid === profile.uid ? { ...m, ...mine } : m))
+          .sort(
+            (a, b) =>
+              (b.streakThisMonth ?? b.currentStreak ?? 0) -
+                (a.streakThisMonth ?? a.currentStreak ?? 0) ||
+              (b.workoutsThisMonth ?? 0) - (a.workoutsThisMonth ?? 0) ||
+              (a.name ?? '').localeCompare(b.name ?? '')
+          )
+      : data;
+    setMembers(merged);
     setChallenge(challengeData);
     setLoading(false);
     setRefreshing(false);

@@ -21,8 +21,8 @@ export async function syncMySocialStats(
   profile: UserProfile,
   workoutLogs: WorkoutLog[],
   lastPR?: { exerciseName: string; label: string; date: number }
-) {
-  if (!profile.trainerId) return;
+): Promise<SocialStats | null> {
+  if (!profile.trainerId) return null;
 
   // Sesiones dentro del periodo del reto activo del grupo (si lo hay).
   let challengeSessions: number | undefined;
@@ -66,6 +66,7 @@ export async function syncMySocialStats(
   ) as SocialStats;
   // merge: los campos no incluidos (p. ej. lastPR previo) se conservan.
   await setDoc(doc(db, 'socialStats', profile.uid), clean, { merge: true });
+  return clean;
 }
 
 /**

@@ -33,6 +33,7 @@ import { getExercisesForTrainer } from '../../lib/firestore/exercises';
 import { getLevelTestsForClient } from '../../lib/firestore/levelTests';
 import {
   exerciseProgression,
+  exerciseRecord,
   isIsometricExercise,
   listExercisesInLogs,
   sessionTotals,
@@ -295,7 +296,9 @@ export default function ProgressScreen() {
         value: progMetric === 'kg' ? p.weight : p.reps,
       }))
     : [];
-  const progBest = progPoints.reduce((m, p) => Math.max(m, p.value), 0);
+  // Récord real del ejercicio, con el formato correcto según su tipo
+  // (reps, segundos o reps×lastre). No se infiere de la métrica de la gráfica.
+  const progRecord = selExerciseId ? exerciseRecord(workoutLogs, selExerciseId) : null;
 
   return (
     <ScreenContainer
@@ -667,12 +670,10 @@ export default function ProgressScreen() {
             <Card style={styles.section}>
               <View style={styles.exHeader}>
                 <Text style={styles.sectionTitle}>{progression?.name ?? 'Ejercicio'}</Text>
-                {progBest > 0 ? (
+                {progRecord ? (
                   <View style={styles.recordPill}>
                     <Ionicons name="trophy" size={13} color={colors.primary} />
-                    <Text style={styles.recordText}>
-                      Récord: {progBest} {progMetric}
-                    </Text>
+                    <Text style={styles.recordText}>Récord: {progRecord.label}</Text>
                   </View>
                 ) : null}
               </View>

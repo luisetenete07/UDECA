@@ -395,6 +395,35 @@ export interface PersonalRecord {
 }
 
 /**
+ * Récord actual de un ejercicio con el formato correcto SEGÚN SU TIPO:
+ *  - Segundos (isométrico): máximo aguante  → "45 s"
+ *  - Con lastre: mejor serie a peso         → "8 × 20 kg"
+ *  - Repeticiones a peso corporal: máx reps → "12 reps"
+ * Nunca mezcla datos de series distintas.
+ */
+export function exerciseRecord(
+  logs: WorkoutLog[],
+  exerciseId: string
+): { label: string; metric: 'reps' | 's' | 'kg' } | null {
+  const best = bestsByExercise(logs)[exerciseId];
+  if (!best) return null;
+  // Medida conocida del ejercicio (la última registrada manda).
+  let measure: 'reps' | 'seconds' = 'reps';
+  for (const log of logs) {
+    const ex = log.exercises.find((e) => e.exerciseId === exerciseId);
+    if (ex?.measure) measure = ex.measure;
+  }
+  if (measure === 'seconds') {
+    return best.bestReps > 0 ? { label: `${best.bestReps} s`, metric: 's' } : null;
+  }
+  if (best.bestWeightKg > 0) {
+    const reps = best.bestRepsAtWeight > 0 ? `${best.bestRepsAtWeight} × ` : '';
+    return { label: `${reps}${best.bestWeightKg} kg`, metric: 'kg' };
+  }
+  return best.bestReps > 0 ? { label: `${best.bestReps} reps`, metric: 'reps' } : null;
+}
+
+/**
  * Compara la sesión recién completada con las mejores marcas históricas y
  * devuelve los récords personales conseguidos hoy (más peso, o más reps con
  * el mismo peso / sin lastre).
