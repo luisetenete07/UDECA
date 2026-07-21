@@ -7,7 +7,7 @@ export default function ClientCoursesLayout() {
     <Stack
       screenOptions={stackScreenOptions}
     >
-      <Stack.Screen name="index" options={{ title: 'Cursos' }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[id]" options={{ title: 'Curso' }} />
     </Stack>
   );

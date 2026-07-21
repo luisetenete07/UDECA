@@ -7,7 +7,7 @@ export default function CoursesLayout() {
     <Stack
       screenOptions={stackScreenOptions}
     >
-      <Stack.Screen name="index" options={{ title: 'Cursos' }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[id]" options={{ title: 'Editar curso' }} />
     </Stack>
   );
