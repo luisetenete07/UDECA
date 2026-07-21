@@ -14,7 +14,7 @@
       "bundleIdentifier": "com.udeca.app"
     },
     "android": {
-      "package": "com.udeca.app",
+      "package": "entrenadores.app",
       "adaptiveIcon": {
         "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
