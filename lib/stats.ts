@@ -121,7 +121,7 @@ function weekdayOf(ts: number): number {
  * solo se rompe al saltarse UN día de entrenamiento programado. Si no se
  * conoce el plan (modo flexible o sin rutina), se tolera 1 día de hueco.
  */
-export function currentStreak(logs: WorkoutLog[], plan?: StreakPlan): number {
+export function currentStreak(logs: WorkoutLog[], plan?: StreakPlan, floorTs?: number): number {
   if (logs.length === 0) return 0;
   const DAY = 24 * 60 * 60 * 1000;
   const trained = new Set(logs.map((l) => startOfDay(l.date)));
@@ -147,6 +147,8 @@ export function currentStreak(logs: WorkoutLog[], plan?: StreakPlan): number {
   let streak = 0;
   let unknownGap = 0;
   for (let d = today, i = 0; d >= oldest && i < 400; d -= DAY, i++) {
+    // Reinicio mensual: no contamos días anteriores al suelo (p. ej. día 1 del mes).
+    if (floorTs !== undefined && d < floorTs) break;
     if (trained.has(d)) {
       streak += 1;
       unknownGap = 0;
@@ -175,6 +177,51 @@ function cycleDayIndexForStreak(anchor: number, len: number, now: number): numbe
 export function sessionsThisWeek(logs: WorkoutLog[]): number {
   const weekStart = startOfWeek(Date.now());
   return logs.filter((l) => l.date >= weekStart).length;
+}
+
+/** Clave "YYYY-MM" del mes de un timestamp (para agrupar por mes de calendario). */
+export function monthKeyOf(ts: number = Date.now()): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Inicio (medianoche del día 1) del mes que contiene ts. */
+export function monthStartOf(ts: number = Date.now()): number {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+}
+
+/** Sesiones registradas dentro del mes de calendario de ref (se reinicia cada mes). */
+export function workoutsInMonth(logs: WorkoutLog[], ref: number = Date.now()): number {
+  const d = new Date(ref);
+  const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+  return logs.filter((l) => l.date >= start && l.date < end).length;
+}
+
+/**
+ * Mejor racha (días de calendario CONSECUTIVOS con al menos un entreno) lograda
+ * dentro del mes de ref. Para el podio de "mejor racha del mes" del ranking.
+ */
+export function bestStreakInMonth(logs: WorkoutLog[], ref: number = Date.now()): number {
+  const DAY = 24 * 60 * 60 * 1000;
+  const d = new Date(ref);
+  const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+  const days = [
+    ...new Set(
+      logs.filter((l) => l.date >= start && l.date < end).map((l) => startOfDay(l.date))
+    ),
+  ].sort((a, b) => a - b);
+  let best = 0;
+  let run = 0;
+  let prev = 0;
+  for (const day of days) {
+    run = prev && day - prev === DAY ? run + 1 : 1;
+    if (run > best) best = run;
+    prev = day;
+  }
+  return best;
 }
 
 /** Número de semanas distintas con al menos un entrenamiento. */
@@ -332,7 +379,9 @@ export function bestsByExercise(logs: WorkoutLog[]): Record<string, ExerciseBest
             b.bestRepsAtWeight = r;
           }
         }
-        if (r > b.bestReps) b.bestReps = r;
+        // bestReps = máximo de reps/segundos a PESO CORPORAL (sin lastre), para
+        // que el récord de "dominadas" refleje el máximo real sin lastre.
+        if (w === 0 && r > b.bestReps) b.bestReps = r;
       }
     }
   }
@@ -360,16 +409,26 @@ export function detectNewPRs(
   for (const ex of session) {
     const b = bests[ex.exerciseId] ?? { bestWeightKg: 0, bestRepsAtWeight: 0, bestReps: 0 };
     const unit = ex.measure === 'seconds' ? 's' : 'reps';
-    let record: PersonalRecord | null = null;
+    // Recorremos TODAS las series de hoy y nos quedamos con la MEJOR (el máximo),
+    // no con la última que supere la marca. Así "9 dominadas" no queda tapado por
+    // una serie posterior de 6.
+    let heavy: { w: number; r: number } | null = null; // serie más pesada
+    let maxReps = 0; // máximo de reps/segundos SIN lastre (peso corporal)
     for (const set of ex.sets) {
       if (!set.completed) continue;
       const w = toNum(set.weight) || 0;
       const r = parseReps(set.reps);
-      if (w > 0 && (w > b.bestWeightKg || (w === b.bestWeightKg && r > b.bestRepsAtWeight))) {
-        record = { exerciseName: ex.name, label: `${w} kg × ${r || '—'}` };
-      } else if (w === 0 && b.bestReps > 0 && r > b.bestReps) {
-        record = { exerciseName: ex.name, label: `${r} ${unit}` };
-      }
+      if (r === 0 && w === 0) continue;
+      if (w > 0 && (!heavy || w > heavy.w || (w === heavy.w && r > heavy.r))) heavy = { w, r };
+      if (w === 0 && r > maxReps) maxReps = r;
+    }
+    let record: PersonalRecord | null = null;
+    // Récord de lastre: la serie más pesada de hoy supera la mejor histórica.
+    if (heavy && (heavy.w > b.bestWeightKg || (heavy.w === b.bestWeightKg && heavy.r > b.bestRepsAtWeight))) {
+      record = { exerciseName: ex.name, label: `${heavy.w} kg × ${heavy.r || '—'}` };
+    } else if (maxReps > 0 && b.bestReps > 0 && maxReps > b.bestReps) {
+      // Récord de repeticiones/segundos a peso corporal: el máximo real de hoy.
+      record = { exerciseName: ex.name, label: `${maxReps} ${unit}` };
     }
     if (record) prs.push(record);
   }

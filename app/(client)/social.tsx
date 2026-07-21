@@ -11,6 +11,7 @@ import { useAuth } from '../../lib/auth-context';
 import { getActiveChallenge } from '../../lib/firestore/challenges';
 import { getSocialLeaderboard, syncMySocialStats } from '../../lib/firestore/social';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { monthKeyOf } from '../../lib/stats';
 import { isOnline } from '../../lib/presence';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { Challenge, SocialStats } from '../../lib/types';
@@ -62,8 +63,25 @@ export default function SocialScreen() {
     );
   }
 
-  const topStreak = members.reduce((m, s) => Math.max(m, s.currentStreak), 0);
+  const topStreak = members.reduce((m, s) => Math.max(m, s.streakThisMonth ?? s.currentStreak), 0);
   const totalSessions = members.reduce((sum, s) => sum + s.sessionsThisWeek, 0);
+
+  // Podio del cambio de mes: los primeros 5 días del mes mostramos, de forma
+  // discreta, el top 3 por mejor racha del MES ANTERIOR. Solo cuentan miembros
+  // cuyas métricas se sincronizaron ya este mes (monthKey al día).
+  const now = new Date();
+  const showPodium = now.getDate() <= 5;
+  const thisMonthKey = monthKeyOf(Date.now());
+  const lastMonthName = new Date(now.getFullYear(), now.getMonth() - 1, 1).toLocaleDateString(
+    'es-ES',
+    { month: 'long' }
+  );
+  const podium = showPodium
+    ? members
+        .filter((m) => m.monthKey === thisMonthKey && (m.lastMonthStreak ?? 0) > 0)
+        .sort((a, b) => (b.lastMonthStreak ?? 0) - (a.lastMonthStreak ?? 0))
+        .slice(0, 3)
+    : [];
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -84,7 +102,7 @@ export default function SocialScreen() {
         <Card style={styles.summaryCard}>
           <Ionicons name="flame" size={18} color={colors.primary} />
           <Text style={styles.summaryValue}>{topStreak}</Text>
-          <Text style={styles.summaryLabel}>Mejor racha</Text>
+          <Text style={styles.summaryLabel}>Mejor racha (mes)</Text>
         </Card>
         <Card style={styles.summaryCard}>
           <Ionicons name="checkmark-done" size={18} color={colors.primary} />
@@ -92,6 +110,20 @@ export default function SocialScreen() {
           <Text style={styles.summaryLabel}>Entrenos (semana)</Text>
         </Card>
       </View>
+
+      {podium.length > 0 ? (
+        <View style={styles.podium}>
+          <Ionicons name="trophy" size={14} color={colors.primary} />
+          <Text style={styles.podiumTitle}>Mejor racha de {lastMonthName}:</Text>
+          {podium.map((m, i) => (
+            <Text key={m.uid} style={styles.podiumItem}>
+              <Text style={{ color: MEDALS[i], fontFamily: fonts.heading }}>{i + 1}º</Text>{' '}
+              {m.name.split(' ')[0]} ({m.lastMonthStreak})
+              {i < podium.length - 1 ? '  ·' : ''}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       {challenge ? (
         <Card accent style={styles.challengeCard}>
@@ -157,7 +189,7 @@ export default function SocialScreen() {
         );
       })()}
 
-      <Text style={styles.sectionTitle}>Ranking de racha</Text>
+      <Text style={styles.sectionTitle}>Ranking de racha · este mes</Text>
 
       {members.length === 0 ? (
         <EmptyState
@@ -187,13 +219,16 @@ export default function SocialScreen() {
                   {isOnline(member.lastSeen) ? <View style={styles.onlineDot} /> : null}
                 </View>
                 <Text style={styles.meta}>
-                  {member.totalWorkouts} entrenos · {member.sessionsThisWeek} esta semana
+                  {member.workoutsThisMonth ?? 0} entrenos este mes · {member.sessionsThisWeek} esta
+                  semana
                 </Text>
               </View>
               <View style={styles.streakWrap}>
                 <View style={styles.streakBadge}>
                   <Ionicons name="flame" size={14} color={colors.primary} />
-                  <Text style={styles.streakValue}>{member.currentStreak}</Text>
+                  <Text style={styles.streakValue}>
+                    {member.streakThisMonth ?? member.currentStreak}
+                  </Text>
                 </View>
                 <Text style={styles.streakLabel}>días</Text>
               </View>
@@ -218,6 +253,21 @@ const styles = StyleSheet.create({
   prBoardValue: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
+  podium: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: spacing.lg,
+  },
+  podiumTitle: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  podiumItem: { ...typography.small, color: colors.text, fontSize: 12 },
   summaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   summaryCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
   summaryValue: { ...typography.h2, color: colors.text, marginTop: spacing.xs },

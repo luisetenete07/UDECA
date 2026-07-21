@@ -194,6 +194,9 @@ export default function WorkoutScreen() {
   // Modo "Sensaciones": selección múltiple de rutinas (en orden) y descanso.
   const [flexSelection, setFlexSelection] = useState<string[]>([]);
   const [combinedDay, setCombinedDay] = useState<RoutineDay | null>(null);
+  // Sensaciones: el alumno pide hacer un SEGUNDO entreno el mismo día. Ignora
+  // temporalmente la tarjeta de "ya completado" para volver a elegir rutina.
+  const [flexAgain, setFlexAgain] = useState(false);
   // Sensaciones: "hoy descanso" se recuerda entre sesiones (persistido en
   // flexRestDays), así al cerrar y reabrir la app el día sigue como descanso.
   const [flexResting, setFlexResting] = useState<boolean>(() => {
@@ -734,7 +737,9 @@ export default function WorkoutScreen() {
     ? history.find((l) => l.routineId === routine.id && isSameDay(l.date))
     : undefined;
   const inProgress = doneSets > 0 || restored;
-  const showCompleted = !!completedTodayLog && !inProgress;
+  // En Sensaciones, "flexAgain" permite ignorar la tarjeta de completado para
+  // encadenar un segundo entreno el mismo día.
+  const showCompleted = !!completedTodayLog && !inProgress && !(isFlex && flexAgain);
 
   const handleSave = async () => {
     if (!profile || !routine || !day) return;
@@ -822,6 +827,7 @@ export default function WorkoutScreen() {
       remoteDraftRef.current = null;
       if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
       setRestored(false);
+      setFlexAgain(false); // consumido: tras guardar vuelve la tarjeta de completado
       // Deja el estado detrás del resumen "limpio": el día queda como completado
       // (doneSets 0), de modo que nunca se vuelven a mostrar sus ejercicios.
       if (day) setLog(buildLog(day));
@@ -1351,6 +1357,21 @@ export default function WorkoutScreen() {
                   onPress={() => router.push('/(client)/dashboard')}
                   style={{ marginTop: spacing.sm }}
                 />
+                {isFlex ? (
+                  <Pressable
+                    onPress={() => {
+                      setCombinedDay(null);
+                      setFlexSelection([]);
+                      setFlexResting(false);
+                      setFlexAgain(true);
+                    }}
+                    style={styles.againLink}
+                    hitSlop={8}
+                  >
+                    <Ionicons name="add-circle-outline" size={14} color={colors.textMuted} />
+                    <Text style={styles.againLinkText}>Hacer otro entrenamiento hoy</Text>
+                  </Pressable>
+                ) : null}
               </Card>
             </FadeIn>
           );
@@ -2111,6 +2132,15 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textDecorationLine: 'underline',
   },
+  againLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  againLinkText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
   // ----- Resumen -----
   summaryContent: { flexGrow: 1, justifyContent: 'center' },
   summaryBadge: {

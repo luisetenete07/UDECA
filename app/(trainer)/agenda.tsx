@@ -307,6 +307,16 @@ export default function CoachCalendarScreen() {
 
   return (
     <ScreenContainer maxWidth={isWide ? 760 : undefined}>
+      {/* Título de sección, como en el resto de pestañas */}
+      <View style={styles.screenHeader}>
+        <Text style={styles.screenTitle}>{view === 'calendar' ? 'Calendario' : 'Tareas'}</Text>
+        <Text style={styles.screenSubtitle}>
+          {view === 'calendar'
+            ? 'Cobros, ciclos y tareas de tu grupo, día a día.'
+            : 'Tus recordatorios y objetivos como coach.'}
+        </Text>
+      </View>
+
       {/* Conmutador principal */}
       <View style={styles.topSeg}>
         {(['calendar', 'tasks'] as const).map((v) => (
@@ -790,6 +800,9 @@ function GoalsList({
 }
 
 const styles = StyleSheet.create({
+  screenHeader: { marginBottom: spacing.md },
+  screenTitle: { ...typography.h1, color: colors.text },
+  screenSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   topSeg: {
     flexDirection: 'row',
     gap: spacing.xs,

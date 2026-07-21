@@ -1,7 +1,14 @@
 import { collection, deleteDoc, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getActiveChallenge } from './challenges';
-import { currentStreak, sessionsThisWeek } from '../stats';
+import {
+  bestStreakInMonth,
+  currentStreak,
+  monthKeyOf,
+  monthStartOf,
+  sessionsThisWeek,
+  workoutsInMonth,
+} from '../stats';
 import type { SocialStats, UserProfile, WorkoutLog } from '../types';
 
 const collectionRef = () => collection(db, 'socialStats');
@@ -30,6 +37,11 @@ export async function syncMySocialStats(
     // El ranking del reto es secundario: no bloquea la sincronización.
   }
 
+  // Métricas mensuales (se reinician cada mes) + mejor racha del mes anterior
+  // para el podio del cambio de mes. Todo se recalcula desde los propios logs.
+  const now = Date.now();
+  const lastMonthRef = monthStartOf(now) - 1; // un instante dentro del mes previo
+
   const stats: SocialStats = {
     uid: profile.uid,
     trainerId: profile.trainerId,
@@ -39,10 +51,14 @@ export async function syncMySocialStats(
     currentStreak: currentStreak(workoutLogs),
     sessionsThisWeek: sessionsThisWeek(workoutLogs),
     totalWorkouts: workoutLogs.length,
+    streakThisMonth: currentStreak(workoutLogs, undefined, monthStartOf(now)),
+    workoutsThisMonth: workoutsInMonth(workoutLogs, now),
+    lastMonthStreak: bestStreakInMonth(workoutLogs, lastMonthRef),
+    monthKey: monthKeyOf(now),
     challengeSessions: challengeSessions ?? 0,
     // Nuevo récord de esta sesión; si no lo hay, merge conserva el anterior.
     lastPR,
-    updatedAt: Date.now(),
+    updatedAt: now,
   };
   // Firestore rechaza campos `undefined`; los omitimos.
   const clean = Object.fromEntries(
@@ -75,6 +91,10 @@ export async function getSocialLeaderboard(trainerId: string): Promise<SocialSta
         currentStreak: s.currentStreak ?? 0,
         sessionsThisWeek: s.sessionsThisWeek ?? 0,
         totalWorkouts: s.totalWorkouts ?? 0,
+        // Compat.: docs antiguos sin métricas mensuales caen a las de siempre.
+        streakThisMonth: s.streakThisMonth ?? s.currentStreak ?? 0,
+        workoutsThisMonth: s.workoutsThisMonth ?? 0,
+        lastMonthStreak: s.lastMonthStreak ?? 0,
         challengeSessions: s.challengeSessions ?? 0,
       } as SocialStats;
     })
@@ -90,9 +110,9 @@ export async function getSocialLeaderboard(trainerId: string): Promise<SocialSta
  */
 function compareLeaderboard(a: SocialStats, b: SocialStats): number {
   return (
-    (b.currentStreak ?? 0) - (a.currentStreak ?? 0) ||
+    (b.streakThisMonth ?? b.currentStreak ?? 0) - (a.streakThisMonth ?? a.currentStreak ?? 0) ||
+    (b.workoutsThisMonth ?? 0) - (a.workoutsThisMonth ?? 0) ||
     (b.sessionsThisWeek ?? 0) - (a.sessionsThisWeek ?? 0) ||
-    (b.totalWorkouts ?? 0) - (a.totalWorkouts ?? 0) ||
     (a.name ?? '').localeCompare(b.name ?? '')
   );
 }

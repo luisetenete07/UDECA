@@ -540,6 +540,14 @@ export interface SocialStats {
   currentStreak: number;
   sessionsThisWeek: number;
   totalWorkouts: number;
+  /** Racha en curso DENTRO del mes actual (se reinicia cada mes). */
+  streakThisMonth?: number;
+  /** Entrenos registrados en el mes actual (se reinicia cada mes). */
+  workoutsThisMonth?: number;
+  /** Mejor racha lograda el MES ANTERIOR (para el podio del cambio de mes). */
+  lastMonthStreak?: number;
+  /** Clave "YYYY-MM" del mes en que se sincronizaron las métricas mensuales. */
+  monthKey?: string;
   /** Sesiones dentro del periodo del reto activo (para el ranking del reto). */
   challengeSessions?: number;
   /** Último récord personal (para el tablón de récords del grupo). */
