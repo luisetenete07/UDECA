@@ -417,6 +417,20 @@ export default function TrainerDashboard() {
         </Pressable>
       </View>
 
+      {/* Biblioteca de metodología del coach (solo lectura, privada). */}
+      <Pressable onPress={() => router.push('/(trainer)/method')} style={styles.methodEntry}>
+        <View style={styles.methodIcon}>
+          <Ionicons name="library-outline" size={18} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.methodTitle}>Metodología UDECA</Text>
+          <Text style={styles.methodSub}>
+            Tu método completo: estructura, skills, programas y guías.
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
+
       {loadError ? (
         <Card style={[styles.section, { borderColor: colors.danger }]}>
           <Text style={[styles.sectionTitle, { color: colors.danger }]}>Error al cargar datos</Text>
@@ -923,6 +937,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  methodEntry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    marginBottom: spacing.md,
+  },
+  methodIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  methodTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  methodSub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   todayStrip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
