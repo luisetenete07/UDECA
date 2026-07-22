@@ -82,19 +82,23 @@ export async function deleteSocialStats(uid: string): Promise<void> {
 export async function getSocialLeaderboard(trainerId: string): Promise<SocialStats[]> {
   const q = query(collectionRef(), where('trainerId', '==', trainerId));
   const snap = await getDocs(q);
+  const nowMonth = monthKeyOf(Date.now());
   return snap.docs
     .map((d) => {
       const s = d.data() as SocialStats;
-      // Normaliza: los docs creados solo por la presencia no traen métricas de
-      // entreno. Sin esto, "undefined" rompe el orden y se ve en la lista.
+      // Si la ficha del alumno se sincronizó en un mes ANTERIOR, sus métricas
+      // mensuales están caducadas: se muestran como 0 (no ha entrenado este mes
+      // que sepamos) hasta que abra la app y se recalculen. Así el ranking del
+      // mes nunca arrastra números viejos.
+      const stale = s.monthKey !== undefined && s.monthKey !== nowMonth;
       return {
         ...s,
         currentStreak: s.currentStreak ?? 0,
         sessionsThisWeek: s.sessionsThisWeek ?? 0,
         totalWorkouts: s.totalWorkouts ?? 0,
         // Compat.: docs antiguos sin métricas mensuales caen a las de siempre.
-        streakThisMonth: s.streakThisMonth ?? s.currentStreak ?? 0,
-        workoutsThisMonth: s.workoutsThisMonth ?? 0,
+        streakThisMonth: stale ? 0 : s.streakThisMonth ?? s.currentStreak ?? 0,
+        workoutsThisMonth: stale ? 0 : s.workoutsThisMonth ?? 0,
         lastMonthStreak: s.lastMonthStreak ?? 0,
         challengeSessions: s.challengeSessions ?? 0,
       } as SocialStats;

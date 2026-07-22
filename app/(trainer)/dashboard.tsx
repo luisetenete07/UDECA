@@ -74,6 +74,7 @@ export default function TrainerDashboard() {
   const [paysReminded, setPaysReminded] = useState(false);
   const [payListOpen, setPayListOpen] = useState(false);
   const [incomeOpen, setIncomeOpen] = useState(false);
+  const [incomeScope, setIncomeScope] = useState<'month' | 'all'>('month');
   const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [editPayId, setEditPayId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
@@ -188,6 +189,9 @@ export default function TrainerDashboard() {
     .filter((p) => p.date >= monthStart.getTime())
     .sort((a, b) => b.date - a.date);
   const incomeThisMonth = monthPayments.reduce((s, p) => s + (p.amountEur || 0), 0);
+  // Historial completo de ingresos (todos los pagos) + total acumulado.
+  const allPaymentsSorted = [...payments].sort((a, b) => b.date - a.date);
+  const incomeAllTime = payments.reduce((s, p) => s + (p.amountEur || 0), 0);
   // Proyección: renovaciones con fecha en los próximos 30 días (cuota fijada).
   const upcoming = clients.filter(
     (c) =>
@@ -723,7 +727,7 @@ export default function TrainerDashboard() {
         <View style={styles.payBackdrop}>
           <View style={styles.paySheet}>
             <View style={styles.payHeader}>
-              <Text style={styles.sectionTitle}>Ingresado este mes ({incomeThisMonth} €)</Text>
+              <Text style={styles.sectionTitle}>Ingresos</Text>
               <Pressable
                 onPress={() => {
                   setIncomeOpen(false);
@@ -734,14 +738,46 @@ export default function TrainerDashboard() {
                 <Ionicons name="close" size={22} color={colors.textMuted} />
               </Pressable>
             </View>
+            {/* Conmutador: ingresos del mes o historial completo. */}
+            <View style={styles.scopeSeg}>
+              {(['month', 'all'] as const).map((sc) => (
+                <Pressable
+                  key={sc}
+                  onPress={() => {
+                    setIncomeScope(sc);
+                    setEditPayId(null);
+                  }}
+                  style={[styles.scopeBtn, incomeScope === sc && styles.scopeBtnOn]}
+                >
+                  <Text
+                    style={[styles.scopeText, incomeScope === sc && styles.scopeTextOn]}
+                  >
+                    {sc === 'month' ? 'Este mes' : 'Histórico'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>
+                {incomeScope === 'month' ? 'Ingresado este mes' : 'Total ingresado hasta la fecha'}
+              </Text>
+              <Text style={styles.totalValue}>
+                {(incomeScope === 'month' ? incomeThisMonth : incomeAllTime).toLocaleString('es-ES')}{' '}
+                €
+              </Text>
+            </View>
             <Text style={styles.subtleHint}>
               Ajusta el importe o elimina un pago si hubo un error.
             </Text>
-            {monthPayments.length === 0 ? (
-              <Text style={styles.mutedText}>Aún no hay pagos registrados este mes.</Text>
+            {(incomeScope === 'month' ? monthPayments : allPaymentsSorted).length === 0 ? (
+              <Text style={styles.mutedText}>
+                {incomeScope === 'month'
+                  ? 'Aún no hay pagos registrados este mes.'
+                  : 'Aún no hay pagos registrados.'}
+              </Text>
             ) : (
-              <ScrollView style={{ maxHeight: 380 }}>
-                {monthPayments.map((p) => {
+              <ScrollView style={{ maxHeight: 400 }}>
+                {(incomeScope === 'month' ? monthPayments : allPaymentsSorted).map((p) => {
                   const client = byId(p.clientId);
                   const editing = editPayId === p.id;
                   return (
@@ -991,6 +1027,32 @@ const styles = StyleSheet.create({
   amountEuro: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold },
   payAmount: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   payIconBtn: { padding: 4 },
+  scopeSeg: {
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    padding: 4,
+    marginBottom: spacing.sm,
+  },
+  scopeBtn: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.sm },
+  scopeBtnOn: { backgroundColor: colors.primary },
+  scopeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  scopeTextOn: { color: colors.onPrimary },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  totalLabel: { ...typography.small, color: colors.textMuted, flex: 1 },
+  totalValue: { ...typography.h3, color: '#2E7D5B', fontFamily: fonts.heading },
   nextPayRow: {
     flexDirection: 'row',
     alignItems: 'center',
