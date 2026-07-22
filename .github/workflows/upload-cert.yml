@@ -1,0 +1,40 @@
+name: Obtener certificado de subida
+
+# Descarga el último .aab compilado y extrae su certificado de subida (.pem),
+# necesario para el "restablecimiento de clave de subida" de Google Play.
+# No recompila: es rápido.
+on:
+  workflow_dispatch:
+
+jobs:
+  cert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Descargar el último .aab y extraer el certificado
+        run: |
+          eas build:list --platform android --limit 1 --json --non-interactive > builds.json
+          URL=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl' builds.json)
+          echo "AAB: $URL"
+          curl -L "$URL" -o app.aab
+          keytool -printcert -jarfile app.aab -rfc > upload_certificate.pem
+          echo "----- CERTIFICADO -----"
+          cat upload_certificate.pem
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aab-y-certificado
+          path: |
+            app.aab
+            upload_certificate.pem
