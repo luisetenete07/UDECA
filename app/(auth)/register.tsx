@@ -67,28 +67,24 @@ export default function RegisterScreen() {
       </View>
 
       <Card accent style={styles.formCard}>
-        <View style={styles.roleSwitch}>
-          <RoleOption
-            label="Soy alumno"
-            selected={role === 'client'}
-            onPress={() => setRole('client')}
-          />
-          <RoleOption
-            label="Soy atleta"
-            selected={role === 'athlete'}
-            onPress={() => setRole('athlete')}
-          />
-          <RoleOption
-            label="Soy entrenador"
-            selected={role === 'trainer'}
-            onPress={() => setRole('trainer')}
-          />
-        </View>
-        {role === 'athlete' ? (
-          <Text style={styles.roleHint}>
-            Entrenas por tu cuenta: creas tus rutinas y sigues tu progreso y nutrición. 10 €/mes.
-          </Text>
-        ) : null}
+        {ROLE_CARDS.map((rc) => (
+          <Pressable
+            key={rc.value}
+            onPress={() => setRole(rc.value)}
+            style={[styles.roleCard, role === rc.value && styles.roleCardOn]}
+          >
+            <View style={[styles.roleCheck, role === rc.value && styles.roleCheckOn]}>
+              {role === rc.value ? <View style={styles.roleCheckDot} /> : null}
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.roleCardTop}>
+                <Text style={styles.roleCardTitle}>{rc.title}</Text>
+                <Text style={[styles.rolePrice, rc.free && styles.rolePriceFree]}>{rc.price}</Text>
+              </View>
+              <Text style={styles.roleCardDesc}>{rc.desc}</Text>
+            </View>
+          </Pressable>
+        ))}
 
         <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Tu nombre" />
         <TextField
@@ -139,26 +135,28 @@ export default function RegisterScreen() {
   );
 }
 
-function RoleOption({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.roleOption, selected && styles.roleOptionSelected]}
-    >
-      <Text style={[styles.roleOptionText, selected && styles.roleOptionTextSelected]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
+const ROLE_CARDS: { value: UserRole; title: string; price: string; desc: string; free?: boolean }[] =
+  [
+    {
+      value: 'client',
+      title: 'Alumno',
+      price: 'Gratis',
+      free: true,
+      desc: 'Entrena con tu entrenador. Necesitas su código de invitación.',
+    },
+    {
+      value: 'athlete',
+      title: 'Atleta',
+      price: '10 €/mes',
+      desc: 'Entrena por tu cuenta: crea tus rutinas y sigue tu progreso y nutrición.',
+    },
+    {
+      value: 'trainer',
+      title: 'Entrenador',
+      price: '15 €/mes',
+      desc: 'Gestiona a tus alumnos, cobros y tu negocio. Cuota anual (180 €/año).',
+    },
+  ];
 
 const styles = StyleSheet.create({
   content: {
@@ -191,41 +189,34 @@ const styles = StyleSheet.create({
   formCard: {
     padding: spacing.lg,
   },
-  roleSwitch: {
+  roleCard: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
     borderRadius: radius.md,
-    padding: spacing.xs,
-    marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: spacing.sm,
   },
-  roleHint: {
-    ...typography.small,
-    color: colors.primaryBright,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
-  },
-  roleOption: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: 2,
-    borderRadius: radius.sm,
+  roleCardOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  roleCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  roleOptionSelected: {
-    backgroundColor: colors.primary,
-  },
-  roleOptionText: {
-    ...typography.small,
-    fontFamily: fonts.semiBold,
-    color: colors.textMuted,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  roleOptionTextSelected: {
-    color: colors.onPrimary,
-  },
+  roleCheckOn: { borderColor: colors.primary },
+  roleCheckDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  roleCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  roleCardTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  rolePrice: { ...typography.small, color: colors.primary, fontFamily: fonts.heading },
+  rolePriceFree: { color: '#2E7D5B' },
+  roleCardDesc: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
   error: {
     ...typography.small,
     color: colors.danger,
