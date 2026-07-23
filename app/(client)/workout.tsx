@@ -70,18 +70,25 @@ import {
 } from '../../lib/types';
 
 const DEFAULT_REST_SECONDS = 90;
-// Una sesión a medias caduca a las 12 h: después se descarta sola.
-const DRAFT_TTL_MS = 12 * 60 * 60 * 1000;
+// Una sesión a medias se conserva hasta 3 días: dentro del MISMO día se retoma
+// sola; si es de un día anterior, se ofrece el botón "Rellenar último entreno".
+const DRAFT_TTL_MS = 72 * 60 * 60 * 1000;
 
 interface WorkoutDraft {
   routineId: string;
   dayId: string;
+  dayName?: string;
   log: LoggedExercise[];
   startedAt: number | null;
   savedAt: number;
 }
 
 const draftKey = (uid: string) => `udeca-workout-draft-${uid}`;
+// Entreno de un día anterior que quedó sin finalizar (se guarda aparte para que
+// empezar uno nuevo hoy no lo borre).
+const pendingKey = (uid: string) => `udeca-workout-pending-${uid}`;
+const draftHasProgress = (d: WorkoutDraft) =>
+  d.log.some((ex) => ex.sets.some((st) => st.completed));
 
 /** Descanso en formato min:seg para las etiquetas: 90 → "1:30", 210 → "3:30". */
 function formatRest(seconds: number): string {
@@ -175,6 +182,13 @@ export default function WorkoutScreen() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [restored, setRestored] = useState(false);
+  // Borrador sin finalizar de un DÍA ANTERIOR: se ofrece rellenarlo o dejarlo.
+  const [pastDraft, setPastDraft] = useState<WorkoutDraft | null>(null);
+  const [pastDismissed, setPastDismissed] = useState(false);
+  // Si estamos rellenando un entreno de otro día, se registra con SU fecha.
+  const [resumeDate, setResumeDate] = useState<number | null>(null);
+  // Evita que el efecto de recuperación pise una recuperación manual.
+  const resumeGuard = useRef(false);
   // Descanso activo: cuando corre, el crono flota abajo; añadimos hueco al
   // final para que no tape los botones Anterior/Siguiente ni el de Terminar.
   const activeRest = useActiveRest();
@@ -298,46 +312,80 @@ export default function WorkoutScreen() {
     if (!routine || !selectedDayId || !profile) return;
     const day = routine.days.find((d) => d.id === selectedDayId);
     if (!day) return;
+    // Una recuperación manual (botón "Rellenar último entreno") ya ha fijado el
+    // log; no lo pisamos.
+    if (resumeGuard.current) {
+      resumeGuard.current = false;
+      return;
+    }
     let cancelled = false;
     (async () => {
-      // Recupera una sesión a medias de este mismo día: se compara el borrador
-      // local con el de la cuenta (otro dispositivo) y gana el más reciente.
+      const uid = profile.uid;
+      const today = startOfDayLocal(Date.now());
+      // 1) Carry-over: entreno de un día anterior sin finalizar (guardado aparte).
+      let pending: WorkoutDraft | null = null;
+      try {
+        const rawP = await AsyncStorage.getItem(pendingKey(uid));
+        if (rawP) pending = JSON.parse(rawP) as WorkoutDraft;
+      } catch {
+        // ilegible: se ignora
+      }
+      if (
+        !pending ||
+        !draftHasProgress(pending) ||
+        Date.now() - pending.savedAt >= DRAFT_TTL_MS ||
+        startOfDayLocal(pending.startedAt ?? pending.savedAt) >= today
+      ) {
+        if (pending) AsyncStorage.removeItem(pendingKey(uid)).catch(() => {});
+        pending = null;
+      }
+
+      // 2) Borrador principal: local vs. cuenta (otro dispositivo), gana el más reciente.
       let draft: WorkoutDraft | null = null;
       try {
-        const raw = await AsyncStorage.getItem(draftKey(profile.uid));
+        const raw = await AsyncStorage.getItem(draftKey(uid));
         if (raw) draft = JSON.parse(raw) as WorkoutDraft;
       } catch {
-        // Borrador local ilegible: se ignora.
+        // ilegible
       }
       const remote = remoteDraftRef.current;
-      if (remote && (!draft || remote.savedAt > draft.savedAt)) {
-        draft = remote;
-      }
-      if (draft) {
-        const fresh = Date.now() - draft.savedAt < DRAFT_TTL_MS;
-        if (
-          fresh &&
-          draft.routineId === routine.id &&
-          draft.dayId === selectedDayId &&
-          draft.log.some((ex) => ex.sets.some((st) => st.completed))
-        ) {
+      if (remote && (!draft || remote.savedAt > draft.savedAt)) draft = remote;
+
+      let restoredHere = false;
+      if (draft && draftHasProgress(draft) && Date.now() - draft.savedAt < DRAFT_TTL_MS) {
+        const draftDay = startOfDayLocal(draft.startedAt ?? draft.savedAt);
+        if (draftDay === today && draft.routineId === routine.id && draft.dayId === selectedDayId) {
+          // Mismo día: se retoma sin preguntar.
           if (cancelled) return;
           setLog(draft.log);
           startedAt.current = draft.startedAt;
           setRestored(true);
+          setResumeDate(null);
           setSummary(null);
-          // Retoma en el primer ejercicio con series pendientes.
           const resume = draft.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
           setViewIndex(resume >= 0 ? resume : 0);
-          return;
+          restoredHere = true;
+        } else if (draftDay < today) {
+          // El borrador principal es de un día anterior: pásalo a "pendiente" para
+          // que empezar hoy no lo borre, y libéralo del borrador/sesión activos.
+          AsyncStorage.setItem(pendingKey(uid), JSON.stringify(draft)).catch(() => {});
+          AsyncStorage.removeItem(draftKey(uid)).catch(() => {});
+          clearActiveSession(uid);
+          remoteDraftRef.current = null;
+          pending = draft;
         }
       }
+
       if (cancelled) return;
-      setLog(buildLog(day));
-      setRestored(false);
-      setSummary(null);
-      setViewIndex(0);
-      startedAt.current = null;
+      setPastDraft(pending);
+      if (!restoredHere) {
+        setLog(buildLog(day));
+        setRestored(false);
+        setResumeDate(null);
+        setSummary(null);
+        setViewIndex(0);
+        startedAt.current = null;
+      }
     })();
     return () => {
       cancelled = true;
@@ -353,6 +401,8 @@ export default function WorkoutScreen() {
     const draft: WorkoutDraft = {
       routineId: routine.id,
       dayId: selectedDayId,
+      dayName:
+        combinedDay?.name ?? routine.days.find((d) => d.id === selectedDayId)?.name ?? undefined,
       log,
       startedAt: startedAt.current,
       savedAt: Date.now(),
@@ -387,9 +437,37 @@ export default function WorkoutScreen() {
     setRestored(false);
   };
 
+  // Rellenar el entreno de un día anterior que quedó sin finalizar. Carga su
+  // log y lo deja listo para completar y guardar (se registrará con SU fecha).
+  const resumePastDraft = () => {
+    if (!routine || !pastDraft) return;
+    const d = pastDraft;
+    setLog(d.log);
+    startedAt.current = d.startedAt;
+    setRestored(true);
+    setResumeDate(startOfDayLocal(d.startedAt ?? d.savedAt));
+    setPastDraft(null);
+    setSummary(null);
+    const realDay = routine.days.find((x) => x.id === d.dayId);
+    if (realDay && d.dayId !== selectedDayId) {
+      // Cambiar de día re-dispara el efecto de recuperación: lo bloqueamos una vez.
+      resumeGuard.current = true;
+      setCombinedDay(null);
+      setSelectedDayId(d.dayId);
+    } else if (!realDay) {
+      // Rutina de Sensaciones (día combinado) o día ya inexistente: día sintético.
+      setCombinedDay({ id: d.dayId, name: d.dayName || 'Entreno', exercises: [] });
+    }
+    const resume = d.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
+    setViewIndex(resume >= 0 ? resume : 0);
+  };
+
+  // Dejar el entreno de ayer para más tarde: se oculta el aviso y se puede
+  // empezar uno nuevo hoy (el borrador se conserva para volver a ofrecerlo).
+  const dismissPastDraft = () => setPastDismissed(true);
+
   const isFlex = routine?.schedule === 'flex';
-  const day =
-    (isFlex ? combinedDay : null) ?? routine?.days.find((d) => d.id === selectedDayId) ?? null;
+  const day = combinedDay ?? routine?.days.find((d) => d.id === selectedDayId) ?? null;
   const todaySession = resolveTodaySession(routine, cycleAnchor ?? undefined);
 
   // Sensaciones: alterna una rutina en la selección (guarda el orden de elección).
@@ -778,7 +856,8 @@ export default function WorkoutScreen() {
         routineId: routine.id,
         routineName: routine.name,
         dayName: day.name,
-        date: Date.now(),
+        // Si estamos rellenando el entreno de otro día, se registra con SU fecha.
+        date: resumeDate ?? Date.now(),
         exercises: finalLog,
         ...(durationMin > 0 ? { durationMin } : {}),
       };
@@ -822,11 +901,15 @@ export default function WorkoutScreen() {
       stopRest();
       if (profile) {
         AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+        AsyncStorage.removeItem(pendingKey(profile.uid)).catch(() => {});
         clearActiveSession(profile.uid);
       }
       remoteDraftRef.current = null;
       if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
       setRestored(false);
+      setResumeDate(null);
+      setPastDraft(null);
+      setPastDismissed(false);
       setFlexAgain(false); // consumido: tras guardar vuelve la tarjeta de completado
       // Deja el estado detrás del resumen "limpio": el día queda como completado
       // (doneSets 0), de modo que nunca se vuelven a mostrar sus ejercicios.
@@ -1025,6 +1108,34 @@ export default function WorkoutScreen() {
         ) : null}
       </View>
       <Text style={styles.title}>{routine.name}</Text>
+
+      {/* Entreno de un día anterior sin finalizar: rellenarlo o dejarlo para luego. */}
+      {pastDraft && !pastDismissed && !restored ? (
+        <FadeIn>
+          <View style={styles.pastDraftCard}>
+            <Ionicons name="time-outline" size={18} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pastDraftTitle}>Tienes un entreno sin terminar</Text>
+              <Text style={styles.pastDraftSub}>
+                {pastDraft.dayName ? `${pastDraft.dayName} · ` : ''}
+                {new Date(pastDraft.startedAt ?? pastDraft.savedAt).toLocaleDateString('es-ES', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </Text>
+            </View>
+            <View style={styles.pastDraftActions}>
+              <Pressable onPress={resumePastDraft} style={styles.pastDraftFill} hitSlop={6}>
+                <Text style={styles.pastDraftFillText}>Rellenar datos</Text>
+              </Pressable>
+              <Pressable onPress={dismissPastDraft} hitSlop={6}>
+                <Text style={styles.pastDraftLater}>Más tarde</Text>
+              </Pressable>
+            </View>
+          </View>
+        </FadeIn>
+      ) : null}
 
       <Modal
         visible={exitConfirmOpen}
@@ -1957,6 +2068,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   restoredText: { ...typography.small, color: colors.primaryBright, flex: 1 },
+  pastDraftCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  pastDraftTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  pastDraftSub: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 1, textTransform: 'capitalize' },
+  pastDraftActions: { alignItems: 'flex-end', gap: 4 },
+  pastDraftFill: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  pastDraftFillText: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.semiBold, fontSize: 12 },
+  pastDraftLater: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   warmupCard: {
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,

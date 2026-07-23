@@ -86,19 +86,19 @@ export async function getSocialLeaderboard(trainerId: string): Promise<SocialSta
   return snap.docs
     .map((d) => {
       const s = d.data() as SocialStats;
-      // Si la ficha del alumno se sincronizó en un mes ANTERIOR, sus métricas
-      // mensuales están caducadas: se muestran como 0 (no ha entrenado este mes
-      // que sepamos) hasta que abra la app y se recalculen. Así el ranking del
-      // mes nunca arrastra números viejos.
-      const stale = s.monthKey !== undefined && s.monthKey !== nowMonth;
+      // Las métricas MENSUALES solo son de fiar si la ficha se sincronizó ESTE
+      // mes. Si es de un mes anterior (o de una versión vieja sin monthKey), se
+      // muestran a 0 hasta que el alumno abra la app y se recalculen. Así nunca
+      // aparece la incoherencia "racha 2 días · 0 entrenos este mes" (que venía
+      // de mezclar la racha global con un conteo mensual vacío).
+      const fresh = s.monthKey === nowMonth;
       return {
         ...s,
         currentStreak: s.currentStreak ?? 0,
         sessionsThisWeek: s.sessionsThisWeek ?? 0,
         totalWorkouts: s.totalWorkouts ?? 0,
-        // Compat.: docs antiguos sin métricas mensuales caen a las de siempre.
-        streakThisMonth: stale ? 0 : s.streakThisMonth ?? s.currentStreak ?? 0,
-        workoutsThisMonth: stale ? 0 : s.workoutsThisMonth ?? 0,
+        streakThisMonth: fresh ? s.streakThisMonth ?? 0 : 0,
+        workoutsThisMonth: fresh ? s.workoutsThisMonth ?? 0 : 0,
         lastMonthStreak: s.lastMonthStreak ?? 0,
         challengeSessions: s.challengeSessions ?? 0,
       } as SocialStats;
