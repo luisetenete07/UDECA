@@ -505,6 +505,48 @@ export default function TrainerDashboard() {
         </Pressable>
       </View>
 
+      {/* Primeros pasos: guía para el coach recién llegado (sin alumnos todavía). */}
+      {clients.length === 0 && requests.length === 0 ? (
+        <Card accent style={styles.section}>
+          <View style={styles.titleRow}>
+            <Ionicons name="rocket-outline" size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Primeros pasos</Text>
+          </View>
+          <Text style={styles.subtleHint}>Pon en marcha tu coaching en 3 pasos.</Text>
+          {[
+            {
+              n: '1',
+              t: 'Invita a tu primer alumno',
+              s: 'Comparte tu código desde tu perfil.',
+              go: '/(trainer)/profile' as const,
+            },
+            {
+              n: '2',
+              t: 'Crea tu primer ejercicio',
+              s: 'Tu biblioteca de ejercicios con vídeo.',
+              go: '/(trainer)/exercises/new' as const,
+            },
+            {
+              n: '3',
+              t: 'Crea un curso',
+              s: 'Comparte tu conocimiento en vídeo.',
+              go: '/(trainer)/courses/new' as const,
+            },
+          ].map((step) => (
+            <Pressable key={step.n} style={styles.stepRow} onPress={() => router.push(step.go)}>
+              <View style={styles.stepNum}>
+                <Text style={styles.stepNumText}>{step.n}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.stepTitle}>{step.t}</Text>
+                <Text style={styles.stepSub}>{step.s}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </Pressable>
+          ))}
+        </Card>
+      ) : null}
+
       {loadError ? (
         <Card style={[styles.section, { borderColor: colors.danger }]}>
           <Text style={[styles.sectionTitle, { color: colors.danger }]}>Error al cargar datos</Text>
@@ -960,6 +1002,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  stepNum: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumText: { ...typography.small, color: colors.primary, fontFamily: fonts.heading },
+  stepTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  stepSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   todayStrip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
