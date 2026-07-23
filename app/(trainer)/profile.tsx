@@ -243,10 +243,24 @@ export default function TrainerProfileScreen() {
 
   const handleShare = async () => {
     if (!profile?.inviteCode) return;
-    const message = `Únete a mis entrenamientos en UDECA. Descarga la app y regístrate como cliente usando este código: ${profile.inviteCode}`;
+    const message =
+      `Únete a mis entrenamientos en UDECA.\n\n` +
+      `1) Entra en www.udeca.app (o busca "UDECA" en Google Play).\n` +
+      `2) Regístrate como alumno con mi código: ${profile.inviteCode}\n\n` +
+      `¡Nos vemos dentro!`;
     if (Platform.OS === 'web') {
+      // Usa el diálogo nativo de compartir del navegador si existe; si no, copia.
+      const nav = navigator as Navigator & { share?: (d: { text: string }) => Promise<void> };
+      if (nav.share) {
+        try {
+          await nav.share({ text: message });
+          return;
+        } catch {
+          // cancelado o no soportado: caemos a copiar
+        }
+      }
       try {
-        await navigator.clipboard.writeText(profile.inviteCode);
+        await navigator.clipboard.writeText(message);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch {
