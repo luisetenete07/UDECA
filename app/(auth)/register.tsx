@@ -154,7 +154,7 @@ const ROLE_CARDS: { value: UserRole; title: string; price: string; desc: string;
       value: 'trainer',
       title: 'Entrenador',
       price: '15 €/mes',
-      desc: 'Gestiona a tus alumnos, cobros y tu negocio. Cuota anual (180 €/año).',
+      desc: 'Gestiona a tus alumnos, cobros y tu negocio. Se paga 180 €/año de una vez (cuota anual, no meses sueltos).',
     },
   ];
 
