@@ -34,8 +34,18 @@ const ATHLETE_BENEFITS = [
 ];
 
 export function Paywall() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, refreshProfile } = useAuth();
   const isAthlete = profile?.role === 'athlete';
+  const [checking, setChecking] = React.useState(false);
+
+  const handleCheck = async () => {
+    setChecking(true);
+    try {
+      await refreshProfile();
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const checkoutUrl = subscriptionCheckoutUrl(profile);
   const handlePay = () => {
@@ -85,11 +95,18 @@ export function Paywall() {
             onPress={handlePay}
             style={{ marginTop: spacing.md }}
           />
+          <Button
+            title={checking ? 'Comprobando...' : 'Ya he pagado · Actualizar'}
+            variant="secondary"
+            onPress={handleCheck}
+            loading={checking}
+            style={{ marginTop: spacing.sm }}
+          />
         </Card>
 
         <Text style={styles.footNote}>
-          ¿Ya has pagado? La activación se aplica en cuanto la confirmamos:
-          cierra sesión y vuelve a entrar.
+          Tras pagar, vuelve aquí y pulsa "Ya he pagado · Actualizar". Si no se
+          activa al instante, espera unos segundos y reintenta.
         </Text>
         <Button title="Cerrar sesión" variant="ghost" onPress={signOut} />
       </View>

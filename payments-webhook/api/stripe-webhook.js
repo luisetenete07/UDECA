@@ -118,6 +118,12 @@ export default async function handler(req, res) {
     res.status(200).json({ received: true });
   } catch (err) {
     console.error('Webhook error:', err);
+    // El procesado falló: borramos el marcador de idempotencia para que el
+    // reintento de Stripe pueda volver a procesar este evento (si no, quedaría
+    // "procesado" y no se activaría nunca la cuenta).
+    if (event && event.id) {
+      await db.collection('stripeEvents').doc(event.id).delete().catch(() => {});
+    }
     res.status(500).send('Error interno');
   }
 }
