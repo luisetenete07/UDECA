@@ -323,6 +323,94 @@ export default function TrainerDashboard() {
     }
   };
 
+  // Historial agrupado por alumno (para la vista "Histórico" tipo Excel).
+  const incomeByClient = (() => {
+    const m = new Map<string, import('../../lib/types').Payment[]>();
+    for (const p of allPaymentsSorted) {
+      const arr = m.get(p.clientId) ?? [];
+      arr.push(p);
+      m.set(p.clientId, arr);
+    }
+    return [...m.entries()]
+      .map(([cid, pays]) => ({
+        cid,
+        name: byId(cid)?.name ?? 'Cliente',
+        photoURL: byId(cid)?.photoURL,
+        total: pays.reduce((s, p) => s + (p.amountEur || 0), 0),
+        pays,
+      }))
+      .sort((a, b) => b.total - a.total);
+  })();
+
+  // Una fila de pago editable (fecha + importe con lápiz/papelera).
+  const renderPayRow = (p: import('../../lib/types').Payment, showAvatar: boolean) => {
+    const client = byId(p.clientId);
+    const editing = editPayId === p.id;
+    return (
+      <View key={p.id} style={styles.payRow}>
+        {showAvatar ? <Avatar name={client?.name} photoURL={client?.photoURL} size={34} /> : null}
+        <View style={{ flex: 1 }}>
+          {showAvatar ? <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text> : null}
+          <Text style={styles.logDetail}>{new Date(p.date).toLocaleDateString('es-ES')}</Text>
+        </View>
+        {editing ? (
+          <>
+            <TextInput
+              value={editAmount}
+              onChangeText={setEditAmount}
+              keyboardType="decimal-pad"
+              style={styles.amountInput}
+              placeholder="0"
+              placeholderTextColor={colors.textFaint}
+              autoFocus
+            />
+            <Text style={styles.amountEuro}>€</Text>
+            <Pressable
+              onPress={() => handleSavePayEdit(p.id)}
+              disabled={savingPay}
+              style={styles.payIconBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="checkmark" size={20} color="#2E7D5B" />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setEditPayId(null);
+                setEditAmount('');
+              }}
+              style={styles.payIconBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="close" size={20} color={colors.textMuted} />
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={styles.payAmount}>{p.amountEur} €</Text>
+            <Pressable
+              onPress={() => {
+                setEditPayId(p.id);
+                setEditAmount(String(p.amountEur ?? ''));
+              }}
+              style={styles.payIconBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="create-outline" size={19} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              onPress={() => handleDeletePayment(p.id)}
+              disabled={savingPay}
+              style={styles.payIconBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="trash-outline" size={19} color={colors.danger} />
+            </Pressable>
+          </>
+        )}
+      </View>
+    );
+  };
+
 
   return (
     <ScreenContainer>
@@ -769,83 +857,32 @@ export default function TrainerDashboard() {
             <Text style={styles.subtleHint}>
               Ajusta el importe o elimina un pago si hubo un error.
             </Text>
-            {(incomeScope === 'month' ? monthPayments : allPaymentsSorted).length === 0 ? (
-              <Text style={styles.mutedText}>
-                {incomeScope === 'month'
-                  ? 'Aún no hay pagos registrados este mes.'
-                  : 'Aún no hay pagos registrados.'}
-              </Text>
+            {incomeScope === 'month' ? (
+              monthPayments.length === 0 ? (
+                <Text style={styles.mutedText}>Aún no hay pagos registrados este mes.</Text>
+              ) : (
+                <ScrollView style={{ maxHeight: 400 }}>
+                  {monthPayments.map((p) => renderPayRow(p, true))}
+                </ScrollView>
+              )
+            ) : incomeByClient.length === 0 ? (
+              <Text style={styles.mutedText}>Aún no hay pagos registrados.</Text>
             ) : (
-              <ScrollView style={{ maxHeight: 400 }}>
-                {(incomeScope === 'month' ? monthPayments : allPaymentsSorted).map((p) => {
-                  const client = byId(p.clientId);
-                  const editing = editPayId === p.id;
-                  return (
-                    <View key={p.id} style={styles.payRow}>
-                      <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
-                        <Text style={styles.logDetail}>
-                          {new Date(p.date).toLocaleDateString('es-ES')}
-                        </Text>
-                      </View>
-                      {editing ? (
-                        <>
-                          <TextInput
-                            value={editAmount}
-                            onChangeText={setEditAmount}
-                            keyboardType="decimal-pad"
-                            style={styles.amountInput}
-                            placeholder="0"
-                            placeholderTextColor={colors.textFaint}
-                            autoFocus
-                          />
-                          <Text style={styles.amountEuro}>€</Text>
-                          <Pressable
-                            onPress={() => handleSavePayEdit(p.id)}
-                            disabled={savingPay}
-                            style={styles.payIconBtn}
-                            hitSlop={6}
-                          >
-                            <Ionicons name="checkmark" size={20} color="#2E7D5B" />
-                          </Pressable>
-                          <Pressable
-                            onPress={() => {
-                              setEditPayId(null);
-                              setEditAmount('');
-                            }}
-                            style={styles.payIconBtn}
-                            hitSlop={6}
-                          >
-                            <Ionicons name="close" size={20} color={colors.textMuted} />
-                          </Pressable>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={styles.payAmount}>{p.amountEur} €</Text>
-                          <Pressable
-                            onPress={() => {
-                              setEditPayId(p.id);
-                              setEditAmount(String(p.amountEur ?? ''));
-                            }}
-                            style={styles.payIconBtn}
-                            hitSlop={6}
-                          >
-                            <Ionicons name="create-outline" size={19} color={colors.primary} />
-                          </Pressable>
-                          <Pressable
-                            onPress={() => handleDeletePayment(p.id)}
-                            disabled={savingPay}
-                            style={styles.payIconBtn}
-                            hitSlop={6}
-                          >
-                            <Ionicons name="trash-outline" size={19} color={colors.danger} />
-                          </Pressable>
-                        </>
-                      )}
+              // Histórico agrupado por alumno (tipo Excel): cada alumno con su
+              // total y el desglose de sus pagos.
+              <ScrollView style={{ maxHeight: 420 }}>
+                {incomeByClient.map((g) => (
+                  <View key={g.cid} style={styles.clientGroup}>
+                    <View style={styles.clientGroupHead}>
+                      <Avatar name={g.name} photoURL={g.photoURL} size={34} />
+                      <Text style={styles.clientGroupName}>{g.name}</Text>
+                      <Text style={styles.clientGroupTotal}>
+                        {g.total.toLocaleString('es-ES')} €
+                      </Text>
                     </View>
-                  );
-                })}
+                    {g.pays.map((p) => renderPayRow(p, false))}
+                  </View>
+                ))}
               </ScrollView>
             )}
           </View>
@@ -1053,6 +1090,18 @@ const styles = StyleSheet.create({
   },
   totalLabel: { ...typography.small, color: colors.textMuted, flex: 1 },
   totalValue: { ...typography.h3, color: '#2E7D5B', fontFamily: fonts.heading },
+  clientGroup: { marginBottom: spacing.sm },
+  clientGroupHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.hairline,
+  },
+  clientGroupName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
+  clientGroupTotal: { ...typography.body, color: '#2E7D5B', fontFamily: fonts.heading },
   nextPayRow: {
     flexDirection: 'row',
     alignItems: 'center',
