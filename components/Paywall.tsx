@@ -10,7 +10,9 @@ import {
   ATHLETE_MONTHLY_EUR,
   CONTACT_EMAIL,
   subscriptionCheckoutUrl,
+  verifySubscriptionNow,
 } from '../lib/subscription';
+import { showToast } from './Toast';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
 
 const BENEFITS = [
@@ -41,7 +43,12 @@ export function Paywall() {
   const handleCheck = async () => {
     setChecking(true);
     try {
+      // Pregunta directamente a Stripe (sin depender del webhook) y activa.
+      const result = await verifySubscriptionNow(profile);
       await refreshProfile();
+      if (!result.active) {
+        showToast(result.reason ? `Aún no: ${result.reason}` : 'Aún no consta el pago');
+      }
     } finally {
       setChecking(false);
     }

@@ -40,6 +40,30 @@ export const PAYMENT_LINK_URL = '';
 export const COACH_PAYMENT_LINK: string = 'https://buy.stripe.com/test_aFa5kEcao8277On4as7g401';
 export const ATHLETE_PAYMENT_LINK: string = 'https://buy.stripe.com/test_14A7sM2zO8275Gf6iA7g400';
 
+/** Endpoint de comprobación bajo demanda (Vercel). Activa la cuenta al momento. */
+export const CHECK_SUB_URL = 'https://udeca.vercel.app/api/check-subscription';
+
+/**
+ * Pregunta a Stripe (vía backend) si el email del usuario tiene suscripción
+ * activa y, si la hay, activa la cuenta. Devuelve el motivo si no puede.
+ */
+export async function verifySubscriptionNow(
+  profile: UserProfile | null
+): Promise<{ active: boolean; reason?: string }> {
+  if (!profile) return { active: false, reason: 'Sin perfil' };
+  try {
+    const res = await fetch(CHECK_SUB_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid: profile.uid, email: profile.email }),
+    });
+    const data = (await res.json()) as { active: boolean; reason?: string };
+    return data;
+  } catch (e) {
+    return { active: false, reason: e instanceof Error ? e.message : 'Error de red' };
+  }
+}
+
 /** URL de suscripción para este usuario, con su uid para la activación auto. */
 export function subscriptionCheckoutUrl(profile: UserProfile | null): string | null {
   if (!profile) return null;
