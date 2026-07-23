@@ -399,6 +399,23 @@ export default function ClientDashboard() {
         <Text style={styles.quoteText}>{quoteOfTheDay()}</Text>
       </View>
 
+      {/* Atleta: acceso a gestionar su propio plan de entreno. */}
+      {profile?.role === 'athlete' ? (
+        <Pressable
+          onPress={() => router.push('/(client)/my-plan')}
+          style={styles.myPlanEntry}
+        >
+          <View style={styles.myPlanIcon}>
+            <Ionicons name="construct-outline" size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.myPlanTitle}>Mi plan de entreno</Text>
+            <Text style={styles.myPlanSub}>Crea y edita tus días y ejercicios.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </Pressable>
+      ) : null}
+
       {/* Petición de valoración: tras 5 entrenos, una sola vez. */}
       {!rateDismissed && workoutLogs.length >= 5 ? (
         <Card accent style={styles.rateCard}>
@@ -742,6 +759,29 @@ const styles = StyleSheet.create({
   },
   rateBtnText: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.semiBold, fontSize: 12 },
   rateLater: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  myPlanEntry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    marginBottom: spacing.md,
+  },
+  myPlanIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  myPlanTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  myPlanSub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   quoteRule: { width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: colors.primary },
   quoteText: {
     ...typography.body,

@@ -8,8 +8,10 @@ import { GlobalRestTimer } from '../../components/GlobalRestTimer';
 import { LinkTrainerScreen } from '../../components/LinkTrainerScreen';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Onboarding } from '../../components/Onboarding';
+import { Paywall } from '../../components/Paywall';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
+import { subscriptionState } from '../../lib/subscription';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { tabScreenOptions } from '../../lib/navTheme';
@@ -61,11 +63,18 @@ export default function ClientLayout() {
 
   if (loading) return <LoadingScreen />;
   if (!firebaseUser || !profile) return <Redirect href="/(auth)/login" />;
-  if (profile.role !== 'client') return <Redirect href="/(trainer)/dashboard" />;
+  // Aquí viven tanto alumnos (con coach) como atletas (autoentrenados).
+  const isAthlete = profile.role === 'athlete';
+  if (profile.role !== 'client' && !isAthlete) {
+    return <Redirect href="/(trainer)/dashboard" />;
+  }
   // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
-  // Alumno sin entrenador: pantalla para enviar/esperar la solicitud.
-  if (!profile.trainerId) return <LinkTrainerScreen />;
+  // Atleta con la suscripción caducada: muro de pago (10 €/mes).
+  if (isAthlete && !subscriptionState(profile).active) return <Paywall />;
+  // Alumno sin entrenador: pantalla para enviar/esperar la solicitud. Los
+  // atletas son su propio coach (trainerId propio), así que no la ven.
+  if (!isAthlete && !profile.trainerId) return <LinkTrainerScreen />;
   // Bienvenida de primer uso (una vez por dispositivo).
   if (onboardingSeen === null) return <LoadingScreen />;
   if (!onboardingSeen) {
@@ -150,6 +159,8 @@ export default function ClientLayout() {
       {/* El perfil se abre tocando el avatar en Inicio; lo ocultamos de la
           barra para no saturarla con demasiadas pestañas. */}
       <Tabs.Screen name="profile" options={{ href: null }} />
+      {/* Editor de plan del atleta (se abre desde Inicio, no es una pestaña). */}
+      <Tabs.Screen name="my-plan" options={{ href: null }} />
     </Tabs>
     {/* Crono de descanso global: sigue corriendo y visible en cualquier pestaña. */}
     <GlobalRestTimer />

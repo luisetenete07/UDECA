@@ -33,6 +33,7 @@ interface AuthContextValue {
     password: string,
     inviteCode: string
   ) => Promise<void>;
+  registerAthlete: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -160,6 +161,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(newProfile);
   };
 
+  // Atleta individual: es su propio coach (trainerId = su uid), sin código.
+  // Nace con la suscripción pendiente (0 = caducada); paga cuota mensual.
+  const registerAthlete = async (name: string, email: string, password: string) => {
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(credential.user, { displayName: name });
+    const newProfile: UserProfile = {
+      uid: credential.user.uid,
+      role: 'athlete' as UserRole,
+      name,
+      email,
+      createdAt: Date.now(),
+      trainerId: credential.user.uid,
+      emailVerificationRequired: true,
+      subscriptionUntil: 0,
+    };
+    await setDoc(doc(db, 'users', credential.user.uid), newProfile);
+    sendEmailVerification(credential.user).catch(() => {});
+    setProfile(newProfile);
+  };
+
   const signOut = async () => {
     await firebaseSignOut(auth);
     setProfile(null);
@@ -212,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       registerTrainer,
       registerClient,
+      registerAthlete,
       signOut,
       deleteAccount,
       refreshProfile,

@@ -13,6 +13,8 @@ import type { UserProfile } from './types';
  *    Firestore impiden que un coach se la extienda a sí mismo).
  */
 export const ANNUAL_PRICE_EUR = 180;
+/** Atleta individual: cuota mensual (suelta, no anual). */
+export const ATHLETE_MONTHLY_EUR = 10;
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -44,7 +46,9 @@ export interface SubscriptionState {
 }
 
 export function subscriptionState(profile: UserProfile | null): SubscriptionState {
-  if (!profile || profile.role !== 'trainer') {
+  // Pagan plataforma: entrenadores (anual) y atletas individuales (mensual).
+  // Los alumnos vinculados a un coach entran gratis.
+  if (!profile || (profile.role !== 'trainer' && profile.role !== 'athlete')) {
     return { active: true, daysLeft: null, legacy: true };
   }
   if (isAdmin(profile)) return { active: true, daysLeft: null, legacy: false };

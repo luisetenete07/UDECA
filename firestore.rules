@@ -58,7 +58,9 @@ service cloud.firestore {
       // NINGÚN tiempo de suscripción (nace caducada); solo el admin la activa.
       allow create: if request.auth != null && request.auth.uid == userId
         && (
-          request.resource.data.role != 'trainer'
+          // Quien paga (coach anual y atleta mensual) nace SIN suscripción
+          // (0 = caducada); solo el admin la activa. Los alumnos entran gratis.
+          (request.resource.data.role != 'trainer' && request.resource.data.role != 'athlete')
           || !('subscriptionUntil' in request.resource.data)
           || request.resource.data.subscriptionUntil <= request.time.toMillis()
         );

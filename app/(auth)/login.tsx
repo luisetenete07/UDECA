@@ -109,7 +109,8 @@ export default function LoginScreen() {
                   {acc.name}
                 </Text>
                 <Text style={styles.accMeta} numberOfLines={1}>
-                  {acc.role === 'trainer' ? 'Entrenador' : 'Alumno'} · {acc.email}
+                  {acc.role === 'trainer' ? 'Entrenador' : acc.role === 'athlete' ? 'Atleta' : 'Alumno'}{' '}
+                  · {acc.email}
                 </Text>
               </View>
               <Pressable onPress={() => removeAccount(acc)} hitSlop={10} style={styles.accRemove}>

@@ -1,6 +1,8 @@
 import type { MuscleId } from './muscles';
 
-export type UserRole = 'trainer' | 'client';
+// 'athlete' = usuario individual que se autoentrena (es su propio coach:
+// crea sus rutinas, sigue su progreso y nutrición). De pago mensual.
+export type UserRole = 'trainer' | 'client' | 'athlete';
 
 export interface UserProfile {
   uid: string;

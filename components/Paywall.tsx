@@ -7,6 +7,7 @@ import { Card } from './Card';
 import { useAuth } from '../lib/auth-context';
 import {
   ANNUAL_PRICE_EUR,
+  ATHLETE_MONTHLY_EUR,
   CONTACT_EMAIL,
   PAYMENT_LINK_URL,
 } from '../lib/subscription';
@@ -24,15 +25,25 @@ const BENEFITS = [
  * Muro de suscripción del coach: aparece cuando su prueba o plan caduca.
  * Los datos no se tocan nunca; solo se bloquea el acceso hasta renovar.
  */
+const ATHLETE_BENEFITS = [
+  'Crea y edita tus propias rutinas',
+  'Registra tus entrenos, series y récords',
+  'Progreso, estadísticas y evolución por ejercicio',
+  'Nutrición: tus macros y seguimiento',
+  'Logros y racha para no fallar',
+];
+
 export function Paywall() {
   const { profile, signOut } = useAuth();
+  const isAthlete = profile?.role === 'athlete';
 
   const handlePay = () => {
     if (PAYMENT_LINK_URL) {
       Linking.openURL(PAYMENT_LINK_URL).catch(() => {});
     } else {
+      const plan = isAthlete ? 'Atleta (10 €/mes)' : 'Pro anual';
       Linking.openURL(
-        `mailto:${CONTACT_EMAIL}?subject=Suscripción UDECA Pro&body=Hola, quiero activar mi suscripción anual de UDECA. Mi correo de coach es: ${profile?.email ?? ''}`
+        `mailto:${CONTACT_EMAIL}?subject=Suscripción UDECA ${plan}&body=Hola, quiero activar mi suscripción de UDECA (${plan}). Mi correo es: ${profile?.email ?? ''}`
       ).catch(() => {});
     }
   };
@@ -41,22 +52,27 @@ export function Paywall() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <Image source={require('../assets/icon.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Activa UDECA Pro</Text>
+        <Text style={styles.title}>{isAthlete ? 'Activa UDECA Atleta' : 'Activa UDECA Pro'}</Text>
         <Text style={styles.subtitle}>
-          Para entrenar a tus alumnos como coach necesitas la suscripción
-          anual. Tus datos están a salvo y te esperan.
+          {isAthlete
+            ? 'Entrena por tu cuenta con todas las herramientas. Tus datos están a salvo y te esperan.'
+            : 'Para entrenar a tus alumnos como coach necesitas la suscripción anual. Tus datos están a salvo y te esperan.'}
         </Text>
 
         <Card accent style={styles.planCard}>
-          <Text style={styles.planName}>UDECA PRO · ANUAL</Text>
+          <Text style={styles.planName}>{isAthlete ? 'UDECA ATLETA · MENSUAL' : 'UDECA PRO · ANUAL'}</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{(ANNUAL_PRICE_EUR / 12).toFixed(0)} €</Text>
+            <Text style={styles.price}>
+              {isAthlete ? ATHLETE_MONTHLY_EUR : (ANNUAL_PRICE_EUR / 12).toFixed(0)} €
+            </Text>
             <Text style={styles.priceUnit}>/ mes</Text>
           </View>
           <Text style={styles.priceHint}>
-            Cuota anual: {ANNUAL_PRICE_EUR} € / año (un único pago)
+            {isAthlete
+              ? 'Cuota mensual, sin permanencia.'
+              : `Cuota anual: ${ANNUAL_PRICE_EUR} € / año (un único pago)`}
           </Text>
-          {BENEFITS.map((b) => (
+          {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
             <View key={b} style={styles.benefitRow}>
               <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
               <Text style={styles.benefitText}>{b}</Text>

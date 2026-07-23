@@ -13,7 +13,7 @@ import { colors, fonts, gradients, radius, spacing, typography } from '../../lib
 import type { UserRole } from '../../lib/types';
 
 export default function RegisterScreen() {
-  const { registerTrainer, registerClient } = useAuth();
+  const { registerTrainer, registerClient, registerAthlete } = useAuth();
   const [role, setRole] = useState<UserRole>('client');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,6 +41,8 @@ export default function RegisterScreen() {
     try {
       if (role === 'trainer') {
         await registerTrainer(name.trim(), email.trim(), password);
+      } else if (role === 'athlete') {
+        await registerAthlete(name.trim(), email.trim(), password);
       } else {
         await registerClient(name.trim(), email.trim(), password, inviteCode);
       }
@@ -67,9 +69,14 @@ export default function RegisterScreen() {
       <Card accent style={styles.formCard}>
         <View style={styles.roleSwitch}>
           <RoleOption
-            label="Soy cliente"
+            label="Soy alumno"
             selected={role === 'client'}
             onPress={() => setRole('client')}
+          />
+          <RoleOption
+            label="Soy atleta"
+            selected={role === 'athlete'}
+            onPress={() => setRole('athlete')}
           />
           <RoleOption
             label="Soy entrenador"
@@ -77,6 +84,11 @@ export default function RegisterScreen() {
             onPress={() => setRole('trainer')}
           />
         </View>
+        {role === 'athlete' ? (
+          <Text style={styles.roleHint}>
+            Entrenas por tu cuenta: creas tus rutinas y sigues tu progreso y nutrición. 10 €/mes.
+          </Text>
+        ) : null}
 
         <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Tu nombre" />
         <TextField
@@ -188,9 +200,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  roleHint: {
+    ...typography.small,
+    color: colors.primaryBright,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   roleOption: {
     flex: 1,
     paddingVertical: spacing.sm,
+    paddingHorizontal: 2,
     borderRadius: radius.sm,
     alignItems: 'center',
   },
@@ -201,6 +220,8 @@ const styles = StyleSheet.create({
     ...typography.small,
     fontFamily: fonts.semiBold,
     color: colors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
   },
   roleOptionTextSelected: {
     color: colors.onPrimary,
