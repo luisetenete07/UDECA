@@ -29,6 +29,29 @@ export const ADMIN_EMAILS = ['luisetenete07@gmail.com', 'luistenaf@gmail.com'];
  */
 export const PAYMENT_LINK_URL = '';
 
+/**
+ * Payment Links de Stripe para las suscripciones de plataforma. Se crean en el
+ * panel de Stripe (Payments → Payment Links) a partir de sus precios recurrentes
+ * y se pegan aquí. La app los abre añadiendo ?client_reference_id=<uid> para que
+ * el webhook active la cuenta correcta automáticamente.
+ *   - Coach: precio 180 €/año  (price_1TwQhVKGNohj8zznoTrUubCg)
+ *   - Atleta: precio 10 €/mes   (price_1TwQi6KGNohj8zznn54uw7mC)
+ */
+export const COACH_PAYMENT_LINK: string = '';
+export const ATHLETE_PAYMENT_LINK: string = '';
+
+/** URL de suscripción para este usuario, con su uid para la activación auto. */
+export function subscriptionCheckoutUrl(profile: UserProfile | null): string | null {
+  if (!profile) return null;
+  const base = profile.role === 'athlete' ? ATHLETE_PAYMENT_LINK : COACH_PAYMENT_LINK;
+  if (!base) return null;
+  const sep = base.includes('?') ? '&' : '?';
+  return (
+    `${base}${sep}client_reference_id=${encodeURIComponent(profile.uid)}` +
+    `&prefilled_email=${encodeURIComponent(profile.email)}`
+  );
+}
+
 /** Correo de contacto para activar/renovar manualmente. */
 export const CONTACT_EMAIL = 'luistenaf@gmail.com';
 

@@ -76,11 +76,23 @@ export default async function handler(req, res) {
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
-      const clientId = session.client_reference_id;
-      const paid = session.payment_status === 'paid' || session.status === 'complete';
-      if (clientId && paid) {
-        await markClientPaid(clientId, (session.amount_total || 0) / 100);
+      if (session.mode === 'subscription') {
+        // Suscripción de coach (anual) o atleta (mensual): activa la cuenta.
+        await activateSubscription(session);
+      } else {
+        // Pago suelto de un alumno a su coach (modelo antiguo/Connect).
+        const clientId = session.client_reference_id;
+        const paid = session.payment_status === 'paid' || session.status === 'complete';
+        if (clientId && paid) {
+          await markClientPaid(clientId, (session.amount_total || 0) / 100);
+        }
       }
+    } else if (event.type === 'invoice.paid') {
+      // Renovación automática: extiende la suscripción al nuevo periodo.
+      await renewSubscription(event.data.object);
+    } else if (event.type === 'customer.subscription.deleted') {
+      // Cancelación: la cuenta caduca (los datos NUNCA se tocan).
+      await expireSubscription(event.data.object);
     }
 
     res.status(200).json({ received: true });
@@ -88,6 +100,56 @@ export default async function handler(req, res) {
     console.error('Webhook error:', err);
     res.status(500).send('Error interno');
   }
+}
+
+// --- Suscripciones de plataforma (coach anual / atleta mensual) ---
+
+// Activa la cuenta tras el primer pago. El uid llega en client_reference_id
+// (el Payment Link se abre desde la app con ?client_reference_id=<uid>).
+async function activateSubscription(session) {
+  const uid = session.client_reference_id;
+  if (!uid) return;
+  let until = addOneMonth(Date.now());
+  if (session.subscription) {
+    const sub = await stripe.subscriptions.retrieve(session.subscription);
+    until = sub.current_period_end * 1000; // fin del periodo pagado (mes o año)
+  }
+  await db.collection('users').doc(uid).set(
+    {
+      subscriptionUntil: until,
+      stripeCustomerId: session.customer || null,
+      stripeSubscriptionId: session.subscription || null,
+    },
+    { merge: true }
+  );
+}
+
+// Renovación automática: al cobrar la nueva factura, extiende la suscripción.
+async function renewSubscription(invoice) {
+  const customer = invoice.customer;
+  const subId = invoice.subscription;
+  if (!customer || !subId) return;
+  const sub = await stripe.subscriptions.retrieve(subId);
+  const q = await db
+    .collection('users')
+    .where('stripeCustomerId', '==', customer)
+    .limit(1)
+    .get();
+  if (q.empty) return;
+  await q.docs[0].ref.set({ subscriptionUntil: sub.current_period_end * 1000 }, { merge: true });
+}
+
+// Cancelación: la cuenta caduca de inmediato (datos intactos).
+async function expireSubscription(sub) {
+  const customer = sub.customer;
+  if (!customer) return;
+  const q = await db
+    .collection('users')
+    .where('stripeCustomerId', '==', customer)
+    .limit(1)
+    .get();
+  if (q.empty) return;
+  await q.docs[0].ref.set({ subscriptionUntil: Date.now() }, { merge: true });
 }
 
 async function markClientPaid(clientId, amountEur) {

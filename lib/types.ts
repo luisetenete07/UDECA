@@ -24,6 +24,13 @@ export interface UserProfile {
   paymentLink?: string;
   /** Solo en clientes: uid del entrenador al que pertenecen. */
   trainerId?: string;
+  /** Stripe: id de cliente y de suscripción (los escribe el webhook). */
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  /** Solo en coaches con Connect: id de su cuenta conectada de Stripe. */
+  stripeAccountId?: string;
+  /** true cuando su cuenta de Stripe Connect ya puede recibir cobros. */
+  stripeChargesEnabled?: boolean;
   /** Solo en clientes: objetivo principal del cliente. */
   goal?: string;
   /** Avatar del usuario como data URL (base64) o URL remota. */

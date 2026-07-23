@@ -9,7 +9,7 @@ import {
   ANNUAL_PRICE_EUR,
   ATHLETE_MONTHLY_EUR,
   CONTACT_EMAIL,
-  PAYMENT_LINK_URL,
+  subscriptionCheckoutUrl,
 } from '../lib/subscription';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
 
@@ -37,9 +37,11 @@ export function Paywall() {
   const { profile, signOut } = useAuth();
   const isAthlete = profile?.role === 'athlete';
 
+  const checkoutUrl = subscriptionCheckoutUrl(profile);
   const handlePay = () => {
-    if (PAYMENT_LINK_URL) {
-      Linking.openURL(PAYMENT_LINK_URL).catch(() => {});
+    if (checkoutUrl) {
+      // Stripe activa la cuenta sola tras pagar (webhook + client_reference_id).
+      Linking.openURL(checkoutUrl).catch(() => {});
     } else {
       const plan = isAthlete ? 'Atleta (10 €/mes)' : 'Pro anual';
       Linking.openURL(
@@ -79,7 +81,7 @@ export function Paywall() {
             </View>
           ))}
           <Button
-            title={PAYMENT_LINK_URL ? 'Activar suscripción' : 'Contactar para activar'}
+            title={checkoutUrl ? 'Suscribirme ahora' : 'Contactar para activar'}
             onPress={handlePay}
             style={{ marginTop: spacing.md }}
           />
