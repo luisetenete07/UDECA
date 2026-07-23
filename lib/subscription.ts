@@ -37,8 +37,8 @@ export const PAYMENT_LINK_URL = '';
  *   - Coach: precio 180 €/año  (price_1TwQhVKGNohj8zznoTrUubCg)
  *   - Atleta: precio 10 €/mes   (price_1TwQi6KGNohj8zznn54uw7mC)
  */
-export const COACH_PAYMENT_LINK: string = '';
-export const ATHLETE_PAYMENT_LINK: string = '';
+export const COACH_PAYMENT_LINK: string = 'https://buy.stripe.com/test_aFa5kEcao8277On4as7g401';
+export const ATHLETE_PAYMENT_LINK: string = 'https://buy.stripe.com/test_14A7sM2zO8275Gf6iA7g400';
 
 /** URL de suscripción para este usuario, con su uid para la activación auto. */
 export function subscriptionCheckoutUrl(profile: UserProfile | null): string | null {
