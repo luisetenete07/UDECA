@@ -45,6 +45,26 @@ function addOneMonth(base) {
   return d.getTime();
 }
 
+/**
+ * Fin del periodo pagado en ms, tolerante a la versión de la API: en las nuevas
+ * `current_period_end` vive en el item de la suscripción, no en la raíz.
+ */
+function subPeriodEndMs(sub) {
+  const secs = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end;
+  return secs ? secs * 1000 : addOneMonth(Date.now());
+}
+
+/** Id de suscripción de una factura, tolerante a la versión de la API. */
+function invoiceSubscriptionId(invoice) {
+  return (
+    invoice?.subscription ??
+    invoice?.parent?.subscription_details?.subscription ??
+    invoice?.lines?.data?.[0]?.subscription ??
+    invoice?.lines?.data?.[0]?.parent?.subscription_item_details?.subscription ??
+    null
+  );
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).send('Method not allowed');
@@ -112,7 +132,7 @@ async function activateSubscription(session) {
   let until = addOneMonth(Date.now());
   if (session.subscription) {
     const sub = await stripe.subscriptions.retrieve(session.subscription);
-    until = sub.current_period_end * 1000; // fin del periodo pagado (mes o año)
+    until = subPeriodEndMs(sub); // fin del periodo pagado (mes o año)
   }
   await db.collection('users').doc(uid).set(
     {
@@ -127,7 +147,7 @@ async function activateSubscription(session) {
 // Renovación automática: al cobrar la nueva factura, extiende la suscripción.
 async function renewSubscription(invoice) {
   const customer = invoice.customer;
-  const subId = invoice.subscription;
+  const subId = invoiceSubscriptionId(invoice);
   if (!customer || !subId) return;
   const sub = await stripe.subscriptions.retrieve(subId);
   const q = await db
@@ -136,7 +156,7 @@ async function renewSubscription(invoice) {
     .limit(1)
     .get();
   if (q.empty) return;
-  await q.docs[0].ref.set({ subscriptionUntil: sub.current_period_end * 1000 }, { merge: true });
+  await q.docs[0].ref.set({ subscriptionUntil: subPeriodEndMs(sub) }, { merge: true });
 }
 
 // Cancelación: la cuenta caduca de inmediato (datos intactos).
