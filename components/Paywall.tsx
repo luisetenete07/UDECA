@@ -50,10 +50,12 @@ export function Paywall() {
         <Card accent style={styles.planCard}>
           <Text style={styles.planName}>UDECA PRO · ANUAL</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{ANNUAL_PRICE_EUR} €</Text>
-            <Text style={styles.priceUnit}>/ año</Text>
+            <Text style={styles.price}>{(ANNUAL_PRICE_EUR / 12).toFixed(0)} €</Text>
+            <Text style={styles.priceUnit}>/ mes</Text>
           </View>
-          <Text style={styles.priceHint}>Equivale a {(ANNUAL_PRICE_EUR / 12).toFixed(0)} € al mes</Text>
+          <Text style={styles.priceHint}>
+            Cuota anual: {ANNUAL_PRICE_EUR} € / año (un único pago)
+          </Text>
           {BENEFITS.map((b) => (
             <View key={b} style={styles.benefitRow}>
               <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
