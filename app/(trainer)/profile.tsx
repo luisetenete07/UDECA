@@ -20,7 +20,7 @@ import {
   updateUserProfile,
 } from '../../lib/firestore/users';
 import { pickAvatar } from '../../lib/image';
-import { getConnectStatus, startCoachOnboarding } from '../../lib/connect';
+import { disconnectCoachPayments, getConnectStatus, startCoachOnboarding } from '../../lib/connect';
 import {
   ANNUAL_PRICE_EUR,
   DAY_MS,
@@ -51,7 +51,9 @@ export default function TrainerProfileScreen() {
   // Stripe Connect (cobros directos sin comisión de UDECA).
   const [connecting, setConnecting] = useState(false);
   const [checkingConnect, setCheckingConnect] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const chargesEnabled = Boolean(profile?.stripeChargesEnabled);
+  const hasConnectAccount = Boolean(profile?.stripeAccountId);
   // Panel admin UDECA (solo cuentas administradoras).
   const [adminOpen, setAdminOpen] = useState(false);
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
@@ -220,6 +222,22 @@ export default function TrainerProfileScreen() {
       else showToast('Alta aún en revisión. Termina los datos en Stripe.');
     } finally {
       setCheckingConnect(false);
+    }
+  };
+
+  // Desvincula la cuenta de cobros (la app olvida la cuenta de Stripe).
+  const handleDisconnectPayments = async () => {
+    const ok = await confirmAdmin(
+      '¿Desvincular tu cuenta de cobros? Tus alumnos dejarán de poder pagarte por la app hasta que la vuelvas a conectar. Tu cuenta de Stripe y tus pagos anteriores no se borran.'
+    );
+    if (!ok) return;
+    setDisconnecting(true);
+    try {
+      const r = await disconnectCoachPayments(profile);
+      await refreshProfile();
+      showToast(r.ok ? 'Cuenta de cobros desvinculada' : r.reason ? `No se pudo: ${r.reason}` : 'No se pudo desvincular');
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -438,6 +456,15 @@ export default function TrainerProfileScreen() {
             />
           </>
         )}
+        {hasConnectAccount ? (
+          <Button
+            title={disconnecting ? 'Desvinculando...' : 'Desvincular cuenta de cobros'}
+            variant="ghost"
+            onPress={handleDisconnectPayments}
+            loading={disconnecting}
+            style={{ marginTop: spacing.xs }}
+          />
+        ) : null}
       </Card>
 
       <Card style={styles.section}>

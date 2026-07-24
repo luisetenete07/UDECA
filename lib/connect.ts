@@ -66,6 +66,18 @@ export async function getConnectStatus(profile: UserProfile | null): Promise<Con
   }
 }
 
+/** Desvincula la cuenta de cobros del coach (la app olvida su cuenta Stripe). */
+export async function disconnectCoachPayments(
+  profile: UserProfile | null
+): Promise<{ ok: boolean; reason?: string }> {
+  if (!profile) return { ok: false, reason: 'Sin perfil' };
+  try {
+    return await post({ action: 'disconnect', uid: profile.uid });
+  } catch (e) {
+    return { ok: false, reason: e instanceof Error ? e.message : 'Error de red' };
+  }
+}
+
 /** Crea el pago del alumno a su coach y devuelve la URL de checkout de Stripe. */
 export async function createCoachCheckoutUrl(
   coachId: string,

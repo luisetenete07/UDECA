@@ -80,6 +80,8 @@ export default async function handler(req, res) {
       await handleStatus(body, res);
     } else if (action === 'checkout') {
       await handleCheckout(body, origin, res);
+    } else if (action === 'disconnect') {
+      await handleDisconnect(body, res);
     } else {
       res.status(200).json({ ok: false, reason: `Acción no válida: ${action}` });
     }
@@ -153,6 +155,29 @@ async function handleStatus(body, res) {
     detailsSubmitted: Boolean(account.details_submitted),
     payoutsEnabled: Boolean(account.payouts_enabled),
   });
+}
+
+// Desvincula la cuenta de cobros del coach: la app "olvida" su cuenta de
+// Stripe (borra stripeAccountId y stripeChargesEnabled). NO borra la cuenta en
+// Stripe (puede tener saldo/pagos): queda ahí y el coach puede reconectar
+// cuando quiera (se creará/usará una cuenta nueva).
+async function handleDisconnect(body, res) {
+  const uid = body.uid;
+  if (!uid) {
+    res.status(200).json({ ok: false, reason: 'Falta uid' });
+    return;
+  }
+  await db
+    .collection('users')
+    .doc(uid)
+    .set(
+      {
+        stripeAccountId: admin.firestore.FieldValue.delete(),
+        stripeChargesEnabled: admin.firestore.FieldValue.delete(),
+      },
+      { merge: true }
+    );
+  res.status(200).json({ ok: true });
 }
 
 // Crea el pago de un alumno a su coach: cargo de DESTINO, sin comisión de UDECA.
