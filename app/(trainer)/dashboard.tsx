@@ -655,12 +655,7 @@ export default function TrainerDashboard() {
 
       <View style={styles.statsRow}>
         <StatTile icon="people" value={String(clients.length)} label="Clientes" />
-        <StatTile
-          icon="barbell"
-          value={String(wk.thisWeek)}
-          label="Entrenos (semana)"
-          highlight={wk.thisWeek > 0}
-        />
+        <StatTile icon="barbell" value={String(wk.thisWeek)} label="Entrenos (semana)" />
         <StatTile
           icon="alert-circle"
           value={String(inactiveClients.length)}
