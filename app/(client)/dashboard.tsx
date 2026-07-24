@@ -418,13 +418,18 @@ export default function ClientDashboard() {
                     <Text style={styles.payBtnText}>Pagar ahora</Text>
                   </Pressable>
                 ) : null}
-                <Pressable
-                  onPress={handleReportPayment}
-                  disabled={reporting}
-                  style={styles.payReportBtn}
-                >
-                  <Text style={styles.payReportBtnText}>Ya he pagado</Text>
-                </Pressable>
+                {/* Con Stripe conectado el cobro se confirma solo (webhook), así
+                    que no ofrecemos el "Ya he pagado" manual: solo se paga y el
+                    aviso desaparece cuando el pago consta de verdad. */}
+                {!(trainerConnect && profile?.monthlyFeeEur) ? (
+                  <Pressable
+                    onPress={handleReportPayment}
+                    disabled={reporting}
+                    style={styles.payReportBtn}
+                  >
+                    <Text style={styles.payReportBtnText}>Ya he pagado</Text>
+                  </Pressable>
+                ) : null}
               </View>
             )}
           </View>
