@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Linking, StyleSheet, Text, View } from 'react-native';
+import { AppState, Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
@@ -39,16 +39,54 @@ export function Paywall() {
   const { profile, signOut, refreshProfile } = useAuth();
   const isAthlete = profile?.role === 'athlete';
   const [checking, setChecking] = React.useState(false);
+  // Evita comprobaciones solapadas (sondeo + volver a la app + botón a la vez).
+  const busyRef = React.useRef(false);
+
+  // Comprueba en Stripe si ya consta el pago y, si es así, activa la cuenta.
+  // `silent`: en las comprobaciones automáticas no molestamos con avisos; solo
+  // el botón manual informa del motivo cuando aún no consta.
+  const checkNow = React.useCallback(
+    async (silent: boolean): Promise<boolean> => {
+      if (busyRef.current) return false;
+      busyRef.current = true;
+      try {
+        const result = await verifySubscriptionNow(profile);
+        if (result.active) {
+          // Al refrescar el perfil, la puerta del layout deja pasar sola.
+          await refreshProfile();
+          return true;
+        }
+        if (!silent) {
+          showToast(result.reason ? `Aún no: ${result.reason}` : 'Aún no consta el pago');
+        }
+        return false;
+      } finally {
+        busyRef.current = false;
+      }
+    },
+    [profile, refreshProfile]
+  );
+
+  // 1) Al volver a la app tras pagar en el navegador (AppState → active, que en
+  //    web cubre también volver a la pestaña): comprueba solo, en silencio.
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkNow(true);
+    });
+    return () => sub.remove();
+  }, [checkNow]);
+
+  // 2) Sondeo periódico mientras el muro está visible, como red de seguridad
+  //    (por si el pago tarda en confirmarse o AppState no dispara).
+  React.useEffect(() => {
+    const id = setInterval(() => checkNow(true), 5000);
+    return () => clearInterval(id);
+  }, [checkNow]);
 
   const handleCheck = async () => {
     setChecking(true);
     try {
-      // Pregunta directamente a Stripe (sin depender del webhook) y activa.
-      const result = await verifySubscriptionNow(profile);
-      await refreshProfile();
-      if (!result.active) {
-        showToast(result.reason ? `Aún no: ${result.reason}` : 'Aún no consta el pago');
-      }
+      await checkNow(false);
     } finally {
       setChecking(false);
     }
@@ -112,8 +150,8 @@ export function Paywall() {
         </Card>
 
         <Text style={styles.footNote}>
-          Tras pagar, vuelve aquí y pulsa "Ya he pagado · Actualizar". Si no se
-          activa al instante, espera unos segundos y reintenta.
+          Al terminar el pago y volver a la app, tu cuenta se activa sola en unos
+          segundos. Si tardara, pulsa "Ya he pagado · Actualizar".
         </Text>
         <Button title="Cerrar sesión" variant="ghost" onPress={signOut} />
       </View>
