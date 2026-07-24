@@ -24,7 +24,13 @@ export const colors = {
   accent: '#FFFFFF',
   danger: '#C4433B',
   dangerMuted: 'rgba(196, 67, 59, 0.14)',
-  warning: '#C4433B',
+  /** Aviso (ámbar): distinto del error rojo, para "próximo/atención" sin alarmar. */
+  warning: '#E0A43B',
+  warningMuted: 'rgba(224, 164, 59, 0.14)',
+  /** Éxito (verde salvia): confirmaciones, "en línea", cobros activos. */
+  success: '#4CAF7D',
+  successMuted: 'rgba(76, 175, 125, 0.15)',
+  successBorder: 'rgba(76, 175, 125, 0.45)',
   text: '#FFFFFF',
   textMuted: '#ADADAD',
   textFaint: '#666666',

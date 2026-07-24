@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.dangerMuted,
+    backgroundColor: colors.warningMuted,
     borderWidth: 1,
     borderColor: colors.warning,
     borderRadius: radius.md,
