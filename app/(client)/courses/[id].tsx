@@ -64,7 +64,7 @@ export default function ClientCourseDetailScreen() {
         ) : (
           <View style={styles.docPlaceholder}>
             <Ionicons name="document-text-outline" size={28} color={colors.textFaint} />
-            <Text style={styles.metaText}>E-book próximamente</Text>
+            <Text style={styles.metaText}>Documento no disponible</Text>
           </View>
         )
       ) : (

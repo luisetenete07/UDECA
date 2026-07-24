@@ -27,7 +27,7 @@ export function VideoPlayer({
     return (
       <View style={styles.placeholder}>
         <Ionicons name="videocam-outline" size={28} color={colors.textFaint} />
-        <Text style={styles.placeholderText}>Vídeo próximamente</Text>
+        <Text style={styles.placeholderText}>Vídeo no disponible</Text>
       </View>
     );
   }
