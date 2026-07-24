@@ -32,7 +32,7 @@ import {
 } from '../../../lib/types';
 
 const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
-  good: '#2E7D5B',
+  good: colors.success,
   warn: '#C9902B',
   bad: colors.danger,
   muted: colors.textFaint,
@@ -55,8 +55,8 @@ function startOfDay(ts: number): number {
 function activityInfo(last?: number): { label: string; color: string } {
   if (!last) return { label: 'Sin entrenos aún', color: colors.textFaint };
   const days = Math.round((startOfDay(Date.now()) - startOfDay(last)) / DAY_MS);
-  if (days <= 0) return { label: 'Entrenó hoy', color: '#2E7D5B' };
-  if (days === 1) return { label: 'Entrenó ayer', color: '#2E7D5B' };
+  if (days <= 0) return { label: 'Entrenó hoy', color: colors.success };
+  if (days === 1) return { label: 'Entrenó ayer', color: colors.success };
   if (days < 7) return { label: `Entrenó hace ${days} días`, color: '#C9902B' };
   return { label: `Sin entrenar ${days} días`, color: colors.danger };
 }

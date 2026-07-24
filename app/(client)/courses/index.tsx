@@ -55,6 +55,7 @@ export default function ClientCoursesScreen() {
 
       {courses.length === 0 ? (
         <EmptyState
+          icon="school-outline"
           title="Aún no hay cursos"
           subtitle="Cuando tu entrenador publique cursos, aparecerán aquí."
         />

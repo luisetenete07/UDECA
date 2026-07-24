@@ -788,7 +788,7 @@ export default function ClientDetailScreen() {
               {trends.map((t) => {
                 const v = t.slope as number;
                 const flat = Math.abs(v) < 0.3;
-                const color = flat ? colors.textMuted : v > 0 ? '#2E7D5B' : colors.danger;
+                const color = flat ? colors.textMuted : v > 0 ? colors.success : colors.danger;
                 const label = flat
                   ? 'estable'
                   : `${v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} ${t.unit}/mes`;
@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   payChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  payGood: { backgroundColor: '#2E7D5B', borderColor: '#2E7D5B' },
+  payGood: { backgroundColor: colors.success, borderColor: colors.success },
   payWarn: { backgroundColor: '#C9902B', borderColor: '#C9902B' },
   payBad: { backgroundColor: colors.danger, borderColor: colors.danger },
   payChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
@@ -1080,9 +1080,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
-  templateChipSent: { borderColor: '#2E7D5B', backgroundColor: colors.primaryMuted },
+  templateChipSent: { borderColor: colors.success, backgroundColor: colors.primaryMuted },
   templateChipText: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, fontSize: 12 },
-  templateChipTextSent: { color: '#2E7D5B' },
+  templateChipTextSent: { color: colors.success },
   habitAddRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',

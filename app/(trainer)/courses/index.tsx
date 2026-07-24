@@ -70,6 +70,7 @@ export default function TrainerCoursesScreen() {
 
       {courses.length === 0 ? (
         <EmptyState
+          icon="school-outline"
           title="Aún no tienes cursos"
           subtitle="Crea tu primer curso, organízalo en secciones y sube tus lecciones en vídeo."
         />

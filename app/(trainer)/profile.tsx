@@ -396,7 +396,7 @@ export default function TrainerProfileScreen() {
           <Text style={styles.sectionTitle}>Cobra a tus alumnos</Text>
           {chargesEnabled ? (
             <View style={styles.connectOn}>
-              <Ionicons name="checkmark-circle" size={14} color="#4CAF7D" />
+              <Ionicons name="checkmark-circle" size={14} color={colors.success} />
               <Text style={styles.connectOnText}>Activo</Text>
             </View>
           ) : null}
@@ -735,12 +735,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(46,125,91,0.15)',
+    backgroundColor: colors.successMuted,
     borderWidth: 1,
-    borderColor: 'rgba(46,125,91,0.45)',
+    borderColor: colors.successBorder,
   },
-  onlinePillText: { ...typography.small, color: '#4CAF7D', fontFamily: fonts.semiBold, fontSize: 12 },
-  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF7D' },
+  onlinePillText: { ...typography.small, color: colors.success, fontFamily: fonts.semiBold, fontSize: 12 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
   mutedSmall: { ...typography.small, color: colors.textFaint },
   rankRow: {
     flexDirection: 'row',
@@ -848,11 +848,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(46,125,91,0.15)',
+    backgroundColor: colors.successMuted,
     borderWidth: 1,
-    borderColor: 'rgba(46,125,91,0.45)',
+    borderColor: colors.successBorder,
   },
-  connectOnText: { ...typography.small, color: '#4CAF7D', fontFamily: fonts.semiBold, fontSize: 12 },
+  connectOnText: { ...typography.small, color: colors.success, fontFamily: fonts.semiBold, fontSize: 12 },
   savedText: { ...typography.small, color: colors.primaryBright, marginBottom: spacing.sm },
   codeBox: {
     backgroundColor: colors.surfaceAlt,

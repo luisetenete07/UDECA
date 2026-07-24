@@ -72,6 +72,7 @@ export default function SocialScreen() {
       <ScreenContainer>
         <Text style={styles.title}>Social</Text>
         <EmptyState
+          icon="people-outline"
           title="Sin comunidad todavía"
           subtitle="Vincúlate a tu entrenador con un código de invitación para ver a tus compañeros."
         />
@@ -209,6 +210,7 @@ export default function SocialScreen() {
 
       {members.length === 0 ? (
         <EmptyState
+          icon="trophy-outline"
           title="Aún no hay actividad"
           subtitle="Cuando tú y tus compañeros registréis entrenamientos, apareceréis aquí."
         />
@@ -258,7 +260,7 @@ export default function SocialScreen() {
 
 const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF7D' },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
   prBoardRow: {
     flexDirection: 'row',
     alignItems: 'center',

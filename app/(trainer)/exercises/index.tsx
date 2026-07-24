@@ -429,6 +429,7 @@ export default function ExercisesScreen() {
 
       {filtered.length === 0 ? (
         <EmptyState
+          icon="barbell-outline"
           title="No hay ejercicios"
           subtitle="Importa el pack UDECA o crea el primero con '+ Nuevo'."
         />

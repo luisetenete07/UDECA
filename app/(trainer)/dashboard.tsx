@@ -43,7 +43,7 @@ import {
 const INACTIVE_DAYS_THRESHOLD = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
-  good: '#2E7D5B',
+  good: colors.success,
   warn: '#C9902B',
   bad: colors.danger,
   muted: colors.textFaint,
@@ -371,7 +371,7 @@ export default function TrainerDashboard() {
               style={styles.payIconBtn}
               hitSlop={6}
             >
-              <Ionicons name="checkmark" size={20} color="#2E7D5B" />
+              <Ionicons name="checkmark" size={20} color={colors.success} />
             </Pressable>
             <Pressable
               onPress={() => {
@@ -430,8 +430,8 @@ export default function TrainerDashboard() {
         <View style={styles.todayStrip}>
           {trainedToday > 0 ? (
             <View style={[styles.todayChip, styles.todayChipGood]}>
-              <Ionicons name="checkmark-circle" size={13} color="#2E7D5B" />
-              <Text style={[styles.todayChipText, { color: '#2E7D5B' }]}>
+              <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+              <Text style={[styles.todayChipText, { color: colors.success }]}>
                 {trainedToday} entrenó hoy
               </Text>
             </View>
@@ -1040,7 +1040,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
-  todayChipGood: { borderColor: '#2E7D5B' },
+  todayChipGood: { borderColor: colors.success },
   todayChipWarn: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
   todayChipBad: { borderColor: colors.danger },
   todayChipText: { ...typography.small, fontFamily: fonts.semiBold, fontSize: 11 },
@@ -1108,7 +1108,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  revenueValue: { ...typography.h2, color: '#2E7D5B', fontFamily: fonts.heading },
+  revenueValue: { ...typography.h2, color: colors.success, fontFamily: fonts.heading },
   revenueLabel: { ...typography.small, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
   revenueBoxIcon: { position: 'absolute', top: 6, right: 6 },
   amountInput: {
@@ -1152,7 +1152,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   totalLabel: { ...typography.small, color: colors.textMuted, flex: 1 },
-  totalValue: { ...typography.h3, color: '#2E7D5B', fontFamily: fonts.heading },
+  totalValue: { ...typography.h3, color: colors.success, fontFamily: fonts.heading },
   clientGroup: { marginBottom: spacing.sm },
   clientGroupHead: {
     flexDirection: 'row',
@@ -1164,7 +1164,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.hairline,
   },
   clientGroupName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
-  clientGroupTotal: { ...typography.body, color: '#2E7D5B', fontFamily: fonts.heading },
+  clientGroupTotal: { ...typography.body, color: colors.success, fontFamily: fonts.heading },
   nextPayRow: {
     flexDirection: 'row',
     alignItems: 'center',

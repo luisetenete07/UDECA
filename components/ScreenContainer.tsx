@@ -12,6 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FadeIn } from './FadeIn';
 import { colors, spacing } from '../lib/theme';
 
+/**
+ * Ancho máximo por defecto del contenido. Los móviles (ancho < 720) no se ven
+ * afectados; en tablet y escritorio el contenido queda centrado y legible en
+ * vez de estirarse de borde a borde. Cada pantalla puede sobreescribirlo.
+ */
+const DEFAULT_MAX_WIDTH = 720;
+
 interface ScreenContainerProps {
   children: React.ReactNode;
   scroll?: boolean;
@@ -19,8 +26,9 @@ interface ScreenContainerProps {
   onRefresh?: () => void;
   contentStyle?: ViewStyle;
   /**
-   * Ancho máximo opcional del contenido (columna centrada). Sin valor, la
-   * pantalla usa todo el ancho disponible (pantalla completa en escritorio).
+   * Ancho máximo del contenido (columna centrada). Por defecto 720 (cómodo en
+   * tablet/escritorio, transparente en móvil). Pasa un valor propio para
+   * formularios más estrechos (p. ej. acceso) o `0` para ancho completo.
    */
   maxWidth?: number;
 }
@@ -37,13 +45,13 @@ export function ScreenContainer({
   contentStyle,
   maxWidth,
 }: ScreenContainerProps) {
+  // 0 = ancho completo explícito; undefined = usa el máximo por defecto.
+  const cap = maxWidth === 0 ? null : { maxWidth: maxWidth ?? DEFAULT_MAX_WIDTH };
   if (!scroll) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.centerRow}>
-          <FadeIn style={[styles.column, maxWidth ? { maxWidth } : null, contentStyle]}>
-            {children}
-          </FadeIn>
+          <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
         </View>
       </SafeAreaView>
     );
@@ -70,9 +78,7 @@ export function ScreenContainer({
             ) : undefined
           }
         >
-          <FadeIn style={[styles.column, maxWidth ? { maxWidth } : null, contentStyle]}>
-            {children}
-          </FadeIn>
+          <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

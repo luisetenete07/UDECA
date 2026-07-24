@@ -955,6 +955,7 @@ export default function WorkoutScreen() {
         </Pressable>
         <Text style={styles.title}>Mi entrenamiento</Text>
         <EmptyState
+          icon="barbell-outline"
           title="Sin rutina asignada"
           subtitle="Tu entrenador todavía no te ha asignado una rutina. Vuelve a comprobarlo pronto."
         />
@@ -1500,6 +1501,26 @@ export default function WorkoutScreen() {
             </Text>
           </View>
           <ProgressBar progress={progress} height={6} />
+          {log.length > 1 ? (
+            <View style={styles.exDotsRow}>
+              {log.map((ex, i) => {
+                const exDone = ex.sets.length > 0 && ex.sets.every((s) => s.completed);
+                const current = i === safeIndex;
+                return (
+                  <Pressable
+                    key={i}
+                    onPress={() => setViewIndex(i)}
+                    hitSlop={6}
+                    style={[
+                      styles.exDot,
+                      exDone && styles.exDotDone,
+                      current && styles.exDotCurrent,
+                    ]}
+                  />
+                );
+              })}
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -1976,6 +1997,23 @@ const styles = StyleSheet.create({
   },
   progressBlock: { marginBottom: spacing.md, gap: spacing.xs },
   progressTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  // Tira de puntos: un ejercicio por punto (dorado = hecho, aro = actual).
+  exDotsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  exDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  exDotDone: { backgroundColor: colors.primary, borderColor: colors.primary },
+  exDotCurrent: {
+    width: 20,
+    borderRadius: 4,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryMuted,
+  },
   exerciseCounter: {
     ...typography.label,
     color: colors.primaryBright,

@@ -639,6 +639,7 @@ export default function ProgressScreen() {
             levelTests.length === 0 ? (
               <Card style={styles.section}>
                 <EmptyState
+                  icon="stats-chart-outline"
                   title="Aún no hay datos por ejercicio"
                   subtitle="Cuando completes entrenamientos verás aquí cómo mejoras en cada ejercicio."
                 />
@@ -772,7 +773,7 @@ function CompareRow({
 }) {
   const delta = now - then;
   const flat = Math.abs(delta) < 0.05;
-  const color = neutral || flat ? colors.textMuted : delta > 0 ? '#2E7D5B' : colors.danger;
+  const color = neutral || flat ? colors.textMuted : delta > 0 ? colors.success : colors.danger;
   const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ','));
   return (
     <View style={styles.compareRow}>

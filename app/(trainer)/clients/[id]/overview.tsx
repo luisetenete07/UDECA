@@ -170,7 +170,7 @@ export default function ClientOverviewScreen() {
       {matrix.rows.length > 0 ? (
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <Ionicons name="arrow-up" size={13} color="#2E7D5B" />
+            <Ionicons name="arrow-up" size={13} color={colors.success} />
             <Text style={styles.legendText}>Mejora</Text>
           </View>
           <View style={styles.legendItem}>
@@ -206,7 +206,7 @@ function prevFilled(cells: (MatrixCell | null)[], i: number): MatrixCell | null 
 function Trend({ current, prev }: { current: MatrixCell; prev: MatrixCell | null }) {
   if (!prev) return <View style={styles.trendSpace} />;
   if (current.score > prev.score) {
-    return <Ionicons name="arrow-up" size={12} color="#2E7D5B" />;
+    return <Ionicons name="arrow-up" size={12} color={colors.success} />;
   }
   if (current.score < prev.score) {
     return <Ionicons name="arrow-down" size={12} color={colors.danger} />;
