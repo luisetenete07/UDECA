@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { Redirect, useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
@@ -61,6 +61,9 @@ export default function SocialScreen() {
       load();
     }, [load])
   );
+
+  // El atleta individual no forma parte de ningún grupo: fuera de aquí.
+  if (profile?.role === 'athlete') return <Redirect href="/(client)/dashboard" />;
 
   if (loading) return <LoadingScreen />;
 

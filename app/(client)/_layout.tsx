@@ -81,6 +81,7 @@ export default function ClientLayout() {
     return (
       <Onboarding
         name={profile.name}
+        role={profile.role}
         onDone={(targets, goal, mainGoal) => {
           doneRef.current = true;
           setOnboardingSeen(true);
@@ -149,10 +150,12 @@ export default function ClientLayout() {
           ),
         }}
       />
+      {/* El atleta se autoentrena (sin grupo ni coach): no ve la sección Social. */}
       <Tabs.Screen
         name="social"
         options={{
           title: 'Social',
+          href: isAthlete ? null : undefined,
           tabBarIcon: (props) => <TabIcon {...props} outline="people-outline" filled="people" />,
         }}
       />

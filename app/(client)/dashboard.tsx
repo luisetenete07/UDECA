@@ -193,6 +193,9 @@ export default function ClientDashboard() {
 
   if (loading) return <LoadingScreen />;
 
+  // Atleta individual: se autoentrena (sin coach). Cambia el tono de varias
+  // tarjetas para que todo hable de "tú" en lugar de "tu entrenador".
+  const isAthlete = profile?.role === 'athlete';
   const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
   const sessions = weekSessions(workoutLogs);
   const streak = currentStreak(workoutLogs, {
@@ -248,12 +251,15 @@ export default function ClientDashboard() {
   const targetSessions = routine?.days.length ?? 0;
   const weekProgress = targetSessions > 0 ? Math.min(sessions / targetSessions, 1) : 0;
 
-  // Checklist de bienvenida: se oculta cuando está todo completado.
+  // Checklist de bienvenida: se oculta cuando está todo completado. Para el
+  // atleta, el último paso es crear su propio plan (no hay check-in de coach).
   const firstSteps = [
-    { key: 'photo', label: 'Sube tu foto de perfil', done: Boolean(profile?.photoURL), go: '/(client)/profile' },
-    { key: 'weight', label: 'Registra tu peso inicial', done: weightLogs.length > 0, go: '/(client)/progress' },
-    { key: 'workout', label: 'Completa tu primer entrenamiento', done: workoutLogs.length > 0, go: '/(client)/workout' },
-    { key: 'checkin', label: 'Envía tu primer check-in', done: hasAnyCheckIn, go: null },
+    { key: 'photo', label: 'Sube tu foto de perfil', done: Boolean(profile?.photoURL), go: '/(client)/profile' as const },
+    { key: 'weight', label: 'Registra tu peso inicial', done: weightLogs.length > 0, go: '/(client)/progress' as const },
+    isAthlete
+      ? { key: 'plan', label: 'Crea tu plan de entreno', done: Boolean(routine), go: '/(client)/my-plan' as const }
+      : { key: 'checkin', label: 'Envía tu primer check-in', done: hasAnyCheckIn, go: null },
+    { key: 'workout', label: 'Completa tu primer entrenamiento', done: workoutLogs.length > 0, go: '/(client)/workout' as const },
   ] as const;
   const showFirstSteps = firstSteps.some((s) => !s.done);
   const stepsDone = firstSteps.filter((s) => s.done).length;
@@ -449,7 +455,11 @@ export default function ClientDashboard() {
       ) : null}
 
       {/* Acción principal del día */}
-      <Pressable onPress={() => router.push('/(client)/workout')}>
+      <Pressable
+        onPress={() =>
+          router.push(isAthlete && !routine ? '/(client)/my-plan' : '/(client)/workout')
+        }
+      >
         <LinearGradient
           colors={gradients.goldSubtle}
           start={{ x: 0, y: 0 }}
@@ -494,6 +504,11 @@ export default function ClientDashboard() {
                   {nextDay.exercises.length} ejercicios · Empezar sesión
                 </Text>
               </>
+            ) : isAthlete ? (
+              <>
+                <Text style={styles.todayTitle}>Crea tu plan</Text>
+                <Text style={styles.todaySub}>Diseña tus días y empieza hoy. Toca para crearlo.</Text>
+              </>
             ) : (
               <>
                 <Text style={styles.todayTitle}>Sin rutina aún</Text>
@@ -503,12 +518,14 @@ export default function ClientDashboard() {
           </View>
           {(() => {
             const canTrain = !!routine && !restDay && (!!nextDay || routine.schedule === 'flex');
+            const createPlan = isAthlete && !routine;
+            const icon = canTrain ? 'play' : createPlan ? 'construct' : 'bed-outline';
             return (
-              <View style={canTrain ? styles.todayPlay : styles.todayRest}>
+              <View style={canTrain || createPlan ? styles.todayPlay : styles.todayRest}>
                 <Ionicons
-                  name={canTrain ? 'play' : 'bed-outline'}
+                  name={icon}
                   size={canTrain ? 26 : 24}
-                  color={canTrain ? colors.onPrimary : colors.primaryBright}
+                  color={canTrain || createPlan ? colors.onPrimary : colors.primaryBright}
                 />
               </View>
             );
@@ -585,7 +602,9 @@ export default function ClientDashboard() {
           </>
         ) : (
           <Text style={styles.weekHint}>
-            Cuando tengas rutina asignada verás aquí tu plan y objetivo semanal.
+            {isAthlete
+              ? 'Crea tu plan para ver aquí tu semana y tu objetivo de sesiones.'
+              : 'Cuando tengas rutina asignada verás aquí tu plan y objetivo semanal.'}
           </Text>
         )}
 
@@ -650,7 +669,7 @@ export default function ClientDashboard() {
         </Card>
       ) : null}
 
-      {needsCheckIn && profile ? (
+      {needsCheckIn && profile && !isAthlete ? (
         <CheckInCard profile={profile} onDone={() => setNeedsCheckIn(false)} />
       ) : null}
 
