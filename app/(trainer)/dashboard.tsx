@@ -667,15 +667,6 @@ export default function TrainerDashboard() {
           label="Inactivos"
         />
       </View>
-      {wk.thisWeek > 0 || wk.lastWeek > 0 ? (
-        <Text style={styles.weekLine}>
-          {wk.lastWeek > 0
-            ? `${wk.thisWeek >= wk.lastWeek ? '▲' : '▼'} Semana pasada: ${wk.lastWeek} · `
-            : ''}
-          {wk.activeClients} alumno(s) han entrenado esta semana
-        </Text>
-      ) : null}
-
       {showBilling ? (
         <Card style={styles.section}>
           <View style={styles.titleRow}>
@@ -1008,13 +999,6 @@ const styles = StyleSheet.create({
   greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
   greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  weekLine: {
-    ...typography.small,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: -spacing.xs,
-    marginBottom: spacing.md,
-  },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   agendaEntry: {
     flexDirection: 'row',
