@@ -852,8 +852,10 @@ const styles = StyleSheet.create({
   screenSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   // Escritorio/tablet: dos columnas a pantalla completa (calendario + tareas).
   twoCol: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
-  colCal: { flex: 1, maxWidth: 480 },
-  colTasks: { flex: 1 },
+  // El calendario ocupa más ancho que las tareas (aprox. 60/40): la rejilla
+  // mensual se ve holgada y las tareas quedan en una columna cómoda al lado.
+  colCal: { flex: 1.5 },
+  colTasks: { flex: 1, maxWidth: 460 },
   colHeading: {
     ...typography.label,
     color: colors.primaryBright,
