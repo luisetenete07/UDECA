@@ -18,15 +18,20 @@ import admin from 'firebase-admin';
 // cuerpo CRUDO (imprescindible en Stripe).
 export const config = { api: { bodyParser: false } };
 
-// --- Firebase Admin (se inicializa una sola vez por instancia) ---
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
-  });
+// Inicialización PEREZOSA: no se hace al cargar el módulo (si faltara una
+// variable de entorno, la función crashearía en el arranque y ningún evento se
+// procesaría). Se inicializa dentro del handler, con errores controlados.
+let db = null;
+let stripe = null;
+function ensureInit() {
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+    });
+  }
+  if (!db) db = admin.firestore();
+  if (!stripe) stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 }
-const db = admin.firestore();
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 async function getRawBody(req) {
   if (Buffer.isBuffer(req.body)) return req.body;
@@ -68,6 +73,21 @@ function invoiceSubscriptionId(invoice) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).send('Method not allowed');
+    return;
+  }
+
+  // Comprobación de configuración (evita crashear en el arranque).
+  const missing = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'FIREBASE_SERVICE_ACCOUNT'].filter(
+    (k) => !process.env[k]
+  );
+  if (missing.length) {
+    res.status(500).send(`Faltan variables de entorno en Vercel: ${missing.join(', ')}`);
+    return;
+  }
+  try {
+    ensureInit();
+  } catch (err) {
+    res.status(500).send(`Config inválida (¿FIREBASE_SERVICE_ACCOUNT mal pegado?): ${err.message}`);
     return;
   }
 
