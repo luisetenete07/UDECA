@@ -5,7 +5,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  useWindowDimensions,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -20,30 +19,19 @@ interface ScreenContainerProps {
   onRefresh?: () => void;
   contentStyle?: ViewStyle;
   /**
-   * Ancho máximo del contenido (columna centrada). Por defecto NO se limita: el
-   * contenido usa TODA la pantalla (móvil, tablet y escritorio a pantalla
-   * completa). Solo se pasa un valor en pantallas concretas que se ven mejor
-   * en columna estrecha (p. ej. los formularios de acceso).
+   * Ancho máximo del contenido. Por defecto NO se limita: el contenido usa TODA
+   * la pantalla a pantalla completa (móvil, tablet y escritorio), con solo un
+   * margen fino y constante para que el texto no toque el borde. Únicamente los
+   * formularios de acceso piden una columna estrecha.
    */
   maxWidth?: number;
 }
 
 /**
- * Márgenes laterales que crecen con el tamaño de pantalla: el contenido ocupa
- * todo el ancho, pero en tablet/escritorio respira con más aire a los lados en
- * vez de pegarse a los bordes. Así la experiencia es a pantalla completa y a la
- * vez elegante en cualquier dispositivo.
- */
-function horizontalPadding(width: number): number {
-  if (width >= 1400) return 72;
-  if (width >= 1100) return 56;
-  if (width >= 820) return 40;
-  return spacing.lg; // móvil: 24
-}
-
-/**
- * Contenedor base de pantalla: padding coherente y responsive. El contenido usa
- * todo el ancho disponible salvo que una pantalla pida un ancho máximo propio.
+ * Contenedor base de pantalla: margen lateral fino y constante en todos los
+ * tamaños, para que en ordenador y tablet el diseño llegue de lado a lado (sin
+ * bandas negras) y a la vez el contenido no se pegue al borde. El ancho solo se
+ * limita si una pantalla concreta lo pide.
  */
 export function ScreenContainer({
   children,
@@ -53,15 +41,13 @@ export function ScreenContainer({
   contentStyle,
   maxWidth,
 }: ScreenContainerProps) {
-  const { width } = useWindowDimensions();
-  const hPad = horizontalPadding(width);
   // Solo se limita el ancho si la pantalla lo pide expresamente (> 0).
   const cap = maxWidth && maxWidth > 0 ? { maxWidth } : null;
 
   if (!scroll) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
-        <View style={[styles.centerRow, { paddingHorizontal: hPad }]}>
+        <View style={styles.centerRow}>
           <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
         </View>
       </SafeAreaView>
@@ -75,7 +61,7 @@ export function ScreenContainer({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingHorizontal: hPad }]}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
@@ -105,12 +91,14 @@ const styles = StyleSheet.create({
   centerRow: {
     flex: 1,
     alignItems: 'center',
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
   },
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },
