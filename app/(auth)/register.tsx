@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -67,24 +68,36 @@ export default function RegisterScreen() {
       </View>
 
       <Card accent style={styles.formCard}>
-        {ROLE_CARDS.map((rc) => (
-          <Pressable
-            key={rc.value}
-            onPress={() => setRole(rc.value)}
-            style={[styles.roleCard, role === rc.value && styles.roleCardOn]}
-          >
-            <View style={[styles.roleCheck, role === rc.value && styles.roleCheckOn]}>
-              {role === rc.value ? <View style={styles.roleCheckDot} /> : null}
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={styles.roleCardTop}>
-                <Text style={styles.roleCardTitle}>{rc.title}</Text>
-                <Text style={[styles.rolePrice, rc.free && styles.rolePriceFree]}>{rc.price}</Text>
+        {ROLE_CARDS.map((rc) => {
+          const on = role === rc.value;
+          return (
+            <Pressable
+              key={rc.value}
+              onPress={() => setRole(rc.value)}
+              style={[styles.roleCard, on && styles.roleCardOn]}
+            >
+              <View style={[styles.roleIcon, on && styles.roleIconOn]}>
+                <Ionicons
+                  name={rc.icon}
+                  size={20}
+                  color={on ? colors.primary : colors.textMuted}
+                />
               </View>
-              <Text style={styles.roleCardDesc}>{rc.desc}</Text>
-            </View>
-          </Pressable>
-        ))}
+              <View style={{ flex: 1 }}>
+                <View style={styles.roleCardTop}>
+                  <Text style={[styles.roleCardTitle, on && styles.roleCardTitleOn]}>{rc.title}</Text>
+                  <Text style={[styles.rolePrice, rc.free && styles.rolePriceFree]}>{rc.price}</Text>
+                </View>
+                <Text style={styles.roleCardDesc}>{rc.desc}</Text>
+              </View>
+              <Ionicons
+                name={on ? 'checkmark-circle' : 'ellipse-outline'}
+                size={22}
+                color={on ? colors.primary : colors.border}
+              />
+            </Pressable>
+          );
+        })}
 
         <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Tu nombre" />
         <TextField
@@ -135,28 +148,37 @@ export default function RegisterScreen() {
   );
 }
 
-const ROLE_CARDS: { value: UserRole; title: string; price: string; desc: string; free?: boolean }[] =
-  [
-    {
-      value: 'client',
-      title: 'Alumno',
-      price: 'Gratis',
-      free: true,
-      desc: 'Entrena con tu entrenador. Necesitas su código de invitación.',
-    },
-    {
-      value: 'athlete',
-      title: 'Atleta',
-      price: '10 €/mes',
-      desc: 'Entrena por tu cuenta: crea tus rutinas y sigue tu progreso y nutrición.',
-    },
-    {
-      value: 'trainer',
-      title: 'Entrenador',
-      price: '15 €/mes',
-      desc: 'Gestiona a tus alumnos, cobros y tu negocio. Se paga 180 €/año de una vez (cuota anual, no meses sueltos).',
-    },
-  ];
+const ROLE_CARDS: {
+  value: UserRole;
+  title: string;
+  price: string;
+  desc: string;
+  free?: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  {
+    value: 'client',
+    title: 'Alumno',
+    price: 'Gratis',
+    free: true,
+    icon: 'person-outline',
+    desc: 'Entrena con tu entrenador. Necesitas su código de invitación.',
+  },
+  {
+    value: 'athlete',
+    title: 'Atleta',
+    price: '10 €/mes',
+    icon: 'barbell-outline',
+    desc: 'Entrena por tu cuenta: crea tus rutinas y sigue tu progreso y nutrición.',
+  },
+  {
+    value: 'trainer',
+    title: 'Entrenador',
+    price: '15 €/mes',
+    icon: 'people-outline',
+    desc: 'Gestiona a tus alumnos, cobros y tu negocio. Se paga 180 €/año de una vez (cuota anual, no meses sueltos).',
+  },
+];
 
 const styles = StyleSheet.create({
   content: {
@@ -201,21 +223,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   roleCardOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  roleCheck: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
+  roleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  roleCheckOn: { borderColor: colors.primary },
-  roleCheckDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary },
+  roleIconOn: { borderColor: colors.hairline, backgroundColor: colors.surface },
   roleCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   roleCardTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  roleCardTitleOn: { color: colors.primaryBright },
   rolePrice: { ...typography.small, color: colors.primary, fontFamily: fonts.heading },
-  rolePriceFree: { color: '#2E7D5B' },
+  rolePriceFree: { color: colors.success },
   roleCardDesc: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
   error: {
     ...typography.small,
