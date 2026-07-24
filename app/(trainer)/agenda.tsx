@@ -305,8 +305,234 @@ export default function CoachCalendarScreen() {
 
   const allDone = scope !== 'goal' && header.total > 0 && active.length === 0;
 
+  // Calendario mensual + eventos del día seleccionado.
+  const calendarContent = (
+    <>
+      <View style={styles.monthHeader}>
+        <Pressable onPress={() => shiftMonth(-1)} style={styles.monthNav} hitSlop={8}>
+          <Ionicons name="chevron-back" size={20} color={colors.primary} />
+        </Pressable>
+        <View style={styles.monthCenter}>
+          <Text style={styles.monthLabel}>{monthLabel}</Text>
+          <Text style={styles.monthCount}>
+            {monthCount === 0 ? 'Sin eventos' : `${monthCount} evento${monthCount === 1 ? '' : 's'}`}
+          </Text>
+        </View>
+        <Pressable onPress={() => shiftMonth(1)} style={styles.monthNav} hitSlop={8}>
+          <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+        </Pressable>
+      </View>
+
+      <Pressable onPress={goToday} style={styles.todayBtn} hitSlop={6}>
+        <Ionicons name="today-outline" size={14} color={colors.primary} />
+        <Text style={styles.todayBtnText}>Hoy</Text>
+      </Pressable>
+
+      {/* Cabecera L-D */}
+      <View style={styles.weekHead}>
+        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((w) => (
+          <Text key={w} style={styles.weekHeadCell}>
+            {w}
+          </Text>
+        ))}
+      </View>
+
+      {/* Rejilla del mes con puntos por tipo de evento */}
+      <View style={styles.grid}>
+        {gridCells.map((ts, i) => {
+          if (ts == null) return <View key={`b${i}`} style={styles.cell} />;
+          const evs = eventsByDay.get(ts) ?? [];
+          const isToday = ts === today;
+          const isSel = ts === selectedDay;
+          const types = [...new Set(evs.map((e) => e.type))].slice(0, 4);
+          return (
+            <Pressable key={ts} style={styles.cell} onPress={() => setSelectedDay(ts)}>
+              <View
+                style={[
+                  styles.cellInner,
+                  isToday && !isSel && styles.cellToday,
+                  isSel && styles.cellSel,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.cellNum,
+                    isToday && styles.cellNumToday,
+                    isSel && styles.cellNumSel,
+                  ]}
+                >
+                  {new Date(ts).getDate()}
+                </Text>
+                <View style={styles.dots}>
+                  {types.map((t) => (
+                    <View key={t} style={[styles.dot, { backgroundColor: TONE[t] }]} />
+                  ))}
+                </View>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Eventos del día seleccionado */}
+      <View style={styles.selectedHead}>
+        <Text style={styles.selectedDate}>
+          {new Date(selectedDay).toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+          })}
+        </Text>
+        {selectedDay === today ? <Text style={styles.todayTag}>HOY</Text> : null}
+      </View>
+      {selectedEvents.length === 0 ? (
+        <Text style={styles.noEvents}>Sin eventos este día.</Text>
+      ) : (
+        selectedEvents.map((e, i) => (
+          <Pressable key={i} onPress={e.onPress} style={styles.event}>
+            <View style={[styles.eventBar, { backgroundColor: TONE[e.type] }]} />
+            <View style={[styles.eventIcon, { borderColor: TONE[e.type] }]}>
+              <Ionicons name={TYPE_ICON[e.type]} size={15} color={TONE[e.type]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eventTitle} numberOfLines={1}>
+                {e.title}
+              </Text>
+              {e.subtitle ? <Text style={styles.eventSub}>{e.subtitle}</Text> : null}
+            </View>
+            {e.onPress ? (
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            ) : null}
+          </Pressable>
+        ))
+      )}
+
+      <View style={styles.legend}>
+        <Legend tone={TONE.payment} label="Cobro" />
+        <Legend tone={TONE['cycle-start']} label="Empieza ciclo" />
+        <Legend tone={TONE['cycle-end']} label="Termina ciclo" />
+        <Legend tone={TONE.task} label="Tareas" />
+      </View>
+    </>
+  );
+
+  // Gestor de tareas y objetivos del coach.
+  const tasksContent = (
+    <>
+      <View style={styles.progressWrap}>
+        <View style={styles.progressTop}>
+          <Text style={styles.progressText}>{header.text}</Text>
+          {allDone ? (
+            <View style={styles.donePill}>
+              <Ionicons name="checkmark" size={13} color={colors.onPrimary} />
+              <Text style={styles.donePillText}>Al día</Text>
+            </View>
+          ) : null}
+        </View>
+        <ProgressBar progress={header.progress} height={8} />
+      </View>
+
+      <View style={styles.segments}>
+        {SCOPES.map((s) => {
+          const count = pendingCount(s);
+          const isActive = scope === s;
+          return (
+            <Pressable
+              key={s}
+              onPress={() => {
+                animate();
+                setScope(s);
+                setShowDone(false);
+              }}
+              style={[styles.segment, isActive && styles.segmentActive]}
+            >
+              <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
+                {TASK_SCOPE_LABEL[s]}
+              </Text>
+              {count > 0 ? (
+                <View style={[styles.badge, isActive && styles.badgeActive]}>
+                  <Text style={[styles.badgeText, isActive && styles.badgeTextActive]}>{count}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.addRow}>
+        <Ionicons name="add" size={20} color={colors.primary} />
+        <TextInput
+          ref={inputRef}
+          style={styles.addInput}
+          placeholder={PLACEHOLDER[scope]}
+          placeholderTextColor={colors.textFaint}
+          value={draft}
+          onChangeText={setDraft}
+          onSubmitEditing={addTask}
+          returnKeyType="done"
+          blurOnSubmit={false}
+        />
+        {draft.trim() ? (
+          <Pressable onPress={addTask} style={styles.addBtn} hitSlop={6}>
+            <Text style={styles.addBtnText}>Añadir</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {scope === 'goal' ? (
+        <GoalsList goals={active.concat(done)} onEdit={setEditing} onProgress={setGoalProgress} />
+      ) : (
+        <>
+          {active.length === 0 && done.length === 0 ? (
+            <View style={styles.empty}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="sunny-outline" size={26} color={colors.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>Nada por aquí</Text>
+              <Text style={styles.emptySub}>
+                Apunta lo que quieras sacar adelante {TASK_SCOPE_LABEL[scope].toLowerCase()}.
+              </Text>
+            </View>
+          ) : null}
+          {active.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              onToggle={() => toggleDone(task)}
+              onFlag={() => toggleFlag(task)}
+              onEdit={() => setEditing(task)}
+            />
+          ))}
+          {done.length > 0 ? (
+            <Pressable
+              style={styles.doneHeader}
+              onPress={() => {
+                animate();
+                setShowDone((v) => !v);
+              }}
+            >
+              <Text style={styles.doneHeaderText}>Completadas · {done.length}</Text>
+              <Ionicons name={showDone ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
+          {showDone
+            ? done.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  onToggle={() => toggleDone(task)}
+                  onFlag={() => toggleFlag(task)}
+                  onEdit={() => setEditing(task)}
+                />
+              ))
+            : null}
+        </>
+      )}
+    </>
+  );
+
   return (
-    <ScreenContainer maxWidth={isWide ? 760 : undefined}>
+    <ScreenContainer>
       <Pressable
         onPress={() => router.push('/(trainer)/dashboard')}
         style={styles.backBtn}
@@ -316,257 +542,59 @@ export default function CoachCalendarScreen() {
       </Pressable>
       {/* Título de sección */}
       <View style={styles.screenHeader}>
-        <Text style={styles.screenTitle}>{view === 'calendar' ? 'Calendario' : 'Tareas'}</Text>
+        <Text style={styles.screenTitle}>
+          {isWide ? 'Calendario y tareas' : view === 'calendar' ? 'Calendario' : 'Tareas'}
+        </Text>
         <Text style={styles.screenSubtitle}>
-          {view === 'calendar'
-            ? 'Cobros, ciclos y tareas de tu grupo, día a día.'
-            : 'Tus recordatorios y objetivos como coach.'}
+          {isWide
+            ? 'Cobros, ciclos y tus tareas, todo a la vista.'
+            : view === 'calendar'
+              ? 'Cobros, ciclos y tareas de tu grupo, día a día.'
+              : 'Tus recordatorios y objetivos como coach.'}
         </Text>
       </View>
 
-      {/* Conmutador principal */}
-      <View style={styles.topSeg}>
-        {(['calendar', 'tasks'] as const).map((v) => (
-          <Pressable
-            key={v}
-            onPress={() => {
-              animate();
-              setView(v);
-            }}
-            style={[styles.topSegBtn, view === v && styles.topSegBtnOn]}
-          >
-            <Ionicons
-              name={v === 'calendar' ? 'calendar-outline' : 'checkbox-outline'}
-              size={16}
-              color={view === v ? colors.onPrimary : colors.textMuted}
-            />
-            <Text style={[styles.topSegText, view === v && styles.topSegTextOn]}>
-              {v === 'calendar' ? 'Calendario' : 'Tareas'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {view === 'calendar' ? (
-        <>
-          <View style={styles.monthHeader}>
-            <Pressable onPress={() => shiftMonth(-1)} style={styles.monthNav} hitSlop={8}>
-              <Ionicons name="chevron-back" size={20} color={colors.primary} />
-            </Pressable>
-            <View style={styles.monthCenter}>
-              <Text style={styles.monthLabel}>{monthLabel}</Text>
-              <Text style={styles.monthCount}>
-                {monthCount === 0 ? 'Sin eventos' : `${monthCount} evento${monthCount === 1 ? '' : 's'}`}
+      {/* Conmutador (solo en móvil; en ancho se ven las dos columnas a la vez). */}
+      {!isWide ? (
+        <View style={styles.topSeg}>
+          {(['calendar', 'tasks'] as const).map((v) => (
+            <Pressable
+              key={v}
+              onPress={() => {
+                animate();
+                setView(v);
+              }}
+              style={[styles.topSegBtn, view === v && styles.topSegBtnOn]}
+            >
+              <Ionicons
+                name={v === 'calendar' ? 'calendar-outline' : 'checkbox-outline'}
+                size={16}
+                color={view === v ? colors.onPrimary : colors.textMuted}
+              />
+              <Text style={[styles.topSegText, view === v && styles.topSegTextOn]}>
+                {v === 'calendar' ? 'Calendario' : 'Tareas'}
               </Text>
-            </View>
-            <Pressable onPress={() => shiftMonth(1)} style={styles.monthNav} hitSlop={8}>
-              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
             </Pressable>
-          </View>
+          ))}
+        </View>
+      ) : null}
 
-          <Pressable onPress={goToday} style={styles.todayBtn} hitSlop={6}>
-            <Ionicons name="today-outline" size={14} color={colors.primary} />
-            <Text style={styles.todayBtnText}>Hoy</Text>
-          </Pressable>
-
-          {/* Cabecera L-D */}
-          <View style={styles.weekHead}>
-            {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((w) => (
-              <Text key={w} style={styles.weekHeadCell}>
-                {w}
-              </Text>
-            ))}
+      {isWide ? (
+        // Escritorio/tablet: calendario y tareas juntos, a pantalla completa.
+        <View style={styles.twoCol}>
+          <View style={styles.colCal}>
+            <Text style={styles.colHeading}>Calendario</Text>
+            {calendarContent}
           </View>
-
-          {/* Rejilla del mes con puntos por tipo de evento */}
-          <View style={styles.grid}>
-            {gridCells.map((ts, i) => {
-              if (ts == null) return <View key={`b${i}`} style={styles.cell} />;
-              const evs = eventsByDay.get(ts) ?? [];
-              const isToday = ts === today;
-              const isSel = ts === selectedDay;
-              const types = [...new Set(evs.map((e) => e.type))].slice(0, 4);
-              return (
-                <Pressable key={ts} style={styles.cell} onPress={() => setSelectedDay(ts)}>
-                  <View
-                    style={[
-                      styles.cellInner,
-                      isToday && !isSel && styles.cellToday,
-                      isSel && styles.cellSel,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.cellNum,
-                        isToday && styles.cellNumToday,
-                        isSel && styles.cellNumSel,
-                      ]}
-                    >
-                      {new Date(ts).getDate()}
-                    </Text>
-                    <View style={styles.dots}>
-                      {types.map((t) => (
-                        <View key={t} style={[styles.dot, { backgroundColor: TONE[t] }]} />
-                      ))}
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })}
+          <View style={styles.colTasks}>
+            <Text style={styles.colHeading}>Tareas y objetivos</Text>
+            {tasksContent}
           </View>
-
-          {/* Eventos del día seleccionado */}
-          <View style={styles.selectedHead}>
-            <Text style={styles.selectedDate}>
-              {new Date(selectedDay).toLocaleDateString('es-ES', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </Text>
-            {selectedDay === today ? <Text style={styles.todayTag}>HOY</Text> : null}
-          </View>
-          {selectedEvents.length === 0 ? (
-            <Text style={styles.noEvents}>Sin eventos este día.</Text>
-          ) : (
-            selectedEvents.map((e, i) => (
-              <Pressable key={i} onPress={e.onPress} style={styles.event}>
-                <View style={[styles.eventBar, { backgroundColor: TONE[e.type] }]} />
-                <View style={[styles.eventIcon, { borderColor: TONE[e.type] }]}>
-                  <Ionicons name={TYPE_ICON[e.type]} size={15} color={TONE[e.type]} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.eventTitle} numberOfLines={1}>
-                    {e.title}
-                  </Text>
-                  {e.subtitle ? <Text style={styles.eventSub}>{e.subtitle}</Text> : null}
-                </View>
-                {e.onPress ? (
-                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                ) : null}
-              </Pressable>
-            ))
-          )}
-
-          <View style={styles.legend}>
-            <Legend tone={TONE.payment} label="Cobro" />
-            <Legend tone={TONE['cycle-start']} label="Empieza ciclo" />
-            <Legend tone={TONE['cycle-end']} label="Termina ciclo" />
-            <Legend tone={TONE.task} label="Tareas" />
-          </View>
-        </>
+        </View>
+      ) : view === 'calendar' ? (
+        calendarContent
       ) : (
-        <>
-          <View style={styles.progressWrap}>
-            <View style={styles.progressTop}>
-              <Text style={styles.progressText}>{header.text}</Text>
-              {allDone ? (
-                <View style={styles.donePill}>
-                  <Ionicons name="checkmark" size={13} color={colors.onPrimary} />
-                  <Text style={styles.donePillText}>Al día</Text>
-                </View>
-              ) : null}
-            </View>
-            <ProgressBar progress={header.progress} height={8} />
-          </View>
-
-          <View style={styles.segments}>
-            {SCOPES.map((s) => {
-              const count = pendingCount(s);
-              const isActive = scope === s;
-              return (
-                <Pressable
-                  key={s}
-                  onPress={() => {
-                    animate();
-                    setScope(s);
-                    setShowDone(false);
-                  }}
-                  style={[styles.segment, isActive && styles.segmentActive]}
-                >
-                  <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-                    {TASK_SCOPE_LABEL[s]}
-                  </Text>
-                  {count > 0 ? (
-                    <View style={[styles.badge, isActive && styles.badgeActive]}>
-                      <Text style={[styles.badgeText, isActive && styles.badgeTextActive]}>{count}</Text>
-                    </View>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={styles.addRow}>
-            <Ionicons name="add" size={20} color={colors.primary} />
-            <TextInput
-              ref={inputRef}
-              style={styles.addInput}
-              placeholder={PLACEHOLDER[scope]}
-              placeholderTextColor={colors.textFaint}
-              value={draft}
-              onChangeText={setDraft}
-              onSubmitEditing={addTask}
-              returnKeyType="done"
-              blurOnSubmit={false}
-            />
-            {draft.trim() ? (
-              <Pressable onPress={addTask} style={styles.addBtn} hitSlop={6}>
-                <Text style={styles.addBtnText}>Añadir</Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          {scope === 'goal' ? (
-            <GoalsList goals={active.concat(done)} onEdit={setEditing} onProgress={setGoalProgress} />
-          ) : (
-            <>
-              {active.length === 0 && done.length === 0 ? (
-                <View style={styles.empty}>
-                  <View style={styles.emptyIcon}>
-                    <Ionicons name="sunny-outline" size={26} color={colors.primary} />
-                  </View>
-                  <Text style={styles.emptyTitle}>Nada por aquí</Text>
-                  <Text style={styles.emptySub}>
-                    Apunta lo que quieras sacar adelante {TASK_SCOPE_LABEL[scope].toLowerCase()}.
-                  </Text>
-                </View>
-              ) : null}
-              {active.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={() => toggleDone(task)}
-                  onFlag={() => toggleFlag(task)}
-                  onEdit={() => setEditing(task)}
-                />
-              ))}
-              {done.length > 0 ? (
-                <Pressable
-                  style={styles.doneHeader}
-                  onPress={() => {
-                    animate();
-                    setShowDone((v) => !v);
-                  }}
-                >
-                  <Text style={styles.doneHeaderText}>Completadas · {done.length}</Text>
-                  <Ionicons name={showDone ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textFaint} />
-                </Pressable>
-              ) : null}
-              {showDone
-                ? done.map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      onToggle={() => toggleDone(task)}
-                      onFlag={() => toggleFlag(task)}
-                      onEdit={() => setEditing(task)}
-                    />
-                  ))
-                : null}
-            </>
-          )}
-        </>
+        tasksContent
       )}
 
       <MoveTaskModal
@@ -822,6 +850,16 @@ const styles = StyleSheet.create({
   screenHeader: { marginBottom: spacing.md },
   screenTitle: { ...typography.h1, color: colors.text },
   screenSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  // Escritorio/tablet: dos columnas a pantalla completa (calendario + tareas).
+  twoCol: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
+  colCal: { flex: 1, maxWidth: 480 },
+  colTasks: { flex: 1 },
+  colHeading: {
+    ...typography.label,
+    color: colors.primaryBright,
+    textTransform: 'uppercase',
+    marginBottom: spacing.md,
+  },
   topSeg: {
     flexDirection: 'row',
     gap: spacing.xs,
