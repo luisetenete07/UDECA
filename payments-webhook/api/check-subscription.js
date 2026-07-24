@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     // Inicialización perezosa (dentro del handler, para poder capturar errores).
     if (!admin.apps.length) {
       admin.initializeApp({
-        credential: admin.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
       });
     }
     const db = admin.firestore();
