@@ -312,6 +312,11 @@ export default function WorkoutScreen() {
     if (!routine || !selectedDayId || !profile) return;
     const day = routine.days.find((d) => d.id === selectedDayId);
     if (!day) return;
+    // Estamos en un día REAL de la rutina: si quedó pegado un "día combinado"
+    // de Sensaciones de una sesión anterior, lo limpiamos. Si no, el nombre del
+    // entreno (dayName) se guardaría con el del combinado antiguo aunque los
+    // ejercicios sean los de este día (p. ej. salía "Core" en un Tirón suave).
+    setCombinedDay(null);
     // Una recuperación manual (botón "Rellenar último entreno") ya ha fijado el
     // log; no lo pisamos.
     if (resumeGuard.current) {
@@ -911,6 +916,9 @@ export default function WorkoutScreen() {
       setPastDraft(null);
       setPastDismissed(false);
       setFlexAgain(false); // consumido: tras guardar vuelve la tarjeta de completado
+      // Limpia el "día combinado" de Sensaciones para que no contamine la
+      // próxima sesión (evita que un entreno futuro herede este nombre).
+      setCombinedDay(null);
       // Deja el estado detrás del resumen "limpio": el día queda como completado
       // (doneSets 0), de modo que nunca se vuelven a mostrar sus ejercicios.
       if (day) setLog(buildLog(day));
