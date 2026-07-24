@@ -55,9 +55,12 @@ export default function TrainerLayout() {
           ),
         }}
       />
+      {/* Calendario: ya no es una pestaña fija (menos saturación). Se abre desde
+          la tarjeta "Calendario y tareas" del Inicio; la ruta sigue disponible. */}
       <Tabs.Screen
         name="agenda"
         options={{
+          href: null,
           title: 'Calendario',
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="calendar-outline" filled="calendar" />

@@ -307,7 +307,14 @@ export default function CoachCalendarScreen() {
 
   return (
     <ScreenContainer maxWidth={isWide ? 760 : undefined}>
-      {/* Título de sección, como en el resto de pestañas */}
+      <Pressable
+        onPress={() => router.push('/(trainer)/dashboard')}
+        style={styles.backBtn}
+        hitSlop={8}
+      >
+        <Ionicons name="chevron-back" size={22} color={colors.text} />
+      </Pressable>
+      {/* Título de sección */}
       <View style={styles.screenHeader}>
         <Text style={styles.screenTitle}>{view === 'calendar' ? 'Calendario' : 'Tareas'}</Text>
         <Text style={styles.screenSubtitle}>
@@ -800,6 +807,18 @@ function GoalsList({
 }
 
 const styles = StyleSheet.create({
+  backBtn: {
+    alignSelf: 'flex-start',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
   screenHeader: { marginBottom: spacing.md },
   screenTitle: { ...typography.h1, color: colors.text },
   screenSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },

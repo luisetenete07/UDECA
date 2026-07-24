@@ -505,6 +505,20 @@ export default function TrainerDashboard() {
         </Pressable>
       </View>
 
+      {/* Acceso a la agenda completa (calendario mensual + tareas y objetivos).
+          Ya no ocupa una pestaña propia: los cobros clave están arriba en Inicio,
+          y aquí se llega al mes completo y a las tareas de un toque. */}
+      <Pressable onPress={() => router.push('/(trainer)/agenda')} style={styles.agendaEntry}>
+        <View style={styles.agendaIcon}>
+          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.agendaTitle}>Calendario y tareas</Text>
+          <Text style={styles.agendaSub}>Cobros, ciclos y tus recordatorios, mes a mes.</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
+
       {/* Primeros pasos: guía para el coach recién llegado (sin alumnos todavía). */}
       {clients.length === 0 && requests.length === 0 ? (
         <Card accent style={styles.section}>
@@ -1002,6 +1016,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  agendaEntry: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    marginBottom: spacing.md,
+  },
+  agendaIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  agendaTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  agendaSub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
