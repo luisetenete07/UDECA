@@ -12,8 +12,13 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
-import { getClientsForTrainer, updateClientPaymentStatus } from '../../lib/firestore/users';
 import {
+  getClientsForTrainer,
+  registerClientPayment,
+  updateClientPaymentStatus,
+} from '../../lib/firestore/users';
+import {
+  createPayment,
   deletePayment,
   getPaymentsForTrainer,
   updatePayment,
@@ -42,6 +47,12 @@ import {
 
 const INACTIVE_DAYS_THRESHOLD = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Suma meses naturales a un timestamp (para la próxima renovación). */
+function addMonths(base: number, months: number): number {
+  const d = new Date(base);
+  d.setMonth(d.getMonth() + months);
+  return d.getTime();
+}
 const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
   good: colors.success,
   warn: '#C9902B',
@@ -79,6 +90,7 @@ export default function TrainerDashboard() {
   const [editPayId, setEditPayId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
   const [savingPay, setSavingPay] = useState(false);
+  const [confirmingPayId, setConfirmingPayId] = useState<string | null>(null);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotReport, setCopilotReport] = useState<CopilotReport | null>(null);
   const [loadingCopilot, setLoadingCopilot] = useState(false);
@@ -320,6 +332,50 @@ export default function TrainerDashboard() {
       showToast(e instanceof Error ? e.message : 'No se pudo eliminar');
     } finally {
       setSavingPay(false);
+    }
+  };
+
+  // El coach confirma manualmente un cobro pendiente (pago fuera de la
+  // plataforma): marca "Pagado", empuja la renovación un mes y lo registra en
+  // ingresos. Los pagos por Stripe pasan a cobrado solos (webhook), sin esto.
+  const handleConfirmPayment = async (c: UserProfile) => {
+    if (!profile) return;
+    setConfirmingPayId(c.uid);
+    try {
+      const base =
+        c.nextPaymentDate && c.nextPaymentDate > Date.now() ? c.nextPaymentDate : Date.now();
+      const nextPaymentDate = addMonths(base, 1);
+      await registerClientPayment(c.uid, nextPaymentDate);
+      const pay = await createPayment({
+        trainerId: profile.uid,
+        clientId: c.uid,
+        amountEur: c.monthlyFeeEur ?? 0,
+        date: Date.now(),
+      });
+      // Refresca el estado local: sale de "pendientes" y suma a ingresos.
+      setClients((prev) =>
+        prev.map((x) =>
+          x.uid === c.uid
+            ? { ...x, paymentStatus: 'paid', nextPaymentDate, paymentReportedAt: undefined }
+            : x
+        )
+      );
+      setPayments((prev) => [
+        {
+          id: pay,
+          trainerId: profile.uid,
+          clientId: c.uid,
+          amountEur: c.monthlyFeeEur ?? 0,
+          date: Date.now(),
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ]);
+      showToast(`Cobro de ${c.name.split(' ')[0]} confirmado`);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo confirmar');
+    } finally {
+      setConfirmingPayId(null);
     }
   };
 
@@ -809,27 +865,42 @@ export default function TrainerDashboard() {
               <Text style={styles.mutedText}>No hay pagos pendientes.</Text>
             ) : (
               duePayClients.map((c) => (
-                <Pressable
-                  key={c.uid}
-                  onPress={() => {
-                    setPayListOpen(false);
-                    router.push(`/(trainer)/clients/${c.uid}`);
-                  }}
-                  style={styles.payRow}
-                >
-                  <Avatar name={c.name} photoURL={c.photoURL} size={38} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.logClient}>{c.name}</Text>
-                    <Text style={styles.payMeta}>
-                      {c.paymentStatus ? PAYMENT_STATUS_LABEL[c.paymentStatus] : 'Pendiente'}
-                      {c.monthlyFeeEur ? ` · ${c.monthlyFeeEur} €` : ''}
-                      {c.nextPaymentDate
-                        ? ` · vence ${new Date(c.nextPaymentDate).toLocaleDateString('es-ES')}`
-                        : ''}
+                <View key={c.uid} style={styles.payRow}>
+                  <Pressable
+                    onPress={() => {
+                      setPayListOpen(false);
+                      router.push(`/(trainer)/clients/${c.uid}`);
+                    }}
+                    style={styles.payRowMain}
+                  >
+                    <Avatar name={c.name} photoURL={c.photoURL} size={38} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.logClient}>{c.name}</Text>
+                      <Text style={styles.payMeta}>
+                        {c.paymentReportedAt
+                          ? 'Dice que ya pagó · confirma'
+                          : c.paymentStatus
+                            ? PAYMENT_STATUS_LABEL[c.paymentStatus]
+                            : 'Pendiente'}
+                        {c.monthlyFeeEur ? ` · ${c.monthlyFeeEur} €` : ''}
+                        {c.nextPaymentDate
+                          ? ` · vence ${new Date(c.nextPaymentDate).toLocaleDateString('es-ES')}`
+                          : ''}
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleConfirmPayment(c)}
+                    disabled={confirmingPayId === c.uid}
+                    style={styles.confirmPayBtn}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                    <Text style={styles.confirmPayText}>
+                      {confirmingPayId === c.uid ? '...' : 'Cobrado'}
                     </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                </Pressable>
+                  </Pressable>
+                </View>
               ))
             )}
             <Button
@@ -1232,6 +1303,19 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   payMeta: { ...typography.small, color: colors.danger, marginTop: 1 },
+  payRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  confirmPayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.successBorder,
+    backgroundColor: colors.successMuted,
+  },
+  confirmPayText: { ...typography.small, color: colors.success, fontFamily: fonts.semiBold, fontSize: 12 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
   sectionTitle: { ...typography.h3, color: colors.text },
