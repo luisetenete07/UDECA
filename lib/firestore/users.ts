@@ -75,6 +75,17 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
   await setDoc(doc(db, 'users', uid), stripUndefined(data), { merge: true });
 }
 
+/**
+ * Fija (o BORRA) el enlace de pago del entrenador. Con enlace vacío elimina el
+ * campo de verdad (deleteField), porque `updateUserProfile` descarta los
+ * `undefined` y el enlace antiguo volvería a aparecer al recargar el perfil.
+ */
+export async function setTrainerPaymentLink(uid: string, link: string) {
+  await updateDoc(doc(db, 'users', uid), {
+    paymentLink: link ? link : deleteField(),
+  });
+}
+
 /** El entrenador cambia el estado (activo/pausa/inactivo) de un cliente suyo. */
 export async function updateClientStatus(
   clientId: string,

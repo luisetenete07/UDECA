@@ -16,6 +16,7 @@ import {
   normalizeInviteCode,
   setCoachSubscription,
   setTrainerInviteCode,
+  setTrainerPaymentLink,
   updateUserProfile,
 } from '../../lib/firestore/users';
 import { pickAvatar } from '../../lib/image';
@@ -231,7 +232,8 @@ export default function TrainerProfileScreen() {
     }
     setSavingPayLink(true);
     try {
-      await updateUserProfile(profile.uid, { paymentLink: url || undefined });
+      // Con enlace vacío BORRA el campo (si no, reaparecería el antiguo).
+      await setTrainerPaymentLink(profile.uid, url);
       await refreshProfile();
       setPayLinkSaved(true);
       setTimeout(() => setPayLinkSaved(false), 2500);
