@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Alert, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
@@ -19,6 +19,7 @@ import {
   updateUserProfile,
 } from '../../lib/firestore/users';
 import { pickAvatar } from '../../lib/image';
+import { getConnectStatus, startCoachOnboarding } from '../../lib/connect';
 import {
   ANNUAL_PRICE_EUR,
   DAY_MS,
@@ -46,6 +47,10 @@ export default function TrainerProfileScreen() {
   const [payLink, setPayLink] = useState(profile?.paymentLink ?? '');
   const [savingPayLink, setSavingPayLink] = useState(false);
   const [payLinkSaved, setPayLinkSaved] = useState(false);
+  // Stripe Connect (cobros directos sin comisión de UDECA).
+  const [connecting, setConnecting] = useState(false);
+  const [checkingConnect, setCheckingConnect] = useState(false);
+  const chargesEnabled = Boolean(profile?.stripeChargesEnabled);
   // Panel admin UDECA (solo cuentas administradoras).
   const [adminOpen, setAdminOpen] = useState(false);
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
@@ -185,6 +190,35 @@ export default function TrainerProfileScreen() {
       showToast(e instanceof Error ? e.message : 'No se pudo actualizar');
     } finally {
       setUpdatingCoach(null);
+    }
+  };
+
+  // Inicia el alta de Stripe Connect (abre el formulario de Stripe).
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const r = await startCoachOnboarding(profile);
+      if (r.ok && r.url) {
+        Linking.openURL(r.url).catch(() => {});
+      } else {
+        showToast(r.reason ? `No se pudo: ${r.reason}` : 'No se pudo abrir el alta');
+      }
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  // Comprueba si Stripe ya ha activado los cobros de la cuenta del coach.
+  const handleRefreshConnect = async () => {
+    setCheckingConnect(true);
+    try {
+      const s = await getConnectStatus(profile);
+      await refreshProfile();
+      if (s.chargesEnabled) showToast('¡Cobros activados! Ya puedes recibir pagos');
+      else if (s.reason) showToast(`Aún no: ${s.reason}`);
+      else showToast('Alta aún en revisión. Termina los datos en Stripe.');
+    } finally {
+      setCheckingConnect(false);
     }
   };
 
@@ -357,11 +391,58 @@ export default function TrainerProfileScreen() {
         )}
       </Card>
 
+      <Card accent style={styles.section}>
+        <View style={styles.connectHead}>
+          <Text style={styles.sectionTitle}>Cobra a tus alumnos</Text>
+          {chargesEnabled ? (
+            <View style={styles.connectOn}>
+              <Ionicons name="checkmark-circle" size={14} color="#4CAF7D" />
+              <Text style={styles.connectOnText}>Activo</Text>
+            </View>
+          ) : null}
+        </View>
+        {chargesEnabled ? (
+          <Text style={styles.helperText}>
+            Tus cobros están activos. Cuando un alumno pague su cuota desde la app, el dinero irá
+            directo a tu cuenta. UDECA no te cobra ninguna comisión: recibes el 100 %.
+          </Text>
+        ) : (
+          <Text style={styles.helperText}>
+            Conecta tu cuenta una vez y cobra a tus alumnos desde la app.{' '}
+            <Text style={styles.connectStrong}>Sin comisiones de UDECA: recibes el 100 %.</Text> El
+            alumno paga con tarjeta y el dinero llega directo a ti.
+          </Text>
+        )}
+        {chargesEnabled ? (
+          <Button
+            title={checkingConnect ? 'Comprobando...' : 'Revisar mis datos de cobro'}
+            variant="secondary"
+            onPress={handleConnect}
+            loading={connecting}
+          />
+        ) : (
+          <>
+            <Button
+              title="Conectar mis cobros"
+              onPress={handleConnect}
+              loading={connecting}
+            />
+            <Button
+              title={checkingConnect ? 'Comprobando...' : 'Ya lo he hecho · Actualizar'}
+              variant="secondary"
+              onPress={handleRefreshConnect}
+              loading={checkingConnect}
+              style={{ marginTop: spacing.sm }}
+            />
+          </>
+        )}
+      </Card>
+
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Cobros</Text>
+        <Text style={styles.sectionTitle}>Otro método de cobro</Text>
         <Text style={styles.helperText}>
-          Pega tu enlace de pago (Stripe, Bizum, PayPal.me, Revolut…). Tus alumnos verán un botón
-          "Pagar ahora" en su aviso de cobro y podrán pagarte de un toque.
+          ¿Prefieres Bizum, PayPal.me, Revolut u otro enlace? Pégalo aquí y tus alumnos verán un
+          botón "Pagar ahora" en su aviso de cobro.
         </Text>
         <TextField
           label="Enlace de pago"
@@ -758,6 +839,20 @@ const styles = StyleSheet.create({
   },
   coachIconDanger: { borderColor: colors.danger },
   helperText: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
+  connectHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs },
+  connectStrong: { color: colors.text, fontFamily: fonts.semiBold },
+  connectOn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(46,125,91,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(46,125,91,0.45)',
+  },
+  connectOnText: { ...typography.small, color: '#4CAF7D', fontFamily: fonts.semiBold, fontSize: 12 },
   savedText: { ...typography.small, color: colors.primaryBright, marginBottom: spacing.sm },
   codeBox: {
     backgroundColor: colors.surfaceAlt,

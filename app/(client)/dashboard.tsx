@@ -31,6 +31,7 @@ import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '.
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
+import { createCoachCheckoutUrl } from '../../lib/connect';
 import { notifyUser } from '../../lib/notifications';
 import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
@@ -96,6 +97,9 @@ export default function ClientDashboard() {
   // muestra la tarjeta — nunca rompe el resto del inicio.
   const [activeCyc, setActiveCyc] = useState<TrainingCycle | null>(null);
   const [trainerPayLink, setTrainerPayLink] = useState<string | null>(null);
+  // Cobros del coach por Stripe Connect (directo, sin comisión de UDECA).
+  const [trainerConnect, setTrainerConnect] = useState(false);
+  const [payingConnect, setPayingConnect] = useState(false);
 
   const load = useCallback(
     async (isActive?: () => boolean) => {
@@ -163,7 +167,10 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (!profile?.trainerId) return;
     getUserProfile(profile.trainerId)
-      .then((t) => setTrainerPayLink(t?.paymentLink ?? null))
+      .then((t) => {
+        setTrainerPayLink(t?.paymentLink ?? null);
+        setTrainerConnect(Boolean(t?.stripeChargesEnabled));
+      })
       .catch(() => {});
   }, [profile?.trainerId]);
 
@@ -263,6 +270,23 @@ export default function ClientDashboard() {
   ] as const;
   const showFirstSteps = firstSteps.some((s) => !s.done);
   const stepsDone = firstSteps.filter((s) => s.done).length;
+
+  // Pago de la cuota al coach por Stripe Connect (directo, sin comisión UDECA).
+  // Tras pagar, el webhook marca el cobro solo (client_reference_id = uid).
+  const handlePayConnect = async () => {
+    if (!profile?.trainerId || !profile.monthlyFeeEur) return;
+    setPayingConnect(true);
+    try {
+      const r = await createCoachCheckoutUrl(profile.trainerId, profile.uid, profile.monthlyFeeEur);
+      if (r.ok && r.url) {
+        Linking.openURL(r.url).catch(() => {});
+      } else {
+        showToast(r.reason ? `No se pudo: ${r.reason}` : 'No se pudo abrir el pago');
+      }
+    } finally {
+      setPayingConnect(false);
+    }
+  };
 
   // El alumno declara que ya ha pagado: lo registra y avisa al entrenador.
   const handleReportPayment = async () => {
@@ -374,7 +398,14 @@ export default function ClientDashboard() {
               </View>
             ) : (
               <View style={styles.payActions}>
-                {trainerPayLink ? (
+                {trainerConnect && profile?.monthlyFeeEur ? (
+                  <Pressable onPress={handlePayConnect} disabled={payingConnect} style={styles.payBtn}>
+                    <Ionicons name="card" size={15} color={colors.onPrimary} />
+                    <Text style={styles.payBtnText}>
+                      {payingConnect ? 'Abriendo...' : `Pagar ${profile.monthlyFeeEur} €`}
+                    </Text>
+                  </Pressable>
+                ) : trainerPayLink ? (
                   <Pressable
                     onPress={() =>
                       Linking.openURL(buildPayUrl(trainerPayLink, profile?.uid ?? '')).catch(
