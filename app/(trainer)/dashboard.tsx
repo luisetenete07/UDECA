@@ -280,7 +280,9 @@ export default function TrainerDashboard() {
     }
     setRemindingPays(true);
     try {
-      await Promise.all(
+      // Un fallo puntual (push de un alumno sin token) NO debe tumbar el resto:
+      // se avisa a todos los que se pueda y se cuentan los envíos con éxito.
+      const results = await Promise.allSettled(
         duePayClients.map((c) =>
           notifyUser(
             c.uid,
@@ -289,8 +291,13 @@ export default function TrainerDashboard() {
           )
         )
       );
-      setPaysReminded(true);
-      showToast(`Recordatorio enviado a ${duePayClients.length} alumno(s)`);
+      const sent = results.filter((r) => r.status === 'fulfilled').length;
+      if (sent > 0) {
+        setPaysReminded(true);
+        showToast(`Recordatorio enviado a ${sent} alumno(s)`);
+      } else {
+        showToast('No se pudo enviar el recordatorio. Reinténtalo.');
+      }
     } finally {
       setRemindingPays(false);
     }

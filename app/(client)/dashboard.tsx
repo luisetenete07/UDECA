@@ -163,16 +163,25 @@ export default function ClientDashboard() {
       .catch(() => {});
   }, [profile]);
 
-  // Enlace de cobro del entrenador (para el botón "Pagar ahora" del alumno).
-  useEffect(() => {
-    if (!profile?.trainerId) return;
-    getUserProfile(profile.trainerId)
-      .then((t) => {
-        setTrainerPayLink(t?.paymentLink ?? null);
-        setTrainerConnect(Boolean(t?.stripeChargesEnabled));
-      })
-      .catch(() => {});
-  }, [profile?.trainerId]);
+  // Info de cobro del entrenador (Connect o enlace). Se refresca en CADA foco
+  // del inicio: así, si el coach acaba de conectar Stripe o cambia el enlace,
+  // el alumno ve el botón de pagar correcto sin tener que reiniciar la app.
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile?.trainerId) return;
+      let active = true;
+      getUserProfile(profile.trainerId)
+        .then((t) => {
+          if (!active) return;
+          setTrainerPayLink(t?.paymentLink ?? null);
+          setTrainerConnect(Boolean(t?.stripeChargesEnabled));
+        })
+        .catch(() => {});
+      return () => {
+        active = false;
+      };
+    }, [profile?.trainerId])
+  );
 
   // ¿Mostrar la petición de valoración? Solo si no se ha pedido/valorado antes.
   useEffect(() => {
@@ -273,15 +282,35 @@ export default function ClientDashboard() {
 
   // Pago de la cuota al coach por Stripe Connect (directo, sin comisión UDECA).
   // Tras pagar, el webhook marca el cobro solo (client_reference_id = uid).
+  // Si el checkout falla (red, coach a medio conectar…) y el coach tiene un
+  // enlace de pago propio, se ofrece ese enlace como respaldo: pagar NUNCA
+  // debe quedarse sin salida.
   const handlePayConnect = async () => {
     if (!profile?.trainerId || !profile.monthlyFeeEur) return;
     setPayingConnect(true);
     try {
       const r = await createCoachCheckoutUrl(profile.trainerId, profile.uid, profile.monthlyFeeEur);
       if (r.ok && r.url) {
-        Linking.openURL(r.url).catch(() => {});
+        const opened = await Linking.openURL(r.url).then(
+          () => true,
+          () => false
+        );
+        if (!opened) showToast('No se pudo abrir la pasarela de pago');
+        return;
+      }
+      // Falló el checkout: respaldo con el enlace del coach si lo hay.
+      if (trainerPayLink) {
+        Linking.openURL(buildPayUrl(trainerPayLink, profile.uid)).catch(() =>
+          showToast('No se pudo abrir el pago')
+        );
+        return;
+      }
+      showToast(r.reason ? `No se pudo: ${r.reason}` : 'No se pudo abrir el pago. Reinténtalo.');
+    } catch {
+      if (trainerPayLink) {
+        Linking.openURL(buildPayUrl(trainerPayLink, profile.uid)).catch(() => {});
       } else {
-        showToast(r.reason ? `No se pudo: ${r.reason}` : 'No se pudo abrir el pago');
+        showToast('No se pudo abrir el pago. Reinténtalo.');
       }
     } finally {
       setPayingConnect(false);
@@ -408,8 +437,8 @@ export default function ClientDashboard() {
                 ) : trainerPayLink ? (
                   <Pressable
                     onPress={() =>
-                      Linking.openURL(buildPayUrl(trainerPayLink, profile?.uid ?? '')).catch(
-                        () => {}
+                      Linking.openURL(buildPayUrl(trainerPayLink, profile?.uid ?? '')).catch(() =>
+                        showToast('No se pudo abrir el pago')
                       )
                     }
                     style={styles.payBtn}
