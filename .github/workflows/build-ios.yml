@@ -1,0 +1,35 @@
+name: Build iOS (App Store)
+
+# Compila el .ipa en la nube (Expo/EAS) y lo sube a App Store Connect, SIN Mac.
+# La clave privada de App Store Connect (.p8) NO vive en el repo: se guarda como
+# secreto de GitHub (ASC_API_KEY_P8) y se reconstruye aquí en tiempo de ejecución.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      # Reconstruye la clave .p8 desde el secreto (nunca se commitea).
+      - name: Preparar clave de App Store Connect
+        run: printf '%s' "${{ secrets.ASC_API_KEY_P8 }}" > asc-key.p8
+      # Con la ASC API key, EAS crea los certificados/perfiles de iOS solo, sin
+      # login interactivo de Apple, y al terminar sube el build a App Store Connect.
+      - name: Compilar y subir a App Store
+        env:
+          EXPO_ASC_API_KEY_PATH: ./asc-key.p8
+          EXPO_ASC_KEY_ID: MZPCDLQ2DV
+          EXPO_ASC_ISSUER_ID: b4f2d2f6-3485-4bb5-8d7c-5e89c09356d9
+        run: eas build --platform ios --profile production --non-interactive --auto-submit
+      - name: Limpiar clave
+        if: always()
+        run: rm -f asc-key.p8
