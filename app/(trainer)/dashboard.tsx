@@ -151,7 +151,9 @@ export default function TrainerDashboard() {
   useFocusEffect(
     useCallback(() => {
       if (!profile) return;
-      return subscribeClientsForTrainer(profile.uid, setClients);
+      return subscribeClientsForTrainer(profile.uid, setClients, (e) =>
+        showToast(`Alumnos en vivo no disponible: ${e.message}`)
+      );
     }, [profile])
   );
 

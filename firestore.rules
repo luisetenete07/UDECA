@@ -54,15 +54,21 @@ service cloud.firestore {
           || userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
           || isUdecaAdmin()
         );
-      // Sin prueba gratuita: al crearse, un coach no puede darse a sí mismo
-      // NINGÚN tiempo de suscripción (nace caducada); solo el admin la activa.
+      // Al crearse, nadie puede regalarse tiempo de suscripción. Única
+      // excepción: el ATLETA nace con su prueba gratuita, acotada aquí a 7
+      // días para que no pueda pedirse más del que le corresponde. El
+      // entrenador nace caducado (0) y se activa al pagar su cuota anual.
       allow create: if request.auth != null && request.auth.uid == userId
         && (
-          // Quien paga (coach anual y atleta mensual) nace SIN suscripción
-          // (0 = caducada); solo el admin la activa. Los alumnos entran gratis.
+          // Los alumnos entran gratis: no llevan suscripción.
           (request.resource.data.role != 'trainer' && request.resource.data.role != 'athlete')
           || !('subscriptionUntil' in request.resource.data)
           || request.resource.data.subscriptionUntil <= request.time.toMillis()
+          || (
+            request.resource.data.role == 'athlete'
+            && request.resource.data.subscriptionUntil
+                 <= request.time.toMillis() + 7 * 24 * 60 * 60 * 1000
+          )
         );
       // El propio usuario edita su perfil (sin tocar su suscripción); el
       // entrenador puede cambiar el `status` de sus clientes o sacarlos de su

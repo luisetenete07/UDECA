@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
+import { showToast } from '../../components/Toast';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -80,7 +81,10 @@ export default function SocialScreen() {
           setMembers(withMine(rows));
           setLoading(false);
         },
-        () => setLoading(false)
+        (e) => {
+          setLoading(false);
+          showToast(`Comunidad en vivo no disponible: ${e.message}`);
+        }
       );
     }, [profile?.trainerId, withMine])
   );
@@ -202,19 +206,25 @@ export default function SocialScreen() {
       ) : null}
 
       {(() => {
-        // Tablón de récords: PRs del grupo conseguidos esta semana. Cuenta la
-        // semana natural (lunes 00:00 → domingo 23:59), así el tablón se
-        // renueva al terminar el domingo.
+        // Tablón de récords. Se destacan los de la semana natural (lunes 00:00
+        // → domingo 23:59), pero si aún no hay ninguno —un lunes por la mañana
+        // no lo habrá— se muestran los últimos conseguidos en vez de dejar el
+        // tablón vacío: el mérito no desaparece al cambiar de semana.
         const weekStart = startOfWeek(Date.now());
-        const weekPRs = members
-          .filter((m) => m.lastPR && m.lastPR.date >= weekStart)
+        const withPR = members
+          .filter((m) => m.lastPR)
           .sort((a, b) => (b.lastPR?.date ?? 0) - (a.lastPR?.date ?? 0));
-        if (weekPRs.length === 0) return null;
+        if (withPR.length === 0) return null;
+        const weekPRs = withPR.filter((m) => (m.lastPR?.date ?? 0) >= weekStart);
+        const thisWeek = weekPRs.length > 0;
+        const shown = thisWeek ? weekPRs : withPR.slice(0, 5);
         return (
           <>
-            <Text style={styles.sectionTitle}>Récords de la semana</Text>
+            <Text style={styles.sectionTitle}>
+              {thisWeek ? 'Récords de la semana' : 'Últimos récords'}
+            </Text>
             <Card accent style={{ marginBottom: spacing.lg }}>
-              {weekPRs.map((m) => (
+              {shown.map((m) => (
                 <View key={m.uid} style={styles.prBoardRow}>
                   <Avatar name={m.name} photoURL={m.photoURL} size={34} />
                   <View style={{ flex: 1 }}>

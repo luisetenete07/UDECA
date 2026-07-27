@@ -177,10 +177,16 @@ export default function ClientsScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!profile) return;
-      return subscribeClientsForTrainer(profile.uid, (data) => {
-        setClients(data);
-        setCached(cacheKey, data);
-      });
+      return subscribeClientsForTrainer(
+        profile.uid,
+        (data) => {
+          setClients(data);
+          setCached(cacheKey, data);
+        },
+        // Si la escucha se cae (permisos, red), hay que enterarse: en silencio
+        // parecería que "no llegan alumnos nuevos" sin motivo aparente.
+        (e) => showToast(`Lista en vivo no disponible: ${e.message}`)
+      );
     }, [profile, cacheKey])
   );
 

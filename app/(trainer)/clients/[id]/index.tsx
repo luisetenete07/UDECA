@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -9,6 +9,7 @@ import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
+import { ProgressTable } from '../../../../components/ProgressTable';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
 import { showToast } from '../../../../components/Toast';
@@ -31,7 +32,7 @@ import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNotes';
 import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
-import { bestMarks, buildClientReportHtml } from '../../../../lib/report';
+import { bestMarks, buildClientReportHtml, computeClientReport } from '../../../../lib/report';
 import { shareReportImage } from '../../../../lib/brandCards';
 import {
   exerciseProgression,
@@ -115,6 +116,7 @@ export default function ClientDetailScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sharingCard, setSharingCard] = useState(false);
+  const [fullOpen, setFullOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [feeInput, setFeeInput] = useState('');
@@ -376,8 +378,18 @@ export default function ClientDetailScreen() {
     }
   };
 
-  // Progreso completo: EXACTAMENTE el mismo informe con tablas que ve el
-  // alumno desde su pantalla de progreso.
+  // Datos del informe, compartidos por la tabla en pantalla y el PDF.
+  const reportData = () => ({
+    client: client!,
+    routine: activeRoutine ?? null,
+    weightLogs,
+    workoutLogs,
+    nutritionPlan,
+    muscleByExercise,
+    measureByExercise,
+  });
+
+  // Exportar a PDF es opcional: la tabla se consulta dentro de la app.
   const handleGenerateReport = async () => {
     if (!client) return;
     setGeneratingReport(true);
@@ -876,8 +888,7 @@ export default function ClientDetailScreen() {
 
       <Button
         title="Ver progreso completo"
-        onPress={handleGenerateReport}
-        loading={generatingReport}
+        onPress={() => setFullOpen(true)}
         style={{ marginBottom: spacing.sm }}
       />
       <Button
@@ -916,11 +927,50 @@ export default function ClientDetailScreen() {
           />
         ) : null}
       </Card>
+
+      {/* Progreso completo: la MISMA tabla que ve el alumno, aquí dentro. */}
+      <Modal visible={fullOpen} animationType="slide" onRequestClose={() => setFullOpen(false)}>
+        <View style={styles.fullSheet}>
+          <View style={styles.fullHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fullTitle}>Progreso completo</Text>
+              <Text style={styles.fullSubtitle}>{client?.name}</Text>
+            </View>
+            <Pressable onPress={() => setFullOpen(false)} hitSlop={10}>
+              <Ionicons name="close" size={24} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.fullBody}>
+            {client ? <ProgressTable report={computeClientReport(reportData())} /> : null}
+            <Button
+              title="Exportar a PDF"
+              variant="secondary"
+              onPress={handleGenerateReport}
+              loading={generatingReport}
+              style={{ marginTop: spacing.xl }}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  fullSheet: { flex: 1, backgroundColor: colors.background },
+  fullHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl * 1.6,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  fullTitle: { ...typography.h2, color: colors.text },
+  fullSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingRight: spacing.sm },
   backText: { ...typography.body, color: colors.primary, fontFamily: fonts.medium },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },

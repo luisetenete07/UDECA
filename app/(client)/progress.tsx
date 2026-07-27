@@ -18,6 +18,7 @@ import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { LineChart } from '../../components/LineChart';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { ProgressTable } from '../../components/ProgressTable';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
@@ -25,7 +26,7 @@ import { MuscleMap } from '../../components/MuscleMap';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { shareSessionImage } from '../../lib/brandCards';
-import { buildClientReportHtml } from '../../lib/report';
+import { buildClientReportHtml, computeClientReport } from '../../lib/report';
 import { muscleLoad } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
@@ -96,6 +97,7 @@ export default function ProgressScreen() {
   const [deleting, setDeleting] = useState(false);
 
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [fullOpen, setFullOpen] = useState(false);
 
   const [weightInput, setWeightInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
@@ -193,21 +195,23 @@ export default function ProgressScreen() {
     showToast('Registro borrado');
   };
 
-  // Informe completo de progreso: usa el MISMO generador que el entrenador,
-  // alimentado solo con los datos de esta cuenta (nunca de otros alumnos).
-  const handleFullReport = async () => {
+  // Datos del informe completo. Se calculan solo cuando se abre la tabla.
+  const reportData = () => ({
+    client: profile!,
+    routine: null,
+    weightLogs,
+    workoutLogs,
+    nutritionPlan: null,
+    muscleByExercise,
+    measureByExercise,
+  });
+
+  // Exportar a PDF es OPCIONAL: la tabla se consulta dentro de la app.
+  const handleExportPdf = async () => {
     if (!profile || workoutLogs.length === 0) return;
     setGeneratingReport(true);
     try {
-      const html = buildClientReportHtml({
-        client: profile,
-        routine: null,
-        weightLogs,
-        workoutLogs,
-        nutritionPlan: null,
-        muscleByExercise,
-        measureByExercise,
-      });
+      const html = buildClientReportHtml(reportData());
       if (Platform.OS === 'web') {
         await Print.printAsync({ html });
       } else {
@@ -217,7 +221,7 @@ export default function ProgressScreen() {
         }
       }
     } catch {
-      showToast('No se pudo generar el progreso');
+      showToast('No se pudo exportar el PDF');
     } finally {
       setGeneratingReport(false);
     }
@@ -405,8 +409,7 @@ export default function ProgressScreen() {
               </Text>
               <Button
                 title="Ver progreso completo"
-                onPress={handleFullReport}
-                loading={generatingReport}
+                onPress={() => setFullOpen(true)}
                 style={{ marginTop: spacing.md }}
               />
             </Card>
@@ -814,6 +817,36 @@ export default function ProgressScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Progreso completo: la tabla se CONSULTA aquí dentro. El PDF queda
+          como exportación opcional, no como única forma de verlo. */}
+      <Modal
+        visible={fullOpen}
+        animationType="slide"
+        onRequestClose={() => setFullOpen(false)}
+      >
+        <View style={styles.fullSheet}>
+          <View style={styles.fullHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fullTitle}>Progreso completo</Text>
+              <Text style={styles.fullSubtitle}>{profile?.name}</Text>
+            </View>
+            <Pressable onPress={() => setFullOpen(false)} hitSlop={10}>
+              <Ionicons name="close" size={24} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.fullBody}>
+            {profile ? <ProgressTable report={computeClientReport(reportData())} /> : null}
+            <Button
+              title="Exportar a PDF"
+              variant="secondary"
+              onPress={handleExportPdf}
+              loading={generatingReport}
+              style={{ marginTop: spacing.xl }}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -873,6 +906,20 @@ function MonthStat({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  fullSheet: { flex: 1, backgroundColor: colors.background },
+  fullHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl * 1.6,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  fullTitle: { ...typography.h2, color: colors.text },
+  fullSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   tabsScroll: { marginBottom: spacing.lg, flexGrow: 0 },
   tabs: {
