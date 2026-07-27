@@ -61,12 +61,15 @@ export default function TrainerProfileScreen() {
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<SocialStats | null>(null);
   // Clasificación en vivo: rachas, entrenos y presencia se refrescan solos, y
-  // un alumno recién incorporado aparece al instante.
-  useEffect(() => {
-    if (!profile) return;
-    const unsubscribe = subscribeSocialLeaderboard(profile.uid, setLeaderboard);
-    return unsubscribe;
-  }, [profile]);
+  // un alumno recién incorporado aparece al instante. Solo escucha mientras la
+  // pantalla está delante: los alumnos refrescan su presencia cada pocos
+  // minutos y no queremos recibir esos latidos en segundo plano.
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile) return;
+      return subscribeSocialLeaderboard(profile.uid, setLeaderboard);
+    }, [profile])
+  );
 
   const confirmDeleteEntry = async () => {
     if (!deleteTarget) return;

@@ -33,15 +33,14 @@ export default function SocialScreen() {
   // ranking para que nuestra fila nunca salga desactualizada por la latencia.
   const mineRef = useRef<SocialStats | null>(null);
 
+  const myUid = profile?.uid;
   const withMine = useCallback(
     (rows: SocialStats[]) => {
       const mine = mineRef.current;
-      if (!mine || !profile) return rows;
-      return rows
-        .map((m) => (m.uid === profile.uid ? { ...m, ...mine } : m))
-        .sort(compareLeaderboard);
+      if (!mine || !myUid) return rows;
+      return rows.map((m) => (m.uid === myUid ? { ...m, ...mine } : m)).sort(compareLeaderboard);
     },
-    [profile]
+    [myUid]
   );
 
   const load = useCallback(async () => {
@@ -65,21 +64,26 @@ export default function SocialScreen() {
   );
 
   // Ranking en vivo: cualquier cambio en el grupo (una racha, un entreno nuevo,
-  // un alumno que acaba de entrar) se refleja sin salir ni refrescar. La baja
-  // se hace al desmontar, así que nunca queda más de un listener abierto.
-  useEffect(() => {
-    const trainerId = profile?.trainerId;
-    if (!trainerId) return;
-    const unsubscribe = subscribeSocialLeaderboard(
-      trainerId,
-      (rows) => {
-        setMembers(withMine(rows));
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return unsubscribe;
-  }, [profile?.trainerId, withMine]);
+  // un alumno que acaba de entrar) se refleja sin salir ni refrescar.
+  //
+  // La escucha vive solo mientras ESTA pantalla está en primer plano. Es
+  // importante: los alumnos refrescan su presencia cada pocos minutos, así que
+  // un listener abierto en segundo plano recibiría los latidos de todo el grupo
+  // sin que nadie los esté mirando, multiplicando las lecturas de Firestore.
+  useFocusEffect(
+    useCallback(() => {
+      const trainerId = profile?.trainerId;
+      if (!trainerId) return;
+      return subscribeSocialLeaderboard(
+        trainerId,
+        (rows) => {
+          setMembers(withMine(rows));
+          setLoading(false);
+        },
+        () => setLoading(false)
+      );
+    }, [profile?.trainerId, withMine])
+  );
 
   // El atleta individual no forma parte de ningún grupo: fuera de aquí.
   if (profile?.role === 'athlete') return <Redirect href="/(client)/dashboard" />;

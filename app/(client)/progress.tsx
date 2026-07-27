@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   Alert,
@@ -289,43 +289,59 @@ export default function ProgressScreen() {
     }
   };
 
+  // Agregaciones pesadas del historial. Van memorizadas y ANTES del retorno
+  // de carga (el orden de hooks debe ser constante): esta pantalla tiene
+  // campos de texto, así que sin esto cada tecla recorrería otra vez todos los
+  // entrenamientos.
+  const months = useMemo(
+    () => workoutsByMonth(workoutLogs, measureByExercise),
+    [workoutLogs, measureByExercise]
+  );
+  const comparison = useMemo(() => thenVsNow(workoutLogs, weightLogs), [workoutLogs, weightLogs]);
+
+  // Mapa corporal: intensidad por músculo según lo trabajado en la última
+  // sesión o en la semana. `muscleByExercise` (grupo del ejercicio) refina la
+  // clasificación por nombre.
+  const muscleIntensity = useMemo(() => {
+    const startOfDayTs = (ts: number) => {
+      const d = new Date(ts);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    };
+    if (muscleMode === 'session') {
+      const lastSessionDay = workoutLogs.length > 0 ? startOfDayTs(workoutLogs[0].date) : 0;
+      const sessionLogs = workoutLogs.filter((l) => startOfDayTs(l.date) === lastSessionDay);
+      return muscleLoad(sessionLogs, undefined, muscleByExercise, musclesByExercise);
+    }
+    // Semana NATURAL (lunes 00:00 → domingo 23:59), no los últimos 7 días: al
+    // pasar el domingo el mapa arranca limpio.
+    return muscleLoad(workoutLogs, startOfWeek(Date.now()), muscleByExercise, musclesByExercise);
+  }, [workoutLogs, muscleMode, muscleByExercise, musclesByExercise]);
+
+  const muscleMap = useMemo(
+    () => setsByMuscleGroup(workoutLogs, muscleByExercise),
+    [workoutLogs, muscleByExercise]
+  );
+  const weeklySets = useMemo(
+    () => weeklySetsByGroup(workoutLogs, muscleByExercise),
+    [workoutLogs, muscleByExercise]
+  );
+  const exercisesInLogs = useMemo(() => listExercisesInLogs(workoutLogs), [workoutLogs]);
+  const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
+  const progression = useMemo(
+    () => (selExerciseId ? exerciseProgression(workoutLogs, selExerciseId) : null),
+    [workoutLogs, selExerciseId]
+  );
+
   if (loading) return <LoadingScreen />;
 
-  const months = workoutsByMonth(workoutLogs, measureByExercise);
   const toggleSession = (id: string) =>
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  const comparison = thenVsNow(workoutLogs, weightLogs);
-
-  // Mapa corporal: intensidad por músculo según lo trabajado en la última
-  // sesión o en los últimos 7 días. `muscleByExercise` (grupo del ejercicio)
-  // refina la clasificación por nombre.
-  const groupByEx = muscleByExercise;
-  const startOfDayTs = (ts: number) => {
-    const d = new Date(ts);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  };
-  const lastSessionDay = workoutLogs.length > 0 ? startOfDayTs(workoutLogs[0].date) : 0;
-  const sessionLogs = workoutLogs.filter((l) => startOfDayTs(l.date) === lastSessionDay);
-  const muscleIntensity =
-    muscleMode === 'session'
-      ? muscleLoad(sessionLogs, undefined, groupByEx, musclesByExercise)
-      : // Semana NATURAL (lunes 00:00 → domingo 23:59), no los últimos 7 días:
-        // al pasar el domingo el mapa arranca limpio.
-        muscleLoad(workoutLogs, startOfWeek(Date.now()), groupByEx, musclesByExercise);
   const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
-
-  const muscleMap = setsByMuscleGroup(workoutLogs, muscleByExercise);
   const muscleMax = muscleMap.length > 0 ? muscleMap[0].sets : 0;
-  const weeklySets = weeklySetsByGroup(workoutLogs, muscleByExercise);
   const pushPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pushSets }));
   const pullPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pullSets }));
-
-  // Datos del historial por ejercicio (tab "Ejercicios").
-  const exercisesInLogs = listExercisesInLogs(workoutLogs);
-  const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
-  const progression = selExerciseId ? exerciseProgression(workoutLogs, selExerciseId) : null;
   const progMetric = progression?.measure === 'seconds' ? 's' : progression?.hasWeight ? 'kg' : 'reps';
   const progPoints = progression
     ? progression.points.map((p) => ({

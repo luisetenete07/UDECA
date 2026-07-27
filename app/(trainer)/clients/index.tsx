@@ -172,15 +172,17 @@ export default function ClientsScreen() {
 
   // Altas y bajas del grupo en vivo: un alumno recién aceptado aparece en la
   // lista sin refrescar ni volver atrás. El resto de datos derivados (últimas
-  // sesiones, entrenos saltados) los sigue calculando `load`.
-  useEffect(() => {
-    if (!profile) return;
-    const unsubscribe = subscribeClientsForTrainer(profile.uid, (data) => {
-      setClients(data);
-      setCached(cacheKey, data);
-    });
-    return unsubscribe;
-  }, [profile, cacheKey]);
+  // sesiones, entrenos saltados) los sigue calculando `load`. Solo escucha
+  // mientras la lista está delante.
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile) return;
+      return subscribeClientsForTrainer(profile.uid, (data) => {
+        setClients(data);
+        setCached(cacheKey, data);
+      });
+    }, [profile, cacheKey])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

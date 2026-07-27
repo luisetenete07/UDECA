@@ -146,12 +146,13 @@ export default function TrainerDashboard() {
   );
 
   // Alta/baja de alumnos en vivo: al aceptar a uno nuevo aparece aquí al
-  // instante, sin refrescar el panel.
-  useEffect(() => {
-    if (!profile) return;
-    const unsubscribe = subscribeClientsForTrainer(profile.uid, setClients);
-    return unsubscribe;
-  }, [profile]);
+  // instante, sin refrescar el panel. Solo mientras el panel está delante.
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile) return;
+      return subscribeClientsForTrainer(profile.uid, setClients);
+    }, [profile])
+  );
 
   if (loading) return <LoadingScreen />;
 

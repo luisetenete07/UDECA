@@ -15,6 +15,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { AnimatedSplash } from '../components/AnimatedSplash';
 import { CardRendererHost } from '../components/CardRendererHost';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ToastHost } from '../components/Toast';
 import { AuthProvider } from '../lib/auth-context';
@@ -47,12 +48,16 @@ export default function RootLayout() {
           {!fontsLoaded ? (
             <LoadingScreen />
           ) : (
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.background },
-              }}
-            />
+            // Si una pantalla falla al pintarse, se muestra un aviso con opción
+            // de reintentar en vez de dejar la app en blanco.
+            <ErrorBoundary>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.background },
+                }}
+              />
+            </ErrorBoundary>
           )}
           {!splashDone ? <AnimatedSplash onFinish={() => setSplashDone(true)} /> : null}
         </AuthProvider>
