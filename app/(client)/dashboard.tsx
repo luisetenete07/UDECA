@@ -10,6 +10,7 @@ import { CheckInCard } from '../../components/CheckInCard';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { TrialBanner } from '../../components/TrialBanner';
 import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
 import { useAuth } from '../../lib/auth-context';
@@ -396,6 +397,8 @@ export default function ClientDashboard() {
         load();
       }}
     >
+      {/* Solo aparece en cuentas de atleta durante su prueba gratuita. */}
+      <TrialBanner profile={profile} />
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greetingLabel}>Bienvenido de nuevo</Text>

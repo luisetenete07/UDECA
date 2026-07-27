@@ -10,6 +10,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { friendlyAuthError } from '../../lib/firebase-errors';
+import { TRIAL_DAYS } from '../../lib/subscription';
 import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 import type { UserRole } from '../../lib/types';
 
@@ -68,7 +69,9 @@ export default function RegisterScreen() {
         />
         <Logo compact />
         <Text style={styles.title}>Crea tu cuenta</Text>
-        <Text style={styles.subtitle}>Elige cómo quieres usar la app</Text>
+        <Text style={styles.subtitle}>
+          Elige cómo quieres usar la app. Empiezas gratis y sin tarjeta.
+        </Text>
       </View>
 
       <Card accent style={styles.formCard}>
@@ -188,16 +191,18 @@ const ROLE_CARDS: {
   {
     value: 'athlete',
     title: 'Atleta',
-    price: '10 €/mes',
+    price: `${TRIAL_DAYS} días gratis`,
+    free: true,
     icon: 'barbell-outline',
-    desc: 'Entrena por tu cuenta: crea tus rutinas y sigue tu progreso y nutrición.',
+    desc: `Entrena por tu cuenta: crea tus rutinas y sigue tu progreso y nutrición. Después, 10 €/mes.`,
   },
   {
     value: 'trainer',
     title: 'Entrenador',
-    price: '15 €/mes',
+    price: `${TRIAL_DAYS} días gratis`,
+    free: true,
     icon: 'people-outline',
-    desc: 'Gestiona a tus alumnos, cobros y tu negocio. Se paga 180 €/año de una vez (cuota anual, no meses sueltos).',
+    desc: `Gestiona a tus alumnos, cobros y tu negocio. Después, 180 €/año (cuota anual, no meses sueltos).`,
   },
 ];
 

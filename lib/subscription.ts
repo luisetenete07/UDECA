@@ -83,6 +83,19 @@ export function isAdmin(profile: UserProfile | null): boolean {
   return !!profile?.email && ADMIN_EMAILS.includes(profile.email.toLowerCase());
 }
 
+/**
+ * Días de prueba al crear una cuenta de pago (entrenador o atleta). Se entra
+ * sin tarjeta: primero se usa el producto y luego se decide. Antes se creaba
+ * la cuenta ya caducada y el muro de pago aparecía nada más registrarse, sin
+ * haber visto nada.
+ */
+export const TRIAL_DAYS = 7;
+
+/** Fecha de fin de la prueba para una cuenta que se crea ahora. */
+export function trialUntil(from: number = Date.now()): number {
+  return from + TRIAL_DAYS * DAY_MS;
+}
+
 export interface SubscriptionState {
   /** true si el coach puede usar la plataforma. */
   active: boolean;
@@ -90,22 +103,29 @@ export interface SubscriptionState {
   daysLeft: number | null;
   /** true si la cuenta es anterior a la monetización (sin fecha). */
   legacy: boolean;
+  /** true mientras se está dentro de la prueba gratuita (aún sin pagar). */
+  trial: boolean;
 }
 
 export function subscriptionState(profile: UserProfile | null): SubscriptionState {
   // Pagan plataforma: entrenadores (anual) y atletas individuales (mensual).
   // Los alumnos vinculados a un coach entran gratis.
   if (!profile || (profile.role !== 'trainer' && profile.role !== 'athlete')) {
-    return { active: true, daysLeft: null, legacy: true };
+    return { active: true, daysLeft: null, legacy: true, trial: false };
   }
-  if (isAdmin(profile)) return { active: true, daysLeft: null, legacy: false };
+  if (isAdmin(profile)) return { active: true, daysLeft: null, legacy: false, trial: false };
   if (profile.subscriptionUntil === undefined) {
-    return { active: true, daysLeft: null, legacy: true };
+    return { active: true, daysLeft: null, legacy: true, trial: false };
   }
   const msLeft = profile.subscriptionUntil - Date.now();
+  // Sigue siendo prueba mientras el acceso no se haya extendido más allá de la
+  // fecha que se fijó al registrarse (al pagar, subscriptionUntil la supera).
+  const trial =
+    profile.trialEndsAt !== undefined && profile.subscriptionUntil <= profile.trialEndsAt;
   return {
     active: msLeft > 0,
     daysLeft: Math.max(0, Math.ceil(msLeft / DAY_MS)),
     legacy: false,
+    trial,
   };
 }

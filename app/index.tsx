@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { useAuth } from '../lib/auth-context';
+import { hasSeenIntro } from '../lib/intro';
 import { colors, spacing, typography } from '../lib/theme';
 
 export default function Index() {
   const { loading, firebaseUser, profile, isFirebaseConfigured } = useAuth();
+  // null = todavía no sabemos si este dispositivo ya vio la presentación.
+  const [introSeen, setIntroSeen] = useState<boolean | null>(null);
+  useEffect(() => {
+    hasSeenIntro().then(setIntroSeen);
+  }, []);
 
   if (!isFirebaseConfigured) {
     return (
@@ -26,7 +32,10 @@ export default function Index() {
   }
 
   if (!firebaseUser || !profile) {
-    return <Redirect href="/(auth)/login" />;
+    if (introSeen === null) return <LoadingScreen label="Cargando..." />;
+    // Primera vez en este dispositivo: antes de pedir nada, contamos qué es
+    // UDECA. Después, directo al inicio de sesión.
+    return <Redirect href={introSeen ? '/(auth)/login' : '/(auth)/welcome'} />;
   }
 
   if (profile.role === 'trainer') {

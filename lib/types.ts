@@ -71,6 +71,12 @@ export interface UserProfile {
    * la monetización). Solo el admin de UDECA puede modificarlo (reglas).
    */
   subscriptionUntil?: number;
+  /**
+   * Fin de la prueba gratuita fijado al crear la cuenta. Sirve para distinguir
+   * "está probando" de "ha pagado": al pagar, subscriptionUntil supera esta
+   * fecha. No se vuelve a tocar, así que la prueba no se puede repetir.
+   */
+  trialEndsAt?: number;
   /** Plan contratado. De momento solo existe el anual (180 €/año). */
   subscriptionPlan?: 'annual';
   /** Onboarding completado (una vez por cuenta, sincronizado entre dispositivos). */

@@ -9,6 +9,7 @@ import { CopilotMark } from '../../components/CopilotMark';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { TrialBanner } from '../../components/TrialBanner';
 import { StatTile } from '../../components/StatTile';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -487,6 +488,7 @@ export default function TrainerDashboard() {
 
   return (
     <ScreenContainer>
+      <TrialBanner profile={profile} />
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greetingLabel}>Panel del entrenador</Text>

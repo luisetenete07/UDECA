@@ -16,6 +16,7 @@ import { sendJoinRequest } from './firestore/joinRequests';
 import { registerForPushNotificationsAsync } from './notifications';
 import { rememberAccount } from './rememberedAccounts';
 import { clearCache } from './screenCache';
+import { trialUntil } from './subscription';
 import type { UserProfile, UserRole } from './types';
 
 interface AuthContextValue {
@@ -120,9 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       inviteCode,
       emailVerificationRequired: true,
-      // SaaS sin prueba gratuita: la cuenta nace pendiente de activación
-      // (0 = caducada); el admin la activa cuando el coach paga su plan.
-      subscriptionUntil: 0,
+      // La cuenta nace con la prueba gratuita en marcha: se entra sin tarjeta y
+      // se paga después de haber usado la app, no antes de verla.
+      subscriptionUntil: trialUntil(),
+      trialEndsAt: trialUntil(),
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     await registerTrainerInviteCode(inviteCode, credential.user.uid);
@@ -174,7 +176,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       trainerId: credential.user.uid,
       emailVerificationRequired: true,
-      subscriptionUntil: 0,
+      // Igual que el entrenador: entra probando, decide después.
+      subscriptionUntil: trialUntil(),
+      trialEndsAt: trialUntil(),
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     sendEmailVerification(credential.user).catch(() => {});
