@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import {
+  AppState,
   Linking,
   Modal,
   Platform,
@@ -81,14 +82,26 @@ interface WorkoutDraft {
   log: LoggedExercise[];
   startedAt: number | null;
   savedAt: number;
+  /** Ejercicio que se estaba viendo, para reanudar justo donde se dejó. */
+  viewIndex?: number;
 }
 
 const draftKey = (uid: string) => `udeca-workout-draft-${uid}`;
 // Entreno de un día anterior que quedó sin finalizar (se guarda aparte para que
 // empezar uno nuevo hoy no lo borre).
 const pendingKey = (uid: string) => `udeca-workout-pending-${uid}`;
+// Un borrador merece restaurarse si contiene CUALQUIER dato del alumno, no solo
+// series marcadas: reps o pesos tecleados y notas cuentan igual. Solo se
+// escriben borradores que difieren de la plantilla del día (ver pristineRef),
+// así que basta con comprobar que hay algo dentro.
 const draftHasProgress = (d: WorkoutDraft) =>
-  d.log.some((ex) => ex.sets.some((st) => st.completed));
+  d.log.some(
+    (ex) =>
+      (ex.notes ?? '').trim() !== '' ||
+      ex.sets.some(
+        (st) => st.completed || (st.reps ?? '').trim() !== '' || (st.weight ?? '').trim() !== ''
+      )
+  );
 
 /** Descanso en formato min:seg para las etiquetas: 90 → "1:30", 210 → "3:30". */
 function formatRest(seconds: number): string {
@@ -218,6 +231,10 @@ export default function WorkoutScreen() {
     return (profile?.flexRestDays ?? []).some((d) => startOfDayLocal(d) === today);
   });
   const startedAt = useRef<number | null>(null);
+  // Log "en blanco" del día tal y como lo genera la plantilla. Sirve para saber
+  // si el alumno ha tocado algo: en cuanto el log difiere de esto, hay datos que
+  // conservar y el borrador empieza a guardarse.
+  const pristineRef = useRef<string>('');
   // Sesión en curso traída de la cuenta (otro dispositivo). Se compara con el
   // borrador local para recuperar siempre la versión más reciente.
   const remoteDraftRef = useRef<WorkoutDraft | null>(null);
@@ -362,13 +379,18 @@ export default function WorkoutScreen() {
         if (draftDay === today && draft.routineId === routine.id && draft.dayId === selectedDayId) {
           // Mismo día: se retoma sin preguntar.
           if (cancelled) return;
+          // La referencia sigue siendo la plantilla del día: el borrador difiere
+          // de ella, así que los cambios se seguirán guardando.
+          pristineRef.current = JSON.stringify(buildLog(day));
           setLog(draft.log);
           startedAt.current = draft.startedAt;
           setRestored(true);
           setResumeDate(null);
           setSummary(null);
+          // Vuelve al ejercicio que estaba viendo; si no consta, al primero sin
+          // terminar.
           const resume = draft.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
-          setViewIndex(resume >= 0 ? resume : 0);
+          setViewIndex(draft.viewIndex ?? (resume >= 0 ? resume : 0));
           restoredHere = true;
         } else if (draftDay < today) {
           // El borrador principal es de un día anterior: pásalo a "pendiente" para
@@ -384,7 +406,9 @@ export default function WorkoutScreen() {
       if (cancelled) return;
       setPastDraft(pending);
       if (!restoredHere) {
-        setLog(buildLog(day));
+        const fresh = buildLog(day);
+        pristineRef.current = JSON.stringify(fresh);
+        setLog(fresh);
         setRestored(false);
         setResumeDate(null);
         setSummary(null);
@@ -400,9 +424,11 @@ export default function WorkoutScreen() {
   // Guarda el borrador con cada cambio: al instante en el dispositivo y, con un
   // pequeño retardo, en la cuenta (Firestore) para sincronizar entre móviles.
   useEffect(() => {
-    if (!profile || !routine || !selectedDayId) return;
-    const hasProgress = log.some((ex) => ex.sets.some((st) => st.completed));
-    if (!hasProgress) return;
+    if (!profile || !routine || !selectedDayId || log.length === 0) return;
+    // Hay algo que guardar en cuanto el log deja de ser la plantilla del día:
+    // basta con teclear unas repeticiones, un peso o una nota, sin necesidad de
+    // marcar ninguna serie como completada.
+    if (!pristineRef.current || JSON.stringify(log) === pristineRef.current) return;
     const draft: WorkoutDraft = {
       routineId: routine.id,
       dayId: selectedDayId,
@@ -411,6 +437,7 @@ export default function WorkoutScreen() {
       log,
       startedAt: startedAt.current,
       savedAt: Date.now(),
+      viewIndex,
     };
     AsyncStorage.setItem(draftKey(profile.uid), JSON.stringify(draft)).catch(() => {});
     remoteDraftRef.current = draft;
@@ -419,7 +446,25 @@ export default function WorkoutScreen() {
     remoteSaveTimer.current = setTimeout(() => {
       saveActiveSession(profile.uid, draft);
     }, 1500);
-  }, [log, profile, routine, selectedDayId]);
+  }, [log, viewIndex, combinedDay, profile, routine, selectedDayId]);
+
+  // Si la app pasa a segundo plano (bloqueo de pantalla, llamada, cambio de
+  // app), no esperamos al debounce: subimos el borrador ya, para que la sesión
+  // siga intacta aunque el sistema cierre la app sin previo aviso.
+  useEffect(() => {
+    if (!profile) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') return;
+      const draft = remoteDraftRef.current;
+      if (!draft) return;
+      if (remoteSaveTimer.current) {
+        clearTimeout(remoteSaveTimer.current);
+        remoteSaveTimer.current = null;
+      }
+      saveActiveSession(profile.uid, draft);
+    });
+    return () => sub.remove();
+  }, [profile]);
 
   // Al salir de la pantalla, cancela cualquier subida pendiente en cola.
   useEffect(() => {
