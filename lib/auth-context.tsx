@@ -121,10 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       inviteCode,
       emailVerificationRequired: true,
-      // La cuenta nace con la prueba gratuita en marcha: se entra sin tarjeta y
-      // se paga después de haber usado la app, no antes de verla.
-      subscriptionUntil: trialUntil(),
-      trialEndsAt: trialUntil(),
+      // El plan de entrenador no tiene prueba: la cuenta nace pendiente de
+      // activación (0 = caducada) y se abre al contratar la cuota anual.
+      subscriptionUntil: 0,
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     await registerTrainerInviteCode(inviteCode, credential.user.uid);
@@ -176,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       trainerId: credential.user.uid,
       emailVerificationRequired: true,
-      // Igual que el entrenador: entra probando, decide después.
+      // El atleta entra probando y decide después de haber usado la app.
       subscriptionUntil: trialUntil(),
       trialEndsAt: trialUntil(),
     };

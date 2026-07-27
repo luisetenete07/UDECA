@@ -69,9 +69,7 @@ export default function RegisterScreen() {
         />
         <Logo compact />
         <Text style={styles.title}>Crea tu cuenta</Text>
-        <Text style={styles.subtitle}>
-          Elige cómo quieres usar la app. Empiezas gratis y sin tarjeta.
-        </Text>
+        <Text style={styles.subtitle}>Elige cómo quieres usar la app</Text>
       </View>
 
       <Card accent style={styles.formCard}>
@@ -199,10 +197,9 @@ const ROLE_CARDS: {
   {
     value: 'trainer',
     title: 'Entrenador',
-    price: `${TRIAL_DAYS} días gratis`,
-    free: true,
+    price: '180 €/año',
     icon: 'people-outline',
-    desc: `Gestiona a tus alumnos, cobros y tu negocio. Después, 180 €/año (cuota anual, no meses sueltos).`,
+    desc: 'Gestiona a tus alumnos, cobros y tu negocio. Cuota anual de una vez, no meses sueltos.',
   },
 ];
 

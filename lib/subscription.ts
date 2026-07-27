@@ -84,14 +84,13 @@ export function isAdmin(profile: UserProfile | null): boolean {
 }
 
 /**
- * Días de prueba al crear una cuenta de pago (entrenador o atleta). Se entra
- * sin tarjeta: primero se usa el producto y luego se decide. Antes se creaba
- * la cuenta ya caducada y el muro de pago aparecía nada más registrarse, sin
- * haber visto nada.
+ * Días de prueba al crear una cuenta de ATLETA. Se entra sin tarjeta: primero
+ * se usa el producto y luego se decide. El plan de entrenador no lleva prueba:
+ * se contrata la cuota anual desde el principio.
  */
 export const TRIAL_DAYS = 7;
 
-/** Fecha de fin de la prueba para una cuenta que se crea ahora. */
+/** Fecha de fin de la prueba para una cuenta de atleta que se crea ahora. */
 export function trialUntil(from: number = Date.now()): number {
   return from + TRIAL_DAYS * DAY_MS;
 }

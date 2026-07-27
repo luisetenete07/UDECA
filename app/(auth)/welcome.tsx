@@ -172,7 +172,8 @@ export default function WelcomeScreen() {
       <View style={styles.footer}>
         <Button title={isLast ? 'Empezar' : 'Siguiente'} onPress={next} />
         <Text style={styles.trialNote}>
-          {TRIAL_DAYS} días gratis. Sin tarjeta. Como alumno de un entrenador, siempre gratis.
+          Con tu entrenador, siempre gratis. Por tu cuenta, {TRIAL_DAYS} días de prueba
+          sin tarjeta.
         </Text>
         <Pressable onPress={() => go('/(auth)/login')} hitSlop={8} style={styles.loginLink}>
           <Text style={styles.loginText}>Ya tengo cuenta</Text>
