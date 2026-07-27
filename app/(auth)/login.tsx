@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
@@ -9,7 +9,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { TextField } from '../../components/TextField';
+import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { auth } from '../../lib/firebase';
 import { friendlyAuthError } from '../../lib/firebase-errors';
@@ -31,6 +31,8 @@ export default function LoginScreen() {
   // Modo selector: si hay cuentas guardadas y aún no se ha elegido ninguna,
   // mostramos las cuentas en vez del formulario para que solo haya que elegir.
   const [picking, setPicking] = useState(true);
+  // Permite saltar del correo a la contraseña al pulsar "siguiente".
+  const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
     getRememberedAccounts().then((list) => {
@@ -140,20 +142,23 @@ export default function LoginScreen() {
           ) : null}
           <TextField
             label="Correo electrónico"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
+            {...emailFieldProps}
             value={email}
             onChangeText={setEmail}
             placeholder="tucorreo@ejemplo.com"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
           />
           <TextField
+            ref={passwordRef}
             label="Contraseña"
             secureTextEntry
             autoComplete="password"
             value={password}
             onChangeText={setPassword}
             placeholder="••••••••"
+            returnKeyType="go"
+            onSubmitEditing={handleSubmit}
           />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}

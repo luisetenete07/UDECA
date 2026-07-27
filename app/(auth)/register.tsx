@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { TextField } from '../../components/TextField';
+import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { friendlyAuthError } from '../../lib/firebase-errors';
 import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
@@ -22,6 +22,10 @@ export default function RegisterScreen() {
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Encadenan el foco al pulsar "siguiente" en el teclado.
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const inviteRef = useRef<TextInput>(null);
 
   const handleSubmit = async () => {
     setError(null);
@@ -99,32 +103,49 @@ export default function RegisterScreen() {
           );
         })}
 
-        <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Tu nombre" />
         <TextField
+          label="Nombre"
+          value={name}
+          onChangeText={setName}
+          placeholder="Tu nombre"
+          returnKeyType="next"
+          onSubmitEditing={() => emailRef.current?.focus()}
+        />
+        <TextField
+          ref={emailRef}
           label="Correo electrónico"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
+          {...emailFieldProps}
           value={email}
           onChangeText={setEmail}
           placeholder="tucorreo@ejemplo.com"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
         />
         <TextField
+          ref={passwordRef}
           label="Contraseña"
           secureTextEntry
           autoComplete="password-new"
           value={password}
           onChangeText={setPassword}
           placeholder="Mínimo 6 caracteres"
+          returnKeyType={role === 'client' ? 'next' : 'go'}
+          onSubmitEditing={() =>
+            role === 'client' ? inviteRef.current?.focus() : handleSubmit()
+          }
         />
 
         {role === 'client' ? (
           <TextField
+            ref={inviteRef}
             label="Código de tu entrenador"
             autoCapitalize="characters"
+            autoCorrect={false}
             value={inviteCode}
             onChangeText={setInviteCode}
             placeholder="Ej. 7XQK2M"
+            returnKeyType="go"
+            onSubmitEditing={handleSubmit}
           />
         ) : null}
 

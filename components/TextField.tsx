@@ -15,7 +15,24 @@ interface TextFieldProps extends TextInputProps {
   error?: string;
   /** Estilo del contenedor exterior (p. ej. flex:1 para repartir una fila). */
   containerStyle?: StyleProp<ViewStyle>;
+  /** Acceso al TextInput interno (p. ej. para enfocar el campo siguiente). */
+  ref?: React.Ref<TextInput>;
 }
+
+/**
+ * Ajustes comunes de un campo de correo. Se comparten entre login y registro
+ * para que ambos se comporten igual. El corrector y las sugerencias del teclado
+ * van desactivados: al escribir direcciones pueden interferir con caracteres
+ * como el punto o el guion.
+ */
+export const emailFieldProps = {
+  autoCapitalize: 'none',
+  autoCorrect: false,
+  spellCheck: false,
+  keyboardType: 'email-address',
+  textContentType: 'emailAddress',
+  autoComplete: 'email',
+} as const satisfies Partial<TextInputProps>;
 
 export function TextField({
   label,
@@ -24,6 +41,7 @@ export function TextField({
   containerStyle,
   onFocus,
   onBlur,
+  ref,
   ...rest
 }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
