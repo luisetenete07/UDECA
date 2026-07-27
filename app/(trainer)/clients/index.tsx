@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,7 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
-import { getClientsForTrainer } from '../../../lib/firestore/users';
+import { getClientsForTrainer, subscribeClientsForTrainer } from '../../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
 import { getActiveRoutineForClient } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
@@ -169,6 +169,18 @@ export default function ClientsScreen() {
       load();
     }, [load])
   );
+
+  // Altas y bajas del grupo en vivo: un alumno recién aceptado aparece en la
+  // lista sin refrescar ni volver atrás. El resto de datos derivados (últimas
+  // sesiones, entrenos saltados) los sigue calculando `load`.
+  useEffect(() => {
+    if (!profile) return;
+    const unsubscribe = subscribeClientsForTrainer(profile.uid, (data) => {
+      setClients(data);
+      setCached(cacheKey, data);
+    });
+    return unsubscribe;
+  }, [profile, cacheKey]);
 
   const onRefresh = () => {
     setRefreshing(true);

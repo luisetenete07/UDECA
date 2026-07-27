@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Alert, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,7 +27,7 @@ import {
   isAdmin,
   subscriptionState,
 } from '../../lib/subscription';
-import { deleteSocialStats, getSocialLeaderboard } from '../../lib/firestore/social';
+import { deleteSocialStats, subscribeSocialLeaderboard } from '../../lib/firestore/social';
 import { isOnline } from '../../lib/presence';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
@@ -60,14 +60,13 @@ export default function TrainerProfileScreen() {
   // Clasificación y presencia del grupo (socialStats de sus alumnos).
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<SocialStats | null>(null);
-  useFocusEffect(
-    useCallback(() => {
-      if (!profile) return;
-      getSocialLeaderboard(profile.uid)
-        .then(setLeaderboard)
-        .catch(() => {});
-    }, [profile])
-  );
+  // Clasificación en vivo: rachas, entrenos y presencia se refrescan solos, y
+  // un alumno recién incorporado aparece al instante.
+  useEffect(() => {
+    if (!profile) return;
+    const unsubscribe = subscribeSocialLeaderboard(profile.uid, setLeaderboard);
+    return unsubscribe;
+  }, [profile]);
 
   const confirmDeleteEntry = async () => {
     if (!deleteTarget) return;
@@ -78,8 +77,8 @@ export default function TrainerProfileScreen() {
       await deleteSocialStats(uid);
       showToast('Perfil eliminado de la clasificación');
     } catch {
+      // La suscripción en vivo devuelve la fila a su sitio por sí sola.
       showToast('No se pudo eliminar');
-      if (profile) getSocialLeaderboard(profile.uid).then(setLeaderboard).catch(() => {});
     }
   };
   const onlineCount = leaderboard.filter((s) => isOnline(s.lastSeen)).length;

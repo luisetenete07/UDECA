@@ -1,4 +1,15 @@
-import { collection, deleteDoc, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  onSnapshot,
+  query,
+  setDoc,
+  where,
+  type DocumentData,
+  type QuerySnapshot,
+} from 'firebase/firestore';
 import { db } from '../firebase';
 import { getActiveChallenge } from './challenges';
 import {
@@ -80,8 +91,32 @@ export async function deleteSocialStats(uid: string): Promise<void> {
 
 /** Ranking de miembros del mismo entrenador, ordenado por racha y sesiones. */
 export async function getSocialLeaderboard(trainerId: string): Promise<SocialStats[]> {
-  const q = query(collectionRef(), where('trainerId', '==', trainerId));
-  const snap = await getDocs(q);
+  const snap = await getDocs(leaderboardQuery(trainerId));
+  return mapLeaderboard(snap);
+}
+
+/**
+ * Igual que `getSocialLeaderboard` pero en vivo: reenvía el ranking cada vez
+ * que cambia cualquier ficha del grupo (racha, entrenos, nivel, alta de un
+ * alumno nuevo...). Devuelve la función para darse de baja.
+ */
+export function subscribeSocialLeaderboard(
+  trainerId: string,
+  onChange: (rows: SocialStats[]) => void,
+  onError?: (error: Error) => void
+): () => void {
+  return onSnapshot(
+    leaderboardQuery(trainerId),
+    (snap) => onChange(mapLeaderboard(snap)),
+    (error) => onError?.(error)
+  );
+}
+
+function leaderboardQuery(trainerId: string) {
+  return query(collectionRef(), where('trainerId', '==', trainerId));
+}
+
+function mapLeaderboard(snap: QuerySnapshot<DocumentData>): SocialStats[] {
   const nowMonth = monthKeyOf(Date.now());
   return snap.docs
     .map((d) => {
@@ -113,7 +148,7 @@ export async function getSocialLeaderboard(trainerId: string): Promise<SocialSta
  * doc solo tiene la presencia) cuentan como 0, de modo que quien no ha
  * entrenado nunca queda por encima de quien sí lo ha hecho.
  */
-function compareLeaderboard(a: SocialStats, b: SocialStats): number {
+export function compareLeaderboard(a: SocialStats, b: SocialStats): number {
   return (
     (b.streakThisMonth ?? b.currentStreak ?? 0) - (a.streakThisMonth ?? a.currentStreak ?? 0) ||
     (b.workoutsThisMonth ?? 0) - (a.workoutsThisMonth ?? 0) ||

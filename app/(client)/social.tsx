@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Redirect, useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,11 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveChallenge } from '../../lib/firestore/challenges';
-import { getSocialLeaderboard, syncMySocialStats } from '../../lib/firestore/social';
+import {
+  compareLeaderboard,
+  subscribeSocialLeaderboard,
+  syncMySocialStats,
+} from '../../lib/firestore/social';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { monthKeyOf } from '../../lib/stats';
 import { isOnline } from '../../lib/presence';
@@ -25,42 +29,57 @@ export default function SocialScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Nuestras métricas recién calculadas. Se superponen sobre lo que llega del
+  // ranking para que nuestra fila nunca salga desactualizada por la latencia.
+  const mineRef = useRef<SocialStats | null>(null);
+
+  const withMine = useCallback(
+    (rows: SocialStats[]) => {
+      const mine = mineRef.current;
+      if (!mine || !profile) return rows;
+      return rows
+        .map((m) => (m.uid === profile.uid ? { ...m, ...mine } : m))
+        .sort(compareLeaderboard);
+    },
+    [profile]
+  );
+
   const load = useCallback(async () => {
     if (!profile?.trainerId) {
       setLoading(false);
       return;
     }
-    // Nos aseguramos de que nuestras propias métricas estén al día antes de leer.
+    // Nos aseguramos de que nuestras propias métricas estén al día; la lista en
+    // sí llega sola por la suscripción en vivo.
     const myLogs = await getWorkoutLogsForClient(profile.uid);
-    const mine = await syncMySocialStats(profile, myLogs);
-    const [data, challengeData] = await Promise.all([
-      getSocialLeaderboard(profile.trainerId),
-      getActiveChallenge(profile.trainerId),
-    ]);
-    // Superponemos nuestras métricas recién calculadas sobre la lista leída, así
-    // nuestra fila nunca sale desactualizada por la latencia de la lectura.
-    const merged = mine
-      ? data
-          .map((m) => (m.uid === profile.uid ? { ...m, ...mine } : m))
-          .sort(
-            (a, b) =>
-              (b.streakThisMonth ?? b.currentStreak ?? 0) -
-                (a.streakThisMonth ?? a.currentStreak ?? 0) ||
-              (b.workoutsThisMonth ?? 0) - (a.workoutsThisMonth ?? 0) ||
-              (a.name ?? '').localeCompare(b.name ?? '')
-          )
-      : data;
-    setMembers(merged);
-    setChallenge(challengeData);
-    setLoading(false);
+    mineRef.current = await syncMySocialStats(profile, myLogs);
+    setMembers((prev) => withMine(prev));
+    setChallenge(await getActiveChallenge(profile.trainerId));
     setRefreshing(false);
-  }, [profile]);
+  }, [profile, withMine]);
 
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load])
   );
+
+  // Ranking en vivo: cualquier cambio en el grupo (una racha, un entreno nuevo,
+  // un alumno que acaba de entrar) se refleja sin salir ni refrescar. La baja
+  // se hace al desmontar, así que nunca queda más de un listener abierto.
+  useEffect(() => {
+    const trainerId = profile?.trainerId;
+    if (!trainerId) return;
+    const unsubscribe = subscribeSocialLeaderboard(
+      trainerId,
+      (rows) => {
+        setMembers(withMine(rows));
+        setLoading(false);
+      },
+      () => setLoading(false)
+    );
+    return unsubscribe;
+  }, [profile?.trainerId, withMine]);
 
   // El atleta individual no forma parte de ningún grupo: fuera de aquí.
   if (profile?.role === 'athlete') return <Redirect href="/(client)/dashboard" />;

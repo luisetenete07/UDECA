@@ -5,10 +5,13 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   setDoc,
   updateDoc,
   where,
+  type DocumentData,
+  type QuerySnapshot,
 } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
@@ -32,12 +35,38 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function getClientsForTrainer(trainerId: string): Promise<UserProfile[]> {
-  const q = query(collection(db, 'users'), where('trainerId', '==', trainerId));
-  const snap = await getDocs(q);
-  return snap.docs
-    .map((d) => d.data() as UserProfile)
-    // Tolerante a documentos editados a mano sin algún campo.
-    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+  const snap = await getDocs(clientsQuery(trainerId));
+  return mapClients(snap);
+}
+
+/**
+ * Igual que `getClientsForTrainer` pero en vivo: en cuanto un alumno entra en
+ * el grupo (o cambia cualquiera de sus datos) la lista se reenvía sola, sin
+ * necesidad de refrescar la pantalla. Devuelve la función para darse de baja.
+ */
+export function subscribeClientsForTrainer(
+  trainerId: string,
+  onChange: (clients: UserProfile[]) => void,
+  onError?: (error: Error) => void
+): () => void {
+  return onSnapshot(
+    clientsQuery(trainerId),
+    (snap) => onChange(mapClients(snap)),
+    (error) => onError?.(error)
+  );
+}
+
+function clientsQuery(trainerId: string) {
+  return query(collection(db, 'users'), where('trainerId', '==', trainerId));
+}
+
+function mapClients(snap: QuerySnapshot<DocumentData>): UserProfile[] {
+  return (
+    snap.docs
+      .map((d) => d.data() as UserProfile)
+      // Tolerante a documentos editados a mano sin algún campo.
+      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
+  );
 }
 
 export async function updateClientGoal(clientId: string, goal: string) {

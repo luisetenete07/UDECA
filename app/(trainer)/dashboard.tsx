@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { useAuth } from '../../lib/auth-context';
 import {
   getClientsForTrainer,
   registerClientPayment,
+  subscribeClientsForTrainer,
   updateClientPaymentStatus,
 } from '../../lib/firestore/users';
 import {
@@ -143,6 +144,14 @@ export default function TrainerDashboard() {
       };
     }, [profile])
   );
+
+  // Alta/baja de alumnos en vivo: al aceptar a uno nuevo aparece aquí al
+  // instante, sin refrescar el panel.
+  useEffect(() => {
+    if (!profile) return;
+    const unsubscribe = subscribeClientsForTrainer(profile.uid, setClients);
+    return unsubscribe;
+  }, [profile]);
 
   if (loading) return <LoadingScreen />;
 
