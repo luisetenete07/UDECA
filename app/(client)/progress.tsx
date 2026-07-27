@@ -22,7 +22,10 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { MuscleMap } from '../../components/MuscleMap';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { shareSessionImage } from '../../lib/brandCards';
+import { buildClientReportHtml } from '../../lib/report';
 import { muscleLoad } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
@@ -89,6 +92,8 @@ export default function ProgressScreen() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [confirmWord, setConfirmWord] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const [weightInput, setWeightInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
@@ -184,6 +189,36 @@ export default function ProgressScreen() {
     setWeightLogs((prev) => prev.filter((l) => l.id !== id));
     await deleteWeightLog(id);
     showToast('Registro borrado');
+  };
+
+  // Informe completo de progreso: usa el MISMO generador que el entrenador,
+  // alimentado solo con los datos de esta cuenta (nunca de otros alumnos).
+  const handleFullReport = async () => {
+    if (!profile || workoutLogs.length === 0) return;
+    setGeneratingReport(true);
+    try {
+      const html = buildClientReportHtml({
+        client: profile,
+        routine: null,
+        weightLogs,
+        workoutLogs,
+        nutritionPlan: null,
+        muscleByExercise,
+        measureByExercise,
+      });
+      if (Platform.OS === 'web') {
+        await Print.printAsync({ html });
+      } else {
+        const { uri } = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
+        }
+      }
+    } catch {
+      showToast('No se pudo generar el progreso');
+    } finally {
+      setGeneratingReport(false);
+    }
   };
 
   // Comparte una sesión concreta del registro mensual como imagen de marca
@@ -616,6 +651,23 @@ export default function ProgressScreen() {
               </View>
             </View>
             <MuscleMap intensity={muscleIntensity} hasData={muscleHasData} />
+          </Card>
+
+          {/* Informe completo (el mismo que genera el entrenador), pero solo
+              con los datos de esta cuenta. */}
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Tu progreso completo</Text>
+            <Text style={styles.photoHint}>
+              Genera una tabla con tus entrenamientos por mes, series, repeticiones,
+              isométricos, volumen y tus mejores marcas. Puedes guardarla o compartirla.
+            </Text>
+            <Button
+              title="Ver progreso completo"
+              onPress={handleFullReport}
+              loading={generatingReport}
+              disabled={workoutLogs.length === 0}
+              style={{ marginTop: spacing.md }}
+            />
           </Card>
           {levelTests.length > 0 ? (
             <Card accent style={styles.section}>

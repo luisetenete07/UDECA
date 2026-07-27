@@ -866,7 +866,7 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Button
-        title="Generar informe PDF"
+        title="Ver progreso completo"
         onPress={handleGenerateReport}
         loading={generatingReport}
         style={{ marginBottom: spacing.md }}
