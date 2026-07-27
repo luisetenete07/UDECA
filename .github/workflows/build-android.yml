@@ -12,9 +12,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      # --legacy-peer-deps: el lockfile se genera con ese modo (igual que en
-      # deploy.yml), así que npm ci debe resolver el árbol de la misma forma.
-      - run: npm ci --legacy-peer-deps
+      # El modo legacy-peer-deps lo fija .npmrc, así que aquí y en las máquinas
+      # de EAS se resuelve el mismo árbol que el del lockfile.
+      - run: npm ci
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
