@@ -342,8 +342,9 @@ export default function ClientDetailScreen() {
     if (!client) return;
     setGeneratingReport(true);
     try {
-      // En web/PWA: imagen PNG de marca (lista para enviar por WhatsApp).
-      if (Platform.OS === 'web') {
+      // Imagen PNG de marca (lista para enviar por WhatsApp). Si no se puede
+      // generar, seguimos con el informe en HTML/PDF de más abajo.
+      {
         const push = bestMarks(workoutLogs, 'Empuje', muscleByExercise, measureByExercise);
         const pull = bestMarks(workoutLogs, 'Tirón', muscleByExercise, measureByExercise);
         const daysSet = new Set(workoutLogs.map((l) => new Date(l.date).toDateString()));

@@ -46,8 +46,7 @@ import {
 import { tabScreenOptions } from '../../lib/navTheme';
 import { notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
-import { shareRecordImage } from '../../lib/recordCard';
-import { shareSessionImage } from '../../lib/brandCards';
+import { shareRecordImage, shareSessionImage } from '../../lib/brandCards';
 import { startRest, stopRest, useActiveRest } from '../../lib/restTimerStore';
 import {
   computeAchievements,
@@ -663,26 +662,25 @@ export default function WorkoutScreen() {
 
   const handleShareSummary = async () => {
     if (!summary || !routine) return;
-    // En web/PWA: imagen de marca (mucho más vistosa que el texto).
-    if (Platform.OS === 'web') {
-      try {
-        const result = await shareSessionImage({
-          routineName: routine.name,
-          dayName: day?.name,
-          durationMin: summary.durationMin,
-          sets: summary.sets,
-          reps: summary.reps,
-          seconds: summary.seconds,
-          volumeKg: summary.volumeKg,
-          streak: summary.streak,
-          prCount: summary.prs.length,
-          date: Date.now(),
-        });
-        if (result === 'downloaded') showToast('Imagen de la sesión descargada');
-        if (result) return;
-      } catch {
-        // Caemos al texto.
-      }
+    // Imagen de marca (mucho más vistosa que el texto). Si por lo que sea no
+    // se puede generar, se comparte el resumen escrito.
+    try {
+      const result = await shareSessionImage({
+        routineName: routine.name,
+        dayName: day?.name,
+        durationMin: summary.durationMin,
+        sets: summary.sets,
+        reps: summary.reps,
+        seconds: summary.seconds,
+        volumeKg: summary.volumeKg,
+        streak: summary.streak,
+        prCount: summary.prs.length,
+        date: Date.now(),
+      });
+      if (result === 'downloaded') showToast('Imagen de la sesión descargada');
+      if (result) return;
+    } catch {
+      // Caemos al texto.
     }
     const parts = [
       `Sesión completada en UDECA: ${day?.name ?? routine.name}`,
@@ -717,25 +715,23 @@ export default function WorkoutScreen() {
   const handleShareCompleted = async (logToShare: WorkoutLog) => {
     if (!routine) return;
     const t = sessionTotals(logToShare.exercises, measureByExercise);
-    if (Platform.OS === 'web') {
-      try {
-        const result = await shareSessionImage({
-          routineName: logToShare.routineName ?? routine.name,
-          dayName: logToShare.dayName,
-          durationMin: logToShare.durationMin ?? 0,
-          sets: t.sets,
-          reps: t.reps,
-          seconds: t.seconds,
-          volumeKg: t.volumeKg,
-          streak: 0,
-          prCount: 0,
-          date: logToShare.date,
-        });
-        if (result === 'downloaded') showToast('Imagen de la sesión descargada');
-        if (result) return;
-      } catch {
-        // Caemos al texto.
-      }
+    try {
+      const result = await shareSessionImage({
+        routineName: logToShare.routineName ?? routine.name,
+        dayName: logToShare.dayName,
+        durationMin: logToShare.durationMin ?? 0,
+        sets: t.sets,
+        reps: t.reps,
+        seconds: t.seconds,
+        volumeKg: t.volumeKg,
+        streak: 0,
+        prCount: 0,
+        date: logToShare.date,
+      });
+      if (result === 'downloaded') showToast('Imagen de la sesión descargada');
+      if (result) return;
+    } catch {
+      // Caemos al texto.
     }
     const parts = [
       `Sesión completada en UDECA: ${logToShare.dayName ?? routine.name}`,
@@ -762,17 +758,15 @@ export default function WorkoutScreen() {
   // Si la imagen no es posible (nativo antiguo, canvas no disponible), texto.
   const handleShareRecord = async () => {
     if (!summary || summary.prs.length === 0) return;
-    if (Platform.OS === 'web') {
-      try {
-        const result = await shareRecordImage({
-          prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
-          streak: summary.streak,
-        });
-        if (result === 'downloaded') showToast('Imagen del récord descargada');
-        if (result) return;
-      } catch {
-        // Caemos al texto.
-      }
+    try {
+      const result = await shareRecordImage({
+        prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
+        streak: summary.streak,
+      });
+      if (result === 'downloaded') showToast('Imagen del récord descargada');
+      if (result) return;
+    } catch {
+      // Caemos al texto.
     }
     const lines = summary.prs.map((pr) => `${pr.exerciseName}: ${pr.label}`);
     const message = `NUEVO RÉCORD PERSONAL\n\n${lines.join('\n')}\n\n${

@@ -14,6 +14,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { AnimatedSplash } from '../components/AnimatedSplash';
+import { CardRendererHost } from '../components/CardRendererHost';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ToastHost } from '../components/Toast';
 import { AuthProvider } from '../lib/auth-context';
@@ -41,6 +42,8 @@ export default function RootLayout() {
         <AuthProvider>
           <StatusBar style="light" />
           <ToastHost />
+          {/* Motor oculto de las tarjetas PNG para compartir (solo móvil). */}
+          <CardRendererHost />
           {!fontsLoaded ? (
             <LoadingScreen />
           ) : (

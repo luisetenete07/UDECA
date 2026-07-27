@@ -187,28 +187,26 @@ export default function ProgressScreen() {
   };
 
   // Comparte una sesión concreta del registro mensual como imagen de marca
-  // UDECA (web/PWA); en nativo cae a texto compartible.
+  // UDECA; si no se puede generar, cae a texto compartible.
   const handleShareSession = async (log: WorkoutLog) => {
     const t = sessionTotals(log.exercises, measureByExercise);
-    if (Platform.OS === 'web') {
-      try {
-        const result = await shareSessionImage({
-          routineName: log.routineName ?? 'UDECA',
-          dayName: log.dayName,
-          durationMin: log.durationMin ?? 0,
-          sets: t.sets,
-          reps: t.reps,
-          seconds: t.seconds,
-          volumeKg: t.volumeKg,
-          streak: 0,
-          prCount: 0,
-          date: log.date,
-        });
-        if (result === 'downloaded') showToast('Imagen de la sesión descargada');
-        if (result) return;
-      } catch {
-        // Caemos al texto.
-      }
+    try {
+      const result = await shareSessionImage({
+        routineName: log.routineName ?? 'UDECA',
+        dayName: log.dayName,
+        durationMin: log.durationMin ?? 0,
+        sets: t.sets,
+        reps: t.reps,
+        seconds: t.seconds,
+        volumeKg: t.volumeKg,
+        streak: 0,
+        prCount: 0,
+        date: log.date,
+      });
+      if (result === 'downloaded') showToast('Imagen de la sesión descargada');
+      if (result) return;
+    } catch {
+      // Caemos al texto.
     }
     const parts = [
       `Sesión completada en UDECA: ${log.dayName ?? log.routineName ?? ''}`.trim(),
