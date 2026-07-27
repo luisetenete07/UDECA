@@ -114,6 +114,7 @@ export default function ClientDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [sharingCard, setSharingCard] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [feeInput, setFeeInput] = useState('');
@@ -338,41 +339,49 @@ export default function ClientDetailScreen() {
   );
   const isoOther = Math.max(0, isoTotals.total - isoTotals.push - isoTotals.pull);
 
+  // Resumen de marca en PNG, para mandarlo por WhatsApp de un vistazo.
+  const handleShareReportCard = async () => {
+    if (!client) return;
+    setSharingCard(true);
+    try {
+      const push = bestMarks(workoutLogs, 'Empuje', muscleByExercise, measureByExercise);
+      const pull = bestMarks(workoutLogs, 'Tirón', muscleByExercise, measureByExercise);
+      const daysSet = new Set(workoutLogs.map((l) => new Date(l.date).toDateString()));
+      const totalMin = workoutLogs.reduce((acc, l) => acc + (l.durationMin ?? 0), 0);
+      const weightChange =
+        weightLogs.length >= 2
+          ? Math.round(
+              (weightLogs[weightLogs.length - 1].weightKg - weightLogs[0].weightKg) * 10
+            ) / 10
+          : undefined;
+      const result = await shareReportImage({
+        clientName: client.name,
+        totalWorkouts: workoutLogs.length,
+        daysTrained: daysSet.size,
+        totalHours: Math.round((totalMin / 60) * 10) / 10,
+        bestPushIso: push.secs ? `${push.secs.name}: ${push.secs.value}s` : undefined,
+        bestPullIso: pull.secs ? `${pull.secs.name}: ${pull.secs.value}s` : undefined,
+        bestPushReps: push.reps ? `${push.reps.name}: ${push.reps.value} reps` : undefined,
+        bestPullReps: pull.reps ? `${pull.reps.name}: ${pull.reps.value} reps` : undefined,
+        weightChangeKg: weightChange,
+        periodLabel: new Date().toLocaleDateString('es-ES', {
+          month: 'long',
+          year: 'numeric',
+        }),
+      });
+      if (result === 'downloaded') showToast('Resumen descargado');
+      if (!result) showToast('No se pudo generar la imagen');
+    } finally {
+      setSharingCard(false);
+    }
+  };
+
+  // Progreso completo: EXACTAMENTE el mismo informe con tablas que ve el
+  // alumno desde su pantalla de progreso.
   const handleGenerateReport = async () => {
     if (!client) return;
     setGeneratingReport(true);
     try {
-      // Imagen PNG de marca (lista para enviar por WhatsApp). Si no se puede
-      // generar, seguimos con el informe en HTML/PDF de más abajo.
-      {
-        const push = bestMarks(workoutLogs, 'Empuje', muscleByExercise, measureByExercise);
-        const pull = bestMarks(workoutLogs, 'Tirón', muscleByExercise, measureByExercise);
-        const daysSet = new Set(workoutLogs.map((l) => new Date(l.date).toDateString()));
-        const totalMin = workoutLogs.reduce((acc, l) => acc + (l.durationMin ?? 0), 0);
-        const weightChange =
-          weightLogs.length >= 2
-            ? Math.round(
-                (weightLogs[weightLogs.length - 1].weightKg - weightLogs[0].weightKg) * 10
-              ) / 10
-            : undefined;
-        const result = await shareReportImage({
-          clientName: client.name,
-          totalWorkouts: workoutLogs.length,
-          daysTrained: daysSet.size,
-          totalHours: Math.round((totalMin / 60) * 10) / 10,
-          bestPushIso: push.secs ? `${push.secs.name}: ${push.secs.value}s` : undefined,
-          bestPullIso: pull.secs ? `${pull.secs.name}: ${pull.secs.value}s` : undefined,
-          bestPushReps: push.reps ? `${push.reps.name}: ${push.reps.value} reps` : undefined,
-          bestPullReps: pull.reps ? `${pull.reps.name}: ${pull.reps.value} reps` : undefined,
-          weightChangeKg: weightChange,
-          periodLabel: new Date().toLocaleDateString('es-ES', {
-            month: 'long',
-            year: 'numeric',
-          }),
-        });
-        if (result === 'downloaded') showToast('Informe descargado');
-        if (result) return;
-      }
       const html = buildClientReportHtml({
         client,
         routine: activeRoutine ?? null,
@@ -869,6 +878,13 @@ export default function ClientDetailScreen() {
         title="Ver progreso completo"
         onPress={handleGenerateReport}
         loading={generatingReport}
+        style={{ marginBottom: spacing.sm }}
+      />
+      <Button
+        title="Compartir resumen (imagen)"
+        variant="secondary"
+        onPress={handleShareReportCard}
+        loading={sharingCard}
         style={{ marginBottom: spacing.md }}
       />
 

@@ -15,7 +15,7 @@ import {
   syncMySocialStats,
 } from '../../lib/firestore/social';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { monthKeyOf } from '../../lib/stats';
+import { monthKeyOf, startOfWeek } from '../../lib/stats';
 import { isOnline } from '../../lib/presence';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import type { Challenge, SocialStats } from '../../lib/types';
@@ -198,10 +198,12 @@ export default function SocialScreen() {
       ) : null}
 
       {(() => {
-        // Tablón de récords: PRs del grupo conseguidos esta semana.
-        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        // Tablón de récords: PRs del grupo conseguidos esta semana. Cuenta la
+        // semana natural (lunes 00:00 → domingo 23:59), así el tablón se
+        // renueva al terminar el domingo.
+        const weekStart = startOfWeek(Date.now());
         const weekPRs = members
-          .filter((m) => m.lastPR && m.lastPR.date >= weekAgo)
+          .filter((m) => m.lastPR && m.lastPR.date >= weekStart)
           .sort((a, b) => (b.lastPR?.date ?? 0) - (a.lastPR?.date ?? 0));
         if (weekPRs.length === 0) return null;
         return (

@@ -179,6 +179,15 @@ function cycleDayIndexForStreak(anchor: number, len: number, now: number): numbe
   return ((elapsed % len) + len) % len;
 }
 
+/**
+ * Clave de la semana natural que contiene ts (lunes 00:00). Sirve para saber
+ * si unas métricas semanales guardadas siguen siendo de la semana en curso o
+ * son de una anterior (la semana termina el domingo a las 23:59).
+ */
+export function weekKeyOf(ts: number = Date.now()): string {
+  return String(startOfWeek(ts));
+}
+
 /** Número de sesiones registradas en la semana en curso (lunes-domingo). */
 export function sessionsThisWeek(logs: WorkoutLog[]): number {
   const weekStart = startOfWeek(Date.now());

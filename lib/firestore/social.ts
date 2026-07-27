@@ -18,6 +18,7 @@ import {
   monthKeyOf,
   monthStartOf,
   sessionsThisWeek,
+  weekKeyOf,
   workoutsInMonth,
 } from '../stats';
 import type { SocialStats, UserProfile, WorkoutLog } from '../types';
@@ -66,6 +67,7 @@ export async function syncMySocialStats(
     workoutsThisMonth: workoutsInMonth(workoutLogs, now),
     lastMonthStreak: bestStreakInMonth(workoutLogs, lastMonthRef),
     monthKey: monthKeyOf(now),
+    weekKey: weekKeyOf(now),
     challengeSessions: challengeSessions ?? 0,
     // Nuevo récord de esta sesión; si no lo hay, merge conserva el anterior.
     lastPR,
@@ -118,6 +120,7 @@ function leaderboardQuery(trainerId: string) {
 
 function mapLeaderboard(snap: QuerySnapshot<DocumentData>): SocialStats[] {
   const nowMonth = monthKeyOf(Date.now());
+  const nowWeek = weekKeyOf(Date.now());
   return snap.docs
     .map((d) => {
       const s = d.data() as SocialStats;
@@ -127,10 +130,14 @@ function mapLeaderboard(snap: QuerySnapshot<DocumentData>): SocialStats[] {
       // aparece la incoherencia "racha 2 días · 0 entrenos este mes" (que venía
       // de mezclar la racha global con un conteo mensual vacío).
       const fresh = s.monthKey === nowMonth;
+      // Lo mismo con las SEMANALES: la semana termina el domingo a las 23:59,
+      // así que una ficha sincronizada antes de ese corte cuenta como 0 hasta
+      // que el alumno vuelva a abrir la app.
+      const freshWeek = s.weekKey === nowWeek;
       return {
         ...s,
         currentStreak: s.currentStreak ?? 0,
-        sessionsThisWeek: s.sessionsThisWeek ?? 0,
+        sessionsThisWeek: freshWeek ? s.sessionsThisWeek ?? 0 : 0,
         totalWorkouts: s.totalWorkouts ?? 0,
         streakThisMonth: fresh ? s.streakThisMonth ?? 0 : 0,
         workoutsThisMonth: fresh ? s.workoutsThisMonth ?? 0 : 0,

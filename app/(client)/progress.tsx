@@ -42,6 +42,7 @@ import {
   listExercisesInLogs,
   sessionTotals,
   setsByMuscleGroup,
+  startOfWeek,
   topExercises,
   trainingDays,
   weeklyActivity,
@@ -310,7 +311,9 @@ export default function ProgressScreen() {
   const muscleIntensity =
     muscleMode === 'session'
       ? muscleLoad(sessionLogs, undefined, groupByEx, musclesByExercise)
-      : muscleLoad(workoutLogs, Date.now() - 7 * 24 * 60 * 60 * 1000, groupByEx, musclesByExercise);
+      : // Semana NATURAL (lunes 00:00 → domingo 23:59), no los últimos 7 días:
+        // al pasar el domingo el mapa arranca limpio.
+        muscleLoad(workoutLogs, startOfWeek(Date.now()), groupByEx, musclesByExercise);
   const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
 
   const muscleMap = setsByMuscleGroup(workoutLogs, muscleByExercise);
@@ -374,6 +377,22 @@ export default function ProgressScreen() {
               <Text style={styles.sectionTitle}>Constancia (12 semanas)</Text>
               <Text style={styles.photoHint}>Cada punto dorado es un día entrenado.</Text>
               <ConsistencyMap days={trainingDays(workoutLogs)} />
+            </Card>
+
+            {/* Mismo informe con tablas que genera el entrenador, pero solo con
+                los datos de esta cuenta. */}
+            <Card style={styles.section}>
+              <Text style={styles.sectionTitle}>Tu progreso completo</Text>
+              <Text style={styles.photoHint}>
+                La misma tabla que ve tu entrenador: entrenamientos por mes, series,
+                repeticiones, isométricos, volumen y tus mejores marcas.
+              </Text>
+              <Button
+                title="Ver progreso completo"
+                onPress={handleFullReport}
+                loading={generatingReport}
+                style={{ marginTop: spacing.md }}
+              />
             </Card>
 
             {comparison ? (
@@ -658,23 +677,6 @@ export default function ProgressScreen() {
               </View>
             </View>
             <MuscleMap intensity={muscleIntensity} hasData={muscleHasData} />
-          </Card>
-
-          {/* Informe completo (el mismo que genera el entrenador), pero solo
-              con los datos de esta cuenta. */}
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Tu progreso completo</Text>
-            <Text style={styles.photoHint}>
-              Genera una tabla con tus entrenamientos por mes, series, repeticiones,
-              isométricos, volumen y tus mejores marcas. Puedes guardarla o compartirla.
-            </Text>
-            <Button
-              title="Ver progreso completo"
-              onPress={handleFullReport}
-              loading={generatingReport}
-              disabled={workoutLogs.length === 0}
-              style={{ marginTop: spacing.md }}
-            />
           </Card>
           {levelTests.length > 0 ? (
             <Card accent style={styles.section}>

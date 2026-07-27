@@ -591,6 +591,11 @@ export interface SocialStats {
   lastMonthStreak?: number;
   /** Clave "YYYY-MM" del mes en que se sincronizaron las métricas mensuales. */
   monthKey?: string;
+  /**
+   * Marca (lunes 00:00) de la semana en que se sincronizaron las métricas
+   * semanales. Si no es la semana en curso, `sessionsThisWeek` se muestra a 0.
+   */
+  weekKey?: string;
   /** Sesiones dentro del periodo del reto activo (para el ranking del reto). */
   challengeSessions?: number;
   /** Último récord personal (para el tablón de récords del grupo). */
