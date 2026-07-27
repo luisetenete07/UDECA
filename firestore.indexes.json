@@ -1,4 +1,31 @@
 {
-  "indexes": [],
+  "//": "Índices compuestos de UDECA. Permiten pedir los entrenamientos ya ordenados por fecha y acotados desde el servidor, en vez de descargar todo el historial en cada carga. Publícalos con `firebase deploy --only firestore:indexes` (o créalos en la consola: Firestore → Índices). Mientras no existan, la app cae sola a la consulta sin acotar y funciona igual que antes.",
+  "indexes": [
+    {
+      "collectionGroup": "workoutLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workoutLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trainerId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workoutLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "trainerId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
