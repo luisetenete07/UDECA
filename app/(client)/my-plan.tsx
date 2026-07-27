@@ -533,6 +533,19 @@ export default function MyPlanScreen() {
                               style={styles.fieldInput}
                             />
                           </View>
+                          {exx.measure === 'combo' ? (
+                            <View style={styles.field}>
+                              <Text style={styles.fieldLabel}>Aguante (s)</Text>
+                              <TextInput
+                                value={exx.seconds ?? ''}
+                                onChangeText={(v) => patchEx(di, ei, { seconds: v })}
+                                placeholder="12"
+                                keyboardType="number-pad"
+                                placeholderTextColor={colors.textFaint}
+                                style={styles.fieldInput}
+                              />
+                            </View>
+                          ) : null}
                           <View style={styles.field}>
                             <Text style={styles.fieldLabel}>RIR</Text>
                             <TextInput
@@ -564,15 +577,26 @@ export default function MyPlanScreen() {
                         <View style={styles.exLinks}>
                           <Pressable
                             onPress={() =>
+                              // Rota entre las tres medidas: reps → segundos →
+                              // combo (reps + aguante en la misma serie).
                               patchEx(di, ei, {
-                                measure: (exx.measure === 'seconds' ? 'reps' : 'seconds') as ExerciseMeasure,
+                                measure:
+                                  exx.measure === 'seconds'
+                                    ? 'combo'
+                                    : exx.measure === 'combo'
+                                      ? 'reps'
+                                      : ('seconds' as ExerciseMeasure),
                               })
                             }
                             style={styles.linkBtn}
                           >
                             <Ionicons name="swap-horizontal" size={14} color={colors.primary} />
                             <Text style={styles.linkBtnText}>
-                              {exx.measure === 'seconds' ? 'Medir en reps' : 'Medir en segundos'}
+                              {exx.measure === 'seconds'
+                                ? 'Medir en combo'
+                                : exx.measure === 'combo'
+                                  ? 'Medir en reps'
+                                  : 'Medir en segundos'}
                             </Text>
                           </Pressable>
                           {ei > 0 ? (

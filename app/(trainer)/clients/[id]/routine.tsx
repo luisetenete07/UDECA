@@ -330,7 +330,7 @@ export default function RoutineEditorScreen() {
   const updateExerciseField = (
     dayId: string,
     exerciseRowId: string,
-    field: 'sets' | 'reps' | 'restSeconds' | 'notes' | 'rir' | 'goal',
+    field: 'sets' | 'reps' | 'seconds' | 'restSeconds' | 'notes' | 'rir' | 'goal',
     value: string
   ) => {
     setDays((prev) =>
@@ -1065,6 +1065,16 @@ export default function RoutineEditorScreen() {
                   placeholder={ex.measure === 'seconds' ? '30' : '8-12'}
                   style={styles.smallInput}
                 />
+                {/* Combo: además de las reps, el aguante de la misma serie. */}
+                {ex.measure === 'combo' ? (
+                  <TextField
+                    label="Aguante (seg)"
+                    value={ex.seconds ?? ''}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'seconds', v)}
+                    placeholder="12"
+                    style={styles.smallInput}
+                  />
+                ) : null}
               </View>
               <View style={styles.exerciseFields}>
                 <TextField

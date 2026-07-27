@@ -84,6 +84,8 @@ export default function SessionDetailScreen() {
                 <Text style={styles.setLabel}>Serie {j + 1}</Text>
                 <Text style={styles.setValue}>
                   {set.reps || '—'} {unit}
+                  {/* En un combo la serie lleva además el aguante. */}
+                  {ex.measure === 'combo' && set.seconds ? ` · ${set.seconds} s` : ''}
                 </Text>
                 {showLoad ? (
                   <Text style={styles.setValue}>

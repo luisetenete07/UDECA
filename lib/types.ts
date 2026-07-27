@@ -160,7 +160,30 @@ export const MUSCLE_GROUPS = [
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
 
 /** Cómo se mide el ejercicio: repeticiones o segundos (isométricos). */
-export type ExerciseMeasure = 'reps' | 'seconds';
+/**
+ * Cómo se mide un ejercicio:
+ *  - 'reps': repeticiones (dominadas).
+ *  - 'seconds': isométrico, se aguanta (front lever).
+ *  - 'combo': ambas en la MISMA serie (muscle up + front lever): se apuntan
+ *    las repeticiones y, a continuación, el aguante.
+ */
+export type ExerciseMeasure = 'reps' | 'seconds' | 'combo';
+
+export const EXERCISE_MEASURES: ExerciseMeasure[] = ['reps', 'seconds', 'combo'];
+
+/** Etiqueta larga (formularios donde se elige la medida). */
+export const MEASURE_LABEL: Record<ExerciseMeasure, string> = {
+  reps: 'Repeticiones',
+  seconds: 'Segundos (isométrico)',
+  combo: 'Combo',
+};
+
+/** Etiqueta corta (listados y resúmenes). */
+export const MEASURE_SHORT: Record<ExerciseMeasure, string> = {
+  reps: 'Repeticiones',
+  seconds: 'Isométrico',
+  combo: 'Combo',
+};
 
 /**
  * Carga del ejercicio (calistenia):
@@ -228,6 +251,11 @@ export interface RoutineExercise {
   sets: number;
   /** Objetivo por serie: repeticiones o segundos según `measure`. */
   reps: string;
+  /**
+   * Aguante objetivo por serie, en segundos. Solo lo usan los ejercicios
+   * 'combo', donde `reps` marca las repeticiones y esto el isométrico.
+   */
+  seconds?: string;
   restSeconds?: number;
   notes?: string;
   /** true = se hace en superserie encadenado con el ejercicio anterior. */
@@ -442,7 +470,13 @@ export interface Payment {
 }
 
 export interface LoggedSet {
+  /**
+   * Marca principal de la serie. En ejercicios por repeticiones (y en la parte
+   * de repeticiones de un combo) son reps; en los isométricos, segundos.
+   */
   reps: string;
+  /** Aguante en segundos de la serie. Solo lo usan los ejercicios 'combo'. */
+  seconds?: string;
   weight?: string;
   completed: boolean;
 }

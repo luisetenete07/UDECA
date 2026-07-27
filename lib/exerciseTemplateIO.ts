@@ -1,5 +1,5 @@
 import type { MuscleId } from './muscles';
-import type { Exercise, ExerciseLoad, ExerciseMeasure } from './types';
+import { EXERCISE_MEASURES, type Exercise, type ExerciseLoad, type ExerciseMeasure } from './types';
 
 /**
  * Exportar / importar la biblioteca de ejercicios de un entrenador como una
@@ -81,7 +81,9 @@ export function parseExerciseTemplate(json: string): ExportedExercise[] | null {
       name,
       muscleGroup:
         typeof e.muscleGroup === 'string' && e.muscleGroup.trim() ? e.muscleGroup : 'Full body',
-      measure: e.measure === 'seconds' ? 'seconds' : e.measure === 'reps' ? 'reps' : undefined,
+      measure: EXERCISE_MEASURES.includes(e.measure as ExerciseMeasure)
+        ? (e.measure as ExerciseMeasure)
+        : undefined,
       description: typeof e.description === 'string' ? e.description : undefined,
       videoUrl: typeof e.videoUrl === 'string' ? e.videoUrl : undefined,
       muscles: Array.isArray(e.muscles)

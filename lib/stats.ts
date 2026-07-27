@@ -1,4 +1,10 @@
-import { resolveLoad, type LoggedExercise, type WeightLog, type WorkoutLog } from './types';
+import {
+  resolveLoad,
+  type ExerciseMeasure,
+  type LoggedExercise,
+  type WeightLog,
+  type WorkoutLog,
+} from './types';
 
 /**
  * Convierte a número tolerando la coma decimal española (66,4 → 66.4). Sin
@@ -408,7 +414,7 @@ export function exerciseRecord(
   const best = bestsByExercise(logs)[exerciseId];
   if (!best) return null;
   // Medida conocida del ejercicio (la última registrada manda).
-  let measure: 'reps' | 'seconds' = 'reps';
+  let measure: ExerciseMeasure = 'reps';
   for (const log of logs) {
     const ex = log.exercises.find((e) => e.exerciseId === exerciseId);
     if (ex?.measure) measure = ex.measure;
@@ -477,6 +483,17 @@ export function isIsometricExercise(
   return ex.measure === 'seconds' || measureByExercise?.[ex.exerciseId] === 'seconds';
 }
 
+/**
+ * Ejercicio 'combo': cada serie tiene repeticiones Y aguante (muscle up +
+ * front lever). Suma en los dos contadores a la vez.
+ */
+export function isComboExercise(
+  ex: LoggedExercise,
+  measureByExercise?: Record<string, string>
+): boolean {
+  return ex.measure === 'combo' || measureByExercise?.[ex.exerciseId] === 'combo';
+}
+
 export function sessionTotals(
   session: LoggedExercise[],
   measureByExercise?: Record<string, string>
@@ -487,6 +504,7 @@ export function sessionTotals(
   let volumeKg = 0;
   for (const ex of session) {
     const isSeconds = isIsometricExercise(ex, measureByExercise);
+    const isCombo = isComboExercise(ex, measureByExercise);
     // La goma ASISTE (resta carga), no se levanta: sus kg no suman volumen.
     // Solo cuenta el peso añadido (lastre, mancuernas, máquinas).
     const weightCounts = resolveLoad(ex) !== 'assisted';
@@ -494,9 +512,16 @@ export function sessionTotals(
       if (!set.completed) continue;
       const r = parseReps(set.reps);
       sets += 1;
-      // Reps de ejercicios por repeticiones; segundos de los isométricos.
-      if (isSeconds) seconds += r;
-      else reps += r;
+      // Reps de ejercicios por repeticiones; segundos de los isométricos. El
+      // combo aporta a los dos: sus repeticiones y su aguante.
+      if (isCombo) {
+        reps += r;
+        seconds += parseReps(set.seconds ?? '');
+      } else if (isSeconds) {
+        seconds += r;
+      } else {
+        reps += r;
+      }
       if (weightCounts) volumeKg += (toNum(set.weight) || 0) * r;
     }
   }
@@ -944,7 +969,7 @@ export interface ExerciseProgressPoint {
 export interface ExerciseProgress {
   exerciseId: string;
   name: string;
-  measure: 'reps' | 'seconds';
+  measure: ExerciseMeasure;
   hasWeight: boolean;
   points: ExerciseProgressPoint[];
 }
@@ -960,7 +985,7 @@ export function exerciseProgression(
   const sorted = [...logs].sort((a, b) => a.date - b.date);
   const points: ExerciseProgressPoint[] = [];
   let name = '';
-  let measure: 'reps' | 'seconds' = 'reps';
+  let measure: ExerciseMeasure = 'reps';
   let hasWeight = false;
   for (const log of sorted) {
     const ex = log.exercises.find((e) => e.exerciseId === exerciseId);

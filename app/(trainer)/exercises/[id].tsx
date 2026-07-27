@@ -210,7 +210,21 @@ export default function ExerciseEditorScreen() {
             Segundos (isométrico)
           </Text>
         </Pressable>
+        <Pressable
+          onPress={() => setMeasure('combo')}
+          style={[styles.segmentBtn, measure === 'combo' && styles.segmentBtnActive]}
+        >
+          <Text style={[styles.segmentText, measure === 'combo' && styles.segmentTextActive]}>
+            Combo
+          </Text>
+        </Pressable>
       </View>
+      {measure === 'combo' ? (
+        <Text style={styles.measureHint}>
+          Cada serie combina repeticiones y aguante en una sola tarjeta. Ej.: Muscle
+          Up + Front Lever → 5 repeticiones y 12 s.
+        </Text>
+      ) : null}
 
       <TextField
         label="Descripción / técnica"
@@ -321,5 +335,12 @@ const styles = StyleSheet.create({
   segmentBtnActive: { backgroundColor: colors.primary },
   segmentText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   segmentTextActive: { color: colors.onPrimary },
+  measureHint: {
+    ...typography.small,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });

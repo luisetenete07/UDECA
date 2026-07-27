@@ -37,6 +37,7 @@ import { getLevelTestsForClient } from '../../lib/firestore/levelTests';
 import {
   exerciseProgression,
   exerciseRecord,
+  isComboExercise,
   isIsometricExercise,
   listExercisesInLogs,
   sessionTotals,
@@ -484,9 +485,15 @@ export default function ProgressScreen() {
                         <View style={styles.sessionDetail}>
                           {s.exercises.map((ex, i) => {
                             const isSec = isIsometricExercise(ex, measureByExercise);
+                            const isCombo = isComboExercise(ex, measureByExercise);
                             const done = ex.sets
                               .filter((st) => st.completed && st.reps)
-                              .map((st) => `${st.reps}${st.weight ? `×${st.weight}kg` : ''}`)
+                              .map(
+                                (st) =>
+                                  // El combo enseña las dos marcas de la serie.
+                                  `${st.reps}${isCombo && st.seconds ? `+${st.seconds}s` : ''}` +
+                                  `${st.weight ? `×${st.weight}kg` : ''}`
+                              )
                               .join(', ');
                             return (
                               <View key={i} style={styles.detailRow}>

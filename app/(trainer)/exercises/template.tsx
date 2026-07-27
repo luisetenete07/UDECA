@@ -22,6 +22,9 @@ import { MUSCLE_LABEL, musclesForExercise, type MuscleId } from '../../../lib/mu
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
+  EXERCISE_MEASURES,
+  MEASURE_LABEL,
+  MEASURE_SHORT,
   MUSCLE_GROUPS,
   type ExerciseMeasure,
   type TemplateExercise,
@@ -271,7 +274,7 @@ export default function TemplateExercisesScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemName}>{it.name}</Text>
                     <Text style={styles.itemMeta}>
-                      {it.measure === 'seconds' ? 'Isométrico' : 'Repeticiones'}
+                      {MEASURE_SHORT[it.measure ?? 'reps']}
                       {it.muscles && it.muscles.length > 0
                         ? ` · ${it.muscles.map((m) => MUSCLE_LABEL[m]).join(', ')}`
                         : ' · sin músculos'}
@@ -328,14 +331,14 @@ export default function TemplateExercisesScreen() {
 
                   <Text style={styles.label}>Se mide en</Text>
                   <View style={styles.segment}>
-                    {(['reps', 'seconds'] as ExerciseMeasure[]).map((m) => (
+                    {EXERCISE_MEASURES.map((m) => (
                       <Pressable
                         key={m}
                         onPress={() => setDraft({ ...draft, measure: m })}
                         style={[styles.segBtn, draft.measure === m && styles.segBtnOn]}
                       >
                         <Text style={[styles.segText, draft.measure === m && styles.segTextOn]}>
-                          {m === 'reps' ? 'Repeticiones' : 'Segundos (isométrico)'}
+                          {MEASURE_LABEL[m]}
                         </Text>
                       </Pressable>
                     ))}
