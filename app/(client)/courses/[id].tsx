@@ -27,16 +27,15 @@ export default function ClientCourseDetailScreen() {
   const isLocked = (lesson: Lesson) =>
     !!lesson.unlockAfterDays && memberDays < lesson.unlockAfterDays;
 
+  // Secciones desplegadas (todas empiezan CERRADAS: el índice primero).
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const data = await getCourse(id);
-      setCourse(data);
-      // Primera lección DESBLOQUEADA.
-      const first = data?.sections
-        .flatMap((s) => s.lessons)
-        .find((l) => !l.unlockAfterDays || memberDays >= l.unlockAfterDays);
-      if (first) setActiveLessonId(first.id);
+      setCourse(await getCourse(id));
+      // Nada de autoseleccionar la primera lección: el curso se abre por su
+      // índice de secciones y el alumno elige dónde entrar.
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,29 +56,35 @@ export default function ClientCourseDetailScreen() {
   const totalLessons = course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
 
   return (
-    <ScreenContainer>
-      {activeLesson && (activeLesson.kind === 'pdf' || (!activeLesson.videoUrl && activeLesson.pdfUrl)) ? (
-        activeLesson.pdfUrl ? (
-          <EmbeddedDoc url={activeLesson.pdfUrl} />
-        ) : (
-          <View style={styles.docPlaceholder}>
-            <Ionicons name="document-text-outline" size={28} color={colors.textFaint} />
-            <Text style={styles.metaText}>Documento no disponible</Text>
-          </View>
-        )
-      ) : (
-        <VideoPlayer url={activeLesson?.videoUrl} protectedContent />
-      )}
+    <ScreenContainer maxWidth={860}>
+      {activeLesson ? (
+        <>
+          {activeLesson.kind === 'pdf' || (!activeLesson.videoUrl && activeLesson.pdfUrl) ? (
+            activeLesson.pdfUrl ? (
+              <EmbeddedDoc url={activeLesson.pdfUrl} />
+            ) : (
+              <View style={styles.docPlaceholder}>
+                <Ionicons name="document-text-outline" size={28} color={colors.textFaint} />
+                <Text style={styles.metaText}>Documento no disponible</Text>
+              </View>
+            )
+          ) : (
+            <VideoPlayer url={activeLesson.videoUrl} protectedContent />
+          )}
 
-      <Text style={styles.lessonTitle}>{activeLesson?.title || course.title}</Text>
-      {activeLesson?.durationLabel ? (
-        <View style={styles.metaRow}>
-          <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.metaText}>{activeLesson.durationLabel}</Text>
-        </View>
-      ) : null}
-      {activeLesson?.description ? (
-        <Text style={styles.lessonDesc}>{activeLesson.description}</Text>
+          <Text style={styles.lessonTitle}>{activeLesson.title}</Text>
+          {activeLesson.durationLabel ? (
+            <View style={styles.metaRow}>
+              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.metaText}>{activeLesson.durationLabel}</Text>
+            </View>
+          ) : null}
+          {activeLesson.description ? (
+            <Text style={styles.lessonDesc}>{activeLesson.description}</Text>
+          ) : null}
+        </>
+      ) : course.coverURL ? (
+        <Image source={{ uri: course.coverURL }} style={styles.courseCover} resizeMode="cover" />
       ) : null}
 
       {/* E-book adjunto a una lección de VÍDEO (material de apoyo). */}
@@ -106,17 +111,41 @@ export default function ClientCourseDetailScreen() {
       {totalLessons === 0 ? (
         <EmptyState title="Este curso aún no tiene lecciones" />
       ) : (
-        course.sections.map((section) => (
+        course.sections.map((section) => {
+          const open = !!openSections[section.id];
+          return (
           <View key={section.id} style={styles.section}>
-            {section.coverURL ? (
-              <Image
-                source={{ uri: section.coverURL }}
-                style={styles.sectionCover}
-                resizeMode="cover"
-              />
-            ) : null}
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            {section.lessons.map((lesson, index) => {
+            {/* Cabecera de la sección: se toca para entrar/salir. La miniatura
+                va pequeña al lado del título, nunca a pantalla completa. */}
+            <Pressable
+              onPress={() => setOpenSections((p) => ({ ...p, [section.id]: !open }))}
+            >
+              <Card style={[styles.sectionHead, open && styles.sectionHeadOpen]}>
+                {section.coverURL ? (
+                  <Image
+                    source={{ uri: section.coverURL }}
+                    style={styles.sectionThumb}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.sectionThumb, styles.sectionThumbEmpty]}>
+                    <Ionicons name="albums-outline" size={18} color={colors.textFaint} />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionName}>{section.title}</Text>
+                  <Text style={styles.sectionMeta}>
+                    {section.lessons.length} lección{section.lessons.length === 1 ? '' : 'es'}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={open ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={colors.textMuted}
+                />
+              </Card>
+            </Pressable>
+            {open ? section.lessons.map((lesson, index) => {
               const isActive = lesson.id === activeLessonId;
               const locked = isLocked(lesson);
               const daysLeft = locked ? lesson.unlockAfterDays! - memberDays : 0;
@@ -180,9 +209,10 @@ export default function ClientCourseDetailScreen() {
                   </Card>
                 </Pressable>
               );
-            })}
+            }) : null}
           </View>
-        ))
+          );
+        })
       )}
     </ScreenContainer>
   );
@@ -263,19 +293,31 @@ const styles = StyleSheet.create({
   privateText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
   courseTitle: { ...typography.h3, color: colors.text },
   courseMeta: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md },
-  section: { marginBottom: spacing.md },
-  sectionCover: {
+  section: { marginBottom: spacing.sm },
+  courseCover: {
     width: '100%',
+    maxWidth: 520,
     aspectRatio: 16 / 9,
     borderRadius: radius.md,
+    alignSelf: 'flex-start',
+  },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-  sectionTitle: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
+  sectionHeadOpen: { borderColor: colors.primary },
+  sectionThumb: { width: 96, height: 54, borderRadius: radius.sm },
+  sectionThumbEmpty: {
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
+  sectionName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  sectionMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   lessonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   lessonRowActive: { borderColor: colors.primary },
   lessonRowLocked: { opacity: 0.6 },

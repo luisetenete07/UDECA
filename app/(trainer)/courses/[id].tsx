@@ -173,7 +173,7 @@ export default function CourseEditorScreen() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <ScreenContainer>
+    <ScreenContainer maxWidth={860}>
       <TextField
         label="Título del curso"
         value={title}
@@ -345,10 +345,12 @@ export default function CourseEditorScreen() {
 const styles = StyleSheet.create({
   textarea: { height: 78, textAlignVertical: 'top' },
   coverPicker: { marginBottom: spacing.md },
-  coverImage: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.md },
+  coverImage: { width: '100%', maxWidth: 480, aspectRatio: 16 / 9, borderRadius: radius.md, alignSelf: 'flex-start' },
   coverEmpty: {
     width: '100%',
+    maxWidth: 480,
     aspectRatio: 16 / 9,
+    alignSelf: 'flex-start',
     borderRadius: radius.md,
     borderWidth: 1,
     borderStyle: 'dashed',

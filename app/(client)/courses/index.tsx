@@ -44,6 +44,7 @@ export default function ClientCoursesScreen() {
 
   return (
     <ScreenContainer
+      maxWidth={860}
       refreshing={refreshing}
       onRefresh={() => {
         setRefreshing(true);

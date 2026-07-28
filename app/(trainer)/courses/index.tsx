@@ -54,6 +54,7 @@ export default function TrainerCoursesScreen() {
 
   return (
     <ScreenContainer
+      maxWidth={860}
       refreshing={refreshing}
       onRefresh={() => {
         setRefreshing(true);
