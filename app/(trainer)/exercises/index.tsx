@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   Modal,
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -26,6 +27,7 @@ import {
   createExercise,
   deleteExercise,
   getExercisesForTrainer,
+  updateExercise,
 } from '../../../lib/firestore/exercises';
 import { getTemplateExercises } from '../../../lib/firestore/templateExercises';
 import { updateUserProfile } from '../../../lib/firestore/users';
@@ -92,6 +94,16 @@ export default function ExercisesScreen() {
     setNewCat('');
     saveCategories([...myCategories, c]);
   };
+  // Mueve una categoría un puesto (las flechas del editor). El orden se
+  // guarda en el perfil y define cómo se agrupan y filtran los ejercicios.
+  const moveCategory = (group: string, dir: -1 | 1) => {
+    const i = myCategories.indexOf(group);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= myCategories.length) return;
+    const list = [...myCategories];
+    [list[i], list[j]] = [list[j], list[i]];
+    saveCategories(list);
+  };
   const removeCategory = (group: string) => {
     const list = myCategories.filter((g) => g !== group);
     if (list.length === 0) {
@@ -116,6 +128,7 @@ export default function ExercisesScreen() {
             // La plantilla nunca trae vídeo: el entrenador lo pone luego.
             videoUrl: undefined as string | undefined,
             muscles: t.muscles,
+            muscleWeights: t.muscleWeights,
           }))
         : STARTER_LIBRARY.map((s) => ({
             name: s.name,
@@ -124,6 +137,9 @@ export default function ExercisesScreen() {
             description: s.description,
             videoUrl: undefined as string | undefined,
             muscles: undefined as import('../../../lib/muscles').MuscleId[] | undefined,
+            muscleWeights: undefined as
+              | Partial<Record<import('../../../lib/muscles').MuscleId, number>>
+              | undefined,
           })),
     [template]
   );
@@ -152,11 +168,88 @@ export default function ExercisesScreen() {
             description: s.description || undefined,
             videoUrl: s.videoUrl,
             muscles: s.muscles,
+            muscleWeights: s.muscleWeights,
           })
         )
       );
       showToast(`${missingPack.length} ejercicios añadidos a tu biblioteca`);
       await load();
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // ACTUALIZAR pack (solo la cuenta admin de UDECA): deja la biblioteca
+  // exactamente como el pack actual. Actualiza por nombre (conservando el id,
+  // para que las rutinas que referencian el ejercicio no se rompan, y su
+  // vídeo), crea los nuevos, BORRA los que ya no están en el pack y reemplaza
+  // las categorías por las del pack, en su orden.
+  const handleUpdatePackFull = async () => {
+    if (!profile || packItems.length === 0) return;
+    const ok =
+      Platform.OS === 'web'
+        ? // eslint-disable-next-line no-alert
+          window.confirm(
+            'Tu biblioteca quedará EXACTAMENTE como el pack UDECA actual: se borrarán los ejercicios que no estén en el pack y se reemplazarán las categorías. ¿Continuar?'
+          )
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Actualizar pack UDECA',
+              'Tu biblioteca quedará exactamente como el pack actual: se borran los ejercicios que no estén en el pack y se reemplazan las categorías.',
+              [
+                { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Actualizar', style: 'destructive', onPress: () => resolve(true) },
+              ]
+            );
+          });
+    if (!ok) return;
+    setImporting(true);
+    try {
+      const key = (n: string) => n.trim().toLowerCase();
+      const byName = new Map(exercises.map((e) => [key(e.name), e]));
+      const packNames = new Set(packItems.map((p) => key(p.name)));
+      const ops: Promise<unknown>[] = [];
+      for (const p of packItems) {
+        const existing = byName.get(key(p.name));
+        if (existing) {
+          ops.push(
+            updateExercise(existing.id, {
+              muscleGroup: p.muscleGroup,
+              measure: p.measure,
+              description: p.description || undefined,
+              muscles: p.muscles,
+              muscleWeights: p.muscleWeights,
+            })
+          );
+        } else {
+          ops.push(
+            createExercise({
+              trainerId: profile.uid,
+              name: p.name,
+              muscleGroup: p.muscleGroup,
+              measure: p.measure,
+              description: p.description || undefined,
+              videoUrl: undefined,
+              muscles: p.muscles,
+              muscleWeights: p.muscleWeights,
+            })
+          );
+        }
+      }
+      for (const e of exercises) {
+        if (!packNames.has(key(e.name))) ops.push(deleteExercise(e.id));
+      }
+      await Promise.all(ops);
+      // Categorías del pack, en su orden de aparición.
+      const cats: string[] = [];
+      for (const p of packItems) {
+        if (!cats.includes(p.muscleGroup)) cats.push(p.muscleGroup);
+      }
+      if (cats.length > 0) await saveCategories(cats);
+      showToast('Biblioteca sincronizada con el pack UDECA');
+      await load();
+    } catch {
+      showToast('No se pudo actualizar el pack');
     } finally {
       setImporting(false);
     }
@@ -251,6 +344,7 @@ export default function ExercisesScreen() {
             description: e.description,
             videoUrl: e.videoUrl,
             muscles: e.muscles,
+            muscleWeights: e.muscleWeights,
             load: e.load,
             band: e.band,
           })
@@ -360,9 +454,25 @@ export default function ExercisesScreen() {
       {editCats ? (
         <>
           <View style={styles.catWrap}>
-            {myCategories.map((group) => (
+            {myCategories.map((group, i) => (
               <View key={group} style={styles.catChip}>
+                <Pressable
+                  onPress={() => moveCategory(group, -1)}
+                  hitSlop={6}
+                  disabled={i === 0}
+                  style={{ opacity: i === 0 ? 0.25 : 1 }}
+                >
+                  <Ionicons name="chevron-back" size={15} color={colors.primary} />
+                </Pressable>
                 <Text style={styles.catChipText}>{group}</Text>
+                <Pressable
+                  onPress={() => moveCategory(group, 1)}
+                  hitSlop={6}
+                  disabled={i === myCategories.length - 1}
+                  style={{ opacity: i === myCategories.length - 1 ? 0.25 : 1 }}
+                >
+                  <Ionicons name="chevron-forward" size={15} color={colors.primary} />
+                </Pressable>
                 <Pressable onPress={() => removeCategory(group)} hitSlop={8} style={styles.catX}>
                   <Ionicons name="close-circle" size={16} color={colors.danger} />
                 </Pressable>
@@ -403,7 +513,15 @@ export default function ExercisesScreen() {
         </ScrollView>
       )}
 
-      {missingPack.length > 0 ? (
+      {isAdmin(profile) && packItems.length > 0 ? (
+        <Button
+          title="Actualizar pack UDECA (reemplaza tu biblioteca)"
+          variant="secondary"
+          onPress={handleUpdatePackFull}
+          loading={importing}
+          style={{ marginBottom: spacing.md }}
+        />
+      ) : missingPack.length > 0 ? (
         <Button
           title={`Importar pack UDECA (${missingPack.length} ejercicio${
             missingPack.length === 1 ? '' : 's'

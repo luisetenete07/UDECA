@@ -28,15 +28,16 @@ const SLUG_TO_MUSCLE: Record<string, { m: MuscleId; f: number }> = {
   tibialis: { m: 'calves', f: 0.6 },
 };
 
-/** Interpola gris → rojo intenso según la intensidad 0..1. */
+/**
+ * Color según la intensidad 0..1: de casi transparente a rojo intenso. Así un
+ * músculo al 25 % apenas se tiñe y uno al 100 % arde, tal y como fija el
+ * porcentaje de trabajo del pack. Sin trabajo, gris de silueta.
+ */
 function fillFor(v: number): string {
   if (v <= 0.04) return GREY;
-  // De rojo oscuro (#6E1C15) a rojo intenso (#F0392C).
-  const lo = [0x6e, 0x1c, 0x15];
-  const hi = [0xf0, 0x39, 0x2c];
   const t = Math.min(1, v);
-  const c = lo.map((l, i) => Math.round(l + (hi[i] - l) * t));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
+  const alpha = 0.18 + 0.82 * t;
+  return `rgba(240,57,44,${alpha.toFixed(2)})`;
 }
 
 function pathsOf(part: BodyPart): string[] {

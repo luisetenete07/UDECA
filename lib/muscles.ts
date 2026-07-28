@@ -37,7 +37,7 @@ export const MUSCLE_LABEL: Record<MuscleId, string> = {
   calves: 'Gemelos',
 };
 
-type Weights = Partial<Record<MuscleId, number>>;
+export type Weights = Partial<Record<MuscleId, number>>;
 
 /** Reglas por palabra clave (calistenia). El orden no importa; se acumulan. */
 const KEYWORD_RULES: { match: RegExp; muscles: Weights }[] = [
@@ -84,6 +84,28 @@ const GROUP_FALLBACK: Record<MuscleGroup, Weights> = {
   Cardio: {},
 };
 
+/**
+ * Pesos 0..1 de un ejercicio de biblioteca a partir de sus campos del pack:
+ * usa los porcentajes del admin si existen; si solo hay lista de músculos
+ * (datos antiguos), cada uno cuenta al 100 %.
+ */
+export function weightsOfExercise(ex: {
+  muscles?: MuscleId[];
+  muscleWeights?: Partial<Record<MuscleId, number>>;
+}): Weights | null {
+  if (ex.muscleWeights && Object.keys(ex.muscleWeights).length > 0) {
+    const w: Weights = {};
+    for (const [m, pct] of Object.entries(ex.muscleWeights)) {
+      if ((pct ?? 0) > 0) w[m as MuscleId] = Math.min(1, (pct as number) / 100);
+    }
+    return Object.keys(w).length > 0 ? w : null;
+  }
+  if (ex.muscles && ex.muscles.length > 0) {
+    return Object.fromEntries(ex.muscles.map((m) => [m, 1])) as Weights;
+  }
+  return null;
+}
+
 /** Músculos que trabaja un ejercicio, por nombre (y grupo opcional de apoyo). */
 export function musclesForExercise(name: string, group?: string): Weights {
   const n = (name || '').toLowerCase();
@@ -114,7 +136,8 @@ export function muscleLoad(
   logs: WorkoutLog[],
   sinceTs?: number,
   groupByExerciseId?: Record<string, string>,
-  musclesByExerciseId?: Record<string, MuscleId[]>
+  // Pesos explícitos 0..1 por músculo (del pack: 25/50/75/100 % → 0,25..1).
+  weightsByExerciseId?: Record<string, Weights>
 ): Record<MuscleId, number> {
   const raw = {} as Record<MuscleId, number>;
   (Object.keys(MUSCLE_LABEL) as MuscleId[]).forEach((m) => (raw[m] = 0));
@@ -124,12 +147,12 @@ export function muscleLoad(
     for (const ex of log.exercises) {
       const completed = ex.sets.filter((s) => s.completed).length;
       if (completed === 0) continue;
-      // Si el ejercicio define músculos explícitos (plantilla UDECA), mandan
-      // ellos; si no, se clasifica por nombre y grupo.
-      const explicit = musclesByExerciseId?.[ex.exerciseId];
+      // Si el ejercicio define músculos explícitos (plantilla UDECA, con su
+      // porcentaje de trabajo), mandan ellos; si no, por nombre y grupo.
+      const explicit = weightsByExerciseId?.[ex.exerciseId];
       const map =
-        explicit && explicit.length > 0
-          ? (Object.fromEntries(explicit.map((m) => [m, 1])) as Weights)
+        explicit && Object.keys(explicit).length > 0
+          ? explicit
           : musclesForExercise(ex.name, groupByExerciseId?.[ex.exerciseId]);
       for (const [m, w] of Object.entries(map)) {
         raw[m as MuscleId] += completed * (w as number);

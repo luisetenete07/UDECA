@@ -226,6 +226,13 @@ export interface Exercise {
    * Se hereda de la plantilla UDECA al importar el pack.
    */
   muscles?: MuscleId[];
+  /**
+   * Cuánto trabaja cada músculo, en porcentaje (25/50/75/100). Lo fija el
+   * admin en la plantilla y viaja con el pack; el cuerpo anatómico colorea de
+   * transparente a rojo intenso según este valor. Si falta, cada músculo de
+   * `muscles` cuenta al 100 % (comportamiento anterior).
+   */
+  muscleWeights?: Partial<Record<MuscleId, number>>;
   createdAt: number;
 }
 
@@ -244,6 +251,8 @@ export interface TemplateExercise {
   measure?: ExerciseMeasure;
   /** Músculos que trabaja (alimenta el cuerpo anatómico). */
   muscles?: MuscleId[];
+  /** Porcentaje de trabajo por músculo (25/50/75/100); ver Exercise. */
+  muscleWeights?: Partial<Record<MuscleId, number>>;
   /** Orden de aparición en la lista (menor primero). */
   order?: number;
   createdAt: number;

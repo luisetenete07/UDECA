@@ -27,7 +27,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { shareSessionImage } from '../../lib/brandCards';
 import { buildClientReportHtml, computeClientReport } from '../../lib/report';
-import { muscleLoad } from '../../lib/muscles';
+import { muscleLoad, weightsOfExercise } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
@@ -85,7 +85,7 @@ export default function ProgressScreen() {
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
   const [musclesByExercise, setMusclesByExercise] = useState<
-    Record<string, import('../../lib/muscles').MuscleId[]>
+    Record<string, import('../../lib/muscles').Weights>
   >({});
   const [levelTests, setLevelTests] = useState<import('../../lib/types').LevelTest[]>([]);
   const [loading, setLoading] = useState(cached === undefined);
@@ -125,11 +125,12 @@ export default function ProgressScreen() {
         .then((library) => {
           const mmap: Record<string, string> = {};
           const gmap: Record<string, string> = {};
-          const musMap: Record<string, import('../../lib/muscles').MuscleId[]> = {};
+          const musMap: Record<string, import('../../lib/muscles').Weights> = {};
           for (const ex of library) {
             mmap[ex.id] = ex.measure ?? 'reps';
             gmap[ex.id] = ex.muscleGroup;
-            if (ex.muscles && ex.muscles.length > 0) musMap[ex.id] = ex.muscles;
+            const w = weightsOfExercise(ex);
+            if (w) musMap[ex.id] = w;
           }
           setMeasureByExercise(mmap);
           setMuscleByExercise(gmap);

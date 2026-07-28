@@ -19,6 +19,7 @@ export interface ExportedExercise {
   muscles?: MuscleId[];
   load?: ExerciseLoad;
   band?: boolean;
+  muscleWeights?: Partial<Record<MuscleId, number>>;
 }
 
 interface TemplateEnvelope {
@@ -45,6 +46,7 @@ export function buildExerciseTemplate(exercises: Exercise[]): string {
       description: e.description,
       videoUrl: e.videoUrl,
       muscles: e.muscles,
+      muscleWeights: e.muscleWeights,
       load: e.load,
       band: e.band,
     })),
@@ -89,6 +91,15 @@ export function parseExerciseTemplate(json: string): ExportedExercise[] | null {
       muscles: Array.isArray(e.muscles)
         ? (e.muscles.filter((m) => typeof m === 'string') as MuscleId[])
         : undefined,
+      // Porcentajes 0-100 por músculo; se descarta cualquier valor extraño.
+      muscleWeights:
+        e.muscleWeights && typeof e.muscleWeights === 'object'
+          ? (Object.fromEntries(
+              Object.entries(e.muscleWeights as Record<string, unknown>).filter(
+                ([, v]) => typeof v === 'number' && v > 0 && v <= 100
+              )
+            ) as Partial<Record<MuscleId, number>>)
+          : undefined,
       load:
         e.load === 'weighted' || e.load === 'assisted' || e.load === 'none'
           ? (e.load as ExerciseLoad)

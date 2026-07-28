@@ -30,11 +30,26 @@ import {
   type TemplateExercise,
 } from '../../../lib/types';
 
-/** Músculos por defecto de un ejercicio del pack base (los de peso ≥ 0,5). */
-function defaultMuscles(name: string, group: string): MuscleId[] {
+/** Redondea un porcentaje al escalón más cercano de 25 (mínimo 25 si > 0). */
+function snapPct(p: number): number {
+  const s = Math.round(p / 25) * 25;
+  return Math.min(100, Math.max(p > 0 ? 25 : 0, s));
+}
+
+/** Pesos por defecto de un ejercicio del pack base (clasificador por nombre). */
+function defaultWeights(name: string, group: string): Partial<Record<MuscleId, number>> {
   const w = musclesForExercise(name, group);
-  return (Object.entries(w) as [MuscleId, number][])
-    .filter(([, v]) => v >= 0.5)
+  const out: Partial<Record<MuscleId, number>> = {};
+  for (const [m, v] of Object.entries(w) as [MuscleId, number][]) {
+    if (v >= 0.4) out[m] = snapPct(v * 100);
+  }
+  return out;
+}
+
+/** Lista de músculos activos (peso > 0) de un mapa de pesos. */
+function musclesOf(weights: Partial<Record<MuscleId, number>>): MuscleId[] {
+  return (Object.entries(weights) as [MuscleId, number][])
+    .filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1])
     .map(([m]) => m);
 }
@@ -48,7 +63,8 @@ interface Draft {
   measure: ExerciseMeasure;
   description: string;
   videoUrl: string;
-  muscles: MuscleId[];
+  /** Porcentaje de trabajo por músculo (0 = no trabaja, 25/50/75/100). */
+  muscleWeights: Partial<Record<MuscleId, number>>;
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -57,7 +73,7 @@ const EMPTY_DRAFT: Draft = {
   measure: 'reps',
   description: '',
   videoUrl: '',
-  muscles: [],
+  muscleWeights: {},
 };
 
 export default function TemplateExercisesScreen() {
@@ -106,7 +122,10 @@ export default function TemplateExercisesScreen() {
       measure: it.measure ?? 'reps',
       description: it.description ?? '',
       videoUrl: it.videoUrl ?? '',
-      muscles: it.muscles ?? [],
+      // Datos antiguos sin porcentajes: cada músculo marcado cuenta al 100 %.
+      muscleWeights:
+        it.muscleWeights ??
+        Object.fromEntries((it.muscles ?? []).map((m) => [m, 100])),
     });
 
   const save = async () => {
@@ -123,7 +142,9 @@ export default function TemplateExercisesScreen() {
       description: draft.description.trim() || undefined,
       // La plantilla UDECA nunca guarda vídeo: cada entrenador pone el suyo.
       videoUrl: undefined,
-      muscles: draft.muscles.length > 0 ? draft.muscles : undefined,
+      muscles: musclesOf(draft.muscleWeights).length > 0 ? musclesOf(draft.muscleWeights) : undefined,
+      muscleWeights:
+        musclesOf(draft.muscleWeights).length > 0 ? draft.muscleWeights : undefined,
     };
     try {
       if (draft.id) {
@@ -159,7 +180,8 @@ export default function TemplateExercisesScreen() {
           muscleGroup: s.muscleGroup,
           measure: s.measure,
           description: s.description,
-          muscles: defaultMuscles(s.name, s.muscleGroup),
+          muscles: musclesOf(defaultWeights(s.name, s.muscleGroup)),
+          muscleWeights: defaultWeights(s.name, s.muscleGroup),
           order: order++,
         });
       }
@@ -195,6 +217,7 @@ export default function TemplateExercisesScreen() {
           // Nunca copiamos el vídeo del coach a la plantilla oficial.
           videoUrl: undefined,
           muscles: e.muscles,
+          muscleWeights: e.muscleWeights,
           order: order++,
         });
       }
@@ -346,31 +369,40 @@ export default function TemplateExercisesScreen() {
 
                   <View style={styles.musclesHead}>
                     <Text style={styles.label}>Músculos que trabaja</Text>
-                    <Text style={styles.musclesHint}>Para el cuerpo anatómico</Text>
+                    <Text style={styles.musclesHint}>
+                      Toca para subir el % (0 → 25 → 50 → 75 → 100)
+                    </Text>
                   </View>
                   <View style={styles.muscleGrid}>
                     {MUSCLE_IDS.map((m) => {
-                      const on = draft.muscles.includes(m);
+                      const pct = draft.muscleWeights[m] ?? 0;
+                      // El chip se tiñe como el cuerpo anatómico: transparente
+                      // a 0 % y rojo intenso a 100 %.
+                      const bg =
+                        pct > 0 ? `rgba(240,57,44,${(0.18 + 0.82 * (pct / 100)).toFixed(2)})` : undefined;
                       return (
                         <Pressable
                           key={m}
                           onPress={() =>
                             setDraft({
                               ...draft,
-                              muscles: on
-                                ? draft.muscles.filter((x) => x !== m)
-                                : [...draft.muscles, m],
+                              muscleWeights: {
+                                ...draft.muscleWeights,
+                                [m]: pct >= 100 ? 0 : pct + 25,
+                              },
                             })
                           }
-                          style={[styles.muscleChip, on && styles.muscleChipOn]}
+                          style={[
+                            styles.muscleChip,
+                            pct > 0 && styles.muscleChipOn,
+                            bg ? { backgroundColor: bg, borderColor: bg } : null,
+                          ]}
                         >
-                          {on ? (
-                            <Ionicons name="checkmark" size={13} color={colors.onPrimary} />
-                          ) : null}
                           <Text
-                            style={[styles.muscleChipText, on && styles.muscleChipTextOn]}
+                            style={[styles.muscleChipText, pct > 0 && styles.muscleChipTextOn]}
                           >
                             {MUSCLE_LABEL[m]}
+                            {pct > 0 ? ` ${pct}%` : ''}
                           </Text>
                         </Pressable>
                       );
