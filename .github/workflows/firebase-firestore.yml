@@ -1,0 +1,77 @@
+# Publica en Firebase las reglas y los índices de Firestore.
+#
+# Hasta ahora `firestore.rules` y `firestore.indexes.json` vivían en el repo
+# pero había que copiarlos a mano en la consola de Firebase, así que era fácil
+# que el código y las reglas publicadas se separaran (con el riesgo de que una
+# función nueva fallara con "permission denied" en producción).
+#
+# Con esto, cualquier cambio en esos ficheros se publica solo al subirlo.
+#
+# Requiere UN secreto en GitHub (Settings → Secrets and variables → Actions):
+#   FIREBASE_SERVICE_ACCOUNT  →  el JSON completo de una cuenta de servicio del
+#                                proyecto udeca-luistenafit.
+# El JSON es una credencial: NUNCA se guarda en el repo, solo como secreto.
+name: Publicar reglas e índices de Firestore
+
+on:
+  push:
+    branches:
+      - claude/calisthenics-coaching-app-o72apc
+    paths:
+      - firestore.rules
+      - firestore.indexes.json
+      - firebase.json
+      - .github/workflows/firebase-firestore.yml
+  workflow_dispatch: {}
+
+concurrency:
+  group: firestore-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Aviso claro y temprano si falta el secreto, en vez de un error críptico
+      # de autenticación a mitad del despliegue.
+      - name: Comprobar que existe la credencial
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT."
+            echo "Créalo en Settings → Secrets and variables → Actions con el JSON"
+            echo "de una cuenta de servicio del proyecto udeca-luistenafit."
+            exit 1
+          fi
+
+      # La credencial se escribe fuera del repo y con permisos 600, para que no
+      # pueda acabar en un commit ni la lea otro proceso del runner.
+      - name: Preparar credencial
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          chmod 600 "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      # Sin --force a propósito: así el despliegue solo CREA lo que falta y
+      # nunca borra un índice que exista en la consola pero no en el fichero.
+      - name: Desplegar reglas e índices
+        run: |
+          npx --yes firebase-tools@13 deploy \
+            --only firestore:rules,firestore:indexes \
+            --project udeca-luistenafit \
+            --non-interactive
+
+      - name: Borrar credencial
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
