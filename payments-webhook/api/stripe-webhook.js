@@ -44,9 +44,37 @@ async function getRawBody(req) {
 }
 
 /** Suma un mes natural a un timestamp. */
+/**
+ * Suma un mes conservando el día. `setMonth` a secas desborda: el 31 de enero
+ * + 1 mes da 3 de marzo porque febrero no tiene 31, así que se recorta al
+ * último día del mes de destino.
+ *
+ * Espejo de addMonthsExact en lib/billing.ts. Vive duplicado porque el backend
+ * es otro paquete y no puede importar del código de la app; si cambias uno,
+ * cambia el otro.
+ */
 function addOneMonth(base) {
   const d = new Date(base);
+  const day = d.getDate();
+  d.setDate(1);
   d.setMonth(d.getMonth() + 1);
+  const lastDayOfTarget = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDayOfTarget));
+  return d.getTime();
+}
+
+/**
+ * Siguiente fecha de cobro de la cuota de un alumno. Espejo de
+ * nextBillingDate en lib/billing.ts: el mes arranca SIEMPRE en la fecha en la
+ * que tocaba pagar, no en la que se paga, y `anchorDay` devuelve el día
+ * original tras pasar por un mes corto (31 ene → 28 feb → 31 mar).
+ */
+function nextClientBillingDate(dueDate, anchorDay) {
+  const next = addOneMonth(dueDate ?? Date.now());
+  if (!anchorDay) return next;
+  const d = new Date(next);
+  const lastDayOfTarget = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(anchorDay, lastDayOfTarget));
   return d.getTime();
 }
 
@@ -205,13 +233,20 @@ async function markClientPaid(clientId, amountEur) {
   const data = snap.data();
 
   const now = Date.now();
-  const base = data.nextPaymentDate && data.nextPaymentDate > now ? data.nextPaymentDate : now;
-  const nextPaymentDate = addOneMonth(base);
+  // Misma regla que cuando el coach confirma el cobro a mano: el mes arranca
+  // en la fecha en que TOCABA pagar. Si no, pagar por tarjeta con retraso
+  // desplazaría la fecha y un alumno acabaría con un ciclo distinto según por
+  // dónde pagara.
+  const anchorDay =
+    data.billingAnchorDay ||
+    (data.nextPaymentDate ? new Date(data.nextPaymentDate).getDate() : undefined);
+  const nextPaymentDate = nextClientBillingDate(data.nextPaymentDate, anchorDay);
 
   await ref.set(
     {
       paymentStatus: 'paid',
       nextPaymentDate,
+      billingAnchorDay: anchorDay || new Date(nextPaymentDate).getDate(),
       paymentReportedAt: admin.firestore.FieldValue.delete(),
     },
     { merge: true }
