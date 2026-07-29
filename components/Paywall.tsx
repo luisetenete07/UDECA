@@ -10,6 +10,7 @@ import {
   ANNUAL_PRICE_EUR,
   ATHLETE_MONTHLY_EUR,
   CONTACT_EMAIL,
+  FREE_CLIENT_LIMIT,
   subscriptionCheckoutUrl,
   verifySubscriptionNow,
 } from '../lib/subscription';
@@ -119,7 +120,7 @@ export function Paywall() {
         <Text style={styles.subtitle}>
           {isAthlete
             ? 'Entrena por tu cuenta con todas las herramientas. Tus datos están a salvo y te esperan.'
-            : 'Para entrenar a tus alumnos como coach necesitas la suscripción anual. Tus datos están a salvo y te esperan.'}
+            : `Tu grupo ha superado los ${FREE_CLIENT_LIMIT} alumnos del plan gratuito. Activa la suscripción para seguir con todos. Tus datos están a salvo y te esperan.`}
         </Text>
 
         <Card accent style={styles.planCard}>
@@ -154,6 +155,13 @@ export function Paywall() {
             style={{ marginTop: spacing.sm }}
           />
         </Card>
+
+        {!isAthlete ? (
+          <Text style={styles.footNote}>
+            ¿Prefieres seguir gratis? Puedes volver a {FREE_CLIENT_LIMIT} alumnos o menos y
+            recuperas el acceso al instante, sin perder nada.
+          </Text>
+        ) : null}
 
         <Text style={styles.footNote}>
           Al terminar el pago y volver a la app, tu cuenta se activa sola en unos

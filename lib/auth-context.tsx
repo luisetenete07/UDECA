@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
-import { getTrainerIdForInviteCode, registerTrainerInviteCode } from './firestore/users';
+import { getInviteCodeInfo, registerTrainerInviteCode } from './firestore/users';
 import { sendJoinRequest } from './firestore/joinRequests';
 import { registerForPushNotificationsAsync } from './notifications';
 import { rememberAccount } from './rememberedAccounts';
@@ -138,10 +138,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     inviteCode: string
   ) => {
-    const trainerId = await getTrainerIdForInviteCode(inviteCode.trim().toUpperCase());
-    if (!trainerId) {
+    const invite = await getInviteCodeInfo(inviteCode.trim().toUpperCase());
+    if (!invite) {
       throw new Error('El código de entrenador no es válido. Revísalo con tu entrenador.');
     }
+    // Si el coach ha llenado su plan gratuito no se le puede añadir gente: le
+    // dejaría por encima del límite y fuera de la app sin haber hecho nada.
+    if (invite.full) {
+      throw new Error(
+        'Tu entrenador ha alcanzado el límite de alumnos de su plan. Pídele que active su suscripción para poder entrar.'
+      );
+    }
+    const trainerId = invite.trainerId;
 
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(credential.user, { displayName: name });

@@ -2,17 +2,25 @@ import type { UserProfile } from './types';
 
 /**
  * Modelo SaaS de UDECA: los COACHES pagan la plataforma; sus alumnos entran
- * gratis con el código del coach. Un único plan anual, sin prueba gratuita.
+ * gratis con el código del coach.
  *
- *  - Un coach recién registrado ve el muro de suscripción (Paywall) hasta que
- *    el admin activa su plan; sus datos NUNCA se tocan, solo se bloquea el
- *    acceso mientras no esté activo.
+ *  - ENTRENADOR: 180 €/año, con plan gratuito hasta FREE_CLIENT_LIMIT alumnos.
+ *    Entra y usa la app entera desde el primer día; el muro solo aparece
+ *    cuando su grupo supera el límite. Pedirle 180 € antes de haber visto el
+ *    producto era el mayor punto de fuga del negocio.
+ *  - ATLETA: 7 días de prueba y después 10 €/mes.
+ *  - ALUMNO de un coach: gratis siempre.
  *  - Cuentas sin `subscriptionUntil` = fundadoras (anteriores a la
  *    monetización): acceso completo para no romper nada.
- *  - La activación la hace el admin de UDECA desde su panel (y las reglas de
- *    Firestore impiden que un coach se la extienda a sí mismo).
+ *  - La activación la hace Stripe (o el admin desde su panel); las reglas de
+ *    Firestore impiden que un coach se extienda la suscripción a sí mismo.
  */
 export const ANNUAL_PRICE_EUR = 180;
+/**
+ * Alumnos que un entrenador puede tener sin pagar. Suficiente para probar el
+ * producto con gente real; insuficiente para llevar un negocio con él.
+ */
+export const FREE_CLIENT_LIMIT = 2;
 /** Atleta individual: cuota mensual (suelta, no anual). */
 export const ATHLETE_MONTHLY_EUR = 10;
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -85,10 +93,14 @@ export function isAdmin(profile: UserProfile | null): boolean {
 
 /**
  * Días de prueba al crear una cuenta de ATLETA. Se entra sin tarjeta: primero
- * se usa el producto y luego se decide. El plan de entrenador no lleva prueba:
- * se contrata la cuota anual desde el principio.
+ * se usa el producto y luego se decide. El entrenador no lleva prueba por
+ * tiempo: su plan gratuito se mide en alumnos (ver FREE_CLIENT_LIMIT), que no
+ * caduca mientras su grupo sea pequeño.
  */
 export const TRIAL_DAYS = 7;
+
+/** Etiqueta del plan del entrenador para las pantallas de venta. */
+export const COACH_PLAN_LABEL = `Gratis hasta ${FREE_CLIENT_LIMIT} alumnos · ${ANNUAL_PRICE_EUR} €/año`;
 
 /** Fecha de fin de la prueba para una cuenta de atleta que se crea ahora. */
 export function trialUntil(from: number = Date.now()): number {
@@ -104,6 +116,26 @@ export interface SubscriptionState {
   legacy: boolean;
   /** true mientras se está dentro de la prueba gratuita (aún sin pagar). */
   trial: boolean;
+}
+
+/**
+ * ¿Puede el entrenador usar la plataforma?
+ *
+ * Con suscripción activa, siempre. Sin ella, mientras su grupo no pase del
+ * límite gratuito. Se mira `clientCount` del propio perfil (lo mantiene su app
+ * al cargar la lista) para no tener que contar alumnos en cada arranque.
+ */
+export function trainerHasAccess(profile: UserProfile | null): boolean {
+  if (!profile || profile.role !== 'trainer') return true;
+  if (subscriptionState(profile).active) return true;
+  return (profile.clientCount ?? 0) <= FREE_CLIENT_LIMIT;
+}
+
+/** true si el entrenador ya no puede sumar alumnos sin suscribirse. */
+export function trainerAtFreeLimit(profile: UserProfile | null): boolean {
+  if (!profile || profile.role !== 'trainer') return false;
+  if (subscriptionState(profile).active) return false;
+  return (profile.clientCount ?? 0) >= FREE_CLIENT_LIMIT;
 }
 
 export function subscriptionState(profile: UserProfile | null): SubscriptionState {

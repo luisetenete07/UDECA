@@ -24,6 +24,7 @@ import {
   getPaymentsForTrainer,
   updatePayment,
 } from '../../lib/firestore/payments';
+import { FREE_CLIENT_LIMIT, trainerAtFreeLimit } from '../../lib/subscription';
 import {
   approveJoinRequest,
   deleteJoinRequest,
@@ -227,6 +228,14 @@ export default function TrainerDashboard() {
 
 
   const handleApproveRequest = async (req: JoinRequest) => {
+    // Aceptar por encima del plan gratuito dejaría al coach fuera de la app en
+    // el siguiente arranque, así que se para aquí y se le ofrece suscribirse.
+    if (trainerAtFreeLimit(profile)) {
+      showToast(
+        `Tu plan gratuito llega a ${FREE_CLIENT_LIMIT} alumnos. Activa la suscripción para aceptar a más.`
+      );
+      return;
+    }
     setProcessingReq(req.id);
     try {
       await approveJoinRequest(req);

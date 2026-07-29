@@ -11,7 +11,7 @@ import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { track, trackOnce } from '../../lib/analytics';
 import { friendlyAuthError } from '../../lib/firebase-errors';
-import { TRIAL_DAYS } from '../../lib/subscription';
+import { ANNUAL_PRICE_EUR, FREE_CLIENT_LIMIT, TRIAL_DAYS } from '../../lib/subscription';
 import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 import type { UserRole } from '../../lib/types';
 
@@ -218,9 +218,11 @@ const ROLE_CARDS: {
   {
     value: 'trainer',
     title: 'Entrenador',
-    price: '180 €/año',
+    price: `Gratis hasta ${FREE_CLIENT_LIMIT}`,
+    // En verde como los demás gratuitos: ahora entrar de coach no cuesta nada.
+    free: true,
     icon: 'people-outline',
-    desc: 'Tus alumnos, tus cobros y tu negocio. Un pago al año.',
+    desc: `Tus alumnos, tus cobros y tu negocio. Con más de ${FREE_CLIENT_LIMIT} alumnos, ${ANNUAL_PRICE_EUR} €/año.`,
   },
 ];
 

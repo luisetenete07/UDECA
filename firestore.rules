@@ -12,6 +12,11 @@ service cloud.firestore {
       // El dueño puede reescribir o liberar sus propios códigos; nadie puede
       // apropiarse del código de otro entrenador (create solo aplica si el
       // documento no existe; update solo si ya es tuyo).
+      //
+      // El documento lleva además `full`: lo marca la app del entrenador cuando
+      // llena su plan gratuito, para que un alumno nuevo no pueda vincularse y
+      // dejarle por encima del límite sin que él haya hecho nada. Al exigir que
+      // `trainerId` siga siendo el suyo, solo él puede tocarlo.
       allow update: if request.auth != null
         && resource.data.trainerId == request.auth.uid
         && request.resource.data.trainerId == request.auth.uid;

@@ -13,7 +13,12 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
-import { getClientsForTrainer, subscribeClientsForTrainer } from '../../../lib/firestore/users';
+import { FREE_CLIENT_LIMIT } from '../../../lib/subscription';
+import {
+  getClientsForTrainer,
+  subscribeClientsForTrainer,
+  syncTrainerClientCount,
+} from '../../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
 import { getActiveRoutineForClient } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
@@ -182,6 +187,10 @@ export default function ClientsScreen() {
         (data) => {
           setClients(data);
           setCached(cacheKey, data);
+          // Único sitio donde se pueden contar los alumnos de verdad: se
+          // guarda en el perfil y se marca el código como lleno para que
+          // nadie más pueda entrar por encima del plan gratuito.
+          void syncTrainerClientCount(profile, data.length, data.length >= FREE_CLIENT_LIMIT);
         },
         // Si la escucha se cae (permisos, red), hay que enterarse: en silencio
         // parecería que "no llegan alumnos nuevos" sin motivo aparente.

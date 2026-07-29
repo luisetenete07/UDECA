@@ -6,7 +6,7 @@ import { Paywall } from '../../components/Paywall';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { tabScreenOptions } from '../../lib/navTheme';
-import { subscriptionState } from '../../lib/subscription';
+import { trainerHasAccess } from '../../lib/subscription';
 
 export default function TrainerLayout() {
   const { loading, firebaseUser, profile, emailVerified } = useAuth();
@@ -16,8 +16,10 @@ export default function TrainerLayout() {
   if (profile.role !== 'trainer') return <Redirect href="/(client)/dashboard" />;
   // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
-  // SaaS: prueba o suscripción caducada → muro de renovación (datos intactos).
-  if (!subscriptionState(profile).active) return <Paywall />;
+  // SaaS: el coach entra gratis mientras su grupo no pase del límite; el muro
+  // solo aparece cuando lo supera o cuando caduca una suscripción con más
+  // alumnos de los que cubre el plan gratuito. Sus datos quedan intactos.
+  if (!trainerHasAccess(profile)) return <Paywall />;
 
   return (
     <Tabs

@@ -20,13 +20,55 @@ import type { UserProfile } from '../types';
 /** trainerCodes/{code} -> { trainerId } — colección pública de solo lectura
  * usada para vincular clientes a su entrenador sin exponer datos personales. */
 export async function registerTrainerInviteCode(code: string, trainerId: string) {
-  await setDoc(doc(db, 'trainerCodes', code), { trainerId });
+  await setDoc(doc(db, 'trainerCodes', code), { trainerId }, { merge: true });
+}
+
+export interface InviteCodeInfo {
+  trainerId: string;
+  /** true si el entrenador ha llenado su plan gratuito y no admite más. */
+  full: boolean;
+}
+
+/**
+ * Resuelve un código de invitación. Devuelve además si el entrenador está
+ * lleno, porque el alumno se vincula a sí mismo al registrarse y no puede
+ * consultar cuántos alumnos tiene ya ese coach (no tiene permiso para verlos).
+ * Sin esta marca, un alumno nuevo podría empujar a su entrenador por encima
+ * del límite y dejarle fuera de la app sin que él hiciera nada.
+ */
+export async function getInviteCodeInfo(code: string): Promise<InviteCodeInfo | null> {
+  const snap = await getDoc(doc(db, 'trainerCodes', code));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  const trainerId = (data.trainerId as string) ?? null;
+  if (!trainerId) return null;
+  return { trainerId, full: data.full === true };
 }
 
 export async function getTrainerIdForInviteCode(code: string): Promise<string | null> {
-  const snap = await getDoc(doc(db, 'trainerCodes', code));
-  if (!snap.exists()) return null;
-  return (snap.data().trainerId as string) ?? null;
+  return (await getInviteCodeInfo(code))?.trainerId ?? null;
+}
+
+/**
+ * Guarda cuántos alumnos tiene el entrenador y deja marcado en su código
+ * público si ya no admite más. Lo llama su propia app al cargar la lista, que
+ * es el único sitio donde se pueden contar de verdad.
+ */
+export async function syncTrainerClientCount(
+  trainer: UserProfile,
+  count: number,
+  full: boolean
+): Promise<void> {
+  try {
+    if (trainer.clientCount !== count) {
+      await updateDoc(doc(db, 'users', trainer.uid), { clientCount: count });
+    }
+    if (trainer.inviteCode) {
+      await setDoc(doc(db, 'trainerCodes', trainer.inviteCode), { full }, { merge: true });
+    }
+  } catch {
+    // Es un contador de conveniencia: si falla, no se le estropea nada al coach.
+  }
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {

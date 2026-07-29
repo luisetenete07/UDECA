@@ -23,6 +23,12 @@ export interface UserProfile {
    * "Accesorios", "Flexiones", "Press" y "Aguantes".
    */
   categorySubgroups?: Record<string, string[]>;
+  /**
+   * Cuántos alumnos tiene el entrenador. Lo mantiene su propia app al cargar
+   * la lista de clientes. Existe para saber si sigue dentro del plan gratuito
+   * sin tener que contar la colección en cada arranque.
+   */
+  clientCount?: number;
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /**
