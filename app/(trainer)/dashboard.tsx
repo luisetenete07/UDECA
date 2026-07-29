@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { CopilotMark } from '../../components/CopilotMark';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -31,9 +30,6 @@ import {
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
-import { getExercisesForTrainer } from '../../lib/firestore/exercises';
-import { getCheckInsForTrainer } from '../../lib/firestore/checkins';
-import { buildCopilotReport, type CopilotReport } from '../../lib/copilot';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
 import { weekComparison } from '../../lib/stats';
@@ -93,9 +89,6 @@ export default function TrainerDashboard() {
   const [editAmount, setEditAmount] = useState('');
   const [savingPay, setSavingPay] = useState(false);
   const [confirmingPayId, setConfirmingPayId] = useState<string | null>(null);
-  const [copilotOpen, setCopilotOpen] = useState(false);
-  const [copilotReport, setCopilotReport] = useState<CopilotReport | null>(null);
-  const [loadingCopilot, setLoadingCopilot] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -258,30 +251,6 @@ export default function TrainerDashboard() {
       showToast(e instanceof Error ? e.message : 'No se pudo rechazar');
     } finally {
       setProcessingReq(null);
-    }
-  };
-
-  // Copiloto UDECA: análisis semanal del grupo bajo demanda (carga los
-  // check-ins solo al abrirlo para no frenar el panel).
-  const handleOpenCopilot = async () => {
-    if (copilotOpen) {
-      setCopilotOpen(false);
-      return;
-    }
-    if (!profile) return;
-    setCopilotOpen(true);
-    setLoadingCopilot(true);
-    try {
-      const [checkIns, library] = await Promise.all([
-        getCheckInsForTrainer(profile.uid),
-        getExercisesForTrainer(profile.uid),
-      ]);
-      const muscleMap = Object.fromEntries(library.map((e) => [e.id, e.muscleGroup]));
-      setCopilotReport(buildCopilotReport(clients, logs, checkIns, muscleMap));
-    } catch {
-      setCopilotReport(buildCopilotReport(clients, logs, []));
-    } finally {
-      setLoadingCopilot(false);
     }
   };
 
@@ -533,7 +502,10 @@ export default function TrainerDashboard() {
             </Pressable>
           ) : null}
           {inactiveClients.length > 0 ? (
-            <Pressable style={styles.todayChip} onPress={handleOpenCopilot}>
+            <Pressable
+              style={styles.todayChip}
+              onPress={() => router.push('/(trainer)/clients')}
+            >
               <Ionicons name="alert-circle" size={13} color={colors.warning} />
               <Text style={[styles.todayChipText, { color: colors.warning }]}>
                 {inactiveClients.length} en riesgo
@@ -545,12 +517,9 @@ export default function TrainerDashboard() {
 
       {/* Atajos: lo más usado, a un toque */}
       <View style={styles.quickRow}>
-        <Pressable
-          style={[styles.quickBtn, copilotOpen && styles.quickBtnActive]}
-          onPress={handleOpenCopilot}
-        >
-          <CopilotMark size={20} />
-          <Text style={styles.quickLabel}>Copiloto</Text>
+        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/agenda')}>
+          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Calendario y tareas</Text>
         </Pressable>
         <Pressable
           style={styles.quickBtn}
@@ -642,50 +611,6 @@ export default function TrainerDashboard() {
         <Card style={[styles.section, { borderColor: colors.danger }]}>
           <Text style={[styles.sectionTitle, { color: colors.danger }]}>Error al cargar datos</Text>
           <Text style={styles.mutedText}>{loadError}</Text>
-        </Card>
-      ) : null}
-
-      {copilotOpen ? (
-        <Card accent style={styles.section}>
-          <View style={styles.titleRow}>
-            <CopilotMark size={16} />
-            <Text style={styles.sectionTitle}>Copiloto · análisis semanal</Text>
-          </View>
-          {loadingCopilot || !copilotReport ? (
-            <Text style={styles.mutedText}>Analizando tu grupo...</Text>
-          ) : (
-            <>
-              <Text style={styles.copilotMeta}>
-                {copilotReport.checkinsThisWeek}/{copilotReport.totalClients} check-ins recibidos
-                esta semana
-              </Text>
-              {copilotReport.highlights.map((h) => (
-                <View key={h} style={styles.copilotHighlight}>
-                  <Ionicons name="trophy-outline" size={14} color={colors.primary} />
-                  <Text style={styles.copilotHighlightText}>{h}</Text>
-                </View>
-              ))}
-              {copilotReport.attention.length === 0 ? (
-                <Text style={styles.mutedText}>
-                  Todo en orden: nadie necesita atención especial esta semana.
-                </Text>
-              ) : (
-                copilotReport.attention.map((a) => (
-                  <Pressable
-                    key={a.uid}
-                    style={styles.copilotRow}
-                    onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.logClient}>{a.name}</Text>
-                      <Text style={styles.copilotReasons}>{a.reasons.join(' · ')}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                  </Pressable>
-                ))
-              )}
-            </>
-          )}
         </Card>
       ) : null}
 
@@ -1183,28 +1108,6 @@ const styles = StyleSheet.create({
   },
   quickBadgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.semiBold },
   quickBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  copilotMeta: {
-    ...typography.small,
-    color: colors.primaryBright,
-    fontFamily: fonts.semiBold,
-    marginBottom: spacing.sm,
-  },
-  copilotHighlight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  copilotHighlightText: { ...typography.small, color: colors.text, flex: 1 },
-  copilotRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  copilotReasons: { ...typography.small, color: colors.warning, marginTop: 2, fontSize: 11 },
   section: { marginBottom: spacing.md },
   revenueRow: { flexDirection: 'row', gap: spacing.sm },
   revenueBox: {

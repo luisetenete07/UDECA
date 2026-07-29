@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
   twoCol: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
   // El calendario ocupa más ancho que las tareas (aprox. 60/40): la rejilla
   // mensual se ve holgada y las tareas quedan en una columna cómoda al lado.
-  colCal: { flex: 1.5 },
+  colCal: { flex: 1.5, maxWidth: 560 },
   colTasks: { flex: 1, maxWidth: 460 },
   colHeading: {
     ...typography.label,
@@ -921,7 +921,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 3 },
+  cell: { width: `${100 / 7}%`, aspectRatio: 1.3, padding: 2 },
   cellInner: {
     flex: 1,
     borderRadius: radius.sm,
@@ -929,15 +929,15 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     backgroundColor: colors.surface,
     alignItems: 'center',
-    paddingTop: 6,
+    paddingTop: 4,
   },
   cellToday: { borderColor: colors.border },
   cellSel: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
   cellNum: { ...typography.small, color: colors.text, fontFamily: fonts.medium, fontSize: 13 },
   cellNumToday: { color: colors.primaryBright, fontFamily: fonts.heading },
   cellNumSel: { color: colors.primaryBright },
-  dots: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 3, marginTop: 4 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
+  dots: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 3, marginTop: 2 },
+  dot: { width: 5, height: 5, borderRadius: 2.5 },
   selectedHead: {
     flexDirection: 'row',
     alignItems: 'center',
