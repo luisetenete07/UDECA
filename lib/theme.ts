@@ -52,6 +52,15 @@ export const gradients = {
     'rgba(162,150,139,0)',
   ] as const,
   surface: ['#141414', '#0A0A0A'] as const,
+  /**
+   * Fondo de toda la app. Negro, pero no plano: se aclara muy poco arriba y
+   * cae a negro puro abajo, como luz cenital sobre una superficie oscura. El
+   * matiz es cálido (no gris azulado) para convivir con el oro de la marca.
+   *
+   * La diferencia es deliberadamente pequeña: en un fondo oscuro, un degradado
+   * que se nota es un degradado que ensucia.
+   */
+  appBackground: ['#141210', '#0A0908', '#000000'] as const,
 };
 
 /** Sombras suaves reutilizables (web + nativo). */

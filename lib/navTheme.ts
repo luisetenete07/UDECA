@@ -17,6 +17,9 @@ export const tabScreenOptions = {
     height: Platform.OS === 'web' ? 62 : 84,
     paddingTop: 6,
   },
+  // El navegador pinta un fondo opaco propio en cada escena y tapaba el
+  // degradado de app/_layout.tsx. Transparente para que se vea el de detrás.
+  sceneStyle: { backgroundColor: 'transparent' },
   tabBarLabelStyle: {
     fontFamily: fonts.medium,
     fontSize: 11,
@@ -26,7 +29,7 @@ export const tabScreenOptions = {
 } as const;
 
 export const stackScreenOptions = {
-  headerStyle: { backgroundColor: colors.background },
+  headerStyle: { backgroundColor: 'transparent' },
   headerTintColor: colors.primary,
   headerTitleStyle: {
     fontFamily: fonts.heading,
@@ -37,5 +40,5 @@ export const stackScreenOptions = {
   headerTitleAlign: 'center' as const,
   headerShadowVisible: false,
   headerBackButtonDisplayMode: 'minimal' as const,
-  contentStyle: { backgroundColor: colors.background },
+  contentStyle: { backgroundColor: 'transparent' },
 } as const;

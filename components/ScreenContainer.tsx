@@ -85,7 +85,8 @@ export function ScreenContainer({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    // Transparente: el fondo lo pinta el degradado de app/_layout.tsx.
+    backgroundColor: 'transparent',
   },
   flex: { flex: 1 },
   centerRow: {

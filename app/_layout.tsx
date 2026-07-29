@@ -18,9 +18,11 @@ import { CardRendererHost } from '../components/CardRendererHost';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ToastHost } from '../components/Toast';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet } from 'react-native';
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { installGlobalErrorLogging } from '../lib/errorLog';
-import { colors } from '../lib/theme';
+import { colors, gradients } from '../lib/theme';
 
 /**
  * Engancha una sola vez el registro de errores no capturados. Vive dentro del
@@ -51,7 +53,16 @@ export default function RootLayout() {
   });
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Fondo de la app: una sola capa detrás de todo. Al vivir aquí y no en
+          cada pantalla, se queda quieto mientras el contenido se desplaza, que
+          es lo que hace que se lea como fondo y no como una cabecera de color. */}
+      <LinearGradient
+        colors={gradients.appBackground}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
       {Platform.OS === 'web' ? (
         <Head>
           <title>UDECA — Universidad de Calistenia</title>
@@ -73,7 +84,8 @@ export default function RootLayout() {
               <Stack
                 screenOptions={{
                   headerShown: false,
-                  contentStyle: { backgroundColor: colors.background },
+                  // Transparente para que se vea el degradado de detrás.
+                  contentStyle: { backgroundColor: 'transparent' },
                 }}
               />
             </ErrorBoundary>
