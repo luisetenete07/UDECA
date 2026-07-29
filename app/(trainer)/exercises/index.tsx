@@ -40,7 +40,14 @@ import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
-import { MUSCLE_GROUPS, type Exercise, type TemplateExercise } from '../../../lib/types';
+import {
+  CATEGORY_PALETTE,
+  DIFFICULTY_COLOR,
+  MUSCLE_GROUPS,
+  type Exercise,
+  type ExerciseDifficulty,
+  type TemplateExercise,
+} from '../../../lib/types';
 
 export default function ExercisesScreen() {
   const { profile, refreshProfile } = useAuth();
@@ -74,6 +81,25 @@ export default function ExercisesScreen() {
         : [...MUSCLE_GROUPS],
     [profile?.exerciseCategories]
   );
+
+  // Color asignado a cada categoría. Si el coach no ha elegido ninguno, se
+  // reparte la paleta de forma estable por posición, para que dos categorías
+  // nunca salgan del mismo color por accidente.
+  const categoryColor = (group: string) =>
+    profile?.categoryColors?.[group] ??
+    CATEGORY_PALETTE[Math.max(0, myCategories.indexOf(group)) % CATEGORY_PALETTE.length];
+
+  const setCategoryColor = async (group: string, color: string) => {
+    if (!profile) return;
+    try {
+      await updateUserProfile(profile.uid, {
+        categoryColors: { ...(profile.categoryColors ?? {}), [group]: color },
+      });
+      await refreshProfile();
+    } catch {
+      showToast('No se pudo guardar el color');
+    }
+  };
 
   const saveCategories = async (list: string[]) => {
     if (!profile) return;
@@ -129,6 +155,7 @@ export default function ExercisesScreen() {
             videoUrl: undefined as string | undefined,
             muscles: t.muscles,
             muscleWeights: t.muscleWeights,
+            difficulty: t.difficulty,
           }))
         : STARTER_LIBRARY.map((s) => ({
             name: s.name,
@@ -140,6 +167,7 @@ export default function ExercisesScreen() {
             muscleWeights: undefined as
               | Partial<Record<import('../../../lib/muscles').MuscleId, number>>
               | undefined,
+            difficulty: undefined as ExerciseDifficulty | undefined,
           })),
     [template]
   );
@@ -169,6 +197,7 @@ export default function ExercisesScreen() {
             videoUrl: s.videoUrl,
             muscles: s.muscles,
             muscleWeights: s.muscleWeights,
+            difficulty: s.difficulty,
           })
         )
       );
@@ -219,6 +248,7 @@ export default function ExercisesScreen() {
               description: p.description || undefined,
               muscles: p.muscles,
               muscleWeights: p.muscleWeights,
+              difficulty: p.difficulty,
             })
           );
         } else {
@@ -245,7 +275,20 @@ export default function ExercisesScreen() {
       for (const p of packItems) {
         if (!cats.includes(p.muscleGroup)) cats.push(p.muscleGroup);
       }
-      if (cats.length > 0) await saveCategories(cats);
+      if (cats.length > 0) {
+        // Las categorías del pack conservan el color que ya tuvieran; a las
+        // nuevas se les asigna uno de la paleta para que ninguna quede sin él.
+        const colors_: Record<string, string> = {};
+        cats.forEach((c, i) => {
+          colors_[c] =
+            profile.categoryColors?.[c] ?? CATEGORY_PALETTE[i % CATEGORY_PALETTE.length];
+        });
+        await updateUserProfile(profile.uid, {
+          exerciseCategories: cats,
+          categoryColors: colors_,
+        });
+        await refreshProfile();
+      }
       showToast('Biblioteca sincronizada con el pack UDECA');
       await load();
     } catch {
@@ -479,6 +522,31 @@ export default function ExercisesScreen() {
               </View>
             ))}
           </View>
+          <Text style={styles.catColorHint}>Color de cada categoría</Text>
+          <View style={styles.catColorList}>
+            {myCategories.map((group) => (
+              <View key={group} style={styles.catColorRow}>
+                <View style={[styles.catDot, { backgroundColor: categoryColor(group) }]} />
+                <Text style={styles.catColorName} numberOfLines={1}>
+                  {group}
+                </Text>
+                <View style={styles.swatches}>
+                  {CATEGORY_PALETTE.map((c) => (
+                    <Pressable
+                      key={c}
+                      onPress={() => setCategoryColor(group, c)}
+                      hitSlop={4}
+                      style={[
+                        styles.swatch,
+                        { backgroundColor: c },
+                        categoryColor(group) === c && styles.swatchOn,
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
           <View style={styles.addCatRow}>
             <TextInput
               value={newCat}
@@ -556,9 +624,34 @@ export default function ExercisesScreen() {
           <FadeIn key={exercise.id} delay={Math.min(index * 30, 240)}>
           <Pressable onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}>
             <Card style={styles.exerciseCard}>
+              {/* Franja del color de su categoría: distingue de un vistazo a
+                  qué grupo pertenece cada ejercicio de la lista. */}
+              <View
+                style={[styles.catStripe, { backgroundColor: categoryColor(exercise.muscleGroup) }]}
+              />
               <View style={{ flex: 1 }}>
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exerciseGroup}>{exercise.muscleGroup}</Text>
+                <View style={styles.exerciseMetaRow}>
+                  <Text style={styles.exerciseGroup}>{exercise.muscleGroup}</Text>
+                  {exercise.difficulty ? (
+                    <View style={styles.diffRow}>
+                      <View
+                        style={[
+                          styles.diffDot,
+                          { backgroundColor: DIFFICULTY_COLOR[exercise.difficulty] },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.exerciseGroup,
+                          { color: DIFFICULTY_COLOR[exercise.difficulty] },
+                        ]}
+                      >
+                        {exercise.difficulty}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
               {exercise.videoUrl ? (
                 <View style={styles.videoBadge}>
@@ -686,6 +779,23 @@ const styles = StyleSheet.create({
   catLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   catEdit: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   catWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  catColorHint: {
+    ...typography.small,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  catColorList: { gap: spacing.xs, marginBottom: spacing.sm },
+  catColorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  catDot: { width: 10, height: 10, borderRadius: 5 },
+  catColorName: { ...typography.small, color: colors.text, flex: 1 },
+  swatches: { flexDirection: 'row', gap: 6 },
+  swatch: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: 'transparent' },
+  swatchOn: { borderColor: colors.text },
+  diffDot: { width: 8, height: 8, borderRadius: 4 },
+  catStripe: { width: 4, alignSelf: 'stretch', borderRadius: 2, marginRight: spacing.sm },
+  exerciseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+  diffRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',

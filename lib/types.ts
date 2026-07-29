@@ -15,6 +15,8 @@ export interface UserProfile {
   /** Solo entrenadores: categorías propias de ejercicios (crea/borra las suyas).
    * Sin valor = usa las de por defecto (MUSCLE_GROUPS). */
   exerciseCategories?: string[];
+  /** Color elegido por el entrenador para cada categoría (nombre → color). */
+  categoryColors?: Record<string, string>;
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /**
@@ -180,6 +182,36 @@ export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
  *  - 'combo': ambas en la MISMA serie (muscle up + front lever): se apuntan
  *    las repeticiones y, a continuación, el aguante.
  */
+/**
+ * Dificultad del ejercicio. Se muestra SIEMPRE como color, para leer de un
+ * vistazo si una rutina está bien calibrada para el alumno.
+ */
+export const EXERCISE_DIFFICULTIES = ['Iniciación', 'Intermedio', 'Avanzado', 'Élite'] as const;
+export type ExerciseDifficulty = (typeof EXERCISE_DIFFICULTIES)[number];
+
+/** Color de cada dificultad (de verde tranquilo a rojo exigente). */
+export const DIFFICULTY_COLOR: Record<ExerciseDifficulty, string> = {
+  'Iniciación': '#4CAF7D',
+  Intermedio: '#E0A43B',
+  Avanzado: '#E2703A',
+  'Élite': '#D2422F',
+};
+
+/**
+ * Paleta con la que cada entrenador colorea sus categorías. Son tonos que
+ * conviven con el negro y el oro de UDECA sin competir con ellos.
+ */
+export const CATEGORY_PALETTE = [
+  '#A2968B',
+  '#4CAF7D',
+  '#3F8EDC',
+  '#8E6FD8',
+  '#E0A43B',
+  '#E2703A',
+  '#D2422F',
+  '#6B7078',
+] as const;
+
 export type ExerciseMeasure = 'reps' | 'seconds' | 'combo';
 
 export const EXERCISE_MEASURES: ExerciseMeasure[] = ['reps', 'seconds', 'combo'];
@@ -240,6 +272,8 @@ export interface Exercise {
    * `muscles` cuenta al 100 % (comportamiento anterior).
    */
   muscleWeights?: Partial<Record<MuscleId, number>>;
+  /** Dificultad del ejercicio (se pinta con su color). */
+  difficulty?: ExerciseDifficulty;
   createdAt: number;
 }
 
@@ -260,6 +294,8 @@ export interface TemplateExercise {
   muscles?: MuscleId[];
   /** Porcentaje de trabajo por músculo (25/50/75/100); ver Exercise. */
   muscleWeights?: Partial<Record<MuscleId, number>>;
+  /** Dificultad del ejercicio (viaja con el pack). */
+  difficulty?: ExerciseDifficulty;
   /** Orden de aparición en la lista (menor primero). */
   order?: number;
   createdAt: number;

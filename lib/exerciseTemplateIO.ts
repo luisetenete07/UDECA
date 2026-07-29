@@ -1,5 +1,12 @@
 import type { MuscleId } from './muscles';
-import { EXERCISE_MEASURES, type Exercise, type ExerciseLoad, type ExerciseMeasure } from './types';
+import {
+  EXERCISE_DIFFICULTIES,
+  EXERCISE_MEASURES,
+  type Exercise,
+  type ExerciseDifficulty,
+  type ExerciseLoad,
+  type ExerciseMeasure,
+} from './types';
 
 /**
  * Exportar / importar la biblioteca de ejercicios de un entrenador como una
@@ -20,6 +27,7 @@ export interface ExportedExercise {
   load?: ExerciseLoad;
   band?: boolean;
   muscleWeights?: Partial<Record<MuscleId, number>>;
+  difficulty?: ExerciseDifficulty;
 }
 
 interface TemplateEnvelope {
@@ -47,6 +55,7 @@ export function buildExerciseTemplate(exercises: Exercise[]): string {
       videoUrl: e.videoUrl,
       muscles: e.muscles,
       muscleWeights: e.muscleWeights,
+      difficulty: e.difficulty,
       load: e.load,
       band: e.band,
     })),
@@ -100,6 +109,9 @@ export function parseExerciseTemplate(json: string): ExportedExercise[] | null {
               )
             ) as Partial<Record<MuscleId, number>>)
           : undefined,
+      difficulty: EXERCISE_DIFFICULTIES.includes(e.difficulty as ExerciseDifficulty)
+        ? (e.difficulty as ExerciseDifficulty)
+        : undefined,
       load:
         e.load === 'weighted' || e.load === 'assisted' || e.load === 'none'
           ? (e.load as ExerciseLoad)

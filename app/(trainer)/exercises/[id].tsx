@@ -12,12 +12,16 @@ import {
   createExercise,
   deleteExercise,
   getExercise,
+  getExercisesForTrainer,
   updateExercise,
 } from '../../../lib/firestore/exercises';
 import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
+  DIFFICULTY_COLOR,
+  EXERCISE_DIFFICULTIES,
   MUSCLE_GROUPS,
+  type ExerciseDifficulty,
   type ExerciseMeasure,
   type MuscleGroup,
 } from '../../../lib/types';
@@ -46,6 +50,9 @@ export default function ExerciseEditorScreen() {
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
+  const [difficulty, setDifficulty] = useState<ExerciseDifficulty | undefined>(undefined);
+  // Nombres ya usados en la biblioteca, para no crear duplicados.
+  const [takenNames, setTakenNames] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,15 +65,34 @@ export default function ExerciseEditorScreen() {
         setDescription(exercise.description ?? '');
         setVideoUrl(exercise.videoUrl ?? '');
         setMeasure(exercise.measure ?? 'reps');
+        setDifficulty(exercise.difficulty);
       }
       setLoading(false);
     })();
   }, [id, isNew]);
 
+  // Nombres del resto de la biblioteca (excluye el que se está editando).
+  useEffect(() => {
+    if (!profile) return;
+    getExercisesForTrainer(profile.uid)
+      .then((list) =>
+        setTakenNames(
+          new Set(list.filter((e) => e.id !== id).map((e) => e.name.trim().toLowerCase()))
+        )
+      )
+      .catch(() => {});
+  }, [profile, id]);
+
   const handleSave = async () => {
     if (!profile) return;
     if (!name.trim()) {
       setError('El nombre del ejercicio es obligatorio.');
+      return;
+    }
+    // Un mismo nombre dos veces haría imposible distinguirlos en las rutinas y
+    // rompería la sincronización del pack (que empareja por nombre).
+    if (takenNames.has(name.trim().toLowerCase())) {
+      setError('Ya tienes un ejercicio con ese nombre.');
       return;
     }
     setError(null);
@@ -80,6 +106,7 @@ export default function ExerciseEditorScreen() {
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
           measure,
+          difficulty,
         });
       } else if (id) {
         await updateExercise(id, {
@@ -88,6 +115,7 @@ export default function ExerciseEditorScreen() {
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
           measure,
+          difficulty,
         });
       }
       showToast('Ejercicio guardado');
@@ -225,6 +253,26 @@ export default function ExerciseEditorScreen() {
           Up + Front Lever → 5 repeticiones y 12 s.
         </Text>
       ) : null}
+
+      <Text style={styles.label}>Dificultad</Text>
+      <View style={styles.segment}>
+        {EXERCISE_DIFFICULTIES.map((d) => {
+          const on = difficulty === d;
+          return (
+            <Pressable
+              key={d}
+              // Volver a tocar la dificultad activa la quita (queda sin marcar).
+              onPress={() => setDifficulty(on ? undefined : d)}
+              style={[
+                styles.segmentBtn,
+                on && { backgroundColor: DIFFICULTY_COLOR[d], borderColor: DIFFICULTY_COLOR[d] },
+              ]}
+            >
+              <Text style={[styles.segmentText, on && styles.segmentTextActive]}>{d}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <TextField
         label="Descripción / técnica"
