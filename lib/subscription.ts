@@ -19,6 +19,11 @@ export const ANNUAL_PRICE_EUR = 180;
 /**
  * Alumnos que un entrenador puede tener sin pagar. Suficiente para probar el
  * producto con gente real; insuficiente para llevar un negocio con él.
+ *
+ * OJO: este número está replicado en dos sitios más que no pueden importar
+ * este fichero — payments-webhook/api/join.js (el servidor, que es quien
+ * decide) y firestore.rules (que lo impone para las versiones antiguas de la
+ * app). Si lo cambias, cámbialo en los tres.
  */
 export const FREE_CLIENT_LIMIT = 2;
 /** Atleta individual: cuota mensual (suelta, no anual). */

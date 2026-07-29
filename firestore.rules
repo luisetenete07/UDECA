@@ -50,6 +50,25 @@ service cloud.firestore {
             'luistenaf@gmail.com'
           ];
       }
+      /**
+       * ¿Le caben más alumnos al entrenador que llama?
+       *
+       * Se apoya en `clientCount`, que solo puede escribir el servidor (ver la
+       * regla de update de abajo): por eso es un dato de confianza y sirve para
+       * imponer aquí el límite del plan gratuito. Si lo escribiera el propio
+       * coach, bastaría con ponerlo a cero para tener alumnos infinitos gratis.
+       *
+       * El 2 de abajo es FREE_CLIENT_LIMIT. Vive en tres sitios que no pueden
+       * importarse entre sí: lib/subscription.ts (app),
+       * payments-webhook/api/join.js (servidor) y aquí. Si lo cambias, cámbialo
+       * en los tres.
+       */
+      function coachWithinPlan() {
+        let coach = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        return !('subscriptionUntil' in coach)
+          || coach.subscriptionUntil > request.time.toMillis()
+          || coach.get('clientCount', 0) < 2;
+      }
       allow read: if request.auth != null
         && (
           request.auth.uid == userId
@@ -109,18 +128,18 @@ service cloud.firestore {
           // Aprobar solicitud: el entrenador se vincula a un alumno que le ha
           // enviado una solicitud (existe joinRequests/{clientId}_{coach}).
           //
-          // PENDIENTE DE RETIRAR. Esta rama no comprueba el límite del plan
-          // gratuito: un cliente modificado podría aceptar alumnos sin pagar.
-          // Ya no la usa la app (aprueba por el servidor, que sí cuenta), pero
-          // las versiones anteriores publicadas SÍ, y quitarla ahora dejaría a
-          // esos usuarios sin poder aceptar alumnos.
-          // Retirar cuando la versión con aprobación por servidor esté
-          // instalada; a partir de ahí solo el SDK de administrador escribe
-          // `trainerId`, que es lo que cierra el agujero del todo.
+          // Este camino lo usan las versiones ya publicadas de la app (la
+          // nueva aprueba por el servidor, que cuenta con permisos de
+          // administrador). Se mantiene para no dejarlas sin aceptar alumnos,
+          // pero AQUÍ TAMBIÉN se impone el límite del plan gratuito: sin esta
+          // comprobación, un cliente modificado podría aceptar alumnos sin
+          // pagar. Se puede retirar del todo cuando la versión nueva esté
+          // instalada en todo el parque.
           request.resource.data.trainerId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId'])
           && exists(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid))
           && get(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid)).data.clientId == userId
+          && coachWithinPlan()
         )
       );
       // El propio usuario puede borrar su cuenta (su documento de perfil);
