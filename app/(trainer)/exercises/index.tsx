@@ -42,6 +42,7 @@ import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   CATEGORY_PALETTE,
+  GRIP_LABEL,
   MUSCLE_GROUPS,
   type Exercise,
   type TemplateExercise,
@@ -218,6 +219,7 @@ export default function ExercisesScreen() {
             muscles: t.muscles,
             muscleWeights: t.muscleWeights,
             subgroup: t.subgroup,
+            variations: t.variations,
           }))
         : STARTER_LIBRARY.map((s) => ({
             name: s.name,
@@ -230,6 +232,9 @@ export default function ExercisesScreen() {
               | Partial<Record<import('../../../lib/muscles').MuscleId, number>>
               | undefined,
             subgroup: undefined as string | undefined,
+            variations: undefined as
+              | import('../../../lib/types').ExerciseVariations
+              | undefined,
           })),
     [template]
   );
@@ -260,6 +265,7 @@ export default function ExercisesScreen() {
             muscles: s.muscles,
             muscleWeights: s.muscleWeights,
             subgroup: s.subgroup,
+            variations: s.variations,
           })
         )
       );
@@ -311,6 +317,9 @@ export default function ExercisesScreen() {
               muscles: p.muscles,
               muscleWeights: p.muscleWeights,
               subgroup: p.subgroup,
+              // Vacío (no undefined) para que se borren las variaciones que el
+              // pack ya no trae, en vez de quedarse las antiguas.
+              variations: p.variations ?? {},
             })
           );
         } else {
@@ -324,6 +333,8 @@ export default function ExercisesScreen() {
               videoUrl: undefined,
               muscles: p.muscles,
               muscleWeights: p.muscleWeights,
+              subgroup: p.subgroup,
+              variations: p.variations,
             })
           );
         }
@@ -459,6 +470,7 @@ export default function ExercisesScreen() {
             muscles: e.muscles,
             muscleWeights: e.muscleWeights,
             subgroup: e.subgroup,
+            variations: e.variations,
             load: e.load,
             band: e.band,
           })
@@ -558,11 +570,47 @@ export default function ExercisesScreen() {
       }}
     >
       <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
+        <View style={styles.headerText}>
           <Text style={styles.title}>Biblioteca</Text>
           <Text style={styles.subtitle}>{exercises.length} ejercicio(s)</Text>
         </View>
+        {/* Acciones secundarias en pastilla pequeña, a la izquierda de la
+            principal: no compiten con "+ Nuevo" ni ocupan filas enteras. */}
+        {isAdmin(profile) && packItems.length > 0 ? (
+          <Pressable
+            onPress={handleUpdatePackFull}
+            disabled={importing}
+            style={[styles.pill, styles.pillDanger, importing && styles.pillBusy]}
+            hitSlop={4}
+          >
+            <Ionicons name="sync-outline" size={14} color={colors.danger} />
+            <Text style={[styles.pillText, { color: colors.danger }]}>Actualizar pack</Text>
+          </Pressable>
+        ) : missingPack.length > 0 ? (
+          <Pressable
+            onPress={handleImportPack}
+            disabled={importing}
+            style={[styles.pill, importing && styles.pillBusy]}
+            hitSlop={4}
+          >
+            <Ionicons name="cube-outline" size={14} color={colors.primary} />
+            <Text style={styles.pillText}>Pack ({missingPack.length})</Text>
+          </Pressable>
+        ) : null}
         <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
+      </View>
+
+      {/* Plantillas entre entrenadores: uso puntual, así que van arriba en
+          pequeño y alineadas a la derecha, sin robar sitio a la lista. */}
+      <View style={styles.toolsRow}>
+        <Pressable onPress={handleExport} style={styles.toolBtn} hitSlop={6}>
+          <Ionicons name="download-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.toolText}>Exportar plantilla</Text>
+        </Pressable>
+        <Pressable onPress={handleImportTemplate} style={styles.toolBtn} hitSlop={6}>
+          <Ionicons name="cloud-upload-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.toolText}>Importar plantilla</Text>
+        </Pressable>
       </View>
 
       {isAdmin(profile) ? (
@@ -721,43 +769,25 @@ export default function ExercisesScreen() {
         </ScrollView>
       ) : null}
 
-      {isAdmin(profile) && packItems.length > 0 ? (
-        <Button
-          title="Actualizar pack UDECA (reemplaza tu biblioteca)"
-          variant="secondary"
-          onPress={handleUpdatePackFull}
-          loading={importing}
-          style={{ marginBottom: spacing.md }}
-        />
-      ) : missingPack.length > 0 ? (
-        <Button
-          title={`Importar pack UDECA (${missingPack.length} ejercicio${
-            missingPack.length === 1 ? '' : 's'
-          })`}
-          variant={exercises.length === 0 ? 'primary' : 'secondary'}
-          onPress={handleImportPack}
-          loading={importing}
-          style={{ marginBottom: spacing.md }}
-        />
-      ) : null}
-
-      {/* Exportar/importar plantilla entre entrenadores */}
-      <View style={styles.toolsRow}>
-        <Pressable onPress={handleExport} style={styles.toolBtn} hitSlop={4}>
-          <Ionicons name="download-outline" size={16} color={colors.primary} />
-          <Text style={styles.toolText}>Exportar plantilla</Text>
-        </Pressable>
-        <Pressable onPress={handleImportTemplate} style={styles.toolBtn} hitSlop={4}>
-          <Ionicons name="cloud-upload-outline" size={16} color={colors.primary} />
-          <Text style={styles.toolText}>Importar plantilla</Text>
-        </Pressable>
-      </View>
-
       {filtered.length === 0 ? (
         <EmptyState
           icon="barbell-outline"
           title="No hay ejercicios"
-          subtitle="Importa el pack UDECA o crea el primero con '+ Nuevo'."
+          subtitle={
+            exercises.length === 0 && missingPack.length > 0
+              ? 'Empieza con el pack UDECA o crea el primero con «+ Nuevo».'
+              : 'Prueba con otra búsqueda o categoría.'
+          }
+          // Con la biblioteca vacía el pack es LA acción a hacer, así que aquí
+          // sí se muestra en grande (en la cabecera va como pastilla pequeña).
+          actionLabel={
+            exercises.length === 0 && missingPack.length > 0
+              ? `Importar pack UDECA (${missingPack.length})`
+              : undefined
+          }
+          onAction={
+            exercises.length === 0 && missingPack.length > 0 ? handleImportPack : undefined
+          }
         />
       ) : (
         grouped.map(([sg, list]) => (
@@ -780,6 +810,13 @@ export default function ExercisesScreen() {
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
                 <View style={styles.exerciseMetaRow}>
                   <Text style={styles.exerciseGroup}>{exercise.muscleGroup}</Text>
+                  {exercise.variations?.grip ? (
+                    <View style={styles.gripBadge}>
+                      <Text style={styles.gripBadgeText}>
+                        {GRIP_LABEL[exercise.variations.grip]}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
               {exercise.videoUrl ? (
@@ -1000,7 +1037,42 @@ function FilterChip({
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  headerText: { flex: 1, minWidth: 130 },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+  },
+  pillDanger: { backgroundColor: colors.surfaceAlt, borderColor: colors.danger },
+  pillBusy: { opacity: 0.5 },
+  pillText: {
+    ...typography.small,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+    fontSize: 12,
+  },
+  gripBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  gripBadgeText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
   adminBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1103,20 +1175,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   addCatText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  toolsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  toolBtn: {
-    flex: 1,
+  toolsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.surfaceAlt,
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
-  toolText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
+  toolBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  toolText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
   confirmBackdrop: {
     flex: 1,
     justifyContent: 'center',

@@ -60,6 +60,7 @@ import {
 } from '../../lib/stats';
 import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
+  GRIP_LABEL,
   resolveLoad,
   todayWeekday,
   WEEKDAY_NAMES,
@@ -188,6 +189,10 @@ export default function WorkoutScreen() {
     useState<Record<string, import('../../lib/types').ExerciseMeasure>>({});
   // Grupo muscular de cada ejercicio (para el calentamiento sugerido del día).
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
+  // Variaciones del ejercicio (agarre) que fijó el entrenador en su biblioteca.
+  const [gripByExercise, setGripByExercise] = useState<
+    Record<string, import('../../lib/types').GripType>
+  >({});
   const [warmupOpen, setWarmupOpen] = useState(false);
   const [intervalOpen, setIntervalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -264,14 +269,17 @@ export default function WorkoutScreen() {
               const map: Record<string, string> = {};
               const measures: Record<string, import('../../lib/types').ExerciseMeasure> = {};
               const muscles: Record<string, string> = {};
+              const grips: Record<string, import('../../lib/types').GripType> = {};
               for (const ex of library) {
                 if (ex.videoUrl) map[ex.id] = ex.videoUrl;
                 measures[ex.id] = ex.measure ?? 'reps';
                 muscles[ex.id] = ex.muscleGroup;
+                if (ex.variations?.grip) grips[ex.id] = ex.variations.grip;
               }
               setVideoByExercise(map);
               setMeasureByExercise(measures);
               setMuscleByExercise(muscles);
+              setGripByExercise(grips);
             })
             .catch(() => {});
         }
@@ -1706,6 +1714,13 @@ export default function WorkoutScreen() {
                   <View style={[styles.metaChip, styles.metaChipWeighted]}>
                     <Text style={[styles.metaChipText, styles.metaChipWeightedText]}>
                       Lastrado
+                    </Text>
+                  </View>
+                ) : null}
+                {gripByExercise[exercise.exerciseId] ? (
+                  <View style={styles.metaChip}>
+                    <Text style={styles.metaChipText}>
+                      Agarre {GRIP_LABEL[gripByExercise[exercise.exerciseId]].toLowerCase()}
                     </Text>
                   </View>
                 ) : null}

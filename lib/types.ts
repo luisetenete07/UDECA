@@ -265,7 +265,29 @@ export interface Exercise {
   muscleWeights?: Partial<Record<MuscleId, number>>;
   /** Subgrupo dentro de su categoría (opcional). */
   subgroup?: string;
+  /** Variaciones del ejercicio (agarre…). Opcional. */
+  variations?: ExerciseVariations;
   createdAt: number;
+}
+
+/**
+ * Tipo de agarre de un ejercicio. Es la primera "variación" disponible; el
+ * objeto `ExerciseVariations` existe para poder añadir más (anchura, tempo…)
+ * sin tener que migrar los ejercicios ya guardados.
+ */
+export type GripType = 'prone' | 'neutral' | 'supine';
+
+export const GRIP_TYPES: GripType[] = ['prone', 'neutral', 'supine'];
+
+export const GRIP_LABEL: Record<GripType, string> = {
+  prone: 'Prono',
+  neutral: 'Neutro',
+  supine: 'Supino',
+};
+
+/** Variaciones opcionales que el entrenador puede añadir a un ejercicio. */
+export interface ExerciseVariations {
+  grip?: GripType;
 }
 
 /**
@@ -287,6 +309,8 @@ export interface TemplateExercise {
   muscleWeights?: Partial<Record<MuscleId, number>>;
   /** Subgrupo dentro de su categoría (viaja con el pack). */
   subgroup?: string;
+  /** Variaciones del ejercicio (agarre…); viaja con el pack. */
+  variations?: ExerciseVariations;
   /** Orden de aparición en la lista (menor primero). */
   order?: number;
   createdAt: number;

@@ -18,8 +18,11 @@ import {
 import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
+  GRIP_LABEL,
+  GRIP_TYPES,
   MUSCLE_GROUPS,
   type ExerciseMeasure,
+  type GripType,
   type MuscleGroup,
 } from '../../../lib/types';
 
@@ -49,6 +52,8 @@ export default function ExerciseEditorScreen() {
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
   const [subgroup, setSubgroup] = useState<string>('');
   const [newSub, setNewSub] = useState('');
+  // Variaciones: de momento solo el agarre. `grip` a undefined = sin variación.
+  const [grip, setGrip] = useState<GripType | undefined>(undefined);
   // Nombres ya usados en la biblioteca, para no crear duplicados.
   const [takenNames, setTakenNames] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +69,7 @@ export default function ExerciseEditorScreen() {
         setVideoUrl(exercise.videoUrl ?? '');
         setMeasure(exercise.measure ?? 'reps');
         setSubgroup(exercise.subgroup ?? '');
+        setGrip(exercise.variations?.grip);
       }
       setLoading(false);
     })();
@@ -105,6 +111,7 @@ export default function ExerciseEditorScreen() {
           videoUrl: videoUrl.trim() || undefined,
           measure,
           subgroup: subgroup || undefined,
+          variations: grip ? { grip } : undefined,
         });
       } else if (id) {
         await updateExercise(id, {
@@ -114,6 +121,9 @@ export default function ExerciseEditorScreen() {
           videoUrl: videoUrl.trim() || undefined,
           measure,
           subgroup: subgroup || undefined,
+          // Al quitar la variación hay que borrar el campo, no dejarlo como
+          // estaba: `stripUndefined` ignoraría un undefined suelto.
+          variations: grip ? { grip } : {},
         });
       }
       showToast('Ejercicio guardado');
@@ -314,6 +324,36 @@ export default function ExerciseEditorScreen() {
         </Text>
       ) : null}
 
+      <Text style={styles.label}>Variaciones</Text>
+      {grip === undefined ? (
+        <Pressable onPress={() => setGrip('prone')} style={styles.addVarBtn}>
+          <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+          <Text style={styles.addVarText}>Añadir variación</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.varCard}>
+          <View style={styles.varHead}>
+            <Text style={styles.varTitle}>Tipo de agarre</Text>
+            <Pressable onPress={() => setGrip(undefined)} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={colors.danger} />
+            </Pressable>
+          </View>
+          <View style={[styles.segment, { marginBottom: 0 }]}>
+            {GRIP_TYPES.map((g) => (
+              <Pressable
+                key={g}
+                onPress={() => setGrip(g)}
+                style={[styles.segmentBtn, grip === g && styles.segmentBtnActive]}
+              >
+                <Text style={[styles.segmentText, grip === g && styles.segmentTextActive]}>
+                  {GRIP_LABEL[g]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+
       <TextField
         label="Descripción / técnica"
         value={description}
@@ -430,5 +470,34 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     lineHeight: 18,
   },
+  addVarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    marginBottom: spacing.md,
+  },
+  addVarText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  varCard: {
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: spacing.md,
+  },
+  varHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  varTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });
