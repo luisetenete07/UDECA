@@ -77,6 +77,13 @@ export interface UserProfile {
    * fecha. No se vuelve a tocar, así que la prueba no se puede repetir.
    */
   trialEndsAt?: number;
+  /**
+   * Marcas del último aviso automático enviado por la tarea diaria del
+   * servidor (inactividad y cuota). Evitan repetir el mismo recordatorio a
+   * diario. Solo las escribe el backend.
+   */
+  lastInactivityNudge?: number;
+  lastPaymentNudge?: number;
   /** Plan contratado. De momento solo existe el anual (180 €/año). */
   subscriptionPlan?: 'annual';
   /** Onboarding completado (una vez por cuenta, sincronizado entre dispositivos). */
