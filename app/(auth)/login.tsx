@@ -11,6 +11,7 @@ import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { track } from '../../lib/analytics';
 import { auth } from '../../lib/firebase';
 import { friendlyAuthError } from '../../lib/firebase-errors';
 import {
@@ -80,6 +81,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signIn(email.trim(), password);
+      void track('login_ok');
     } catch (e) {
       setError(friendlyAuthError(e));
     } finally {

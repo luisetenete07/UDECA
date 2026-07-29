@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
 import { Card } from './Card';
 import { useAuth } from '../lib/auth-context';
+import { track, trackOnce } from '../lib/analytics';
 import {
   ANNUAL_PRICE_EUR,
   ATHLETE_MONTHLY_EUR,
@@ -38,6 +39,10 @@ const ATHLETE_BENEFITS = [
 export function Paywall() {
   const { profile, signOut, refreshProfile } = useAuth();
   const isAthlete = profile?.role === 'athlete';
+  // Cuánta gente llega al muro de pago frente a cuánta lo cruza.
+  React.useEffect(() => {
+    void trackOnce('paywall_view');
+  }, []);
   const [checking, setChecking] = React.useState(false);
   // Evita comprobaciones solapadas (sondeo + volver a la app + botón a la vez).
   const busyRef = React.useRef(false);
@@ -94,6 +99,7 @@ export function Paywall() {
 
   const checkoutUrl = subscriptionCheckoutUrl(profile);
   const handlePay = () => {
+    void track('checkout_start');
     if (checkoutUrl) {
       // Stripe activa la cuenta sola tras pagar (webhook + client_reference_id).
       Linking.openURL(checkoutUrl).catch(() => {});

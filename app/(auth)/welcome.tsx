@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/Button';
 import { Logo } from '../../components/Logo';
 import { markIntroSeen } from '../../lib/intro';
+import { trackOnce } from '../../lib/analytics';
 import { TRIAL_DAYS } from '../../lib/subscription';
 import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 
@@ -59,6 +60,11 @@ export default function WelcomeScreen() {
   const scrollX = useRef(new Animated.Value(0)).current;
   const [index, setIndex] = useState(0);
 
+  // Primer paso del embudo: alguien acaba de instalar y abrir la app.
+  useEffect(() => {
+    void trackOnce('intro_start');
+  }, []);
+
   // La cabecera entra una sola vez; las diapositivas se animan con el gesto.
   const headerIn = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -71,6 +77,7 @@ export default function WelcomeScreen() {
   }, [headerIn]);
 
   const go = async (path: '/(auth)/register' | '/(auth)/login') => {
+    void trackOnce('intro_done');
     await markIntroSeen();
     router.replace(path);
   };

@@ -29,6 +29,12 @@ import {
 } from '../../lib/subscription';
 import { deleteSocialStats, subscribeSocialLeaderboard } from '../../lib/firestore/social';
 import { getRecentErrorLogs, groupErrors, type ErrorGroup } from '../../lib/firestore/errorLogs';
+import {
+  buildFunnel,
+  getDailyCounters,
+  sumCounters,
+  type FunnelStep,
+} from '../../lib/firestore/analytics';
 import { isOnline } from '../../lib/presence';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
@@ -61,6 +67,12 @@ export default function TrainerProfileScreen() {
   const [errorsOpen, setErrorsOpen] = useState(false);
   const [errorGroups, setErrorGroups] = useState<ErrorGroup[]>([]);
   const [loadingErrors, setLoadingErrors] = useState(false);
+  // Embudo de ventas (solo CEO).
+  const [funnelOpen, setFunnelOpen] = useState(false);
+  const [funnel, setFunnel] = useState<FunnelStep[]>([]);
+  const [funnelExtra, setFunnelExtra] = useState<Record<string, number>>({});
+  const [funnelDays, setFunnelDays] = useState(30);
+  const [loadingFunnel, setLoadingFunnel] = useState(false);
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
   // Clasificación y presencia del grupo (socialStats de sus alumnos).
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
@@ -106,6 +118,21 @@ export default function TrainerProfileScreen() {
 
   const sub = subscriptionState(profile);
   const admin = isAdmin(profile);
+
+  const openFunnel = async (days = funnelDays) => {
+    setFunnelOpen(true);
+    setFunnelDays(days);
+    setLoadingFunnel(true);
+    try {
+      const totals = sumCounters(await getDailyCounters(), days);
+      setFunnel(buildFunnel(totals));
+      setFunnelExtra(totals);
+    } catch {
+      showToast('No se pudieron cargar las métricas');
+    } finally {
+      setLoadingFunnel(false);
+    }
+  };
 
   const openErrors = async () => {
     setErrorsOpen(true);
@@ -613,6 +640,88 @@ export default function TrainerProfileScreen() {
       {admin ? (
         <Card accent style={styles.section}>
           <View style={styles.subHeader}>
+            <Text style={styles.sectionTitle}>Embudo de ventas</Text>
+            <Pressable
+              onPress={funnelOpen ? () => setFunnelOpen(false) : () => openFunnel()}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={funnelOpen ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.textMuted}
+              />
+            </Pressable>
+          </View>
+          {!funnelOpen ? (
+            <Text style={styles.helperText}>
+              Dónde se cae la gente entre abrir la app y crear la cuenta.
+            </Text>
+          ) : loadingFunnel ? (
+            <Text style={styles.helperText}>Cargando métricas...</Text>
+          ) : (
+            <>
+              <View style={styles.rangeRow}>
+                {[7, 30, 60].map((d) => (
+                  <Pressable
+                    key={d}
+                    onPress={() => openFunnel(d)}
+                    style={[styles.rangeChip, funnelDays === d && styles.rangeChipOn]}
+                  >
+                    <Text
+                      style={[styles.rangeText, funnelDays === d && styles.rangeTextOn]}
+                    >
+                      {d} días
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {funnel.map((step, i) => (
+                <View key={step.key} style={styles.funnelRow}>
+                  <View style={styles.funnelHead}>
+                    <Text style={styles.funnelLabel}>{step.label}</Text>
+                    <Text style={styles.funnelValue}>{step.value}</Text>
+                  </View>
+                  {/* La barra es sobre el total inicial: se ve el desplome. */}
+                  <View style={styles.funnelTrack}>
+                    <View
+                      style={[
+                        styles.funnelFill,
+                        { width: `${Math.max(2, step.pctOfTop)}%` },
+                        // Menos de la mitad del paso anterior = fuga gorda.
+                        i > 0 && step.pctOfPrev < 50 ? styles.funnelFillBad : null,
+                      ]}
+                    />
+                  </View>
+                  {i > 0 ? (
+                    <Text
+                      style={[
+                        styles.funnelPct,
+                        step.pctOfPrev < 50 ? { color: colors.danger } : null,
+                      ]}
+                    >
+                      {step.pctOfPrev}% de los del paso anterior
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+              <Text style={styles.funnelFoot}>
+                Altas por tipo — coach {funnelExtra.register_ok_trainer ?? 0} · atleta{' '}
+                {funnelExtra.register_ok_athlete ?? 0} · alumno{' '}
+                {funnelExtra.register_ok_client ?? 0}
+              </Text>
+              <Text style={styles.funnelFoot}>
+                Muro de pago visto {funnelExtra.paywall_view ?? 0} · pagos iniciados{' '}
+                {funnelExtra.checkout_start ?? 0} · altas fallidas{' '}
+                {funnelExtra.register_fail ?? 0}
+              </Text>
+            </>
+          )}
+        </Card>
+      ) : null}
+
+      {admin ? (
+        <Card accent style={styles.section}>
+          <View style={styles.subHeader}>
             <Text style={styles.sectionTitle}>Errores de usuarios</Text>
             <Pressable onPress={errorsOpen ? () => setErrorsOpen(false) : openErrors} hitSlop={8}>
               <Ionicons
@@ -885,6 +994,38 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   coachCard: { borderTopWidth: 1, borderTopColor: colors.border },
+  rangeRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  rangeChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  rangeChipOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  rangeText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
+  rangeTextOn: { color: colors.primary, fontFamily: fonts.semiBold },
+  funnelRow: { marginTop: spacing.md },
+  funnelHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  funnelLabel: { ...typography.small, color: colors.text },
+  funnelValue: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  funnelTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceAlt,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  funnelFill: { height: '100%', borderRadius: 4, backgroundColor: colors.primary },
+  funnelFillBad: { backgroundColor: colors.danger },
+  funnelPct: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 3 },
+  funnelFoot: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: spacing.sm,
+  },
   errCard: {
     borderTopWidth: 1,
     borderTopColor: colors.border,

@@ -372,6 +372,37 @@ service cloud.firestore {
     // documento se valida con dureza (campos exactos y longitudes acotadas)
     // para que no sirva de almacén gratuito, y nadie puede leerlo, editarlo ni
     // borrarlo salvo el CEO.
+    // Contadores del embudo (una fila por día). No guardan nada personal: solo
+    // cuántas veces ocurrió cada paso. Se escribe SIN sesión a propósito,
+    // porque los pasos que más importan (ver la intro, abrir el registro)
+    // ocurren antes de que exista un usuario.
+    //
+    // La protección está en que solo se pueden tocar contadores de la lista
+    // conocida: `affectedKeys` funciona con `increment`, así que nadie puede
+    // inventarse campos ni meter datos aquí.
+    match /analytics/{day} {
+      function isUdecaAdmin() {
+        return request.auth != null
+          && request.auth.token.email in [
+            'luisetenete07@gmail.com',
+            'luistenaf@gmail.com'
+          ];
+      }
+      function knownCounters() {
+        return [
+          'intro_start', 'intro_done',
+          'register_view', 'register_submit', 'register_ok', 'register_fail',
+          'register_ok_trainer', 'register_ok_athlete', 'register_ok_client',
+          'login_ok', 'paywall_view', 'checkout_start',
+          'updatedAt'
+        ];
+      }
+      allow read, delete: if isUdecaAdmin();
+      allow create: if request.resource.data.keys().hasOnly(knownCounters());
+      allow update: if request.resource.data.diff(resource.data)
+        .affectedKeys().hasOnly(knownCounters());
+    }
+
     match /errorLogs/{logId} {
       function isUdecaAdmin() {
         return request.auth != null

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { track, trackOnce } from '../../lib/analytics';
 import { friendlyAuthError } from '../../lib/firebase-errors';
 import { TRIAL_DAYS } from '../../lib/subscription';
 import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
@@ -28,8 +29,14 @@ export default function RegisterScreen() {
   const passwordRef = useRef<TextInput>(null);
   const inviteRef = useRef<TextInput>(null);
 
+  // Cuántos llegan a ver la pantalla de alta (denominador del embudo).
+  useEffect(() => {
+    void trackOnce('register_view');
+  }, []);
+
   const handleSubmit = async () => {
     setError(null);
+    void track('register_submit');
     if (!name || !email || !password) {
       setError('Rellena todos los campos.');
       return;
@@ -52,7 +59,18 @@ export default function RegisterScreen() {
       } else {
         await registerClient(name.trim(), email.trim(), password, inviteCode);
       }
+      void track('register_ok');
+      void track(
+        role === 'trainer'
+          ? 'register_ok_trainer'
+          : role === 'athlete'
+            ? 'register_ok_athlete'
+            : 'register_ok_client'
+      );
     } catch (e) {
+      // El fallo importa tanto como el éxito: si `register_fail` sube, algo
+      // se ha roto en el alta (fue lo que pasó con las reglas de Firestore).
+      void track('register_fail');
       setError(friendlyAuthError(e));
     } finally {
       setLoading(false);
