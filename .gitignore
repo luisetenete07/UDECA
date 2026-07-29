@@ -18,6 +18,12 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Credenciales de cuenta de servicio de Firebase/Google: son claves privadas y
+# solo deben vivir como secreto (GitHub Actions / Vercel), nunca en el repo.
+*serviceAccount*.json
+*service-account*.json
+*-firebase-adminsdk-*.json
+
 # Metro
 .metro-health-check*
 
