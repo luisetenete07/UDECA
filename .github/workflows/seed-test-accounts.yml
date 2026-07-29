@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       password:
-        description: 'Contraseña para las tres cuentas (vacío = se genera una)'
+        description: 'Contraseña (déjalo VACÍO: los registros son públicos; entrarás con «he olvidado mi contraseña»)'
         required: false
         default: ''
       email_base:

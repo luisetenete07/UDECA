@@ -31,10 +31,14 @@ const TRIAL_DAYS = 7;
 /**
  * Contraseña de las cuentas de prueba.
  *
- * NO se escribe ninguna por defecto en el código: este repositorio es público,
- * y una contraseña fija aquí junto a unos correos predecibles es una invitación
- * a que cualquiera entre en las cuentas de prueba. Si no se pasa una, se genera
- * al vuelo y se imprime al terminar.
+ * NO se escribe ninguna por defecto ni se imprime la generada: este repositorio
+ * es público, y tanto el código como los registros de GitHub Actions los puede
+ * leer cualquiera. Una contraseña fija junto a unos correos predecibles sería
+ * una invitación a entrar en las cuentas.
+ *
+ * Sin SEED_PASSWORD se pone una aleatoria que nadie conoce, y se entra usando
+ * "¿Has olvidado tu contraseña?" desde la app: el aviso llega a la bandeja del
+ * correo base y la contraseña la eliges tú, sin pasar por ningún registro.
  */
 const PASSWORD = process.env.SEED_PASSWORD || randomPassword();
 
@@ -169,16 +173,23 @@ async function main() {
   console.log(`
 ✔ Cuentas de prueba listas
 
-  CONTRASEÑA (las tres): ${PASSWORD}
-  Apúntala: si no fijaste SEED_PASSWORD, cada ejecución genera una nueva.
-
   Coach    ${coachEmail}
   Atleta   ${athleteEmail}
   Alumno   ${clientEmail}   (ya en el grupo del coach)
 
   Código de invitación del coach: ${INVITE_CODE}
+${
+  process.env.SEED_PASSWORD
+    ? '\n  Contraseña: la que has indicado.'
+    : `
+  CONTRASEÑA: no se muestra a propósito. Este script suele ejecutarse desde
+  GitHub Actions y, en un repositorio público, esos registros los puede leer
+  cualquiera. Para entrar, usa "¿Has olvidado tu contraseña?" en la pantalla de
+  acceso con cada uno de los correos de arriba: los tres avisos llegan a la
+  bandeja de ${EMAIL_BASE} y eliges tú la contraseña.`
+}
 
-Vuelve a ejecutar este script cuando quieras dejarlas como estaban.
+Vuelve a ejecutar esto cuando quieras dejar las cuentas como estaban.
 `);
 }
 
