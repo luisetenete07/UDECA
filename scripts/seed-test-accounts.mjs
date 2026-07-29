@@ -75,9 +75,16 @@ Ese JSON es una credencial: no lo subas al repo (ya está en .gitignore).
 // Import diferido: así los avisos de arriba salen antes de que Node se queje
 // de que falta el paquete, que es lo que confunde cuando ejecutas esto por
 // primera vez.
-let admin;
+//
+// Se usan los sub-módulos (firebase-admin/app, /auth, /firestore) y no el
+// import por defecto: en las versiones nuevas del paquete ese objeto ya no
+// expone `credential`, y el script petaba con "Cannot read properties of
+// undefined". Esta forma es la misma en todas las versiones recientes.
+let initializeApp, applicationDefault, getAuth, getFirestore;
 try {
-  admin = (await import('firebase-admin')).default;
+  ({ initializeApp, applicationDefault } = await import('firebase-admin/app'));
+  ({ getAuth } = await import('firebase-admin/auth'));
+  ({ getFirestore } = await import('firebase-admin/firestore'));
 } catch {
   console.error(`
 ✖ Falta el paquete firebase-admin. Instálalo con:
@@ -87,9 +94,9 @@ try {
   process.exit(1);
 }
 
-admin.initializeApp({ credential: admin.credential.applicationDefault() });
-const auth = admin.auth();
-const db = admin.firestore();
+initializeApp({ credential: applicationDefault() });
+const auth = getAuth();
+const db = getFirestore();
 
 /** Crea el usuario de Auth o lo reutiliza si ya existe, siempre verificado. */
 async function ensureUser(email, name) {
