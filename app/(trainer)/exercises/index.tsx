@@ -61,6 +61,7 @@ export default function ExercisesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
+  const [subFilter, setSubFilter] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [template, setTemplate] = useState<TemplateExercise[]>([]);
   // Import/export de plantillas entre entrenadores.
@@ -156,6 +157,7 @@ export default function ExercisesScreen() {
             muscles: t.muscles,
             muscleWeights: t.muscleWeights,
             difficulty: t.difficulty,
+            subgroup: t.subgroup,
           }))
         : STARTER_LIBRARY.map((s) => ({
             name: s.name,
@@ -168,6 +170,7 @@ export default function ExercisesScreen() {
               | Partial<Record<import('../../../lib/muscles').MuscleId, number>>
               | undefined,
             difficulty: undefined as ExerciseDifficulty | undefined,
+            subgroup: undefined as string | undefined,
           })),
     [template]
   );
@@ -198,6 +201,7 @@ export default function ExercisesScreen() {
             muscles: s.muscles,
             muscleWeights: s.muscleWeights,
             difficulty: s.difficulty,
+            subgroup: s.subgroup,
           })
         )
       );
@@ -249,6 +253,7 @@ export default function ExercisesScreen() {
               muscles: p.muscles,
               muscleWeights: p.muscleWeights,
               difficulty: p.difficulty,
+              subgroup: p.subgroup,
             })
           );
         } else {
@@ -283,9 +288,17 @@ export default function ExercisesScreen() {
           colors_[c] =
             profile.categoryColors?.[c] ?? CATEGORY_PALETTE[i % CATEGORY_PALETTE.length];
         });
+        // Subgrupos que trae el pack, por categoría y en su orden.
+        const subs: Record<string, string[]> = {};
+        for (const p of packItems) {
+          if (!p.subgroup) continue;
+          const list = subs[p.muscleGroup] ?? [];
+          if (!list.includes(p.subgroup)) subs[p.muscleGroup] = [...list, p.subgroup];
+        }
         await updateUserProfile(profile.uid, {
           exerciseCategories: cats,
           categoryColors: colors_,
+          categorySubgroups: { ...(profile.categorySubgroups ?? {}), ...subs },
         });
         await refreshProfile();
       }
@@ -388,6 +401,8 @@ export default function ExercisesScreen() {
             videoUrl: e.videoUrl,
             muscles: e.muscles,
             muscleWeights: e.muscleWeights,
+            difficulty: e.difficulty,
+            subgroup: e.subgroup,
             load: e.load,
             band: e.band,
           })
@@ -427,10 +442,35 @@ export default function ExercisesScreen() {
       exercises.filter(
         (e) =>
           e.name.toLowerCase().includes(search.toLowerCase().trim()) &&
-          (!muscleFilter || e.muscleGroup === muscleFilter)
+          (!muscleFilter || e.muscleGroup === muscleFilter) &&
+          (!subFilter || (e.subgroup ?? '') === subFilter)
       ),
-    [exercises, search, muscleFilter]
+    [exercises, search, muscleFilter, subFilter]
   );
+
+  // Subgrupos disponibles en la categoría filtrada: los definidos por el coach
+  // más los que ya use algún ejercicio, para no esconder ninguno.
+  const subOptions = useMemo(() => {
+    if (!muscleFilter) return [];
+    const base = profile?.categorySubgroups?.[muscleFilter] ?? [];
+    const used = exercises
+      .filter((e) => e.muscleGroup === muscleFilter && e.subgroup)
+      .map((e) => e.subgroup as string);
+    return Array.from(new Set([...base, ...used]));
+  }, [muscleFilter, profile?.categorySubgroups, exercises]);
+
+  // Lista agrupada por subgrupo, para que cada bloque se lea aparte.
+  const grouped = useMemo(() => {
+    const map = new Map<string, Exercise[]>();
+    for (const e of filtered) {
+      const k = e.subgroup ?? '';
+      map.set(k, [...(map.get(k) ?? []), e]);
+    }
+    // Los que no tienen subgrupo van al final, bajo "Sin subgrupo".
+    return [...map.entries()].sort((a, b) =>
+      a[0] === '' ? 1 : b[0] === '' ? -1 : a[0].localeCompare(b[0])
+    );
+  }, [filtered]);
 
   // Filtros: las categorías del coach (o las de por defecto) más cualquier otra
   // que ya use algún ejercicio, para no ocultar ninguno.
@@ -568,18 +608,42 @@ export default function ExercisesScreen() {
           <FilterChip
             label="Todos"
             selected={muscleFilter === null}
-            onPress={() => setMuscleFilter(null)}
+            onPress={() => {
+              setMuscleFilter(null);
+              setSubFilter(null);
+            }}
           />
           {filterCategories.map((group) => (
             <FilterChip
               key={group}
               label={group}
               selected={muscleFilter === group}
-              onPress={() => setMuscleFilter(group)}
+              onPress={() => {
+                setMuscleFilter(group);
+                setSubFilter(null);
+              }}
             />
           ))}
         </ScrollView>
       )}
+
+      {muscleFilter && subOptions.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}>
+          <FilterChip
+            label="Toda la categoría"
+            selected={subFilter === null}
+            onPress={() => setSubFilter(null)}
+          />
+          {subOptions.map((sg) => (
+            <FilterChip
+              key={sg}
+              label={sg}
+              selected={subFilter === sg}
+              onPress={() => setSubFilter(sg)}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
 
       {isAdmin(profile) && packItems.length > 0 ? (
         <Button
@@ -620,7 +684,14 @@ export default function ExercisesScreen() {
           subtitle="Importa el pack UDECA o crea el primero con '+ Nuevo'."
         />
       ) : (
-        filtered.map((exercise, index) => (
+        grouped.map(([sg, list]) => (
+          <View key={sg || '__none__'}>
+            {/* Solo se rotula si hay más de un bloque: con uno solo, la
+                cabecera sobra y añade ruido. */}
+            {grouped.length > 1 ? (
+              <Text style={styles.subgroupHead}>{sg || 'Sin subgrupo'}</Text>
+            ) : null}
+            {list.map((exercise, index) => (
           <FadeIn key={exercise.id} delay={Math.min(index * 30, 240)}>
           <Pressable onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}>
             <Card style={styles.exerciseCard}>
@@ -662,6 +733,8 @@ export default function ExercisesScreen() {
             </Card>
           </Pressable>
           </FadeIn>
+            ))}
+          </View>
         ))
       )}
 
@@ -793,6 +866,14 @@ const styles = StyleSheet.create({
   swatch: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: 'transparent' },
   swatchOn: { borderColor: colors.text },
   diffDot: { width: 8, height: 8, borderRadius: 4 },
+  subgroupHead: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   catStripe: { width: 4, alignSelf: 'stretch', borderRadius: 2, marginRight: spacing.sm },
   exerciseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
   diffRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },

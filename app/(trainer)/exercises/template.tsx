@@ -69,6 +69,7 @@ interface Draft {
   /** Porcentaje de trabajo por músculo (0 = no trabaja, 25/50/75/100). */
   muscleWeights: Partial<Record<MuscleId, number>>;
   difficulty?: ExerciseDifficulty;
+  subgroup: string;
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -78,6 +79,7 @@ const EMPTY_DRAFT: Draft = {
   description: '',
   videoUrl: '',
   muscleWeights: {},
+  subgroup: '',
 };
 
 export default function TemplateExercisesScreen() {
@@ -131,6 +133,7 @@ export default function TemplateExercisesScreen() {
         it.muscleWeights ??
         Object.fromEntries((it.muscles ?? []).map((m) => [m, 100])),
       difficulty: it.difficulty,
+      subgroup: it.subgroup ?? '',
     });
 
   const save = async () => {
@@ -151,6 +154,7 @@ export default function TemplateExercisesScreen() {
       muscleWeights:
         musclesOf(draft.muscleWeights).length > 0 ? draft.muscleWeights : undefined,
       difficulty: draft.difficulty,
+      subgroup: draft.subgroup.trim() || undefined,
     };
     try {
       if (draft.id) {
@@ -225,6 +229,7 @@ export default function TemplateExercisesScreen() {
           muscles: e.muscles,
           muscleWeights: e.muscleWeights,
           difficulty: e.difficulty,
+          subgroup: e.subgroup,
           order: order++,
         });
       }
@@ -305,6 +310,7 @@ export default function TemplateExercisesScreen() {
                     <Text style={styles.itemName}>{it.name}</Text>
                     <Text style={styles.itemMeta}>
                       {MEASURE_SHORT[it.measure ?? 'reps']}
+                      {it.subgroup ? ` · ${it.subgroup}` : ''}
                       {it.difficulty ? ` · ${it.difficulty}` : ''}
                       {it.muscles && it.muscles.length > 0
                         ? ` · ${it.muscles.map((m) => MUSCLE_LABEL[m]).join(', ')}`
@@ -374,6 +380,13 @@ export default function TemplateExercisesScreen() {
                       </Pressable>
                     ))}
                   </View>
+
+                  <TextField
+                    label="Subgrupo (opcional)"
+                    value={draft.subgroup}
+                    onChangeText={(v) => setDraft({ ...draft, subgroup: v })}
+                    placeholder="Ej. Accesorios, Flexiones, Press, Aguantes"
+                  />
 
                   <Text style={styles.label}>Dificultad</Text>
                   <View style={styles.segment}>

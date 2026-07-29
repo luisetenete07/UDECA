@@ -51,6 +51,8 @@ export default function ExerciseEditorScreen() {
   const [videoUrl, setVideoUrl] = useState('');
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
   const [difficulty, setDifficulty] = useState<ExerciseDifficulty | undefined>(undefined);
+  const [subgroup, setSubgroup] = useState<string>('');
+  const [newSub, setNewSub] = useState('');
   // Nombres ya usados en la biblioteca, para no crear duplicados.
   const [takenNames, setTakenNames] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export default function ExerciseEditorScreen() {
         setVideoUrl(exercise.videoUrl ?? '');
         setMeasure(exercise.measure ?? 'reps');
         setDifficulty(exercise.difficulty);
+        setSubgroup(exercise.subgroup ?? '');
       }
       setLoading(false);
     })();
@@ -107,6 +110,7 @@ export default function ExerciseEditorScreen() {
           videoUrl: videoUrl.trim() || undefined,
           measure,
           difficulty,
+          subgroup: subgroup || undefined,
         });
       } else if (id) {
         await updateExercise(id, {
@@ -116,6 +120,7 @@ export default function ExerciseEditorScreen() {
           videoUrl: videoUrl.trim() || undefined,
           measure,
           difficulty,
+          subgroup: subgroup || undefined,
         });
       }
       showToast('Ejercicio guardado');
@@ -155,6 +160,32 @@ export default function ExerciseEditorScreen() {
     }
     setNewCat('');
     saveCategories([...categories, c]);
+  };
+
+  // Subgrupos definidos por el coach para la categoría seleccionada.
+  const subgroups = profile?.categorySubgroups?.[muscleGroup] ?? [];
+
+  /** Crea un subgrupo dentro de la categoría actual y lo deja seleccionado. */
+  const addSubgroup = async () => {
+    const sg = newSub.trim();
+    if (!sg || !profile) return;
+    if (subgroups.some((x) => x.toLowerCase() === sg.toLowerCase())) {
+      showToast('Ese subgrupo ya existe');
+      return;
+    }
+    setNewSub('');
+    setSubgroup(sg);
+    try {
+      await updateUserProfile(profile.uid, {
+        categorySubgroups: {
+          ...(profile.categorySubgroups ?? {}),
+          [muscleGroup]: [...subgroups, sg],
+        },
+      });
+      await refreshProfile();
+    } catch {
+      showToast('No se pudo crear el subgrupo');
+    }
   };
 
   const removeCategory = (group: string) => {
@@ -219,6 +250,42 @@ export default function ExerciseEditorScreen() {
           </Pressable>
         </View>
       ) : null}
+
+      <Text style={styles.label}>Subgrupo</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
+        <Pressable
+          onPress={() => setSubgroup('')}
+          style={[styles.chip, subgroup === '' && styles.chipSelected]}
+        >
+          <Text style={[styles.chipText, subgroup === '' && styles.chipTextSelected]}>
+            Sin subgrupo
+          </Text>
+        </Pressable>
+        {subgroups.map((sg) => (
+          <Pressable
+            key={sg}
+            onPress={() => setSubgroup(sg)}
+            style={[styles.chip, subgroup === sg && styles.chipSelected]}
+          >
+            <Text style={[styles.chipText, subgroup === sg && styles.chipTextSelected]}>{sg}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+      <View style={styles.addCatRow}>
+        <TextInput
+          value={newSub}
+          onChangeText={setNewSub}
+          placeholder={`Nuevo subgrupo de ${muscleGroup}…`}
+          placeholderTextColor={colors.textFaint}
+          style={styles.addCatInput}
+          onSubmitEditing={addSubgroup}
+          returnKeyType="done"
+        />
+        <Pressable onPress={addSubgroup} style={styles.addCatBtn} hitSlop={6}>
+          <Ionicons name="add" size={16} color={colors.primary} />
+          <Text style={styles.addCatText}>Añadir</Text>
+        </Pressable>
+      </View>
 
       <Text style={styles.label}>Se mide en</Text>
       <View style={styles.segment}>

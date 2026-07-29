@@ -17,6 +17,12 @@ export interface UserProfile {
   exerciseCategories?: string[];
   /** Color elegido por el entrenador para cada categoría (nombre → color). */
   categoryColors?: Record<string, string>;
+  /**
+   * Subgrupos dentro de cada categoría, en su orden (categoría → subgrupos).
+   * Sirven para separar ejercicios afines: en "Planche", por ejemplo,
+   * "Accesorios", "Flexiones", "Press" y "Aguantes".
+   */
+  categorySubgroups?: Record<string, string[]>;
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /**
@@ -274,6 +280,8 @@ export interface Exercise {
   muscleWeights?: Partial<Record<MuscleId, number>>;
   /** Dificultad del ejercicio (se pinta con su color). */
   difficulty?: ExerciseDifficulty;
+  /** Subgrupo dentro de su categoría (opcional). */
+  subgroup?: string;
   createdAt: number;
 }
 
@@ -296,6 +304,8 @@ export interface TemplateExercise {
   muscleWeights?: Partial<Record<MuscleId, number>>;
   /** Dificultad del ejercicio (viaja con el pack). */
   difficulty?: ExerciseDifficulty;
+  /** Subgrupo dentro de su categoría (viaja con el pack). */
+  subgroup?: string;
   /** Orden de aparición en la lista (menor primero). */
   order?: number;
   createdAt: number;

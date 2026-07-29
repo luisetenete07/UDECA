@@ -28,6 +28,7 @@ export interface ExportedExercise {
   band?: boolean;
   muscleWeights?: Partial<Record<MuscleId, number>>;
   difficulty?: ExerciseDifficulty;
+  subgroup?: string;
 }
 
 interface TemplateEnvelope {
@@ -56,6 +57,7 @@ export function buildExerciseTemplate(exercises: Exercise[]): string {
       muscles: e.muscles,
       muscleWeights: e.muscleWeights,
       difficulty: e.difficulty,
+      subgroup: e.subgroup,
       load: e.load,
       band: e.band,
     })),
@@ -112,6 +114,7 @@ export function parseExerciseTemplate(json: string): ExportedExercise[] | null {
       difficulty: EXERCISE_DIFFICULTIES.includes(e.difficulty as ExerciseDifficulty)
         ? (e.difficulty as ExerciseDifficulty)
         : undefined,
+      subgroup: typeof e.subgroup === 'string' && e.subgroup.trim() ? e.subgroup.trim() : undefined,
       load:
         e.load === 'weighted' || e.load === 'assisted' || e.load === 'none'
           ? (e.load as ExerciseLoad)
