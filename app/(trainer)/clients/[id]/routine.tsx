@@ -122,11 +122,13 @@ export default function RoutineEditorScreen() {
   );
   // Ejercicios con el recuadro de objetivo abierto (además de los que ya lo tienen).
   const [goalOpen, setGoalOpen] = useState<Record<string, boolean>>({});
-  // Qué días están desplegados en el editor (compacto por defecto).
+  // Qué días están desplegados en el editor. Todos cerrados al entrar: con la
+  // lista compacta se ve el plan completo de un vistazo y se abre solo el día
+  // que se va a tocar.
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
-  const toggleDayExpanded = (dayId: string, fallback: boolean) => {
-    setExpandedDays((prev) => ({ ...prev, [dayId]: !(prev[dayId] ?? fallback) }));
+  const toggleDayExpanded = (dayId: string) => {
+    setExpandedDays((prev) => ({ ...prev, [dayId]: !prev[dayId] }));
   };
 
   // Nivel del alumno (para el borrador automático del copiloto).
@@ -756,7 +758,7 @@ export default function RoutineEditorScreen() {
       </Card>
 
       {days.map((day, dayIndex) => {
-        const isOpen = expandedDays[day.id] ?? dayIndex === 0;
+        const isOpen = expandedDays[day.id] ?? false;
         const exCount = day.exercises.length;
         const summaryParts: string[] = [];
         if (schedule === 'cycle') {
@@ -778,7 +780,7 @@ export default function RoutineEditorScreen() {
           <View style={styles.dayHeaderRow}>
             <Pressable
               style={styles.dayHeaderMain}
-              onPress={() => toggleDayExpanded(day.id, dayIndex === 0)}
+              onPress={() => toggleDayExpanded(day.id)}
             >
               <Text style={styles.dayTitle} numberOfLines={1}>
                 {day.name || `Día ${dayIndex + 1}`}
@@ -809,7 +811,7 @@ export default function RoutineEditorScreen() {
             <Pressable onPress={() => removeDay(day.id)} style={styles.removeDayBtn} hitSlop={8}>
               <Ionicons name="trash-outline" size={18} color={colors.danger} />
             </Pressable>
-            <Pressable onPress={() => toggleDayExpanded(day.id, dayIndex === 0)} hitSlop={8}>
+            <Pressable onPress={() => toggleDayExpanded(day.id)} hitSlop={8}>
               <Ionicons
                 name={isOpen ? 'chevron-up' : 'chevron-down'}
                 size={20}
