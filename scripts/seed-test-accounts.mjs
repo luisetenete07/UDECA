@@ -20,7 +20,7 @@
  *
  * Opcional:
  *   SEED_EMAIL_BASE=otro@gmail.com   (por defecto udeca.app@gmail.com)
- *   SEED_PASSWORD=otracosa           (por defecto "udeca-test-1234")
+ *   SEED_PASSWORD=otracosa           (si no, se genera una y se imprime)
  *
  * Los correos se generan con "+etiqueta" sobre la cuenta de UDECA
  * (udeca.app+coach@gmail.com…): Gmail los entrega todos a esa misma bandeja y
@@ -28,7 +28,22 @@
  */
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_DAYS = 7;
-const PASSWORD = process.env.SEED_PASSWORD || 'udeca-test-1234';
+/**
+ * Contraseña de las cuentas de prueba.
+ *
+ * NO se escribe ninguna por defecto en el código: este repositorio es público,
+ * y una contraseña fija aquí junto a unos correos predecibles es una invitación
+ * a que cualquiera entre en las cuentas de prueba. Si no se pasa una, se genera
+ * al vuelo y se imprime al terminar.
+ */
+const PASSWORD = process.env.SEED_PASSWORD || randomPassword();
+
+function randomPassword() {
+  const abc = 'abcdefghijkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = 'udeca-';
+  for (let i = 0; i < 12; i++) out += abc[Math.floor(Math.random() * abc.length)];
+  return out;
+}
 const EMAIL_BASE = process.env.SEED_EMAIL_BASE || 'udeca.app@gmail.com';
 const INVITE_CODE = 'TEST01';
 
@@ -152,7 +167,10 @@ async function main() {
   await db.collection('joinRequests').doc(`${clientUid}_${coachUid}`).delete();
 
   console.log(`
-✔ Cuentas de prueba listas (contraseña para las tres: ${PASSWORD})
+✔ Cuentas de prueba listas
+
+  CONTRASEÑA (las tres): ${PASSWORD}
+  Apúntala: si no fijaste SEED_PASSWORD, cada ejecución genera una nueva.
 
   Coach    ${coachEmail}
   Atleta   ${athleteEmail}

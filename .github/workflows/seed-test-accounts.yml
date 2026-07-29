@@ -1,0 +1,67 @@
+# Crea (o resetea) las tres cuentas de prueba: coach, atleta y alumno.
+#
+# Se lanza a mano desde Actions → "Cuentas de prueba" → Run workflow. Así no
+# hace falta tener el proyecto descargado, ni Node instalado, ni manejar la
+# clave privada en el ordenador: GitHub ya la tiene guardada como secreto.
+#
+# Solo puede lanzarlo quien tenga permiso de escritura en el repositorio.
+name: Cuentas de prueba
+
+on:
+  workflow_dispatch:
+    inputs:
+      password:
+        description: 'Contraseña para las tres cuentas (vacío = se genera una)'
+        required: false
+        default: ''
+      email_base:
+        description: 'Correo base (las cuentas serán correo+coach@, +atleta@, +alumno@)'
+        required: false
+        default: 'udeca.app@gmail.com'
+
+concurrency:
+  group: seed-test-accounts
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Comprobar que existe la credencial
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT."
+            exit 1
+          fi
+
+      - name: Instalar firebase-admin
+        run: npm i --no-save firebase-admin
+
+      # La credencial se escribe fuera del repo y con permisos 600.
+      - name: Preparar credencial
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          chmod 600 "$RUNNER_TEMP/sa.json"
+
+      - name: Crear las cuentas
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          SEED_PASSWORD: ${{ inputs.password }}
+          SEED_EMAIL_BASE: ${{ inputs.email_base }}
+        run: node scripts/seed-test-accounts.mjs
+
+      - name: Borrar credencial
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
