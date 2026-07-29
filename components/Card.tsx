@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, radius, shadows, spacing } from '../lib/theme';
+import { colors, radius, shadows, spacing, surfaceHighlight } from '../lib/theme';
 
 export function Card({
   children,
@@ -12,7 +12,15 @@ export function Card({
   /** Tarjeta destacada: filo dorado sutil en lugar del borde neutro. */
   accent?: boolean;
 }) {
-  return <View style={[styles.card, accent && styles.accent, style]}>{children}</View>;
+  return (
+    <View style={[styles.card, accent && styles.accent, style]}>
+      {/* Filo de luz superior: da la sensación de material iluminado desde
+          arriba en vez de un rectángulo plano. Va detrás del contenido y no
+          intercepta toques. */}
+      <View style={styles.highlight} pointerEvents="none" />
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -24,6 +32,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...shadows.card,
   },
+  highlight: surfaceHighlight,
   accent: {
     borderColor: colors.hairline,
   },

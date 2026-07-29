@@ -43,6 +43,14 @@ export const gradients = {
   goldSubtle: ['rgba(162,150,139,0.22)', 'rgba(162,150,139,0.06)'] as const,
   // Halo ambiental: se funde a totalmente transparente (sin corte contra el negro).
   goldHalo: ['rgba(162,150,139,0.20)', 'rgba(162,150,139,0)'] as const,
+  // Igual, pero transparente TAMBIÉN al principio: para bandas que no arrancan
+  // en el borde de la pantalla, donde `goldHalo` dejaría una línea dura al
+  // empezar directamente a máxima opacidad.
+  goldHaloSoft: [
+    'rgba(162,150,139,0)',
+    'rgba(162,150,139,0.18)',
+    'rgba(162,150,139,0)',
+  ] as const,
   surface: ['#141414', '#0A0A0A'] as const,
 };
 
@@ -80,6 +88,13 @@ export const radius = {
   full: 999,
 };
 
+/**
+ * Cifras de ancho fijo. Sin esto, un cronómetro o un contador "bailan" al
+ * cambiar de número porque el 1 es más estrecho que el 8. Es el tipo de
+ * detalle que no se nota hasta que está bien.
+ */
+export const tabularNums = { fontVariant: ['tabular-nums' as const] };
+
 export const typography = {
   h1: { fontSize: 28, fontFamily: fonts.display, letterSpacing: 0.4, lineHeight: 36 },
   h2: { fontSize: 21, fontFamily: fonts.displaySemiBold, letterSpacing: 0.3, lineHeight: 28 },
@@ -87,4 +102,20 @@ export const typography = {
   body: { fontSize: 15, fontFamily: fonts.body, lineHeight: 22 },
   small: { fontSize: 13, fontFamily: fonts.body, lineHeight: 19 },
   label: { fontSize: 12, fontFamily: fonts.semiBold, letterSpacing: 1.4, lineHeight: 16 },
+};
+
+/**
+ * Filo de luz superior de las superficies. Imita luz cenital sobre un material
+ * real: es lo que separa una tarjeta "premium" de un rectángulo gris.
+ */
+export const surfaceHighlight = {
+  position: 'absolute' as const,
+  top: 0,
+  // Se queda dentro del tramo recto del borde superior para no cruzar el arco
+  // de las esquinas: así la tarjeta no necesita `overflow: hidden`, que
+  // recortaría las insignias que hoy se salen del borde a propósito.
+  left: radius.lg,
+  right: radius.lg,
+  height: 1,
+  backgroundColor: 'rgba(255,255,255,0.07)',
 };

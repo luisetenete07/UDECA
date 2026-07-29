@@ -24,7 +24,7 @@ import { getMealBooksForTrainer } from '../../lib/firestore/mealBooks';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { pickProgressPhoto } from '../../lib/image';
 import { MacroCalculator } from '../../components/MacroCalculator';
-import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   PHOTO_POSES,
   type MealBook,
@@ -495,7 +495,14 @@ const styles = StyleSheet.create({
   },
   planName: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   calSummary: { alignItems: 'center', marginBottom: spacing.md },
-  calBig: { ...typography.h1, color: colors.primaryBright, fontFamily: fonts.heading, fontSize: 44, lineHeight: 48 },
+  calBig: {
+    ...typography.h1,
+    ...tabularNums,
+    color: colors.primaryBright,
+    fontFamily: fonts.heading,
+    fontSize: 44,
+    lineHeight: 48,
+  },
   calUnit: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
   calSub: { ...typography.small, color: colors.textFaint, marginTop: 4 },
   recalcBtn: {
