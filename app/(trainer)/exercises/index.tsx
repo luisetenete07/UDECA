@@ -42,10 +42,8 @@ import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   CATEGORY_PALETTE,
-  DIFFICULTY_COLOR,
   MUSCLE_GROUPS,
   type Exercise,
-  type ExerciseDifficulty,
   type TemplateExercise,
 } from '../../../lib/types';
 
@@ -73,6 +71,15 @@ export default function ExercisesScreen() {
   // Gestión de categorías del entrenador (Tren superior, Empuje…).
   const [editCats, setEditCats] = useState(false);
   const [newCat, setNewCat] = useState('');
+  // Color de categoría: un único diálogo por categoría (paleta + personalizado),
+  // en vez de una parrilla de muestras repetida en cada fila.
+  const [colorTarget, setColorTarget] = useState<string | null>(null);
+  const [customColor, setCustomColor] = useState('');
+  // Renombrar subgrupos dentro de la categoría filtrada.
+  const [subEdit, setSubEdit] = useState(false);
+  const [renameSub, setRenameSub] = useState<{ group: string; from: string } | null>(null);
+  const [renameText, setRenameText] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   // Categorías propias del coach (las suyas si las tiene, si no las de por defecto).
   const myCategories = useMemo(
@@ -92,6 +99,7 @@ export default function ExercisesScreen() {
 
   const setCategoryColor = async (group: string, color: string) => {
     if (!profile) return;
+    setColorTarget(null);
     try {
       await updateUserProfile(profile.uid, {
         categoryColors: { ...(profile.categoryColors ?? {}), [group]: color },
@@ -100,6 +108,18 @@ export default function ExercisesScreen() {
     } catch {
       showToast('No se pudo guardar el color');
     }
+  };
+
+  // Color escrito a mano (#RRGGBB). Se valida antes de guardar para no dejar
+  // una categoría con un color que la app no sepa pintar.
+  const applyCustomColor = () => {
+    const hex = normalizeHex(customColor);
+    if (!colorTarget) return;
+    if (!hex) {
+      showToast('Escribe un color tipo #FF9900');
+      return;
+    }
+    setCategoryColor(colorTarget, hex);
   };
 
   const saveCategories = async (list: string[]) => {
@@ -141,6 +161,47 @@ export default function ExercisesScreen() {
     saveCategories(list);
   };
 
+  // Renombrar un subgrupo. El nombre vive en dos sitios: la lista del perfil y
+  // el campo `subgroup` de cada ejercicio que lo usa; si solo se cambiara la
+  // lista, esos ejercicios quedarían huérfanos bajo el nombre antiguo.
+  const applyRenameSub = async () => {
+    if (!profile || !renameSub) return;
+    const { group, from } = renameSub;
+    const to = renameText.trim();
+    if (!to) return;
+    if (to === from) {
+      setRenameSub(null);
+      return;
+    }
+    const list = profile.categorySubgroups?.[group] ?? [];
+    if (list.some((s) => s.toLowerCase() === to.toLowerCase())) {
+      showToast('Ya existe un subgrupo con ese nombre');
+      return;
+    }
+    setRenaming(true);
+    try {
+      const affected = exercises.filter((e) => e.muscleGroup === group && e.subgroup === from);
+      await Promise.all(affected.map((e) => updateExercise(e.id, { subgroup: to })));
+      const next = list.includes(from) ? list.map((s) => (s === from ? to : s)) : [...list, to];
+      await updateUserProfile(profile.uid, {
+        categorySubgroups: { ...(profile.categorySubgroups ?? {}), [group]: next },
+      });
+      await refreshProfile();
+      const updated = exercises.map((e) =>
+        e.muscleGroup === group && e.subgroup === from ? { ...e, subgroup: to } : e
+      );
+      setExercises(updated);
+      setCached(cacheKey, updated);
+      if (subFilter === from) setSubFilter(to);
+      setRenameSub(null);
+      showToast('Subgrupo renombrado');
+    } catch {
+      showToast('No se pudo renombrar el subgrupo');
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   // Pack a precargar: la plantilla oficial de UDECA (editada por el CEO) si
   // existe; si no, el pack estático de calistenia. Cada ejercicio arrastra sus
   // músculos para el cuerpo anatómico.
@@ -156,7 +217,6 @@ export default function ExercisesScreen() {
             videoUrl: undefined as string | undefined,
             muscles: t.muscles,
             muscleWeights: t.muscleWeights,
-            difficulty: t.difficulty,
             subgroup: t.subgroup,
           }))
         : STARTER_LIBRARY.map((s) => ({
@@ -169,7 +229,6 @@ export default function ExercisesScreen() {
             muscleWeights: undefined as
               | Partial<Record<import('../../../lib/muscles').MuscleId, number>>
               | undefined,
-            difficulty: undefined as ExerciseDifficulty | undefined,
             subgroup: undefined as string | undefined,
           })),
     [template]
@@ -200,7 +259,6 @@ export default function ExercisesScreen() {
             videoUrl: s.videoUrl,
             muscles: s.muscles,
             muscleWeights: s.muscleWeights,
-            difficulty: s.difficulty,
             subgroup: s.subgroup,
           })
         )
@@ -252,7 +310,6 @@ export default function ExercisesScreen() {
               description: p.description || undefined,
               muscles: p.muscles,
               muscleWeights: p.muscleWeights,
-              difficulty: p.difficulty,
               subgroup: p.subgroup,
             })
           );
@@ -401,7 +458,6 @@ export default function ExercisesScreen() {
             videoUrl: e.videoUrl,
             muscles: e.muscles,
             muscleWeights: e.muscleWeights,
-            difficulty: e.difficulty,
             subgroup: e.subgroup,
             load: e.load,
             band: e.band,
@@ -562,29 +618,24 @@ export default function ExercisesScreen() {
               </View>
             ))}
           </View>
-          <Text style={styles.catColorHint}>Color de cada categoría</Text>
+          <Text style={styles.catColorHint}>Toca un color para cambiarlo</Text>
           <View style={styles.catColorList}>
             {myCategories.map((group) => (
-              <View key={group} style={styles.catColorRow}>
-                <View style={[styles.catDot, { backgroundColor: categoryColor(group) }]} />
+              <Pressable
+                key={group}
+                onPress={() => {
+                  setColorTarget(group);
+                  setCustomColor(categoryColor(group));
+                }}
+                style={styles.catColorRow}
+              >
+                <View style={[styles.catDotBig, { backgroundColor: categoryColor(group) }]} />
                 <Text style={styles.catColorName} numberOfLines={1}>
                   {group}
                 </Text>
-                <View style={styles.swatches}>
-                  {CATEGORY_PALETTE.map((c) => (
-                    <Pressable
-                      key={c}
-                      onPress={() => setCategoryColor(group, c)}
-                      hitSlop={4}
-                      style={[
-                        styles.swatch,
-                        { backgroundColor: c },
-                        categoryColor(group) === c && styles.swatchOn,
-                      ]}
-                    />
-                  ))}
-                </View>
-              </View>
+                <Text style={styles.catColorHex}>{categoryColor(group).toUpperCase()}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+              </Pressable>
             ))}
           </View>
           <View style={styles.addCatRow}>
@@ -611,6 +662,7 @@ export default function ExercisesScreen() {
             onPress={() => {
               setMuscleFilter(null);
               setSubFilter(null);
+              setSubEdit(false);
             }}
           />
           {filterCategories.map((group) => (
@@ -621,6 +673,7 @@ export default function ExercisesScreen() {
               onPress={() => {
                 setMuscleFilter(group);
                 setSubFilter(null);
+                setSubEdit(false);
               }}
             />
           ))}
@@ -629,19 +682,42 @@ export default function ExercisesScreen() {
 
       {muscleFilter && subOptions.length > 0 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}>
-          <FilterChip
-            label="Toda la categoría"
-            selected={subFilter === null}
-            onPress={() => setSubFilter(null)}
-          />
-          {subOptions.map((sg) => (
+          {subEdit ? null : (
             <FilterChip
-              key={sg}
-              label={sg}
-              selected={subFilter === sg}
-              onPress={() => setSubFilter(sg)}
+              label="Toda la categoría"
+              selected={subFilter === null}
+              onPress={() => setSubFilter(null)}
             />
-          ))}
+          )}
+          {subOptions.map((sg) =>
+            subEdit ? (
+              // En modo edición el chip abre el renombrado en vez de filtrar.
+              <Pressable
+                key={sg}
+                onPress={() => {
+                  setRenameSub({ group: muscleFilter, from: sg });
+                  setRenameText(sg);
+                }}
+                style={[styles.chip, styles.chipEdit]}
+              >
+                <Ionicons name="pencil" size={13} color={colors.primary} />
+                <Text style={[styles.chipText, { color: colors.primary }]}>{sg}</Text>
+              </Pressable>
+            ) : (
+              <FilterChip
+                key={sg}
+                label={sg}
+                selected={subFilter === sg}
+                onPress={() => setSubFilter(sg)}
+              />
+            )
+          )}
+          <Pressable onPress={() => setSubEdit((v) => !v)} style={[styles.chip, styles.chipEdit]}>
+            <Ionicons name={subEdit ? 'checkmark' : 'pencil'} size={13} color={colors.primary} />
+            <Text style={[styles.chipText, { color: colors.primary }]}>
+              {subEdit ? 'Listo' : 'Renombrar'}
+            </Text>
+          </Pressable>
         </ScrollView>
       ) : null}
 
@@ -704,24 +780,6 @@ export default function ExercisesScreen() {
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
                 <View style={styles.exerciseMetaRow}>
                   <Text style={styles.exerciseGroup}>{exercise.muscleGroup}</Text>
-                  {exercise.difficulty ? (
-                    <View style={styles.diffRow}>
-                      <View
-                        style={[
-                          styles.diffDot,
-                          { backgroundColor: DIFFICULTY_COLOR[exercise.difficulty] },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.exerciseGroup,
-                          { color: DIFFICULTY_COLOR[exercise.difficulty] },
-                        ]}
-                      >
-                        {exercise.difficulty}
-                      </Text>
-                    </View>
-                  ) : null}
                 </View>
               </View>
               {exercise.videoUrl ? (
@@ -737,6 +795,106 @@ export default function ExercisesScreen() {
           </View>
         ))
       )}
+
+      {/* Color de una categoría: paleta + color personalizado */}
+      <Modal
+        visible={!!colorTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setColorTarget(null)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
+            <Text style={styles.confirmTitle}>{colorTarget}</Text>
+            <Text style={[styles.confirmText, { marginBottom: spacing.md }]}>
+              Elige un color o escribe el tuyo.
+            </Text>
+            <View style={styles.paletteGrid}>
+              {CATEGORY_PALETTE.map((c) => (
+                <Pressable
+                  key={c}
+                  onPress={() => colorTarget && setCategoryColor(colorTarget, c)}
+                  style={[
+                    styles.paletteDot,
+                    { backgroundColor: c },
+                    colorTarget && categoryColor(colorTarget).toLowerCase() === c.toLowerCase()
+                      ? styles.paletteDotOn
+                      : null,
+                  ]}
+                />
+              ))}
+            </View>
+            <View style={styles.customRow}>
+              <View
+                style={[
+                  styles.catDotBig,
+                  { backgroundColor: normalizeHex(customColor) ?? colors.surfaceAlt },
+                ]}
+              />
+              <TextInput
+                value={customColor}
+                onChangeText={setCustomColor}
+                placeholder="#FF9900"
+                placeholderTextColor={colors.textFaint}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={7}
+                style={styles.addCatInput}
+                onSubmitEditing={applyCustomColor}
+                returnKeyType="done"
+              />
+              <Pressable onPress={applyCustomColor} style={styles.addCatBtn} hitSlop={6}>
+                <Text style={styles.addCatText}>Usar</Text>
+              </Pressable>
+            </View>
+            <Button
+              title="Cerrar"
+              variant="ghost"
+              onPress={() => setColorTarget(null)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Renombrar un subgrupo (arrastra a sus ejercicios) */}
+      <Modal
+        visible={!!renameSub}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameSub(null)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
+            <Text style={styles.confirmTitle}>Renombrar subgrupo</Text>
+            <Text style={[styles.confirmText, { marginBottom: spacing.md }]}>
+              Se actualizarán también los ejercicios que ya están en «{renameSub?.from}».
+            </Text>
+            <TextInput
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="Nuevo nombre"
+              placeholderTextColor={colors.textFaint}
+              style={styles.addCatInput}
+              onSubmitEditing={applyRenameSub}
+              returnKeyType="done"
+              autoFocus
+            />
+            <Button
+              title="Guardar"
+              onPress={applyRenameSub}
+              loading={renaming}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setRenameSub(null)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        </View>
+      </Modal>
 
       {/* Importar por pegado de texto (móvil) */}
       <Modal
@@ -811,6 +969,20 @@ export default function ExercisesScreen() {
   );
 }
 
+/** Acepta "#abc", "abc123" o "#AABBCC" y devuelve "#AABBCC", o null si no vale. */
+function normalizeHex(input: string): string | null {
+  const v = input.trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{3}$/.test(v)) {
+    return `#${v
+      .split('')
+      .map((c) => c + c)
+      .join('')
+      .toUpperCase()}`;
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v.toUpperCase()}`;
+  return null;
+}
+
 function FilterChip({
   label,
   selected,
@@ -859,13 +1031,31 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   catColorList: { gap: spacing.xs, marginBottom: spacing.sm },
-  catColorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  catDot: { width: 10, height: 10, borderRadius: 5 },
+  catColorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.surfaceAlt,
+  },
+  catDotBig: { width: 22, height: 22, borderRadius: 11 },
   catColorName: { ...typography.small, color: colors.text, flex: 1 },
-  swatches: { flexDirection: 'row', gap: 6 },
-  swatch: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: 'transparent' },
-  swatchOn: { borderColor: colors.text },
-  diffDot: { width: 8, height: 8, borderRadius: 4 },
+  catColorHex: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  paletteGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  paletteDot: { width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: 'transparent' },
+  paletteDotOn: { borderColor: colors.text },
+  customRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  chipEdit: { flexDirection: 'row', alignItems: 'center', gap: 5, borderColor: colors.primary },
   subgroupHead: {
     ...typography.label,
     color: colors.textMuted,
@@ -876,7 +1066,6 @@ const styles = StyleSheet.create({
   },
   catStripe: { width: 4, alignSelf: 'stretch', borderRadius: 2, marginRight: spacing.sm },
   exerciseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
-  diffRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',

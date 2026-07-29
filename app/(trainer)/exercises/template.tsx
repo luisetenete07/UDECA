@@ -25,10 +25,7 @@ import {
   EXERCISE_MEASURES,
   MEASURE_LABEL,
   MEASURE_SHORT,
-  DIFFICULTY_COLOR,
-  EXERCISE_DIFFICULTIES,
   MUSCLE_GROUPS,
-  type ExerciseDifficulty,
   type ExerciseMeasure,
   type TemplateExercise,
 } from '../../../lib/types';
@@ -68,7 +65,6 @@ interface Draft {
   videoUrl: string;
   /** Porcentaje de trabajo por músculo (0 = no trabaja, 25/50/75/100). */
   muscleWeights: Partial<Record<MuscleId, number>>;
-  difficulty?: ExerciseDifficulty;
   subgroup: string;
 }
 
@@ -132,7 +128,6 @@ export default function TemplateExercisesScreen() {
       muscleWeights:
         it.muscleWeights ??
         Object.fromEntries((it.muscles ?? []).map((m) => [m, 100])),
-      difficulty: it.difficulty,
       subgroup: it.subgroup ?? '',
     });
 
@@ -153,7 +148,6 @@ export default function TemplateExercisesScreen() {
       muscles: musclesOf(draft.muscleWeights).length > 0 ? musclesOf(draft.muscleWeights) : undefined,
       muscleWeights:
         musclesOf(draft.muscleWeights).length > 0 ? draft.muscleWeights : undefined,
-      difficulty: draft.difficulty,
       subgroup: draft.subgroup.trim() || undefined,
     };
     try {
@@ -228,7 +222,6 @@ export default function TemplateExercisesScreen() {
           videoUrl: undefined,
           muscles: e.muscles,
           muscleWeights: e.muscleWeights,
-          difficulty: e.difficulty,
           subgroup: e.subgroup,
           order: order++,
         });
@@ -311,7 +304,6 @@ export default function TemplateExercisesScreen() {
                     <Text style={styles.itemMeta}>
                       {MEASURE_SHORT[it.measure ?? 'reps']}
                       {it.subgroup ? ` · ${it.subgroup}` : ''}
-                      {it.difficulty ? ` · ${it.difficulty}` : ''}
                       {it.muscles && it.muscles.length > 0
                         ? ` · ${it.muscles.map((m) => MUSCLE_LABEL[m]).join(', ')}`
                         : ' · sin músculos'}
@@ -387,28 +379,6 @@ export default function TemplateExercisesScreen() {
                     onChangeText={(v) => setDraft({ ...draft, subgroup: v })}
                     placeholder="Ej. Accesorios, Flexiones, Press, Aguantes"
                   />
-
-                  <Text style={styles.label}>Dificultad</Text>
-                  <View style={styles.segment}>
-                    {EXERCISE_DIFFICULTIES.map((d) => {
-                      const on = draft.difficulty === d;
-                      return (
-                        <Pressable
-                          key={d}
-                          onPress={() => setDraft({ ...draft, difficulty: on ? undefined : d })}
-                          style={[
-                            styles.segBtn,
-                            on && {
-                              backgroundColor: DIFFICULTY_COLOR[d],
-                              borderColor: DIFFICULTY_COLOR[d],
-                            },
-                          ]}
-                        >
-                          <Text style={[styles.segText, on && styles.segTextOn]}>{d}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
 
                   <View style={styles.musclesHead}>
                     <Text style={styles.label}>Músculos que trabaja</Text>

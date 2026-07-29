@@ -1,9 +1,7 @@
 import type { MuscleId } from './muscles';
 import {
-  EXERCISE_DIFFICULTIES,
   EXERCISE_MEASURES,
   type Exercise,
-  type ExerciseDifficulty,
   type ExerciseLoad,
   type ExerciseMeasure,
 } from './types';
@@ -27,7 +25,6 @@ export interface ExportedExercise {
   load?: ExerciseLoad;
   band?: boolean;
   muscleWeights?: Partial<Record<MuscleId, number>>;
-  difficulty?: ExerciseDifficulty;
   subgroup?: string;
 }
 
@@ -56,7 +53,6 @@ export function buildExerciseTemplate(exercises: Exercise[]): string {
       videoUrl: e.videoUrl,
       muscles: e.muscles,
       muscleWeights: e.muscleWeights,
-      difficulty: e.difficulty,
       subgroup: e.subgroup,
       load: e.load,
       band: e.band,
@@ -111,9 +107,6 @@ export function parseExerciseTemplate(json: string): ExportedExercise[] | null {
               )
             ) as Partial<Record<MuscleId, number>>)
           : undefined,
-      difficulty: EXERCISE_DIFFICULTIES.includes(e.difficulty as ExerciseDifficulty)
-        ? (e.difficulty as ExerciseDifficulty)
-        : undefined,
       subgroup: typeof e.subgroup === 'string' && e.subgroup.trim() ? e.subgroup.trim() : undefined,
       load:
         e.load === 'weighted' || e.load === 'assisted' || e.load === 'none'

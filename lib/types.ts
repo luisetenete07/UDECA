@@ -189,21 +189,6 @@ export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
  *    las repeticiones y, a continuación, el aguante.
  */
 /**
- * Dificultad del ejercicio. Se muestra SIEMPRE como color, para leer de un
- * vistazo si una rutina está bien calibrada para el alumno.
- */
-export const EXERCISE_DIFFICULTIES = ['Iniciación', 'Intermedio', 'Avanzado', 'Élite'] as const;
-export type ExerciseDifficulty = (typeof EXERCISE_DIFFICULTIES)[number];
-
-/** Color de cada dificultad (de verde tranquilo a rojo exigente). */
-export const DIFFICULTY_COLOR: Record<ExerciseDifficulty, string> = {
-  'Iniciación': '#4CAF7D',
-  Intermedio: '#E0A43B',
-  Avanzado: '#E2703A',
-  'Élite': '#D2422F',
-};
-
-/**
  * Paleta con la que cada entrenador colorea sus categorías. Son tonos que
  * conviven con el negro y el oro de UDECA sin competir con ellos.
  */
@@ -278,8 +263,6 @@ export interface Exercise {
    * `muscles` cuenta al 100 % (comportamiento anterior).
    */
   muscleWeights?: Partial<Record<MuscleId, number>>;
-  /** Dificultad del ejercicio (se pinta con su color). */
-  difficulty?: ExerciseDifficulty;
   /** Subgrupo dentro de su categoría (opcional). */
   subgroup?: string;
   createdAt: number;
@@ -302,8 +285,6 @@ export interface TemplateExercise {
   muscles?: MuscleId[];
   /** Porcentaje de trabajo por músculo (25/50/75/100); ver Exercise. */
   muscleWeights?: Partial<Record<MuscleId, number>>;
-  /** Dificultad del ejercicio (viaja con el pack). */
-  difficulty?: ExerciseDifficulty;
   /** Subgrupo dentro de su categoría (viaja con el pack). */
   subgroup?: string;
   /** Orden de aparición en la lista (menor primero). */

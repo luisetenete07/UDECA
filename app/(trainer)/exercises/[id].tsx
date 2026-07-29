@@ -18,10 +18,7 @@ import {
 import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
-  DIFFICULTY_COLOR,
-  EXERCISE_DIFFICULTIES,
   MUSCLE_GROUPS,
-  type ExerciseDifficulty,
   type ExerciseMeasure,
   type MuscleGroup,
 } from '../../../lib/types';
@@ -50,7 +47,6 @@ export default function ExerciseEditorScreen() {
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
-  const [difficulty, setDifficulty] = useState<ExerciseDifficulty | undefined>(undefined);
   const [subgroup, setSubgroup] = useState<string>('');
   const [newSub, setNewSub] = useState('');
   // Nombres ya usados en la biblioteca, para no crear duplicados.
@@ -67,7 +63,6 @@ export default function ExerciseEditorScreen() {
         setDescription(exercise.description ?? '');
         setVideoUrl(exercise.videoUrl ?? '');
         setMeasure(exercise.measure ?? 'reps');
-        setDifficulty(exercise.difficulty);
         setSubgroup(exercise.subgroup ?? '');
       }
       setLoading(false);
@@ -109,7 +104,6 @@ export default function ExerciseEditorScreen() {
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
           measure,
-          difficulty,
           subgroup: subgroup || undefined,
         });
       } else if (id) {
@@ -119,7 +113,6 @@ export default function ExerciseEditorScreen() {
           description: description.trim() || undefined,
           videoUrl: videoUrl.trim() || undefined,
           measure,
-          difficulty,
           subgroup: subgroup || undefined,
         });
       }
@@ -320,26 +313,6 @@ export default function ExerciseEditorScreen() {
           Up + Front Lever → 5 repeticiones y 12 s.
         </Text>
       ) : null}
-
-      <Text style={styles.label}>Dificultad</Text>
-      <View style={styles.segment}>
-        {EXERCISE_DIFFICULTIES.map((d) => {
-          const on = difficulty === d;
-          return (
-            <Pressable
-              key={d}
-              // Volver a tocar la dificultad activa la quita (queda sin marcar).
-              onPress={() => setDifficulty(on ? undefined : d)}
-              style={[
-                styles.segmentBtn,
-                on && { backgroundColor: DIFFICULTY_COLOR[d], borderColor: DIFFICULTY_COLOR[d] },
-              ]}
-            >
-              <Text style={[styles.segmentText, on && styles.segmentTextActive]}>{d}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
 
       <TextField
         label="Descripción / técnica"
