@@ -8,9 +8,10 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FadeIn } from './FadeIn';
-import { colors, spacing } from '../lib/theme';
+import { colors, gradients, spacing } from '../lib/theme';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -47,6 +48,12 @@ export function ScreenContainer({
   if (!scroll) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
+        <LinearGradient
+          colors={gradients.appBackground}
+          locations={[0, 0.45, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
         <View style={styles.centerRow}>
           <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
         </View>
@@ -56,6 +63,16 @@ export function ScreenContainer({
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Fondo de la pantalla. Va aquí y no en el layout raíz porque el
+          contenedor de navegación pinta su propio fondo por encima; dentro del
+          marco de la pantalla queda fijo igualmente mientras el contenido se
+          desplaza, que es lo que importa. */}
+      <LinearGradient
+        colors={gradients.appBackground}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -85,8 +102,9 @@ export function ScreenContainer({
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    // Transparente: el fondo lo pinta el degradado de app/_layout.tsx.
-    backgroundColor: 'transparent',
+    // Opaco a propósito: si esto fuera transparente se vería el fondo claro
+    // que pinta el contenedor de navegación por debajo.
+    backgroundColor: colors.background,
   },
   flex: { flex: 1 },
   centerRow: {
