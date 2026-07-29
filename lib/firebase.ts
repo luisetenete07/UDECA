@@ -1,8 +1,8 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { initializeAuth, getAuth, type Auth } from 'firebase/auth';
+import { initializeAuth, getAuth, connectAuthEmulator, type Auth } from 'firebase/auth';
 // @ts-expect-error -- getReactNativePersistence exists at runtime but is missing from the firebase/auth types.
 import { getReactNativePersistence } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, type Firestore } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -38,6 +38,17 @@ if (isFirebaseConfigured) {
   }
 
   dbInstance = getFirestore(app);
+
+  // Modo emulador: apunta el SDK a un Firebase local en vez de al de verdad.
+  // Solo se activa con EXPO_PUBLIC_FIREBASE_EMULATOR=1 al compilar, algo que
+  // NUNCA ocurre en los builds de tienda ni en el despliegue web. Sirve para
+  // poder abrir la app con datos de prueba y revisarla pantalla por pantalla
+  // sin tocar la base de datos real ni depender de capturas de terceros.
+  if (process.env.EXPO_PUBLIC_FIREBASE_EMULATOR === '1') {
+    const host = process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST || '127.0.0.1';
+    connectAuthEmulator(authInstance, `http://${host}:9099`, { disableWarnings: true });
+    connectFirestoreEmulator(dbInstance, host, 8080);
+  }
 }
 
 // Estos valores solo se usan cuando isFirebaseConfigured es true (comprobado

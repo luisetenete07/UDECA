@@ -128,13 +128,11 @@ service cloud.firestore {
           // Aprobar solicitud: el entrenador se vincula a un alumno que le ha
           // enviado una solicitud (existe joinRequests/{clientId}_{coach}).
           //
-          // Este camino lo usan las versiones ya publicadas de la app (la
-          // nueva aprueba por el servidor, que cuenta con permisos de
-          // administrador). Se mantiene para no dejarlas sin aceptar alumnos,
-          // pero AQUÍ TAMBIÉN se impone el límite del plan gratuito: sin esta
-          // comprobación, un cliente modificado podría aceptar alumnos sin
-          // pagar. Se puede retirar del todo cuando la versión nueva esté
-          // instalada en todo el parque.
+          // Se mantiene como RESPALDO de las versiones ya publicadas de la app:
+          // la actual aprueba por el servidor (payments-webhook/api/join), que
+          // cuenta los alumnos con permisos de administrador. Aquí se impone el
+          // mismo límite apoyándose en `clientCount`, que solo escribe el
+          // servidor, para que este camino no sirva de puerta trasera.
           request.resource.data.trainerId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId'])
           && exists(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid))
