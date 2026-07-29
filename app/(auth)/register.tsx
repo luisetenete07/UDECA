@@ -228,11 +228,13 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: 'absolute',
-    alignSelf: 'center',
-    top: -60,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
+    // Ver welcome.tsx: banda, no óvalo. Se desborda a los lados de la columna
+    // de contenido para que su borde quede fuera de pantalla en cualquier
+    // ancho realista; abajo se apaga a transparente y no deja costura.
+    top: -spacing.lg,
+    left: -600,
+    right: -600,
+    height: 380,
   },
   header: {
     alignItems: 'center',
@@ -254,7 +256,9 @@ const styles = StyleSheet.create({
   },
   roleCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Arriba, no centrado: con descripciones de tres líneas el icono se
+    // quedaba flotando a media tarjeta y la fila se veía descuadrada.
+    alignItems: 'flex-start',
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radius.md,

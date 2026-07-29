@@ -37,7 +37,7 @@ interface Slide {
 
 const SLIDES: Slide[] = [
   {
-    icon: 'body-outline',
+    icon: 'flame-outline',
     title: 'Tu cuerpo es el gimnasio',
     body: 'Calistenia de verdad: dominar tu propio peso. Sin máquinas, sin excusas y desde donde estés.',
   },
@@ -108,7 +108,6 @@ export default function WelcomeScreen() {
         ]}
       >
         <Logo />
-        <Text style={styles.kicker}>Universidad de Calistenia</Text>
       </Animated.View>
 
       <ScrollView
@@ -194,20 +193,15 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   halo: {
     position: 'absolute',
-    alignSelf: 'center',
-    top: -90,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
+    // Banda a sangre, no un óvalo. `LinearGradient` recortado con borderRadius
+    // deja un borde duro visible (en PC se veía el arco del círculo); de lado
+    // a lado no hay lados que cortar y abajo se apaga a transparente.
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 420,
   },
   header: { alignItems: 'center', paddingTop: spacing.xl * 2, paddingHorizontal: spacing.lg },
-  kicker: {
-    ...typography.small,
-    color: colors.textMuted,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    marginTop: spacing.sm,
-  },
   pager: { flexGrow: 0 },
   slide: {
     paddingHorizontal: spacing.xl,
@@ -260,6 +254,5 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.primary,
     fontFamily: fonts.semiBold,
-    textDecorationLine: 'underline',
   },
 });

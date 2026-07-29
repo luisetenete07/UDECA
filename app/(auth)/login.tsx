@@ -196,11 +196,13 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: 'absolute',
-    alignSelf: 'center',
-    top: -70,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
+    // Ver welcome.tsx: banda, no óvalo. Se desborda a los lados de la columna
+    // de contenido para que su borde quede fuera de pantalla en cualquier
+    // ancho realista; abajo se apaga a transparente y no deja costura.
+    top: -spacing.lg,
+    left: -600,
+    right: -600,
+    height: 380,
   },
   header: {
     alignItems: 'center',
@@ -272,7 +274,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.md,
-    textDecorationLine: 'underline',
   },
   submit: {
     marginTop: spacing.sm,
