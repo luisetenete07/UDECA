@@ -25,6 +25,7 @@ import {
   updatePayment,
 } from '../../lib/firestore/payments';
 import { FREE_CLIENT_LIMIT, trainerAtFreeLimit } from '../../lib/subscription';
+import { approveClientOnServer } from '../../lib/join';
 import {
   approveJoinRequest,
   deleteJoinRequest,
@@ -67,7 +68,9 @@ interface DashboardData {
 }
 
 export default function TrainerDashboard() {
-  const { profile } = useAuth();
+  // refreshProfile: tras aceptar a un alumno, el servidor actualiza el recuento
+  // del perfil y hay que releerlo para que el acceso quede al día.
+  const { profile, refreshProfile } = useAuth();
   const router = useRouter();
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
   const cacheKey = `trainer-dash-${profile?.uid ?? ''}`;
@@ -228,8 +231,8 @@ export default function TrainerDashboard() {
 
 
   const handleApproveRequest = async (req: JoinRequest) => {
-    // Aceptar por encima del plan gratuito dejaría al coach fuera de la app en
-    // el siguiente arranque, así que se para aquí y se le ofrece suscribirse.
+    // Aviso inmediato si ya sabemos que está lleno, para no hacerle esperar a
+    // una respuesta que va a ser que no.
     if (trainerAtFreeLimit(profile)) {
       showToast(
         `Tu plan gratuito llega a ${FREE_CLIENT_LIMIT} alumnos. Activa la suscripción para aceptar a más.`
@@ -238,7 +241,26 @@ export default function TrainerDashboard() {
     }
     setProcessingReq(req.id);
     try {
-      await approveJoinRequest(req);
+      // Quien decide es el servidor: cuenta los alumnos con permisos de
+      // administrador, así que ni se puede falsear desde un cliente modificado
+      // ni dos aprobaciones a la vez pueden colar a un tercero.
+      let approved = false;
+      try {
+        const result = await approveClientOnServer(req.clientId);
+        if (!result.ok) {
+          showToast(result.reason ?? 'No se pudo aprobar');
+          return;
+        }
+        approved = true;
+      } catch {
+        // El servidor no responde (sin red, backend caído). Se aprueba por la
+        // vía antigua para no dejar al coach bloqueado por una caída ajena; el
+        // límite se recalcula igualmente en el siguiente `sync`.
+        await approveJoinRequest(req);
+        approved = true;
+      }
+      if (!approved) return;
+      await refreshProfile();
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       if (profile) setClients(await getClientsForTrainer(profile.uid));
       notifyUser(req.clientId, 'Solicitud aceptada', 'Tu entrenador te ha aceptado en su grupo. ¡A entrenar!').catch(() => {});

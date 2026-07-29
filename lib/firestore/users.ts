@@ -49,27 +49,11 @@ export async function getTrainerIdForInviteCode(code: string): Promise<string | 
   return (await getInviteCodeInfo(code))?.trainerId ?? null;
 }
 
-/**
- * Guarda cuántos alumnos tiene el entrenador y deja marcado en su código
- * público si ya no admite más. Lo llama su propia app al cargar la lista, que
- * es el único sitio donde se pueden contar de verdad.
- */
-export async function syncTrainerClientCount(
-  trainer: UserProfile,
-  count: number,
-  full: boolean
-): Promise<void> {
-  try {
-    if (trainer.clientCount !== count) {
-      await updateDoc(doc(db, 'users', trainer.uid), { clientCount: count });
-    }
-    if (trainer.inviteCode) {
-      await setDoc(doc(db, 'trainerCodes', trainer.inviteCode), { full }, { merge: true });
-    }
-  } catch {
-    // Es un contador de conveniencia: si falla, no se le estropea nada al coach.
-  }
-}
+// El recuento de alumnos (`clientCount`) y la marca `full` del código NO se
+// escriben desde la app: los escribe el servidor (payments-webhook/api/join),
+// que es quien cuenta de verdad. Si los escribiera el cliente, un coach podría
+// falsearlos para saltarse el límite del plan gratuito.
+// Ver lib/join.ts → syncClientCountOnServer().
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const snap = await getDoc(doc(db, 'users', uid));

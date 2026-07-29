@@ -81,8 +81,11 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         (
           request.auth.uid == userId
+          // `clientCount` decide si el entrenador sigue dentro del plan
+          // gratuito, así que solo lo escribe el servidor (que cuenta de
+          // verdad). Si pudiera escribirlo él, se saltaría el límite.
           && !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['subscriptionUntil', 'subscriptionPlan'])
+            .hasAny(['subscriptionUntil', 'subscriptionPlan', 'clientCount'])
         )
         || (
           isUdecaAdmin()
@@ -105,6 +108,15 @@ service cloud.firestore {
         || (
           // Aprobar solicitud: el entrenador se vincula a un alumno que le ha
           // enviado una solicitud (existe joinRequests/{clientId}_{coach}).
+          //
+          // PENDIENTE DE RETIRAR. Esta rama no comprueba el límite del plan
+          // gratuito: un cliente modificado podría aceptar alumnos sin pagar.
+          // Ya no la usa la app (aprueba por el servidor, que sí cuenta), pero
+          // las versiones anteriores publicadas SÍ, y quitarla ahora dejaría a
+          // esos usuarios sin poder aceptar alumnos.
+          // Retirar cuando la versión con aprobación por servidor esté
+          // instalada; a partir de ahí solo el SDK de administrador escribe
+          // `trainerId`, que es lo que cierra el agujero del todo.
           request.resource.data.trainerId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId'])
           && exists(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid))
