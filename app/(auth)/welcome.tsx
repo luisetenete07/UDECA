@@ -96,6 +96,12 @@ export default function WelcomeScreen() {
     <View style={styles.root}>
       <LinearGradient colors={gradients.goldHalo} style={styles.halo} pointerEvents="none" />
 
+      {/* Salida directa, visible desde la primera diapositiva. Quien llega con
+          el código de su entrenador ya viene convertido y solo quiere entrar. */}
+      <Pressable onPress={() => go('/(auth)/register')} hitSlop={10} style={styles.skip}>
+        <Text style={styles.skipText}>Saltar</Text>
+      </Pressable>
+
       <Animated.View
         style={[
           styles.header,
@@ -201,6 +207,15 @@ const styles = StyleSheet.create({
     right: 0,
     height: 420,
   },
+  skip: {
+    position: 'absolute',
+    top: spacing.xl + spacing.sm,
+    right: spacing.lg,
+    zIndex: 2,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  skipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   header: { alignItems: 'center', paddingTop: spacing.xl * 2, paddingHorizontal: spacing.lg },
   pager: { flexGrow: 0 },
   slide: {

@@ -111,7 +111,10 @@ export default function RegisterScreen() {
                   <Text style={[styles.roleCardTitle, on && styles.roleCardTitleOn]}>{rc.title}</Text>
                   <Text style={[styles.rolePrice, rc.free && styles.rolePriceFree]}>{rc.price}</Text>
                 </View>
-                <Text style={styles.roleCardDesc}>{rc.desc}</Text>
+                {/* La descripción solo del rol elegido. Las otras dos quedan en
+                    una línea, y así el botón de crear cuenta sube casi una
+                    pantalla entera: es el paso que queremos que llegue antes. */}
+                {on ? <Text style={styles.roleCardDesc}>{rc.desc}</Text> : null}
               </View>
               <Ionicons
                 name={on ? 'checkmark-circle' : 'ellipse-outline'}
@@ -202,7 +205,7 @@ const ROLE_CARDS: {
     price: 'Gratis',
     free: true,
     icon: 'person-outline',
-    desc: 'Entrena con tu entrenador. Necesitas su código de invitación.',
+    desc: 'Con tu entrenador. Necesitas su código.',
   },
   {
     value: 'athlete',
@@ -210,14 +213,14 @@ const ROLE_CARDS: {
     price: `${TRIAL_DAYS} días gratis`,
     free: true,
     icon: 'barbell-outline',
-    desc: `Entrena por tu cuenta: crea tus rutinas y sigue tu progreso y nutrición. Después, 10 €/mes.`,
+    desc: 'Por tu cuenta: tus rutinas, tu progreso y tu nutrición. Luego 10 €/mes.',
   },
   {
     value: 'trainer',
     title: 'Entrenador',
     price: '180 €/año',
     icon: 'people-outline',
-    desc: 'Gestiona a tus alumnos, cobros y tu negocio. Cuota anual de una vez, no meses sueltos.',
+    desc: 'Tus alumnos, tus cobros y tu negocio. Un pago al año.',
   },
 ];
 
@@ -256,11 +259,11 @@ const styles = StyleSheet.create({
   },
   roleCard: {
     flexDirection: 'row',
-    // Arriba, no centrado: con descripciones de tres líneas el icono se
-    // quedaba flotando a media tarjeta y la fila se veía descuadrada.
+    // Arriba, no centrado: con descripción el icono se quedaría flotando a
+    // media tarjeta y la fila se vería descuadrada.
     alignItems: 'flex-start',
     gap: spacing.sm,
-    padding: spacing.md,
+    padding: spacing.sm + 2,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
