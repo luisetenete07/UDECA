@@ -19,24 +19,24 @@
  *     node scripts/seed-test-accounts.mjs
  *
  * Opcional:
- *   SEED_EMAIL_BASE=tucorreo@gmail.com   (por defecto usa el de contacto)
- *   SEED_PASSWORD=otracosa               (por defecto "udeca-test-1234")
+ *   SEED_EMAIL_BASE=otro@gmail.com   (por defecto udeca.app@gmail.com)
+ *   SEED_PASSWORD=otracosa           (por defecto "udeca-test-1234")
  *
- * Los correos se generan con "+etiqueta" sobre tu dirección real
- * (tucorreo+udeca-coach@gmail.com…): Gmail los entrega todos a tu bandeja y
+ * Los correos se generan con "+etiqueta" sobre la cuenta de UDECA
+ * (udeca.app+coach@gmail.com…): Gmail los entrega todos a esa misma bandeja y
  * Firebase los trata como cuentas distintas. Cero cuentas de Google nuevas.
  */
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_DAYS = 7;
 const PASSWORD = process.env.SEED_PASSWORD || 'udeca-test-1234';
-const EMAIL_BASE = process.env.SEED_EMAIL_BASE || 'luistenaf@gmail.com';
+const EMAIL_BASE = process.env.SEED_EMAIL_BASE || 'udeca.app@gmail.com';
 const INVITE_CODE = 'TEST01';
 
-/** tucorreo@gmail.com + "coach" -> tucorreo+udeca-coach@gmail.com */
+/** udeca.app@gmail.com + "coach" -> udeca.app+coach@gmail.com */
 function taggedEmail(tag) {
   const [user, domain] = EMAIL_BASE.split('@');
   if (!domain) throw new Error(`SEED_EMAIL_BASE no es un correo válido: ${EMAIL_BASE}`);
-  return `${user}+udeca-${tag}@${domain}`;
+  return `${user}+${tag}@${domain}`;
 }
 
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
