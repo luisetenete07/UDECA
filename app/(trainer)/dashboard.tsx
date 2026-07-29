@@ -472,7 +472,7 @@ export default function TrainerDashboard() {
 
       {/* Panel "Hoy": qué requiere acción, en 10 segundos. Solo aparece si
           hay algo que hacer (cero ruido cuando todo está al día). */}
-      {requests.length > 0 || overdueCount > 0 || inactiveClients.length > 0 || trainedToday > 0 ? (
+      {requests.length > 0 || overdueCount > 0 || trainedToday > 0 ? (
         <View style={styles.todayStrip}>
           {trainedToday > 0 ? (
             <View style={[styles.todayChip, styles.todayChipGood]}>
@@ -498,17 +498,6 @@ export default function TrainerDashboard() {
               <Ionicons name="cash" size={13} color={colors.danger} />
               <Text style={[styles.todayChipText, { color: colors.danger }]}>
                 {overdueCount} vencido(s)
-              </Text>
-            </Pressable>
-          ) : null}
-          {inactiveClients.length > 0 ? (
-            <Pressable
-              style={styles.todayChip}
-              onPress={() => router.push('/(trainer)/clients')}
-            >
-              <Ionicons name="alert-circle" size={13} color={colors.warning} />
-              <Text style={[styles.todayChipText, { color: colors.warning }]}>
-                {inactiveClients.length} en riesgo
               </Text>
             </Pressable>
           ) : null}
@@ -550,20 +539,6 @@ export default function TrainerDashboard() {
           </Text>
         </Pressable>
       </View>
-
-      {/* Acceso a la agenda completa (calendario mensual + tareas y objetivos).
-          Ya no ocupa una pestaña propia: los cobros clave están arriba en Inicio,
-          y aquí se llega al mes completo y a las tareas de un toque. */}
-      <Pressable onPress={() => router.push('/(trainer)/agenda')} style={styles.agendaEntry}>
-        <View style={styles.agendaIcon}>
-          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.agendaTitle}>Calendario y tareas</Text>
-          <Text style={styles.agendaSub}>Cobros, ciclos y tus recordatorios, mes a mes.</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-      </Pressable>
 
       {/* Primeros pasos: guía para el coach recién llegado (sin alumnos todavía). */}
       {clients.length === 0 && requests.length === 0 ? (
@@ -1012,29 +987,6 @@ const styles = StyleSheet.create({
   greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  agendaEntry: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-    marginBottom: spacing.md,
-  },
-  agendaIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  agendaTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  agendaSub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
