@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   Modal,
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -75,6 +74,9 @@ export default function ExercisesScreen() {
   // Color de categoría: un único diálogo por categoría (paleta + personalizado),
   // en vez de una parrilla de muestras repetida en cada fila.
   const [colorTarget, setColorTarget] = useState<string | null>(null);
+  // Confirmación previa de "Actualizar a pack UDECA": es destructivo (sustituye
+  // toda la biblioteca), así que nunca se ejecuta a la primera pulsación.
+  const [confirmPack, setConfirmPack] = useState(false);
   const [customColor, setCustomColor] = useState('');
   // Renombrar subgrupos dentro de la categoría filtrada.
   const [subEdit, setSubEdit] = useState(false);
@@ -283,23 +285,7 @@ export default function ExercisesScreen() {
   // las categorías por las del pack, en su orden.
   const handleUpdatePackFull = async () => {
     if (!profile || packItems.length === 0) return;
-    const ok =
-      Platform.OS === 'web'
-        ? // eslint-disable-next-line no-alert
-          window.confirm(
-            'Tu biblioteca quedará EXACTAMENTE como el pack UDECA actual: se borrarán los ejercicios que no estén en el pack y se reemplazarán las categorías. ¿Continuar?'
-          )
-        : await new Promise<boolean>((resolve) => {
-            Alert.alert(
-              'Actualizar pack UDECA',
-              'Tu biblioteca quedará exactamente como el pack actual: se borran los ejercicios que no estén en el pack y se reemplazan las categorías.',
-              [
-                { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-                { text: 'Actualizar', style: 'destructive', onPress: () => resolve(true) },
-              ]
-            );
-          });
-    if (!ok) return;
+    setConfirmPack(false);
     setImporting(true);
     try {
       const key = (n: string) => n.trim().toLowerCase();
@@ -578,13 +564,15 @@ export default function ExercisesScreen() {
             principal: no compiten con "+ Nuevo" ni ocupan filas enteras. */}
         {isAdmin(profile) && packItems.length > 0 ? (
           <Pressable
-            onPress={handleUpdatePackFull}
+            onPress={() => setConfirmPack(true)}
             disabled={importing}
             style={[styles.pill, styles.pillDanger, importing && styles.pillBusy]}
             hitSlop={4}
           >
             <Ionicons name="sync-outline" size={14} color={colors.danger} />
-            <Text style={[styles.pillText, { color: colors.danger }]}>Actualizar pack</Text>
+            <Text style={[styles.pillText, { color: colors.danger }]}>
+              Actualizar a pack UDECA
+            </Text>
           </Pressable>
         ) : missingPack.length > 0 ? (
           <Pressable
@@ -598,19 +586,6 @@ export default function ExercisesScreen() {
           </Pressable>
         ) : null}
         <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
-      </View>
-
-      {/* Plantillas entre entrenadores: uso puntual, así que van arriba en
-          pequeño y alineadas a la derecha, sin robar sitio a la lista. */}
-      <View style={styles.toolsRow}>
-        <Pressable onPress={handleExport} style={styles.toolBtn} hitSlop={6}>
-          <Ionicons name="download-outline" size={13} color={colors.textMuted} />
-          <Text style={styles.toolText}>Exportar plantilla</Text>
-        </Pressable>
-        <Pressable onPress={handleImportTemplate} style={styles.toolBtn} hitSlop={6}>
-          <Ionicons name="cloud-upload-outline" size={13} color={colors.textMuted} />
-          <Text style={styles.toolText}>Importar plantilla</Text>
-        </Pressable>
       </View>
 
       {isAdmin(profile) ? (
@@ -633,9 +608,22 @@ export default function ExercisesScreen() {
 
       <View style={styles.catHeader}>
         <Text style={styles.catLabel}>Categorías</Text>
-        <Pressable onPress={() => setEditCats((v) => !v)} hitSlop={6}>
-          <Text style={styles.catEdit}>{editCats ? 'Listo' : 'Editar categorías'}</Text>
-        </Pressable>
+        {/* Plantillas entre entrenadores: uso muy puntual, así que viven aquí
+            en discreto, a la izquierda de la acción de editar categorías. */}
+        <View style={styles.catActions}>
+          <Pressable onPress={handleExport} style={styles.toolBtn} hitSlop={8}>
+            <Ionicons name="download-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.toolText}>Exportar</Text>
+          </Pressable>
+          <Pressable onPress={handleImportTemplate} style={styles.toolBtn} hitSlop={8}>
+            <Ionicons name="cloud-upload-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.toolText}>Importar</Text>
+          </Pressable>
+          <View style={styles.catActionsSep} />
+          <Pressable onPress={() => setEditCats((v) => !v)} hitSlop={8}>
+            <Text style={styles.catEdit}>{editCats ? 'Listo' : 'Editar categorías'}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {editCats ? (
@@ -832,6 +820,42 @@ export default function ExercisesScreen() {
           </View>
         ))
       )}
+
+      {/* Confirmación previa de "Actualizar a pack UDECA" (destructivo) */}
+      <Modal
+        visible={confirmPack}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmPack(false)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.confirmIcon}>
+              <Ionicons name="warning-outline" size={26} color={colors.danger} />
+            </View>
+            <Text style={styles.confirmTitle}>¿Actualizar a pack UDECA?</Text>
+            <Text style={styles.confirmText}>
+              Tu biblioteca quedará EXACTAMENTE igual que el pack UDECA actual
+              ({packItems.length} ejercicios): se sustituyen los datos de los que ya tienes,
+              se añaden los que falten y se BORRAN tus {exercises.length} ejercicio(s) que no
+              estén en el pack. También se reemplazan tus categorías. No se puede deshacer.
+            </Text>
+            <Button
+              title="Sí, sustituirlo todo"
+              variant="danger"
+              onPress={handleUpdatePackFull}
+              loading={importing}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setConfirmPack(false)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        </View>
+      </Modal>
 
       {/* Color de una categoría: paleta + color personalizado */}
       <Modal
@@ -1175,12 +1199,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   addCatText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  toolsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
+  catActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  catActionsSep: { width: 1, height: 12, backgroundColor: colors.border },
   toolBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   toolText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
   confirmBackdrop: {

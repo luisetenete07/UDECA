@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { updateUserProfile } from '../../../lib/firestore/users';
@@ -52,6 +52,10 @@ export default function ExerciseEditorScreen() {
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
   const [subgroup, setSubgroup] = useState<string>('');
   const [newSub, setNewSub] = useState('');
+  // Renombrar un subgrupo ya creado, desde el propio editor del ejercicio.
+  const [renameSub, setRenameSub] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState('');
+  const [renaming, setRenaming] = useState(false);
   // Variaciones: de momento solo el agarre. `grip` a undefined = sin variación.
   const [grip, setGrip] = useState<GripType | undefined>(undefined);
   // Nombres ya usados en la biblioteca, para no crear duplicados.
@@ -191,6 +195,48 @@ export default function ExerciseEditorScreen() {
     }
   };
 
+  /**
+   * Renombra un subgrupo de la categoría actual. El nombre vive en dos sitios:
+   * la lista del perfil y el campo `subgroup` de cada ejercicio que lo usa, así
+   * que hay que tocar los dos o esos ejercicios quedan huérfanos.
+   */
+  const applyRenameSub = async () => {
+    if (!profile || !renameSub) return;
+    const to = renameText.trim();
+    if (!to) return;
+    if (to === renameSub) {
+      setRenameSub(null);
+      return;
+    }
+    if (subgroups.some((x) => x.toLowerCase() === to.toLowerCase())) {
+      showToast('Ya existe un subgrupo con ese nombre');
+      return;
+    }
+    setRenaming(true);
+    try {
+      const library = await getExercisesForTrainer(profile.uid);
+      const affected = library.filter(
+        (e) => e.muscleGroup === muscleGroup && e.subgroup === renameSub
+      );
+      await Promise.all(affected.map((e) => updateExercise(e.id, { subgroup: to })));
+      await updateUserProfile(profile.uid, {
+        categorySubgroups: {
+          ...(profile.categorySubgroups ?? {}),
+          [muscleGroup]: subgroups.map((x) => (x === renameSub ? to : x)),
+        },
+      });
+      await refreshProfile();
+      // Si el ejercicio abierto estaba en ese subgrupo, sigue en él.
+      if (subgroup === renameSub) setSubgroup(to);
+      setRenameSub(null);
+      showToast('Subgrupo renombrado');
+    } catch {
+      showToast('No se pudo renombrar el subgrupo');
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   const removeCategory = (group: string) => {
     const list = categories.filter((g) => g !== group);
     if (list.length === 0) {
@@ -271,6 +317,21 @@ export default function ExerciseEditorScreen() {
             style={[styles.chip, subgroup === sg && styles.chipSelected]}
           >
             <Text style={[styles.chipText, subgroup === sg && styles.chipTextSelected]}>{sg}</Text>
+            {/* Lápiz para renombrarlo sin salir del editor. */}
+            <Pressable
+              onPress={() => {
+                setRenameSub(sg);
+                setRenameText(sg);
+              }}
+              hitSlop={8}
+              style={styles.chipPencil}
+            >
+              <Ionicons
+                name="pencil"
+                size={12}
+                color={subgroup === sg ? colors.onPrimary : colors.textMuted}
+              />
+            </Pressable>
           </Pressable>
         ))}
       </ScrollView>
@@ -384,6 +445,45 @@ export default function ExerciseEditorScreen() {
           style={{ marginTop: spacing.md, marginBottom: spacing.xl }}
         />
       ) : null}
+
+      {/* Renombrar subgrupo (arrastra a todos los ejercicios que lo usan) */}
+      <Modal
+        visible={!!renameSub}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameSub(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Renombrar subgrupo</Text>
+            <Text style={styles.modalText}>
+              Se actualizarán también los ejercicios que ya están en «{renameSub}».
+            </Text>
+            <TextInput
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="Nuevo nombre"
+              placeholderTextColor={colors.textFaint}
+              style={styles.addCatInput}
+              onSubmitEditing={applyRenameSub}
+              returnKeyType="done"
+              autoFocus
+            />
+            <Button
+              title="Guardar"
+              onPress={applyRenameSub}
+              loading={renaming}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setRenameSub(null)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -499,5 +599,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   varTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  chipPencil: { marginLeft: -1, marginRight: -3, opacity: 0.8 },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
+  modalText: {
+    ...typography.small,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });
