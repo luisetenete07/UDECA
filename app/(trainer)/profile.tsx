@@ -28,6 +28,7 @@ import {
   subscriptionState,
 } from '../../lib/subscription';
 import { deleteSocialStats, subscribeSocialLeaderboard } from '../../lib/firestore/social';
+import { getRecentErrorLogs, groupErrors, type ErrorGroup } from '../../lib/firestore/errorLogs';
 import { isOnline } from '../../lib/presence';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
@@ -56,6 +57,10 @@ export default function TrainerProfileScreen() {
   const hasConnectAccount = Boolean(profile?.stripeAccountId);
   // Panel admin UDECA (solo cuentas administradoras).
   const [adminOpen, setAdminOpen] = useState(false);
+  // Errores reales de los usuarios (solo CEO).
+  const [errorsOpen, setErrorsOpen] = useState(false);
+  const [errorGroups, setErrorGroups] = useState<ErrorGroup[]>([]);
+  const [loadingErrors, setLoadingErrors] = useState(false);
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
   // Clasificación y presencia del grupo (socialStats de sus alumnos).
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
@@ -101,6 +106,18 @@ export default function TrainerProfileScreen() {
 
   const sub = subscriptionState(profile);
   const admin = isAdmin(profile);
+
+  const openErrors = async () => {
+    setErrorsOpen(true);
+    setLoadingErrors(true);
+    try {
+      setErrorGroups(groupErrors(await getRecentErrorLogs()));
+    } catch {
+      showToast('No se pudieron cargar los errores');
+    } finally {
+      setLoadingErrors(false);
+    }
+  };
 
   const openAdmin = async () => {
     setAdminOpen(true);
@@ -596,6 +613,45 @@ export default function TrainerProfileScreen() {
       {admin ? (
         <Card accent style={styles.section}>
           <View style={styles.subHeader}>
+            <Text style={styles.sectionTitle}>Errores de usuarios</Text>
+            <Pressable onPress={errorsOpen ? () => setErrorsOpen(false) : openErrors} hitSlop={8}>
+              <Ionicons
+                name={errorsOpen ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.textMuted}
+              />
+            </Pressable>
+          </View>
+          {!errorsOpen ? (
+            <Text style={styles.helperText}>
+              Qué se ha roto de verdad en el móvil de la gente, agrupado por fallo.
+            </Text>
+          ) : loadingErrors ? (
+            <Text style={styles.helperText}>Cargando errores...</Text>
+          ) : errorGroups.length === 0 ? (
+            <Text style={styles.helperText}>
+              Ningún error registrado. Buena señal.
+            </Text>
+          ) : (
+            errorGroups.map((g) => (
+              <View key={g.message} style={styles.errCard}>
+                <Text style={styles.errMsg}>{g.message}</Text>
+                <Text style={styles.errMeta}>
+                  {g.count}× · {g.affected} usuario(s) · {g.platforms.join(', ')}
+                  {g.where ? ` · ${g.where}` : ''}
+                </Text>
+                <Text style={styles.errMeta}>
+                  Última vez: {fmtDate(g.lastAt)} · versión {g.sample.appVersion ?? '—'}
+                </Text>
+              </View>
+            ))
+          )}
+        </Card>
+      ) : null}
+
+      {admin ? (
+        <Card accent style={styles.section}>
+          <View style={styles.subHeader}>
             <Text style={styles.sectionTitle}>Admin UDECA · coaches</Text>
             <Pressable onPress={adminOpen ? () => setAdminOpen(false) : openAdmin} hitSlop={8}>
               <Ionicons
@@ -829,6 +885,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   coachCard: { borderTopWidth: 1, borderTopColor: colors.border },
+  errCard: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  errMsg: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  errMeta: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 2 },
   coachRow: {
     flexDirection: 'row',
     alignItems: 'center',

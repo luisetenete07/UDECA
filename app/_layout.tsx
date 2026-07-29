@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
@@ -18,8 +18,26 @@ import { CardRendererHost } from '../components/CardRendererHost';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ToastHost } from '../components/Toast';
-import { AuthProvider } from '../lib/auth-context';
+import { AuthProvider, useAuth } from '../lib/auth-context';
+import { installGlobalErrorLogging } from '../lib/errorLog';
 import { colors } from '../lib/theme';
+
+/**
+ * Engancha una sola vez el registro de errores no capturados. Vive dentro del
+ * AuthProvider para poder adjuntar a cada fallo el usuario afectado, que es lo
+ * que permite escribirle y saber si le pasa a uno o a todos.
+ */
+function GlobalErrorLogger() {
+  const { profile } = useAuth();
+  // Ref en vez de dependencia: el manejador se instala una vez y lee siempre
+  // el uid más reciente, sin reinstalarse en cada login.
+  const uidRef = useRef<string | undefined>(undefined);
+  uidRef.current = profile?.uid;
+  useEffect(() => {
+    installGlobalErrorLogging(() => uidRef.current);
+  }, []);
+  return null;
+}
 
 export default function RootLayout() {
   const [splashDone, setSplashDone] = useState(false);
@@ -42,6 +60,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <AuthProvider>
           <StatusBar style="light" />
+          <GlobalErrorLogger />
           <ToastHost />
           {/* Motor oculto de las tarjetas PNG para compartir (solo móvil). */}
           <CardRendererHost />

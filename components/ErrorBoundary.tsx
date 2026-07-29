@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { describeError, logError } from '../lib/errorLog';
 
 /**
  * Red de seguridad de la app. Si una pantalla lanza un error al pintarse, sin
@@ -23,6 +24,18 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
+  }
+
+  // Se registra aquí y no en getDerivedStateFromError porque ese método debe
+  // ser puro: React puede llamarlo más de una vez por el mismo fallo.
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    const { message, stack } = describeError(error);
+    void logError({
+      message,
+      stack: stack ?? info.componentStack ?? undefined,
+      where: 'render',
+      fatal: true,
+    });
   }
 
   private reset = () => this.setState({ error: null });

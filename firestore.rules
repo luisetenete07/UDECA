@@ -362,5 +362,40 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.trainerId == request.auth.uid;
     }
+
+    // Errores reales de los usuarios. Los escribe la app cuando algo se rompe,
+    // para que dejemos de enterarnos de los fallos por WhatsApp (o por un
+    // rechazo de Apple).
+    //
+    // Se permite escribir SIN sesión a propósito: los fallos más caros son los
+    // del registro y el login, donde todavía no hay usuario. A cambio, el
+    // documento se valida con dureza (campos exactos y longitudes acotadas)
+    // para que no sirva de almacén gratuito, y nadie puede leerlo, editarlo ni
+    // borrarlo salvo el CEO.
+    match /errorLogs/{logId} {
+      function isUdecaAdmin() {
+        return request.auth != null
+          && request.auth.token.email in [
+            'luisetenete07@gmail.com',
+            'luistenaf@gmail.com'
+          ];
+      }
+      allow read, delete: if isUdecaAdmin();
+      allow update: if false; // un error registrado no se reescribe
+      allow create: if request.resource.data.keys().hasOnly([
+            'message', 'stack', 'where', 'uid', 'fatal', 'platform', 'appVersion', 'createdAt'
+          ])
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 300
+        && (!('stack' in request.resource.data)
+            || request.resource.data.stack.size() <= 2000)
+        && (!('where' in request.resource.data)
+            || request.resource.data.where.size() <= 200)
+        // No se puede firmar un error en nombre de otro usuario.
+        && (request.resource.data.uid == null
+            || (request.auth != null && request.resource.data.uid == request.auth.uid))
+        && request.resource.data.createdAt is int;
+    }
   }
 }

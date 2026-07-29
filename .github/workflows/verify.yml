@@ -1,0 +1,55 @@
+# Red de seguridad en cada push: comprueba que la app compila, que los tipos
+# cuadran y que no se ha colado ningún módulo nativo sin declarar.
+#
+# El orden importa: primero lo barato (tipos, dependencias) y al final el
+# empaquetado, que es lo que más tarda. Así un error tonto se ve en segundos.
+name: Verificar
+
+on:
+  push:
+    branches:
+      - claude/calisthenics-coaching-app-o72apc
+  pull_request: {}
+  workflow_dispatch: {}
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Configuración PÚBLICA de cliente de Firebase (va incrustada en el JS que
+  # descarga cualquier visitante, por diseño del SDK). La seguridad real la
+  # imponen las reglas de Firestore. No son secretos.
+  EXPO_PUBLIC_FIREBASE_API_KEY: AIzaSyCZ8cGqFNCJHEHFRbQrVUpZxDXfv6Nl2ZE
+  EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: udeca-luistenafit.firebaseapp.com
+  EXPO_PUBLIC_FIREBASE_PROJECT_ID: udeca-luistenafit
+  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: udeca-luistenafit.firebasestorage.app
+  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "1042172841881"
+  EXPO_PUBLIC_FIREBASE_APP_ID: 1:1042172841881:web:91985251ac5b7db1884d08
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tipos (TypeScript)
+        run: npx tsc --noEmit
+
+      # Un módulo nativo transitivo compila pero crashea al arrancar. Esto es
+      # lo que provocó el rechazo de Apple de julio; ahora lo caza CI.
+      - name: Módulos nativos declarados
+        run: node scripts/check-native-deps.mjs
+
+      - name: Empaquetado web
+        run: npx expo export --platform web --clear
