@@ -9,7 +9,7 @@ import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
 import { showToast } from '../../../../components/Toast';
 import { useAuth } from '../../../../lib/auth-context';
-import { createExercise, getExercisesForTrainer } from '../../../../lib/firestore/exercises';
+import { createExercise, getExerciseLibrary } from '../../../../lib/firestore/exercises';
 import {
   createRoutine,
   getActiveRoutineForClient,
@@ -139,7 +139,7 @@ export default function RoutineEditorScreen() {
     (async () => {
       const [existing, library, clientProfile] = await Promise.all([
         getActiveRoutineForClient(clientId, profile.uid),
-        getExercisesForTrainer(profile.uid),
+        getExerciseLibrary(profile.uid),
         getUserProfile(clientId).catch(() => null),
       ]);
       setExercises(library);

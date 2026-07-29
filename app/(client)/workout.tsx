@@ -29,7 +29,7 @@ import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
-import { getExercisesForTrainer } from '../../lib/firestore/exercises';
+import { getExerciseLibrary } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
@@ -263,7 +263,7 @@ export default function WorkoutScreen() {
         setLastPerf(lastPerformanceByExercise(logs));
         // Vídeos de técnica de la biblioteca del entrenador (no bloquea).
         if (profile.trainerId) {
-          getExercisesForTrainer(profile.trainerId)
+          getExerciseLibrary(profile.trainerId)
             .then((library) => {
               if (cancelled) return;
               const map: Record<string, string> = {};

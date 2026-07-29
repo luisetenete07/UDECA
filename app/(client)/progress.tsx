@@ -33,7 +33,7 @@ import { showToast } from '../../components/Toast';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { getExercisesForTrainer } from '../../lib/firestore/exercises';
+import { getExerciseLibrary } from '../../lib/firestore/exercises';
 import { getLevelTestsForClient } from '../../lib/firestore/levelTests';
 import {
   exerciseProgression,
@@ -121,7 +121,7 @@ export default function ProgressScreen() {
     // Medida actual de cada ejercicio (reps/segundos) desde la biblioteca del
     // coach, para mostrar bien los isométricos aunque el registro sea antiguo.
     if (profile.trainerId) {
-      getExercisesForTrainer(profile.trainerId)
+      getExerciseLibrary(profile.trainerId)
         .then((library) => {
           const mmap: Record<string, string> = {};
           const gmap: Record<string, string> = {};

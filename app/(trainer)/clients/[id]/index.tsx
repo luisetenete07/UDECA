@@ -17,7 +17,7 @@ import { ConsistencyMap } from '../../../../components/ConsistencyMap';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getCheckInsForClient } from '../../../../lib/firestore/checkins';
-import { getExercisesForTrainer } from '../../../../lib/firestore/exercises';
+import { getExerciseLibrary } from '../../../../lib/firestore/exercises';
 import {
   createHabit,
   deleteHabit,
@@ -145,7 +145,7 @@ export default function ClientDetailScreen() {
             getHabitsForClient(id, uid),
             getHabitLogsForClient(id, uid),
             getCoachNote(id),
-            getExercisesForTrainer(uid),
+            getExerciseLibrary(uid),
           ]);
         if (cancelled) return;
         setClient(clientData);
