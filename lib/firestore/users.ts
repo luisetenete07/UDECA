@@ -186,10 +186,19 @@ export async function clearClientNextPayment(clientId: string) {
  * El entrenador confirma el cobro: marca "Pagado", fija la próxima renovación y
  * limpia el aviso de "pago declarado" del alumno (todo en una escritura).
  */
-export async function registerClientPayment(clientId: string, nextPaymentDate: number) {
+export async function registerClientPayment(
+  clientId: string,
+  nextPaymentDate: number,
+  billingAnchorDay?: number
+) {
   await setDoc(
     doc(db, 'users', clientId),
-    { paymentStatus: 'paid', nextPaymentDate, paymentReportedAt: deleteField() },
+    {
+      paymentStatus: 'paid',
+      nextPaymentDate,
+      ...(billingAnchorDay ? { billingAnchorDay } : {}),
+      paymentReportedAt: deleteField(),
+    },
     { merge: true }
   );
 }

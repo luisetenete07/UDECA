@@ -18,6 +18,7 @@ import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getCheckInsForClient } from '../../../../lib/firestore/checkins';
 import { getExerciseLibrary } from '../../../../lib/firestore/exercises';
+import { billingAnchorOf, nextBillingDate } from '../../../../lib/billing';
 import {
   createHabit,
   deleteHabit,
@@ -73,12 +74,6 @@ import {
 } from '../../../../lib/types';
 
 /** Suma `n` meses a un timestamp (Date gestiona el desbordamiento de mes). */
-function addMonths(ts: number, n: number): number {
-  const d = new Date(ts);
-  d.setMonth(d.getMonth() + n);
-  return d.getTime();
-}
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 const fmtDate = (ts: number) =>
   new Date(ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -221,13 +216,21 @@ export default function ClientDetailScreen() {
   // renovación (o desde hoy si ya venció). Un solo toque = cobro al día.
   const handleRegisterPayment = async () => {
     if (!id || !client || !profile) return;
-    const base =
-      client.nextPaymentDate && client.nextPaymentDate > Date.now()
-        ? client.nextPaymentDate
-        : Date.now();
-    const nextPaymentDate = addMonths(base, 1);
-    setClient({ ...client, paymentStatus: 'paid', nextPaymentDate, paymentReportedAt: undefined });
-    await registerClientPayment(id, nextPaymentDate);
+    // Ver lib/billing.ts: el mes cobrado arranca en la fecha en que TOCABA
+    // pagar, no en la que se paga.
+    const anchor =
+      client.billingAnchorDay ??
+      (client.nextPaymentDate ? billingAnchorOf(client.nextPaymentDate) : undefined);
+    const nextPaymentDate = nextBillingDate(client.nextPaymentDate, anchor);
+    const billingAnchorDay = anchor ?? billingAnchorOf(nextPaymentDate);
+    setClient({
+      ...client,
+      paymentStatus: 'paid',
+      nextPaymentDate,
+      billingAnchorDay,
+      paymentReportedAt: undefined,
+    });
+    await registerClientPayment(id, nextPaymentDate, billingAnchorDay);
     // Registro del cobro para el historial de ingresos (con la cuota actual).
     createPayment({
       trainerId: profile.uid,

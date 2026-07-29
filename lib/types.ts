@@ -29,6 +29,12 @@ export interface UserProfile {
    * sin tener que contar la colección en cada arranque.
    */
   clientCount?: number;
+  /**
+   * Día del mes en que se le cobra la cuota. Es el ancla de su ciclo: sin él,
+   * un alumno que cobra el 31 caería a 28 al pasar por febrero y se quedaría
+   * ahí para siempre.
+   */
+  billingAnchorDay?: number;
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /**

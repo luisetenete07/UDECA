@@ -25,6 +25,7 @@ import {
   updatePayment,
 } from '../../lib/firestore/payments';
 import { FREE_CLIENT_LIMIT, trainerAtFreeLimit } from '../../lib/subscription';
+import { billingAnchorOf, nextBillingDate, periodsOwed } from '../../lib/billing';
 import { approveClientOnServer } from '../../lib/join';
 import {
   approveJoinRequest,
@@ -48,11 +49,6 @@ import {
 const INACTIVE_DAYS_THRESHOLD = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Suma meses naturales a un timestamp (para la próxima renovación). */
-function addMonths(base: number, months: number): number {
-  const d = new Date(base);
-  d.setMonth(d.getMonth() + months);
-  return d.getTime();
-}
 const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
   good: colors.success,
   warn: '#C9902B',
@@ -362,10 +358,11 @@ export default function TrainerDashboard() {
     if (!profile) return;
     setConfirmingPayId(c.uid);
     try {
-      const base =
-        c.nextPaymentDate && c.nextPaymentDate > Date.now() ? c.nextPaymentDate : Date.now();
-      const nextPaymentDate = addMonths(base, 1);
-      await registerClientPayment(c.uid, nextPaymentDate);
+      // El mes cobrado arranca en la fecha en que TOCABA pagar, no en la que
+      // se paga: si no, cada retraso empuja el cobro y la fecha no vuelve.
+      const anchor = c.billingAnchorDay ?? (c.nextPaymentDate ? billingAnchorOf(c.nextPaymentDate) : undefined);
+      const nextPaymentDate = nextBillingDate(c.nextPaymentDate, anchor);
+      await registerClientPayment(c.uid, nextPaymentDate, anchor ?? billingAnchorOf(nextPaymentDate));
       const pay = await createPayment({
         trainerId: profile.uid,
         clientId: c.uid,
@@ -391,7 +388,14 @@ export default function TrainerDashboard() {
         },
         ...prev,
       ]);
-      showToast(`Cobro de ${c.name.split(' ')[0]} confirmado`);
+      // Un cobro cubre UN mes. Si el alumno acumulaba varios impagos sigue
+      // debiendo: mejor decirlo que dejar al coach creyendo que está al día.
+      const pendientes = periodsOwed(nextPaymentDate);
+      showToast(
+        pendientes > 0
+          ? `Cobro confirmado · a ${c.name.split(' ')[0]} le faltan ${pendientes} mensualidad(es)`
+          : `Cobro de ${c.name.split(' ')[0]} confirmado`
+      );
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo confirmar');
     } finally {
