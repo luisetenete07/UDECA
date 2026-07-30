@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FadeIn } from './FadeIn';
+import { useLayout } from '../lib/responsive';
 import { colors, gradients, spacing } from '../lib/theme';
 
 interface ScreenContainerProps {
@@ -20,19 +21,23 @@ interface ScreenContainerProps {
   onRefresh?: () => void;
   contentStyle?: ViewStyle;
   /**
-   * Ancho máximo del contenido. Por defecto NO se limita: el contenido usa TODA
-   * la pantalla a pantalla completa (móvil, tablet y escritorio), con solo un
-   * margen fino y constante para que el texto no toque el borde. Únicamente los
-   * formularios de acceso piden una columna estrecha.
+   * Ancho máximo del contenido. Por defecto se usa el de `useLayout()`, que
+   * mantiene la columna legible en pantallas grandes. Solo se indica aquí para
+   * pedir algo más estrecho (los formularios de acceso) o para una pantalla que
+   * de verdad quiera ocupar todo el ancho (`0`).
    */
   maxWidth?: number;
 }
 
 /**
- * Contenedor base de pantalla: margen lateral fino y constante en todos los
- * tamaños, para que en ordenador y tablet el diseño llegue de lado a lado (sin
- * bandas negras) y a la vez el contenido no se pegue al borde. El ancho solo se
- * limita si una pantalla concreta lo pide.
+ * Contenedor base de pantalla: fondo, margen lateral proporcional al tamaño y
+ * columna de contenido centrada con un ancho máximo.
+ *
+ * El ancho máximo es lo que evita que en un monitor una fila de alumno mida
+ * 1400 px con el nombre a la izquierda del todo y la flecha a 1350 px. El
+ * espacio que queda a los lados no es hueco desaprovechado: es el margen que
+ * hace que el contenido se lea. Para aprovechar el ancho se usan más columnas
+ * (ver `Grid`), no filas más largas.
  */
 export function ScreenContainer({
   children,
@@ -42,8 +47,15 @@ export function ScreenContainer({
   contentStyle,
   maxWidth,
 }: ScreenContainerProps) {
-  // Solo se limita el ancho si la pantalla lo pide expresamente (> 0).
-  const cap = maxWidth && maxWidth > 0 ? { maxWidth } : null;
+  const layout = useLayout();
+  // `maxWidth={0}` es la forma de pedir explícitamente todo el ancho.
+  const limite = maxWidth === undefined ? layout.maxWidth : maxWidth;
+  const cap = limite > 0 ? { maxWidth: limite } : null;
+  // En pantalla ancha la barra de pestañas es un muelle flotante (ver
+  // `useTabScreenOptions`), así que el contenido necesita sitio por debajo para
+  // no quedarse escondido detrás de ella al llegar al final.
+  const dock = Platform.OS === 'web' && layout.isWide ? spacing.xxl + spacing.lg : 0;
+  const gutter = { paddingHorizontal: layout.gutter, paddingBottom: dock };
 
   if (!scroll) {
     return (
@@ -54,7 +66,7 @@ export function ScreenContainer({
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        <View style={styles.centerRow}>
+        <View style={[styles.centerRow, gutter]}>
           <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
         </View>
       </SafeAreaView>
@@ -78,7 +90,7 @@ export function ScreenContainer({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, gutter]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
@@ -110,14 +122,12 @@ const styles = StyleSheet.create({
   centerRow: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
   },
   scrollContent: {
     flexGrow: 1,
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },

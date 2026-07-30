@@ -5,11 +5,13 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { Paywall } from '../../components/Paywall';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
-import { tabScreenOptions } from '../../lib/navTheme';
+import { useTabScreenOptions } from '../../lib/navTheme';
 import { trainerHasAccess } from '../../lib/subscription';
 
 export default function TrainerLayout() {
   const { loading, firebaseUser, profile, emailVerified } = useAuth();
+  // Antes de los `return` de abajo: un hook no puede quedarse sin llamar.
+  const tabOptions = useTabScreenOptions();
 
   if (loading) return <LoadingScreen />;
   if (!firebaseUser || !profile) return <Redirect href="/(auth)/login" />;
@@ -23,7 +25,7 @@ export default function TrainerLayout() {
 
   return (
     <Tabs
-      screenOptions={tabScreenOptions}
+      screenOptions={tabOptions}
     >
       <Tabs.Screen
         name="dashboard"

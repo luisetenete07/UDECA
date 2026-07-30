@@ -14,6 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { FadeIn } from '../../../components/FadeIn';
+import { Grid } from '../../../components/Grid';
+import { CardButton } from '../../../components/CardButton';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
@@ -774,10 +776,13 @@ export default function ExercisesScreen() {
             {grouped.length > 1 ? (
               <Text style={styles.subgroupHead}>{sg || 'Sin subgrupo'}</Text>
             ) : null}
+            <Grid>
             {list.map((exercise, index) => (
           <FadeIn key={exercise.id} delay={Math.min(index * 30, 240)}>
-          <Pressable onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}>
-            <Card style={styles.exerciseCard}>
+          <CardButton
+            onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}
+            style={styles.exerciseCard}
+          >
               {/* Franja del color de su categoría: distingue de un vistazo a
                   qué grupo pertenece cada ejercicio de la lista. */}
               <View
@@ -795,10 +800,10 @@ export default function ExercisesScreen() {
                   <Text style={styles.videoBadgeText}>Vídeo</Text>
                 </View>
               ) : null}
-            </Card>
-          </Pressable>
+          </CardButton>
           </FadeIn>
             ))}
+            </Grid>
           </View>
         ))
       )}
@@ -1238,7 +1243,8 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
   chipTextSelected: { color: colors.onPrimary },
-  exerciseCard: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
+  // La separación entre tarjetas la pone la rejilla, no la tarjeta.
+  exerciseCard: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   exerciseName: { ...typography.h3, color: colors.text },
   exerciseGroup: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   videoBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },

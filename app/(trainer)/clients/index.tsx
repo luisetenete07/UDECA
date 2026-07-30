@@ -4,6 +4,8 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../components/Avatar';
 import { FadeIn } from '../../../components/FadeIn';
+import { Grid } from '../../../components/Grid';
+import { CardButton } from '../../../components/CardButton';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { ErrorState } from '../../../components/ErrorState';
@@ -358,12 +360,15 @@ export default function ClientsScreen() {
       ) : filtered.length === 0 ? (
         <EmptyState icon="search-outline" title="Sin resultados" subtitle="Prueba con otro nombre o cambia el filtro." />
       ) : (
-        filtered.map((client, index) => {
+        <Grid>
+        {filtered.map((client, index) => {
           const activity = activityInfo(lastTrained[client.uid]);
           return (
           <FadeIn key={client.uid} delay={Math.min(index * 40, 280)}>
-          <Pressable onPress={() => router.push(`/(trainer)/clients/${client.uid}`)}>
-            <Card style={styles.clientCard}>
+          <CardButton
+            onPress={() => router.push(`/(trainer)/clients/${client.uid}`)}
+            style={styles.clientCard}
+          >
               <Avatar name={client.name} photoURL={client.photoURL} size={44} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.clientName}>{client.name}</Text>
@@ -404,11 +409,11 @@ export default function ClientsScreen() {
                 </View>
               ) : null}
               <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
-            </Card>
-          </Pressable>
+          </CardButton>
           </FadeIn>
           );
-        })
+        })}
+        </Grid>
       )}
     </ScreenContainer>
   );
@@ -488,7 +493,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    marginBottom: spacing.sm,
+    // La separación entre fichas la pone la rejilla, no la tarjeta.
+    flex: 1,
   },
   clientName: { ...typography.h3, color: colors.text },
   clientGoal: { ...typography.small, color: colors.textMuted, marginTop: 2 },

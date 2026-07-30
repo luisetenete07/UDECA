@@ -14,12 +14,14 @@ import { useAuth } from '../../lib/auth-context';
 import { subscriptionState } from '../../lib/subscription';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
-import { tabScreenOptions } from '../../lib/navTheme';
+import { useTabScreenOptions } from '../../lib/navTheme';
 
 const onboardingKey = (uid: string) => `udeca-onboarding-${uid}`;
 
 export default function ClientLayout() {
   const { loading, firebaseUser, profile, emailVerified, refreshProfile } = useAuth();
+  // Antes de los `return` de abajo: un hook no puede quedarse sin llamar.
+  const tabOptions = useTabScreenOptions();
   // null = comprobando; true = ya visto; false = mostrar bienvenida.
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
   // Una vez terminado en esta sesión, no dejamos que un refresco del perfil lo
@@ -105,7 +107,7 @@ export default function ClientLayout() {
   return (
     <View style={{ flex: 1 }}>
     <Tabs
-      screenOptions={tabScreenOptions}
+      screenOptions={tabOptions}
     >
       <Tabs.Screen
         name="dashboard"
