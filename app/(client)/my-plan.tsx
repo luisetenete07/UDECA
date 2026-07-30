@@ -18,6 +18,8 @@ import {
 import { flexLabel } from '../../lib/schedule';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
+  GRIP_LABEL,
+  GRIP_TYPES,
   resolveLoad,
   WEEKDAY_LABELS,
   type ExerciseLoad,
@@ -505,6 +507,28 @@ export default function MyPlanScreen() {
                               >
                                 <Text style={[styles.loadChipText, active && styles.loadChipTextActive]}>
                                   {opt.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+
+                        {/* Agarre de ESTE ejercicio en ESTE día. Volver a
+                            tocarlo lo deja sin especificar. */}
+                        <View style={styles.loadRow}>
+                          {GRIP_TYPES.map((g) => {
+                            const active = exx.grip === g;
+                            return (
+                              <Pressable
+                                key={g}
+                                onPress={() =>
+                                  patchEx(di, ei, { grip: active ? undefined : g })
+                                }
+                                style={[styles.loadChip, active && styles.loadChipActive]}
+                                hitSlop={2}
+                              >
+                                <Text style={[styles.loadChipText, active && styles.loadChipTextActive]}>
+                                  {GRIP_LABEL[g]}
                                 </Text>
                               </Pressable>
                             );

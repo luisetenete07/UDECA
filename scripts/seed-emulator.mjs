@@ -89,8 +89,8 @@ await addDoc(collection(db, 'routines'), {
   clientId: cli, trainerId: coach, name: 'Bloque de fuerza', active: true,
   createdAt: now - 30 * DAY, schedule: 'cycle',
   days: [
-    { id: 'd1', name: 'Empuje', intensity: 7, exercises: ids.slice(0, 3).map((e, i) => ({ id: 'e' + i, exerciseId: e.id, name: e.name, sets: 4, reps: 8, restSeconds: 120, rir: 2 })) },
-    { id: 'd2', name: 'Tirón', intensity: 8, exercises: ids.slice(3).map((e, i) => ({ id: 'f' + i, exerciseId: e.id, name: e.name, sets: 4, reps: 6, restSeconds: 150, rir: 1 })) },
+    { id: 'd1', name: 'Empuje', intensity: 7, exercises: ids.slice(0, 3).map((e, i) => ({ id: 'e' + i, exerciseId: e.id, name: e.name, sets: 4, reps: '8', restSeconds: 120, rir: 2 })) },
+    { id: 'd2', name: 'Tirón', intensity: 8, exercises: ids.slice(3).map((e, i) => ({ id: 'f' + i, exerciseId: e.id, name: e.name, sets: 4, reps: '6', restSeconds: 150, rir: 1 })) },
     { id: 'd3', name: 'Descanso', isRest: true, exercises: [] },
   ],
 });

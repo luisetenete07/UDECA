@@ -23,13 +23,10 @@ import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   EXERCISE_MEASURES,
-  GRIP_LABEL,
-  GRIP_TYPES,
   MEASURE_LABEL,
   MEASURE_SHORT,
   MUSCLE_GROUPS,
   type ExerciseMeasure,
-  type GripType,
   type TemplateExercise,
 } from '../../../lib/types';
 
@@ -69,7 +66,6 @@ interface Draft {
   /** Porcentaje de trabajo por músculo (0 = no trabaja, 25/50/75/100). */
   muscleWeights: Partial<Record<MuscleId, number>>;
   subgroup: string;
-  grip?: GripType;
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -80,7 +76,6 @@ const EMPTY_DRAFT: Draft = {
   videoUrl: '',
   muscleWeights: {},
   subgroup: '',
-  grip: undefined,
 };
 
 export default function TemplateExercisesScreen() {
@@ -134,7 +129,6 @@ export default function TemplateExercisesScreen() {
         it.muscleWeights ??
         Object.fromEntries((it.muscles ?? []).map((m) => [m, 100])),
       subgroup: it.subgroup ?? '',
-      grip: it.variations?.grip,
     });
 
   const save = async () => {
@@ -155,8 +149,6 @@ export default function TemplateExercisesScreen() {
       muscleWeights:
         musclesOf(draft.muscleWeights).length > 0 ? draft.muscleWeights : undefined,
       subgroup: draft.subgroup.trim() || undefined,
-      // Vacío (no undefined) al quitar la variación, para que se borre el campo.
-      variations: draft.grip ? { grip: draft.grip } : {},
     };
     try {
       if (draft.id) {
@@ -231,7 +223,6 @@ export default function TemplateExercisesScreen() {
           muscles: e.muscles,
           muscleWeights: e.muscleWeights,
           subgroup: e.subgroup,
-          variations: e.variations,
           order: order++,
         });
       }
@@ -313,7 +304,6 @@ export default function TemplateExercisesScreen() {
                     <Text style={styles.itemMeta}>
                       {MEASURE_SHORT[it.measure ?? 'reps']}
                       {it.subgroup ? ` · ${it.subgroup}` : ''}
-                      {it.variations?.grip ? ` · ${GRIP_LABEL[it.variations.grip]}` : ''}
                       {it.muscles && it.muscles.length > 0
                         ? ` · ${it.muscles.map((m) => MUSCLE_LABEL[m]).join(', ')}`
                         : ' · sin músculos'}
@@ -389,42 +379,6 @@ export default function TemplateExercisesScreen() {
                     onChangeText={(v) => setDraft({ ...draft, subgroup: v })}
                     placeholder="Ej. Accesorios, Flexiones, Press, Aguantes"
                   />
-
-                  <Text style={styles.label}>Variaciones</Text>
-                  {draft.grip === undefined ? (
-                    <Pressable
-                      onPress={() => setDraft({ ...draft, grip: 'prone' })}
-                      style={styles.addVarBtn}
-                    >
-                      <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                      <Text style={styles.addVarText}>Añadir variación</Text>
-                    </Pressable>
-                  ) : (
-                    <View style={styles.varCard}>
-                      <View style={styles.varHead}>
-                        <Text style={styles.varTitle}>Tipo de agarre</Text>
-                        <Pressable
-                          onPress={() => setDraft({ ...draft, grip: undefined })}
-                          hitSlop={8}
-                        >
-                          <Ionicons name="close-circle" size={18} color={colors.danger} />
-                        </Pressable>
-                      </View>
-                      <View style={[styles.segment, { marginBottom: 0 }]}>
-                        {GRIP_TYPES.map((g) => (
-                          <Pressable
-                            key={g}
-                            onPress={() => setDraft({ ...draft, grip: g })}
-                            style={[styles.segBtn, draft.grip === g && styles.segBtnOn]}
-                          >
-                            <Text style={[styles.segText, draft.grip === g && styles.segTextOn]}>
-                              {GRIP_LABEL[g]}
-                            </Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                  )}
 
                   <View style={styles.musclesHead}>
                     <Text style={styles.label}>Músculos que trabaja</Text>
@@ -560,35 +514,6 @@ const styles = StyleSheet.create({
   segBtnOn: { backgroundColor: colors.primary },
   segText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   segTextOn: { color: colors.onPrimary },
-  addVarBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-    marginBottom: spacing.md,
-  },
-  addVarText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  varCard: {
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    marginBottom: spacing.md,
-  },
-  varHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  varTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   musclesHead: {
     flexDirection: 'row',
     alignItems: 'center',

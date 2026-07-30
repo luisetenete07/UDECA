@@ -277,15 +277,14 @@ export interface Exercise {
   muscleWeights?: Partial<Record<MuscleId, number>>;
   /** Subgrupo dentro de su categoría (opcional). */
   subgroup?: string;
-  /** Variaciones del ejercicio (agarre…). Opcional. */
-  variations?: ExerciseVariations;
   createdAt: number;
 }
 
 /**
- * Tipo de agarre de un ejercicio. Es la primera "variación" disponible; el
- * objeto `ExerciseVariations` existe para poder añadir más (anchura, tempo…)
- * sin tener que migrar los ejercicios ya guardados.
+ * Tipo de agarre. NO es una propiedad del ejercicio, sino de cómo se programa
+ * en un plan concreto: las mismas dominadas son prono un día y supinas otro, y
+ * fijarlo en la biblioteca obligaba a duplicar el ejercicio para cada agarre.
+ * Por eso vive en `RoutineExercise` y se elige al montar el plan.
  */
 export type GripType = 'prone' | 'neutral' | 'supine';
 
@@ -296,11 +295,6 @@ export const GRIP_LABEL: Record<GripType, string> = {
   neutral: 'Neutro',
   supine: 'Supino',
 };
-
-/** Variaciones opcionales que el entrenador puede añadir a un ejercicio. */
-export interface ExerciseVariations {
-  grip?: GripType;
-}
 
 /**
  * Plantilla maestra de ejercicios de UDECA. La edita SOLO el admin (CEO) y
@@ -321,8 +315,6 @@ export interface TemplateExercise {
   muscleWeights?: Partial<Record<MuscleId, number>>;
   /** Subgrupo dentro de su categoría (viaja con el pack). */
   subgroup?: string;
-  /** Variaciones del ejercicio (agarre…); viaja con el pack. */
-  variations?: ExerciseVariations;
   /** Orden de aparición en la lista (menor primero). */
   order?: number;
   createdAt: number;
@@ -353,6 +345,12 @@ export interface RoutineExercise {
   band?: boolean;
   /** RIR objetivo (repeticiones en reserva), 0-5. */
   rir?: number;
+  /**
+   * Agarre con el que se hace ESTE ejercicio en ESTE día del plan (prono,
+   * neutro o supino). Lo elige el entrenador al montar el plan, no al crear el
+   * ejercicio: así unas dominadas sirven para los tres agarres.
+   */
+  grip?: GripType;
   /**
    * Objetivo del coach para este ejercicio (opcional): reps o segundos a
    * alcanzar según su medida (p. ej. "20" reps o "60" seg de aguante).

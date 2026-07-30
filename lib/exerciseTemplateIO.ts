@@ -1,12 +1,9 @@
 import type { MuscleId } from './muscles';
 import {
   EXERCISE_MEASURES,
-  GRIP_TYPES,
   type Exercise,
   type ExerciseLoad,
   type ExerciseMeasure,
-  type ExerciseVariations,
-  type GripType,
 } from './types';
 
 /**
@@ -29,7 +26,6 @@ export interface ExportedExercise {
   band?: boolean;
   muscleWeights?: Partial<Record<MuscleId, number>>;
   subgroup?: string;
-  variations?: ExerciseVariations;
 }
 
 interface TemplateEnvelope {
@@ -58,7 +54,6 @@ export function buildExerciseTemplate(exercises: Exercise[]): string {
       muscles: e.muscles,
       muscleWeights: e.muscleWeights,
       subgroup: e.subgroup,
-      variations: e.variations,
       load: e.load,
       band: e.band,
     })),
@@ -113,7 +108,6 @@ export function parseExerciseTemplate(json: string): ExportedExercise[] | null {
             ) as Partial<Record<MuscleId, number>>)
           : undefined,
       subgroup: typeof e.subgroup === 'string' && e.subgroup.trim() ? e.subgroup.trim() : undefined,
-      variations: parseVariations(e.variations),
       load:
         e.load === 'weighted' || e.load === 'assisted' || e.load === 'none'
           ? (e.load as ExerciseLoad)
@@ -122,11 +116,4 @@ export function parseExerciseTemplate(json: string): ExportedExercise[] | null {
     });
   }
   return clean.length > 0 ? clean : null;
-}
-
-/** Solo se acepta lo que la app sabe pintar; el resto se descarta. */
-function parseVariations(raw: unknown): ExerciseVariations | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const grip = (raw as Record<string, unknown>).grip;
-  return GRIP_TYPES.includes(grip as GripType) ? { grip: grip as GripType } : undefined;
 }

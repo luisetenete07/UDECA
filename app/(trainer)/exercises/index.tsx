@@ -41,7 +41,6 @@ import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   CATEGORY_PALETTE,
-  GRIP_LABEL,
   MUSCLE_GROUPS,
   type Exercise,
   type TemplateExercise,
@@ -221,7 +220,6 @@ export default function ExercisesScreen() {
             muscles: t.muscles,
             muscleWeights: t.muscleWeights,
             subgroup: t.subgroup,
-            variations: t.variations,
           }))
         : STARTER_LIBRARY.map((s) => ({
             name: s.name,
@@ -234,9 +232,6 @@ export default function ExercisesScreen() {
               | Partial<Record<import('../../../lib/muscles').MuscleId, number>>
               | undefined,
             subgroup: undefined as string | undefined,
-            variations: undefined as
-              | import('../../../lib/types').ExerciseVariations
-              | undefined,
           })),
     [template]
   );
@@ -267,7 +262,6 @@ export default function ExercisesScreen() {
             muscles: s.muscles,
             muscleWeights: s.muscleWeights,
             subgroup: s.subgroup,
-            variations: s.variations,
           })
         )
       );
@@ -303,9 +297,6 @@ export default function ExercisesScreen() {
               muscles: p.muscles,
               muscleWeights: p.muscleWeights,
               subgroup: p.subgroup,
-              // Vacío (no undefined) para que se borren las variaciones que el
-              // pack ya no trae, en vez de quedarse las antiguas.
-              variations: p.variations ?? {},
             })
           );
         } else {
@@ -320,7 +311,6 @@ export default function ExercisesScreen() {
               muscles: p.muscles,
               muscleWeights: p.muscleWeights,
               subgroup: p.subgroup,
-              variations: p.variations,
             })
           );
         }
@@ -456,7 +446,6 @@ export default function ExercisesScreen() {
             muscles: e.muscles,
             muscleWeights: e.muscleWeights,
             subgroup: e.subgroup,
-            variations: e.variations,
             load: e.load,
             band: e.band,
           })
@@ -798,13 +787,6 @@ export default function ExercisesScreen() {
                 <Text style={styles.exerciseName}>{exercise.name}</Text>
                 <View style={styles.exerciseMetaRow}>
                   <Text style={styles.exerciseGroup}>{exercise.muscleGroup}</Text>
-                  {exercise.variations?.grip ? (
-                    <View style={styles.gripBadge}>
-                      <Text style={styles.gripBadgeText}>
-                        {GRIP_LABEL[exercise.variations.grip]}
-                      </Text>
-                    </View>
-                  ) : null}
                 </View>
               </View>
               {exercise.videoUrl ? (
@@ -1088,15 +1070,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     fontSize: 12,
   },
-  gripBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  gripBadgeText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
   adminBanner: {
     flexDirection: 'row',
     alignItems: 'center',

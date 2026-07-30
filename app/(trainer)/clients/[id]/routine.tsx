@@ -27,6 +27,8 @@ import { flexLabel } from '../../../../lib/schedule';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
+  GRIP_LABEL,
+  GRIP_TYPES,
   MUSCLE_GROUPS,
   resolveLoad,
   WEEKDAY_LABELS,
@@ -34,6 +36,7 @@ import {
   type Exercise,
   type ExerciseLoad,
   type ExerciseMeasure,
+  type GripType,
   type MuscleGroup,
   type RoutineDay,
   type RoutineExercise,
@@ -404,6 +407,25 @@ export default function RoutineEditorScreen() {
               ...d,
               exercises: d.exercises.map((e) =>
                 e.id === exerciseRowId ? { ...e, load, band: load === 'assisted' } : e
+              ),
+            }
+          : d
+      )
+    );
+  };
+
+  // Fija el agarre de un ejercicio DENTRO de la rutina. Va aquí y no en la
+  // ficha del ejercicio porque las mismas dominadas son prono un día y supinas
+  // otro: es cosa del plan, no del ejercicio. Volver a tocar el agarre activo
+  // lo quita, para poder dejarlo sin especificar.
+  const setExerciseGrip = (dayId: string, exerciseRowId: string, grip: GripType) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) =>
+                e.id === exerciseRowId ? { ...e, grip: e.grip === grip ? undefined : grip } : e
               ),
             }
           : d
@@ -1052,20 +1074,39 @@ export default function RoutineEditorScreen() {
                 })}
               </View>
 
+              <Text style={styles.loadLabel}>Agarre (opcional)</Text>
+              <View style={styles.loadRow}>
+                {GRIP_TYPES.map((g) => {
+                  const active = ex.grip === g;
+                  return (
+                    <Pressable
+                      key={g}
+                      onPress={() => setExerciseGrip(day.id, ex.id, g)}
+                      style={[styles.loadChip, active && styles.loadChipActive]}
+                      hitSlop={4}
+                    >
+                      <Text style={[styles.loadChipText, active && styles.loadChipTextActive]}>
+                        {GRIP_LABEL[g]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
               <View style={styles.exerciseFields}>
                 <TextField
                   label="Series"
                   keyboardType="number-pad"
                   value={String(ex.sets)}
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'sets', v)}
-                  style={styles.smallInput}
+                  containerStyle={styles.smallInput}
                 />
                 <TextField
                   label={ex.measure === 'seconds' ? 'Aguante (seg)' : 'Reps'}
                   value={ex.reps}
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
                   placeholder={ex.measure === 'seconds' ? '30' : '8-12'}
-                  style={styles.smallInput}
+                  containerStyle={styles.smallInput}
                 />
                 {/* Combo: además de las reps, el aguante de la misma serie. */}
                 {ex.measure === 'combo' ? (
@@ -1074,7 +1115,7 @@ export default function RoutineEditorScreen() {
                     value={ex.seconds ?? ''}
                     onChangeText={(v) => updateExerciseField(day.id, ex.id, 'seconds', v)}
                     placeholder="12"
-                    style={styles.smallInput}
+                    containerStyle={styles.smallInput}
                   />
                 ) : null}
               </View>
@@ -1085,7 +1126,7 @@ export default function RoutineEditorScreen() {
                   value={ex.rir !== undefined ? String(ex.rir) : ''}
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'rir', v)}
                   placeholder="2"
-                  style={styles.smallInput}
+                  containerStyle={styles.smallInput}
                 />
                 <TextField
                   label="Descanso (min:seg)"
@@ -1096,7 +1137,7 @@ export default function RoutineEditorScreen() {
                     updateRestSeconds(day.id, ex.id, parseClock(v));
                   }}
                   placeholder="3:30"
-                  style={styles.smallInput}
+                  containerStyle={styles.smallInput}
                 />
               </View>
               <TextField
@@ -1550,6 +1591,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   exerciseFields: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginTop: spacing.xs },
+  // Va en `containerStyle`, no en `style`: `style` acaba en el TextInput de
+  // dentro, así que el contenedor seguía midiendo lo que ocupase su etiqueta y
+  // "Descanso (min:seg)" empujaba la fila fuera de la pantalla.
   smallInput: { flex: 1, marginBottom: 0 },
   loadLabel: {
     ...typography.label,
