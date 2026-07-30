@@ -1,5 +1,7 @@
+import React from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
-import { BREAKPOINTS, CONTENT_MAX_WIDTH } from './responsive';
+import { BRAND_HEIGHT, SidebarBrand } from '../components/SidebarBrand';
+import { BREAKPOINTS, CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, usesSidebarNav } from './responsive';
 import { colors, fonts, radius, spacing } from './theme';
 
 /**
@@ -40,6 +42,46 @@ export const tabScreenOptions = {
  */
 export function useTabScreenOptions() {
   const { width } = useWindowDimensions();
+  // Escritorio: la navegación se va a una columna a la izquierda. Es el patrón
+  // que espera cualquiera que use un ordenador (Linear, Notion, Stripe) y el
+  // que deja el recorrido de la vista donde toca: arriba a la izquierda.
+  if (usesSidebarNav(width)) {
+    return {
+      ...tabScreenOptions,
+      tabBarPosition: 'left' as const,
+      // 'material' pone la etiqueta al lado del icono en vez de debajo, que es
+      // lo legible en una columna estrecha y alta.
+      tabBarVariant: 'material' as const,
+      // Única ranura disponible para poner algo propio en la barra: se pinta
+      // detrás de los destinos, en el hueco que reserva `paddingTop`.
+      tabBarBackground: () => React.createElement(SidebarBrand),
+      tabBarStyle: {
+        // `minWidth` y `maxWidth` además de `width`: la barra lateral trae de
+        // serie un `min-width: 360px` que se come casi un tercio de un portátil
+        // y deja sin fijar el ancho si solo se pone `width`.
+        width: SIDEBAR_WIDTH,
+        minWidth: SIDEBAR_WIDTH,
+        maxWidth: SIDEBAR_WIDTH,
+        backgroundColor: '#070606',
+        borderTopWidth: 0,
+        borderRightWidth: 1,
+        borderRightColor: colors.hairlineFaint,
+        // Hueco superior para la marca, que se pinta de fondo (ver abajo).
+        paddingTop: BRAND_HEIGHT,
+        paddingHorizontal: spacing.sm,
+      },
+      tabBarLabelStyle: {
+        fontFamily: fonts.medium,
+        fontSize: 14,
+        letterSpacing: 0.2,
+      },
+      tabBarItemStyle: {
+        borderRadius: radius.md,
+        marginBottom: spacing.xs,
+      },
+    };
+  }
+
   const pantallaAncha = Platform.OS === 'web' && width >= BREAKPOINTS.tablet;
   if (!pantallaAncha) return tabScreenOptions;
 

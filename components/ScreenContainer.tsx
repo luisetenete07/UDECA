@@ -51,10 +51,12 @@ export function ScreenContainer({
   // `maxWidth={0}` es la forma de pedir explícitamente todo el ancho.
   const limite = maxWidth === undefined ? layout.maxWidth : maxWidth;
   const cap = limite > 0 ? { maxWidth: limite } : null;
-  // En pantalla ancha la barra de pestañas es un muelle flotante (ver
+  // En tablet la barra de pestañas es un muelle flotante (ver
   // `useTabScreenOptions`), así que el contenido necesita sitio por debajo para
-  // no quedarse escondido detrás de ella al llegar al final.
-  const dock = Platform.OS === 'web' && layout.isWide ? spacing.xxl + spacing.lg : 0;
+  // no quedarse escondido detrás de ella al llegar al final. Con barra lateral
+  // no hay nada que esquivar y ese hueco sobraría.
+  const dock =
+    Platform.OS === 'web' && layout.isWide && !layout.sidebar ? spacing.xxl + spacing.lg : 0;
   const gutter = { paddingHorizontal: layout.gutter, paddingBottom: dock };
 
   if (!scroll) {

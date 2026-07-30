@@ -1,4 +1,4 @@
-import { useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 import { spacing } from './theme';
 
 /**
@@ -32,6 +32,24 @@ export const BREAKPOINTS = {
  */
 export const CONTENT_MAX_WIDTH = 1200;
 
+/** Ancho de la barra lateral de navegación en escritorio. */
+export const SIDEBAR_WIDTH = 240;
+
+/**
+ * A partir de portátil, la navegación deja de ser una barra abajo y pasa a una
+ * columna a la izquierda.
+ *
+ * El corte está en portátil y no en tablet a propósito: una tablet se maneja
+ * con el pulgar y ahí abajo es donde llega la mano; un portátil se maneja con
+ * ratón y el recorrido natural de la vista empieza arriba a la izquierda.
+ *
+ * Solo en web: en las apps de tienda la navegación de abajo es lo que espera
+ * cualquiera que use un móvil.
+ */
+export function usesSidebarNav(width: number): boolean {
+  return Platform.OS === 'web' && width >= BREAKPOINTS.laptop;
+}
+
 export interface Layout {
   width: number;
   bp: Breakpoint;
@@ -45,6 +63,8 @@ export interface Layout {
   maxWidth: number;
   /** Columnas recomendadas para una rejilla de tarjetas. */
   columns: number;
+  /** La navegación es una columna a la izquierda, no una barra abajo. */
+  sidebar: boolean;
 }
 
 export function useLayout(): Layout {
@@ -58,9 +78,12 @@ export function useLayout(): Layout {
           ? 'laptop'
           : 'desktop';
 
+  const sidebar = usesSidebarNav(width);
+
   return {
     width,
     bp,
+    sidebar,
     isPhone: bp === 'phone',
     isWide: bp !== 'phone',
     // El margen crece con la pantalla: pegado al borde en móvil se ve pobre, y

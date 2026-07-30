@@ -21,6 +21,7 @@ import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ListSkeleton } from '../../../components/Skeleton';
 import { ScreenContainer } from '../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
 import { isAdmin } from '../../../lib/subscription';
@@ -546,11 +547,11 @@ export default function ExercisesScreen() {
         load();
       }}
     >
-      <View style={styles.headerRow}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Biblioteca</Text>
-          <Text style={styles.subtitle}>{exercises.length} ejercicio(s)</Text>
-        </View>
+      <ScreenHeader
+        title="Biblioteca"
+        subtitle={`${exercises.length} ejercicio(s)`}
+        actions={
+          <>
         {/* Acciones secundarias en pastilla pequeña, a la izquierda de la
             principal: no compiten con "+ Nuevo" ni ocupan filas enteras. */}
         {isAdmin(profile) && packItems.length > 0 ? (
@@ -577,7 +578,9 @@ export default function ExercisesScreen() {
           </Pressable>
         ) : null}
         <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
-      </View>
+          </>
+        }
+      />
 
       {isAdmin(profile) ? (
         <Pressable

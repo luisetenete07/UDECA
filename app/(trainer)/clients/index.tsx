@@ -12,6 +12,7 @@ import { ErrorState } from '../../../components/ErrorState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ListSkeleton } from '../../../components/Skeleton';
 import { ScreenContainer } from '../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { TextField } from '../../../components/TextField';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
@@ -268,18 +269,18 @@ export default function ClientsScreen() {
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={onRefresh}>
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Tus clientes</Text>
-          <Text style={styles.subtitle}>{clients.length} cliente(s) activos</Text>
-        </View>
-        {clients.length > 0 && Platform.OS === 'web' ? (
-          <Pressable onPress={handleExportCsv} style={styles.exportBtn} hitSlop={6}>
-            <Ionicons name="download-outline" size={15} color={colors.primary} />
-            <Text style={styles.exportText}>Exportar</Text>
-          </Pressable>
-        ) : null}
-      </View>
+      <ScreenHeader
+        title="Tus clientes"
+        subtitle={`${clients.length} cliente(s) activos`}
+        actions={
+          clients.length > 0 && Platform.OS === 'web' ? (
+            <Pressable onPress={handleExportCsv} style={styles.exportBtn} hitSlop={6}>
+              <Ionicons name="download-outline" size={15} color={colors.primary} />
+              <Text style={styles.exportText}>Exportar</Text>
+            </Pressable>
+          ) : null
+        }
+      />
 
       <Pressable
         onPress={() => router.push('/(trainer)/clients/meal-books')}

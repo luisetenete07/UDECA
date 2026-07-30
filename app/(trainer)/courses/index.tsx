@@ -7,6 +7,7 @@ import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useAuth } from '../../../lib/auth-context';
 import { getCoursesForTrainer, updateCourse } from '../../../lib/firestore/courses';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
@@ -61,13 +62,13 @@ export default function TrainerCoursesScreen() {
         load();
       }}
     >
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Cursos</Text>
-          <Text style={styles.subtitle}>{courses.length} curso(s)</Text>
-        </View>
-        <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/courses/new')} />
-      </View>
+      <ScreenHeader
+        title="Cursos"
+        subtitle={`${courses.length} curso(s)`}
+        actions={
+          <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/courses/new')} />
+        }
+      />
 
       {courses.length === 0 ? (
         <EmptyState

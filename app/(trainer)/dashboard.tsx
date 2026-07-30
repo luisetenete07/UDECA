@@ -8,6 +8,7 @@ import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import { TrialBanner } from '../../components/TrialBanner';
 import { StatTile } from '../../components/StatTile';
 import { showToast } from '../../components/Toast';
@@ -495,47 +496,65 @@ export default function TrainerDashboard() {
   return (
     <ScreenContainer>
       <TrialBanner profile={profile} />
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.greetingLabel}>Panel del entrenador</Text>
-          <Text style={styles.greeting}>Hola, {profile?.name?.split(' ')[0]}</Text>
-        </View>
-        <Pressable onPress={() => router.push('/(trainer)/profile')}>
-          <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
-        </Pressable>
-      </View>
+      <ScreenHeader
+        eyebrow="Panel del entrenador"
+        title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
+        actions={
+          <Pressable onPress={() => router.push('/(trainer)/profile')}>
+            <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
+          </Pressable>
+        }
+      />
 
-      {/* Panel "Hoy": qué requiere acción, en 10 segundos. Solo aparece si
-          hay algo que hacer (cero ruido cuando todo está al día). */}
-      {requests.length > 0 || overdueCount > 0 || trainedToday > 0 ? (
-        <View style={styles.todayStrip}>
-          {trainedToday > 0 ? (
-            <View style={[styles.todayChip, styles.todayChipGood]}>
-              <Ionicons name="checkmark-circle" size={13} color={colors.success} />
-              <Text style={[styles.todayChipText, { color: colors.success }]}>
-                {trainedToday} entrenó hoy
-              </Text>
-            </View>
-          ) : null}
-          {requests.length > 0 ? (
-            <View style={[styles.todayChip, styles.todayChipWarn]}>
-              <Ionicons name="person-add" size={13} color={colors.primary} />
-              <Text style={[styles.todayChipText, { color: colors.primaryBright }]}>
-                {requests.length} solicitud(es)
-              </Text>
-            </View>
-          ) : null}
+      {/* Lo que necesita acción, arriba del todo y con peso visual.
+          Antes esto eran tres pastillas diminutas: lo más urgente del panel
+          era también lo más pequeño de la pantalla. Solo aparece si hay algo
+          que hacer, para que un día tranquilo no tenga ruido. */}
+      {requests.length > 0 || overdueCount > 0 ? (
+        <Card accent style={styles.section}>
+          <View style={styles.titleRow}>
+            <Ionicons name="alert-circle-outline" size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Necesita tu atención</Text>
+          </View>
           {overdueCount > 0 ? (
-            <Pressable
-              style={[styles.todayChip, styles.todayChipBad]}
-              onPress={() => router.push('/(trainer)/clients')}
-            >
-              <Ionicons name="cash" size={13} color={colors.danger} />
-              <Text style={[styles.todayChipText, { color: colors.danger }]}>
-                {overdueCount} vencido(s)
-              </Text>
+            <Pressable style={styles.attentionRow} onPress={() => router.push('/(trainer)/clients')}>
+              <View style={[styles.attentionIcon, { backgroundColor: colors.dangerMuted }]}>
+                <Ionicons name="cash-outline" size={17} color={colors.danger} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.attentionTitle}>
+                  {overdueCount} pago{overdueCount === 1 ? '' : 's'} vencido
+                  {overdueCount === 1 ? '' : 's'}
+                </Text>
+                <Text style={styles.attentionSub}>Revisa a quién hay que cobrar.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
             </Pressable>
           ) : null}
+          {requests.length > 0 ? (
+            <View style={styles.attentionRow}>
+              <View style={[styles.attentionIcon, { backgroundColor: colors.primaryMuted }]}>
+                <Ionicons name="person-add-outline" size={17} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.attentionTitle}>
+                  {requests.length} solicitud{requests.length === 1 ? '' : 'es'} de alumno
+                </Text>
+                <Text style={styles.attentionSub}>Acéptalas más abajo para sumarlos al grupo.</Text>
+              </View>
+            </View>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {/* Lo bueno no es una alerta: se cuenta en una línea tranquila. */}
+      {trainedToday > 0 ? (
+        <View style={styles.goodNews}>
+          <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+          <Text style={styles.goodNewsText}>
+            {trainedToday} alumno{trainedToday === 1 ? '' : 's'} ha
+            {trainedToday === 1 ? '' : 'n'} entrenado hoy
+          </Text>
         </View>
       ) : null}
 
@@ -1043,27 +1062,28 @@ const styles = StyleSheet.create({
   stepNumText: { ...typography.small, color: colors.primary, fontFamily: fonts.heading },
   stepTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   stepSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
-  todayStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  todayChip: {
+  attentionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  todayChipGood: { borderColor: colors.success },
-  todayChipWarn: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
-  todayChipBad: { borderColor: colors.danger },
-  todayChipText: { ...typography.small, fontFamily: fonts.semiBold, fontSize: 11 },
+  attentionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attentionTitle: { ...typography.h3, color: colors.text },
+  attentionSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  goodNews: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.md,
+  },
+  goodNewsText: { ...typography.small, color: colors.textMuted },
   quickBtn: {
     flex: 1,
     alignItems: 'center',
