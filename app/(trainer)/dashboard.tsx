@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { ListSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { StatTile } from '../../components/StatTile';
 import { showToast } from '../../components/Toast';
@@ -151,7 +152,19 @@ export default function TrainerDashboard() {
     }, [profile])
   );
 
-  if (loading) return <LoadingScreen />;
+  // Esqueleto con la cabecera ya pintada: abrir la app no pasa por una
+  // pantalla negra con logo, sino por el panel tomando forma.
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <ScreenHeader
+          eyebrow="Panel del entrenador"
+          title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
+        />
+        <ListSkeleton rows={5} />
+      </ScreenContainer>
+    );
+  }
 
   const now = Date.now();
   const lastLogByClient = new Map<string, number>();

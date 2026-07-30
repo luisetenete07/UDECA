@@ -17,6 +17,8 @@ import * as Haptics from 'expo-haptics';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { ListSkeleton } from '../../components/Skeleton';
 import { TaskEditSheet } from '../../components/TaskEditSheet';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -277,7 +279,14 @@ export default function CoachCalendarScreen() {
     return map;
   }, [clients, cycles, dayTasks, router]);
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="Calendario" subtitle="Cargando..." />
+        <ListSkeleton rows={5} />
+      </ScreenContainer>
+    );
+  }
 
   const today = startOfDay(Date.now());
   const anchor = new Date(monthAnchor);

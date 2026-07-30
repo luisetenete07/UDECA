@@ -8,6 +8,7 @@ import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { ScreenHeader } from '../../../components/ScreenHeader';
+import { ListSkeleton } from '../../../components/Skeleton';
 import { useAuth } from '../../../lib/auth-context';
 import { getCoursesForTrainer, updateCourse } from '../../../lib/firestore/courses';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
@@ -51,7 +52,16 @@ export default function TrainerCoursesScreen() {
     }, [load])
   );
 
-  if (loading) return <LoadingScreen />;
+  // Esqueleto en sitio, con la cabecera ya pintada: cambiar a esta pestaña no
+  // "apaga" la pantalla mientras llegan los datos.
+  if (loading) {
+    return (
+      <ScreenContainer maxWidth={860}>
+        <ScreenHeader title="Cursos" subtitle="Cargando..." />
+        <ListSkeleton rows={4} />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer

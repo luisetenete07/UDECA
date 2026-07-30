@@ -532,8 +532,7 @@ export default function ExercisesScreen() {
   if (loading) {
     return (
       <ScreenContainer>
-        <Text style={styles.title}>Biblioteca</Text>
-        <Text style={styles.subtitle}>Cargando ejercicios...</Text>
+        <ScreenHeader title="Biblioteca" subtitle="Cargando ejercicios..." />
         <ListSkeleton rows={7} />
       </ScreenContainer>
     );

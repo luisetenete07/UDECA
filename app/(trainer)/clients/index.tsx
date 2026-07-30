@@ -206,8 +206,7 @@ export default function ClientsScreen() {
   if (loading) {
     return (
       <ScreenContainer>
-        <Text style={styles.title}>Tus clientes</Text>
-        <Text style={styles.subtitle}>Cargando tu grupo...</Text>
+        <ScreenHeader title="Tus clientes" subtitle="Cargando tu grupo..." />
         <ListSkeleton rows={6} />
       </ScreenContainer>
     );
@@ -351,13 +350,13 @@ export default function ClientsScreen() {
       ) : null}
 
       {clients.length === 0 ? (
-        <Card style={styles.inviteCard}>
-          <Text style={styles.inviteTitle}>Aún no tienes clientes</Text>
-          <Text style={styles.inviteText}>
-            Comparte tu código de invitación desde la pestaña de Perfil para que tus clientes
-            se registren y aparezcan aquí automáticamente.
-          </Text>
-        </Card>
+        <EmptyState
+          icon="people-outline"
+          title="Aún no tienes clientes"
+          subtitle="Comparte tu código de invitación para que tus alumnos se registren y aparezcan aquí automáticamente."
+          actionLabel="Ver mi código"
+          onAction={() => router.push('/(trainer)/profile')}
+        />
       ) : filtered.length === 0 ? (
         <EmptyState icon="search-outline" title="Sin resultados" subtitle="Prueba con otro nombre o cambia el filtro." />
       ) : (
