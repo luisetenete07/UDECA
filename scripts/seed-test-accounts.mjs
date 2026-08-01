@@ -27,7 +27,7 @@
  * Firebase los trata como cuentas distintas. Cero cuentas de Google nuevas.
  */
 const DAY_MS = 24 * 60 * 60 * 1000;
-const TRIAL_DAYS = 7;
+const TRIAL_DAYS = 14;
 /**
  * Contraseña de las cuentas de prueba.
  *

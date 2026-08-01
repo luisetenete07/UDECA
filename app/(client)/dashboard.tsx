@@ -10,7 +10,6 @@ import { CheckInCard } from '../../components/CheckInCard';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { TrialBanner } from '../../components/TrialBanner';
 import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
 import { useAuth } from '../../lib/auth-context';
@@ -33,6 +32,7 @@ import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
 import { createCoachCheckoutUrl } from '../../lib/connect';
+import { clientDaysUntilLock } from '../../lib/subscription';
 import { notifyUser } from '../../lib/notifications';
 import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
@@ -356,12 +356,23 @@ export default function ClientDashboard() {
     const status = profile?.paymentStatus;
     if (due) {
       const days = Math.round((startDay(due) - startDay(Date.now())) / (24 * 60 * 60 * 1000));
-      if (days < 0)
+      if (days < 0) {
+        // Se avisa de cuántos días quedan antes de que se pause el acceso.
+        // Bloquear sin haber dicho antes que iba a pasar es lo que convierte un
+        // recordatorio en un castigo.
+        const restan = clientDaysUntilLock(profile);
+        const cola =
+          restan === null
+            ? ''
+            : restan === 0
+              ? ' Tu acceso queda en pausa hasta que se resuelva.'
+              : ` Te ${restan === 1 ? 'queda 1 día' : `quedan ${restan} días`} antes de que el acceso se pause.`;
         return {
           bad: true,
           title: 'Cobro pendiente',
-          text: `Tu cuota de ${fee} venció el ${fmt(due)}. Renueva con tu entrenador para no perder el acceso.`,
+          text: `Tu cuota de ${fee} venció el ${fmt(due)}.${cola}`,
         };
+      }
       if (days <= 5)
         return {
           bad: false,
@@ -398,7 +409,6 @@ export default function ClientDashboard() {
       }}
     >
       {/* Solo aparece en cuentas de atleta durante su prueba gratuita. */}
-      <TrialBanner profile={profile} />
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greetingLabel}>Bienvenido de nuevo</Text>

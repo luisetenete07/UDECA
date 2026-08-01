@@ -79,8 +79,9 @@ service cloud.firestore {
           || isUdecaAdmin()
         );
       // Al crearse, nadie puede regalarse tiempo de suscripción. Única
-      // excepción: el ATLETA nace con su prueba gratuita, acotada aquí a 7
-      // días para que no pueda pedirse más del que le corresponde. El
+      // excepción: el ATLETA nace con su prueba gratuita, acotada aquí a 14
+      // días para que no pueda pedirse más del que le corresponde (el mismo
+      // número que TRIAL_DAYS en lib/subscription.ts). El
       // entrenador nace caducado (0) y se activa al pagar su cuota anual.
       allow create: if request.auth != null && request.auth.uid == userId
         && (
@@ -91,7 +92,7 @@ service cloud.firestore {
           || (
             request.resource.data.role == 'athlete'
             && request.resource.data.subscriptionUntil
-                 <= request.time.toMillis() + 7 * 24 * 60 * 60 * 1000
+                 <= request.time.toMillis() + 14 * 24 * 60 * 60 * 1000
           )
         );
       // El propio usuario edita su perfil (sin tocar su suscripción); el
@@ -114,8 +115,12 @@ service cloud.firestore {
         || (
           resource.data.trainerId == request.auth.uid
           && (
+            // `billingAnchorDay` es el día del mes en que se le cobra a ese
+            // alumno. Lo escribe el entrenador al confirmar un cobro (ver
+            // lib/billing.ts); faltaba en esta lista, así que TODA confirmación
+            // de pago se rechazaba con "permisos insuficientes".
             request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt'])
+              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)
@@ -176,6 +181,20 @@ service cloud.firestore {
     match /coachNotes/{clientId} {
       // Si el alumno aún no tiene nota, el documento no existe (resource == null):
       // se permite la lectura para que el perfil cargue sin nota, sin exponer datos.
+      allow read: if request.auth != null
+        && (resource == null || resource.data.trainerId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
+    // Qué ejercicios sigue el entrenador en la tabla de progreso de un alumno
+    // (doc id = clientId). Es una preferencia del entrenador sobre su propia
+    // vista: solo él la lee y la escribe.
+    match /progressTrackers/{clientId} {
+      // Si aún no existe, `resource` es null: se permite leer para que la
+      // pantalla cargue sin selección en vez de fallar.
       allow read: if request.auth != null
         && (resource == null || resource.data.trainerId == request.auth.uid);
       allow create: if request.auth != null

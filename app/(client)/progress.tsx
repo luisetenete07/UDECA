@@ -30,6 +30,7 @@ import { buildClientReportHtml, computeClientReport } from '../../lib/report';
 import { muscleLoad, weightsOfExercise } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
+import { updateUserProfile } from '../../lib/firestore/users';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
@@ -47,7 +48,7 @@ import {
   topExercises,
   trainingDays,
   weeklyActivity,
-  weeklySetsByGroup,
+  weeklySetsForGroups,
   thenVsNow,
   workoutsByMonth,
 } from '../../lib/stats';
@@ -72,7 +73,7 @@ interface ProgressData {
 }
 
 export default function ProgressScreen() {
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [tab, setTab] = useState<Tab>('workouts');
   const [muscleMode, setMuscleMode] = useState<'session' | 'week'>('week');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
@@ -327,10 +328,40 @@ export default function ProgressScreen() {
     () => setsByMuscleGroup(workoutLogs, muscleByExercise),
     [workoutLogs, muscleByExercise]
   );
-  const weeklySets = useMemo(
-    () => weeklySetsByGroup(workoutLogs, muscleByExercise),
-    [workoutLogs, muscleByExercise]
+  /**
+   * Categorías de las gráficas de series semanales: las que haya elegido el
+   * alumno y, si no ha elegido, las DOS que más trabaja. Antes eran siempre
+   * Empuje y Tirón, aunque entrenase otra cosa.
+   */
+  const gruposDisponibles = useMemo(
+    () => muscleMap.filter((m) => m.group !== 'Otros').map((m) => m.group),
+    [muscleMap]
   );
+  const gruposMostrados = useMemo(() => {
+    const elegidos = (profile?.progressGroups ?? []).filter((g) => g);
+    if (elegidos.length > 0) return elegidos;
+    return gruposDisponibles.slice(0, 2);
+  }, [profile?.progressGroups, gruposDisponibles]);
+  const weeklySets = useMemo(
+    () => weeklySetsForGroups(workoutLogs, muscleByExercise, gruposMostrados),
+    [workoutLogs, muscleByExercise, gruposMostrados]
+  );
+
+  // Añade o quita una categoría de las que se grafican (mínimo una).
+  const alternarGrupo = async (grupo: string) => {
+    if (!profile) return;
+    const actuales = gruposMostrados;
+    const next = actuales.includes(grupo)
+      ? actuales.filter((g) => g !== grupo)
+      : [...actuales, grupo];
+    if (next.length === 0) return;
+    try {
+      await updateUserProfile(profile.uid, { progressGroups: next });
+      await refreshProfile();
+    } catch {
+      showToast('No se pudo guardar tu selección');
+    }
+  };
   const exercisesInLogs = useMemo(() => listExercisesInLogs(workoutLogs), [workoutLogs]);
   const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
   const progression = useMemo(
@@ -345,8 +376,6 @@ export default function ProgressScreen() {
 
   const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
   const muscleMax = muscleMap.length > 0 ? muscleMap[0].sets : 0;
-  const pushPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pushSets }));
-  const pullPoints = weeklySets.map((w) => ({ date: w.weekStart, value: w.pullSets }));
   const progMetric = progression?.measure === 'seconds' ? 's' : progression?.hasWeight ? 'kg' : 'reps';
   const progPoints = progression
     ? progression.points.map((p) => ({
@@ -567,22 +596,50 @@ export default function ProgressScreen() {
             </Card>
 
             <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Series semanales · Empuje</Text>
-              <Text style={styles.photoHint}>Total de series de empuje completadas cada semana.</Text>
-              <LineChart
-                points={pushPoints}
-                unit="series"
-                emptyMessage="Marca ejercicios como 'Empuje' en tu biblioteca para ver este dato."
-              />
-              <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>
-                Series semanales · Tirón
+              <Text style={styles.sectionTitle}>Series semanales</Text>
+              <Text style={styles.photoHint}>
+                Series completadas cada semana en lo que más entrenas. Toca una categoría
+                para seguirla o dejar de seguirla.
               </Text>
-              <Text style={styles.photoHint}>Total de series de tirón completadas cada semana.</Text>
-              <LineChart
-                points={pullPoints}
-                unit="series"
-                emptyMessage="Marca ejercicios como 'Tirón' en tu biblioteca para ver este dato."
-              />
+              {gruposDisponibles.length > 0 ? (
+                <View style={styles.groupPicker}>
+                  {gruposDisponibles.map((g) => {
+                    const on = gruposMostrados.includes(g);
+                    return (
+                      <Pressable
+                        key={g}
+                        onPress={() => alternarGrupo(g)}
+                        style={[styles.groupChip, on && styles.groupChipOn]}
+                      >
+                        <Text style={[styles.groupChipText, on && styles.groupChipTextOn]}>
+                          {g}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
+              {gruposMostrados.length === 0 ? (
+                <Text style={styles.photoHint}>
+                  Registra entrenamientos para ver aquí tus series por categoría.
+                </Text>
+              ) : (
+                gruposMostrados.map((g, i) => (
+                  <View key={g}>
+                    <Text style={[styles.sectionTitle, i > 0 && { marginTop: spacing.lg }]}>
+                      {g}
+                    </Text>
+                    <LineChart
+                      points={weeklySets.map((w) => ({
+                        date: w.weekStart,
+                        value: w.byGroup[g] ?? 0,
+                      }))}
+                      unit="series"
+                      emptyMessage={`Aún no hay series de ${g} registradas.`}
+                    />
+                  </View>
+                ))
+              )}
             </Card>
 
             {muscleMap.length > 0 ? (
@@ -907,6 +964,23 @@ function MonthStat({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  groupPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  groupChip: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  groupChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  groupChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  groupChipTextOn: { color: colors.onPrimary },
   fullSheet: { flex: 1, backgroundColor: colors.background },
   fullHeader: {
     flexDirection: 'row',

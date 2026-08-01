@@ -489,7 +489,21 @@ export function isIsometricExercise(
   ex: LoggedExercise,
   measureByExercise?: Record<string, string>
 ): boolean {
-  return ex.measure === 'seconds' || measureByExercise?.[ex.exerciseId] === 'seconds';
+  const m = ex.measure ?? measureByExercise?.[ex.exerciseId];
+  return m === 'seconds' || m === 'secondsDual';
+}
+
+/**
+ * Ejercicio anotado por lados (izquierda y derecha): cada serie trae dos
+ * marcas del mismo tipo. Para los totales suman las dos, porque las dos se han
+ * hecho de verdad.
+ */
+export function isDualSidedExercise(
+  ex: LoggedExercise,
+  measureByExercise?: Record<string, string>
+): boolean {
+  const m = ex.measure ?? measureByExercise?.[ex.exerciseId];
+  return m === 'repsDual' || m === 'secondsDual';
 }
 
 /**
@@ -500,7 +514,8 @@ export function isComboExercise(
   ex: LoggedExercise,
   measureByExercise?: Record<string, string>
 ): boolean {
-  return ex.measure === 'combo' || measureByExercise?.[ex.exerciseId] === 'combo';
+  const m = ex.measure ?? measureByExercise?.[ex.exerciseId];
+  return m === 'combo';
 }
 
 export function sessionTotals(
@@ -514,6 +529,7 @@ export function sessionTotals(
   for (const ex of session) {
     const isSeconds = isIsometricExercise(ex, measureByExercise);
     const isCombo = isComboExercise(ex, measureByExercise);
+    const isDual = isDualSidedExercise(ex, measureByExercise);
     // La goma ASISTE (resta carga), no se levanta: sus kg no suman volumen.
     // Solo cuenta el peso añadido (lastre, mancuernas, máquinas).
     const weightCounts = resolveLoad(ex) !== 'assisted';
@@ -523,15 +539,19 @@ export function sessionTotals(
       sets += 1;
       // Reps de ejercicios por repeticiones; segundos de los isométricos. El
       // combo aporta a los dos: sus repeticiones y su aguante.
+      // Por lados, la serie trae dos marcas: cuentan las dos, porque las dos
+      // se han hecho. Sumarlas al mismo contador es lo correcto para el total
+      // de la sesión (el detalle por lado se ve en el registro).
+      const r2 = isDual ? parseReps(set.side2 ?? '') : 0;
       if (isCombo) {
         reps += r;
         seconds += parseReps(set.seconds ?? '');
       } else if (isSeconds) {
-        seconds += r;
+        seconds += r + r2;
       } else {
-        reps += r;
+        reps += r + r2;
       }
-      if (weightCounts) volumeKg += (toNum(set.weight) || 0) * r;
+      if (weightCounts) volumeKg += (toNum(set.weight) || 0) * (r + r2);
     }
   }
   return { sets, reps, seconds, volumeKg: Math.round(volumeKg) };
@@ -574,6 +594,39 @@ export interface WeeklySetsByGroup {
  * 'Empuje') y tirón ('Tirón'). El mapa exerciseId → grupo muscular viene de la
  * biblioteca del entrenador (el registro de la serie no guarda el grupo).
  */
+/**
+ * Series completadas por semana para las categorías que se pidan.
+ *
+ * Sustituye al par fijo Empuje/Tirón: no todo el mundo entrena en esos dos
+ * patrones, y a quien trabaja sobre todo Core o Tren inferior esas dos gráficas
+ * le salían planas. Aquí manda quien mira: se piden las categorías que
+ * interesan y se devuelven sus series semana a semana.
+ */
+export function weeklySetsForGroups(
+  logs: WorkoutLog[],
+  muscleByExercise: Record<string, string>,
+  groups: string[],
+  weeks = 8
+): { weekStart: number; byGroup: Record<string, number> }[] {
+  const currentWeek = startOfWeek(Date.now());
+  const wanted = new Set(groups);
+  const result = Array.from({ length: weeks }, (_, i) => ({
+    weekStart: addDays(currentWeek, -7 * (weeks - 1 - i)),
+    byGroup: Object.fromEntries(groups.map((g) => [g, 0])) as Record<string, number>,
+  }));
+  const index = new Map(result.map((r, i) => [r.weekStart, i]));
+  for (const log of logs) {
+    const i = index.get(startOfWeek(log.date));
+    if (i === undefined) continue;
+    for (const ex of log.exercises) {
+      const group = muscleByExercise[ex.exerciseId];
+      if (!group || !wanted.has(group)) continue;
+      result[i].byGroup[group] += ex.sets.filter((s) => s.completed).length;
+    }
+  }
+  return result;
+}
+
 export function weeklySetsByGroup(
   logs: WorkoutLog[],
   muscleByExercise: Record<string, string>,

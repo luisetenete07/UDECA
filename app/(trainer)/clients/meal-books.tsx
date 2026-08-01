@@ -1,6 +1,16 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -29,6 +39,9 @@ export default function MealBooksScreen() {
   const [books, setBooks] = useState<MealBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState('');
+  // Libreta que se está renombrando (id) y el texto en curso.
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState('');
   const [creating, setCreating] = useState(false);
   const [busyBook, setBusyBook] = useState<string | null>(null);
 
@@ -61,14 +74,65 @@ export default function MealBooksScreen() {
     });
   };
 
+  // Renombrar una libreta. Se guarda al confirmar (no en cada tecla) para no
+  // escribir en Firestore con cada letra.
+  const startRename = (book: MealBook) => {
+    setRenaming(book.id);
+    setRenameText(book.title);
+  };
+  const applyRename = async () => {
+    const book = books.find((b) => b.id === renaming);
+    const title = renameText.trim();
+    setRenaming(null);
+    if (!book || !title || title === book.title) return;
+    setBooks((prev) => prev.map((b) => (b.id === book.id ? { ...b, title } : b)));
+    try {
+      await updateMealBook(book.id, { title });
+    } catch {
+      showToast('No se pudo renombrar');
+      setBooks((prev) => prev.map((b) => (b.id === book.id ? { ...b, title: book.title } : b)));
+    }
+  };
+
+  // Subir o bajar una libreta. Se reescribe el `order` de TODAS: si solo se
+  // intercambiaran las dos afectadas, las libretas antiguas sin `order`
+  // seguirían sin tenerlo y el orden volvería a descolocarse.
+  const moveBook = (index: number, delta: -1 | 1) => {
+    const j = index + delta;
+    if (j < 0 || j >= books.length) return;
+    const next = [...books];
+    [next[index], next[j]] = [next[j], next[index]];
+    const conOrden = next.map((b, i) => ({ ...b, order: i }));
+    setBooks(conOrden);
+    conOrden.forEach((b, i) => {
+      if ((books[i]?.id ?? null) !== b.id || b.order !== books[i]?.order) {
+        updateMealBook(b.id, { order: i }).catch(() => {});
+      }
+    });
+  };
+
   const handleCreate = async () => {
     if (!profile || !newTitle.trim()) return;
     setCreating(true);
     try {
-      const id = await createMealBook({ trainerId: profile.uid, title: newTitle.trim(), photos: [] });
+      const order = books.length;
+      const id = await createMealBook({
+        trainerId: profile.uid,
+        title: newTitle.trim(),
+        photos: [],
+        order,
+      });
       setBooks((prev) => [
         ...prev,
-        { id, trainerId: profile.uid, title: newTitle.trim(), photos: [], createdAt: Date.now(), updatedAt: Date.now() },
+        {
+          id,
+          trainerId: profile.uid,
+          title: newTitle.trim(),
+          photos: [],
+          order,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
       ]);
       setNewTitle('');
     } catch (e) {
@@ -155,10 +219,52 @@ export default function MealBooksScreen() {
           subtitle="Crea tu primera libreta y añade fotos de tus platos y recetas."
         />
       ) : (
-        books.map((book) => (
+        books.map((book, index) => (
           <Card key={book.id} style={styles.section}>
             <View style={styles.bookHead}>
-              <Text style={styles.bookTitle}>{book.title}</Text>
+              {renaming === book.id ? (
+                <TextInput
+                  value={renameText}
+                  onChangeText={setRenameText}
+                  onBlur={applyRename}
+                  onSubmitEditing={applyRename}
+                  autoFocus
+                  style={styles.renameInput}
+                  placeholder="Nombre de la libreta"
+                  placeholderTextColor={colors.textFaint}
+                />
+              ) : (
+                <Pressable style={{ flex: 1 }} onPress={() => startRename(book)}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.bookTitle}>{book.title}</Text>
+                    <Ionicons name="pencil" size={13} color={colors.textFaint} />
+                  </View>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => moveBook(index, -1)}
+                hitSlop={6}
+                disabled={index === 0}
+                style={styles.orderBtn}
+              >
+                <Ionicons
+                  name="chevron-up"
+                  size={18}
+                  color={index === 0 ? colors.border : colors.textMuted}
+                />
+              </Pressable>
+              <Pressable
+                onPress={() => moveBook(index, 1)}
+                hitSlop={6}
+                disabled={index === books.length - 1}
+                style={styles.orderBtn}
+              >
+                <Ionicons
+                  name="chevron-down"
+                  size={18}
+                  color={index === books.length - 1 ? colors.border : colors.textMuted}
+                />
+              </Pressable>
               <Pressable onPress={() => handleDeleteBook(book)} hitSlop={8}>
                 <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
               </Pressable>
@@ -215,6 +321,16 @@ const styles = StyleSheet.create({
   mutedText: { ...typography.small, color: colors.textFaint },
   photoStrip: { marginVertical: spacing.xs },
   photoWrap: { marginRight: spacing.sm, position: 'relative' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  orderBtn: { padding: 2 },
+  renameInput: {
+    flex: 1,
+    ...typography.h3,
+    color: colors.text,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.hairline,
+    paddingVertical: 2,
+  },
   photo: { width: 120, height: 150, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   photoRemove: {
     position: 'absolute',

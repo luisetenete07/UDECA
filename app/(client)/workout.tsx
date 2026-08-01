@@ -60,7 +60,11 @@ import {
 } from '../../lib/stats';
 import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
+  EXERCISE_MEASURES,
   GRIP_LABEL,
+  type ExerciseMeasure,
+  isDualMeasure,
+  isHoldMeasure,
   resolveLoad,
   todayWeekday,
   WEEKDAY_NAMES,
@@ -608,11 +612,19 @@ export default function WorkoutScreen() {
       const logsThatDay = history.filter(
         (l) => routine && l.routineId === routine.id && startOfDayLocal(l.date) === ts
       );
+      // Un día pasado sin nada registrado ES un descanso, lo haya marcado el
+      // alumno o no: si no entrenó, descansó. Antes salía un guion, que no
+      // dice nada y deja el historial lleno de huecos.
+      //
+      // HOY se queda sin marcar a propósito: el día no ha terminado y darlo
+      // por descanso a media mañana sería contarle un día que aún puede hacer.
       const what = logsThatDay.length
         ? logsThatDay.map((l) => l.dayName).join(', ')
         : rest.has(ts)
           ? 'Descanso'
-          : '—';
+          : i === 0
+            ? '—'
+            : 'Descanso';
       out.push({
         ts,
         label:
@@ -788,7 +800,7 @@ export default function WorkoutScreen() {
   const updateSet = (
     exerciseIndex: number,
     setIndex: number,
-    field: 'reps' | 'seconds' | 'weight' | 'completed',
+    field: 'reps' | 'seconds' | 'side2' | 'weight' | 'completed',
     value: string | boolean
   ) => {
     setLog((prev) =>
@@ -878,17 +890,17 @@ export default function WorkoutScreen() {
         doneSets > 0
           ? log
           : log.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s, completed: true })) }));
-      // Sella la medida ACTUAL de cada ejercicio: isométrico (segundos) si la
-      // biblioteca o la rutina lo indican; si no, reps. Así el histórico y las
-      // estadísticas isométricas quedan correctos.
+      // Sella la medida ACTUAL de cada ejercicio para que el histórico y las
+      // estadísticas la interpreten bien años después, aunque el entrenador
+      // cambie la ficha del ejercicio. Manda la del plan; si no la trae, la de
+      // la biblioteca; y si tampoco, reps.
       const finalLog: LoggedExercise[] = baseLog.map((ex) => {
-        const current = measureByExercise[ex.exerciseId];
-        const measure: import('../../lib/types').ExerciseMeasure =
-          current === 'combo' || ex.measure === 'combo'
-            ? 'combo'
-            : current === 'seconds' || ex.measure === 'seconds'
-              ? 'seconds'
-              : 'reps';
+        const candidata = ex.measure ?? measureByExercise[ex.exerciseId];
+        const measure: ExerciseMeasure = EXERCISE_MEASURES.includes(
+          candidata as ExerciseMeasure
+        )
+          ? (candidata as ExerciseMeasure)
+          : 'reps';
         return { ...ex, measure };
       });
       const prs = detectNewPRs(history, finalLog);
@@ -1652,16 +1664,16 @@ export default function WorkoutScreen() {
         // Medida real: isométrico (segundos) si CUALQUIER fuente lo indica —la
         // biblioteca actual del coach, la copia de la rutina o el registro—. Así
         // una plancha marcada como segundos nunca se muestra como reps.
-        const isSeconds =
-          measureByExercise[exercise.exerciseId] === 'seconds' ||
-          exercise.measure === 'seconds' ||
-          planned?.measure === 'seconds';
+        // La medida que manda: la del plan si la trae, si no la del registro y,
+        // en último caso, la de la biblioteca del entrenador.
+        const medida =
+          planned?.measure ?? exercise.measure ?? measureByExercise[exercise.exerciseId];
+        const isSeconds = isHoldMeasure(medida);
         // Combo: la serie combina repeticiones Y aguante, así que lleva una
         // casilla extra de segundos junto a la de reps.
-        const isCombo =
-          measureByExercise[exercise.exerciseId] === 'combo' ||
-          exercise.measure === 'combo' ||
-          planned?.measure === 'combo';
+        const isCombo = medida === 'combo';
+        // Por lados: la segunda casilla es el otro brazo, no otra cosa.
+        const isDual = isDualMeasure(medida);
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
@@ -1760,8 +1772,13 @@ export default function WorkoutScreen() {
               </View>
             ) : null}
             <View style={styles.setHead}>
-              <Text style={styles.setHeadCap}>{isSeconds ? 'SEGUNDOS' : 'REPS'}</Text>
+              <Text style={styles.setHeadCap}>
+                {isDual ? (isSeconds ? 'IZQ. S' : 'IZQ.') : isSeconds ? 'SEGUNDOS' : 'REPS'}
+              </Text>
               {isCombo ? <Text style={styles.setHeadCap}>AGUANTE S</Text> : null}
+              {isDual ? (
+                <Text style={styles.setHeadCap}>{isSeconds ? 'DER. S' : 'DER.'}</Text>
+              ) : null}
               {load === 'weighted' ? (
                 <Text style={styles.setHeadCap}>PESO KG</Text>
               ) : load === 'assisted' ? (
@@ -1796,6 +1813,14 @@ export default function WorkoutScreen() {
                     value={set.seconds ?? ''}
                     onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'seconds', v)}
                     placeholder={planned?.seconds ? String(planned.seconds) : 'seg'}
+                    keyboardType="numeric"
+                    style={styles.setFieldInput}
+                  />
+                ) : isDual ? (
+                  <TextField
+                    value={set.side2 ?? ''}
+                    onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'side2', v)}
+                    placeholder={planned?.side2 || planned?.reps || (isSeconds ? 'seg' : 'reps')}
                     keyboardType="numeric"
                     style={styles.setFieldInput}
                   />

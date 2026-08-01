@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
@@ -8,6 +8,13 @@ import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { useAuth } from '../../../../lib/auth-context';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
+import { getActiveRoutineForClient } from '../../../../lib/firestore/routines';
+import {
+  clearProgressTracker,
+  getProgressTracker,
+  saveProgressTracker,
+} from '../../../../lib/firestore/progressTrackers';
+import { showToast } from '../../../../components/Toast';
 import { startOfWeek, weeklyExerciseMatrix, type MatrixCell } from '../../../../lib/stats';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import type { WorkoutLog } from '../../../../lib/types';
@@ -28,11 +35,31 @@ export default function ClientOverviewScreen() {
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<4 | 8 | 12 | 'total'>(8);
+  // Selección de ejercicios que sigue el entrenador. null = todos (por defecto).
+  const [tracked, setTracked] = useState<string[] | null>(null);
+  // Ejercicios del plan activo del alumno, para poder añadir cualquiera.
+  const [planExercises, setPlanExercises] = useState<{ id: string; name: string }[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile || !id) return;
     try {
-      setLogs(await getWorkoutLogsForClient(id, profile.uid));
+      const [data, seleccion, rutina] = await Promise.all([
+        getWorkoutLogsForClient(id, profile.uid),
+        getProgressTracker(id),
+        getActiveRoutineForClient(id, profile.uid).catch(() => null),
+      ]);
+      setLogs(data);
+      setTracked(seleccion);
+      // Los ejercicios del plan activo, sin repetir: son los que el entrenador
+      // puede meter en la tabla aunque el alumno aún no los haya registrado.
+      const vistos = new Map<string, string>();
+      for (const day of rutina?.days ?? []) {
+        for (const ex of day.exercises) {
+          if (!vistos.has(ex.exerciseId)) vistos.set(ex.exerciseId, ex.name);
+        }
+      }
+      setPlanExercises([...vistos.entries()].map(([exId, name]) => ({ id: exId, name })));
     } catch {
       setLogs([]);
     }
@@ -55,7 +82,61 @@ export default function ClientOverviewScreen() {
   }, [logs]);
 
   const weeks = range === 'total' ? totalWeeks : range;
-  const matrix = useMemo(() => weeklyExerciseMatrix(logs, weeks), [logs, weeks]);
+  const matrixCompleta = useMemo(() => weeklyExerciseMatrix(logs, weeks), [logs, weeks]);
+
+  /**
+   * Filas que se pintan. Sin selección se muestran todas (como siempre). Con
+   * selección manda el orden elegido, y un ejercicio elegido que aún no tenga
+   * registros aparece igualmente con la fila vacía: saber que el alumno NO lo
+   * ha hecho es tan informativo como ver sus marcas.
+   */
+  const matrix = useMemo(() => {
+    if (!tracked) return matrixCompleta;
+    const porId = new Map(matrixCompleta.rows.map((r) => [r.exerciseId, r]));
+    const nombres = new Map(planExercises.map((e) => [e.id, e.name]));
+    const rows = tracked.map(
+      (exId) =>
+        porId.get(exId) ?? {
+          exerciseId: exId,
+          name: nombres.get(exId) ?? 'Ejercicio',
+          measure: 'reps' as const,
+          weeksActive: 0,
+          cells: matrixCompleta.weekStarts.map(() => null),
+        }
+    );
+    return { weekStarts: matrixCompleta.weekStarts, rows };
+  }, [matrixCompleta, tracked, planExercises]);
+
+  // Lista base sobre la que se quita/añade: la selección actual o, si no hay,
+  // todo lo que la tabla muestra ahora mismo.
+  const seleccionActual = () => tracked ?? matrixCompleta.rows.map((r) => r.exerciseId);
+
+  const guardar = async (ids: string[]) => {
+    if (!profile || !id) return;
+    setTracked(ids);
+    try {
+      await saveProgressTracker(profile.uid, id, ids);
+    } catch {
+      showToast('No se pudo guardar la selección');
+    }
+  };
+
+  const quitarEjercicio = (exId: string) => guardar(seleccionActual().filter((x) => x !== exId));
+  const anadirEjercicio = (exId: string) => {
+    setPickerOpen(false);
+    const actual = seleccionActual();
+    if (actual.includes(exId)) return;
+    guardar([...actual, exId]);
+  };
+  const restaurarTodos = async () => {
+    if (!profile || !id) return;
+    setTracked(null);
+    try {
+      await clearProgressTracker(profile.uid, id);
+    } catch {
+      showToast('No se pudo restaurar');
+    }
+  };
 
   const OPTIONS: { v: 4 | 8 | 12 | 'total'; label: string }[] = [
     { v: 4, label: '4 sem' },
@@ -110,6 +191,13 @@ export default function ClientOverviewScreen() {
                   <Text style={styles.nameText} numberOfLines={2}>
                     {r.name}
                   </Text>
+                  <Pressable
+                    onPress={() => quitarEjercicio(r.exerciseId)}
+                    hitSlop={8}
+                    style={styles.rowRemove}
+                  >
+                    <Ionicons name="close" size={13} color={colors.textFaint} />
+                  </Pressable>
                 </View>
               ))}
             </View>
@@ -167,6 +255,60 @@ export default function ClientOverviewScreen() {
         </Card>
       )}
 
+      {/* Elegir qué se sigue: quitar cualquier fila con la ✕ y añadir
+          cualquier ejercicio del plan activo del alumno. Con muchos meses de
+          historial la tabla acumula filas que ya no interesan, y lo que hace
+          útil esta pantalla es mirar pocas cosas y las correctas. */}
+      <View style={styles.trackBar}>
+        <Pressable onPress={() => setPickerOpen(true)} style={styles.trackBtn}>
+          <Ionicons name="add-circle-outline" size={15} color={colors.primary} />
+          <Text style={styles.trackBtnText}>Añadir ejercicio</Text>
+        </Pressable>
+        {tracked ? (
+          <Pressable onPress={restaurarTodos} style={styles.trackBtn}>
+            <Ionicons name="refresh-outline" size={15} color={colors.textMuted} />
+            <Text style={[styles.trackBtnText, { color: colors.textMuted }]}>
+              Mostrar todos
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {/* Selector: ejercicios del plan activo que no estén ya en la tabla. */}
+      <Modal
+        visible={pickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickerOpen(false)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setPickerOpen(false)}>
+          <Pressable style={styles.picker} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.pickerTitle}>Añadir al seguimiento</Text>
+            <Text style={styles.pickerHint}>Ejercicios del plan activo del alumno.</Text>
+            <ScrollView style={{ maxHeight: 320 }}>
+              {planExercises.filter((e) => !seleccionActual().includes(e.id)).length === 0 ? (
+                <Text style={styles.pickerEmpty}>
+                  Ya sigues todos los ejercicios de su plan.
+                </Text>
+              ) : (
+                planExercises
+                  .filter((e) => !seleccionActual().includes(e.id))
+                  .map((e) => (
+                    <Pressable
+                      key={e.id}
+                      onPress={() => anadirEjercicio(e.id)}
+                      style={styles.pickerRow}
+                    >
+                      <Ionicons name="add" size={16} color={colors.primary} />
+                      <Text style={styles.pickerRowText}>{e.name}</Text>
+                    </Pressable>
+                  ))
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {matrix.rows.length > 0 ? (
         <View style={styles.legend}>
           <View style={styles.legendItem}>
@@ -215,6 +357,48 @@ function Trend({ current, prev }: { current: MatrixCell; prev: MatrixCell | null
 }
 
 const styles = StyleSheet.create({
+  rowRemove: { position: 'absolute', top: 4, right: 4, padding: 2 },
+  trackBar: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, flexWrap: 'wrap' },
+  trackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  trackBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  picker: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  pickerTitle: { ...typography.h3, color: colors.text },
+  pickerHint: { ...typography.small, color: colors.textMuted, marginBottom: spacing.sm },
+  pickerEmpty: { ...typography.small, color: colors.textFaint, paddingVertical: spacing.md },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  pickerRowText: { ...typography.body, color: colors.text, flex: 1 },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
   weekToggle: {

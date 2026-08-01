@@ -24,7 +24,13 @@ export async function getMealBooksForTrainer(trainerId: string): Promise<MealBoo
   const snap = await getDocs(query(booksRef(), where('trainerId', '==', trainerId)));
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as MealBook)
-    .sort((a, b) => a.createdAt - b.createdAt);
+    // Manda el orden que fijó el entrenador; las libretas antiguas (sin
+    // `order`) se colocan detrás por fecha, sin reordenarse solas.
+    .sort(
+      (a, b) =>
+        (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER) ||
+        a.createdAt - b.createdAt
+    );
 }
 
 export async function createMealBook(

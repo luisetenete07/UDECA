@@ -29,6 +29,8 @@ import { fonts, colors, radius, spacing, typography } from '../../../../lib/them
 import {
   GRIP_LABEL,
   GRIP_TYPES,
+  isDualMeasure,
+  isHoldMeasure,
   MUSCLE_GROUPS,
   resolveLoad,
   WEEKDAY_LABELS,
@@ -335,7 +337,7 @@ export default function RoutineEditorScreen() {
   const updateExerciseField = (
     dayId: string,
     exerciseRowId: string,
-    field: 'sets' | 'reps' | 'seconds' | 'restSeconds' | 'notes' | 'rir' | 'goal',
+    field: 'sets' | 'reps' | 'seconds' | 'side2' | 'restSeconds' | 'notes' | 'rir' | 'goal',
     value: string
   ) => {
     setDays((prev) =>
@@ -1102,10 +1104,18 @@ export default function RoutineEditorScreen() {
                   containerStyle={styles.smallInput}
                 />
                 <TextField
-                  label={ex.measure === 'seconds' ? 'Aguante (seg)' : 'Reps'}
+                  label={
+                    isDualMeasure(ex.measure)
+                      ? isHoldMeasure(ex.measure)
+                        ? 'Aguante izq. (seg)'
+                        : 'Reps izq.'
+                      : isHoldMeasure(ex.measure)
+                        ? 'Aguante (seg)'
+                        : 'Reps'
+                  }
                   value={ex.reps}
                   onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
-                  placeholder={ex.measure === 'seconds' ? '30' : '8-12'}
+                  placeholder={isHoldMeasure(ex.measure) ? '30' : '8-12'}
                   containerStyle={styles.smallInput}
                 />
                 {/* Combo: además de las reps, el aguante de la misma serie. */}
@@ -1115,6 +1125,17 @@ export default function RoutineEditorScreen() {
                     value={ex.seconds ?? ''}
                     onChangeText={(v) => updateExerciseField(day.id, ex.id, 'seconds', v)}
                     placeholder="12"
+                    containerStyle={styles.smallInput}
+                  />
+                ) : isDualMeasure(ex.measure) ? (
+                  /* Por lados: el objetivo del lado derecho. Casi siempre será
+                     el mismo que el izquierdo, pero no siempre, y ahí está la
+                     gracia de poder ponerlo aparte. */
+                  <TextField
+                    label={isHoldMeasure(ex.measure) ? 'Aguante der. (seg)' : 'Reps der.'}
+                    value={ex.side2 ?? ''}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'side2', v)}
+                    placeholder={isHoldMeasure(ex.measure) ? '30' : '8-12'}
                     containerStyle={styles.smallInput}
                   />
                 ) : null}

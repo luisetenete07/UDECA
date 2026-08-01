@@ -101,8 +101,71 @@ export function isAdmin(profile: UserProfile | null): boolean {
  * se usa el producto y luego se decide. El entrenador no lleva prueba por
  * tiempo: su plan gratuito se mide en alumnos (ver FREE_CLIENT_LIMIT), que no
  * caduca mientras su grupo sea pequeño.
+ *
+ * Son 14 y no 7 porque en calistenia dos semanas es lo mínimo para completar
+ * un par de ciclos de entrenamiento y notar algo. Con una semana la decisión
+ * se toma sin haber llegado a usar el producto de verdad.
+ *
+ * Este número está también en firestore.rules (que impide pedir más prueba de
+ * la que toca al crear la cuenta). Si lo cambias, cámbialo en los dos sitios.
  */
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 14;
+
+/**
+ * Días de margen desde que le vence la cuota a un alumno hasta que se le
+ * bloquea la app. Cinco: los suficientes para que un despiste o un fin de
+ * semana no le dejen fuera, y pocos para que el coach no acabe regalando un
+ * mes de trabajo.
+ */
+export const CLIENT_GRACE_DAYS = 5;
+
+/**
+ * Margen extra desde que el alumno declara "ya he pagado" hasta que el bloqueo
+ * vuelve si el coach no lo confirma.
+ *
+ * Sin esto, quien paga por transferencia un viernes se queda fuera hasta que
+ * su coach entre a confirmarlo, que es castigar justo a quien ha cumplido.
+ * Con tope, porque si no bastaría con declarar un pago falso para tener la app
+ * gratis para siempre.
+ */
+export const CLIENT_REPORT_GRACE_DAYS = 3;
+
+/**
+ * ¿Está el alumno bloqueado por impago?
+ *
+ * Solo aplica a alumnos de un coach con cuota puesta. No bloquea a quien está
+ * de prueba o de cortesía, ni a quien no tiene cuota (0 €): en esos casos no
+ * hay nada que cobrar y bloquear sería un error de la app, no un impago.
+ */
+export function clientIsLocked(profile: UserProfile | null, now: number = Date.now()): boolean {
+  if (!profile || profile.role !== 'client') return false;
+  if (!profile.trainerId) return false;
+  if (!profile.nextPaymentDate) return false;
+  if (!profile.monthlyFeeEur) return false;
+  if (profile.paymentStatus === 'free' || profile.paymentStatus === 'trial') return false;
+  if (profile.paymentStatus === 'paid' && profile.nextPaymentDate > now) return false;
+  // Ha dicho que ya pagó y aún está dentro del margen de confirmación.
+  if (
+    profile.paymentReportedAt &&
+    now < profile.paymentReportedAt + CLIENT_REPORT_GRACE_DAYS * DAY_MS
+  ) {
+    return false;
+  }
+  return now > profile.nextPaymentDate + CLIENT_GRACE_DAYS * DAY_MS;
+}
+
+/** Días que le quedan al alumno antes de que se le bloquee la app (0 = hoy). */
+export function clientDaysUntilLock(
+  profile: UserProfile | null,
+  now: number = Date.now()
+): number | null {
+  if (!profile || profile.role !== 'client' || !profile.nextPaymentDate) return null;
+  if (!profile.monthlyFeeEur) return null;
+  if (profile.paymentStatus === 'free' || profile.paymentStatus === 'trial') return null;
+  const limite = profile.nextPaymentDate + CLIENT_GRACE_DAYS * DAY_MS;
+  if (now >= limite) return 0;
+  return Math.ceil((limite - now) / DAY_MS);
+}
 
 /** Etiqueta del plan del entrenador para las pantallas de venta. */
 export const COACH_PLAN_LABEL = `Gratis hasta ${FREE_CLIENT_LIMIT} alumnos · ${ANNUAL_PRICE_EUR} €/año`;

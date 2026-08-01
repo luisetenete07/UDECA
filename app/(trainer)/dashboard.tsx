@@ -529,8 +529,12 @@ export default function TrainerDashboard() {
             <Ionicons name="alert-circle-outline" size={16} color={colors.primary} />
             <Text style={styles.sectionTitle}>Necesita tu atención</Text>
           </View>
+          {/* Abre aquí mismo la lista de quién debe, en vez de mandar a la
+              pestaña de Clientes: desde ahí habría que buscar a mano quiénes
+              son y volver. La respuesta a "¿quién me debe?" se da donde se
+              hace la pregunta. */}
           {overdueCount > 0 ? (
-            <Pressable style={styles.attentionRow} onPress={() => router.push('/(trainer)/clients')}>
+            <Pressable style={styles.attentionRow} onPress={() => setPayListOpen(true)}>
               <View style={[styles.attentionIcon, { backgroundColor: colors.dangerMuted }]}>
                 <Ionicons name="cash-outline" size={17} color={colors.danger} />
               </View>

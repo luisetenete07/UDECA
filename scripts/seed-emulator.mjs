@@ -46,14 +46,31 @@ async function ensure(email, name) {
   }
 }
 
+/**
+ * Se entra con cada cuenta antes de escribir SUS datos.
+ *
+ * El emulador carga las reglas de verdad (firestore.rules), así que sembrar
+ * "desde fuera" ya no vale: cada documento tiene que escribirlo quien tendría
+ * permiso para escribirlo en producción. Es más incómodo, pero convierte la
+ * siembra en una prueba de las reglas: si el guion pasa, las reglas permiten
+ * lo que la app necesita hacer de verdad.
+ */
+async function como(email) {
+  await signInWithEmailAndPassword(auth, email, PW);
+}
+
 const coach = await ensure('coach@demo.test', 'Luis Tena');
 const cli = await ensure('alumno@demo.test', 'Marcos Ruiz');
 const cli2 = await ensure('alumno2@demo.test', 'Ana Gil');
 
+await como('coach@demo.test');
 await setDoc(doc(db, 'users', coach), {
   uid: coach, role: 'trainer', name: 'Luis Tena', email: 'coach@demo.test',
   createdAt: now - 200 * DAY, inviteCode: 'DEMO01', emailVerificationRequired: false,
-  subscriptionUntil: now + 300 * DAY, clientCount: 2,
+  // Caducado a propósito: las reglas impiden regalarse suscripción al crear la
+  // cuenta. Con 2 alumnos entra igual por el plan gratuito, que es justo el
+  // caso que interesa poder revisar.
+  subscriptionUntil: 0, clientCount: 2,
 });
 await setDoc(doc(db, 'trainerCodes', 'DEMO01'), { trainerId: coach, full: false });
 
@@ -63,6 +80,7 @@ const alumnos = [
 ];
 for (const [uid, name, email, fee, dias, estado] of alumnos) {
   const due = now + dias * DAY;
+  await como(email);
   await setDoc(doc(db, 'users', uid), {
     uid, role: 'client', name, email, createdAt: now - 120 * DAY, trainerId: coach,
     emailVerificationRequired: false, monthlyFeeEur: fee, paymentStatus: estado,
@@ -71,6 +89,7 @@ for (const [uid, name, email, fee, dias, estado] of alumnos) {
   });
 }
 
+await como('coach@demo.test');
 const EJ = [
   ['Dominadas', 'Tirón', 'reps'], ['Fondos en paralelas', 'Empuje', 'reps'],
   ['Front lever', 'Core', 'seconds'], ['Muscle up', 'Tirón', 'combo'],
@@ -95,6 +114,8 @@ await addDoc(collection(db, 'routines'), {
   ],
 });
 
+// Los entrenos los registra el alumno, no el coach.
+await como('alumno@demo.test');
 for (let d = 1; d <= 22; d++) {
   if (d % 3 === 0) continue;
   await addDoc(collection(db, 'workoutLogs'), {
@@ -107,12 +128,17 @@ for (let d = 1; d <= 22; d++) {
   });
 }
 
-for (const [uid, name, week, streak, total] of [[cli, 'Marcos Ruiz', 4, 12, 96], [cli2, 'Ana Gil', 3, 5, 61]]) {
+for (const [uid, name, email, week, streak, total] of [
+  [cli, 'Marcos Ruiz', 'alumno@demo.test', 4, 12, 96],
+  [cli2, 'Ana Gil', 'alumno2@demo.test', 3, 5, 61],
+]) {
+  await como(email);
   await setDoc(doc(db, 'socialStats', uid), {
     uid, name, trainerId: coach, weekWorkouts: week, streak, totalWorkouts: total,
     weekKey: 'demo', updatedAt: now,
   });
 }
+await como('coach@demo.test');
 for (const dias of [10, 40, 70]) {
   await addDoc(collection(db, 'payments'), {
     trainerId: coach, clientId: cli, amountEur: 45, date: now - dias * DAY, createdAt: now - dias * DAY,

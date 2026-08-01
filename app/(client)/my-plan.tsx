@@ -18,8 +18,12 @@ import {
 import { flexLabel } from '../../lib/schedule';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
+  EXERCISE_MEASURES,
   GRIP_LABEL,
   GRIP_TYPES,
+  isDualMeasure,
+  isHoldMeasure,
+  MEASURE_SHORT,
   resolveLoad,
   WEEKDAY_LABELS,
   type ExerciseLoad,
@@ -552,7 +556,7 @@ export default function MyPlanScreen() {
                             <TextInput
                               value={exx.reps}
                               onChangeText={(v) => patchEx(di, ei, { reps: v })}
-                              placeholder={exx.measure === 'seconds' ? '30' : '8-12'}
+                              placeholder={isHoldMeasure(exx.measure) ? '30' : '8-12'}
                               placeholderTextColor={colors.textFaint}
                               style={styles.fieldInput}
                             />
@@ -565,6 +569,19 @@ export default function MyPlanScreen() {
                                 onChangeText={(v) => patchEx(di, ei, { seconds: v })}
                                 placeholder="12"
                                 keyboardType="number-pad"
+                                placeholderTextColor={colors.textFaint}
+                                style={styles.fieldInput}
+                              />
+                            </View>
+                          ) : isDualMeasure(exx.measure) ? (
+                            <View style={styles.field}>
+                              <Text style={styles.fieldLabel}>
+                                {isHoldMeasure(exx.measure) ? 'Der. (s)' : 'Der.'}
+                              </Text>
+                              <TextInput
+                                value={exx.side2 ?? ''}
+                                onChangeText={(v) => patchEx(di, ei, { side2: v })}
+                                placeholder={isHoldMeasure(exx.measure) ? '30' : '8-12'}
                                 placeholderTextColor={colors.textFaint}
                                 style={styles.fieldInput}
                               />
@@ -600,27 +617,21 @@ export default function MyPlanScreen() {
 
                         <View style={styles.exLinks}>
                           <Pressable
-                            onPress={() =>
-                              // Rota entre las tres medidas: reps → segundos →
-                              // combo (reps + aguante en la misma serie).
-                              patchEx(di, ei, {
-                                measure:
-                                  exx.measure === 'seconds'
-                                    ? 'combo'
-                                    : exx.measure === 'combo'
-                                      ? 'reps'
-                                      : ('seconds' as ExerciseMeasure),
-                              })
-                            }
+                            onPress={() => {
+                              // Rota por todas las medidas en orden, volviendo
+                              // al principio: reps → segundos → combo → por
+                              // lados → aguante por lados → reps.
+                              const actual = exx.measure ?? 'reps';
+                              const i = EXERCISE_MEASURES.indexOf(actual);
+                              const siguiente =
+                                EXERCISE_MEASURES[(i + 1) % EXERCISE_MEASURES.length];
+                              patchEx(di, ei, { measure: siguiente });
+                            }}
                             style={styles.linkBtn}
                           >
                             <Ionicons name="swap-horizontal" size={14} color={colors.primary} />
                             <Text style={styles.linkBtnText}>
-                              {exx.measure === 'seconds'
-                                ? 'Medir en combo'
-                                : exx.measure === 'combo'
-                                  ? 'Medir en reps'
-                                  : 'Medir en segundos'}
+                              {MEASURE_SHORT[exx.measure ?? 'reps']}
                             </Text>
                           </Pressable>
                           {ei > 0 ? (

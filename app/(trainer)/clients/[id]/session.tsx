@@ -8,7 +8,7 @@ import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { getWorkoutLog } from '../../../../lib/firestore/workoutLogs';
 import { colors, fonts, spacing, typography } from '../../../../lib/theme';
-import type { WorkoutLog } from '../../../../lib/types';
+import { isDualMeasure, type WorkoutLog } from '../../../../lib/types';
 
 export default function SessionDetailScreen() {
   const { logId, id } = useLocalSearchParams<{ logId: string; id: string }>();
@@ -86,6 +86,9 @@ export default function SessionDetailScreen() {
                   {set.reps || '—'} {unit}
                   {/* En un combo la serie lleva además el aguante. */}
                   {ex.measure === 'combo' && set.seconds ? ` · ${set.seconds} s` : ''}
+                  {/* Por lados: se ve cada brazo por separado, que es justo
+                      para lo que se anota así. */}
+                  {isDualMeasure(ex.measure) && set.side2 ? ` · ${set.side2} ${unit} (der.)` : ''}
                 </Text>
                 {showLoad ? (
                   <Text style={styles.setValue}>

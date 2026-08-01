@@ -18,6 +18,9 @@ import {
 import { showToast } from '../../../components/Toast';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
+  EXERCISE_MEASURES,
+  isDualMeasure,
+  MEASURE_LABEL,
   MUSCLE_GROUPS,
   type ExerciseMeasure,
   type MuscleGroup,
@@ -342,36 +345,37 @@ export default function ExerciseEditorScreen() {
       </View>
 
       <Text style={styles.label}>Se mide en</Text>
-      <View style={styles.segment}>
-        <Pressable
-          onPress={() => setMeasure('reps')}
-          style={[styles.segmentBtn, measure === 'reps' && styles.segmentBtnActive]}
-        >
-          <Text style={[styles.segmentText, measure === 'reps' && styles.segmentTextActive]}>
-            Repeticiones
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setMeasure('seconds')}
-          style={[styles.segmentBtn, measure === 'seconds' && styles.segmentBtnActive]}
-        >
-          <Text style={[styles.segmentText, measure === 'seconds' && styles.segmentTextActive]}>
-            Segundos (isométrico)
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setMeasure('combo')}
-          style={[styles.segmentBtn, measure === 'combo' && styles.segmentBtnActive]}
-        >
-          <Text style={[styles.segmentText, measure === 'combo' && styles.segmentTextActive]}>
-            Combo
-          </Text>
-        </Pressable>
+      {/* Lista vertical y no una fila de botones: con cinco opciones, cada
+          etiqueta necesita leerse entera ("Aguante por lado" no se distingue
+          de "Aguante" recortado a dos palabras). */}
+      <View style={styles.measureList}>
+        {EXERCISE_MEASURES.map((m) => (
+          <Pressable
+            key={m}
+            onPress={() => setMeasure(m)}
+            style={[styles.measureOption, measure === m && styles.measureOptionActive]}
+          >
+            <Ionicons
+              name={measure === m ? 'radio-button-on' : 'radio-button-off'}
+              size={18}
+              color={measure === m ? colors.primary : colors.textFaint}
+            />
+            <Text style={[styles.measureText, measure === m && styles.measureTextActive]}>
+              {MEASURE_LABEL[m]}
+            </Text>
+          </Pressable>
+        ))}
       </View>
       {measure === 'combo' ? (
         <Text style={styles.measureHint}>
           Cada serie combina repeticiones y aguante en una sola tarjeta. Ej.: Muscle
           Up + Front Lever → 5 repeticiones y 12 s.
+        </Text>
+      ) : isDualMeasure(measure) ? (
+        <Text style={styles.measureHint}>
+          Cada serie se anota por separado para el lado izquierdo y el derecho. Para
+          trabajo a un brazo, donde saber cuál va por detrás es justo el dato que
+          importa.
         </Text>
       ) : null}
 
@@ -530,6 +534,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     lineHeight: 18,
   },
+  measureList: { gap: spacing.xs, marginBottom: spacing.md },
+  measureOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  measureOptionActive: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  measureText: { ...typography.body, color: colors.textMuted },
+  measureTextActive: { color: colors.text, fontFamily: fonts.semiBold },
   chipPencil: { marginLeft: -1, marginRight: -3, opacity: 0.8 },
   modalBackdrop: {
     flex: 1,

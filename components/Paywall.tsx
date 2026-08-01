@@ -30,11 +30,11 @@ const BENEFITS = [
  * Los datos no se tocan nunca; solo se bloquea el acceso hasta renovar.
  */
 const ATHLETE_BENEFITS = [
-  'Crea y edita tus propias rutinas',
-  'Registra tus entrenos, series y récords',
-  'Progreso, estadísticas y evolución por ejercicio',
-  'Nutrición: tus macros y seguimiento',
-  'Logros y racha para no fallar',
+  'Tus rutinas, a tu medida y sin límite',
+  'Cada serie, cada récord y cada progresión, registrados',
+  'Tu evolución por ejercicio, con números que no mienten',
+  'Nutrición y macros alineados con tu objetivo',
+  'Racha y logros para no soltar la barra',
 ];
 
 export function Paywall() {
@@ -116,10 +116,12 @@ export function Paywall() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <Image source={require('../assets/icon.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>{isAthlete ? 'Activa UDECA Atleta' : 'Activa UDECA Pro'}</Text>
+        <Text style={styles.title}>
+          {isAthlete ? 'Has terminado la prueba' : 'Activa UDECA Pro'}
+        </Text>
         <Text style={styles.subtitle}>
           {isAthlete
-            ? 'Entrena por tu cuenta con todas las herramientas. Tus datos están a salvo y te esperan.'
+            ? `Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.`
             : `Tu grupo ha superado los ${FREE_CLIENT_LIMIT} alumnos del plan gratuito. Activa la suscripción para seguir con todos. Tus datos están a salvo y te esperan.`}
         </Text>
 
@@ -143,7 +145,13 @@ export function Paywall() {
             </View>
           ))}
           <Button
-            title={checkoutUrl ? 'Suscribirme ahora' : 'Contactar para activar'}
+            title={
+              checkoutUrl
+                ? isAthlete
+                  ? 'Seguir entrenando'
+                  : 'Suscribirme ahora'
+                : 'Contactar para activar'
+            }
             onPress={handlePay}
             style={{ marginTop: spacing.md }}
           />

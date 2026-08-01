@@ -359,14 +359,21 @@ export default function TemplateExercisesScreen() {
                   </ScrollView>
 
                   <Text style={styles.label}>Se mide en</Text>
-                  <View style={styles.segment}>
+                  {/* En lista: con cinco medidas, en fila las etiquetas se
+                      recortan y "Reps por lado" pasa a ser ilegible. */}
+                  <View style={styles.measureList}>
                     {EXERCISE_MEASURES.map((m) => (
                       <Pressable
                         key={m}
                         onPress={() => setDraft({ ...draft, measure: m })}
-                        style={[styles.segBtn, draft.measure === m && styles.segBtnOn]}
+                        style={[styles.measureOption, draft.measure === m && styles.measureOptionOn]}
                       >
-                        <Text style={[styles.segText, draft.measure === m && styles.segTextOn]}>
+                        <Ionicons
+                          name={draft.measure === m ? 'radio-button-on' : 'radio-button-off'}
+                          size={18}
+                          color={draft.measure === m ? colors.primary : colors.textFaint}
+                        />
+                        <Text style={[styles.segText, draft.measure === m && styles.measureTextOn]}>
                           {MEASURE_LABEL[m]}
                         </Text>
                       </Pressable>
@@ -514,6 +521,20 @@ const styles = StyleSheet.create({
   segBtnOn: { backgroundColor: colors.primary },
   segText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   segTextOn: { color: colors.onPrimary },
+  measureList: { gap: spacing.xs, marginBottom: spacing.md },
+  measureOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  measureOptionOn: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  measureTextOn: { color: colors.text, fontFamily: fonts.semiBold },
   musclesHead: {
     flexDirection: 'row',
     alignItems: 'center',

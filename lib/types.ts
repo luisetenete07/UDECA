@@ -135,6 +135,12 @@ export interface UserProfile {
    * descanso a propósito; no rompen la racha.
    */
   flexRestDays?: number[];
+  /**
+   * Categorías cuyas series semanales quiere ver el alumno en su progreso. Sin
+   * valor se muestran las que más trabaja. Antes eran siempre Empuje y Tirón,
+   * que a quien entrena sobre todo Core le dejaba dos gráficas planas.
+   */
+  progressGroups?: string[];
 }
 
 /** Sesión de entrenamiento a medias, sincronizable entre dispositivos. */
@@ -215,15 +221,38 @@ export const CATEGORY_PALETTE = [
   '#6B7078',
 ] as const;
 
-export type ExerciseMeasure = 'reps' | 'seconds' | 'combo';
+/**
+ * Cómo se mide una serie.
+ *
+ *  - 'reps'        una marca: repeticiones.
+ *  - 'seconds'     una marca: segundos de aguante (isométrico).
+ *  - 'combo'       dos marcas DISTINTAS en la misma serie: repeticiones y, a
+ *                  continuación, aguante (muscle up + front lever).
+ *  - 'repsDual'    dos marcas del MISMO tipo, una por lado: repeticiones con
+ *                  el brazo izquierdo y con el derecho.
+ *  - 'secondsDual' igual, pero de aguante por lado.
+ *
+ * Los dos últimos existen porque en calistenia hay mucho trabajo a un brazo
+ * (dominadas a un brazo, planchas a una mano) y anotar los dos lados en la
+ * misma casilla pierde justo el dato que importa: cuál va por detrás.
+ */
+export type ExerciseMeasure = 'reps' | 'seconds' | 'combo' | 'repsDual' | 'secondsDual';
 
-export const EXERCISE_MEASURES: ExerciseMeasure[] = ['reps', 'seconds', 'combo'];
+export const EXERCISE_MEASURES: ExerciseMeasure[] = [
+  'reps',
+  'seconds',
+  'combo',
+  'repsDual',
+  'secondsDual',
+];
 
 /** Etiqueta larga (formularios donde se elige la medida). */
 export const MEASURE_LABEL: Record<ExerciseMeasure, string> = {
   reps: 'Repeticiones',
   seconds: 'Segundos (isométrico)',
-  combo: 'Combo',
+  combo: 'Combo (reps + aguante)',
+  repsDual: 'Reps por lado (izq. y der.)',
+  secondsDual: 'Aguante por lado (izq. y der.)',
 };
 
 /** Etiqueta corta (listados y resúmenes). */
@@ -231,7 +260,24 @@ export const MEASURE_SHORT: Record<ExerciseMeasure, string> = {
   reps: 'Repeticiones',
   seconds: 'Isométrico',
   combo: 'Combo',
+  repsDual: 'Reps por lado',
+  secondsDual: 'Isométrico por lado',
 };
+
+/** ¿La marca principal se mide en segundos (aguante) en vez de en reps? */
+export function isHoldMeasure(m?: ExerciseMeasure): boolean {
+  return m === 'seconds' || m === 'secondsDual';
+}
+
+/** ¿Se anota cada lado por separado (izquierda y derecha)? */
+export function isDualMeasure(m?: ExerciseMeasure): boolean {
+  return m === 'repsDual' || m === 'secondsDual';
+}
+
+/** ¿La serie lleva una segunda casilla, sea aguante (combo) o el otro lado? */
+export function hasSecondMark(m?: ExerciseMeasure): boolean {
+  return m === 'combo' || isDualMeasure(m);
+}
 
 /**
  * Carga del ejercicio (calistenia):
@@ -333,6 +379,13 @@ export interface RoutineExercise {
    * 'combo', donde `reps` marca las repeticiones y esto el isométrico.
    */
   seconds?: string;
+  /**
+   * Objetivo del SEGUNDO lado en los ejercicios por lados ('repsDual' y
+   * 'secondsDual'): `reps` es el lado izquierdo y esto el derecho. Va en un
+   * campo propio y no reutiliza `seconds` porque ahí guardar repeticiones
+   * sería mentir sobre lo que contiene.
+   */
+  side2?: string;
   restSeconds?: number;
   notes?: string;
   /** true = se hace en superserie encadenado con el ejercicio anterior. */
@@ -560,6 +613,8 @@ export interface LoggedSet {
   reps: string;
   /** Aguante en segundos de la serie. Solo lo usan los ejercicios 'combo'. */
   seconds?: string;
+  /** Marca del segundo lado (derecho) en los ejercicios por lados. */
+  side2?: string;
   weight?: string;
   completed: boolean;
 }
@@ -634,6 +689,12 @@ export interface MealBook {
   trainerId: string;
   title: string;
   photos: MealBookPhoto[];
+  /**
+   * Posición en la lista (menor primero). Las libretas creadas antes de que
+   * existiera este campo no lo tienen: se ordenan por fecha de creación, que
+   * es justo el orden que tenían hasta ahora.
+   */
+  order?: number;
   createdAt: number;
   updatedAt: number;
 }

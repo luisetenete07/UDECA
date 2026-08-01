@@ -9,9 +9,10 @@ import { LinkTrainerScreen } from '../../components/LinkTrainerScreen';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Onboarding } from '../../components/Onboarding';
 import { Paywall } from '../../components/Paywall';
+import { ClientLockScreen } from '../../components/ClientLockScreen';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
-import { subscriptionState } from '../../lib/subscription';
+import { clientIsLocked, subscriptionState } from '../../lib/subscription';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { useTabScreenOptions } from '../../lib/navTheme';
@@ -74,6 +75,11 @@ export default function ClientLayout() {
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
   // Atleta con la suscripción caducada: muro de pago (10 €/mes).
   if (isAthlete && !subscriptionState(profile).active) return <Paywall />;
+  // Alumno con la cuota vencida más allá del margen: acceso en pausa hasta que
+  // pague o su entrenador confirme el cobro. `clientIsLocked` ya descarta a
+  // quien no tiene entrenador o no tiene cuota, así que no hay riesgo de
+  // bloquear a alguien a quien nadie le cobra nada.
+  if (!isAthlete && clientIsLocked(profile)) return <ClientLockScreen />;
   // Alumno sin entrenador: pantalla para enviar/esperar la solicitud. Los
   // atletas son su propio coach (trainerId propio), así que no la ven.
   if (!isAthlete && !profile.trainerId) return <LinkTrainerScreen />;
