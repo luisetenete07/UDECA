@@ -21,6 +21,8 @@ import {
   connectFirestoreEmulator,
   doc,
   setDoc,
+  deleteDoc,
+  getDoc,
   getDocs,
   collection,
   query,
@@ -131,6 +133,57 @@ await comprobar('marcarle como pagado', false, () =>
 await comprobar('quitarle el entrenador', false, () =>
   setDoc(doc(db, 'users', alumno.id), { trainerId: otro.user.uid }, { merge: true })
 );
+
+console.log('\nTabla de progreso (progressTrackers)');
+// Se limpia al final: esta prueba escribe en la misma base que usa la app para
+// revisarla a mano, y dejar ejercicios inventados ahí ensucia la pantalla.
+await comprobar('el alumno LEE su propia tabla', true, () =>
+  getDoc(doc(db, 'progressTrackers', otro.user.uid))
+);
+await comprobar('el alumno NO puede escribir su tabla', false, () =>
+  setDoc(
+    doc(db, 'progressTrackers', otro.user.uid),
+    { trainerId: otro.user.uid, clientId: otro.user.uid, exerciseIds: ['x'], updatedAt: Date.now() },
+    { merge: true }
+  )
+);
+
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador SÍ escribe la tabla de su alumno', true, () =>
+  setDoc(
+    doc(db, 'progressTrackers', alumno.id),
+    {
+      trainerId: coach.user.uid,
+      clientId: alumno.id,
+      exerciseIds: ['a', 'b'],
+      updatedAt: Date.now(),
+    },
+    { merge: true }
+  )
+);
+
+// Esta comprobación va AQUÍ y no antes: leer un documento que no existe está
+// permitido a propósito (para que la pantalla cargue sin selección), así que
+// solo prueba algo una vez el documento existe de verdad.
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+await comprobar('un alumno NO lee la tabla de otro alumno', false, () =>
+  getDoc(doc(db, 'progressTrackers', alumno.id))
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+
+// Un documento con el dueño equivocado (de un fallo antiguo o de un cambio de
+// entrenador) no puede quedar bloqueado: el entrenador actual lo recupera.
+await comprobar('el entrenador recupera una tabla con dueño equivocado', true, () =>
+  setDoc(
+    doc(db, 'progressTrackers', alumno.id),
+    { trainerId: coach.user.uid, exerciseIds: ['c'], updatedAt: Date.now() },
+    { merge: true }
+  )
+);
+
+// Deja la tabla como estaba: sin selección, que es el comportamiento por
+// defecto (se muestran todos los ejercicios).
+await deleteDoc(doc(db, 'progressTrackers', alumno.id)).catch(() => {});
 
 console.log(
   fallos === 0

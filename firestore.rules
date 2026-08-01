@@ -189,18 +189,46 @@ service cloud.firestore {
         && resource.data.trainerId == request.auth.uid;
     }
 
-    // Qué ejercicios sigue el entrenador en la tabla de progreso de un alumno
-    // (doc id = clientId). Es una preferencia del entrenador sobre su propia
-    // vista: solo él la lee y la escribe.
+    // Qué ejercicios se siguen en la tabla de progreso de un alumno
+    // (doc id = clientId).
+    //
+    // Lo LEEN los dos: el entrenador y el propio alumno, porque ven la misma
+    // tabla y hablar del progreso mirando cosas distintas no lleva a ningún
+    // sitio. Lo ESCRIBE solo el entrenador: es él quien decide qué se vigila.
+    //
+    // El atleta se autoentrena (su trainerId es su propio uid), así que esta
+    // misma regla le deja editar la suya sin ninguna excepción especial.
     match /progressTrackers/{clientId} {
-      // Si aún no existe, `resource` es null: se permite leer para que la
-      // pantalla cargue sin selección en vez de fallar.
+      // Quién puede leer se deduce del ALUMNO (el id del documento), no del
+      // documento en sí: así funciona igual cuando todavía no existe, que es
+      // lo normal hasta que el entrenador elige algo. Apoyarse en
+      // `resource.data` obligaba a un `resource == null` que el motor de
+      // reglas no siempre resuelve antes de evaluar el resto.
       allow read: if request.auth != null
-        && (resource == null || resource.data.trainerId == request.auth.uid);
+        && (
+          clientId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(clientId)).data.trainerId
+               == request.auth.uid
+        );
+      // Quien manda es EL ENTRENADOR ACTUAL del alumno, mirando el vínculo real
+      // en `users`, no el `trainerId` que traiga guardado el documento.
+      //
+      // Importa por dos motivos. Uno: sin comprobar el vínculo, un alumno podía
+      // crear él mismo el documento poniéndose de entrenador y quedarse con su
+      // tabla. Dos: si un documento acabara con el dueño equivocado (por un
+      // fallo o por un cambio de entrenador), fiarse de lo guardado lo dejaría
+      // bloqueado para siempre; así el entrenador de turno siempre puede
+      // recuperarlo.
+      //
+      // El atleta pasa la comprobación sin ninguna excepción: su `trainerId` es
+      // su propio uid, así que es su propio entrenador.
       allow create: if request.auth != null
-        && request.resource.data.trainerId == request.auth.uid;
+        && request.resource.data.trainerId == request.auth.uid
+        && get(/databases/$(database)/documents/users/$(clientId)).data.trainerId
+             == request.auth.uid;
       allow update, delete: if request.auth != null
-        && resource.data.trainerId == request.auth.uid;
+        && get(/databases/$(database)/documents/users/$(clientId)).data.trainerId
+             == request.auth.uid;
     }
 
     // Pagos registrados por el entrenador (historial de ingresos).

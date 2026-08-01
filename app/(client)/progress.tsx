@@ -30,6 +30,8 @@ import { buildClientReportHtml, computeClientReport } from '../../lib/report';
 import { muscleLoad, weightsOfExercise } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
+import { ProgressMatrix } from '../../components/ProgressMatrix';
+import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getCached, setCached } from '../../lib/screenCache';
@@ -98,6 +100,10 @@ export default function ProgressScreen() {
   const [deleting, setDeleting] = useState(false);
 
   const [generatingReport, setGeneratingReport] = useState(false);
+  // El atleta es su propio entrenador: puede elegir qué ejercicios sigue. El
+  // alumno de un coach solo mira: su tabla la decide quien le entrena.
+  const isAthlete = profile?.role === 'athlete';
+  const [planExercises, setPlanExercises] = useState<{ id: string; name: string }[]>([]);
   const [fullOpen, setFullOpen] = useState(false);
 
   const [weightInput, setWeightInput] = useState('');
@@ -115,6 +121,20 @@ export default function ProgressScreen() {
     setWeightLogs(weightData);
     setWorkoutLogs(workoutData);
     setLevelTests(testData);
+    // Ejercicios del plan activo: solo se usan si esta cuenta puede elegir qué
+    // sigue en su tabla (el atleta), pero se cargan siempre porque el plan ya
+    // se consulta aquí y no cuesta nada.
+    getActiveRoutineForClient(profile.uid, profile.trainerId ?? profile.uid)
+      .then((rutina) => {
+        const vistos = new Map<string, string>();
+        for (const day of rutina?.days ?? []) {
+          for (const ex of day.exercises) {
+            if (!vistos.has(ex.exerciseId)) vistos.set(ex.exerciseId, ex.name);
+          }
+        }
+        setPlanExercises([...vistos.entries()].map(([exId, name]) => ({ id: exId, name })));
+      })
+      .catch(() => {});
     setCached(cacheKey, {
       weightLogs: weightData,
       workoutLogs: workoutData,
@@ -429,13 +449,13 @@ export default function ProgressScreen() {
               <ConsistencyMap days={trainingDays(workoutLogs)} />
             </Card>
 
-            {/* Mismo informe con tablas que genera el entrenador, pero solo con
-                los datos de esta cuenta. */}
+            {/* Exactamente la misma tabla que ve el entrenador. */}
             <Card style={styles.section}>
               <Text style={styles.sectionTitle}>Tu progreso completo</Text>
               <Text style={styles.photoHint}>
-                La misma tabla que ve tu entrenador: entrenamientos por mes, series,
-                repeticiones, isométricos, volumen y tus mejores marcas.
+                {isAthlete
+                  ? 'La mejor serie de cada ejercicio, semana a semana. Elige qué ejercicios quieres seguir.'
+                  : 'La mejor serie de cada ejercicio, semana a semana. Es la misma tabla que ve tu entrenador.'}
               </Text>
               <Button
                 title="Ver progreso completo"
@@ -894,7 +914,18 @@ export default function ProgressScreen() {
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={styles.fullBody}>
-            {profile ? <ProgressTable report={computeClientReport(reportData())} /> : null}
+            {profile ? (
+              <ProgressMatrix
+                logs={workoutLogs}
+                clientId={profile.uid}
+                // El atleta es su propio entrenador y manda sobre su tabla. El
+                // alumno de un coach no: la suya la decide quien le entrena, y
+                // las reglas de Firestore lo imponen igualmente.
+                ownerId={isAthlete ? profile.uid : undefined}
+                editable={isAthlete}
+                planExercises={planExercises}
+              />
+            ) : null}
             <Button
               title="Exportar a PDF"
               variant="secondary"

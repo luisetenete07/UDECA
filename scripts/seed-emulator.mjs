@@ -24,7 +24,19 @@
  */
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator, doc, setDoc, addDoc, collection } from 'firebase/firestore';
+import {
+  getFirestore,
+  connectFirestoreEmulator,
+  doc,
+  setDoc,
+  addDoc,
+  collection,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  query,
+  where,
+} from 'firebase/firestore';
 
 const app = initializeApp({ apiKey: 'demo', projectId: 'udeca-demo', appId: '1:1:web:1' });
 const auth = getAuth(app);
@@ -60,6 +72,21 @@ async function como(email) {
 }
 
 const coach = await ensure('coach@demo.test', 'Luis Tena');
+const atleta = await ensure('atleta@demo.test', 'Sara Vidal');
+
+/**
+ * Borra lo sembrado antes por esta cuenta.
+ *
+ * Sin esto cada ejecución AÑADÍA encima de la anterior: tras unas cuantas
+ * había cientos de entrenos repetidos, los contadores subían solos y los
+ * registros viejos (con el formato antiguo) convivían con los nuevos. Un guion
+ * que dice "resetear el entorno" tiene que dejarlo como recién hecho.
+ */
+async function limpiar(nombreColeccion, campo, valor) {
+  const snap = await getDocs(query(collection(db, nombreColeccion), where(campo, '==', valor)));
+  for (const d of snap.docs) await deleteDoc(d.ref).catch(() => {});
+  return snap.size;
+}
 const cli = await ensure('alumno@demo.test', 'Marcos Ruiz');
 const cli2 = await ensure('alumno2@demo.test', 'Ana Gil');
 
@@ -89,7 +116,23 @@ for (const [uid, name, email, fee, dias, estado] of alumnos) {
   });
 }
 
+// Limpieza previa: cada uno borra lo suyo (las reglas no dejan borrar lo
+// ajeno). El orden importa: primero los entrenos de cada alumno, luego lo del
+// entrenador.
+await como('alumno@demo.test');
+await limpiar('workoutLogs', 'clientId', cli);
+await como('alumno2@demo.test');
+await limpiar('workoutLogs', 'clientId', cli2);
+await como('atleta@demo.test');
+await limpiar('workoutLogs', 'clientId', atleta);
+await limpiar('exercises', 'trainerId', atleta);
+await limpiar('routines', 'trainerId', atleta);
+
 await como('coach@demo.test');
+await limpiar('exercises', 'trainerId', coach);
+await limpiar('routines', 'trainerId', coach);
+await limpiar('payments', 'trainerId', coach);
+
 const EJ = [
   ['Dominadas', 'Tirón', 'reps'], ['Fondos en paralelas', 'Empuje', 'reps'],
   ['Front lever', 'Core', 'seconds'], ['Muscle up', 'Tirón', 'combo'],
@@ -123,7 +166,14 @@ for (let d = 1; d <= 22; d++) {
     dayName: d % 2 ? 'Empuje' : 'Tirón', durationMin: 52 + (d % 9),
     exercises: ids.slice(0, 3).map((e) => ({
       exerciseId: e.id, name: e.name,
-      sets: [{ reps: 8, weightKg: 0 }, { reps: 7, weightKg: 0 }, { reps: 6, weightKg: 0 }],
+      // Las series van con `completed: true` y las marcas como TEXTO, que es
+      // lo que escribe la app (ver LoggedSet). Sin `completed`, las tablas de
+      // progreso las ignoran y la pantalla sale vacía con datos sembrados.
+      sets: [
+        { reps: String(6 + (d % 4)), weight: '0', completed: true },
+        { reps: String(5 + (d % 3)), weight: '0', completed: true },
+        { reps: '5', weight: '0', completed: true },
+      ],
     })),
   });
 }
@@ -138,7 +188,71 @@ for (const [uid, name, email, week, streak, total] of [
     weekKey: 'demo', updatedAt: now,
   });
 }
+// ATLETA: se autoentrena (es su propio entrenador), con su plan y su
+// historial. Sirve para revisar el caso en el que quien entrena manda sobre
+// sus propias estadísticas.
+await como('atleta@demo.test');
+// La suscripción SOLO se escribe la primera vez: las reglas prohíben que uno
+// se cambie la suya, así que al resembrar hay que dejarla como está o el
+// guion falla con "permisos insuficientes". Es la regla haciendo su trabajo.
+const yaExiste = (await getDoc(doc(db, 'users', atleta))).exists();
+await setDoc(
+  doc(db, 'users', atleta),
+  {
+    uid: atleta, role: 'athlete', name: 'Sara Vidal', email: 'atleta@demo.test',
+    createdAt: now - 40 * DAY, trainerId: atleta, emailVerificationRequired: false,
+    weightKg: 62.0, heightCm: 168, goal: 'Front lever', level: 'Intermedio',
+    // Dentro de la prueba gratuita (las reglas no dejan pedir más de 14 días).
+    ...(yaExiste ? {} : { subscriptionUntil: now + 10 * DAY, trialEndsAt: now + 10 * DAY }),
+  },
+  { merge: true }
+);
+const idsAtleta = [];
+for (const [name, muscleGroup, measure] of [
+  ['Dominadas', 'Tirón', 'reps'],
+  ['Fondos', 'Empuje', 'reps'],
+  ['Front lever', 'Core', 'seconds'],
+]) {
+  const r = await addDoc(collection(db, 'exercises'), {
+    trainerId: atleta, name, muscleGroup, measure, createdAt: now,
+  });
+  idsAtleta.push({ id: r.id, name });
+}
+await addDoc(collection(db, 'routines'), {
+  clientId: atleta, trainerId: atleta, name: 'Mi plan', active: true,
+  createdAt: now - 30 * DAY, schedule: 'weekly',
+  days: [
+    { id: 'a1', name: 'Día A', weekday: 0, exercises: idsAtleta.map((e, i) => ({ id: 'x' + i, exerciseId: e.id, name: e.name, sets: 4, reps: '8', restSeconds: 120 })) },
+  ],
+});
+for (let d = 1; d <= 12; d++) {
+  if (d % 3 === 0) continue;
+  await addDoc(collection(db, 'workoutLogs'), {
+    clientId: atleta, trainerId: atleta, date: now - d * DAY,
+    dayName: 'Día A', durationMin: 45,
+    exercises: idsAtleta.slice(0, 2).map((e) => ({
+      exerciseId: e.id, name: e.name,
+      sets: [
+        { reps: String(7 + (d % 3)), weight: '0', completed: true },
+        { reps: '7', weight: '0', completed: true },
+      ],
+    })),
+  });
+}
+
 await como('coach@demo.test');
+// La selección de ejercicios de la tabla de progreso se borra al sembrar: es
+// estado del entrenador, no datos de ejemplo, y arrastrarla entre siembras
+// deja la pantalla enseñando ejercicios de una prueba anterior.
+for (const uid of [cli, cli2]) {
+  // Se comprueba antes de borrar: pedir el borrado de un documento que no
+  // existe lo rechazan las reglas y el SDK lo escupe por consola, aunque el
+  // error se capture. Menos ruido y misma consecuencia.
+  if ((await getDoc(doc(db, 'progressTrackers', uid))).exists()) {
+    await deleteDoc(doc(db, 'progressTrackers', uid)).catch(() => {});
+  }
+}
+
 for (const dias of [10, 40, 70]) {
   await addDoc(collection(db, 'payments'), {
     trainerId: coach, clientId: cli, amountEur: 45, date: now - dias * DAY, createdAt: now - dias * DAY,
@@ -149,5 +263,6 @@ console.log(`Emulador sembrado.
   coach@demo.test   (entrenador, 2 alumnos)
   alumno@demo.test  (alumno con rutina e historial)
   alumno2@demo.test (alumno con pago pendiente)
+  atleta@demo.test  (atleta autoentrenado, en prueba gratuita)
   contraseña: ${PW}`);
 process.exit(0);

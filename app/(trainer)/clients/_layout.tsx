@@ -10,7 +10,7 @@ export default function ClientsLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="meal-books" options={{ title: 'Libretas de comida' }} />
       <Stack.Screen name="[id]/index" options={{ title: 'Cliente' }} />
-      <Stack.Screen name="[id]/overview" options={{ title: 'Progreso semanal' }} />
+      <Stack.Screen name="[id]/overview" options={{ title: 'Progreso total' }} />
       <Stack.Screen name="[id]/routine" options={{ title: 'Rutina' }} />
       <Stack.Screen name="[id]/nutrition" options={{ title: 'Nutrición' }} />
       <Stack.Screen name="[id]/session" options={{ title: 'Sesión' }} />

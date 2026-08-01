@@ -629,13 +629,13 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Progreso semanal</Text>
+        <Text style={styles.sectionTitle}>Progreso total</Text>
         <Text style={styles.mutedText}>
-          Vista general estilo hoja de cálculo: la mejor serie de cada ejercicio semana a semana,
-          para ver de un vistazo la evolución y reestructurar la rutina.
+          La mejor serie de cada ejercicio, semana a semana, desde que entrena. Aquí eliges qué
+          ejercicios se siguen; tu alumno ve la misma tabla.
         </Text>
         <Button
-          title="Ver progreso semanal"
+          title="Ver progreso total"
           onPress={() => router.push(`/(trainer)/clients/${id}/overview`)}
           style={{ marginTop: spacing.md }}
         />
