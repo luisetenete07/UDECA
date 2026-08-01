@@ -42,6 +42,7 @@ import {
   isComboExercise,
   isIsometricExercise,
   listExercisesInLogs,
+  monthKeyOf,
   sessionTotals,
   setsByMuscleGroup,
   startOfWeek,
@@ -56,12 +57,19 @@ import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
+  isHoldMeasure,
+  setMarks,
   type Routine,
   type WeightLog,
   type WorkoutLog,
 } from '../../lib/types';
 
 type Tab = 'workouts' | 'weight' | 'exercises';
+
+/** Número corto en español: sin decimales si no los tiene (7,5 / 10). */
+function formatNum(n: number): string {
+  return (Number.isInteger(n) ? String(n) : n.toFixed(1)).replace('.', ',');
+}
 
 /** Pone en mayúscula la primera letra (para "julio 2026" → "Julio 2026"). */
 function capitalize(s: string): string {
@@ -79,6 +87,9 @@ export default function ProgressScreen() {
   const [muscleMode, setMuscleMode] = useState<'session' | 'week'>('week');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
+  // Meses replegados a mano. Sin entrada = vale el criterio por defecto (solo
+  // abierto el mes en curso).
+  const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({});
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
   const cacheKey = `progress-${profile?.uid ?? ''}`;
   const cached = getCached<ProgressData>(cacheKey);
@@ -394,14 +405,47 @@ export default function ProgressScreen() {
   const toggleSession = (id: string) =>
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
 
+  /**
+   * Meses cerrados salvo el que está en curso.
+   *
+   * Con medio año de historial, la pestaña era un rollo interminable de
+   * entrenamientos por el que había que hacer scroll para llegar a cualquier
+   * otra cosa. Cada mes cerrado sigue enseñando su resumen —sesiones, series,
+   * reps—, que es lo que se mira de un mes terminado; el detalle está a un
+   * toque para quien lo quiera.
+   */
+  // Se guarda si queda RECOGIDO, así que el nuevo valor es "estaba abierto".
+  const toggleMonth = (key: string) =>
+    setCollapsedMonths((prev) => ({ ...prev, [key]: isMonthOpen(key) }));
+  const isMonthOpen = (key: string) => {
+    const guardado = collapsedMonths[key];
+    return guardado === undefined ? key === monthKeyOf() : !guardado;
+  };
+
   const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
   const muscleMax = muscleMap.length > 0 ? muscleMap[0].sets : 0;
   const progMetric = progression?.measure === 'seconds' ? 's' : progression?.hasWeight ? 'kg' : 'reps';
+  /**
+   * Cada punto de la gráfica lleva escrita SU MARCA y SU DÍA. La línea sola
+   * enseña la forma, pero no contesta a "¿cuánto hice aquel día?", que es
+   * justo lo que se mira. En los combos van las dos marcas juntas, reps y
+   * aguante, porque una sin la otra no dice cómo fue la serie.
+   */
   const progPoints = progression
-    ? progression.points.map((p) => ({
-        date: p.date,
-        value: progMetric === 'kg' ? p.weight : p.reps,
-      }))
+    ? progression.points.map((p) => {
+        const esAguante = isHoldMeasure(progression.measure);
+        const esCombo = progression.measure === 'combo';
+        const marca = esAguante ? `${p.reps}s` : String(p.reps);
+        const partes = [
+          esCombo && p.seconds > 0 ? `${marca} · ${p.seconds}s` : marca,
+          p.weight > 0 ? `×${formatNum(p.weight)}kg` : null,
+        ].filter(Boolean);
+        return {
+          date: p.date,
+          value: progMetric === 'kg' ? p.weight : p.reps,
+          label: partes.join(' '),
+        };
+      })
     : [];
   // Récord real del ejercicio, con el formato correcto según su tipo
   // (reps, segundos o reps×lastre). No se infiere de la métrica de la gráfica.
@@ -501,12 +545,17 @@ export default function ProgressScreen() {
             {months.map((m, mi) => (
               <FadeIn key={m.key} delay={Math.min(mi * 60, 240)}>
               <Card style={styles.section}>
-                <View style={styles.monthHeader}>
+                <Pressable style={styles.monthHeader} onPress={() => toggleMonth(m.key)}>
                   <Text style={styles.monthTitle}>{capitalize(m.label)}</Text>
                   <Text style={styles.monthCount}>
                     {m.sessions.length} {m.sessions.length === 1 ? 'sesión' : 'sesiones'}
                   </Text>
-                </View>
+                  <Ionicons
+                    name={isMonthOpen(m.key) ? 'chevron-up' : 'chevron-down'}
+                    size={18}
+                    color={colors.textFaint}
+                  />
+                </Pressable>
                 <View style={styles.monthStats}>
                   <MonthStat value={String(m.totalSets)} label="series" />
                   {m.totalReps > 0 ? <MonthStat value={String(m.totalReps)} label="reps" /> : null}
@@ -518,7 +567,16 @@ export default function ProgressScreen() {
                   ) : null}
                 </View>
 
-                {m.sessions.map((s) => {
+                {!isMonthOpen(m.key) ? (
+                  <Pressable onPress={() => toggleMonth(m.key)} style={styles.monthExpand}>
+                    <Ionicons name="list-outline" size={14} color={colors.primary} />
+                    <Text style={styles.monthExpandText}>
+                      Ver los {m.sessions.length} entrenamientos
+                    </Text>
+                  </Pressable>
+                ) : null}
+
+                {isMonthOpen(m.key) && m.sessions.map((s) => {
                   const t = sessionTotals(s.exercises, measureByExercise);
                   const open = expandedSessions[s.id];
                   const d = new Date(s.date);
@@ -578,8 +636,11 @@ export default function ProgressScreen() {
                               .filter((st) => st.completed && st.reps)
                               .map(
                                 (st) =>
-                                  // El combo enseña las dos marcas de la serie.
-                                  `${st.reps}${isCombo && st.seconds ? `+${st.seconds}s` : ''}` +
+                                  // En clúster, la serie fueron varios bloques:
+                                  // se enseñan todos ("3+3+3"), que es lo que
+                                  // de verdad se hizo.
+                                  `${setMarks(st).join('+')}` +
+                                  `${isCombo && st.seconds ? `+${st.seconds}s` : ''}` +
                                   `${st.weight ? `×${st.weight}kg` : ''}`
                               )
                               .join(', ');
@@ -836,14 +897,15 @@ export default function ProgressScreen() {
               </View>
               <Text style={styles.photoHint}>
                 {progMetric === 'kg'
-                  ? 'Mejor peso por sesión.'
+                  ? 'Mejor peso por sesión, con la marca y el día de cada una.'
                   : progMetric === 's'
-                    ? 'Mejor aguante (segundos) por sesión.'
-                    : 'Mejores repeticiones por sesión.'}
+                    ? 'Mejor aguante por sesión, con la marca y el día de cada una.'
+                    : 'Mejor marca por sesión, con el día de cada una.'}
               </Text>
               <LineChart
                 points={progPoints}
                 unit={progMetric}
+                labelAll
                 emptyMessage="Necesitas al menos dos sesiones con este ejercicio."
               />
             </Card>
@@ -1148,11 +1210,19 @@ const styles = StyleSheet.create({
   // ----- Registro de entrenamiento mensual -----
   monthHeader: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-  monthTitle: { ...typography.h3, color: colors.text },
+  monthTitle: { ...typography.h3, color: colors.text, flex: 1 },
+  monthExpand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+  },
+  monthExpandText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   monthCount: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   monthStats: {
     flexDirection: 'row',

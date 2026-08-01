@@ -8,6 +8,10 @@ node_modules/
 dist/
 # Compilación web apuntando al emulador local (solo para revisar en el navegador).
 dist-emu/
+# Registros del emulador de Firebase (solo desarrollo local).
+firestore-debug.log
+firebase-debug.log
+ui-debug.log
 web-build/
 expo-env.d.ts
 

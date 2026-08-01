@@ -94,5 +94,7 @@ export function DragList<T>({
 const styles = StyleSheet.create({
   lifted: { opacity: 0.95 },
   // Arrastrar no debe seleccionar el texto de la fila (pasa en navegador).
-  row: { userSelect: 'none' },
+  // `userSelect` es propiedad de React Native Web y los tipos de Animated no la
+  // conocen, de ahí el casting.
+  row: { userSelect: 'none' } as ViewStyle,
 });

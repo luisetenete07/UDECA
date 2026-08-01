@@ -60,6 +60,7 @@ import {
 } from '../../lib/stats';
 import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
+  clusterBlocks,
   EXERCISE_MEASURES,
   GRIP_LABEL,
   type ExerciseMeasure,
@@ -815,6 +816,8 @@ export default function WorkoutScreen() {
     );
 
     // Al completar una serie: arranca el crono de descanso del ejercicio.
+    // (En clúster, el descanso CORTO entre bloques se pide aparte: ver
+    // `descansoDeBloque`. Este es el descanso largo, el de la serie entera.)
     if (field === 'completed' && value === true) {
       if (!startedAt.current) startedAt.current = Date.now();
       if (Platform.OS !== 'web') {
@@ -848,6 +851,44 @@ export default function WorkoutScreen() {
         }, 900);
       }
     }
+  };
+
+  /**
+   * Marca de un bloque de una serie en clúster. El bloque 1 es la casilla de
+   * siempre (`reps`); estos son los siguientes, y viven en `clusters` para no
+   * tocar nada de lo que ya lee la marca principal.
+   */
+  const updateCluster = (
+    exerciseIndex: number,
+    setIndex: number,
+    blockIndex: number,
+    value: string
+  ) => {
+    setLog((prev) =>
+      prev.map((ex, i) =>
+        i === exerciseIndex
+          ? {
+              ...ex,
+              sets: ex.sets.map((s, j) => {
+                if (j !== setIndex) return s;
+                const marcas = [...(s.clusters ?? [])];
+                while (marcas.length <= blockIndex) marcas.push('');
+                marcas[blockIndex] = value;
+                return { ...s, clusters: marcas };
+              }),
+            }
+          : ex
+      )
+    );
+  };
+
+  /** Descanso corto entre bloques de un clúster, el que fija el entrenador. */
+  const descansoDeBloque = (segundos: number, exName: string) => {
+    if (!startedAt.current) startedAt.current = Date.now();
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    startRest(segundos, `Ahora: siguiente bloque · ${exName}`);
   };
 
   // Nota escrita del alumno sobre un ejercicio (p. ej. "hice la variante X").
@@ -1674,6 +1715,10 @@ export default function WorkoutScreen() {
         const isCombo = medida === 'combo';
         // Por lados: la segunda casilla es el otro brazo, no otra cosa.
         const isDual = isDualMeasure(medida);
+        // Clúster: la serie se hace en bloques con una pausa mínima, así que
+        // lleva una casilla por bloque y un botón para ese descanso corto.
+        const cluster = planned?.cluster;
+        const bloques = cluster ? clusterBlocks(cluster) : 1;
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
@@ -1734,6 +1779,13 @@ export default function WorkoutScreen() {
                     <Text style={styles.metaChipText}>Objetivo: {planned.goal}</Text>
                   </View>
                 ) : null}
+                {cluster ? (
+                  <View style={[styles.metaChip, styles.metaChipCluster]}>
+                    <Text style={styles.metaChipText}>
+                      Clúster {bloques} bloques · {cluster.restSeconds}s
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ) : null}
             {planned?.notes ? <Text style={styles.coachNotes}>{planned.notes}</Text> : null}
@@ -1773,8 +1825,23 @@ export default function WorkoutScreen() {
             ) : null}
             <View style={styles.setHead}>
               <Text style={styles.setHeadCap}>
-                {isDual ? (isSeconds ? 'IZQ. S' : 'IZQ.') : isSeconds ? 'SEGUNDOS' : 'REPS'}
+                {cluster
+                  ? 'BLOQUE 1'
+                  : isDual
+                    ? isSeconds
+                      ? 'IZQ. S'
+                      : 'IZQ.'
+                    : isSeconds
+                      ? 'SEGUNDOS'
+                      : 'REPS'}
               </Text>
+              {cluster
+                ? Array.from({ length: bloques - 1 }, (_, b) => (
+                    <Text key={b} style={styles.setHeadCap}>
+                      BLOQUE {b + 2}
+                    </Text>
+                  ))
+                : null}
               {isCombo ? <Text style={styles.setHeadCap}>AGUANTE S</Text> : null}
               {isDual ? (
                 <Text style={styles.setHeadCap}>{isSeconds ? 'DER. S' : 'DER.'}</Text>
@@ -1808,6 +1875,20 @@ export default function WorkoutScreen() {
                   keyboardType="numeric"
                   style={styles.setFieldInput}
                 />
+                {/* Un bloque más de la misma serie: se apunta lo que salió en
+                    cada uno, que es justo lo que un clúster quiere medir. */}
+                {cluster
+                  ? Array.from({ length: bloques - 1 }, (_, b) => (
+                      <TextField
+                        key={b}
+                        value={set.clusters?.[b] ?? ''}
+                        onChangeText={(v) => updateCluster(exerciseIndex, setIndex, b, v)}
+                        placeholder={planned?.reps || (isSeconds ? 'seg' : 'reps')}
+                        keyboardType="numeric"
+                        style={styles.setFieldInput}
+                      />
+                    ))
+                  : null}
                 {isCombo ? (
                   <TextField
                     value={set.seconds ?? ''}
@@ -1838,6 +1919,18 @@ export default function WorkoutScreen() {
                 ) : null}
               </View>
             ))}
+            {cluster ? (
+              <Pressable
+                onPress={() => descansoDeBloque(cluster.restSeconds, exercise.name)}
+                style={styles.clusterRestBtn}
+                hitSlop={6}
+              >
+                <Ionicons name="timer-outline" size={15} color={colors.primary} />
+                <Text style={styles.clusterRestText}>
+                  Descanso entre bloques · {cluster.restSeconds}s
+                </Text>
+              </Pressable>
+            ) : null}
             {isFlex ? (
               <View style={styles.setEditRow}>
                 <Pressable onPress={() => removeSet(exerciseIndex)} style={styles.setEditBtn} hitSlop={6}>
@@ -2073,6 +2166,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   setEditBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  clusterRestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  clusterRestText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   setEditText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   exitTitle: { ...typography.h2, color: colors.text, textAlign: 'center', marginTop: spacing.sm },
   exitMsg: {
@@ -2286,6 +2392,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   metaChipBand: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  metaChipCluster: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
   // Lastre en azul (distinto de la goma dorada), sin emojis.
   metaChipWeighted: { borderColor: 'rgba(91,155,213,0.5)', backgroundColor: 'rgba(91,155,213,0.14)' },
   metaChipWeightedText: { color: '#7FB3E0' },

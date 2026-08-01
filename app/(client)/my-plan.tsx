@@ -20,6 +20,8 @@ import {
 import { flexLabel } from '../../lib/schedule';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
+  CLUSTER_DEFAULT,
+  clusterBlocks,
   EXERCISE_MEASURES,
   GRIP_LABEL,
   GRIP_TYPES,
@@ -609,6 +611,54 @@ export default function MyPlanScreen() {
                           </View>
                         </View>
 
+                        {/* Clúster: la serie en bloques con una pausa mínima.
+                            Sus números solo salen cuando está activado. */}
+                        {exx.cluster ? (
+                          <View style={styles.exFields}>
+                            <View style={styles.field}>
+                              <Text style={styles.fieldLabel}>Bloques</Text>
+                              <TextInput
+                                value={String(clusterBlocks(exx.cluster))}
+                                onChangeText={(v) =>
+                                  patchEx(di, ei, {
+                                    cluster: {
+                                      ...CLUSTER_DEFAULT,
+                                      ...exx.cluster,
+                                      blocks: parseInt(v, 10) || 2,
+                                    },
+                                  })
+                                }
+                                keyboardType="number-pad"
+                                placeholder="3"
+                                placeholderTextColor={colors.textFaint}
+                                style={styles.fieldInput}
+                              />
+                            </View>
+                            <View style={styles.field}>
+                              <Text style={styles.fieldLabel}>Pausa (s)</Text>
+                              <TextInput
+                                value={String(exx.cluster.restSeconds)}
+                                onChangeText={(v) =>
+                                  patchEx(di, ei, {
+                                    cluster: {
+                                      ...CLUSTER_DEFAULT,
+                                      ...exx.cluster,
+                                      restSeconds: Math.max(
+                                        0,
+                                        Math.min(120, parseInt(v, 10) || 0)
+                                      ),
+                                    },
+                                  })
+                                }
+                                keyboardType="number-pad"
+                                placeholder="15"
+                                placeholderTextColor={colors.textFaint}
+                                style={styles.fieldInput}
+                              />
+                            </View>
+                          </View>
+                        ) : null}
+
                         <View style={styles.exLinks}>
                           <Pressable
                             onPress={() => {
@@ -626,6 +676,25 @@ export default function MyPlanScreen() {
                             <Ionicons name="swap-horizontal" size={14} color={colors.primary} />
                             <Text style={styles.linkBtnText}>
                               {MEASURE_SHORT[exx.measure ?? 'reps']}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() =>
+                              patchEx(di, ei, {
+                                cluster: exx.cluster ? undefined : { ...CLUSTER_DEFAULT },
+                              })
+                            }
+                            style={styles.linkBtn}
+                          >
+                            <Ionicons
+                              name={exx.cluster ? 'layers' : 'layers-outline'}
+                              size={14}
+                              color={colors.primary}
+                            />
+                            <Text style={styles.linkBtnText}>
+                              {exx.cluster
+                                ? `Clúster ${clusterBlocks(exx.cluster)}×${exx.cluster.restSeconds}s`
+                                : 'Clúster'}
                             </Text>
                           </Pressable>
                           {ei > 0 ? (

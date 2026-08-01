@@ -367,6 +367,32 @@ export interface TemplateExercise {
   updatedAt: number;
 }
 
+/**
+ * Series en CLÚSTER: la serie no se hace de un tirón, sino en bloques cortos
+ * separados por un descanso muy breve (10-20 s). Con 3+3+3 y 15 s de pausa se
+ * acumulan más repeticiones de calidad que con una serie seguida al fallo, y
+ * por eso es una herramienta distinta del EMOM: allí manda el reloj, aquí la
+ * pausa mínima entre bloques.
+ *
+ * No es una medida del ejercicio (`ExerciseMeasure`) sino una forma de
+ * programarlo, así que vive en el plan: las mismas dominadas son en clúster un
+ * día y normales al siguiente.
+ */
+export interface ClusterConfig {
+  /** Bloques dentro de cada serie (mínimo 2). */
+  blocks: number;
+  /** Descanso entre bloques, en segundos. */
+  restSeconds: number;
+}
+
+export const CLUSTER_DEFAULT: ClusterConfig = { blocks: 2, restSeconds: 15 };
+
+/** Bloques reales de un clúster (nunca menos de 2: si no, no es un clúster). */
+export function clusterBlocks(c?: ClusterConfig | null): number {
+  if (!c) return 1;
+  return Math.max(2, Math.min(10, Math.round(c.blocks || 2)));
+}
+
 export interface RoutineExercise {
   id: string;
   exerciseId: string;
@@ -409,6 +435,11 @@ export interface RoutineExercise {
    * alcanzar según su medida (p. ej. "20" reps o "60" seg de aguante).
    */
   goal?: string;
+  /**
+   * Series en clúster: bloques con una pausa mínima entre ellos. Sin esto, la
+   * serie es normal.
+   */
+  cluster?: ClusterConfig;
 }
 
 export interface RoutineDay {
@@ -615,8 +646,23 @@ export interface LoggedSet {
   seconds?: string;
   /** Marca del segundo lado (derecho) en los ejercicios por lados. */
   side2?: string;
+  /**
+   * Marcas de los bloques SIGUIENTES de una serie en clúster; el primero va en
+   * `reps`. Se guarda así, y no como una lista completa, para que todo lo que
+   * ya lee `reps` (récords, tabla de progreso, informes) siga funcionando sin
+   * enterarse de que existen los clústeres.
+   */
+  clusters?: string[];
   weight?: string;
   completed: boolean;
+}
+
+/**
+ * Todas las marcas apuntadas en una serie: la principal y, si fue en clúster,
+ * la de cada bloque. Vacías fuera.
+ */
+export function setMarks(set: { reps: string; clusters?: string[] }): string[] {
+  return [set.reps, ...(set.clusters ?? [])].filter((m) => String(m ?? '').trim() !== '');
 }
 
 export interface LoggedExercise {

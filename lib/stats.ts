@@ -543,15 +543,18 @@ export function sessionTotals(
       // se han hecho. Sumarlas al mismo contador es lo correcto para el total
       // de la sesión (el detalle por lado se ve en el registro).
       const r2 = isDual ? parseReps(set.side2 ?? '') : 0;
+      // Los bloques de una serie en clúster se han hecho de verdad: cuentan
+      // todos. Lo que NO se hace es fingir que fueron una sola serie seguida.
+      const rc = (set.clusters ?? []).reduce((s, m) => s + parseReps(m), 0);
       if (isCombo) {
-        reps += r;
+        reps += r + rc;
         seconds += parseReps(set.seconds ?? '');
       } else if (isSeconds) {
-        seconds += r + r2;
+        seconds += r + r2 + rc;
       } else {
-        reps += r + r2;
+        reps += r + r2 + rc;
       }
-      if (weightCounts) volumeKg += (toNum(set.weight) || 0) * (r + r2);
+      if (weightCounts) volumeKg += (toNum(set.weight) || 0) * (r + r2 + rc);
     }
   }
   return { sets, reps, seconds, volumeKg: Math.round(volumeKg) };
@@ -975,13 +978,17 @@ export function weeklyExerciseMatrix(
       let topReps: { r: number; w: number } | null = null; // serie con más reps
       for (const set of ex.sets) {
         if (!set.completed) continue;
-        const rp = parseInt(set.reps, 10);
         const wn = toNum(set.weight);
-        const r = Number.isNaN(rp) ? 0 : rp;
         const w = set.weight && !Number.isNaN(wn) ? wn : 0;
-        if (r === 0 && w === 0) continue;
-        if (!heavy || w > heavy.w || (w === heavy.w && r > heavy.r)) heavy = { r, w };
-        if (!topReps || r > topReps.r || (r === topReps.r && w > topReps.w)) topReps = { r, w };
+        // Cada bloque de un clúster compite por su cuenta. Sumarlos daría una
+        // marca que nunca se hizo del tirón, y esta tabla enseña series reales.
+        for (const marca of [set.reps, ...(set.clusters ?? [])]) {
+          const rp = parseInt(marca, 10);
+          const r = Number.isNaN(rp) ? 0 : rp;
+          if (r === 0 && w === 0) continue;
+          if (!heavy || w > heavy.w || (w === heavy.w && r > heavy.r)) heavy = { r, w };
+          if (!topReps || r > topReps.r || (r === topReps.r && w > topReps.w)) topReps = { r, w };
+        }
       }
       if (!heavy || !topReps) continue;
 
@@ -1042,6 +1049,14 @@ export interface ExerciseProgressPoint {
   date: number;
   reps: number;
   weight: number;
+  /**
+   * Mejor aguante de la sesión, en segundos. Solo lo llenan los ejercicios
+   * 'combo', donde la serie tiene repeticiones Y aguante y hay que poder
+   * enseñar las dos marcas juntas en la gráfica.
+   */
+  seconds: number;
+  /** La sesión se hizo en clúster (la marca sale de un bloque, no de una serie seguida). */
+  cluster?: boolean;
 }
 export interface ExerciseProgress {
   exerciseId: string;
@@ -1071,17 +1086,31 @@ export function exerciseProgression(
     if (ex.measure) measure = ex.measure;
     let bestReps = 0;
     let bestWeight = 0;
+    let bestSeconds = 0;
+    let cluster = false;
     for (const set of ex.sets) {
       if (!set.completed) continue;
-      const r = parseInt(set.reps, 10);
-      if (!Number.isNaN(r)) bestReps = Math.max(bestReps, r);
+      // En clúster, la mejor marca es la del mejor bloque.
+      if (set.clusters?.length) cluster = true;
+      for (const marca of [set.reps, ...(set.clusters ?? [])]) {
+        const r = parseInt(marca, 10);
+        if (!Number.isNaN(r)) bestReps = Math.max(bestReps, r);
+      }
+      const s = parseInt(set.seconds ?? '', 10);
+      if (!Number.isNaN(s)) bestSeconds = Math.max(bestSeconds, s);
       const w = toNum(set.weight);
       if (set.weight && !Number.isNaN(w)) {
         bestWeight = Math.max(bestWeight, w);
         if (w > 0) hasWeight = true;
       }
     }
-    points.push({ date: log.date, reps: bestReps, weight: bestWeight });
+    points.push({
+      date: log.date,
+      reps: bestReps,
+      weight: bestWeight,
+      seconds: bestSeconds,
+      ...(cluster ? { cluster: true } : {}),
+    });
   }
   if (points.length === 0) return null;
   return { exerciseId, name, measure, hasWeight, points };

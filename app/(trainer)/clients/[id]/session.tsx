@@ -8,7 +8,7 @@ import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { getWorkoutLog } from '../../../../lib/firestore/workoutLogs';
 import { colors, fonts, spacing, typography } from '../../../../lib/theme';
-import { isDualMeasure, type WorkoutLog } from '../../../../lib/types';
+import { isDualMeasure, setMarks, type WorkoutLog } from '../../../../lib/types';
 
 export default function SessionDetailScreen() {
   const { logId, id } = useLocalSearchParams<{ logId: string; id: string }>();
@@ -83,7 +83,9 @@ export default function SessionDetailScreen() {
               <View key={j} style={styles.setRow}>
                 <Text style={styles.setLabel}>Serie {j + 1}</Text>
                 <Text style={styles.setValue}>
-                  {set.reps || '—'} {unit}
+                  {/* En clúster la serie fueron varios bloques ("3+3+3"): se
+                      enseñan todos, que es lo que de verdad hizo. */}
+                  {set.clusters?.length ? setMarks(set).join('+') : set.reps || '—'} {unit}
                   {/* En un combo la serie lleva además el aguante. */}
                   {ex.measure === 'combo' && set.seconds ? ` · ${set.seconds} s` : ''}
                   {/* Por lados: se ve cada brazo por separado, que es justo

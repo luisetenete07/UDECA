@@ -8,6 +8,12 @@ const CHART_HEIGHT = 160;
 export interface LineChartPoint {
   date: number;
   value: number;
+  /**
+   * Qué poner encima del punto en vez del número pelado: la marca tal cual se
+   * hizo ("8", "45s", "8 · 20s" en un combo, "3+3+3" en clúster). Sin esto se
+   * escribe el valor.
+   */
+  label?: string;
 }
 
 interface LineChartProps {
@@ -17,10 +23,20 @@ interface LineChartProps {
   lowerIsBetter?: boolean;
   /** Etiqueta día + valor en los puntos clave (primero, último, mín, máx). */
   labeled?: boolean;
+  /**
+   * Etiqueta TODOS los puntos con su marca y su día. Es lo que convierte la
+   * línea en algo que se lee: sin los números encima solo se ve la forma, y
+   * "¿cuánto hice el 12 de mayo?" no se puede contestar mirando la curva.
+   */
+  labelAll?: boolean;
 }
 
 const shortDate = (ts: number) =>
   new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+
+/** Número corto: sin decimales si no los tiene ("8", no "8.0"). */
+const formatValue = (v: number) =>
+  (Number.isInteger(v) ? String(v) : v.toFixed(1)).replace('.', ',');
 
 /** Índices clave a etiquetar: primero, último, mínimo y máximo (sin repetir). */
 function keyIndices(values: number[]): number[] {
@@ -40,6 +56,7 @@ export function LineChart({
   emptyMessage,
   lowerIsBetter = true,
   labeled = false,
+  labelAll = false,
 }: LineChartProps) {
   if (points.length < 2) {
     return (
@@ -49,14 +66,18 @@ export function LineChart({
     );
   }
 
+  const conEtiquetas = labeled || labelAll;
   const values = points.map((p) => p.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
-  const chartWidth = Math.max(points.length * 48, 280);
+  // Etiquetando todos los puntos hace falta más sitio por punto: las marcas de
+  // un combo ("8 · 20s") se pisarían entre ellas con la separación normal.
+  const perPoint = labelAll ? 74 : 48;
+  const chartWidth = Math.max(points.length * perPoint, 280);
   // Con etiquetas dejamos más aire arriba (valor) y abajo (fecha).
-  const paddingTop = labeled ? 24 : 16;
-  const paddingBottom = labeled ? 30 : 16;
+  const paddingTop = conEtiquetas ? 26 : 16;
+  const paddingBottom = conEtiquetas ? 30 : 16;
 
   const coords = points.map((point, index) => {
     const x = (index / (points.length - 1)) * (chartWidth - 24) + 12;
@@ -67,7 +88,11 @@ export function LineChart({
     return { x, y };
   });
 
-  const labelSet = labeled ? new Set(keyIndices(values)) : new Set<number>();
+  const labelSet = labelAll
+    ? new Set(points.map((_, i) => i))
+    : labeled
+      ? new Set(keyIndices(values))
+      : new Set<number>();
 
   const polylinePoints = coords.map((p) => `${p.x},${p.y}`).join(' ');
   const first = points[0].value;
@@ -79,13 +104,13 @@ export function LineChart({
   return (
     <View>
       <View style={styles.summaryRow}>
-        <SummaryStat label="Actual" value={`${last.toFixed(1)} ${unit}`} />
+        <SummaryStat label="Actual" value={`${formatValue(last)} ${unit}`} />
         <SummaryStat
           label="Cambio"
-          value={`${diff >= 0 ? '+' : ''}${diff.toFixed(1)} ${unit}`}
+          value={`${diff >= 0 ? '+' : ''}${formatValue(diff)} ${unit}`}
           highlight={diffIsGood ? colors.accent : diffIsBad ? colors.warning : colors.textMuted}
         />
-        <SummaryStat label="Mín / Máx" value={`${min.toFixed(1)} / ${max.toFixed(1)}`} />
+        <SummaryStat label="Mín / Máx" value={`${formatValue(min)} / ${formatValue(max)}`} />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <Svg width={chartWidth} height={CHART_HEIGHT}>
@@ -119,7 +144,7 @@ export function LineChart({
                       fill={colors.primaryBright}
                       textAnchor="middle"
                     >
-                      {points[i].value.toFixed(1)}
+                      {points[i].label ?? formatValue(points[i].value)}
                     </SvgText>
                     <SvgText
                       x={p.x}

@@ -29,6 +29,8 @@ import { flexLabel } from '../../../../lib/schedule';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
+  CLUSTER_DEFAULT,
+  clusterBlocks,
   GRIP_LABEL,
   GRIP_TYPES,
   isDualMeasure,
@@ -37,6 +39,7 @@ import {
   resolveLoad,
   WEEKDAY_LABELS,
   WEEKDAY_NAMES,
+  type ClusterConfig,
   type Exercise,
   type ExerciseLoad,
   type ExerciseMeasure,
@@ -422,6 +425,37 @@ export default function RoutineEditorScreen() {
               exercises: d.exercises.map((e) =>
                 e.id === exerciseRowId ? { ...e, grip: e.grip === grip ? undefined : grip } : e
               ),
+            }
+          : d
+      )
+    );
+  };
+
+  /**
+   * Series en clúster: activarlas, apagarlas o cambiar sus números.
+   *
+   * No es lo mismo que el EMOM del día: allí el reloj manda sobre toda la
+   * sesión y aquí se parte UNA serie en bloques con una pausa mínima, ejercicio
+   * a ejercicio. Por eso se configura en el ejercicio y no en el día.
+   */
+  const setExerciseCluster = (
+    dayId: string,
+    exerciseRowId: string,
+    patch: Partial<ClusterConfig> | null
+  ) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) => {
+                if (e.id !== exerciseRowId) return e;
+                if (patch === null) {
+                  const { cluster: _fuera, ...resto } = e;
+                  return resto;
+                }
+                return { ...e, cluster: { ...CLUSTER_DEFAULT, ...e.cluster, ...patch } };
+              }),
             }
           : d
       )
@@ -1143,6 +1177,35 @@ export default function RoutineEditorScreen() {
                   containerStyle={styles.smallInput}
                 />
               </View>
+              {/* Clúster: la serie se parte en bloques con una pausa mínima.
+                  Los números solo aparecen si está activado, para no meter dos
+                  casillas más en la ficha de todos los ejercicios. */}
+              {ex.cluster ? (
+                <View style={styles.exerciseFields}>
+                  <TextField
+                    label="Bloques por serie"
+                    keyboardType="number-pad"
+                    value={String(clusterBlocks(ex.cluster))}
+                    onChangeText={(v) =>
+                      setExerciseCluster(day.id, ex.id, { blocks: parseInt(v, 10) || 2 })
+                    }
+                    placeholder="3"
+                    containerStyle={styles.smallInput}
+                  />
+                  <TextField
+                    label="Pausa entre bloques (seg)"
+                    keyboardType="number-pad"
+                    value={String(ex.cluster.restSeconds)}
+                    onChangeText={(v) =>
+                      setExerciseCluster(day.id, ex.id, {
+                        restSeconds: Math.max(0, Math.min(120, parseInt(v, 10) || 0)),
+                      })
+                    }
+                    placeholder="15"
+                    containerStyle={styles.smallInput}
+                  />
+                </View>
+              ) : null}
               <TextField
                 label="Indicaciones (opcional)"
                 value={ex.notes ?? ''}
@@ -1169,6 +1232,23 @@ export default function RoutineEditorScreen() {
                   <Ionicons name="flag-outline" size={14} color={colors.primary} />
                   <Text style={styles.linkBtnText}>
                     {ex.goal ? `Objetivo: ${ex.goal}` : 'Añadir objetivo'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() =>
+                    setExerciseCluster(day.id, ex.id, ex.cluster ? null : { ...CLUSTER_DEFAULT })
+                  }
+                  style={styles.linkBtn}
+                >
+                  <Ionicons
+                    name={ex.cluster ? 'layers' : 'layers-outline'}
+                    size={14}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.linkBtnText}>
+                    {ex.cluster
+                      ? `Clúster: ${clusterBlocks(ex.cluster)} bloques · ${ex.cluster.restSeconds}s`
+                      : 'Series en clúster'}
                   </Text>
                 </Pressable>
                 {exIndex > 0 ? (
