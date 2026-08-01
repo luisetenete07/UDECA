@@ -66,83 +66,12 @@ export function bestMarks(
   return { reps, secs };
 }
 
-/** Fila de la tabla mensual del informe. */
-export interface ReportMonthRow {
-  label: string;
-  sessions: number;
-  sets: number;
-  reps: number;
-  seconds: number;
-  volumeKg: number;
-}
-
-/** Informe ya calculado, listo para pintar (en la app o en HTML). */
-export interface ClientReport {
-  totalWorkouts: number;
-  daysTrained: number;
-  hoursTrained: string;
-  avgRest: string;
-  push: { reps: Mark | null; secs: Mark | null };
-  pull: { reps: Mark | null; secs: Mark | null };
-  months: ReportMonthRow[];
-  lastWeightKg: number | null;
-  weightChange: string | null;
-}
-
-/**
- * Calcula el informe una sola vez para que lo compartan la tabla que se ve
- * dentro de la app y el HTML que se exporta a PDF. Así ambos enseñan
- * exactamente los mismos números.
+/*
+ * Aquí vivía `computeClientReport`, que alimentaba una tabla de resumen por
+ * meses dentro de la app. Esa tabla ya no existe: coach, alumno y atleta ven la
+ * misma matriz de progreso (`ProgressMatrix`), así que el único informe que
+ * queda es el PDF, que se construye entero en `buildClientReportHtml`.
  */
-export function computeClientReport(data: ClientReportData): ClientReport {
-  const { weightLogs, workoutLogs, muscleByExercise = {}, measureByExercise = {} } = data;
-
-  const totalWorkouts = workoutLogs.length;
-  const dayKeys = [...new Set(workoutLogs.map((l) => new Date(l.date).toDateString()))];
-  const daysTrained = dayKeys.length;
-  const totalMinutes = workoutLogs.reduce((s, l) => s + (l.durationMin ?? 0), 0);
-  const hoursTrained =
-    totalMinutes > 0 ? `${(totalMinutes / 60).toFixed(1).replace('.', ',')} h` : '—';
-  // Descanso medio: media de días entre sesiones (días naturales) menos 1.
-  const dayTimes = dayKeys.map((k) => new Date(k).getTime()).sort((a, b) => a - b);
-  let avgRest = '—';
-  if (dayTimes.length >= 2) {
-    const gaps: number[] = [];
-    for (let i = 1; i < dayTimes.length; i++) {
-      gaps.push((dayTimes[i] - dayTimes[i - 1]) / (24 * 60 * 60 * 1000));
-    }
-    const rest = Math.max(0, gaps.reduce((s, g) => s + g, 0) / gaps.length - 1);
-    avgRest = `${rest.toFixed(1).replace('.', ',')} días`;
-  }
-
-  const lastWeight = weightLogs[weightLogs.length - 1];
-  const firstWeight = weightLogs[0];
-  const weightChange =
-    firstWeight && lastWeight ? (lastWeight.weightKg - firstWeight.weightKg).toFixed(1) : null;
-
-  const months = workoutsByMonth(workoutLogs, measureByExercise)
-    .slice(0, 12)
-    .map((m) => ({
-      label: m.label.charAt(0).toUpperCase() + m.label.slice(1),
-      sessions: m.sessions.length,
-      sets: m.totalSets,
-      reps: m.totalReps,
-      seconds: m.totalSeconds,
-      volumeKg: m.volumeKg,
-    }));
-
-  return {
-    totalWorkouts,
-    daysTrained,
-    hoursTrained,
-    avgRest,
-    push: bestMarks(workoutLogs, 'Empuje', muscleByExercise, measureByExercise),
-    pull: bestMarks(workoutLogs, 'Tirón', muscleByExercise, measureByExercise),
-    months,
-    lastWeightKg: lastWeight ? lastWeight.weightKg : null,
-    weightChange,
-  };
-}
 
 /**
  * Informe de progreso con la identidad de UDECA (fondo oscuro, dorado):

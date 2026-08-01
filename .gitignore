@@ -6,6 +6,8 @@ node_modules/
 # Expo
 .expo/
 dist/
+# Compilación web apuntando al emulador local (solo para revisar en el navegador).
+dist-emu/
 web-build/
 expo-env.d.ts
 
