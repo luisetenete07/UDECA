@@ -1,9 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { Avatar } from '../../../../components/Avatar';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
@@ -32,7 +30,7 @@ import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNotes';
 import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
-import { bestMarks, buildClientReportHtml } from '../../../../lib/report';
+import { bestMarks } from '../../../../lib/report';
 import { shareReportImage } from '../../../../lib/brandCards';
 import {
   exerciseProgression,
@@ -108,7 +106,6 @@ export default function ClientDetailScreen() {
   const [addingHabit, setAddingHabit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [generatingReport, setGeneratingReport] = useState(false);
   const [sharingCard, setSharingCard] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -379,34 +376,6 @@ export default function ClientDetailScreen() {
     }
   };
 
-  // Exportar a PDF es opcional: la tabla se consulta dentro de la app.
-  const handleGenerateReport = async () => {
-    if (!client) return;
-    setGeneratingReport(true);
-    try {
-      const html = buildClientReportHtml({
-        client,
-        routine: activeRoutine ?? null,
-        weightLogs,
-        workoutLogs,
-        nutritionPlan,
-        muscleByExercise,
-        measureByExercise,
-      });
-
-      if (Platform.OS === 'web') {
-        await Print.printAsync({ html });
-      } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
-        }
-      }
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
-
   return (
     <ScreenContainer>
       <Stack.Screen options={{ headerLeft: backToClients }} />
@@ -625,14 +594,6 @@ export default function ClientDetailScreen() {
           title="Ver progreso total"
           onPress={() => router.push(`/(trainer)/clients/${id}/overview`)}
           style={{ marginTop: spacing.md }}
-        />
-        {/* El informe en PDF sigue disponible, ahora colgando de esta tarjeta. */}
-        <Button
-          title="Exportar a PDF"
-          variant="secondary"
-          onPress={handleGenerateReport}
-          loading={generatingReport}
-          style={{ marginTop: spacing.sm }}
         />
       </Card>
 

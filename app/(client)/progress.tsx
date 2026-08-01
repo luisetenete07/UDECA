@@ -22,10 +22,9 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { MuscleMap } from '../../components/MuscleMap';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { shareSessionImage } from '../../lib/brandCards';
 import { buildClientReportHtml } from '../../lib/report';
+import { printReportHtml } from '../../lib/printReport';
 import { muscleLoad, weightsOfExercise } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
@@ -57,6 +56,7 @@ import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
+  type Routine,
   type WeightLog,
   type WorkoutLog,
 } from '../../lib/types';
@@ -103,7 +103,13 @@ export default function ProgressScreen() {
   // alumno de un coach solo mira: su tabla la decide quien le entrena.
   const isAthlete = profile?.role === 'athlete';
   const [planExercises, setPlanExercises] = useState<{ id: string; name: string }[]>([]);
+  const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [fullOpen, setFullOpen] = useState(false);
+  // Lo que la tabla está enseñando ahora mismo, para que el PDF salga igual.
+  const [matrixView, setMatrixView] = useState<{ weeks: number; exerciseIds: string[] }>({
+    weeks: 8,
+    exerciseIds: [],
+  });
 
   const [weightInput, setWeightInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
@@ -125,6 +131,7 @@ export default function ProgressScreen() {
     // se consulta aquí y no cuesta nada.
     getActiveRoutineForClient(profile.uid, profile.trainerId ?? profile.uid)
       .then((rutina) => {
+        setActiveRoutine(rutina ?? null);
         const vistos = new Map<string, string>();
         for (const day of rutina?.days ?? []) {
           for (const ex of day.exercises) {
@@ -140,24 +147,24 @@ export default function ProgressScreen() {
     } satisfies ProgressData);
     // Medida actual de cada ejercicio (reps/segundos) desde la biblioteca del
     // coach, para mostrar bien los isométricos aunque el registro sea antiguo.
-    if (profile.trainerId) {
-      getExerciseLibrary(profile.trainerId)
-        .then((library) => {
-          const mmap: Record<string, string> = {};
-          const gmap: Record<string, string> = {};
-          const musMap: Record<string, import('../../lib/muscles').Weights> = {};
-          for (const ex of library) {
-            mmap[ex.id] = ex.measure ?? 'reps';
-            gmap[ex.id] = ex.muscleGroup;
-            const w = weightsOfExercise(ex);
-            if (w) musMap[ex.id] = w;
-          }
-          setMeasureByExercise(mmap);
-          setMuscleByExercise(gmap);
-          setMusclesByExercise(musMap);
-        })
-        .catch(() => {});
-    }
+    // El atleta es su propio entrenador, así que su biblioteca es la suya: sin
+    // este respaldo se quedaba sin mapa muscular ni marcas en el informe.
+    getExerciseLibrary(profile.trainerId ?? profile.uid)
+      .then((library) => {
+        const mmap: Record<string, string> = {};
+        const gmap: Record<string, string> = {};
+        const musMap: Record<string, import('../../lib/muscles').Weights> = {};
+        for (const ex of library) {
+          mmap[ex.id] = ex.measure ?? 'reps';
+          gmap[ex.id] = ex.muscleGroup;
+          const w = weightsOfExercise(ex);
+          if (w) musMap[ex.id] = w;
+        }
+        setMeasureByExercise(mmap);
+        setMuscleByExercise(gmap);
+        setMusclesByExercise(musMap);
+      })
+      .catch(() => {});
     setLoading(false);
     setRefreshing(false);
   }, [profile, cacheKey]);
@@ -216,31 +223,25 @@ export default function ProgressScreen() {
     showToast('Registro borrado');
   };
 
-  // Datos del informe completo. Se calculan solo cuando se abre la tabla.
-  const reportData = () => ({
-    client: profile!,
-    routine: null,
-    weightLogs,
-    workoutLogs,
-    nutritionPlan: null,
-    muscleByExercise,
-    measureByExercise,
-  });
-
-  // Exportar a PDF es OPCIONAL: la tabla se consulta dentro de la app.
+  // Exportar a PDF es OPCIONAL: la tabla se consulta dentro de la app. El
+  // informe sale con lo que se está viendo: mismas semanas, mismos ejercicios.
   const handleExportPdf = async () => {
     if (!profile || workoutLogs.length === 0) return;
     setGeneratingReport(true);
     try {
-      const html = buildClientReportHtml(reportData());
-      if (Platform.OS === 'web') {
-        await Print.printAsync({ html });
-      } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
-        }
-      }
+      await printReportHtml(
+        buildClientReportHtml({
+          client: profile,
+          routine: activeRoutine,
+          weightLogs,
+          workoutLogs,
+          muscleByExercise,
+          measureByExercise,
+          exerciseIds: matrixView.exerciseIds,
+          weeks: matrixView.weeks,
+        }),
+        `informe-${profile.name}`
+      );
     } catch {
       showToast('No se pudo exportar el PDF');
     } finally {
@@ -923,6 +924,7 @@ export default function ProgressScreen() {
                 ownerId={isAthlete ? profile.uid : undefined}
                 editable={isAthlete}
                 planExercises={planExercises}
+                onViewChange={setMatrixView}
               />
             ) : null}
             <Button

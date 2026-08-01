@@ -921,6 +921,12 @@ export interface MatrixCell {
   mark?: boolean;
   /** Puntuación numérica para comparar semanas (tendencia). */
   score: number;
+  /**
+   * La serie principal en números, para poder decir CUÁNTO se ha mejorado y no
+   * solo si la flecha sube. En isométricos, `reps` son los segundos.
+   */
+  reps: number;
+  weight: number;
 }
 export interface MatrixRow {
   exerciseId: string;
@@ -984,14 +990,21 @@ export function weeklyExerciseMatrix(
       let alt: string | undefined;
       let mark = false;
       let score: number;
+      // Números de la serie principal, los mismos que se pintan en `label`.
+      let mainReps: number;
+      let mainWeight: number;
       if (measure === 'seconds') {
         // En isométricos la "mejor serie" es la de más segundos (guardados en reps).
         label = `${topReps.r}s`;
         score = topReps.r;
+        mainReps = topReps.r;
+        mainWeight = 0;
       } else {
         // Serie principal = la más pesada (una serie real, tal cual se hizo).
         label = fmt(heavy);
         score = heavy.w > 0 ? heavy.w * 1000 + heavy.r : heavy.r;
+        mainReps = heavy.r;
+        mainWeight = heavy.w;
         // Si la de más reps es OTRA serie distinta, se muestra aparte + marca.
         if (heavy.r !== topReps.r || heavy.w !== topReps.w) {
           alt = fmt(topReps);
@@ -1012,7 +1025,9 @@ export function weeklyExerciseMatrix(
       }
       const prev = row.cells[col];
       // Nos quedamos con la mejor serie de la semana (mayor puntuación).
-      if (!prev || score > prev.score) row.cells[col] = { label, alt, mark, score };
+      if (!prev || score > prev.score) {
+        row.cells[col] = { label, alt, mark, score, reps: mainReps, weight: mainWeight };
+      }
     }
   }
 

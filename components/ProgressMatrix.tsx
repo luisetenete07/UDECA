@@ -41,6 +41,11 @@ interface ProgressMatrixProps {
   editable?: boolean;
   /** Ejercicios del plan activo, para poder añadir los que aún no ha hecho. */
   planExercises?: { id: string; name: string }[];
+  /**
+   * Avisa de QUÉ se está viendo: cuántas semanas y qué ejercicios, en su orden.
+   * Lo usa el informe en PDF para salir exactamente igual que la pantalla.
+   */
+  onViewChange?: (view: { weeks: number; exerciseIds: string[] }) => void;
 }
 
 /**
@@ -58,6 +63,7 @@ export function ProgressMatrix({
   ownerId,
   editable = false,
   planExercises = [],
+  onViewChange,
 }: ProgressMatrixProps) {
   const [range, setRange] = useState<4 | 8 | 12 | 'total'>(8);
   // Selección guardada de ejercicios. null = todos (comportamiento por defecto).
@@ -117,6 +123,22 @@ export function ProgressMatrix({
       .filter((r): r is NonNullable<typeof r> => r !== null);
     return { weekStarts: matrixCompleta.weekStarts, rows };
   }, [matrixCompleta, tracked, planExercises]);
+
+  /**
+   * Avisa a la pantalla de lo que hay en la tabla. Se compara con lo anunciado
+   * la última vez —y el callback se guarda en una ref— porque si no, un padre
+   * que pase una función anónima entraría en un bucle de repintados.
+   */
+  const vistaRef = React.useRef('');
+  const onViewChangeRef = React.useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
+  React.useEffect(() => {
+    const ids = matrix.rows.map((r) => r.exerciseId);
+    const clave = `${weeks}|${ids.join(',')}`;
+    if (vistaRef.current === clave) return;
+    vistaRef.current = clave;
+    onViewChangeRef.current?.({ weeks, exerciseIds: ids });
+  }, [weeks, matrix]);
 
   const seleccionActual = useCallback(
     () => tracked ?? matrixCompleta.rows.map((r) => r.exerciseId),
