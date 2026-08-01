@@ -345,7 +345,9 @@ export default function TrainerProfileScreen() {
     if (!profile?.inviteCode) return;
     const message =
       `Únete a mis entrenamientos en UDECA.\n\n` +
-      `1) Entra en www.udeca.app (o busca "UDECA" en Google Play).\n` +
+      // La app vive en app.udeca.app; www.udeca.app es la web de presentación.
+      // Al alumno hay que mandarlo donde puede registrarse, no al escaparate.
+      `1) Entra en app.udeca.app (o busca "UDECA" en Google Play).\n` +
       `2) Regístrate como alumno con mi código: ${profile.inviteCode}\n\n` +
       `¡Nos vemos dentro!`;
     if (Platform.OS === 'web') {

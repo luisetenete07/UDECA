@@ -509,5 +509,18 @@ service cloud.firestore {
             || (request.auth != null && request.resource.data.uid == request.auth.uid))
         && request.resource.data.createdAt is int;
     }
+
+    /**
+     * Contactos de la comunidad privada (comunidad.udeca.app).
+     *
+     * Nadie entra aquí desde la app ni desde el navegador: los escribe el
+     * servidor con el SDK de administrador, que no pasa por estas reglas. Se
+     * deja escrito de forma explícita —en vez de confiar en el denegado por
+     * defecto— porque es una lista de correos de personas y conviene que se vea
+     * de un vistazo que está cerrada.
+     */
+    match /leads/{leadId} {
+      allow read, write: if false;
+    }
   }
 }

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bienvenido a UDECA</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="halo"></div>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/">
+      <img src="/assets/logo.png" alt="" />
+      <span>UDECA</span>
+    </a>
+  </div>
+</header>
+
+<section>
+  <div class="wrap" style="max-width:720px">
+    <p class="eyebrow">Pago completado</p>
+    <h1 style="font-size:clamp(32px,7vw,52px)">Ya eres de los nuestros.</h1>
+    <p class="lead" style="margin-top:18px">
+      Tu suscripción está activa. Ahora solo queda entrar en la app y crear tu cuenta
+      con <b>el mismo correo</b> con el que has pagado: es lo que la vincula a tu
+      suscripción.
+    </p>
+
+    <div class="card" style="margin-top:34px">
+      <h3>Qué hacer ahora</h3>
+      <ol style="color:var(--muted); padding-left:20px; margin:14px 0 0; display:grid; gap:10px">
+        <li>Abre UDECA y regístrate con el correo del pago.</li>
+        <li>Completa el cuestionario inicial: de ahí sale tu punto de partida.</li>
+        <li>Si la cuenta apareciera como no activa, pulsa <b>“Ya he pagado”</b> en la app y se comprueba al momento.</li>
+      </ol>
+    </div>
+
+    <div class="hero-cta" style="margin-top:30px">
+      <a class="btn btn-primary" data-app href="https://app.udeca.app">Abrir UDECA</a>
+      <a class="btn btn-ghost" data-comunidad href="#">Entrar en la comunidad</a>
+    </div>
+
+    <p class="hero-note" style="margin-top:24px">
+      ¿Algún problema con el pago o con el acceso? Escríbenos a
+      <a data-contacto href="#" style="color:var(--gold-bright)">nuestro correo</a> y lo resolvemos.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="legal">© <span id="year"></span> UDECA · Universidad de Calistenia.</p>
+  </div>
+</footer>
+
+<script src="/config.js"></script>
+<script src="/main.js"></script>
+</body>
+</html>

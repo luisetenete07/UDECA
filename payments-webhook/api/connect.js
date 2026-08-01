@@ -37,8 +37,18 @@ function ensureInit() {
   if (!stripe) stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
-/** Solo permitimos volver a dominios conocidos (evita redirecciones abiertas). */
-const ALLOWED_HOSTS = ['udeca.app', 'www.udeca.app', 'localhost', 'udeca.vercel.app'];
+/**
+ * Solo permitimos volver a dominios conocidos (evita redirecciones abiertas).
+ * `app.udeca.app` es donde vive la app desde que www.udeca.app es la web
+ * pública: sin él, volver de Stripe Connect acabaría en la página de ventas.
+ */
+const ALLOWED_HOSTS = [
+  'app.udeca.app',
+  'udeca.app',
+  'www.udeca.app',
+  'localhost',
+  'udeca.vercel.app',
+];
 function safeOrigin(origin) {
   try {
     const u = new URL(origin);
@@ -46,7 +56,7 @@ function safeOrigin(origin) {
   } catch {
     /* ignora */
   }
-  return 'https://www.udeca.app';
+  return 'https://app.udeca.app';
 }
 
 export default async function handler(req, res) {

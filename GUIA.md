@@ -1,6 +1,7 @@
 # Guía de uso de UDECA
 
-La app vive en **https://www.udeca.app**. Es gratuita de alojar,
+La app vive en **https://app.udeca.app** (en www.udeca.app está la web de
+presentación, con los planes y las descargas). Es gratuita de alojar,
 se actualiza sola con cada mejora y funciona en móvil, tablet y ordenador.
 
 ---
@@ -9,7 +10,7 @@ se actualiza sola con cada mejora y funciona en móvil, tablet y ordenador.
 
 Mándales esto por WhatsApp:
 
-> 1. Abre https://www.udeca.app en el navegador del móvil.
+> 1. Abre https://app.udeca.app en el navegador del móvil.
 > 2. Pulsa "Regístrate", elige **Soy cliente** y usa el **código del
 >    entrenador** que te he pasado.
 > 3. Instálala como app: en iPhone (Safari) botón compartir → "Añadir a
@@ -85,7 +86,7 @@ y recordatorio diario de entrenamiento.
       Starter da más almacenamiento).
    2. Sube tu vídeo. En **Privacidad**: "Ocultar de Vimeo" (hide from
       Vimeo) y en **¿Dónde se puede incrustar?** elige "Solo en sitios
-      específicos" y añade `www.udeca.app`.
+      específicos" y añade `app.udeca.app`.
    3. Copia el **enlace del vídeo** (botón compartir; si es oculto tendrá
       la forma `vimeo.com/123456789/a1b2c3`).
    4. En la app: Cursos → tu curso → pega ese enlace en el campo de vídeo

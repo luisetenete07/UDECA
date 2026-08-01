@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Comunidad privada de UDECA</title>
+<meta name="description" content="Acceso a la comunidad privada de UDECA: progresiones, correcciones de técnica y lo que probamos antes de que llegue a la app." />
+<meta name="theme-color" content="#000000" />
+<!-- Página de acceso: no interesa que se indexe, se llega desde el perfil. -->
+<meta name="robots" content="noindex" />
+<link rel="icon" href="/assets/favicon.png" />
+<meta property="og:title" content="Comunidad privada de UDECA" />
+<meta property="og:description" content="Desbloquea el acceso al grupo privado." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="halo"></div>
+
+<main class="wrap">
+  <img class="logo" src="/assets/logo.png" alt="UDECA" />
+  <p class="eyebrow">Comunidad privada</p>
+
+  <!-- Paso 1: la puerta -->
+  <section id="paso-form">
+    <h1>Estás a un paso<br /><em>de entrar.</em></h1>
+    <p class="lead">
+      Dentro compartimos progresiones, correcciones de técnica, rutinas que estamos
+      probando y lo que llega a la app antes que a nadie. Es gratis, pero es cerrado:
+      déjanos tu nombre y tu correo y te damos el acceso.
+    </p>
+
+    <form id="form" novalidate>
+      <label>
+        <span>Tu nombre</span>
+        <input id="nombre" name="nombre" type="text" autocomplete="given-name" placeholder="Cómo te llamas" required />
+      </label>
+      <label>
+        <span>Tu correo</span>
+        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="tucorreo@ejemplo.com" required />
+      </label>
+
+      <p class="error" id="error" role="alert" hidden></p>
+
+      <button class="btn btn-primary" id="enviar" type="submit">Desbloquear acceso</button>
+
+      <p class="fine">
+        Te escribiremos solo cuando tengamos algo que merezca la pena. Puedes darte de
+        baja cuando quieras. Nada de spam ni de ceder tus datos a terceros.
+      </p>
+    </form>
+  </section>
+
+  <!-- Paso 2: el premio -->
+  <section id="paso-ok" hidden>
+    <div class="ok-mark">✓</div>
+    <h1>Acceso <em>desbloqueado</em></h1>
+    <p class="lead" id="saludo">Bienvenido. Tu sitio en la comunidad está listo.</p>
+    <a class="btn btn-primary big" id="enlace" href="#" target="_blank" rel="noopener">Entrar en el grupo</a>
+    <p class="fine">
+      Si el botón no abriera Telegram, copia este enlace:
+      <br /><code id="enlace-texto"></code>
+    </p>
+    <a class="secundario" href="https://www.udeca.app">Conocer UDECA</a>
+  </section>
+
+  <footer>
+    <p>© <span id="year"></span> UDECA · Universidad de Calistenia</p>
+  </footer>
+</main>
+
+<script src="/config.js"></script>
+<script src="/main.js"></script>
+</body>
+</html>

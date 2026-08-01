@@ -1,19 +1,29 @@
-# Despliegue automático de la web UDECA a GitHub Pages.
+# Despliegue automático de la APP de UDECA a GitHub Pages.
 #
 # Cada push a la rama de desarrollo compila la app web (Expo) y publica el
-# resultado en la rama gh-pages, que GitHub Pages sirve en el dominio
-# www.udeca.app. Así no hace falta desplegar a mano nunca más.
+# resultado en la rama gh-pages, que GitHub Pages sirve en app.udeca.app.
+#
+# Ojo con el dominio: la app vivía en www.udeca.app, pero ese dominio es ahora
+# la WEB pública (captación, planes y descargas), que se despliega aparte desde
+# la carpeta `web/`. La app se queda en su propio subdominio para poder seguir
+# probándola mientras no esté en las tiendas. Ver docs/WEB.md.
 #
 # Nota sobre las variables EXPO_PUBLIC_FIREBASE_*: son la configuración
 # PÚBLICA de cliente de Firebase (van incrustadas en el JavaScript que
 # descarga cualquier visitante de la web, por diseño del SDK). No son
 # secretos: la seguridad real la imponen las reglas de Firestore.
-name: Deploy web to GitHub Pages
+name: Deploy app to GitHub Pages
 
 on:
   push:
     branches:
       - claude/calisthenics-coaching-app-o72apc
+    # Tocar la web pública no tiene por qué recompilar la app entera.
+    paths-ignore:
+      - 'web/**'
+      - 'comunidad/**'
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch: {}
 
 permissions:
@@ -53,7 +63,7 @@ jobs:
       - name: Prepare Pages artifacts
         run: |
           touch dist/.nojekyll
-          echo "www.udeca.app" > dist/CNAME
+          echo "app.udeca.app" > dist/CNAME
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
