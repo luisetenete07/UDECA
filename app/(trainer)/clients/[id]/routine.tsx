@@ -7,6 +7,8 @@ import { Card } from '../../../../components/Card';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
+import { DragList } from '../../../../components/DragList';
+import { moveItem } from '../../../../lib/useDragReorder';
 import { showToast } from '../../../../components/Toast';
 import { useAuth } from '../../../../lib/auth-context';
 import { createExercise, getExerciseLibrary } from '../../../../lib/firestore/exercises';
@@ -205,15 +207,6 @@ export default function RoutineEditorScreen() {
   };
 
   // Mueve un día una posición arriba o abajo (reordenar la semana / el ciclo).
-  const moveDay = (index: number, delta: -1 | 1) => {
-    setDays((prev) => {
-      const target = index + delta;
-      if (target < 0 || target >= prev.length) return prev;
-      const list = [...prev];
-      [list[index], list[target]] = [list[target], list[index]];
-      return list;
-    });
-  };
 
   // Duplica un día (con ids nuevos) justo debajo, para no rehacerlo.
   const duplicateDay = (dayId: string) => {
@@ -479,18 +472,12 @@ export default function RoutineEditorScreen() {
   };
 
   // Mueve un ejercicio una posición arriba o abajo dentro de su día.
-  const moveExercise = (dayId: string, index: number, delta: -1 | 1) => {
+  const reordenarEjercicios = (dayId: string, from: number, to: number) => {
     setDays((prev) =>
-      prev.map((d) => {
-        if (d.id !== dayId) return d;
-        const target = index + delta;
-        if (target < 0 || target >= d.exercises.length) return d;
-        const list = [...d.exercises];
-        [list[index], list[target]] = [list[target], list[index]];
-        return { ...d, exercises: list };
-      })
+      prev.map((d) => (d.id === dayId ? { ...d, exercises: moveItem(d.exercises, from, to) } : d))
     );
   };
+
 
   // Abre el selector de "copiar rutina de otro alumno".
   const openCopyPicker = async () => {
@@ -781,7 +768,13 @@ export default function RoutineEditorScreen() {
         )}
       </Card>
 
-      {days.map((day, dayIndex) => {
+      <DragList
+        items={days}
+        keyOf={(d) => d.id}
+        gap={0}
+        handleOnly
+        onReorder={(from, to) => setDays((prev) => moveItem(prev, from, to))}
+        renderItem={(day, dayIndex, diaArrastrando, asaDia) => {
         const isOpen = expandedDays[day.id] ?? false;
         const exCount = day.exercises.length;
         const summaryParts: string[] = [];
@@ -800,7 +793,7 @@ export default function RoutineEditorScreen() {
           if (totalSets > 0) summaryParts.push(`${totalSets} series`);
         }
         return (
-        <Card key={day.id} style={styles.dayCard}>
+        <Card style={[styles.dayCard, diaArrastrando && styles.dayCardDragging]}>
           <View style={styles.dayHeaderRow}>
             <Pressable
               style={styles.dayHeaderMain}
@@ -813,22 +806,10 @@ export default function RoutineEditorScreen() {
                 {summaryParts.join(' · ')}
               </Text>
             </Pressable>
-            <Pressable
-              onPress={() => moveDay(dayIndex, -1)}
-              disabled={dayIndex === 0}
-              style={[styles.moveDayBtn, dayIndex === 0 && styles.moveDayBtnOff]}
-              hitSlop={6}
-            >
-              <Ionicons name="arrow-up" size={16} color={colors.textMuted} />
-            </Pressable>
-            <Pressable
-              onPress={() => moveDay(dayIndex, 1)}
-              disabled={dayIndex === days.length - 1}
-              style={[styles.moveDayBtn, dayIndex === days.length - 1 && styles.moveDayBtnOff]}
-              hitSlop={6}
-            >
-              <Ionicons name="arrow-down" size={16} color={colors.textMuted} />
-            </Pressable>
+            {/* Asa del día: mantener pulsado y mover para cambiar su orden. */}
+            <View {...asaDia} style={styles.moveDayBtn}>
+              <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
+            </View>
             <Pressable onPress={() => duplicateDay(day.id)} style={styles.removeDayBtn} hitSlop={8}>
               <Ionicons name="copy-outline" size={17} color={colors.textMuted} />
             </Pressable>
@@ -1005,10 +986,19 @@ export default function RoutineEditorScreen() {
             </View>
           ) : null}
 
-          {day.exercises.map((ex, exIndex) => (
+          <DragList
+            items={day.exercises}
+            keyOf={(ex) => ex.id}
+            gap={0}
+            handleOnly
+            onReorder={(from, to) => reordenarEjercicios(day.id, from, to)}
+            renderItem={(ex, exIndex, arrastrando, asa) => (
             <View
-              key={ex.id}
-              style={[styles.exerciseRow, ex.supersetWithPrevious && styles.exerciseRowLinked]}
+              style={[
+                styles.exerciseRow,
+                ex.supersetWithPrevious && styles.exerciseRowLinked,
+                arrastrando && styles.exerciseRowDragging,
+              ]}
             >
               {ex.supersetWithPrevious ? (
                 <View style={styles.supersetTag}>
@@ -1034,20 +1024,12 @@ export default function RoutineEditorScreen() {
                     <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
                   </Pressable>
                 ) : null}
-                <Pressable
-                  onPress={() => moveExercise(day.id, exIndex, -1)}
-                  style={styles.moveBtn}
-                  hitSlop={4}
-                >
-                  <Ionicons name="chevron-up" size={16} color={colors.textMuted} />
-                </Pressable>
-                <Pressable
-                  onPress={() => moveExercise(day.id, exIndex, 1)}
-                  style={styles.moveBtn}
-                  hitSlop={4}
-                >
-                  <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
-                </Pressable>
+                {/* Asa: mantener pulsado aquí y mover arriba o abajo. Va
+                    aparte de la fila porque está llena de campos de texto y
+                    colocar el cursor no debe mover el ejercicio. */}
+                <View {...asa} style={styles.moveBtn}>
+                  <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
+                </View>
                 <Pressable
                   onPress={() => removeExercise(day.id, ex.id)}
                   style={styles.deleteBtn}
@@ -1205,7 +1187,8 @@ export default function RoutineEditorScreen() {
                 ) : null}
               </View>
             </View>
-          ))}
+            )}
+          />
 
           <Button
             title="+ Añadir ejercicio"
@@ -1221,7 +1204,8 @@ export default function RoutineEditorScreen() {
           ) : null}
         </Card>
         );
-      })}
+        }}
+      />
 
       <Modal
         visible={pickerForDay !== null}
@@ -1447,6 +1431,7 @@ export default function RoutineEditorScreen() {
 }
 
 const styles = StyleSheet.create({
+  dayCardDragging: { borderColor: colors.hairline },
   dayCard: { marginBottom: spacing.md },
   scheduleCard: { marginBottom: spacing.md },
   scheduleTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
@@ -1558,7 +1543,6 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   moveDayBtn: { paddingHorizontal: 4 },
-  moveDayBtnOff: { opacity: 0.3 },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dayNameInput: { flex: 1, marginBottom: 0 },
   removeDayBtn: { paddingHorizontal: spacing.sm },
@@ -1600,6 +1584,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   exerciseName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
+  exerciseRowDragging: { borderColor: colors.hairline },
   exerciseRowLinked: {
     borderLeftWidth: 2,
     borderLeftColor: colors.hairline,

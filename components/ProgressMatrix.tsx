@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
 import { EmptyState } from './EmptyState';
@@ -10,6 +10,7 @@ import {
   saveProgressTracker,
 } from '../lib/firestore/progressTrackers';
 import { startOfWeek, weeklyExerciseMatrix, type MatrixCell } from '../lib/stats';
+import { moveItem, useDragReorder } from '../lib/useDragReorder';
 import { fonts, colors, radius, spacing, typography } from '../lib/theme';
 import type { WorkoutLog } from '../lib/types';
 
@@ -151,6 +152,33 @@ export function ProgressMatrix({
 
   const puedeEditar = editable && Boolean(ownerId);
 
+  /**
+   * Reordenar filas arrastrando.
+   *
+   * La tabla son DOS columnas: los nombres, fijos a la izquierda, y las
+   * semanas, que se desplazan en horizontal. Al mover una fila hay que
+   * desplazar las dos a la vez o el nombre se separaría de sus datos, así que
+   * el mismo gesto alimenta ambas.
+   *
+   * Al soltar se guarda el orden: si no había selección previa, se parte de lo
+   * que la tabla muestra ahora, que es justo lo que el entrenador está viendo.
+   */
+  const reordenar = (from: number, to: number) => {
+    const orden = moveItem(
+      matrix.rows.map((r) => r.exerciseId),
+      from,
+      to
+    );
+    guardar(orden);
+  };
+  const drag = useDragReorder(matrix.rows.length, reordenar, puedeEditar);
+
+  /** Estilo de desplazamiento de una fila, igual en las dos columnas. */
+  const filaStyle = (index: number) =>
+    drag.isDragging(index)
+      ? { transform: [{ translateY: drag.pan }], zIndex: 10 }
+      : { transform: [{ translateY: drag.shiftFor(index) }] };
+
   const OPTIONS: { v: 4 | 8 | 12 | 'total'; label: string }[] = [
     { v: 4, label: '4 sem' },
     { v: 8, label: '8 sem' },
@@ -191,8 +219,17 @@ export function ProgressMatrix({
               <View style={[styles.headerCell, styles.nameHeader]}>
                 <Text style={styles.headerText}>Ejercicio</Text>
               </View>
-              {matrix.rows.map((r) => (
-                <View key={r.exerciseId} style={styles.nameCell}>
+              {matrix.rows.map((r, index) => (
+                <Animated.View
+                  key={r.exerciseId}
+                  onLayout={drag.onLayoutFor(index)}
+                  {...drag.handlersFor(index)}
+                  style={[
+                    styles.nameCell,
+                    filaStyle(index),
+                    drag.isDragging(index) && styles.rowLifted,
+                  ]}
+                >
                   <Text style={styles.nameText} numberOfLines={2}>
                     {r.name}
                   </Text>
@@ -205,7 +242,7 @@ export function ProgressMatrix({
                       <Ionicons name="close" size={13} color={colors.textFaint} />
                     </Pressable>
                   ) : null}
-                </View>
+                </Animated.View>
               ))}
             </View>
 
@@ -226,8 +263,15 @@ export function ProgressMatrix({
                     </View>
                   ))}
                 </View>
-                {matrix.rows.map((r) => (
-                  <View key={r.exerciseId} style={styles.dataRow}>
+                {matrix.rows.map((r, index) => (
+                  <Animated.View
+                    key={r.exerciseId}
+                    style={[
+                      styles.dataRow,
+                      filaStyle(index),
+                      drag.isDragging(index) && styles.rowLifted,
+                    ]}
+                  >
                     {r.cells.map((cell, i) => {
                       const prev = prevFilled(r.cells, i);
                       return (
@@ -254,7 +298,7 @@ export function ProgressMatrix({
                         </View>
                       );
                     })}
-                  </View>
+                  </Animated.View>
                 ))}
               </View>
             </ScrollView>
@@ -363,6 +407,8 @@ function Trend({ current, prev }: { current: MatrixCell; prev: MatrixCell | null
 
 const styles = StyleSheet.create({
   rowRemove: { position: 'absolute', top: 4, right: 4, padding: 2 },
+  // La fila que se arrastra se levanta del resto para que se vea cuál es.
+  rowLifted: { backgroundColor: colors.surfaceAlt, opacity: 0.97 },
   trackBar: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, flexWrap: 'wrap' },
   trackBtn: {
     flexDirection: 'row',
@@ -447,6 +493,9 @@ const styles = StyleSheet.create({
   },
   weekHeadNow: { color: colors.primaryBright, fontFamily: fonts.semiBold },
   nameCell: {
+    // Sin esto, arrastrar en el navegador selecciona el texto de las filas y
+    // el gesto compite con la selección del sistema.
+    userSelect: 'none',
     width: NAME_W,
     height: ROW_H,
     justifyContent: 'center',

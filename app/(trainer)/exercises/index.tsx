@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { FadeIn } from '../../../components/FadeIn';
 import { Grid } from '../../../components/Grid';
+import { DragList } from '../../../components/DragList';
+import { moveItem } from '../../../lib/useDragReorder';
 import { CardButton } from '../../../components/CardButton';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
@@ -145,16 +147,6 @@ export default function ExercisesScreen() {
     }
     setNewCat('');
     saveCategories([...myCategories, c]);
-  };
-  // Mueve una categoría un puesto (las flechas del editor). El orden se
-  // guarda en el perfil y define cómo se agrupan y filtran los ejercicios.
-  const moveCategory = (group: string, dir: -1 | 1) => {
-    const i = myCategories.indexOf(group);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= myCategories.length) return;
-    const list = [...myCategories];
-    [list[i], list[j]] = [list[j], list[i]];
-    saveCategories(list);
   };
   const removeCategory = (group: string) => {
     const list = myCategories.filter((g) => g !== group);
@@ -621,32 +613,27 @@ export default function ExercisesScreen() {
 
       {editCats ? (
         <>
-          <View style={styles.catWrap}>
-            {myCategories.map((group, i) => (
-              <View key={group} style={styles.catChip}>
-                <Pressable
-                  onPress={() => moveCategory(group, -1)}
-                  hitSlop={6}
-                  disabled={i === 0}
-                  style={{ opacity: i === 0 ? 0.25 : 1 }}
-                >
-                  <Ionicons name="chevron-back" size={15} color={colors.primary} />
-                </Pressable>
-                <Text style={styles.catChipText}>{group}</Text>
-                <Pressable
-                  onPress={() => moveCategory(group, 1)}
-                  hitSlop={6}
-                  disabled={i === myCategories.length - 1}
-                  style={{ opacity: i === myCategories.length - 1 ? 0.25 : 1 }}
-                >
-                  <Ionicons name="chevron-forward" size={15} color={colors.primary} />
-                </Pressable>
-                <Pressable onPress={() => removeCategory(group)} hitSlop={8} style={styles.catX}>
-                  <Ionicons name="close-circle" size={16} color={colors.danger} />
+          {/* En edición se listan en vertical, no como fichas sueltas: el gesto
+              de reordenar es el mismo de toda la app (mantener pulsado y
+              mover arriba o abajo), y en horizontal ese gesto no existe. */}
+          <DragList
+            items={myCategories}
+            keyOf={(g) => g}
+            onReorder={(from, to) => saveCategories(moveItem(myCategories, from, to))}
+            gap={spacing.xs}
+            handleOnly
+            renderItem={(group, i, arrastrando, asa) => (
+              <View style={[styles.catRow, arrastrando && styles.catRowDragging]}>
+                <View {...asa} style={styles.dragHandle}>
+                  <Ionicons name="reorder-three" size={18} color={colors.textFaint} />
+                </View>
+                <Text style={styles.catRowText}>{group}</Text>
+                <Pressable onPress={() => removeCategory(group)} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color={colors.danger} />
                 </Pressable>
               </View>
-            ))}
-          </View>
+            )}
+          />
           <Text style={styles.catColorHint}>Toca un color para cambiarlo</Text>
           <View style={styles.catColorList}>
             {myCategories.map((group) => (
@@ -1142,6 +1129,20 @@ const styles = StyleSheet.create({
   },
   catStripe: { width: 4, alignSelf: 'stretch', borderRadius: 2, marginRight: spacing.sm },
   exerciseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+  catRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  catRowDragging: { borderColor: colors.hairline },
+  dragHandle: { padding: spacing.xs },
+  catRowText: { ...typography.body, color: colors.text, flex: 1 },
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',

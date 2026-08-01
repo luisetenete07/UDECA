@@ -6,6 +6,8 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { DragList } from '../../components/DragList';
+import { moveItem } from '../../lib/useDragReorder';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -182,14 +184,7 @@ export default function MyPlanScreen() {
       )
     );
 
-  const moveDay = (index: number, delta: -1 | 1) =>
-    setDays((prev) => {
-      const t = index + delta;
-      if (t < 0 || t >= prev.length) return prev;
-      const list = [...prev];
-      [list[index], list[t]] = [list[t], list[index]];
-      return list;
-    });
+  // Duplica un día (con ids nuevos) justo debajo, para no rehacerlo entero.
   const duplicateDay = (di: number) =>
     setDays((prev) => {
       const src = prev[di];
@@ -356,7 +351,13 @@ export default function MyPlanScreen() {
         )}
       </Card>
 
-      {days.map((day, di) => {
+      <DragList
+        items={days}
+        keyOf={(d) => d.id}
+        gap={0}
+        handleOnly
+        onReorder={(from, to) => setDays((prev) => moveItem(prev, from, to))}
+        renderItem={(day, di, arrastrando, asa) => {
         const isOpen = expanded[day.id] ?? di === 0;
         const total = day.exercises.reduce((a, e) => a + (e.sets || 0), 0);
         const summary = day.isRest
@@ -365,7 +366,7 @@ export default function MyPlanScreen() {
               schedule === 'cycle' ? ` · Int. ${day.intensity ?? 5}/10` : ''
             }`;
         return (
-          <Card key={day.id} style={styles.dayCard}>
+          <Card style={[styles.dayCard, arrastrando && styles.dayCardDragging]}>
             <View style={styles.dayHead}>
               <Pressable style={styles.dayHeadMain} onPress={() => toggleDay(day.id, di === 0)}>
                 <Text style={styles.dayTitle} numberOfLines={1}>
@@ -373,17 +374,10 @@ export default function MyPlanScreen() {
                 </Text>
                 <Text style={styles.daySummary}>{summary}</Text>
               </Pressable>
-              <Pressable onPress={() => moveDay(di, -1)} disabled={di === 0} hitSlop={6} style={di === 0 && styles.dim}>
-                <Ionicons name="arrow-up" size={16} color={colors.textMuted} />
-              </Pressable>
-              <Pressable
-                onPress={() => moveDay(di, 1)}
-                disabled={di === days.length - 1}
-                hitSlop={6}
-                style={di === days.length - 1 && styles.dim}
-              >
-                <Ionicons name="arrow-down" size={16} color={colors.textMuted} />
-              </Pressable>
+              {/* Asa: mantener pulsado y mover para cambiar el orden del día. */}
+              <View {...asa}>
+                <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
+              </View>
               <Pressable onPress={() => duplicateDay(di)} hitSlop={6}>
                 <Ionicons name="copy-outline" size={17} color={colors.textMuted} />
               </Pressable>
@@ -675,7 +669,8 @@ export default function MyPlanScreen() {
             ) : null}
           </Card>
         );
-      })}
+        }}
+      />
 
       <Button
         title="Añadir día"
@@ -742,6 +737,7 @@ const styles = StyleSheet.create({
   scheduleHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
   cycleResetBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md, alignSelf: 'flex-start' },
   cycleResetText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
+  dayCardDragging: { borderColor: colors.hairline },
   dayCard: { marginBottom: spacing.md },
   dayHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dayHeadMain: { flex: 1, paddingVertical: spacing.xs },

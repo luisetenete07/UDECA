@@ -17,6 +17,8 @@ import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
+import { DragList } from '../../../components/DragList';
+import { moveItem } from '../../../lib/useDragReorder';
 import { TextField } from '../../../components/TextField';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
@@ -94,20 +96,14 @@ export default function MealBooksScreen() {
     }
   };
 
-  // Subir o bajar una libreta. Se reescribe el `order` de TODAS: si solo se
-  // intercambiaran las dos afectadas, las libretas antiguas sin `order`
-  // seguirían sin tenerlo y el orden volvería a descolocarse.
-  const moveBook = (index: number, delta: -1 | 1) => {
-    const j = index + delta;
-    if (j < 0 || j >= books.length) return;
-    const next = [...books];
-    [next[index], next[j]] = [next[j], next[index]];
-    const conOrden = next.map((b, i) => ({ ...b, order: i }));
+  // Reordenar arrastrando. Se reescribe el `order` de TODAS: si solo se
+  // tocaran las que cambian de sitio, las libretas antiguas sin `order`
+  // seguirían sin tenerlo y la lista volvería a descolocarse.
+  const reordenar = (from: number, to: number) => {
+    const conOrden = moveItem(books, from, to).map((b, i) => ({ ...b, order: i }));
     setBooks(conOrden);
     conOrden.forEach((b, i) => {
-      if ((books[i]?.id ?? null) !== b.id || b.order !== books[i]?.order) {
-        updateMealBook(b.id, { order: i }).catch(() => {});
-      }
+      updateMealBook(b.id, { order: i }).catch(() => {});
     });
   };
 
@@ -197,7 +193,7 @@ export default function MealBooksScreen() {
         de la app, al final de su pestaña de nutrición.
       </Text>
 
-      <Card style={styles.section}>
+      <Card style={styles.createCard}>
         <Text style={styles.sectionTitle}>Nueva libreta</Text>
         <TextField
           placeholder="Título (Ej. Recetas de desayuno)"
@@ -219,8 +215,13 @@ export default function MealBooksScreen() {
           subtitle="Crea tu primera libreta y añade fotos de tus platos y recetas."
         />
       ) : (
-        books.map((book, index) => (
-          <Card key={book.id} style={styles.section}>
+        <DragList
+          items={books}
+          keyOf={(b) => b.id}
+          onReorder={reordenar}
+          handleOnly
+          renderItem={(book, index, arrastrando, asa) => (
+          <Card style={[styles.section, arrastrando && styles.sectionDragging]}>
             <View style={styles.bookHead}>
               {renaming === book.id ? (
                 <TextInput
@@ -241,30 +242,11 @@ export default function MealBooksScreen() {
                   </View>
                 </Pressable>
               )}
-              <Pressable
-                onPress={() => moveBook(index, -1)}
-                hitSlop={6}
-                disabled={index === 0}
-                style={styles.orderBtn}
-              >
-                <Ionicons
-                  name="chevron-up"
-                  size={18}
-                  color={index === 0 ? colors.border : colors.textMuted}
-                />
-              </Pressable>
-              <Pressable
-                onPress={() => moveBook(index, 1)}
-                hitSlop={6}
-                disabled={index === books.length - 1}
-                style={styles.orderBtn}
-              >
-                <Ionicons
-                  name="chevron-down"
-                  size={18}
-                  color={index === books.length - 1 ? colors.border : colors.textMuted}
-                />
-              </Pressable>
+              {/* Asa para reordenar: el título se toca para renombrar, así
+                  que el arrastre necesita su propio sitio. */}
+              <View {...asa} style={styles.dragHandle}>
+                <Ionicons name="reorder-three" size={20} color={colors.textFaint} />
+              </View>
               <Pressable onPress={() => handleDeleteBook(book)} hitSlop={8}>
                 <Ionicons name="trash-outline" size={18} color={colors.textFaint} />
               </Pressable>
@@ -300,7 +282,8 @@ export default function MealBooksScreen() {
               {book.photos.length}/{MAX_PHOTOS} fotos
             </Text>
           </Card>
-        ))
+          )}
+        />
       )}
     </ScreenContainer>
   );
@@ -309,7 +292,10 @@ export default function MealBooksScreen() {
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
   subtitle: { ...typography.small, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.lg },
-  section: { marginBottom: spacing.md },
+  createCard: { marginBottom: spacing.md },
+  section: { marginBottom: 0 },
+  sectionDragging: { borderColor: colors.hairline },
+  dragHandle: { padding: spacing.xs },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   bookHead: {
     flexDirection: 'row',
@@ -322,7 +308,6 @@ const styles = StyleSheet.create({
   photoStrip: { marginVertical: spacing.xs },
   photoWrap: { marginRight: spacing.sm, position: 'relative' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  orderBtn: { padding: 2 },
   renameInput: {
     flex: 1,
     ...typography.h3,
