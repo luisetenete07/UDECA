@@ -59,7 +59,11 @@ En el proyecto de Vercel que ya tienes con los webhooks (`udeca`, el de
 
 | Variable | Valor |
 |---|---|
-| `TELEGRAM_INVITE_URL` | El enlace de invitación a tu grupo privado |
+| `TELEGRAM_INVITE_URL` | El enlace de invitación a tu grupo privado (`https://t.me/+…`) |
+
+> El enlace **no se escribe en este repositorio**, que es público: se pega en
+> Vercel y ya está. Si estuviera aquí, cualquiera lo leería en GitHub y la
+> puerta de la comunidad dejaría de tener sentido.
 
 Y vuelve a desplegar ese proyecto (`cd payments-webhook && npx vercel --prod`).
 
