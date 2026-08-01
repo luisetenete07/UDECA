@@ -230,7 +230,22 @@ export function ProgressMatrix({
                     drag.isDragging(index) && styles.rowLifted,
                   ]}
                 >
-                  <Text style={styles.nameText} numberOfLines={2}>
+                  {/* Asa de arrastre. Se arrastra desde toda la fila, pero sin
+                      un icono que lo insinúe el gesto es invisible: aquí no hay
+                      nada más que pulsar, así que nadie prueba a mantener el
+                      dedo. Es el mismo ≡ que en el resto de la app. */}
+                  {puedeEditar ? (
+                    <Ionicons
+                      name="reorder-three"
+                      size={15}
+                      color={colors.textFaint}
+                      style={styles.rowHandle}
+                    />
+                  ) : null}
+                  <Text
+                    style={[styles.nameText, puedeEditar && styles.nameTextEditable]}
+                    numberOfLines={2}
+                  >
                     {r.name}
                   </Text>
                   {puedeEditar ? (
@@ -407,6 +422,9 @@ function Trend({ current, prev }: { current: MatrixCell; prev: MatrixCell | null
 
 const styles = StyleSheet.create({
   rowRemove: { position: 'absolute', top: 4, right: 4, padding: 2 },
+  rowHandle: { position: 'absolute', left: 2, top: '50%', marginTop: -8 },
+  // Deja sitio al asa para que no se solape con el nombre.
+  nameTextEditable: { paddingLeft: spacing.sm },
   // La fila que se arrastra se levanta del resto para que se vea cuál es.
   rowLifted: { backgroundColor: colors.surfaceAlt, opacity: 0.97 },
   trackBar: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, flexWrap: 'wrap' },
