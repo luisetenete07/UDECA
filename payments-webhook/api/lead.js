@@ -21,10 +21,12 @@ import crypto from 'node:crypto';
 
 /** Desde dónde se acepta la llamada. Cualquier otro origen no recibe permiso. */
 const ORIGENES = [
-  'https://comunidad.udeca.app',
+  'https://acceso.udeca.app',
   'https://www.udeca.app',
   'https://udeca.app',
+  // Pruebas en local: 4600 es la web pública y 4601 la página de acceso.
   'http://localhost:4600',
+  'http://localhost:4601',
 ];
 
 function initAdmin() {

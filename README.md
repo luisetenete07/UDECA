@@ -14,8 +14,8 @@ Construida con **Expo (React Native + React Native Web)** y **Firebase**
   instalable en el móvil desde "Añadir a pantalla de inicio").
 - **Web pública**: https://www.udeca.app — presentación, planes y
   descargas. Vive en `web/` y se despliega aparte; ver `docs/WEB.md`.
-- **Comunidad**: https://comunidad.udeca.app — la puerta al grupo privado
-  de Telegram (`comunidad/`).
+- **Acceso a la comunidad**: https://acceso.udeca.app — la puerta al grupo
+  privado de Telegram (`acceso/`).
 - **Despliegue automático**: cada push a la rama de desarrollo compila la
   web y la publica en GitHub Pages vía `.github/workflows/deploy.yml`.
   No hay despliegues manuales.

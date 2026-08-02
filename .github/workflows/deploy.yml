@@ -21,7 +21,7 @@ on:
     # Tocar la web pública no tiene por qué recompilar la app entera.
     paths-ignore:
       - 'web/**'
-      - 'comunidad/**'
+      - 'acceso/**'
       - 'docs/**'
       - '**/*.md'
   workflow_dispatch: {}

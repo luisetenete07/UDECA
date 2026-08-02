@@ -6,7 +6,7 @@ A partir de ahora el dominio se reparte en tres, cada uno con su trabajo:
 |---|---|---|---|
 | `www.udeca.app` | La web pública: planes, descargas y quiénes somos | Vercel | `web/` |
 | `app.udeca.app` | La app (la que usas para probar hasta que salga en las tiendas) | GitHub Pages | el proyecto Expo |
-| `comunidad.udeca.app` | La puerta a la comunidad privada de Telegram | Vercel | `comunidad/` |
+| `acceso.udeca.app` | La puerta a la comunidad privada de Telegram | Vercel | `acceso/` |
 
 El motivo del reparto: la web pública tiene que cargar en un segundo y hablarle
 a quien todavía no nos conoce; la app es un programa de 3 MB que solo interesa a
@@ -23,7 +23,7 @@ app entera para leer los precios.
 |---|---|---|
 | CNAME | `app` | `luisetenete07.github.io` |
 | CNAME | `www` | `cname.vercel-dns.com` |
-| CNAME | `comunidad` | `cname.vercel-dns.com` |
+| CNAME | `acceso` | `cname.vercel-dns.com` |
 | A | `@` (raíz) | `76.76.21.21` (Vercel, para que `udeca.app` lleve a `www`) |
 
 > El registro de `www` **cambia**: antes apuntaba a GitHub Pages y ahora va a
@@ -45,12 +45,12 @@ En **Vercel → udeca-web → Settings → Domains** añade `www.udeca.app` y
 ### 1.3 · Publicar la comunidad en Vercel
 
 ```bash
-cd comunidad
-npx vercel            # proyecto "udeca-comunidad"
+cd acceso
+npx vercel            # proyecto "udeca-acceso"
 npx vercel --prod
 ```
 
-Dominio: `comunidad.udeca.app`.
+Dominio: `acceso.udeca.app`.
 
 ### 1.4 · El enlace de Telegram
 
@@ -100,7 +100,7 @@ suscripción con su cuenta.
 
 ## 3 · Cómo funciona el embudo de Instagram
 
-1. En el perfil (y en los CTA de los vídeos) pones `comunidad.udeca.app`.
+1. En el perfil (y en los CTA de los vídeos) pones `acceso.udeca.app`.
    Si quieres medir de qué vídeo viene cada uno, añade `?utm_source=reel-planchas`.
 2. La página pide nombre y correo. Nada más: cada campo de más es gente que se cae.
 3. Al enviar, el servidor guarda el contacto en Firestore (colección `leads`) y
@@ -126,8 +126,8 @@ la consola de Firebase o con la cuenta de servicio.
 npx serve web -l 4600
 
 # Comunidad (el formulario llamará al endpoint real de Vercel)
-npx serve comunidad -l 4601
+npx serve acceso -l 4601
 ```
 
-`http://localhost:4600` está en la lista de orígenes permitidos del endpoint,
-así que el formulario funciona en local sin tocar nada.
+Los dos puertos (`4600` y `4601`) están en la lista de orígenes permitidos del
+endpoint, así que el formulario funciona en local sin tocar nada.

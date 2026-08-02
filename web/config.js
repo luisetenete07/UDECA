@@ -28,7 +28,7 @@ window.UDECA = {
   },
 
   /** Comunidad privada y redes. */
-  comunidad: 'https://comunidad.udeca.app',
+  comunidad: 'https://acceso.udeca.app',
   instagram: 'https://www.instagram.com/udeca.app/',
   contacto: 'luistenaf@gmail.com',
 };
