@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import type { UserProfile } from './types';
 
 /**
@@ -78,6 +79,57 @@ export const PAYMENT_LINK_URL = '';
 export const COACH_PAYMENT_LINK: string = 'https://buy.stripe.com/test_aFa5kEcao8277On4as7g401';
 export const ATHLETE_PAYMENT_LINK: string = 'https://buy.stripe.com/test_14A7sM2zO8275Gf6iA7g400';
 
+/**
+ * Enlaces del ALTA de 1 € (pago único), uno por rol.
+ *
+ * Son los MISMOS dos que se pegan en `web/config.js`: la web los usa para quien
+ * llega de fuera y la app para quien se registró sin pasar por ella. Si cambias
+ * uno, cambia el otro.
+ */
+export const COACH_ENTRY_LINK: string = '';
+export const ATHLETE_ENTRY_LINK: string = '';
+
+/** Enlace del alta con el uid dentro, para que el webhook sepa a quién activar. */
+export function entryCheckoutUrl(profile: UserProfile | null): string | null {
+  if (!profile) return null;
+  const base = profile.role === 'athlete' ? ATHLETE_ENTRY_LINK : COACH_ENTRY_LINK;
+  if (!base) return null;
+  const sep = base.includes('?') ? '&' : '?';
+  return (
+    `${base}${sep}client_reference_id=${encodeURIComponent(profile.uid)}` +
+    `&prefilled_email=${encodeURIComponent(profile.email)}`
+  );
+}
+
+/**
+ * Desde cuándo se exige el alta de 1 €.
+ *
+ * Las cuentas anteriores no la pagan nunca: cambiar las reglas a mitad de
+ * partida y dejar fuera a quien ya estaba dentro es la forma más rápida de
+ * perder a los primeros, que son justo los que menos merecen perderse.
+ */
+export const ENTRY_REQUIRED_FROM = Date.parse('2026-08-03T00:00:00Z');
+
+/**
+ * ¿Le falta pagar el alta a esta cuenta?
+ *
+ * Solo a quien paga plataforma (entrenador y atleta) y solo si se registró
+ * después de que existiera el alta. El alumno de un coach no paga nunca.
+ */
+export function needsEntryPayment(profile: UserProfile | null): boolean {
+  if (!profile) return false;
+  if (profile.role !== 'trainer' && profile.role !== 'athlete') return false;
+  if (isAdmin(profile)) return false;
+  if (profile.entryPaidAt) return false;
+  // Cuenta fundadora: existía antes de que hubiera alta.
+  if ((profile.createdAt ?? 0) < ENTRY_REQUIRED_FROM) return false;
+  // Estar de prueba NO exime: la prueba es justo lo que compra el euro. Solo se
+  // salta el alta quien ya paga una suscripción de verdad (o a quien se le ha
+  // extendido el acceso a mano), porque a ese ya se le conoce la tarjeta.
+  const estado = subscriptionState(profile);
+  return !estado.active || estado.trial;
+}
+
 /** Endpoint de comprobación bajo demanda (Vercel). Activa la cuenta al momento. */
 export const CHECK_SUB_URL = 'https://udeca.vercel.app/api/check-subscription';
 
@@ -113,6 +165,28 @@ export function subscriptionCheckoutUrl(profile: UserProfile | null): string | n
     `&prefilled_email=${encodeURIComponent(profile.email)}`
   );
 }
+
+/**
+ * ¿Se puede vender la plataforma DENTRO de la app?
+ *
+ * En iPhone y iPad, no. La norma 3.1.1 de la App Store obliga a que todo lo
+ * digital que se use dentro se compre con las compras integradas de Apple, y
+ * prohíbe además enseñar precios o enlaces que lleven a pagar por fuera: una
+ * pantalla con "180 €/año" y un botón a Stripe es rechazo seguro, y ni siquiera
+ * es discutible. Lo que sí está permitido —y es lo que hacen Netflix, Spotify o
+ * Notion— es que la cuenta se gestione fuera y la app se limite a decir que no
+ * está activa, sin precio, sin enlace y sin explicar dónde pagar.
+ *
+ * Fuera de iOS (Android, web, APK) se cobra con normalidad por la web.
+ *
+ * Esto NO afecta a lo que un alumno le paga a su entrenador: eso es un servicio
+ * real entre dos personas, no contenido digital, y Apple lo deja fuera de las
+ * compras integradas expresamente.
+ *
+ * La solución definitiva en iOS son las compras integradas, que son otro
+ * proyecto (StoreKit + acuerdos de pago en App Store Connect).
+ */
+export const CAN_SELL_IN_APP = Platform.OS !== 'ios';
 
 /** Correo de contacto para activar/renovar manualmente. */
 export const CONTACT_EMAIL = 'luistenaf@gmail.com';
@@ -221,14 +295,14 @@ export interface SubscriptionState {
 export function trainerHasAccess(profile: UserProfile | null): boolean {
   if (!profile || profile.role !== 'trainer') return true;
   if (subscriptionState(profile).active) return true;
-  return (profile.clientCount ?? 0) <= FREE_CLIENT_LIMIT;
+  return (profile.clientCount ?? 0) <= clientSlotsOf(profile);
 }
 
 /** true si el entrenador ya no puede sumar alumnos sin suscribirse. */
 export function trainerAtFreeLimit(profile: UserProfile | null): boolean {
   if (!profile || profile.role !== 'trainer') return false;
   if (subscriptionState(profile).active) return false;
-  return (profile.clientCount ?? 0) >= FREE_CLIENT_LIMIT;
+  return (profile.clientCount ?? 0) >= clientSlotsOf(profile);
 }
 
 export function subscriptionState(profile: UserProfile | null): SubscriptionState {

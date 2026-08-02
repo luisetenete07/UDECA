@@ -16,6 +16,8 @@ Construida con **Expo (React Native + React Native Web)** y **Firebase**
   descargas. Vive en `web/` y se despliega aparte; ver `docs/WEB.md`.
 - **Acceso a la comunidad**: https://acceso.udeca.app — la puerta al grupo
   privado de Telegram (`acceso/`).
+- **Cobros**: qué se cobra, cuándo y por qué en iOS no se puede enseñar un
+  precio dentro de la app; ver `docs/COBROS.md`.
 - **Despliegue automático**: cada push a la rama de desarrollo compila la
   web y la publica en GitHub Pages vía `.github/workflows/deploy.yml`.
   No hay despliegues manuales.

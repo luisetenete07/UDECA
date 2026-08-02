@@ -1,7 +1,7 @@
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { subscriptionCheckoutUrl, subscriptionState } from '../lib/subscription';
+import { CAN_SELL_IN_APP, subscriptionCheckoutUrl, subscriptionState } from '../lib/subscription';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { UserProfile } from '../lib/types';
 
@@ -15,7 +15,9 @@ export function TrialBanner({ profile }: { profile: UserProfile | null }) {
   if (!sub.trial || !sub.active) return null;
 
   const days = sub.daysLeft ?? 0;
-  const url = subscriptionCheckoutUrl(profile);
+  // En iOS no puede haber un botón que lleve a pagar fuera (ver CAN_SELL_IN_APP):
+  // el aviso se queda en informar de los días que quedan.
+  const url = CAN_SELL_IN_APP ? subscriptionCheckoutUrl(profile) : null;
   // El último día se avisa con más énfasis (es cuando se decide).
   const urgent = days <= 2;
 
@@ -30,7 +32,11 @@ export function TrialBanner({ profile }: { profile: UserProfile | null }) {
         <Text style={styles.title}>
           {days <= 1 ? 'Último día de prueba' : `Te quedan ${days} días de prueba`}
         </Text>
-        <Text style={styles.subtitle}>Actívala y sigue con todo tu progreso y tus alumnos.</Text>
+        <Text style={styles.subtitle}>
+          {url
+            ? 'Actívala y sigue con todo tu progreso y tus alumnos.'
+            : 'Tu progreso se queda contigo pase lo que pase.'}
+        </Text>
       </View>
       {url ? (
         <Pressable onPress={() => Linking.openURL(url)} style={styles.action} hitSlop={6}>

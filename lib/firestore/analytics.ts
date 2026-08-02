@@ -47,6 +47,10 @@ const STEPS: { key: FunnelEvent; label: string }[] = [
   { key: 'register_view', label: 'Ven el registro' },
   { key: 'register_submit', label: 'Pulsan crear cuenta' },
   { key: 'register_ok', label: 'Cuenta creada' },
+  // La cuenta creada ya no es el final del embudo: entre ella y usar la app
+  // está el alta de 1 €, que es justo donde más gente se puede caer.
+  { key: 'entry_wall_view', label: 'Ven el alta' },
+  { key: 'checkout_start', label: 'Pulsan pagar' },
 ];
 
 /**

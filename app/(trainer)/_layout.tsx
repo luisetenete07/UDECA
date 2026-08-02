@@ -3,10 +3,11 @@ import { Redirect, Tabs } from 'expo-router';
 import { TabIcon } from '../../components/TabIcon';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Paywall } from '../../components/Paywall';
+import { EntryWall } from '../../components/EntryWall';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { useTabScreenOptions } from '../../lib/navTheme';
-import { trainerHasAccess } from '../../lib/subscription';
+import { needsEntryPayment, trainerHasAccess } from '../../lib/subscription';
 
 export default function TrainerLayout() {
   const { loading, firebaseUser, profile, emailVerified } = useAuth();
@@ -18,6 +19,10 @@ export default function TrainerLayout() {
   if (profile.role !== 'trainer') return <Redirect href="/(client)/dashboard" />;
   // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
+  // Alta de 1 €: va ANTES que el muro de suscripción porque es el primer
+  // escalón (y el que identifica la tarjeta). Las cuentas anteriores al alta
+  // no lo ven nunca.
+  if (needsEntryPayment(profile)) return <EntryWall />;
   // SaaS: el coach entra gratis mientras su grupo no pase del límite; el muro
   // solo aparece cuando lo supera o cuando caduca una suscripción con más
   // alumnos de los que incluye su alta. Sus datos quedan intactos.

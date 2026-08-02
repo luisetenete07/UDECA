@@ -32,6 +32,7 @@ export const FUNNEL_EVENTS = [
   'register_ok_athlete',
   'register_ok_client',
   'login_ok',
+  'entry_wall_view', // se topa con el alta de 1 € al entrar por primera vez
   'paywall_view', // un coach se topa con el muro de pago
   'checkout_start', // pulsa pagar
 ] as const;

@@ -18,6 +18,13 @@ import admin from 'firebase-admin';
 // cuerpo CRUDO (imprescindible en Stripe).
 export const config = { api: { bodyParser: false } };
 
+/**
+ * Días de prueba del atleta. Está también en lib/subscription.ts y en
+ * firestore.rules; este fichero no puede importarlos (se despliega solo en
+ * Vercel). Si cambias el número, cámbialo en los tres.
+ */
+const TRIAL_DAYS = 14;
+
 // Inicialización PEREZOSA: no se hace al cargar el módulo (si faltara una
 // variable de entorno, la función crashearía en el arranque y ningún evento se
 // procesaría). Se inicializa dentro del handler, con errores controlados.
@@ -268,6 +275,16 @@ async function activarAlta(session) {
   const datos = { entryPaidAt: Date.now(), stripeCustomerId: session.customer || null };
   const huella = await tarjetaDelPago(session);
   if (huella) datos.payerFingerprint = huella;
+
+  // El atleta compra con el euro sus 14 días de prueba, así que el reloj
+  // empieza AQUÍ y no al registrarse: si tardó dos días en pagar, no los
+  // pierde. Solo la primera vez, y sin acortar nunca un acceso mayor que ya
+  // tuviera (cortesías, prórrogas dadas a mano).
+  if (perfil.role === 'athlete' && !perfil.entryPaidAt) {
+    const fin = Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000;
+    datos.trialEndsAt = fin;
+    datos.subscriptionUntil = Math.max(fin, perfil.subscriptionUntil || 0);
+  }
 
   if (perfil.role === 'trainer' && huella) {
     const { ref, otras, yaEstaba } = await cuentasConLaMismaTarjeta(huella, uid);

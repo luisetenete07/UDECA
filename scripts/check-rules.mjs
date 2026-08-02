@@ -125,6 +125,11 @@ await comprobar('regalarse plazas de alumno', false, () =>
 await comprobar('falsear la huella de su tarjeta', false, () =>
   setDoc(doc(db, 'users', coach.user.uid), { payerFingerprint: 'otra' }, { merge: true })
 );
+// Todo el muro de alta se sostiene sobre este campo: si la propia cuenta
+// pudiera escribirlo, el euro sería voluntario y la tarjeta no se conocería.
+await comprobar('darse el alta a sí mismo', false, () =>
+  setDoc(doc(db, 'users', coach.user.uid), { entryPaidAt: Date.now() }, { merge: true })
+);
 await comprobar('cambiar su propio nombre', true, () =>
   setDoc(doc(db, 'users', coach.user.uid), { name: 'Luis Tena' }, { merge: true })
 );

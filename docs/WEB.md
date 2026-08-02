@@ -84,8 +84,18 @@ normalmente basta con esperar al primer despliegue y comprobarlo.
 Todo lo configurable de la web pública está en **`web/config.js`**, en un solo
 sitio y en castellano:
 
-- `pagos.atleta` y `pagos.coach` — los Payment Links de Stripe. Ahora mismo
-  apuntan a los de **prueba**; cuando pases a producción, pega los `live`.
+- `pagos.altaAtleta` y `pagos.altaCoach` — los dos Payment Links del **alta de
+  1 €** (pago único), uno por rol para saber quién se da de alta.
+
+  **Los mismos dos enlaces van también en la app**, en
+  `lib/subscription.ts` → `ATHLETE_ENTRY_LINK` y `COACH_ENTRY_LINK`. La web los
+  usa para quien llega de fuera y la app para quien se registró sin pasar por
+  ella; si cambias uno, cambia el otro. Mientras estén vacíos, el muro de la app
+  ofrece escribir un correo en vez de dejar al usuario sin salida.
+
+  Lo que viene después (180 €/año del entrenador, 10 €/mes del atleta) se cobra
+  desde la app con `COACH_PAYMENT_LINK` / `ATHLETE_PAYMENT_LINK`, que ahora
+  apuntan a los de **prueba**: al pasar a producción, pega los `live`.
 - `descargas.appStore`, `descargas.playStore`, `descargas.apkPc` — déjalos
   vacíos hasta que la ficha exista. Vacío = la tarjeta se queda en
   "Próximamente" y no lleva a un 404; con enlace = pasa sola a "Disponible".

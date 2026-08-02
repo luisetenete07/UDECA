@@ -37,7 +37,8 @@ interface AuthContextValue {
   registerAthlete: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  /** Relee el perfil de la cuenta y devuelve el recién leído (null si no hay). */
+  refreshProfile: () => Promise<UserProfile | null>;
   /** Recarga el usuario de Auth para refrescar el estado de verificación. */
   reloadUser: () => Promise<boolean>;
   /** Reenvía el correo de verificación al usuario actual. */
@@ -61,7 +62,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [emailVerified, setEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = async (uid: string) => {
+  /**
+   * Lee el perfil de la cuenta y lo devuelve además de guardarlo en el estado.
+   *
+   * Lo devuelve porque quien acaba de pedir un refresco (el muro de alta, por
+   * ejemplo) necesita saber YA si el dato cambió, y el estado de React no está
+   * disponible hasta el siguiente render.
+   */
+  const loadProfile = async (uid: string): Promise<UserProfile | null> => {
     try {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
@@ -70,13 +78,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Recuerda esta cuenta en el dispositivo para el selector de acceso
         // (con nombre, rol y foto completos).
         rememberAccount({ email: p.email, name: p.name, role: p.role, photoURL: p.photoURL });
-      } else {
-        setProfile(null);
+        return p;
       }
+      setProfile(null);
     } catch {
       // Si la lectura del perfil falla (sin red), no rompemos el arranque: el
       // correo ya se recordó al detectar la sesión.
     }
+    return null;
   };
 
   useEffect(() => {
@@ -214,10 +223,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
   };
 
-  const refreshProfile = async () => {
-    if (firebaseUser) {
-      await loadProfile(firebaseUser.uid);
-    }
+  const refreshProfile = async (): Promise<UserProfile | null> => {
+    if (!firebaseUser) return null;
+    return loadProfile(firebaseUser.uid);
   };
 
   const reloadUser = async () => {

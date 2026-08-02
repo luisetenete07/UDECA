@@ -23,6 +23,7 @@ import { pickAvatar } from '../../lib/image';
 import { disconnectCoachPayments, getConnectStatus, startCoachOnboarding } from '../../lib/connect';
 import {
   ANNUAL_PRICE_EUR,
+  CAN_SELL_IN_APP,
   DAY_MS,
   isAdmin,
   subscriptionState,
@@ -633,7 +634,8 @@ export default function TrainerProfileScreen() {
             ? 'Cuenta administradora de UDECA: acceso completo sin caducidad.'
             : sub.legacy
               ? 'Cuenta fundadora: acceso completo a UDECA Pro.'
-              : `Plan anual (${ANNUAL_PRICE_EUR} €/año) · activo hasta ${
+              : // En iOS, el estado sin precio (ver CAN_SELL_IN_APP).
+                `Plan anual${CAN_SELL_IN_APP ? ` (${ANNUAL_PRICE_EUR} €/año)` : ''} · activo hasta ${
                   profile?.subscriptionUntil ? fmtDate(profile.subscriptionUntil) : '—'
                 }.`}
         </Text>

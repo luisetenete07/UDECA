@@ -9,8 +9,9 @@ import { track, trackOnce } from '../lib/analytics';
 import {
   ANNUAL_PRICE_EUR,
   ATHLETE_MONTHLY_EUR,
+  CAN_SELL_IN_APP,
   CONTACT_EMAIL,
-  FREE_CLIENT_LIMIT,
+  clientSlotsOf,
   subscriptionCheckoutUrl,
   verifySubscriptionNow,
 } from '../lib/subscription';
@@ -40,6 +41,10 @@ const ATHLETE_BENEFITS = [
 export function Paywall() {
   const { profile, signOut, refreshProfile } = useAuth();
   const isAthlete = profile?.role === 'athlete';
+  // Plazas de alumno de ESTA cuenta: normalmente las del alta, pero cero si el
+  // servidor detectó que ese euro ya se pagó con la misma tarjeta en otra
+  // cuenta de entrenador. El texto tiene que decir la verdad en los dos casos.
+  const plazas = clientSlotsOf(profile);
   // Cuánta gente llega al muro de pago frente a cuánta lo cruza.
   React.useEffect(() => {
     void trackOnce('paywall_view');
@@ -117,63 +122,94 @@ export function Paywall() {
       <View style={styles.container}>
         <Image source={require('../assets/icon.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>
-          {isAthlete ? 'Has terminado la prueba' : 'Activa UDECA Pro'}
+          {!CAN_SELL_IN_APP
+            ? 'Tu cuenta no está activa'
+            : isAthlete
+              ? 'Has terminado la prueba'
+              : 'Activa UDECA Pro'}
         </Text>
         <Text style={styles.subtitle}>
-          {isAthlete
-            ? `Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.`
-            : `Tu grupo ha superado los ${FREE_CLIENT_LIMIT} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`}
+          {!CAN_SELL_IN_APP
+            ? 'Tus datos, tus rutinas y todo tu progreso siguen intactos. En cuanto tu cuenta vuelva a estar activa, la app lo reconoce sola.'
+            : isAthlete
+              ? `Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.`
+              : plazas === 0
+                ? 'Esta cuenta no incluye alumnos: el alta de su tarjeta ya se usó en otra cuenta de entrenador. Con la suscripción anual tienes alumnos ilimitados. Tus datos están a salvo y te esperan.'
+                : `Tu grupo ha superado los ${plazas} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`}
         </Text>
 
-        <Card accent style={styles.planCard}>
-          <Text style={styles.planName}>{isAthlete ? 'UDECA ATLETA · MENSUAL' : 'UDECA PRO · ANUAL'}</Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>
-              {isAthlete ? ATHLETE_MONTHLY_EUR : (ANNUAL_PRICE_EUR / 12).toFixed(0)} €
+        {/* En iOS no se vende nada aquí dentro (ver CAN_SELL_IN_APP): ni precio,
+            ni plan, ni botón que lleve a pagar fuera. Solo el estado de la
+            cuenta y la forma de refrescarlo. */}
+        {CAN_SELL_IN_APP ? (
+          <Card accent style={styles.planCard}>
+            <Text style={styles.planName}>
+              {isAthlete ? 'UDECA ATLETA · MENSUAL' : 'UDECA PRO · ANUAL'}
             </Text>
-            <Text style={styles.priceUnit}>/ mes</Text>
-          </View>
-          <Text style={styles.priceHint}>
-            {isAthlete
-              ? 'Cuota mensual, sin permanencia.'
-              : `Cuota anual: ${ANNUAL_PRICE_EUR} € / año (un único pago)`}
-          </Text>
-          {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
-            <View key={b} style={styles.benefitRow}>
-              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-              <Text style={styles.benefitText}>{b}</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.price}>
+                {isAthlete ? ATHLETE_MONTHLY_EUR : (ANNUAL_PRICE_EUR / 12).toFixed(0)} €
+              </Text>
+              <Text style={styles.priceUnit}>/ mes</Text>
             </View>
-          ))}
-          <Button
-            title={
-              checkoutUrl
-                ? isAthlete
-                  ? 'Seguir entrenando'
-                  : 'Suscribirme ahora'
-                : 'Contactar para activar'
-            }
-            onPress={handlePay}
-            style={{ marginTop: spacing.md }}
-          />
-          <Button
-            title={checking ? 'Comprobando...' : 'Ya he pagado · Actualizar'}
-            variant="secondary"
-            onPress={handleCheck}
-            loading={checking}
-            style={{ marginTop: spacing.sm }}
-          />
-        </Card>
+            <Text style={styles.priceHint}>
+              {isAthlete
+                ? 'Cuota mensual, sin permanencia.'
+                : `Cuota anual: ${ANNUAL_PRICE_EUR} € / año (un único pago)`}
+            </Text>
+            {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
+              <View key={b} style={styles.benefitRow}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                <Text style={styles.benefitText}>{b}</Text>
+              </View>
+            ))}
+            <Button
+              title={
+                checkoutUrl
+                  ? isAthlete
+                    ? 'Seguir entrenando'
+                    : 'Suscribirme ahora'
+                  : 'Contactar para activar'
+              }
+              onPress={handlePay}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title={checking ? 'Comprobando...' : 'Ya he pagado · Actualizar'}
+              variant="secondary"
+              onPress={handleCheck}
+              loading={checking}
+              style={{ marginTop: spacing.sm }}
+            />
+          </Card>
+        ) : (
+          <Card style={styles.planCard}>
+            {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
+              <View key={b} style={styles.benefitRow}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                <Text style={styles.benefitText}>{b}</Text>
+              </View>
+            ))}
+            <Button
+              title={checking ? 'Comprobando...' : 'Ya está activa · Actualizar'}
+              onPress={handleCheck}
+              loading={checking}
+              style={{ marginTop: spacing.md }}
+            />
+          </Card>
+        )}
 
-        {!isAthlete ? (
+        {CAN_SELL_IN_APP && !isAthlete && plazas > 0 ? (
           <Text style={styles.footNote}>
-            ¿Prefieres seguir gratis? Puedes volver a {FREE_CLIENT_LIMIT} alumnos o menos y
+            ¿Prefieres seguir gratis? Puedes volver a {plazas} alumnos o menos y
             recuperas el acceso al instante, sin perder nada.
           </Text>
         ) : null}
 
         <Text style={styles.footNote}>
-          Al terminar el pago y volver a la app, tu cuenta se activa sola en unos
-          segundos. Si tardara, pulsa "Ya he pagado · Actualizar".
+          {CAN_SELL_IN_APP
+            ? 'Al terminar el pago y volver a la app, tu cuenta se activa sola en unos segundos. Si tardara, pulsa "Ya he pagado · Actualizar".'
+            : `¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`}
         </Text>
         <Button title="Cerrar sesión" variant="ghost" onPress={signOut} />
       </View>

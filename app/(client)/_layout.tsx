@@ -9,10 +9,11 @@ import { LinkTrainerScreen } from '../../components/LinkTrainerScreen';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Onboarding } from '../../components/Onboarding';
 import { Paywall } from '../../components/Paywall';
+import { EntryWall } from '../../components/EntryWall';
 import { ClientLockScreen } from '../../components/ClientLockScreen';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
-import { clientIsLocked, subscriptionState } from '../../lib/subscription';
+import { clientIsLocked, needsEntryPayment, subscriptionState } from '../../lib/subscription';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { useTabScreenOptions } from '../../lib/navTheme';
@@ -73,6 +74,9 @@ export default function ClientLayout() {
   }
   // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
+  // Alta de 1 € del atleta: con ella arrancan sus 14 días. El alumno de un
+  // coach no paga nada, así que `needsEntryPayment` ya lo descarta.
+  if (needsEntryPayment(profile)) return <EntryWall />;
   // Atleta con la suscripción caducada: muro de pago (10 €/mes).
   if (isAthlete && !subscriptionState(profile).active) return <Paywall />;
   // Alumno con la cuota vencida más allá del margen: acceso en pausa hasta que

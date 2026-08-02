@@ -11,7 +11,12 @@ import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { track, trackOnce } from '../../lib/analytics';
 import { friendlyAuthError } from '../../lib/firebase-errors';
-import { ANNUAL_PRICE_EUR, FREE_CLIENT_LIMIT, TRIAL_DAYS } from '../../lib/subscription';
+import {
+  ANNUAL_PRICE_EUR,
+  CAN_SELL_IN_APP,
+  FREE_CLIENT_LIMIT,
+  TRIAL_DAYS,
+} from '../../lib/subscription';
 import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 import type { UserRole } from '../../lib/types';
 
@@ -213,17 +218,22 @@ const ROLE_CARDS: {
     price: `${TRIAL_DAYS} días gratis`,
     free: true,
     icon: 'barbell-outline',
-    desc: 'Por tu cuenta: tus rutinas, tu progreso y tu nutrición. Luego 10 €/mes.',
+    // En iOS no se nombran precios de la plataforma (ver CAN_SELL_IN_APP).
+    desc: CAN_SELL_IN_APP
+      ? 'Por tu cuenta: tus rutinas, tu progreso y tu nutrición. Luego 10 €/mes.'
+      : 'Por tu cuenta: tus rutinas, tu progreso y tu nutrición.',
   },
   {
     value: 'trainer',
     title: 'Entrenador',
-    price: `1 € de alta`,
     // El alta es un euro para todos: filtra al curioso y deja una tarjeta
     // identificada, que es lo que impide multiplicar cuentas de entrenador.
+    price: CAN_SELL_IN_APP ? '1 € de alta' : 'Profesional',
     free: true,
     icon: 'people-outline',
-    desc: `Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos; a partir de ahí, ${ANNUAL_PRICE_EUR} €/año.`,
+    desc: CAN_SELL_IN_APP
+      ? `Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos; a partir de ahí, ${ANNUAL_PRICE_EUR} €/año.`
+      : `Tus alumnos, tus cobros y tu negocio. El plan de entrada incluye ${FREE_CLIENT_LIMIT} alumnos.`,
   },
 ];
 
