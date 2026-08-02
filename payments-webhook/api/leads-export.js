@@ -35,12 +35,26 @@ function initAdmin() {
 }
 
 /** Comparación en tiempo constante: no filtra la clave carácter a carácter. */
+function iguales(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  let dif = 0;
+  for (let i = 0; i < a.length; i++) dif |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return dif === 0;
+}
+
+/**
+ * ¿Es esta la clave?
+ *
+ * Se prueban dos formas de lo recibido porque la clave viaja en la dirección
+ * web, y ahí el signo "+" significa "espacio". Una clave generada con base64
+ * (que lleva "+" a menudo) llegaba convertida en espacios y no coincidía nunca,
+ * con el usuario mirando una clave que a simple vista era la correcta.
+ */
 function claveCorrecta(dada, esperada) {
-  if (typeof dada !== 'string' || typeof esperada !== 'string') return false;
-  if (dada.length !== esperada.length) return false;
-  let iguales = 0;
-  for (let i = 0; i < dada.length; i++) iguales |= dada.charCodeAt(i) ^ esperada.charCodeAt(i);
-  return iguales === 0;
+  const limpia = String(dada ?? '').trim();
+  const patron = String(esperada ?? '').trim();
+  return iguales(limpia, patron) || iguales(limpia.replace(/ /g, '+'), patron);
 }
 
 /** Celda de CSV a prueba de comas, comillas y saltos de línea. */
@@ -57,8 +71,20 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'Falta configurar LEADS_EXPORT_KEY' });
   }
   const dada = req.headers['x-udeca-key'] || req.query.key;
-  if (!claveCorrecta(String(dada ?? ''), esperada)) {
-    return res.status(401).json({ error: 'Clave no válida' });
+  if (!claveCorrecta(dada, esperada)) {
+    // Se dice QUÉ falta y CONTRA QUÉ variable se está comparando, nunca su
+    // valor. Sin esto, "clave no válida" es igual de opaco tanto si te has
+    // equivocado al copiarla como si Vercel todavía no tiene la variable, y no
+    // hay forma de saber cuál de las dos cosas arreglar.
+    const usando = process.env.LEADS_EXPORT_KEY ? 'LEADS_EXPORT_KEY' : 'CRON_SECRET';
+    return res.status(401).json({
+      error: dada ? 'La clave no coincide' : 'Falta la clave: añade ?key=… a la dirección',
+      comparandoCon: usando,
+      pista:
+        usando === 'CRON_SECRET'
+          ? 'Este despliegue no tiene LEADS_EXPORT_KEY. Añádela en Vercel y vuelve a desplegar.'
+          : 'Revisa que la copiaste entera, sin espacios delante ni detrás.',
+    });
   }
 
   try {
