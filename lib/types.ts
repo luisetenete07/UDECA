@@ -427,6 +427,8 @@ export interface RoutineExercise {
    * su plan escribiendo los nombres, que es justo lo que hace el atleta.
    */
   muscleGroup?: string;
+  /** Subgrupo dentro de la categoría ("Accesorios", "Aguantes"…), si lo tiene. */
+  subgroup?: string;
   /** Copia de la carga del ejercicio al añadirlo. */
   load?: ExerciseLoad;
   /** (Obsoleto) copia del uso de goma; equivale a load='assisted'. */

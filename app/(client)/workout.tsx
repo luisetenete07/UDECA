@@ -1719,6 +1719,12 @@ export default function WorkoutScreen() {
         // lleva una casilla por bloque y un botón para ese descanso corto.
         const cluster = planned?.cluster;
         const bloques = cluster ? clusterBlocks(cluster) : 1;
+        const categoriaEjercicio = [
+          planned?.muscleGroup ?? muscleByExercise[exercise.exerciseId],
+          planned?.subgroup,
+        ]
+          .filter(Boolean)
+          .join(' · ');
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
@@ -1729,9 +1735,18 @@ export default function WorkoutScreen() {
               </View>
             ) : null}
             <View style={styles.exerciseHeader}>
-              <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>
-                {exercise.name}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>
+                  {exercise.name}
+                </Text>
+                {/* Categoría y subgrupo bajo el nombre: entrenando, dos
+                    ejercicios que se llaman parecido solo se distinguen así
+                    ("Dominadas · Tirón · Aguantes"). Viene del plan, y si es
+                    de antes de que se guardara ahí, de la biblioteca. */}
+                {categoriaEjercicio ? (
+                  <Text style={styles.exerciseCategory}>{categoriaEjercicio}</Text>
+                ) : null}
+              </View>
               {isDone ? (
                 <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
               ) : null}
@@ -2267,6 +2282,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: spacing.xs,
+  },
+  exerciseCategory: {
+    ...typography.small,
+    color: colors.primary,
+    fontSize: 12,
+    marginTop: 2,
+    letterSpacing: 0.3,
   },
   exerciseName: { ...typography.h3, color: colors.text, flex: 1 },
   exerciseNameCurrent: { color: colors.primaryBright },

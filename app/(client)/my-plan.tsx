@@ -145,6 +145,9 @@ export default function MyPlanScreen() {
   });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [restText, setRestText] = useState<Record<string, string>>({});
+  // Ejercicio cuyo selector de categoría está abierto. Los demás la enseñan
+  // recogida en una etiqueta.
+  const [categoriaAbierta, setCategoriaAbierta] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -497,29 +500,51 @@ export default function MyPlanScreen() {
                         {/* Categoría del ejercicio. Aquí no hay biblioteca de
                             la que copiarla —el nombre se escribe a mano—, así
                             que sin este paso el mapa muscular, las series por
-                            grupo y el reparto del informe se quedaban vacíos. */}
-                        <Text style={styles.fieldLabel}>Categoría</Text>
-                        <View style={styles.groupWrap}>
-                          {MUSCLE_GROUPS.map((g) => {
-                            const active = exx.muscleGroup === g;
-                            return (
-                              <Pressable
-                                key={g}
-                                onPress={() =>
-                                  patchEx(di, ei, { muscleGroup: active ? undefined : g })
-                                }
-                                style={[styles.groupChip, active && styles.loadChipActive]}
-                                hitSlop={2}
-                              >
-                                <Text
-                                  style={[styles.loadChipText, active && styles.loadChipTextActive]}
-                                >
-                                  {g}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
+                            grupo y el reparto del informe se quedaban vacíos.
+
+                            Se elige UNA vez, al añadir el ejercicio. Después se
+                            recoge en una etiqueta junto al nombre: el plan es
+                            largo y ocho botones por ejercicio lo convertían en
+                            un muro. Tocando la etiqueta vuelven a salir. */}
+                        {exx.muscleGroup && categoriaAbierta !== exx.id ? (
+                          <Pressable
+                            onPress={() => setCategoriaAbierta(exx.id)}
+                            style={styles.catTag}
+                            hitSlop={6}
+                          >
+                            <Ionicons name="pricetag-outline" size={12} color={colors.primary} />
+                            <Text style={styles.catTagText}>{exx.muscleGroup}</Text>
+                          </Pressable>
+                        ) : (
+                          <>
+                            <Text style={styles.fieldLabel}>Categoría</Text>
+                            <View style={styles.groupWrap}>
+                              {MUSCLE_GROUPS.map((g) => {
+                                const active = exx.muscleGroup === g;
+                                return (
+                                  <Pressable
+                                    key={g}
+                                    onPress={() => {
+                                      patchEx(di, ei, { muscleGroup: active ? undefined : g });
+                                      setCategoriaAbierta(active ? exx.id : null);
+                                    }}
+                                    style={[styles.groupChip, active && styles.loadChipActive]}
+                                    hitSlop={2}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.loadChipText,
+                                        active && styles.loadChipTextActive,
+                                      ]}
+                                    >
+                                      {g}
+                                    </Text>
+                                  </Pressable>
+                                );
+                              })}
+                            </View>
+                          </>
+                        )}
 
                         <View style={styles.loadRow}>
                           {LOAD_OPTIONS.map((opt) => {
@@ -907,6 +932,19 @@ const styles = StyleSheet.create({
   // Las categorías son muchas: se envuelven en varias líneas en vez de
   // repartirse a la fuerza en una sola, donde los nombres se parten.
   groupWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  catTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.hairlineFaint,
+    backgroundColor: colors.primaryMuted,
+  },
+  catTagText: { ...typography.small, color: colors.primary, fontSize: 12, fontFamily: fonts.semiBold },
   groupChip: {
     paddingVertical: 7,
     paddingHorizontal: spacing.sm + 2,

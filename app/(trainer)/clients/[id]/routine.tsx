@@ -321,9 +321,12 @@ export default function RoutineEditorScreen() {
       sets: 3,
       reps: exercise.measure === 'seconds' ? '30' : '10',
       measure: exercise.measure ?? 'reps',
-      // La categoría viaja con el plan: así el reparto por grupos sigue
-      // saliendo aunque el ejercicio se renombre o se borre de la biblioteca.
+      // La categoría y el subgrupo viajan con el plan: se enseñan durante el
+      // entrenamiento junto al nombre —para no confundir dos ejercicios que se
+      // llaman parecido— y sostienen el reparto por grupos aunque el ejercicio
+      // se renombre o se borre de la biblioteca.
       muscleGroup: exercise.muscleGroup,
+      subgroup: exercise.subgroup,
       load: resolveLoad(exercise),
       band: exercise.band ?? false,
     };
