@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { RateApp } from '../../components/RateApp';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
@@ -869,6 +870,8 @@ export default function TrainerProfileScreen() {
           )}
         </Card>
       ) : null}
+
+      <RateApp />
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={{ marginTop: spacing.lg }} />
       <DeleteAccountButton />

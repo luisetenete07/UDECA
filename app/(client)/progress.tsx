@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
+import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { LineChart } from '../../components/LineChart';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -37,10 +38,9 @@ import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/w
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
 import { getLevelTestsForClient } from '../../lib/firestore/levelTests';
 import {
-  exerciseProgression,
-  exerciseRecord,
   isComboExercise,
   isIsometricExercise,
+  toNum,
   listExercisesInLogs,
   monthKeyOf,
   sessionTotals,
@@ -57,7 +57,6 @@ import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
-  isHoldMeasure,
   setMarks,
   type Routine,
   type WeightLog,
@@ -65,11 +64,6 @@ import {
 } from '../../lib/types';
 
 type Tab = 'workouts' | 'weight' | 'exercises';
-
-/** Número corto en español: sin decimales si no los tiene (7,5 / 10). */
-function formatNum(n: number): string {
-  return (Number.isInteger(n) ? String(n) : n.toFixed(1)).replace('.', ',');
-}
 
 /** Pone en mayúscula la primera letra (para "julio 2026" → "Julio 2026"). */
 function capitalize(s: string): string {
@@ -411,10 +405,6 @@ export default function ProgressScreen() {
   };
   const exercisesInLogs = useMemo(() => listExercisesInLogs(workoutLogs), [workoutLogs]);
   const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
-  const progression = useMemo(
-    () => (selExerciseId ? exerciseProgression(workoutLogs, selExerciseId) : null),
-    [workoutLogs, selExerciseId]
-  );
 
   if (loading) return <LoadingScreen />;
 
@@ -440,32 +430,6 @@ export default function ProgressScreen() {
 
   const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
   const muscleMax = muscleMap.length > 0 ? muscleMap[0].sets : 0;
-  const progMetric = progression?.measure === 'seconds' ? 's' : progression?.hasWeight ? 'kg' : 'reps';
-  /**
-   * Cada punto de la gráfica lleva escrita SU MARCA y SU DÍA. La línea sola
-   * enseña la forma, pero no contesta a "¿cuánto hice aquel día?", que es
-   * justo lo que se mira. En los combos van las dos marcas juntas, reps y
-   * aguante, porque una sin la otra no dice cómo fue la serie.
-   */
-  const progPoints = progression
-    ? progression.points.map((p) => {
-        const esAguante = isHoldMeasure(progression.measure);
-        const esCombo = progression.measure === 'combo';
-        const marca = esAguante ? `${p.reps}s` : String(p.reps);
-        const partes = [
-          esCombo && p.seconds > 0 ? `${marca} · ${p.seconds}s` : marca,
-          p.weight > 0 ? `×${formatNum(p.weight)}kg` : null,
-        ].filter(Boolean);
-        return {
-          date: p.date,
-          value: progMetric === 'kg' ? p.weight : p.reps,
-          label: partes.join(' '),
-        };
-      })
-    : [];
-  // Récord real del ejercicio, con el formato correcto según su tipo
-  // (reps, segundos o reps×lastre). No se infiere de la métrica de la gráfica.
-  const progRecord = selExerciseId ? exerciseRecord(workoutLogs, selExerciseId) : null;
 
   return (
     <ScreenContainer
@@ -648,26 +612,50 @@ export default function ProgressScreen() {
                           {s.exercises.map((ex, i) => {
                             const isSec = isIsometricExercise(ex, measureByExercise);
                             const isCombo = isComboExercise(ex, measureByExercise);
-                            const done = ex.sets
+                            // Cada serie va en su propia marca en vez de en una
+                            // lista separada por comas: "12, 10, 8" obliga a
+                            // leer, y tres marcas seguidas se ven de un golpe.
+                            const marcas = ex.sets
                               .filter((st) => st.completed && st.reps)
-                              .map(
-                                (st) =>
+                              .map((st) => {
+                                // Un lastre de 0 kg no es lastre: escribirlo
+                                // ("7 × 0 kg") es ruido en cada serie de peso
+                                // corporal, que son casi todas.
+                                const kg = toNum(st.weight);
+                                return {
                                   // En clúster, la serie fueron varios bloques:
-                                  // se enseñan todos ("3+3+3"), que es lo que
-                                  // de verdad se hizo.
-                                  `${setMarks(st).join('+')}` +
-                                  `${isCombo && st.seconds ? `+${st.seconds}s` : ''}` +
-                                  `${st.weight ? `×${st.weight}kg` : ''}`
-                              )
-                              .join(', ');
+                                  // se enseñan todos ("3+3+3"), que es lo que de
+                                  // verdad se hizo.
+                                  texto:
+                                    `${setMarks(st).join('+')}${isSec ? ' s' : ''}` +
+                                    `${isCombo && st.seconds ? ` + ${st.seconds}s` : ''}` +
+                                    `${kg > 0 ? ` × ${kg} kg` : ''}`,
+                                  cluster: (st.clusters?.length ?? 0) > 0,
+                                };
+                              });
                             return (
-                              <View key={i} style={styles.detailRow}>
+                              <View key={i} style={styles.detailBlock}>
                                 <Text style={styles.detailName} numberOfLines={1}>
                                   {ex.name}
                                 </Text>
-                                <Text style={styles.detailSets}>
-                                  {done ? `${done}${isSec ? ' s' : ''}` : '✓'}
-                                </Text>
+                                {marcas.length > 0 ? (
+                                  <View style={styles.detailMarks}>
+                                    {marcas.map((m, j) => (
+                                      <View key={j} style={styles.detailMark}>
+                                        {m.cluster ? (
+                                          <Ionicons
+                                            name="layers-outline"
+                                            size={11}
+                                            color={colors.textMuted}
+                                          />
+                                        ) : null}
+                                        <Text style={styles.detailMarkText}>{m.texto}</Text>
+                                      </View>
+                                    ))}
+                                  </View>
+                                ) : (
+                                  <Text style={styles.detailDone}>Completado</Text>
+                                )}
                               </View>
                             );
                           })}
@@ -688,6 +676,8 @@ export default function ProgressScreen() {
                   value: w.volumeKg,
                 }))}
                 unit="kg"
+                // Más volumen es mejor: sin esto el "+" salía en color de aviso.
+                lowerIsBetter={false}
                 emptyMessage="Registra entrenamientos con peso para ver tu volumen semanal."
               />
             </Card>
@@ -732,6 +722,7 @@ export default function ProgressScreen() {
                         value: w.byGroup[g] ?? 0,
                       }))}
                       unit="series"
+                      lowerIsBetter={false}
                       emptyMessage={`Aún no hay series de ${g} registradas.`}
                     />
                   </View>
@@ -901,30 +892,13 @@ export default function ProgressScreen() {
               })}
             </ScrollView>
 
-            <Card style={styles.section}>
-              <View style={styles.exHeader}>
-                <Text style={styles.sectionTitle}>{progression?.name ?? 'Ejercicio'}</Text>
-                {progRecord ? (
-                  <View style={styles.recordPill}>
-                    <Ionicons name="trophy" size={13} color={colors.primary} />
-                    <Text style={styles.recordText}>Récord: {progRecord.label}</Text>
-                  </View>
-                ) : null}
-              </View>
-              <Text style={styles.photoHint}>
-                {progMetric === 'kg'
-                  ? 'Mejor peso por sesión, con la marca y el día de cada una.'
-                  : progMetric === 's'
-                    ? 'Mejor aguante por sesión, con la marca y el día de cada una.'
-                    : 'Mejor marca por sesión, con el día de cada una.'}
-              </Text>
-              <LineChart
-                points={progPoints}
-                unit={progMetric}
-                labelAll
-                emptyMessage="Necesitas al menos dos sesiones con este ejercicio."
+            {selExerciseId ? (
+              <ExerciseHistory
+                logs={workoutLogs}
+                exerciseId={selExerciseId}
+                measureByExercise={measureByExercise}
               />
-            </Card>
+            ) : null}
           </>
           )}
         </>
@@ -1340,11 +1314,22 @@ const styles = StyleSheet.create({
   sessionDetail: {
     paddingLeft: 52,
     paddingBottom: spacing.sm,
-    gap: 4,
+    gap: spacing.sm,
   },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
-  detailName: { ...typography.small, color: colors.textMuted, flex: 1 },
-  detailSets: { ...typography.small, color: colors.text, fontFamily: fonts.medium },
+  detailBlock: { gap: 5 },
+  detailName: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  detailMarks: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  detailMark: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  detailMarkText: { ...typography.small, color: colors.text, fontSize: 12 },
+  detailDone: { ...typography.small, color: colors.textFaint },
   photoHint: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md },
   poseRow: { flexDirection: 'row', gap: spacing.sm },
   poseBtn: { flex: 1, paddingHorizontal: spacing.sm },

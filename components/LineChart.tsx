@@ -29,6 +29,12 @@ interface LineChartProps {
    * "¿cuánto hice el 12 de mayo?" no se puede contestar mirando la curva.
    */
   labelAll?: boolean;
+  /**
+   * Fila de "Actual · Cambio · Mín/Máx" encima de la gráfica. Se puede quitar
+   * cuando quien la usa ya cuenta eso mismo más arriba y con más claridad:
+   * repetir el mismo número dos veces seguidas no informa, distrae.
+   */
+  showSummary?: boolean;
 }
 
 const shortDate = (ts: number) =>
@@ -57,6 +63,7 @@ export function LineChart({
   lowerIsBetter = true,
   labeled = false,
   labelAll = false,
+  showSummary = true,
 }: LineChartProps) {
   if (points.length < 2) {
     return (
@@ -103,15 +110,17 @@ export function LineChart({
 
   return (
     <View>
-      <View style={styles.summaryRow}>
-        <SummaryStat label="Actual" value={`${formatValue(last)} ${unit}`} />
-        <SummaryStat
-          label="Cambio"
-          value={`${diff >= 0 ? '+' : ''}${formatValue(diff)} ${unit}`}
-          highlight={diffIsGood ? colors.accent : diffIsBad ? colors.warning : colors.textMuted}
-        />
-        <SummaryStat label="Mín / Máx" value={`${formatValue(min)} / ${formatValue(max)}`} />
-      </View>
+      {showSummary ? (
+        <View style={styles.summaryRow}>
+          <SummaryStat label="Actual" value={`${formatValue(last)} ${unit}`} />
+          <SummaryStat
+            label="Cambio"
+            value={`${diff >= 0 ? '+' : ''}${formatValue(diff)} ${unit}`}
+            highlight={diffIsGood ? colors.accent : diffIsBad ? colors.warning : colors.textMuted}
+          />
+          <SummaryStat label="Mín / Máx" value={`${formatValue(min)} / ${formatValue(max)}`} />
+        </View>
+      ) : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <Svg width={chartWidth} height={CHART_HEIGHT}>
           <Line

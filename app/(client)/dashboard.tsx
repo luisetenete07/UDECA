@@ -91,8 +91,6 @@ export default function ClientDashboard() {
   const [cycleAnchor, setCycleAnchor] = useState<number | null>(cached?.cycleAnchor ?? null);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
-  // Petición de valoración en Play Store: una sola vez, tras coger ritmo.
-  const [rateDismissed, setRateDismissed] = useState(true);
   // Ciclo en curso (si el coach usa planificación). Best-effort: si las reglas
   // de ciclos aún no están publicadas, la consulta falla en silencio y no se
   // muestra la tarjeta — nunca rompe el resto del inicio.
@@ -183,30 +181,6 @@ export default function ClientDashboard() {
       };
     }, [profile?.trainerId])
   );
-
-  // ¿Mostrar la petición de valoración? Solo si no se ha pedido/valorado antes.
-  useEffect(() => {
-    if (!profile) return;
-    AsyncStorage.getItem(`udeca-rate-${profile.uid}`)
-      .then((v) => setRateDismissed(v === '1'))
-      .catch(() => setRateDismissed(true));
-  }, [profile]);
-
-  const closeRate = (rated: boolean) => {
-    setRateDismissed(true);
-    if (profile) AsyncStorage.setItem(`udeca-rate-${profile.uid}`, '1').catch(() => {});
-    if (rated) {
-      const url =
-        Platform.OS === 'android'
-          ? 'market://details?id=entrenadores.app'
-          : 'https://play.google.com/store/apps/details?id=entrenadores.app';
-      Linking.openURL(url).catch(() =>
-        Linking.openURL(
-          'https://play.google.com/store/apps/details?id=entrenadores.app'
-        ).catch(() => {})
-      );
-    }
-  };
 
   if (loading) return <LoadingScreen />;
 
@@ -498,25 +472,6 @@ export default function ClientDashboard() {
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
         </Pressable>
-      ) : null}
-
-      {/* Petición de valoración: tras 5 entrenos, una sola vez. */}
-      {!rateDismissed && workoutLogs.length >= 5 ? (
-        <Card accent style={styles.rateCard}>
-          <Ionicons name="star" size={20} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rateTitle}>¿Te está gustando UDECA?</Text>
-            <Text style={styles.rateSub}>Tu valoración nos ayuda un montón.</Text>
-          </View>
-          <View style={styles.rateActions}>
-            <Pressable onPress={() => closeRate(true)} style={styles.rateBtn} hitSlop={6}>
-              <Text style={styles.rateBtnText}>Valorar</Text>
-            </Pressable>
-            <Pressable onPress={() => closeRate(false)} hitSlop={6}>
-              <Text style={styles.rateLater}>Ahora no</Text>
-            </Pressable>
-          </View>
-        </Card>
       ) : null}
 
       {showWeightReminder ? (
@@ -839,23 +794,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingRight: spacing.md,
   },
-  rateCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  rateTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  rateSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
-  rateActions: { alignItems: 'flex-end', gap: 4 },
-  rateBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-  },
-  rateBtnText: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.semiBold, fontSize: 12 },
-  rateLater: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   myPlanEntry: {
     flexDirection: 'row',
     alignItems: 'center',

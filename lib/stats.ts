@@ -1,5 +1,6 @@
 import {
   resolveLoad,
+  setMarks,
   type ExerciseMeasure,
   type LoggedExercise,
   type WeightLog,
@@ -418,12 +419,15 @@ export interface PersonalRecord {
  */
 export function exerciseRecord(
   logs: WorkoutLog[],
-  exerciseId: string
+  exerciseId: string,
+  measureByExercise?: Record<string, string>
 ): { label: string; metric: 'reps' | 's' | 'kg' } | null {
   const best = bestsByExercise(logs)[exerciseId];
   if (!best) return null;
-  // Medida conocida del ejercicio (la última registrada manda).
-  let measure: ExerciseMeasure = 'reps';
+  // Medida conocida del ejercicio (la última registrada manda). Los entrenos
+  // antiguos no la guardaban: para esos vale la de la biblioteca, o un aguante
+  // de 40 segundos se anunciaría como "40 repeticiones".
+  let measure = (measureByExercise?.[exerciseId] as ExerciseMeasure | undefined) ?? 'reps';
   for (const log of logs) {
     const ex = log.exercises.find((e) => e.exerciseId === exerciseId);
     if (ex?.measure) measure = ex.measure;
@@ -1114,4 +1118,82 @@ export function exerciseProgression(
   }
   if (points.length === 0) return null;
   return { exerciseId, name, measure, hasWeight, points };
+}
+
+/** Una serie de un ejercicio, tal y como se hizo ese día. */
+export interface ExerciseSetMark {
+  /** Lo que se hizo, escrito como se lee: "10", "5+4", "45 s", "8 × 20 kg". */
+  label: string;
+  /** Mejor marca de la serie (repeticiones, o segundos si es isométrico). */
+  reps: number;
+  /** Aguante de la serie, en segundos. Solo en combos. */
+  seconds: number;
+  /** Lastre de la serie, en kg. */
+  weight: number;
+  /** La serie se hizo en clúster (varios bloques con pausa corta). */
+  cluster: boolean;
+}
+
+/** Un día en que se entrenó un ejercicio, con todas sus series. */
+export interface ExerciseSession {
+  id: string;
+  date: number;
+  dayName: string;
+  sets: ExerciseSetMark[];
+}
+
+/**
+ * Historial de un ejercicio: cada día que se hizo, con TODAS sus series.
+ *
+ * `exerciseProgression` se queda con la mejor serie de cada día, que es lo que
+ * necesita una gráfica. Esto es lo contrario: lo que hace falta para mirar
+ * atrás y ver qué se hizo exactamente, sin tener que abrir la sesión entera
+ * en la pestaña de entrenos.
+ *
+ * Devuelve lo más reciente primero, que es el orden en que se mira.
+ */
+export function exerciseSessions(
+  logs: WorkoutLog[],
+  exerciseId: string,
+  measureByExercise?: Record<string, string>
+): ExerciseSession[] {
+  const salida: ExerciseSession[] = [];
+  const ordenados = [...logs].sort((a, b) => b.date - a.date);
+  for (const log of ordenados) {
+    const ex = log.exercises.find((e) => e.exerciseId === exerciseId);
+    if (!ex) continue;
+    const esSeg = isIsometricExercise(ex, measureByExercise);
+    const esCombo = isComboExercise(ex, measureByExercise);
+    const sets: ExerciseSetMark[] = [];
+    for (const st of ex.sets) {
+      if (!st.completed) continue;
+      const marcas = setMarks(st);
+      if (marcas.length === 0) continue;
+      // Se escribe igual que en la sesión: los bloques de un clúster van
+      // sumados ("5+4+3") porque eso es lo que se hizo de verdad.
+      let label = marcas.join('+') + (esSeg ? ' s' : '');
+      const seconds = parseInt(st.seconds ?? '', 10);
+      const conAguante = !Number.isNaN(seconds) && seconds > 0;
+      if (esCombo && conAguante) label += ` + ${seconds}s`;
+      const weight = toNum(st.weight);
+      const conPeso = st.weight !== undefined && !Number.isNaN(weight) && weight > 0;
+      if (conPeso) label += ` × ${weight} kg`;
+      let mejor = 0;
+      for (const m of marcas) {
+        const n = parseInt(m, 10);
+        if (!Number.isNaN(n)) mejor = Math.max(mejor, n);
+      }
+      sets.push({
+        label,
+        reps: mejor,
+        seconds: conAguante ? seconds : 0,
+        weight: conPeso ? weight : 0,
+        cluster: (st.clusters?.length ?? 0) > 0,
+      });
+    }
+    if (sets.length > 0) {
+      salida.push({ id: log.id, date: log.date, dayName: log.dayName, sets });
+    }
+  }
+  return salida;
 }

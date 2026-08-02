@@ -6,6 +6,7 @@ import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { RateApp } from '../../components/RateApp';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
@@ -41,6 +42,8 @@ const two = (n: number) => String(n).padStart(2, '0');
 
 export default function ClientProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
+  // Esta pantalla la comparten el alumno de un coach y el atleta autoentrenado.
+  const isAthlete = profile?.role === 'athlete';
   const [name, setName] = useState(profile?.name ?? '');
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
@@ -424,6 +427,11 @@ export default function ClientProfileScreen() {
           {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
         </Text>
       </Card>
+
+      {/* Valorar la app: solo al atleta. El alumno de un coach no elige la
+          herramienta —se la pone su entrenador—, así que pedirle a él la
+          valoración es pedirla a quien no ha decidido nada. */}
+      {isAthlete ? <RateApp /> : null}
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={styles.signOut} />
     </ScreenContainer>
