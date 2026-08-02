@@ -147,6 +147,12 @@ await comprobar('quitarle el entrenador', false, () =>
   setDoc(doc(db, 'users', alumno.id), { trainerId: otro.user.uid }, { merge: true })
 );
 
+// El enlace del grupo privado puede vivir en `config/comunidad`. Si se pudiera
+// leer desde la app, el formulario de la comunidad dejaría de ser una puerta.
+await comprobar('leer los ajustes del servidor (config)', false, () =>
+  getDoc(doc(db, 'config', 'comunidad'))
+);
+
 console.log('\nTabla de progreso (progressTrackers)');
 // Se limpia al final: esta prueba escribe en la misma base que usa la app para
 // revisarla a mano, y dejar ejercicios inventados ahí ensucia la pantalla.

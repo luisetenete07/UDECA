@@ -17,6 +17,13 @@ import crypto from 'node:crypto';
  *   FIREBASE_SERVICE_ACCOUNT — JSON de la cuenta de servicio (ya la usan los
  *                              demás endpoints de este proyecto).
  *   TELEGRAM_INVITE_URL      — enlace de invitación al grupo privado.
+ *
+ * El enlace puede venir de dos sitios (ver `enlaceDeInvitacion`): esa variable
+ * de entorno o el documento `config/comunidad` de Firestore. El segundo existe
+ * porque cambiar una variable en Vercel obliga a volver a desplegar, y cuando
+ * la puerta está cerrada lo que hace falta es abrirla ya.
+ *
+ * En ninguno de los dos casos el enlace vive en el repositorio, que es público.
  */
 
 /** Desde dónde se acepta la llamada. Cualquier otro origen no recibe permiso. */
@@ -49,19 +56,54 @@ function idDeCorreo(email) {
   return crypto.createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 32);
 }
 
+/**
+ * De dónde sale el enlace del grupo.
+ *
+ * Primero la variable de entorno, que es lo normal. Si no está, se mira
+ * `config/comunidad` → `telegramInviteUrl` en Firestore: se pega desde la
+ * consola de Firebase y funciona al instante, sin desplegar nada. Las reglas
+ * impiden leer esa colección desde el navegador, así que el enlace sigue sin
+ * estar al alcance de nadie que no rellene el formulario.
+ */
+async function enlaceDeInvitacion() {
+  const deEntorno = process.env.TELEGRAM_INVITE_URL;
+  if (deEntorno) return deEntorno;
+  try {
+    initAdmin();
+    const snap = await admin.firestore().doc('config/comunidad').get();
+    const url = snap.exists ? snap.data().telegramInviteUrl : null;
+    return typeof url === 'string' && url.startsWith('https://') ? url : null;
+  } catch {
+    // Sin credenciales o sin red: se trata como que no hay enlace.
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   const origen = req.headers.origin;
   if (origen && ORIGENES.includes(origen)) {
     res.setHeader('Access-Control-Allow-Origin', origen);
     res.setHeader('Vary', 'Origin');
   }
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
+
+  // Diagnóstico: abrir esta dirección en el navegador dice si la puerta está
+  // abierta y por dónde le llega el enlace, sin enseñarlo nunca. Sirve para no
+  // tener que adivinar si una variable de Vercel llegó a desplegarse.
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      abierta: Boolean(await enlaceDeInvitacion()),
+      enlaceEnVercel: Boolean(process.env.TELEGRAM_INVITE_URL),
+      credencialesFirebase: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT),
+    });
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
 
-  const invitacion = process.env.TELEGRAM_INVITE_URL;
+  const invitacion = await enlaceDeInvitacion();
   if (!invitacion) {
     // Sin enlace configurado no se guarda nada: sería pedirle el correo a
     // alguien para no darle nada a cambio.

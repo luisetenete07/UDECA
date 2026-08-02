@@ -117,6 +117,47 @@ suscripción con su cuenta.
    **entonces** devuelve el enlace del grupo.
 4. El enlace no está en el código de la página, así que la puerta es real.
 
+### Abrir la comunidad (o por qué dice que "todavía no está abierta")
+
+Ese mensaje sale cuando el servidor no tiene enlace del grupo. Sin enlace no
+guarda el contacto a propósito: pedirle el correo a alguien para no darle nada
+a cambio es la peor primera impresión posible.
+
+Hay **dos formas** de dárselo, y basta con una:
+
+1. **Firestore (inmediata, sin desplegar).** En la consola de Firebase, crea la
+   colección `config`, dentro el documento `comunidad`, y en él un campo de
+   texto `telegramInviteUrl` con el enlace de invitación. Funciona en la
+   siguiente petición. Las reglas cierran esa colección a cal y canto: no se
+   puede leer desde la app ni desde el navegador.
+2. **Variable de entorno en Vercel.** `TELEGRAM_INVITE_URL` en el proyecto de
+   los webhooks (el de `udeca.vercel.app`, que es donde vive `/api/lead`), en el
+   entorno **Production**. Aquí está el fallo más común: **las variables solo
+   entran en vigor al volver a desplegar**. Después de añadirla, Deployments →
+   el último → Redeploy.
+
+Si están las dos, manda la de Vercel.
+
+**Para saber en qué estado está**, abre esto en el navegador:
+
+```
+https://udeca.vercel.app/api/lead
+```
+
+Responde algo así, sin enseñar nunca el enlace:
+
+```json
+{ "abierta": true, "enlaceEnVercel": false, "credencialesFirebase": true }
+```
+
+- `abierta: false` → no hay enlace por ninguna de las dos vías.
+- `abierta: true` pero `enlaceEnVercel: false` → está funcionando por Firestore.
+- `credencialesFirebase: false` → falta `FIREBASE_SERVICE_ACCOUNT` y no se puede
+  guardar ningún contacto.
+
+El enlace de Telegram **no está en el repositorio y no debe estarlo**: este
+repositorio es público, y ahí dentro la puerta la abriría cualquiera.
+
 ### La lista de correos
 
 Los contactos de la comunidad **no se mezclan con las cuentas de UDECA**. Viven

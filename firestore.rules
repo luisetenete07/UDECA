@@ -545,5 +545,17 @@ service cloud.firestore {
     match /payerCards/{fingerprint} {
       allow read, write: if false;
     }
+
+    /**
+     * Ajustes del servidor (entre ellos el enlace del grupo de Telegram).
+     *
+     * Cerrada a cal y canto: si se pudiera leer desde el navegador, el enlace
+     * de la comunidad estaría a un clic y el formulario dejaría de ser una
+     * puerta. Se escribe a mano desde la consola de Firebase o con el SDK de
+     * administrador, que no pasa por estas reglas.
+     */
+    match /config/{docId} {
+      allow read, write: if false;
+    }
   }
 }
