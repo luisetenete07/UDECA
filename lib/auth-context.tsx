@@ -208,9 +208,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearCache();
   };
 
-  // Borra la cuenta: primero el perfil en Firestore y luego el usuario de
-  // Auth. Si Firebase pide reautenticación reciente, se propaga el error
-  // para que la pantalla pida volver a iniciar sesión.
+  /**
+   * Borra la cuenta: primero el perfil en Firestore y luego el usuario de Auth.
+   * Si Firebase pide reautenticación reciente, se propaga el error para que la
+   * pantalla pida volver a iniciar sesión.
+   *
+   * Ahora mismo NINGUNA pantalla lo llama: el borrado se pide por correo (ver
+   * app/delete-account.tsx). Se conserva porque las tiendas exigen poder
+   * borrarse desde dentro de la app y esto es lo que haría falta el día que se
+   * reponga el botón.
+   */
   const deleteAccount = async () => {
     const user = auth.currentUser;
     if (!user) return;

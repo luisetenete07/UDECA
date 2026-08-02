@@ -9,7 +9,6 @@ import { RateApp } from '../../components/RateApp';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
-import { DeleteAccountButton } from '../../components/DeleteAccountButton';
 import { useAuth } from '../../lib/auth-context';
 import {
   deleteCoachAccount,
@@ -874,7 +873,6 @@ export default function TrainerProfileScreen() {
       <RateApp />
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={{ marginTop: spacing.lg }} />
-      <DeleteAccountButton />
     </ScreenContainer>
   );
 }
