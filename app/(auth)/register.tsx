@@ -218,11 +218,12 @@ const ROLE_CARDS: {
   {
     value: 'trainer',
     title: 'Entrenador',
-    price: `Gratis hasta ${FREE_CLIENT_LIMIT}`,
-    // En verde como los demás gratuitos: ahora entrar de coach no cuesta nada.
+    price: `1 € de alta`,
+    // El alta es un euro para todos: filtra al curioso y deja una tarjeta
+    // identificada, que es lo que impide multiplicar cuentas de entrenador.
     free: true,
     icon: 'people-outline',
-    desc: `Tus alumnos, tus cobros y tu negocio. Con más de ${FREE_CLIENT_LIMIT} alumnos, ${ANNUAL_PRICE_EUR} €/año.`,
+    desc: `Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos; a partir de ahí, ${ANNUAL_PRICE_EUR} €/año.`,
   },
 ];
 

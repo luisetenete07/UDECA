@@ -4,28 +4,53 @@ import type { UserProfile } from './types';
  * Modelo SaaS de UDECA: los COACHES pagan la plataforma; sus alumnos entran
  * gratis con el código del coach.
  *
- *  - ENTRENADOR: 180 €/año, con plan gratuito hasta FREE_CLIENT_LIMIT alumnos.
- *    Entra y usa la app entera desde el primer día; el muro solo aparece
- *    cuando su grupo supera el límite. Pedirle 180 € antes de haber visto el
- *    producto era el mayor punto de fuga del negocio.
- *  - ATLETA: 7 días de prueba y después 10 €/mes.
+ *  - ALTA: 1 € una sola vez, al registrarse, tanto entrenador como atleta.
+ *    No es el precio del producto: es el peaje que filtra al curioso y —lo
+ *    importante— deja una TARJETA identificada. Ver `ENTRY_PRICE_EUR`.
+ *  - ENTRENADOR: con el alta pagada entran FREE_CLIENT_LIMIT alumnos. Para
+ *    pasar de ahí, 180 €/año. Entra y usa la app entera desde el primer día;
+ *    el muro solo aparece cuando su grupo crece. Pedirle 180 € antes de haber
+ *    visto el producto era el mayor punto de fuga del negocio.
+ *  - ATLETA: 14 días desde el alta y después 10 €/mes.
  *  - ALUMNO de un coach: gratis siempre.
  *  - Cuentas sin `subscriptionUntil` = fundadoras (anteriores a la
  *    monetización): acceso completo para no romper nada.
  *  - La activación la hace Stripe (o el admin desde su panel); las reglas de
  *    Firestore impiden que un coach se extienda la suscripción a sí mismo.
  */
+
+/**
+ * Alta única, en euros.
+ *
+ * Un euro no financia nada: financia la IDENTIFICACIÓN. Al cobrarlo con
+ * tarjeta, Stripe devuelve una huella del medio de pago que es la misma para
+ * la misma tarjeta en cualquier cuenta, correo o dispositivo. Es lo que
+ * permite que un entrenador no pueda multiplicarse en cuentas de cinco alumnos
+ * para no pagar los 180 €, y no cuesta ni un paso más al que va de frente:
+ * ya estaba metiendo la tarjeta.
+ */
+export const ENTRY_PRICE_EUR = 1;
 export const ANNUAL_PRICE_EUR = 180;
 /**
- * Alumnos que un entrenador puede tener sin pagar. Suficiente para probar el
- * producto con gente real; insuficiente para llevar un negocio con él.
+ * Alumnos incluidos en el alta de 1 €. Suficiente para llevar un grupo
+ * pequeño de verdad; insuficiente para vivir de ello sin pasar por caja.
+ *
+ * Es un TOPE POR DEFECTO, no una ley: el servidor puede rebajarlo por cuenta
+ * (`clientSlots`) cuando detecta que ese euro ya se pagó con la misma tarjeta
+ * en otra cuenta de entrenador. Cinco plazas por euro, una vez.
  *
  * OJO: este número está replicado en dos sitios más que no pueden importar
  * este fichero — payments-webhook/api/join.js (el servidor, que es quien
  * decide) y firestore.rules (que lo impone para las versiones antiguas de la
  * app). Si lo cambias, cámbialo en los tres.
  */
-export const FREE_CLIENT_LIMIT = 2;
+export const FREE_CLIENT_LIMIT = 5;
+
+/** Plazas de alumno de esta cuenta: las del alta salvo que el servidor las baje. */
+export function clientSlotsOf(profile: { clientSlots?: number } | null): number {
+  const n = profile?.clientSlots;
+  return typeof n === 'number' && n >= 0 ? n : FREE_CLIENT_LIMIT;
+}
 /** Atleta individual: cuota mensual (suelta, no anual). */
 export const ATHLETE_MONTHLY_EUR = 10;
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -168,7 +193,7 @@ export function clientDaysUntilLock(
 }
 
 /** Etiqueta del plan del entrenador para las pantallas de venta. */
-export const COACH_PLAN_LABEL = `Gratis hasta ${FREE_CLIENT_LIMIT} alumnos · ${ANNUAL_PRICE_EUR} €/año`;
+export const COACH_PLAN_LABEL = `Hasta ${FREE_CLIENT_LIMIT} alumnos incluidos · ${ANNUAL_PRICE_EUR} €/año para más`;
 
 /** Fecha de fin de la prueba para una cuenta de atleta que se crea ahora. */
 export function trialUntil(from: number = Date.now()): number {

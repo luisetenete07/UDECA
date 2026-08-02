@@ -30,6 +30,22 @@ export interface UserProfile {
    */
   clientCount?: number;
   /**
+   * Plazas de alumno incluidas en esta cuenta. Sin valor = las del alta
+   * (FREE_CLIENT_LIMIT). Solo lo escribe el servidor, que lo pone a 0 cuando el
+   * alta se pagó con una tarjeta que ya compró sus plazas en otra cuenta.
+   */
+  clientSlots?: number;
+  /** Cuándo se pagó el alta de 1 €. Solo servidor. */
+  entryPaidAt?: number;
+  /**
+   * Huella de la tarjeta del alta: la misma tarjeta da la misma huella en
+   * cualquier cuenta. Solo servidor; es la señal que sostiene el control de
+   * multicuentas.
+   */
+  payerFingerprint?: string;
+  /** Otras cuentas de entrenador que pagaron con esa misma tarjeta. Solo servidor. */
+  sharedCardWith?: string[];
+  /**
    * Día del mes en que se le cobra la cuota. Es el ancla de su ciclo: sin él,
    * un alumno que cobra el 31 caería a 28 al pasar por febrero y se quedaría
    * ahí para siempre.

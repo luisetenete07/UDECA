@@ -20,7 +20,7 @@ export default function TrainerLayout() {
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
   // SaaS: el coach entra gratis mientras su grupo no pase del límite; el muro
   // solo aparece cuando lo supera o cuando caduca una suscripción con más
-  // alumnos de los que cubre el plan gratuito. Sus datos quedan intactos.
+  // alumnos de los que incluye su alta. Sus datos quedan intactos.
   if (!trainerHasAccess(profile)) return <Paywall />;
 
   return (

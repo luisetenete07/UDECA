@@ -148,11 +148,18 @@ export default async function handler(req, res) {
         // Suscripción de coach (anual) o atleta (mensual): activa la cuenta.
         await activateSubscription(session);
       } else {
-        // Pago suelto de un alumno a su coach (modelo antiguo/Connect).
         const clientId = session.client_reference_id;
         const paid = session.payment_status === 'paid' || session.status === 'complete';
         if (clientId && paid) {
-          await markClientPaid(clientId, (session.amount_total || 0) / 100);
+          // El alta de la plataforma y la cuota de un alumno a su coach llegan
+          // por el mismo sitio: se distinguen por el rol de quien paga.
+          const quien = await db.collection('users').doc(clientId).get();
+          const rol = quien.exists ? quien.data().role : null;
+          if (rol === 'trainer' || rol === 'athlete') {
+            await activarAlta(session);
+          } else {
+            await markClientPaid(clientId, (session.amount_total || 0) / 100);
+          }
         }
       }
     } else if (event.type === 'invoice.paid') {
@@ -178,6 +185,52 @@ export default async function handler(req, res) {
 
 // --- Suscripciones de plataforma (coach anual / atleta mensual) ---
 
+/**
+ * Huella de la tarjeta con la que se ha pagado.
+ *
+ * Stripe devuelve la MISMA huella para la misma tarjeta aunque cambien el
+ * correo, el nombre, el dispositivo o la cuenta. Es lo único de todo el
+ * registro que un usuario no puede fabricarse otra vez gratis, y por eso es la
+ * base del control de multicuentas.
+ *
+ * Devuelve null si no se puede leer (pagos que no son con tarjeta, o carteras
+ * que no la exponen): en ese caso no se penaliza a nadie, simplemente no hay
+ * señal.
+ */
+async function tarjetaDelPago(session) {
+  try {
+    const piId = session.payment_intent;
+    if (!piId) return null;
+    const pi = await stripe.paymentIntents.retrieve(piId, {
+      expand: ['payment_method'],
+    });
+    const card = pi?.payment_method?.card;
+    return card?.fingerprint || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ¿Cuántas cuentas de ENTRENADOR han pagado ya con esta tarjeta?
+ *
+ * El alta de 1 € da cinco plazas de alumno. Si la misma tarjeta paga un
+ * segundo alta de entrenador, no compra otras cinco plazas: compra una cuenta
+ * más, vacía. Así abrir cuentas deja de ser una forma de esquivar los 180 € y
+ * pasa a ser solo trabajo extra para el que lo intente.
+ *
+ * No se bloquea ni se borra nada: cuentas legítimas comparten tarjeta (una
+ * pareja, un centro que paga por dos entrenadores). Se marca y se decide,
+ * nunca se castiga en automático.
+ */
+async function cuentasConLaMismaTarjeta(fingerprint, uid) {
+  const ref = db.collection('payerCards').doc(fingerprint);
+  const snap = await ref.get();
+  const previas = (snap.exists ? snap.data().trainerUids : []) || [];
+  const otras = previas.filter((x) => x !== uid);
+  return { ref, otras, yaEstaba: previas.includes(uid) };
+}
+
 // Activa la cuenta tras el primer pago. El uid llega en client_reference_id
 // (el Payment Link se abre desde la app con ?client_reference_id=<uid>).
 async function activateSubscription(session) {
@@ -196,6 +249,46 @@ async function activateSubscription(session) {
     },
     { merge: true }
   );
+}
+
+/**
+ * Alta de 1 €: da acceso y reparte las plazas de alumno del entrenador.
+ *
+ * Es un pago suelto (no suscripción), así que llega por el mismo evento pero
+ * sin `session.subscription`. Lo que hace especial a este cobro es que es el
+ * momento en el que conocemos la tarjeta.
+ */
+async function activarAlta(session) {
+  const uid = session.client_reference_id;
+  if (!uid) return;
+  const snap = await db.collection('users').doc(uid).get();
+  if (!snap.exists) return;
+  const perfil = snap.data();
+
+  const datos = { entryPaidAt: Date.now(), stripeCustomerId: session.customer || null };
+  const huella = await tarjetaDelPago(session);
+  if (huella) datos.payerFingerprint = huella;
+
+  if (perfil.role === 'trainer' && huella) {
+    const { ref, otras, yaEstaba } = await cuentasConLaMismaTarjeta(huella, uid);
+    if (otras.length > 0) {
+      // Esta tarjeta ya compró sus plazas. La cuenta entra igual, pero sin
+      // plazas incluidas: para tener alumnos, la cuota anual.
+      datos.clientSlots = 0;
+      datos.sharedCardWith = otras;
+    }
+    if (!yaEstaba) {
+      await ref.set(
+        {
+          trainerUids: admin.firestore.FieldValue.arrayUnion(uid),
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      );
+    }
+  }
+
+  await db.collection('users').doc(uid).set(datos, { merge: true });
 }
 
 // Renovación automática: al cobrar la nueva factura, extiende la suscripción.

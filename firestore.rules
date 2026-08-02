@@ -58,16 +58,20 @@ service cloud.firestore {
        * imponer aquí el límite del plan gratuito. Si lo escribiera el propio
        * coach, bastaría con ponerlo a cero para tener alumnos infinitos gratis.
        *
-       * El 2 de abajo es FREE_CLIENT_LIMIT. Vive en tres sitios que no pueden
-       * importarse entre sí: lib/subscription.ts (app),
-       * payments-webhook/api/join.js (servidor) y aquí. Si lo cambias, cámbialo
-       * en los tres.
+       * El 5 de abajo es FREE_CLIENT_LIMIT (los alumnos que incluye el alta de
+       * 1 €). Vive en tres sitios que no pueden importarse entre sí:
+       * lib/subscription.ts (app), payments-webhook/api/join.js (servidor) y
+       * aquí. Si lo cambias, cámbialo en los tres.
+       *
+       * `clientSlots` lo escribe SOLO el servidor y baja ese tope a cero cuando
+       * el alta se pagó con una tarjeta que ya había gastado sus plazas en otra
+       * cuenta de entrenador.
        */
       function coachWithinPlan() {
         let coach = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
         return !('subscriptionUntil' in coach)
           || coach.subscriptionUntil > request.time.toMillis()
-          || coach.get('clientCount', 0) < 2;
+          || coach.get('clientCount', 0) < coach.get('clientSlots', 5);
       }
       allow read: if request.auth != null
         && (
@@ -101,11 +105,18 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         (
           request.auth.uid == userId
-          // `clientCount` decide si el entrenador sigue dentro del plan
-          // gratuito, así que solo lo escribe el servidor (que cuenta de
-          // verdad). Si pudiera escribirlo él, se saltaría el límite.
+          // Campos que decide el SERVIDOR y nadie más:
+          //  - clientCount / clientSlots: cuántos alumnos tiene y cuántos le
+          //    caben. Si pudiera escribirlos, se saltaría el límite poniendo
+          //    el contador a cero o regalándose plazas.
+          //  - entryPaidAt / payerFingerprint / sharedCardWith: el rastro del
+          //    alta de 1 €. Es la prueba de qué tarjeta pagó, y falsificarla
+          //    desmontaría el control de multicuentas entero.
           && !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['subscriptionUntil', 'subscriptionPlan', 'clientCount'])
+            .hasAny([
+              'subscriptionUntil', 'subscriptionPlan', 'clientCount',
+              'clientSlots', 'entryPaidAt', 'payerFingerprint', 'sharedCardWith'
+            ])
         )
         || (
           isUdecaAdmin()
@@ -520,6 +531,18 @@ service cloud.firestore {
      * de un vistazo que está cerrada.
      */
     match /leads/{leadId} {
+      allow read, write: if false;
+    }
+
+    /**
+     * Huellas de tarjeta del alta de 1 € (qué cuentas ha pagado cada tarjeta).
+     *
+     * Cerrada por completo: la escribe el servidor con el SDK de
+     * administrador, que no pasa por estas reglas. Ni se lee ni se toca desde
+     * la app —es el mecanismo que impide multiplicar cuentas de entrenador, y
+     * enseñarlo sería explicar cómo esquivarlo.
+     */
+    match /payerCards/{fingerprint} {
       allow read, write: if false;
     }
   }

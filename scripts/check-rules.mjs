@@ -117,6 +117,14 @@ await comprobar('regalarse suscripción', false, () =>
 await comprobar('falsear su recuento de alumnos', false, () =>
   setDoc(doc(db, 'users', coach.user.uid), { clientCount: 0 }, { merge: true })
 );
+// El alta de 1 € da 5 plazas UNA vez; si el coach pudiera escribir este campo,
+// se regalaría plazas y el control de multicuentas no valdría nada.
+await comprobar('regalarse plazas de alumno', false, () =>
+  setDoc(doc(db, 'users', coach.user.uid), { clientSlots: 999 }, { merge: true })
+);
+await comprobar('falsear la huella de su tarjeta', false, () =>
+  setDoc(doc(db, 'users', coach.user.uid), { payerFingerprint: 'otra' }, { merge: true })
+);
 await comprobar('cambiar su propio nombre', true, () =>
   setDoc(doc(db, 'users', coach.user.uid), { name: 'Luis Tena' }, { merge: true })
 );

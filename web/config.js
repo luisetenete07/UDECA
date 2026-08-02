@@ -9,12 +9,21 @@ window.UDECA = {
   /** Dónde vive la app mientras no está en las tiendas. */
   appUrl: 'https://app.udeca.app',
 
-  /** Enlaces de pago de Stripe (Payments → Payment Links). */
+  /**
+   * Enlaces de pago de Stripe (Payments → Payment Links).
+   *
+   * El ALTA es de 1 €, pago único, e igual para entrenador y atleta: es lo que
+   * abre la cuenta. Lo que viene después (los 180 €/año del entrenador con más
+   * de 5 alumnos, los 10 €/mes del atleta pasados 14 días) se cobra DESDE LA
+   * APP, cuando toca, no aquí: nadie paga una suscripción antes de haber usado
+   * el producto.
+   *
+   * Hay que crear dos Payment Links nuevos de 1 € en Stripe —uno por rol, para
+   * saber quién se da de alta— y pegarlos aquí.
+   */
   pagos: {
-    // Atleta: 10 €/mes.
-    atleta: 'https://buy.stripe.com/test_14A7sM2zO8275Gf6iA7g400',
-    // Entrenador: 180 €/año.
-    coach: 'https://buy.stripe.com/test_aFa5kEcao8277On4as7g401',
+    altaAtleta: '',
+    altaCoach: '',
   },
 
   /**

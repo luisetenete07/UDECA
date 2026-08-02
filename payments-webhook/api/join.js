@@ -22,10 +22,21 @@ import admin from 'firebase-admin';
  */
 
 /**
- * Alumnos incluidos en el plan gratuito del entrenador.
+ * Alumnos incluidos en el alta de 1 € del entrenador.
  * Debe coincidir con FREE_CLIENT_LIMIT de lib/subscription.ts.
  */
-const FREE_CLIENT_LIMIT = 2;
+const FREE_CLIENT_LIMIT = 5;
+
+/**
+ * Plazas de ESTA cuenta. Por defecto las del alta, pero el servidor las baja a
+ * cero cuando el alta se pagó con una tarjeta que ya había comprado sus plazas
+ * en otra cuenta de entrenador (ver stripe-webhook.js). Un euro, cinco plazas,
+ * una vez.
+ */
+function plazasDe(trainer) {
+  const n = trainer?.clientSlots;
+  return typeof n === 'number' && n >= 0 ? n : FREE_CLIENT_LIMIT;
+}
 
 function initAdmin() {
   if (!admin.apps.length) {
@@ -59,7 +70,7 @@ async function countClients(db, trainerId) {
  * coach ya no puede falsearlo para seguir creciendo gratis.
  */
 async function writeCount(db, trainer, trainerId, count) {
-  const full = !hasActiveSubscription(trainer) && count >= FREE_CLIENT_LIMIT;
+  const full = !hasActiveSubscription(trainer) && count >= plazasDe(trainer);
   await db.collection('users').doc(trainerId).update({ clientCount: count });
   if (trainer?.inviteCode) {
     await db
@@ -120,11 +131,14 @@ export default async function handler(req, res) {
       }
 
       const count = await countClients(db, caller.uid);
-      if (!hasActiveSubscription(trainer) && count >= FREE_CLIENT_LIMIT) {
+      if (!hasActiveSubscription(trainer) && count >= plazasDe(trainer)) {
         await writeCount(db, trainer, caller.uid, count);
         res.status(200).json({
           ok: false,
-          reason: `Tu plan gratuito llega a ${FREE_CLIENT_LIMIT} alumnos. Activa la suscripción para aceptar a más.`,
+          reason:
+            plazasDe(trainer) === 0
+              ? 'Esta cuenta no tiene plazas incluidas: el alta se pagó con una tarjeta que ya las usó en otra cuenta. Activa la suscripción anual para aceptar alumnos.'
+              : `Tu alta incluye ${plazasDe(trainer)} alumnos. Activa la suscripción anual para aceptar a más.`,
         });
         return;
       }

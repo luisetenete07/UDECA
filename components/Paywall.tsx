@@ -122,7 +122,7 @@ export function Paywall() {
         <Text style={styles.subtitle}>
           {isAthlete
             ? `Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.`
-            : `Tu grupo ha superado los ${FREE_CLIENT_LIMIT} alumnos del plan gratuito. Activa la suscripción para seguir con todos. Tus datos están a salvo y te esperan.`}
+            : `Tu grupo ha superado los ${FREE_CLIENT_LIMIT} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`}
         </Text>
 
         <Card accent style={styles.planCard}>

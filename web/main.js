@@ -6,7 +6,7 @@
 (function () {
   var C = window.UDECA || {};
 
-  /** Enlaces de pago. */
+  /** Enlaces de pago del alta. */
   document.querySelectorAll('[data-pago]').forEach(function (el) {
     var url = (C.pagos || {})[el.getAttribute('data-pago')];
     if (url) {
