@@ -127,6 +127,22 @@ export default function ProgressScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /**
+   * Categoría de cada ejercicio. Manda la biblioteca del entrenador, y el plan
+   * rellena los huecos: el atleta escribe los nombres de sus ejercicios a mano,
+   * así que la única categoría que existe para ellos es la que él eligió al
+   * montar el plan. Sin esta mezcla, sus gráficas por grupo salían vacías.
+   */
+  const gruposDeEjercicio = useMemo(() => {
+    const mapa: Record<string, string> = {};
+    for (const day of activeRoutine?.days ?? []) {
+      for (const ex of day.exercises) {
+        if (ex.muscleGroup) mapa[ex.exerciseId] = ex.muscleGroup;
+      }
+    }
+    return { ...mapa, ...muscleByExercise };
+  }, [activeRoutine, muscleByExercise]);
+
   const load = useCallback(async () => {
     if (!profile) return;
     const [weightData, workoutData, testData] = await Promise.all([
@@ -246,7 +262,7 @@ export default function ProgressScreen() {
           routine: activeRoutine,
           weightLogs,
           workoutLogs,
-          muscleByExercise,
+          muscleByExercise: gruposDeEjercicio,
           measureByExercise,
           exerciseIds: matrixView.exerciseIds,
           weeks: matrixView.weeks,
@@ -348,16 +364,16 @@ export default function ProgressScreen() {
     if (muscleMode === 'session') {
       const lastSessionDay = workoutLogs.length > 0 ? startOfDayTs(workoutLogs[0].date) : 0;
       const sessionLogs = workoutLogs.filter((l) => startOfDayTs(l.date) === lastSessionDay);
-      return muscleLoad(sessionLogs, undefined, muscleByExercise, musclesByExercise);
+      return muscleLoad(sessionLogs, undefined, gruposDeEjercicio, musclesByExercise);
     }
     // Semana NATURAL (lunes 00:00 → domingo 23:59), no los últimos 7 días: al
     // pasar el domingo el mapa arranca limpio.
-    return muscleLoad(workoutLogs, startOfWeek(Date.now()), muscleByExercise, musclesByExercise);
-  }, [workoutLogs, muscleMode, muscleByExercise, musclesByExercise]);
+    return muscleLoad(workoutLogs, startOfWeek(Date.now()), gruposDeEjercicio, musclesByExercise);
+  }, [workoutLogs, muscleMode, gruposDeEjercicio, musclesByExercise]);
 
   const muscleMap = useMemo(
-    () => setsByMuscleGroup(workoutLogs, muscleByExercise),
-    [workoutLogs, muscleByExercise]
+    () => setsByMuscleGroup(workoutLogs, gruposDeEjercicio),
+    [workoutLogs, gruposDeEjercicio]
   );
   /**
    * Categorías de las gráficas de series semanales: las que haya elegido el
@@ -374,8 +390,8 @@ export default function ProgressScreen() {
     return gruposDisponibles.slice(0, 2);
   }, [profile?.progressGroups, gruposDisponibles]);
   const weeklySets = useMemo(
-    () => weeklySetsForGroups(workoutLogs, muscleByExercise, gruposMostrados),
-    [workoutLogs, muscleByExercise, gruposMostrados]
+    () => weeklySetsForGroups(workoutLogs, gruposDeEjercicio, gruposMostrados),
+    [workoutLogs, gruposDeEjercicio, gruposMostrados]
   );
 
   // Añade o quita una categoría de las que se grafican (mínimo una).

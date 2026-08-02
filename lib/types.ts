@@ -418,6 +418,15 @@ export interface RoutineExercise {
   supersetWithPrevious?: boolean;
   /** Copia de la medida del ejercicio al añadirlo ('reps' por defecto). */
   measure?: ExerciseMeasure;
+  /**
+   * Categoría del ejercicio (Empuje, Tirón, Core…), copiada de la biblioteca al
+   * añadirlo o elegida a mano por el atleta, que no tiene biblioteca.
+   *
+   * Sin esto, todo lo que reparte el trabajo por grupos —el mapa muscular, las
+   * series semanales, el reparto del informe— se quedaba vacío para quien monta
+   * su plan escribiendo los nombres, que es justo lo que hace el atleta.
+   */
+  muscleGroup?: string;
   /** Copia de la carga del ejercicio al añadirlo. */
   load?: ExerciseLoad;
   /** (Obsoleto) copia del uso de goma; equivale a load='assisted'. */

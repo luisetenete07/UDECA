@@ -110,10 +110,18 @@ export default function RoutineEditorScreen() {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState('');
+  // Filtros del selector de ejercicios: por categoría y, dentro de ella, por
+  // subgrupo. Se guardan aquí y no en el modal para que al añadir varios
+  // ejercicios del mismo bloque no haya que volver a elegir cada vez.
+  const [filtroCategoria, setFiltroCategoria] = useState('Todos');
+  const [filtroSubgrupo, setFiltroSubgrupo] = useState<string | null>(null);
   // Crear un ejercicio nuevo sin salir del selector (agiliza montar la rutina).
   const [creatingNew, setCreatingNew] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newGroup, setNewGroup] = useState<MuscleGroup>('Empuje');
+  // La categoría del ejercicio nuevo es texto libre porque el entrenador puede
+  // tener las suyas propias, no solo las de fábrica.
+  const [newGroup, setNewGroup] = useState<string>('Empuje');
+  const [newSubgroup, setNewSubgroup] = useState('');
   const [newMeasure, setNewMeasure] = useState<ExerciseMeasure>('reps');
   const [newLoad, setNewLoad] = useState<ExerciseLoad>('none');
   const [newVideo, setNewVideo] = useState('');
@@ -269,6 +277,42 @@ export default function RoutineEditorScreen() {
     );
   };
 
+  /**
+   * Categorías del selector: las del entrenador si las ha personalizado y, si
+   * no, las de fábrica. Se añaden además las que aparezcan en ejercicios
+   * importados con el pack, para que ninguno quede fuera de todos los filtros.
+   */
+  const categoriasBiblioteca = React.useMemo(() => {
+    const base = profile?.exerciseCategories?.length ? profile.exerciseCategories : [...MUSCLE_GROUPS];
+    const enUso = [...new Set(exercises.map((e) => e.muscleGroup).filter(Boolean))];
+    return [...base, ...enUso.filter((g) => !base.includes(g))];
+  }, [profile?.exerciseCategories, exercises]);
+
+  /** Subgrupos de la categoría filtrada que de verdad tienen ejercicios. */
+  const subgruposVisibles = React.useMemo(() => {
+    if (filtroCategoria === 'Todos') return [];
+    const declarados = profile?.categorySubgroups?.[filtroCategoria] ?? [];
+    const enUso = [
+      ...new Set(
+        exercises
+          .filter((e) => e.muscleGroup === filtroCategoria && e.subgroup)
+          .map((e) => e.subgroup as string)
+      ),
+    ];
+    const todos = [...declarados, ...enUso.filter((s) => !declarados.includes(s))];
+    return todos;
+  }, [filtroCategoria, profile?.categorySubgroups, exercises]);
+
+  const ejerciciosFiltrados = React.useMemo(() => {
+    const busca = exerciseSearch.toLowerCase().trim();
+    return exercises.filter(
+      (ex) =>
+        ex.name.toLowerCase().includes(busca) &&
+        (filtroCategoria === 'Todos' || ex.muscleGroup === filtroCategoria) &&
+        (!filtroSubgrupo || ex.subgroup === filtroSubgrupo)
+    );
+  }, [exercises, exerciseSearch, filtroCategoria, filtroSubgrupo]);
+
   const addExerciseToDay = (dayId: string, exercise: Exercise) => {
     const routineExercise: RoutineExercise = {
       id: uid(),
@@ -277,6 +321,9 @@ export default function RoutineEditorScreen() {
       sets: 3,
       reps: exercise.measure === 'seconds' ? '30' : '10',
       measure: exercise.measure ?? 'reps',
+      // La categoría viaja con el plan: así el reparto por grupos sigue
+      // saliendo aunque el ejercicio se renombre o se borre de la biblioteca.
+      muscleGroup: exercise.muscleGroup,
       load: resolveLoad(exercise),
       band: exercise.band ?? false,
     };
@@ -298,6 +345,7 @@ export default function RoutineEditorScreen() {
         trainerId: profile.uid,
         name: newName.trim(),
         muscleGroup: newGroup,
+        subgroup: newSubgroup.trim() || undefined,
         measure: newMeasure,
         load: newLoad,
         videoUrl: newVideo.trim() || undefined,
@@ -308,6 +356,7 @@ export default function RoutineEditorScreen() {
       addExerciseToDay(dayId, ex);
       setCreatingNew(false);
       setNewName('');
+      setNewSubgroup('');
       setNewMeasure('reps');
       setNewLoad('none');
       setNewVideo('');
@@ -1318,12 +1367,15 @@ export default function RoutineEditorScreen() {
                   value={newName}
                   onChangeText={setNewName}
                 />
-                <Text style={styles.loadLabel}>Grupo muscular</Text>
+                <Text style={styles.loadLabel}>Categoría</Text>
                 <View style={styles.groupWrap}>
-                  {MUSCLE_GROUPS.map((g) => (
+                  {categoriasBiblioteca.map((g) => (
                     <Pressable
                       key={g}
-                      onPress={() => setNewGroup(g)}
+                      onPress={() => {
+                        setNewGroup(g);
+                        setNewSubgroup('');
+                      }}
                       style={[styles.loadChip, newGroup === g && styles.loadChipActive]}
                     >
                       <Text style={[styles.loadChipText, newGroup === g && styles.loadChipTextActive]}>
@@ -1332,6 +1384,28 @@ export default function RoutineEditorScreen() {
                     </Pressable>
                   ))}
                 </View>
+                {/* Subgrupo: solo si esa categoría ya tiene alguno definido. */}
+                {(profile?.categorySubgroups?.[newGroup] ?? []).length > 0 ? (
+                  <>
+                    <Text style={styles.loadLabel}>Subgrupo (opcional)</Text>
+                    <View style={styles.groupWrap}>
+                      {(profile?.categorySubgroups?.[newGroup] ?? []).map((sg) => {
+                        const activo = newSubgroup === sg;
+                        return (
+                          <Pressable
+                            key={sg}
+                            onPress={() => setNewSubgroup(activo ? '' : sg)}
+                            style={[styles.loadChip, activo && styles.loadChipActive]}
+                          >
+                            <Text style={[styles.loadChipText, activo && styles.loadChipTextActive]}>
+                              {sg}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </>
+                ) : null}
                 <Text style={styles.loadLabel}>Medida</Text>
                 <View style={styles.loadRow}>
                   {(['reps', 'seconds'] as ExerciseMeasure[]).map((m) => (
@@ -1411,11 +1485,72 @@ export default function RoutineEditorScreen() {
                     arriba.
                   </Text>
                 ) : (
+                  <>
+                    {/* Filtro por categoría. Con una biblioteca grande, buscar
+                        por nombre obliga a saber ya lo que quieres; por
+                        categoría se puede ir a "Tirón" y ver qué hay. */}
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.filterRow}
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      {['Todos', ...categoriasBiblioteca].map((cat) => {
+                        const activo = filtroCategoria === cat;
+                        return (
+                          <Pressable
+                            key={cat}
+                            onPress={() => {
+                              setFiltroCategoria(cat);
+                              setFiltroSubgrupo(null);
+                            }}
+                            style={[styles.filterChip, activo && styles.filterChipActive]}
+                          >
+                            <Text
+                              style={[styles.filterChipText, activo && styles.filterChipTextActive]}
+                            >
+                              {cat}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+
+                    {/* Subgrupos: solo dentro de una categoría concreta y solo
+                        si esa categoría los tiene. */}
+                    {subgruposVisibles.length > 0 ? (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.filterRow}
+                        keyboardShouldPersistTaps="handled"
+                      >
+                        {subgruposVisibles.map((sg) => {
+                          const activo = filtroSubgrupo === sg;
+                          return (
+                            <Pressable
+                              key={sg}
+                              onPress={() => setFiltroSubgrupo(activo ? null : sg)}
+                              style={[styles.subChip, activo && styles.subChipActive]}
+                            >
+                              <Text
+                                style={[styles.subChipText, activo && styles.filterChipTextActive]}
+                              >
+                                {sg}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    ) : null}
+
                   <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
-                    {exercises
-                      .filter((ex) =>
-                        ex.name.toLowerCase().includes(exerciseSearch.toLowerCase().trim())
-                      )
+                    {ejerciciosFiltrados.length === 0 ? (
+                      <Text style={styles.mutedText}>
+                        Ningún ejercicio de esa categoría coincide con la búsqueda.
+                      </Text>
+                    ) : null}
+                    {ejerciciosFiltrados
                       .map((ex) => (
                         <Pressable
                           key={ex.id}
@@ -1433,6 +1568,7 @@ export default function RoutineEditorScreen() {
                             </Text>
                             <Text style={styles.pickerRowMuscle}>
                               {ex.muscleGroup}
+                              {ex.subgroup ? ` · ${ex.subgroup}` : ''}
                               {ex.measure === 'seconds' ? ' · isométrico' : ''}
                             </Text>
                           </View>
@@ -1440,6 +1576,7 @@ export default function RoutineEditorScreen() {
                         </Pressable>
                       ))}
                   </ScrollView>
+                  </>
                 )}
               </>
             )}
@@ -1708,6 +1845,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   createNewText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, flex: 1 },
+  filterRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.xs },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  filterChipTextActive: { color: colors.onPrimary },
+  subChip: {
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.hairlineFaint,
+  },
+  subChipActive: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
+  subChipText: { ...typography.small, color: colors.textFaint, fontSize: 12 },
   loadChip: {
     flex: 1,
     paddingVertical: spacing.sm,

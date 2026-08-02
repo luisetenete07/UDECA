@@ -78,7 +78,13 @@
       })
       .then(function (r) {
         if (!r.ok || !r.data || !r.data.url) {
-          throw new Error((r.data && r.data.error) || 'No se pudo completar');
+          // El servidor sabe POR QUÉ no puede (aún no está abierta, correo mal
+          // escrito…). Tragarse ese motivo y soltar un "inténtalo más tarde"
+          // deja a la persona sin saber qué hacer y a nosotros sin saber qué
+          // arreglar, así que se enseña tal cual viene.
+          var e = new Error((r.data && r.data.error) || 'No se pudo completar');
+          e.delServidor = true;
+          throw e;
         }
         enlace.href = r.data.url;
         enlaceTexto.textContent = r.data.url;
@@ -88,10 +94,15 @@
         // Abrir el grupo solo cuando lo pulse: abrirlo solo lo bloquea el navegador.
         enlace.focus();
       })
-      .catch(function () {
+      .catch(function (e) {
         boton.disabled = false;
         boton.textContent = 'Desbloquear acceso';
-        mostrarError('No hemos podido darte el acceso ahora mismo. Inténtalo en un minuto.');
+        mostrarError(
+          e && e.delServidor
+            ? e.message
+            : // Aquí no hubo respuesta: sin red, o el servidor no contesta.
+              'No hemos podido conectar. Comprueba tu conexión e inténtalo otra vez.'
+        );
       });
   });
 })();

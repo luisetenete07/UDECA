@@ -28,6 +28,7 @@ import {
   isDualMeasure,
   isHoldMeasure,
   MEASURE_SHORT,
+  MUSCLE_GROUPS,
   resolveLoad,
   WEEKDAY_LABELS,
   type ExerciseLoad,
@@ -493,6 +494,33 @@ export default function MyPlanScreen() {
                           </Pressable>
                         </View>
 
+                        {/* Categoría del ejercicio. Aquí no hay biblioteca de
+                            la que copiarla —el nombre se escribe a mano—, así
+                            que sin este paso el mapa muscular, las series por
+                            grupo y el reparto del informe se quedaban vacíos. */}
+                        <Text style={styles.fieldLabel}>Categoría</Text>
+                        <View style={styles.groupWrap}>
+                          {MUSCLE_GROUPS.map((g) => {
+                            const active = exx.muscleGroup === g;
+                            return (
+                              <Pressable
+                                key={g}
+                                onPress={() =>
+                                  patchEx(di, ei, { muscleGroup: active ? undefined : g })
+                                }
+                                style={[styles.groupChip, active && styles.loadChipActive]}
+                                hitSlop={2}
+                              >
+                                <Text
+                                  style={[styles.loadChipText, active && styles.loadChipTextActive]}
+                                >
+                                  {g}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+
                         <View style={styles.loadRow}>
                           {LOAD_OPTIONS.map((opt) => {
                             const active = resolveLoad(exx) === opt.key;
@@ -876,6 +904,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   loadRow: { flexDirection: 'row', gap: spacing.xs },
+  // Las categorías son muchas: se envuelven en varias líneas en vez de
+  // repartirse a la fuerza en una sola, donde los nombres se parten.
+  groupWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  groupChip: {
+    paddingVertical: 7,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
   loadChip: {
     flex: 1,
     paddingVertical: 7,
