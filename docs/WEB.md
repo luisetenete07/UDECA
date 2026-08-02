@@ -109,13 +109,33 @@ suscripción con su cuenta.
 
 ### La lista de correos
 
-Cada contacto queda en `leads` con nombre, correo, origen, campaña, número de
-visitas y el consentimiento con su fecha (lo que exige el RGPD para poder
-escribirles después).
+Los contactos de la comunidad **no se mezclan con las cuentas de UDECA**. Viven
+en su propia colección, `leads`, separada de `users`: quien deja el correo en
+una página de captación no es un usuario de la app, y juntarlos acaba con
+alguien mandando una campaña a sus propios alumnos.
 
-Nadie puede leer ni escribir esa colección desde la app o el navegador: las
-reglas la cierran por completo y solo entra el servidor. Para exportarla, desde
-la consola de Firebase o con la cuenta de servicio.
+Cada contacto queda con nombre, correo, origen, campaña, número de visitas y el
+consentimiento con su fecha (lo que exige el RGPD para poder escribirles
+después). Nadie puede leer ni escribir esa colección desde la app o el
+navegador: las reglas la cierran por completo y solo entra el servidor.
+
+**Descargar la lista** (para importarla en Mailchimp, Brevo, MailerLite…):
+
+```
+https://udeca.vercel.app/api/leads-export?key=TU_CLAVE
+```
+
+Devuelve un CSV con una fila por contacto, listo para abrir en Excel o subir a
+la herramienta de correo. Añadiendo `&format=json` sale en JSON.
+
+La clave es la variable `LEADS_EXPORT_KEY` del proyecto de los webhooks. Si no
+la pones, vale la `CRON_SECRET` que ya tienes; es mejor darle una propia, para
+que una filtración no se lleve las dos cosas a la vez. Sin clave válida, el
+endpoint no devuelve nada: es la lista entera de correos de tu comunidad.
+
+**Darse de baja:** por ahora se hace a mano (borrando el documento en la consola
+de Firebase). En cuanto empieces a mandar campañas de verdad, la herramienta de
+correo se encarga de las bajas y esta lista pasa a ser solo el origen.
 
 ---
 
