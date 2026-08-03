@@ -32,6 +32,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   getDoc,
   getDocs,
   query,
@@ -108,6 +109,9 @@ await setDoc(
     // la cuenta. Con tres alumnos entra igual por el plan gratuito (cinco
     // incluidos), que es justo el caso que interesa poder revisar.
     ...(coachExiste ? {} : { subscriptionUntil: 0, clientCount: 3 }),
+    // Al resembrar vuelve a salir el aviso del plan: cerrado una vez, no
+    // habría forma de revisarlo hasta la semana siguiente.
+    planPopupClosedAt: deleteField(),
   },
   { merge: true }
 );
@@ -243,6 +247,7 @@ await setDoc(
     weightKg: 62.0, heightCm: 168, goal: 'Front lever', level: 'Intermedio',
     // Dentro de la prueba gratuita (las reglas no dejan pedir más de 14 días).
     ...(yaExiste ? {} : { subscriptionUntil: now + 10 * DAY, trialEndsAt: now + 10 * DAY }),
+    planPopupClosedAt: deleteField(),
   },
   { merge: true }
 );

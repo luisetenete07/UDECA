@@ -125,6 +125,15 @@ export interface UserProfile {
   /** Onboarding completado (una vez por cuenta, sincronizado entre dispositivos). */
   onboardingCompleted?: boolean;
   /**
+   * Cuándo cerró por última vez el aviso del plan (la pantalla completa).
+   *
+   * Va en la CUENTA y no en el dispositivo a propósito: cerrarlo en el móvil y
+   * que vuelva a saltar en el ordenador media hora después no es un
+   * recordatorio, es perseguir a alguien. Aquí se cierra una vez y descansa una
+   * semana en todos sus dispositivos.
+   */
+  planPopupClosedAt?: number;
+  /**
    * Objetivo de macros que el propio alumno calculó (en el onboarding o en la
    * calculadora): se usa en Nutrición si su coach aún no le asignó un plan.
    */

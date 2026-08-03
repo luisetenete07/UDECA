@@ -1,20 +1,21 @@
 import React from 'react';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from './Card';
 import { useAuth } from '../lib/auth-context';
+import { updateUserProfile } from '../lib/firestore/users';
 import { track } from '../lib/analytics';
 import {
   ANNUAL_PRICE_EUR,
   ATHLETE_MONTHLY_EUR,
-  COACH_MONTHLY_EQUIV_EUR,
   CAN_SELL_IN_APP,
+  COACH_MONTHLY_EQUIV_EUR,
   clientSlotsOf,
   isAdmin,
   subscriptionCheckoutUrl,
   subscriptionState,
+  TRIAL_DAYS,
 } from '../lib/subscription';
 import type { UserProfile } from '../lib/types';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
@@ -170,6 +171,34 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         ) : null}
       </View>
 
+      {/* El atleta ve lo mismo que el entrenador, pero contado en días: lo que
+          compró con el euro y cuánto le queda. Un contador a la vista evita la
+          sorpresa del día 15, que es cuando se pierde a la gente. */}
+      {esAtleta && diasRestantes !== null ? (
+        <View style={styles.plazas}>
+          <View style={styles.plazasFila}>
+            <Text style={styles.plazasTitulo}>Tu alta incluye {TRIAL_DAYS} días</Text>
+            <Text
+              style={[styles.plazasCuenta, diasRestantes <= 3 && { color: colors.warning }]}
+            >
+              quedan {diasRestantes}
+            </Text>
+          </View>
+          <View style={styles.plazasPuntos}>
+            {Array.from({ length: TRIAL_DAYS }, (_, i) => (
+              <View
+                key={i}
+                style={[styles.plaza, i < TRIAL_DAYS - diasRestantes && styles.plazaOcupada]}
+              />
+            ))}
+          </View>
+          <Text style={styles.plazasPie}>
+            Con todo abierto, sin recortes. Cuando terminen, seguir cuesta{' '}
+            {ATHLETE_MONTHLY_EUR} €/mes y lo que has registrado te espera intacto.
+          </Text>
+        </View>
+      ) : null}
+
       {/* Lo primero que ve el entrenador es lo que YA tiene, no lo que le
           falta: el euro que pagó incluye plazas de verdad y son suyas para
           siempre. Enseñar el contador es a la vez lo más honesto y lo más
@@ -239,37 +268,6 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
 }
 
 /**
- * Versión breve para el inicio, que se puede cerrar y no vuelve.
- *
- * Se recuerda por dispositivo y por cuenta: un recordatorio que reaparece
- * después de cerrarlo dos veces deja de ser un recordatorio y pasa a ser un
- * anuncio.
- */
-export function UpgradeReminder() {
-  const { profile } = useAuth();
-  const [cerrado, setCerrado] = React.useState(true);
-  const clave = profile ? `udeca-upgrade-${profile.uid}` : null;
-
-  React.useEffect(() => {
-    if (!clave) return;
-    AsyncStorage.getItem(clave)
-      .then((v) => setCerrado(v === '1'))
-      .catch(() => setCerrado(true));
-  }, [clave]);
-
-  if (cerrado) return null;
-  return (
-    <UpgradeCard
-      variante="recordatorio"
-      onClose={() => {
-        setCerrado(true);
-        if (clave) AsyncStorage.setItem(clave, '1').catch(() => {});
-      }}
-    />
-  );
-}
-
-/**
  * Cada cuánto vuelve a saltar el aviso a pantalla completa: una semana.
  *
  * Ni una vez y nunca más —el que hoy tiene dos alumnos puede tener seis en un
@@ -280,42 +278,39 @@ export function UpgradeReminder() {
 const CADA_CUANTO_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Aviso a pantalla completa del plan, para el ENTRENADOR.
+ * Aviso a pantalla completa del plan.
  *
- * Va a pantalla completa a propósito: el tope de alumnos no es un detalle de
- * letra pequeña, es la condición que le va a afectar el día que le entre gente
- * — y enterarse ese día, y no antes, es lo que hace que un precio justo parezca
- * una encerrona. Se cierra con un toque y no vuelve en una semana.
+ * Va a pantalla completa a propósito: lo que aquí se cuenta —el tope de
+ * alumnos, los días de prueba— no es un detalle de letra pequeña, es la
+ * condición que le va a afectar el día que le entre gente o se le acabe el
+ * plazo. Enterarse ESE día, y no antes, es lo que hace que un precio justo
+ * parezca una encerrona.
  *
- * Al atleta no le sale: acaba de pagar el alta y tiene sus 14 días por delante;
- * plantarle una pantalla de venta encima sería cobrarle dos veces la atención.
+ * Sale igual al entrenador y al atleta, con lo suyo cada uno: las plazas de
+ * alumno o los días que le quedan. Se cierra con un toque y no vuelve en una
+ * semana, y el descanso se guarda en la CUENTA: cerrarlo en el móvil y que
+ * salte en el ordenador media hora después no es recordar, es perseguir.
+ *
+ * Cuando la prueba del atleta caduca ya no llega aquí: el muro de pago le sale
+ * antes y bloquea la app entera, así que no se pisan.
  */
 export function UpgradePopup() {
-  const { profile } = useAuth();
-  const [visible, setVisible] = React.useState(false);
-  const clave = profile ? `udeca-plan-popup-${profile.uid}` : null;
-  const esEntrenador = profile?.role === 'trainer';
+  const { profile, refreshProfile } = useAuth();
+  const [cerradoAhora, setCerradoAhora] = React.useState(false);
+  const esAtleta = profile?.role === 'athlete';
 
-  React.useEffect(() => {
-    if (!clave || !esEntrenador || !canUpgrade(profile)) return;
-    AsyncStorage.getItem(clave)
-      .then((v) => {
-        const ultimoCierre = Number(v ?? 0);
-        const nunca = !Number.isFinite(ultimoCierre) || ultimoCierre <= 0;
-        setVisible(nunca || Date.now() - ultimoCierre > CADA_CUANTO_MS);
-      })
-      .catch(() => {});
-    // `profile` cambia en cada refresco; la clave (el uid) es lo que de verdad
-    // decide si hay que volver a mirarlo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clave, esEntrenador]);
+  const ultimoCierre = profile?.planPopupClosedAt ?? 0;
+  const tocaEnseñarlo = Date.now() - ultimoCierre > CADA_CUANTO_MS;
 
   const cerrar = () => {
-    setVisible(false);
-    if (clave) AsyncStorage.setItem(clave, String(Date.now())).catch(() => {});
+    setCerradoAhora(true);
+    if (!profile) return;
+    updateUserProfile(profile.uid, { planPopupClosedAt: Date.now() })
+      .then(() => refreshProfile())
+      .catch(() => {});
   };
 
-  if (!visible || !esEntrenador || !canUpgrade(profile)) return null;
+  if (cerradoAhora || !tocaEnseñarlo || !canUpgrade(profile)) return null;
 
   return (
     <Modal visible animationType="slide" onRequestClose={cerrar}>
@@ -327,10 +322,14 @@ export function UpgradePopup() {
         </View>
         <ScrollView contentContainerStyle={styles.popupCuerpo}>
           <View style={styles.popupIcono}>
-            <Ionicons name="people" size={26} color={colors.primary} />
+            <Ionicons name={esAtleta ? 'barbell' : 'people'} size={26} color={colors.primary} />
           </View>
-          <Text style={styles.popupEyebrow}>Tu plan de entrenador</Text>
-          <Text style={styles.popupTitulo}>Así funciona tu grupo</Text>
+          <Text style={styles.popupEyebrow}>
+            {esAtleta ? 'Tu plan de atleta' : 'Tu plan de entrenador'}
+          </Text>
+          <Text style={styles.popupTitulo}>
+            {esAtleta ? 'Así funciona tu prueba' : 'Así funciona tu grupo'}
+          </Text>
           <UpgradeCard />
           <Pressable onPress={cerrar} style={styles.popupAhoraNo} hitSlop={8}>
             <Text style={styles.popupAhoraNoTexto}>Ahora no, gracias</Text>
