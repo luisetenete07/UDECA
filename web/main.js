@@ -44,6 +44,7 @@
   var enlaces = [
     ['[data-app]', C.appUrl],
     ['[data-comunidad]', C.comunidad],
+    ['[data-discord]', C.discord],
     ['[data-instagram]', C.instagram],
   ];
   enlaces.forEach(function (par) {

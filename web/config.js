@@ -36,8 +36,16 @@ window.UDECA = {
     apkPc: '',
   },
 
-  /** Comunidad privada y redes. */
+  /**
+   * Comunidad privada y redes.
+   *
+   * `comunidad` es la PUERTA (acceso.udeca.app): pide nombre y correo antes de
+   * dar el enlace, y es la que se enseña a quien todavía no es cliente.
+   * `discord` es el enlace directo al servidor, y solo se usa donde ya no hace
+   * falta filtrar a nadie: en la página de gracias, con el pago hecho.
+   */
   comunidad: 'https://acceso.udeca.app',
+  discord: 'https://discord.gg/Mhnx5DNdY7',
   instagram: 'https://www.instagram.com/udeca.app/',
   contacto: 'luistenaf@gmail.com',
 };
