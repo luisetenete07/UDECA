@@ -9,6 +9,7 @@ import {
   ANNUAL_PRICE_EUR,
   ATHLETE_MONTHLY_EUR,
   CAN_SELL_IN_APP,
+  clientSlotsOf,
   isAdmin,
   subscriptionCheckoutUrl,
   subscriptionState,
@@ -65,6 +66,19 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
 
   const precio = esAtleta ? `${ATHLETE_MONTHLY_EUR} €` : `${ANNUAL_PRICE_EUR} €`;
   const unidad = esAtleta ? '/ mes' : '/ año';
+
+  /**
+   * Las plazas del entrenador, con nombre y apellidos.
+   *
+   * Decir "tu alta incluye 5 alumnos y llevas 3" hace dos cosas a la vez: es la
+   * verdad completa —lo que compró, sin letra pequeña— y es lo que de verdad
+   * mueve a dar el paso, porque enseña dónde está el techo antes de chocar con
+   * él. Un mensaje que solo dice "hazte Pro" no informa de nada.
+   */
+  const plazas = clientSlotsOf(profile);
+  const usados = profile?.clientCount ?? 0;
+  const lleno = usados >= plazas;
+
   const ventajas = esAtleta
     ? [
         'Tus rutinas y tu progreso, sin límite de tiempo',
@@ -72,10 +86,22 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         'Informes en PDF y récords guardados para siempre',
       ]
     : [
-        'Alumnos ilimitados, sin tope de grupo',
+        `Alumnos ilimitados (tu alta incluye ${plazas})`,
         'Cobros, avisos de impago y control de cuotas',
         'Informes de progreso con tu marca',
       ];
+
+  /** El titular del recordatorio para el entrenador, según dónde esté. */
+  const tituloCoach = lleno
+    ? plazas === 0
+      ? 'Esta cuenta no incluye alumnos'
+      : `Has llenado tus ${plazas} plazas`
+    : `Tu alta incluye ${plazas} alumnos`;
+  const textoCoach = lleno
+    ? plazas === 0
+      ? `El alta de tu tarjeta ya se usó en otra cuenta de entrenador, así que esta entra sin plazas. Con el plan anual (${precio}${unidad}) tienes alumnos ilimitados.`
+      : `Para seguir sumando gente necesitas el plan anual: ${precio}${unidad}, alumnos ilimitados. Los ${plazas} que ya tienes siguen igual, pagues o no.`
+    : `Ya llevas ${usados} de ${plazas}, y los tienes incluidos para siempre. El día que quieras pasar de ahí, el plan anual quita el tope: ${precio}${unidad}, sin límite de grupo.`;
 
   const abrir = () => {
     void track('checkout_start');
@@ -91,14 +117,14 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.breveTitulo}>
-              {esAtleta ? 'Cuando quieras, sin esperar' : 'Cuando tu grupo crezca'}
+              {esAtleta ? 'Cuando quieras, sin esperar' : tituloCoach}
             </Text>
             <Text style={styles.breveTexto}>
               {esAtleta
                 ? diasRestantes !== null
                   ? `Te quedan ${diasRestantes} días de prueba. Si ya lo tienes claro, pasa al plan completo por ${precio}${unidad} y olvídate del contador.`
                   : `Pasa al plan completo por ${precio}${unidad} cuando quieras.`
-                : `Tu alta incluye alumnos suficientes para empezar. El plan anual (${precio}${unidad}) los quita del todo.`}
+                : textoCoach}
             </Text>
           </View>
           {onClose ? (
@@ -130,12 +156,53 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         ) : null}
       </View>
 
+      {/* Lo primero que ve el entrenador es lo que YA tiene, no lo que le
+          falta: el euro que pagó incluye plazas de verdad y son suyas para
+          siempre. Enseñar el contador es a la vez lo más honesto y lo más
+          persuasivo — el que va por 4 de 5 sabe exactamente qué está a punto
+          de necesitar. */}
+      {!esAtleta ? (
+        <View style={styles.plazas}>
+          <View style={styles.plazasFila}>
+            <Text style={styles.plazasTitulo}>
+              {plazas === 0
+                ? 'Tu alta no incluye alumnos'
+                : `Tu alta incluye ${plazas} alumnos`}
+            </Text>
+            {plazas > 0 ? (
+              <Text style={[styles.plazasCuenta, lleno && { color: colors.warning }]}>
+                {usados} / {plazas}
+              </Text>
+            ) : null}
+          </View>
+          {plazas > 0 ? (
+            <View style={styles.plazasPuntos}>
+              {Array.from({ length: plazas }, (_, i) => (
+                <View
+                  key={i}
+                  style={[styles.plaza, i < usados && styles.plazaOcupada]}
+                />
+              ))}
+            </View>
+          ) : null}
+          <Text style={styles.plazasPie}>
+            {plazas === 0
+              ? 'El alta de tu tarjeta ya se usó en otra cuenta de entrenador.'
+              : lleno
+                ? 'Están todas ocupadas. Los que ya tienes siguen contigo pagues o no; para sumar más, el plan anual.'
+                : `Son tuyas para siempre, sin caducidad. El plan anual es para el día que quieras pasar de ${plazas}.`}
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.precioFila}>
         <Text style={styles.precio}>{precio}</Text>
         <Text style={styles.precioUnidad}>{unidad}</Text>
       </View>
       <Text style={styles.pie}>
-        {esAtleta ? 'Sin permanencia. Se cancela cuando quieras.' : 'Un único pago al año.'}
+        {esAtleta
+          ? 'Sin permanencia. Se cancela cuando quieras.'
+          : 'Un único pago al año. Sale a 15 € al mes.'}
       </Text>
 
       {ventajas.map((v) => (
@@ -229,7 +296,25 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   pillTexto: { ...typography.small, color: colors.textMuted, fontSize: 11 },
-  precioFila: { flexDirection: 'row', alignItems: 'baseline', gap: 5, marginTop: spacing.sm },
+  plazas: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+  },
+  plazasFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  plazasTitulo: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  plazasCuenta: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  plazasPuntos: { flexDirection: 'row', gap: 5, marginTop: spacing.sm },
+  plaza: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+  },
+  plazaOcupada: { backgroundColor: colors.primary },
+  plazasPie: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 17 },
+  precioFila: { flexDirection: 'row', alignItems: 'baseline', gap: 5, marginTop: spacing.md },
   precio: { fontSize: 38, lineHeight: 42, color: colors.text, fontFamily: fonts.heading },
   precioUnidad: { ...typography.body, color: colors.textMuted },
   pie: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
