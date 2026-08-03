@@ -11,7 +11,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { ListSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
-import { UpgradeReminder } from '../../components/UpgradeCard';
+import { UpgradePopup } from '../../components/UpgradeCard';
 import { StatTile } from '../../components/StatTile';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -510,8 +510,9 @@ export default function TrainerDashboard() {
   return (
     <ScreenContainer>
       <TrialBanner profile={profile} />
-      {/* Recordatorio del plan anual: breve, y se cierra para siempre. */}
-      <UpgradeReminder />
+      {/* A pantalla completa y sin esquivarlo: el tope de alumnos hay que
+          saberlo antes de necesitarlo. Se cierra y no vuelve en una semana. */}
+      <UpgradePopup />
       <ScreenHeader
         eyebrow="Panel del entrenador"
         title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}

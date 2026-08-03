@@ -1,7 +1,8 @@
 import React from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from './Card';
 import { useAuth } from '../lib/auth-context';
 import { track } from '../lib/analytics';
@@ -268,7 +269,118 @@ export function UpgradeReminder() {
   );
 }
 
+/**
+ * Cada cuánto vuelve a saltar el aviso a pantalla completa: una semana.
+ *
+ * Ni una vez y nunca más —el que hoy tiene dos alumnos puede tener seis en un
+ * mes y necesita enterarse— ni cada vez que abre la app, que es como se
+ * consigue que alguien desinstale. Una vez por semana es un recordatorio; cada
+ * día es acoso.
+ */
+const CADA_CUANTO_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Aviso a pantalla completa del plan, para el ENTRENADOR.
+ *
+ * Va a pantalla completa a propósito: el tope de alumnos no es un detalle de
+ * letra pequeña, es la condición que le va a afectar el día que le entre gente
+ * — y enterarse ese día, y no antes, es lo que hace que un precio justo parezca
+ * una encerrona. Se cierra con un toque y no vuelve en una semana.
+ *
+ * Al atleta no le sale: acaba de pagar el alta y tiene sus 14 días por delante;
+ * plantarle una pantalla de venta encima sería cobrarle dos veces la atención.
+ */
+export function UpgradePopup() {
+  const { profile } = useAuth();
+  const [visible, setVisible] = React.useState(false);
+  const clave = profile ? `udeca-plan-popup-${profile.uid}` : null;
+  const esEntrenador = profile?.role === 'trainer';
+
+  React.useEffect(() => {
+    if (!clave || !esEntrenador || !canUpgrade(profile)) return;
+    AsyncStorage.getItem(clave)
+      .then((v) => {
+        const ultimoCierre = Number(v ?? 0);
+        const nunca = !Number.isFinite(ultimoCierre) || ultimoCierre <= 0;
+        setVisible(nunca || Date.now() - ultimoCierre > CADA_CUANTO_MS);
+      })
+      .catch(() => {});
+    // `profile` cambia en cada refresco; la clave (el uid) es lo que de verdad
+    // decide si hay que volver a mirarlo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clave, esEntrenador]);
+
+  const cerrar = () => {
+    setVisible(false);
+    if (clave) AsyncStorage.setItem(clave, String(Date.now())).catch(() => {});
+  };
+
+  if (!visible || !esEntrenador || !canUpgrade(profile)) return null;
+
+  return (
+    <Modal visible animationType="slide" onRequestClose={cerrar}>
+      <SafeAreaView style={styles.popup} edges={['top', 'bottom']}>
+        <View style={styles.popupBarra}>
+          <Pressable onPress={cerrar} hitSlop={12} style={styles.popupCerrar}>
+            <Ionicons name="close" size={22} color={colors.textMuted} />
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={styles.popupCuerpo}>
+          <View style={styles.popupIcono}>
+            <Ionicons name="people" size={26} color={colors.primary} />
+          </View>
+          <Text style={styles.popupEyebrow}>Tu plan de entrenador</Text>
+          <Text style={styles.popupTitulo}>Así funciona tu grupo</Text>
+          <UpgradeCard />
+          <Pressable onPress={cerrar} style={styles.popupAhoraNo} hitSlop={8}>
+            <Text style={styles.popupAhoraNoTexto}>Ahora no, gracias</Text>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
+  popup: { flex: 1, backgroundColor: colors.background },
+  popupBarra: { alignItems: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  popupCerrar: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  popupCuerpo: {
+    padding: spacing.lg,
+    paddingTop: spacing.sm,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  popupIcono: {
+    width: 54,
+    height: 54,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  popupEyebrow: {
+    ...typography.small,
+    color: colors.primary,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    fontFamily: fonts.semiBold,
+  },
+  popupTitulo: { ...typography.h1, color: colors.text, marginTop: 2, marginBottom: spacing.lg },
+  popupAhoraNo: { alignSelf: 'center', paddingVertical: spacing.md },
+  popupAhoraNoTexto: { ...typography.body, color: colors.textMuted },
+
   breve: { marginBottom: spacing.md },
   breveFila: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   icono: {
