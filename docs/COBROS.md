@@ -183,14 +183,15 @@ El número lo reparte el servidor (`payments-webhook/api/_alta.js`) dentro de un
 lleven el mismo. Las reglas impiden escribir `founderNumber` desde la app: un
 distintivo que cualquiera pudiera ponerse no valdría nada.
 
-**Cerrar la campaña** (o ponerle tope) se hace desde la consola de Firebase, sin
-desplegar nada — es una decisión de marketing, no un despliegue. En
-`config/fundadores`:
+**La campaña arranca CERRADA.** Se abre y se cierra desde la consola de Firebase,
+sin desplegar nada: empieza cuando lo decide quien lleva el marketing. Y cerrada
+por defecto porque repartir números antes de tiempo no tiene vuelta atrás — el
+número 1 solo se da una vez. En `config/fundadores`:
 
 | Campo | Para qué |
 | --- | --- |
-| `abierta` | `false` cierra la campaña. Si no existe, está abierta. |
-| `limite` | Último número que se reparte (por ejemplo 100). Opcional. |
+| `abierta` | `true` la abre. Sin este campo (o en `false`) no se reparte nada. |
+| `limite` | Último número que se reparte, por ejemplo 100. Opcional. |
 | `siguiente` | El próximo número. Lo lleva el servidor; no hace falta tocarlo. |
 
 Si el reparto falla por lo que sea, la cuenta se activa igual: el alta es lo que

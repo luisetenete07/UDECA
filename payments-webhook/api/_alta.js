@@ -25,10 +25,11 @@ export const TRIAL_DAYS = 14;
  * eso el contador se guarda aparte (`config/fundadores`) y se incrementa en una
  * TRANSACCIÓN: dos altas simultáneas no pueden llevarse el mismo número.
  *
- * La campaña está abierta por defecto y se cierra poniendo `abierta: false` en
- * ese documento desde la consola de Firebase. También se puede fijar un tope
- * con `limite`. Se decide desde fuera del código a propósito: cerrarla es una
- * decisión de marketing, no un despliegue.
+ * La campaña arranca CERRADA y se abre poniendo `abierta: true` en ese documento
+ * desde la consola de Firebase; se puede fijar un tope con `limite`. Empieza y
+ * termina cuando lo decide quien lleva el marketing, no cuando se despliega
+ * código — y cerrada por defecto porque repartir números antes de tiempo no
+ * tiene vuelta atrás: el número 1 solo se da una vez.
  */
 async function repartirNumeroDeFundador(db, uid) {
   const ref = db.collection('config').doc('fundadores');
@@ -36,7 +37,7 @@ async function repartirNumeroDeFundador(db, uid) {
     return await db.runTransaction(async (t) => {
       const snap = await t.get(ref);
       const datos = snap.exists ? snap.data() : {};
-      if (datos.abierta === false) return null;
+      if (datos.abierta !== true) return null;
       const siguiente = typeof datos.siguiente === 'number' ? datos.siguiente : 1;
       if (typeof datos.limite === 'number' && siguiente > datos.limite) return null;
       t.set(ref, { siguiente: siguiente + 1, ultimoUid: uid, updatedAt: Date.now() }, { merge: true });
