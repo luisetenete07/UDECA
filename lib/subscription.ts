@@ -86,8 +86,10 @@ export const ATHLETE_PAYMENT_LINK: string = 'https://buy.stripe.com/test_14A7sM2
  * llega de fuera y la app para quien se registró sin pasar por ella. Si cambias
  * uno, cambia el otro.
  */
-export const COACH_ENTRY_LINK: string = '';
-export const ATHLETE_ENTRY_LINK: string = '';
+export const COACH_ENTRY_LINK: string =
+  'https://buy.stripe.com/test_cNi5kEdescin1pZ4as7g403';
+export const ATHLETE_ENTRY_LINK: string =
+  'https://buy.stripe.com/test_cNi3cw3DScin9WvbCU7g402';
 
 /** Enlace del alta con el uid dentro, para que el webhook sepa a quién activar. */
 export function entryCheckoutUrl(profile: UserProfile | null): string | null {
@@ -132,6 +134,35 @@ export function needsEntryPayment(profile: UserProfile | null): boolean {
 
 /** Endpoint de comprobación bajo demanda (Vercel). Activa la cuenta al momento. */
 export const CHECK_SUB_URL = 'https://udeca.vercel.app/api/check-subscription';
+
+/** Endpoint que recoge un alta pagada en la web antes de existir la cuenta. */
+export const CLAIM_ENTRY_URL = 'https://udeca.vercel.app/api/claim-entry';
+
+/**
+ * Reclama el alta pagada desde la web.
+ *
+ * Quien paga en udeca.app lo hace ANTES de tener cuenta, así que ese euro
+ * queda apuntado a su correo. Al registrarse, esto lo recoge y activa la
+ * cuenta; sin ello, la app le pediría pagar por segunda vez.
+ *
+ * Se manda el token de sesión de Firebase, no el uid: el servidor tiene que
+ * poder comprobar que quien reclama el pago es de verdad el dueño de ese
+ * correo, y un uid suelto no demuestra nada.
+ */
+export async function claimEntryNow(
+  idToken: string
+): Promise<{ activa: boolean; motivo?: string }> {
+  try {
+    const res = await fetch(CLAIM_ENTRY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: '{}',
+    });
+    return (await res.json()) as { activa: boolean; motivo?: string };
+  } catch (e) {
+    return { activa: false, motivo: e instanceof Error ? e.message : 'Error de red' };
+  }
+}
 
 /**
  * Pregunta a Stripe (vía backend) si el email del usuario tiene suscripción

@@ -343,3 +343,14 @@ footer { border-top: 1px solid var(--border); padding: 44px 0 60px; position: re
   .story { grid-template-columns: 1.1fr 0.9fr; align-items: start; gap: 48px; }
   .hero { padding: 96px 0 40px; }
 }
+
+/* Pasos numerados de la página de gracias: lo único que se lee ahí. */
+.pasos {
+  color: var(--muted);
+  padding-left: 20px;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 12px;
+  line-height: 1.55;
+}
+.pasos b { color: var(--text); }

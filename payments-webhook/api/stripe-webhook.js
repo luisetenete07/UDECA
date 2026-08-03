@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 import admin from 'firebase-admin';
+import crypto from 'node:crypto';
+import { aplicarAlta } from './_alta.js';
 
 /**
  * Webhook de Stripe para UDECA: verifica de forma SEGURA (firma de Stripe) que
@@ -17,13 +19,6 @@ import admin from 'firebase-admin';
 // Vercel: desactiva el parseo del cuerpo para poder validar la firma con el
 // cuerpo CRUDO (imprescindible en Stripe).
 export const config = { api: { bodyParser: false } };
-
-/**
- * Días de prueba del atleta. Está también en lib/subscription.ts y en
- * firestore.rules; este fichero no puede importarlos (se despliega solo en
- * Vercel). Si cambias el número, cámbialo en los tres.
- */
-const TRIAL_DAYS = 14;
 
 // Inicialización PEREZOSA: no se hace al cargar el módulo (si faltara una
 // variable de entorno, la función crashearía en el arranque y ningún evento se
@@ -167,6 +162,9 @@ export default async function handler(req, res) {
           } else {
             await markClientPaid(clientId, (session.amount_total || 0) / 100);
           }
+        } else if (paid) {
+          // Sin uid: ha pagado desde la WEB, donde todavía no tiene cuenta.
+          await altaPagadaSinCuenta(session);
         }
       }
     } else if (event.type === 'invoice.paid') {
@@ -218,26 +216,6 @@ async function tarjetaDelPago(session) {
   }
 }
 
-/**
- * ¿Cuántas cuentas de ENTRENADOR han pagado ya con esta tarjeta?
- *
- * El alta de 1 € da cinco plazas de alumno. Si la misma tarjeta paga un
- * segundo alta de entrenador, no compra otras cinco plazas: compra una cuenta
- * más, vacía. Así abrir cuentas deja de ser una forma de esquivar los 180 € y
- * pasa a ser solo trabajo extra para el que lo intente.
- *
- * No se bloquea ni se borra nada: cuentas legítimas comparten tarjeta (una
- * pareja, un centro que paga por dos entrenadores). Se marca y se decide,
- * nunca se castiga en automático.
- */
-async function cuentasConLaMismaTarjeta(fingerprint, uid) {
-  const ref = db.collection('payerCards').doc(fingerprint);
-  const snap = await ref.get();
-  const previas = (snap.exists ? snap.data().trainerUids : []) || [];
-  const otras = previas.filter((x) => x !== uid);
-  return { ref, otras, yaEstaba: previas.includes(uid) };
-}
-
 // Activa la cuenta tras el primer pago. El uid llega en client_reference_id
 // (el Payment Link se abre desde la app con ?client_reference_id=<uid>).
 async function activateSubscription(session) {
@@ -259,53 +237,82 @@ async function activateSubscription(session) {
 }
 
 /**
+ * Alta pagada ANTES de existir la cuenta (el caso normal de la web).
+ *
+ * En la web se paga primero y se crea la cuenta después, así que el pago llega
+ * sin `client_reference_id` y no hay a quién activar. Sin esto, ese euro se
+ * perdía: la persona se registraba, la app le enseñaba el muro del alta y le
+ * pedía pagar OTRA VEZ. Cobrar dos veces en el primer minuto es la forma más
+ * rápida de perder a un cliente que ya había dicho que sí.
+ *
+ * Lo que se hace es apuntar el pago por CORREO. Si ya existe una cuenta con
+ * ese correo, se activa ahora mismo; si no, queda esperando y la reclama la
+ * app en cuanto alguien se registre con él (ver api/claim-entry.js).
+ */
+async function altaPagadaSinCuenta(session) {
+  const email = correoDelPago(session);
+  if (!email) return;
+
+  const q = await db.collection('users').where('email', '==', email).limit(1).get();
+  if (!q.empty) {
+    const perfil = q.docs[0].data();
+    if (perfil.role === 'trainer' || perfil.role === 'athlete') {
+      await activarAlta(session, q.docs[0].id);
+      return;
+    }
+  }
+
+  // Todavía no hay cuenta: se guarda el pago para que lo reclame quien se
+  // registre con ese correo. La huella de la tarjeta se guarda ya, porque
+  // después de este momento no vuelve a estar disponible.
+  await db
+    .collection('entryPayments')
+    .doc(claveDeCorreo(email))
+    .set(
+      {
+        email,
+        paidAt: Date.now(),
+        amountEur: (session.amount_total || 0) / 100,
+        stripeCustomerId: session.customer || null,
+        stripeSessionId: session.id,
+        payerFingerprint: (await tarjetaDelPago(session)) || null,
+        claimedBy: null,
+      },
+      { merge: true }
+    );
+}
+
+/** El correo con el que se pagó (Stripe lo pide en el propio checkout). */
+function correoDelPago(session) {
+  const email = session.customer_details?.email || session.customer_email;
+  return email ? String(email).trim().toLowerCase() : null;
+}
+
+/**
+ * Id del documento del pago: el correo en minúsculas, en hash.
+ *
+ * En hash porque el id de un documento se ve en cualquier listado y en los
+ * registros del servidor, y un correo es un dato personal. Mismo criterio que
+ * la lista de la comunidad (api/lead.js).
+ */
+function claveDeCorreo(email) {
+  return crypto.createHash('sha256').update(email).digest('hex').slice(0, 32);
+}
+
+/**
  * Alta de 1 €: da acceso y reparte las plazas de alumno del entrenador.
  *
  * Es un pago suelto (no suscripción), así que llega por el mismo evento pero
  * sin `session.subscription`. Lo que hace especial a este cobro es que es el
- * momento en el que conocemos la tarjeta.
+ * momento —el único— en el que conocemos la tarjeta.
  */
-async function activarAlta(session) {
-  const uid = session.client_reference_id;
+async function activarAlta(session, uidExplicito) {
+  const uid = uidExplicito || session.client_reference_id;
   if (!uid) return;
-  const snap = await db.collection('users').doc(uid).get();
-  if (!snap.exists) return;
-  const perfil = snap.data();
-
-  const datos = { entryPaidAt: Date.now(), stripeCustomerId: session.customer || null };
-  const huella = await tarjetaDelPago(session);
-  if (huella) datos.payerFingerprint = huella;
-
-  // El atleta compra con el euro sus 14 días de prueba, así que el reloj
-  // empieza AQUÍ y no al registrarse: si tardó dos días en pagar, no los
-  // pierde. Solo la primera vez, y sin acortar nunca un acceso mayor que ya
-  // tuviera (cortesías, prórrogas dadas a mano).
-  if (perfil.role === 'athlete' && !perfil.entryPaidAt) {
-    const fin = Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000;
-    datos.trialEndsAt = fin;
-    datos.subscriptionUntil = Math.max(fin, perfil.subscriptionUntil || 0);
-  }
-
-  if (perfil.role === 'trainer' && huella) {
-    const { ref, otras, yaEstaba } = await cuentasConLaMismaTarjeta(huella, uid);
-    if (otras.length > 0) {
-      // Esta tarjeta ya compró sus plazas. La cuenta entra igual, pero sin
-      // plazas incluidas: para tener alumnos, la cuota anual.
-      datos.clientSlots = 0;
-      datos.sharedCardWith = otras;
-    }
-    if (!yaEstaba) {
-      await ref.set(
-        {
-          trainerUids: admin.firestore.FieldValue.arrayUnion(uid),
-          updatedAt: Date.now(),
-        },
-        { merge: true }
-      );
-    }
-  }
-
-  await db.collection('users').doc(uid).set(datos, { merge: true });
+  await aplicarAlta(db, uid, {
+    huella: await tarjetaDelPago(session),
+    customerId: session.customer || null,
+  });
 }
 
 // Renovación automática: al cobrar la nueva factura, extiende la suscripción.

@@ -12,6 +12,7 @@ import {
   CONTACT_EMAIL,
   ENTRY_PRICE_EUR,
   FREE_CLIENT_LIMIT,
+  claimEntryNow,
   entryCheckoutUrl,
 } from '../lib/subscription';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
@@ -33,7 +34,7 @@ import { colors, fonts, radius, spacing, typography } from '../lib/theme';
  * compras integradas de Apple, que son otro proyecto.
  */
 export function EntryWall() {
-  const { profile, signOut, refreshProfile } = useAuth();
+  const { firebaseUser, profile, signOut, refreshProfile } = useAuth();
   const [comprobando, setComprobando] = React.useState(false);
   const esAtleta = profile?.role === 'athlete';
   const url = entryCheckoutUrl(profile);
@@ -74,6 +75,24 @@ export function EntryWall() {
       try {
         const fresco = await refreshProfile();
         if (fresco?.entryPaidAt) return true;
+        // Puede haber pagado en la WEB, antes de tener cuenta: entonces el euro
+        // está apuntado a su correo y hay que ir a recogerlo. Es el camino
+        // normal de quien llega por udeca.app, no un caso raro.
+        if (firebaseUser) {
+          const token = await firebaseUser.getIdToken();
+          const reclamado = await claimEntryNow(token);
+          if (reclamado.activa) {
+            await refreshProfile();
+            return true;
+          }
+          if (!silencioso) {
+            showToast(
+              reclamado.motivo ??
+                'Todavía no nos consta el pago. Dale un momento y vuelve a intentarlo.'
+            );
+            return false;
+          }
+        }
         if (!silencioso) {
           showToast('Todavía no nos consta el pago. Dale un momento y vuelve a intentarlo.');
         }
@@ -85,7 +104,7 @@ export function EntryWall() {
       }
       return false;
     },
-    [refreshProfile]
+    [firebaseUser, refreshProfile]
   );
 
   // Al volver a la app desde el navegador de Stripe, se comprueba solo: nadie

@@ -552,6 +552,20 @@ service cloud.firestore {
     }
 
     /**
+     * Altas de 1 € pagadas ANTES de existir la cuenta (las de la web).
+     *
+     * Cerrada por completo. Guarda el correo de quien pagó y la huella de su
+     * tarjeta, y es lo que permite activar la cuenta cuando esa persona se
+     * registra. Si se pudiera leer, sería una lista de correos de clientes; si
+     * se pudiera escribir, cualquiera se regalaría el alta inventándose un
+     * pago. La escribe el webhook y la consume api/claim-entry, los dos con
+     * permisos de administrador, que no pasan por estas reglas.
+     */
+    match /entryPayments/{clave} {
+      allow read, write: if false;
+    }
+
+    /**
      * Ajustes del servidor (entre ellos el enlace del grupo de Telegram).
      *
      * Cerrada a cal y canto: si se pudiera leer desde el navegador, el enlace

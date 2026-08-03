@@ -22,8 +22,8 @@ window.UDECA = {
    * saber quién se da de alta— y pegarlos aquí.
    */
   pagos: {
-    altaAtleta: '',
-    altaCoach: '',
+    altaAtleta: 'https://buy.stripe.com/test_cNi3cw3DScin9WvbCU7g402',
+    altaCoach: 'https://buy.stripe.com/test_cNi5kEdescin1pZ4as7g403',
   },
 
   /**

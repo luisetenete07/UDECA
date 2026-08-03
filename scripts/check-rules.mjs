@@ -153,6 +153,16 @@ await comprobar('leer los ajustes del servidor (config)', false, () =>
   getDoc(doc(db, 'config', 'comunidad'))
 );
 
+// Un alta pagada en la web queda apuntada a un correo. Si se pudiera leer o
+// escribir desde la app, cualquiera se regalaría el euro o se llevaría la
+// lista de correos de quien ha pagado.
+await comprobar('leer las altas pagadas en la web', false, () =>
+  getDoc(doc(db, 'entryPayments', 'loquesea'))
+);
+await comprobar('inventarse un alta pagada', false, () =>
+  setDoc(doc(db, 'entryPayments', 'loquesea'), { email: 'yo@ejemplo.com', paidAt: Date.now() })
+);
+
 // Borrarse la cuenta exige poder llevarse el nombre de la clasificación.
 await signInWithEmailAndPassword(auth, otroEmail, PW);
 await comprobar('borrar su propia ficha de la clasificación', true, () =>

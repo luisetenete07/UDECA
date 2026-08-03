@@ -34,6 +34,29 @@ Los campos que sostienen todo esto (`entryPaidAt`, `payerFingerprint`,
 Firestore se lo prohíben a la propia cuenta, y hay una comprobación por cada uno
 en `scripts/check-rules.mjs`. Si eso se rompiera, el euro sería voluntario.
 
+### Quien paga en la web todavía no tiene cuenta
+
+Es el camino normal de udeca.app: se paga primero y se crea la cuenta después.
+El pago llega entonces **sin uid**, así que no hay a quién activar.
+
+Sin resolverlo, esa persona se registraba, la app le enseñaba el muro del alta y
+le pedía el euro **otra vez**. Cobrar dos veces en el primer minuto es la forma
+más rápida de perder a alguien que ya había dicho que sí.
+
+Lo que ocurre ahora:
+
+1. El webhook mira el **correo del pago**. Si ya existe una cuenta con él, la
+   activa en el momento.
+2. Si no existe, guarda el pago en `entryPayments` (con la huella de la tarjeta,
+   que después ya no se puede recuperar) y ahí se queda esperando.
+3. Cuando esa persona se registra, el muro del alta llama a
+   `api/claim-entry`, que comprueba **con el token de sesión de Firebase** que
+   quien reclama el pago es de verdad el dueño de ese correo, y activa la cuenta.
+4. Un pago activa **una** cuenta: al reclamarlo queda marcado con el uid.
+
+Por eso la página de gracias insiste tanto en registrarse con el mismo correo:
+es lo único que une el pago con la cuenta.
+
 ### Cuándo empiezan los 14 días del atleta
 
 Al pagar el alta, no al registrarse (lo escribe `activarAlta` en el webhook).
@@ -99,3 +122,32 @@ En Android, web y APK no cambia nada: se cobra con normalidad.
 
 Todos los eventos son idempotentes (colección `stripeEvents`): Stripe reenvía, y
 un cobro no puede contar dos veces.
+
+
+---
+
+## 4 · Qué hay que configurar en Stripe
+
+Una vez por cada Payment Link (Payments → Payment Links → el enlace → editar):
+
+- **Después del pago → Redirigir a una página**, con la dirección
+  `https://www.udeca.app/gracias`. Es la página que explica cómo activar la
+  cuenta; sin ella, el cliente paga y se queda mirando la pantalla de Stripe.
+- **Recopilar el correo del cliente**, activado. Sin correo no hay forma de unir
+  el pago con la cuenta que se cree después, y el euro se pierde.
+
+Una sola vez, para toda la cuenta (Desarrolladores → Webhooks → Añadir
+endpoint):
+
+- Dirección: `https://udeca.vercel.app/api/stripe-webhook`
+- Eventos: `checkout.session.completed`, `invoice.paid`,
+  `customer.subscription.deleted`
+- Copia el **secreto de firma** (`whsec_…`) en la variable
+  `STRIPE_WEBHOOK_SECRET` de Vercel, y **vuelve a desplegar**: las variables no
+  entran en vigor hasta el siguiente despliegue.
+
+**Modo de prueba y modo real son dos mundos separados.** Tienen claves,
+webhooks y enlaces distintos. Si los enlaces son `buy.stripe.com/test_…`, en
+Vercel tienen que estar la clave de prueba (`sk_test_…`) y el secreto del
+webhook de prueba; el día que pases a real hay que cambiar los tres a la vez
+(enlaces, clave y secreto) o los pagos entrarán sin que nadie se entere.
