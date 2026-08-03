@@ -873,11 +873,18 @@ export default function TrainerProfileScreen() {
       <RateApp />
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={{ marginTop: spacing.lg }} />
+
+      {/* Ver el comentario del mismo botón en el perfil del alumno. */}
+      <Pressable onPress={() => router.push('/account-deletion')} style={styles.borrarCuenta}>
+        <Text style={styles.borrarCuentaTexto}>Eliminar mi cuenta</Text>
+      </Pressable>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  borrarCuenta: { alignSelf: 'center', paddingVertical: spacing.lg },
+  borrarCuentaTexto: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
   backBtn: {
     alignSelf: 'flex-start',
     width: 40,

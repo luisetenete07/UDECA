@@ -2,9 +2,11 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   sendEmailVerification,
   signInWithEmailAndPassword,
   deleteUser,
+  EmailAuthProvider,
   signOut as firebaseSignOut,
   updateProfile,
   type User,
@@ -14,7 +16,7 @@ import { auth, db, isFirebaseConfigured } from './firebase';
 import { getInviteCodeInfo, registerTrainerInviteCode } from './firestore/users';
 import { sendJoinRequest } from './firestore/joinRequests';
 import { registerForPushNotificationsAsync } from './notifications';
-import { rememberAccount } from './rememberedAccounts';
+import { forgetAccount, rememberAccount } from './rememberedAccounts';
 import { clearCache } from './screenCache';
 import { trialUntil } from './subscription';
 import type { UserProfile, UserRole } from './types';
@@ -37,6 +39,14 @@ interface AuthContextValue {
   registerAthlete: (name: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
+  /**
+   * Vuelve a comprobar la contraseña de quien ya ha entrado.
+   *
+   * Firebase exige un inicio de sesión reciente para borrar una cuenta, y con
+   * razón: un móvil abierto encima de la mesa no debería bastar para que
+   * alguien borre la vida deportiva de otro.
+   */
+  reauthenticate: (password: string) => Promise<void>;
   /** Relee el perfil de la cuenta y devuelve el recién leído (null si no hay). */
   refreshProfile: () => Promise<UserProfile | null>;
   /** Recarga el usuario de Auth para refrescar el estado de verificación. */
@@ -213,10 +223,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Si Firebase pide reautenticación reciente, se propaga el error para que la
    * pantalla pida volver a iniciar sesión.
    *
-   * Ahora mismo NINGUNA pantalla lo llama: el borrado se pide por correo (ver
-   * app/delete-account.tsx). Se conserva porque las tiendas exigen poder
-   * borrarse desde dentro de la app y esto es lo que haría falta el día que se
-   * reponga el botón.
+   * Los DATOS se borran antes, desde la pantalla de borrado
+   * (lib/firestore/eraseAccount.ts): aquí solo quedan el perfil y el usuario.
+   * El orden importa —primero los datos, que necesitan sesión— y por eso esto
+   * es el último paso y no el único.
    */
   const deleteAccount = async () => {
     const user = auth.currentUser;
@@ -227,7 +237,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Si el borrado del perfil falla, seguimos con el de Auth igualmente.
     }
     await deleteUser(user);
+    // El selector de acceso guarda las cuentas usadas en ESTE dispositivo. Si
+    // no se quita, la pantalla de entrar sigue ofreciendo una cuenta que ya no
+    // existe, y quien acaba de borrarse se encuentra su nombre ahí al volver.
+    if (user.email) await forgetAccount(user.email).catch(() => {});
     setProfile(null);
+    clearCache();
+  };
+
+  const reauthenticate = async (password: string) => {
+    const user = auth.currentUser;
+    if (!user?.email) throw new Error('No hay sesión activa');
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
   };
 
   const refreshProfile = async (): Promise<UserProfile | null> => {
@@ -262,6 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       registerAthlete,
       signOut,
       deleteAccount,
+      reauthenticate,
       refreshProfile,
       reloadUser,
       resendVerification,

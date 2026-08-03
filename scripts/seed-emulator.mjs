@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Llena el emulador local de Firebase con un grupo de prueba realista: un
- * coach con dos alumnos, biblioteca de ejercicios, una rutina activa, tres
+ * coach con tres alumnos, biblioteca de ejercicios, una rutina activa, tres
  * semanas de entrenos, cobros y clasificación social.
  *
  * Sirve para abrir la app CON DATOS y revisarla pantalla por pantalla sin
@@ -89,21 +89,34 @@ async function limpiar(nombreColeccion, campo, valor) {
 }
 const cli = await ensure('alumno@demo.test', 'Marcos Ruiz');
 const cli2 = await ensure('alumno2@demo.test', 'Ana Gil');
+// Tercer alumno: sin rutina ni historial, solo perfil y clasificación. Está
+// para que el podio del mes pasado tenga de verdad un 1º, un 2º y un 3º.
+const cli3 = await ensure('alumno3@demo.test', 'Iker Sanz');
 
 await como('coach@demo.test');
-await setDoc(doc(db, 'users', coach), {
-  uid: coach, role: 'trainer', name: 'Luis Tena', email: 'coach@demo.test',
-  createdAt: now - 200 * DAY, inviteCode: 'DEMO01', emailVerificationRequired: false,
-  // Caducado a propósito: las reglas impiden regalarse suscripción al crear la
-  // cuenta. Con 2 alumnos entra igual por el plan gratuito, que es justo el
-  // caso que interesa poder revisar.
-  subscriptionUntil: 0, clientCount: 2,
-});
+// `subscriptionUntil` y `clientCount` SOLO se escriben al crear la cuenta: son
+// campos del servidor y las reglas prohíben que el propio coach los cambie.
+// Al resembrar sobre una base ya existente hay que dejarlos como están, o el
+// guion muere con "permisos insuficientes" — que es la regla funcionando.
+const coachExiste = (await getDoc(doc(db, 'users', coach))).exists();
+await setDoc(
+  doc(db, 'users', coach),
+  {
+    uid: coach, role: 'trainer', name: 'Luis Tena', email: 'coach@demo.test',
+    createdAt: now - 200 * DAY, inviteCode: 'DEMO01', emailVerificationRequired: false,
+    // Caducado a propósito: las reglas impiden regalarse suscripción al crear
+    // la cuenta. Con tres alumnos entra igual por el plan gratuito (cinco
+    // incluidos), que es justo el caso que interesa poder revisar.
+    ...(coachExiste ? {} : { subscriptionUntil: 0, clientCount: 3 }),
+  },
+  { merge: true }
+);
 await setDoc(doc(db, 'trainerCodes', 'DEMO01'), { trainerId: coach, full: false });
 
 const alumnos = [
   [cli, 'Marcos Ruiz', 'alumno@demo.test', 45, 4, 'paid'],
   [cli2, 'Ana Gil', 'alumno2@demo.test', 45, -3, 'pending'],
+  [cli3, 'Iker Sanz', 'alumno3@demo.test', 40, 12, 'paid'],
 ];
 for (const [uid, name, email, fee, dias, estado] of alumnos) {
   const due = now + dias * DAY;
@@ -178,14 +191,40 @@ for (let d = 1; d <= 22; d++) {
   });
 }
 
-for (const [uid, name, email, week, streak, total] of [
-  [cli, 'Marcos Ruiz', 'alumno@demo.test', 4, 12, 96],
-  [cli2, 'Ana Gil', 'alumno2@demo.test', 3, 5, 61],
+/**
+ * Clasificación del grupo.
+ *
+ * Los nombres de los campos son los que lee la app HOY (sessionsThisWeek,
+ * currentStreak, streakThisMonth...). Los de la primera versión —weekWorkouts,
+ * streak— ya no los mira nadie, así que sembrarlos dejaba el ranking a cero y
+ * el podio del mes pasado sin salir nunca.
+ *
+ * `monthKey` y `weekKey` tienen que ser los de AHORA: la app da por caducadas
+ * las métricas mensuales y semanales que no sean del periodo en curso.
+ */
+const mesActual = (() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+})();
+const semanaActual = (() => {
+  const d = new Date();
+  const dia = d.getDay() === 0 ? 7 : d.getDay();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - dia + 1);
+  return String(d.getTime());
+})();
+for (const [uid, name, email, semana, racha, mesPasado, total] of [
+  [cli, 'Marcos Ruiz', 'alumno@demo.test', 4, 12, 18, 96],
+  [cli2, 'Ana Gil', 'alumno2@demo.test', 3, 5, 21, 61],
+  [cli3, 'Iker Sanz', 'alumno3@demo.test', 2, 3, 9, 24],
 ]) {
   await como(email);
   await setDoc(doc(db, 'socialStats', uid), {
-    uid, name, trainerId: coach, weekWorkouts: week, streak, totalWorkouts: total,
-    weekKey: 'demo', updatedAt: now,
+    uid, name, trainerId: coach,
+    sessionsThisWeek: semana, currentStreak: racha, streakThisMonth: racha,
+    workoutsThisMonth: semana * 4, totalWorkouts: total,
+    lastMonthStreak: mesPasado,
+    monthKey: mesActual, weekKey: semanaActual, updatedAt: now,
   });
 }
 // ATLETA: se autoentrena (es su propio entrenador), con su plan y su
@@ -260,9 +299,10 @@ for (const dias of [10, 40, 70]) {
 }
 
 console.log(`Emulador sembrado.
-  coach@demo.test   (entrenador, 2 alumnos)
+  coach@demo.test   (entrenador, 3 alumnos)
   alumno@demo.test  (alumno con rutina e historial)
   alumno2@demo.test (alumno con pago pendiente)
+  alumno3@demo.test (alumno solo para la clasificación)
   atleta@demo.test  (atleta autoentrenado, en prueba gratuita)
   contraseña: ${PW}`);
 process.exit(0);

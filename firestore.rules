@@ -412,9 +412,14 @@ service cloud.firestore {
         && request.auth.uid == userId
         && request.resource.data.uid == request.auth.uid;
       // El entrenador puede borrar la entrada de un alumno de su grupo (limpiar
-      // la clasificación de perfiles antiguos o de prueba).
+      // la clasificación de perfiles antiguos o de prueba), y cada uno la suya:
+      // esta ficha lleva el nombre a la vista, así que al borrarse la cuenta
+      // tiene que poder irse con ella.
       allow delete: if request.auth != null
-        && resource.data.trainerId == request.auth.uid;
+        && (
+          resource.data.trainerId == request.auth.uid
+          || resource.data.uid == request.auth.uid
+        );
     }
 
     // Cursos en vídeo del entrenador. Los alumnos solo pueden leer los cursos

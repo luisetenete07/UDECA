@@ -120,10 +120,26 @@ export default function SocialScreen() {
     'es-ES',
     { month: 'long' }
   );
+  /**
+   * Los tres del mes pasado.
+   *
+   * Solo entran quienes ENTRENARON (racha > 0) y tienen la ficha al día: la
+   * racha del mes anterior se recalcula al abrir la app, así que la de alguien
+   * que lleva meses sin entrar sería de otro mes distinto.
+   *
+   * Los desempates importan cuando dos hacen los mismos días: primero quien
+   * más entrenó, y si sigue el empate, por nombre, que al menos es estable y
+   * no cambia de orden en cada recarga.
+   */
   const podium = showPodium
     ? members
         .filter((m) => m.monthKey === thisMonthKey && (m.lastMonthStreak ?? 0) > 0)
-        .sort((a, b) => (b.lastMonthStreak ?? 0) - (a.lastMonthStreak ?? 0))
+        .sort(
+          (a, b) =>
+            (b.lastMonthStreak ?? 0) - (a.lastMonthStreak ?? 0) ||
+            (b.totalWorkouts ?? 0) - (a.totalWorkouts ?? 0) ||
+            (a.name ?? '').localeCompare(b.name ?? '')
+        )
         .slice(0, 3)
     : [];
 
@@ -157,15 +173,31 @@ export default function SocialScreen() {
 
       {podium.length > 0 ? (
         <View style={styles.podium}>
-          <Ionicons name="trophy" size={14} color={colors.primary} />
-          <Text style={styles.podiumTitle}>Mejor racha de {lastMonthName}:</Text>
-          {podium.map((m, i) => (
-            <Text key={m.uid} style={styles.podiumItem}>
-              <Text style={{ color: MEDALS[i], fontFamily: fonts.heading }}>{i + 1}º</Text>{' '}
-              {m.name.split(' ')[0]} ({m.lastMonthStreak})
-              {i < podium.length - 1 ? '  ·' : ''}
-            </Text>
-          ))}
+          <View style={styles.podiumHeader}>
+            <Ionicons name="trophy" size={15} color={colors.primary} />
+            <Text style={styles.podiumTitle}>Mejor racha de {lastMonthName}</Text>
+          </View>
+          {/* Las tres plazas, siempre. Cuando falta alguien se dice por qué en
+              vez de enseñar un podio de dos y dejar la duda. */}
+          {[0, 1, 2].map((i) => {
+            const m = podium[i];
+            return (
+              <View key={i} style={styles.podiumRow}>
+                <Text style={[styles.podiumPos, { color: MEDALS[i] }]}>{i + 1}º</Text>
+                <Text
+                  style={[styles.podiumName, !m && styles.podiumVacio]}
+                  numberOfLines={1}
+                >
+                  {m ? m.name.split(' ')[0] : 'Plaza libre'}
+                </Text>
+                <Text style={[styles.podiumDias, !m && styles.podiumVacio]}>
+                  {m
+                    ? `${m.lastMonthStreak} ${m.lastMonthStreak === 1 ? 'día' : 'días'}`
+                    : '—'}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       ) : null}
 
@@ -307,10 +339,6 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   podium: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
@@ -319,8 +347,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     marginBottom: spacing.lg,
   },
+  podiumHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.xs,
+  },
   podiumTitle: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  podiumItem: { ...typography.small, color: colors.text, fontSize: 12 },
+  podiumRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 3,
+  },
+  podiumPos: { ...typography.body, fontFamily: fonts.heading, minWidth: 26 },
+  podiumName: { ...typography.small, color: colors.text, flex: 1 },
+  podiumDias: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  podiumVacio: { color: colors.textFaint },
   summaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   summaryCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
   summaryValue: { ...typography.h2, color: colors.text, marginTop: spacing.xs },

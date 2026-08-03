@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
@@ -42,6 +42,7 @@ const two = (n: number) => String(n).padStart(2, '0');
 
 export default function ClientProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
+  const router = useRouter();
   // Esta pantalla la comparten el alumno de un coach y el atleta autoentrenado.
   const isAthlete = profile?.role === 'athlete';
   const [name, setName] = useState(profile?.name ?? '');
@@ -434,11 +435,20 @@ export default function ClientProfileScreen() {
       {isAthlete ? <RateApp /> : null}
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={styles.signOut} />
+
+      {/* Eliminar la cuenta: discreto, pero SIEMPRE presente. Las tiendas
+          exigen que se pueda hacer desde dentro de la app, y el proceso en sí
+          (cinco pasos) es el que evita los borrados por impulso. */}
+      <Pressable onPress={() => router.push('/account-deletion')} style={styles.borrarCuenta}>
+        <Text style={styles.borrarCuentaTexto}>Eliminar mi cuenta</Text>
+      </Pressable>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  borrarCuenta: { alignSelf: 'center', paddingVertical: spacing.lg },
+  borrarCuentaTexto: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
   hero: { alignItems: 'center', marginBottom: spacing.lg },
   avatarWrap: { marginBottom: spacing.md },
   cameraBadge: {

@@ -153,6 +153,18 @@ await comprobar('leer los ajustes del servidor (config)', false, () =>
   getDoc(doc(db, 'config', 'comunidad'))
 );
 
+// Borrarse la cuenta exige poder llevarse el nombre de la clasificación.
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+await comprobar('borrar su propia ficha de la clasificación', true, () =>
+  setDoc(doc(db, 'socialStats', otro.user.uid), {
+    uid: otro.user.uid,
+    trainerId: coach.user.uid,
+    name: 'Prueba',
+    updatedAt: Date.now(),
+  }).then(() => deleteDoc(doc(db, 'socialStats', otro.user.uid)))
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+
 console.log('\nTabla de progreso (progressTrackers)');
 // Se limpia al final: esta prueba escribe en la misma base que usa la app para
 // revisarla a mano, y dejar ejercicios inventados ahí ensucia la pantalla.

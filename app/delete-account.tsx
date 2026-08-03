@@ -8,14 +8,27 @@ export default function DeleteAccount() {
       <Text style={styles.title}>Eliminar tu cuenta de UDECA</Text>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Desde la app, tú mismo</Text>
         <Text style={styles.body}>
-          Para eliminar tu cuenta y todos tus datos asociados (perfil, rutinas, historial de
-          entrenamientos, pagos, fotos de progreso y mensajes), envía un email desde la
-          dirección con la que te registraste a:
+          Entra en UDECA y ve a <Text style={styles.fuerte}>Perfil → Eliminar mi cuenta</Text>, al
+          final de la pantalla. Son cinco pasos: te explicamos qué se borra, tienes que
+          escribir "ELIMINAR MI CUENTA" y confirmar con tu contraseña. Al terminar, tu cuenta
+          y tus datos desaparecen en el momento. Vale para cualquier tipo de perfil: alumno,
+          atleta y entrenador.
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Por correo, si prefieres</Text>
+        <Text style={styles.body}>
+          Escríbenos desde la dirección con la que te registraste a:
         </Text>
         <Text style={styles.email}>luistenaf@gmail.com</Text>
         <Text style={styles.body}>
-          Asunto: "Eliminar cuenta". Procesaremos la solicitud en un máximo de 30 días.
+          Asunto: "Eliminar cuenta". Procesaremos la solicitud en un máximo de 30 días. Es
+          también la vía para pedir que se borren los restos que la app no puede quitar por
+          sí sola (comidas y hábitos registrados, y los mensajes con tu entrenador, que
+          conserva su copia).
         </Text>
       </View>
 
@@ -46,4 +59,5 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
   body: { ...typography.body, color: colors.textMuted, lineHeight: 22 },
   email: { ...typography.h3, color: colors.primary, marginVertical: spacing.sm },
+  fuerte: { color: colors.text },
 });
