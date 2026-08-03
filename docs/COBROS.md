@@ -57,6 +57,22 @@ Lo que ocurre ahora:
 Por eso la página de gracias insiste tanto en registrarse con el mismo correo:
 es lo único que une el pago con la cuenta.
 
+### Al atleta se le avisa antes de que se acabe
+
+A tres días del final y el último día, por notificación
+(`payments-webhook/api/cron-daily.js`). La app se lo promete por escrito en la
+tarjeta del plan, así que tiene que cumplirse: entrar el día 15 y encontrarse el
+muro de pago sin previo aviso convierte a alguien que iba a pagar en alguien que
+se va.
+
+El aviso guarda el **hito** enviado (3 o 1) y no la fecha, para que los dos
+puedan salir con un día de diferencia sin pisarse, y deja de aplicar solo en
+cuanto la persona paga.
+
+**Solo llega a quien tiene la app de móvil instalada** y las notificaciones
+concedidas: en web no hay push. Para cubrir a los demás haría falta correo, que
+todavía no está montado.
+
 ### Cuándo empiezan los 14 días del atleta
 
 Al pagar el alta, no al registrarse (lo escribe `activarAlta` en el webhook).

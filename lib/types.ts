@@ -120,6 +120,12 @@ export interface UserProfile {
    */
   lastInactivityNudge?: number;
   lastPaymentNudge?: number;
+  /**
+   * Último aviso enviado sobre el final de la prueba, en días que quedaban
+   * (3 o 1). Guarda el HITO y no la fecha para que los dos avisos puedan
+   * salir con un día de diferencia sin pisarse. Solo lo escribe el backend.
+   */
+  trialNudgeStage?: number;
   /** Plan contratado. De momento solo existe el anual (180 €/año). */
   subscriptionPlan?: 'annual';
   /** Onboarding completado (una vez por cuenta, sincronizado entre dispositivos). */

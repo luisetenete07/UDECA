@@ -13,6 +13,7 @@ import admin from 'firebase-admin';
  *     haya abierto la app.
  *  2. Avisa por push a quien lleva días sin entrenar.
  *  3. Avisa por push de la cuota vencida o a punto de vencer.
+ *  4. Avisa al atleta de que su prueba se acaba, ANTES de que se acabe.
  *
  * Variables de entorno: FIREBASE_SERVICE_ACCOUNT (JSON de la cuenta de
  * servicio) y CRON_SECRET (lo envía Vercel como Authorization: Bearer …).
@@ -23,6 +24,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const INACTIVE_DAYS = 5;
 /** Días de antelación con los que se recuerda la cuota. */
 const PAYMENT_DUE_DAYS = 3;
+/**
+ * Cuándo se avisa al atleta de que se le acaba la prueba: a tres días y el
+ * último día.
+ *
+ * Existe porque la app le promete por escrito que le avisaremos, y hasta ahora
+ * no lo hacía: entraba el día 15 y se encontraba el muro de pago sin previo
+ * aviso. Enterarse así, aunque el precio sea justo, es lo que convierte a
+ * alguien que iba a pagar en alguien que se va.
+ */
+const TRIAL_NUDGE_DAYS = [3, 1];
+/** Cuota mensual del atleta (la misma que ATHLETE_MONTHLY_EUR en la app). */
+const ATHLETE_MONTHLY_EUR = 10;
 /** No se repite el mismo tipo de aviso antes de este plazo. */
 const NUDGE_COOLDOWN_MS = 5 * DAY_MS;
 /** Ventana de entrenamientos que se lee (suficiente para semana, mes y racha). */
@@ -189,7 +202,35 @@ export default async function handler(req, res) {
           title: 'Tu cuerpo te espera',
           body: `Hace ${daysOff} días de tu último entreno. Retomarlo hoy cuesta menos que mañana.`,
         });
-        nudged.push({ id: doc.id, field: 'lastInactivityNudge' });
+        nudged.push({ id: doc.id, data: { lastInactivityNudge: now } });
+      }
+
+      // --- La prueba del atleta se acaba ---
+      //
+      // Solo mientras SIGUE siendo prueba: al pagar, `subscriptionUntil` pasa
+      // de largo de `trialEndsAt` y esto deja de aplicar solo.
+      if (
+        u.pushToken &&
+        u.role === 'athlete' &&
+        typeof u.subscriptionUntil === 'number' &&
+        typeof u.trialEndsAt === 'number' &&
+        u.subscriptionUntil <= u.trialEndsAt &&
+        u.subscriptionUntil > now
+      ) {
+        const restantes = Math.ceil((u.subscriptionUntil - now) / DAY_MS);
+        // El hito es el aviso que TOCA ahora; si ya se envió, no se repite.
+        const hito = TRIAL_NUDGE_DAYS.filter((d) => restantes <= d).pop() ?? null;
+        if (hito !== null && u.trialNudgeStage !== hito) {
+          const ultimoDia = hito === 1;
+          messages.push({
+            to: u.pushToken,
+            title: ultimoDia ? 'Hoy es tu último día de prueba' : `Te quedan ${restantes} días de prueba`,
+            body: ultimoDia
+              ? `Para seguir sin cortes, actívalo desde la app: ${ATHLETE_MONTHLY_EUR} €/mes, sin permanencia. Tu progreso se queda contigo decidas lo que decidas.`
+              : `Después, seguir cuesta ${ATHLETE_MONTHLY_EUR} €/mes. Lo que has registrado no se borra pase lo que pase.`,
+          });
+          nudged.push({ id: doc.id, data: { trialNudgeStage: hito } });
+        }
       }
 
       // --- Recordatorio de cuota (vencida o a punto de vencer) ---
@@ -209,7 +250,7 @@ export default async function handler(req, res) {
             ? 'Tu cuota con tu entrenador está pendiente. Puedes pagarla desde la app.'
             : `Tu cuota vence el ${new Date(due).toLocaleDateString('es-ES')}.`,
         });
-        nudged.push({ id: doc.id, field: 'lastPaymentNudge' });
+        nudged.push({ id: doc.id, data: { lastPaymentNudge: now } });
       }
     });
 
@@ -217,7 +258,7 @@ export default async function handler(req, res) {
     const sent = await sendPush(messages);
     // Marca de envío para no repetir el mismo aviso a diario.
     await Promise.all(
-      nudged.map((n) => db.collection('users').doc(n.id).set({ [n.field]: now }, { merge: true }))
+      nudged.map((n) => db.collection('users').doc(n.id).set(n.data, { merge: true }))
     );
 
     res.status(200).json({ ok: true, statsUpdated, notified: sent });
