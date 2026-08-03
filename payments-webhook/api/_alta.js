@@ -18,6 +18,38 @@ import admin from 'firebase-admin';
 export const TRIAL_DAYS = 14;
 
 /**
+ * Reparte el número de fundador, si la campaña sigue abierta.
+ *
+ * El número es correlativo y no se reutiliza: el 7 es el séptimo que pagó su
+ * alta y lo seguirá siendo aunque los seis de antes se borren la cuenta. Por
+ * eso el contador se guarda aparte (`config/fundadores`) y se incrementa en una
+ * TRANSACCIÓN: dos altas simultáneas no pueden llevarse el mismo número.
+ *
+ * La campaña está abierta por defecto y se cierra poniendo `abierta: false` en
+ * ese documento desde la consola de Firebase. También se puede fijar un tope
+ * con `limite`. Se decide desde fuera del código a propósito: cerrarla es una
+ * decisión de marketing, no un despliegue.
+ */
+async function repartirNumeroDeFundador(db, uid) {
+  const ref = db.collection('config').doc('fundadores');
+  try {
+    return await db.runTransaction(async (t) => {
+      const snap = await t.get(ref);
+      const datos = snap.exists ? snap.data() : {};
+      if (datos.abierta === false) return null;
+      const siguiente = typeof datos.siguiente === 'number' ? datos.siguiente : 1;
+      if (typeof datos.limite === 'number' && siguiente > datos.limite) return null;
+      t.set(ref, { siguiente: siguiente + 1, ultimoUid: uid, updatedAt: Date.now() }, { merge: true });
+      return siguiente;
+    });
+  } catch {
+    // Que falle el contador no puede impedir que la cuenta se active: el alta
+    // es lo que la persona ha pagado; el número es un extra.
+    return null;
+  }
+}
+
+/**
  * ¿Cuántas cuentas de ENTRENADOR han pagado ya con esta tarjeta?
  *
  * El alta de 1 € da cinco plazas de alumno. Si la misma tarjeta paga un
@@ -78,6 +110,15 @@ export async function aplicarAlta(db, uid, { huella = null, customerId = null } 
         },
         { merge: true }
       );
+    }
+  }
+
+  // Fundador: solo la primera vez, y solo si la campaña sigue abierta.
+  if (!perfil.founderNumber) {
+    const numero = await repartirNumeroDeFundador(db, uid);
+    if (numero !== null) {
+      datos.founderNumber = numero;
+      datos.founderSince = Date.now();
     }
   }
 

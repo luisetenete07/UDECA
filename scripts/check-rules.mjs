@@ -130,6 +130,11 @@ await comprobar('falsear la huella de su tarjeta', false, () =>
 await comprobar('darse el alta a sí mismo', false, () =>
   setDoc(doc(db, 'users', coach.user.uid), { entryPaidAt: Date.now() }, { merge: true })
 );
+// La tarjeta de fundador vale porque el número lo reparte el servidor: si se
+// pudiera escribir, cualquiera sería el número 1.
+await comprobar('nombrarse fundador', false, () =>
+  setDoc(doc(db, 'users', coach.user.uid), { founderNumber: 1 }, { merge: true })
+);
 await comprobar('cambiar su propio nombre', true, () =>
   setDoc(doc(db, 'users', coach.user.uid), { name: 'Luis Tena' }, { merge: true })
 );

@@ -6,6 +6,7 @@ import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { MemberCard } from '../../components/MemberCard';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -238,6 +239,9 @@ export default function ClientProfileScreen() {
           <Text style={styles.memberSince}>Miembro desde {memberSince}</Text>
         ) : null}
       </View>
+
+      {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
+      <MemberCard />
 
       <View style={styles.statsRow}>
         <StatTile icon="flame" value={String(streak)} label="Racha (días)" highlight={streak > 0} />

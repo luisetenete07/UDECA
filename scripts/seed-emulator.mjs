@@ -108,7 +108,7 @@ await setDoc(
     // Caducado a propósito: las reglas impiden regalarse suscripción al crear
     // la cuenta. Con tres alumnos entra igual por el plan gratuito (cinco
     // incluidos), que es justo el caso que interesa poder revisar.
-    ...(coachExiste ? {} : { subscriptionUntil: 0, clientCount: 3 }),
+    ...(coachExiste ? {} : { subscriptionUntil: 0, clientCount: 3, founderNumber: 7, founderSince: now - 30 * DAY }),
     // Al resembrar vuelve a salir el aviso del plan: cerrado una vez, no
     // habría forma de revisarlo hasta la semana siguiente.
     planPopupClosedAt: deleteField(),

@@ -115,7 +115,10 @@ service cloud.firestore {
           && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny([
               'subscriptionUntil', 'subscriptionPlan', 'clientCount',
-              'clientSlots', 'entryPaidAt', 'payerFingerprint', 'sharedCardWith'
+              'clientSlots', 'entryPaidAt', 'payerFingerprint', 'sharedCardWith',
+              // El número de fundador es correlativo y lo reparte el servidor.
+              // Si cada uno se lo pusiera, mañana habría diez "fundador nº 1".
+              'founderNumber', 'founderSince'
             ])
         )
         || (

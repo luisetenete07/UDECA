@@ -167,3 +167,31 @@ webhooks y enlaces distintos. Si los enlaces son `buy.stripe.com/test_…`, en
 Vercel tienen que estar la clave de prueba (`sk_test_…`) y el secreto del
 webhook de prueba; el día que pases a real hay que cambiar los tres a la vez
 (enlaces, clave y secreto) o los pagos entrarán sin que nadie se entere.
+
+
+---
+
+## 5 · La campaña de fundadores
+
+Quien paga su alta mientras la campaña está abierta recibe un **número de
+fundador** correlativo: el 7 es el séptimo, y lo sigue siendo aunque los seis
+anteriores se borren la cuenta. Se ve en su perfil y se puede compartir como
+imagen.
+
+El número lo reparte el servidor (`payments-webhook/api/_alta.js`) dentro de una
+**transacción** sobre `config/fundadores`, para que dos altas simultáneas no se
+lleven el mismo. Las reglas impiden escribir `founderNumber` desde la app: un
+distintivo que cualquiera pudiera ponerse no valdría nada.
+
+**Cerrar la campaña** (o ponerle tope) se hace desde la consola de Firebase, sin
+desplegar nada — es una decisión de marketing, no un despliegue. En
+`config/fundadores`:
+
+| Campo | Para qué |
+| --- | --- |
+| `abierta` | `false` cierra la campaña. Si no existe, está abierta. |
+| `limite` | Último número que se reparte (por ejemplo 100). Opcional. |
+| `siguiente` | El próximo número. Lo lleva el servidor; no hace falta tocarlo. |
+
+Si el reparto falla por lo que sea, la cuenta se activa igual: el alta es lo que
+la persona ha pagado, y el número es un extra.

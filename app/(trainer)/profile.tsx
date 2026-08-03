@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { MemberCard } from '../../components/MemberCard';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -403,6 +404,9 @@ export default function TrainerProfileScreen() {
           <Text style={styles.roleBadgeText}>Entrenador</Text>
         </View>
       </View>
+
+      {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
+      <MemberCard />
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Código de invitación</Text>

@@ -128,6 +128,17 @@ export interface UserProfile {
   trialNudgeStage?: number;
   /** Plan contratado. De momento solo existe el anual (180 €/año). */
   subscriptionPlan?: 'annual';
+  /**
+   * Número de fundador, si entró durante la campaña. Es correlativo y no se
+   * reutiliza: el 7 es el séptimo que pagó su alta, y lo sigue siendo aunque
+   * los seis anteriores se borren la cuenta.
+   *
+   * Lo asigna el servidor al activar el alta (payments-webhook/api/_alta.js);
+   * las reglas impiden que nadie se lo ponga a mano.
+   */
+  founderNumber?: number;
+  /** Cuándo se le asignó ese número. */
+  founderSince?: number;
   /** Onboarding completado (una vez por cuenta, sincronizado entre dispositivos). */
   onboardingCompleted?: boolean;
   /**
