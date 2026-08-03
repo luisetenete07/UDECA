@@ -98,6 +98,11 @@ Implementado hasta ahora:
   calendario semana a semana con lo que el alumno ha cumplido de verdad.
   El alumno ve en su inicio el bloque, la semana del plan y si toca
   descargar. Sigue siendo opcional: sin plan, la app funciona igual.
+- **Vista general del bloque**: volumen por grupo muscular semana a semana,
+  con lo previsto al lado de lo hecho, la frecuencia debajo y los avisos que
+  salen de ahí (un grupo sin tocar, un plan descompensado, una descarga que
+  no descargó). Sale en la ficha del ciclo, en el progreso del alumno y en
+  el del propio atleta.
 - **Editor de rutinas pro**: descanso y notas por ejercicio, superseries
   (sin descanso entre encadenados), reordenar y copiar la rutina de otro
   alumno.

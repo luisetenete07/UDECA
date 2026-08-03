@@ -78,6 +78,7 @@ export function PlanCalendar({
       {visibles.map((w, i) => {
         const nuevoBloque = w.blockStart || i === 0;
         const cumple = w.target ? w.done >= w.target : w.done > 0;
+        const futura = !w.isPast && !w.isCurrent;
         const fila = (
           <View style={[styles.weekRow, w.isCurrent && styles.weekRowNow]}>
             <View style={[styles.band, w.isDeload && styles.bandDeload, w.isPast && styles.bandPast]} />
@@ -102,9 +103,18 @@ export function PlanCalendar({
             </View>
 
             <View style={styles.countBox}>
+              {/* Una semana que no ha empezado enseña lo previsto y ya: un
+                  "0/4" en una semana futura acusa de algo que todavía no ha
+                  tenido ocasión de pasar. */}
               <Text style={[styles.count, cumple && styles.countOk]}>
-                {w.done}
-                {w.target ? <Text style={styles.countTarget}>/{w.target}</Text> : null}
+                {futura ? (
+                  <Text style={styles.countTarget}>{w.target ?? '·'}</Text>
+                ) : (
+                  <>
+                    {w.done}
+                    {w.target ? <Text style={styles.countTarget}>/{w.target}</Text> : null}
+                  </>
+                )}
               </Text>
               {w.isDeload ? <Text style={styles.deloadTag}>descarga</Text> : null}
             </View>

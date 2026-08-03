@@ -14,12 +14,21 @@ import { ScreenContainer } from '../../../../../components/ScreenContainer';
 import { StatTile } from '../../../../../components/StatTile';
 import { showToast } from '../../../../../components/Toast';
 import { useAuth } from '../../../../../lib/auth-context';
+import { BlockOverview } from '../../../../../components/BlockOverview';
 import { deleteCycles, getCyclesForClient } from '../../../../../lib/firestore/cycles';
+import { getExerciseLibrary } from '../../../../../lib/firestore/exercises';
+import { getActiveRoutineForClient } from '../../../../../lib/firestore/routines';
 import { getWorkoutLogsForClient } from '../../../../../lib/firestore/workoutLogs';
 import { computeCycleStats } from '../../../../../lib/cycleStats';
 import { descendantIds } from '../../../../../lib/cyclePlan';
+import { buildBlockView } from '../../../../../lib/blockView';
 import { colors, fonts, radius, spacing, typography } from '../../../../../lib/theme';
-import { CYCLE_LEVEL_LABEL, type TrainingCycle, type WorkoutLog } from '../../../../../lib/types';
+import {
+  CYCLE_LEVEL_LABEL,
+  type Routine,
+  type TrainingCycle,
+  type WorkoutLog,
+} from '../../../../../lib/types';
 
 function fmt(ts: number): string {
   return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
@@ -32,19 +41,27 @@ export default function CycleDashboardScreen() {
   const [cycles, setCycles] = useState<TrainingCycle[]>([]);
   const [cycle, setCycle] = useState<TrainingCycle | null>(null);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
+  const [routine, setRoutine] = useState<Routine | null>(null);
+  const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
+  const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile || !id || !cycleId) return;
-    const [cyclesData, logsData] = await Promise.all([
+    const [cyclesData, logsData, rutina, biblioteca] = await Promise.all([
       getCyclesForClient(profile.uid, id),
       getWorkoutLogsForClient(id, profile.uid),
+      getActiveRoutineForClient(id, profile.uid).catch(() => null),
+      getExerciseLibrary(profile.uid).catch(() => []),
     ]);
     setCycles(cyclesData);
     setCycle(cyclesData.find((c) => c.id === cycleId) ?? null);
     setLogs(logsData);
+    setRoutine(rutina);
+    setMuscleByExercise(Object.fromEntries(biblioteca.map((e) => [e.id, e.muscleGroup])));
+    setMeasureByExercise(Object.fromEntries(biblioteca.map((e) => [e.id, e.measure ?? 'reps'])));
     setLoading(false);
   }, [profile, id, cycleId]);
 
@@ -127,6 +144,24 @@ export default function CycleDashboardScreen() {
         </View>
       ) : null}
 
+      <Card style={styles.section}>
+        <BlockOverview
+          view={buildBlockView({
+            cycle,
+            cycles,
+            logs,
+            routine,
+            muscleByExercise,
+            measureByExercise,
+          })}
+          title={cycle.name}
+          subtitle={`${CYCLE_LEVEL_LABEL[cycle.level]} · ${stats.sessionsDone} entreno${
+            stats.sessionsDone === 1 ? '' : 's'
+          }`}
+          onPressDetail={() => router.push(`/(trainer)/clients/${id}/overview`)}
+        />
+      </Card>
+
       <View style={styles.tilesRow}>
         <StatTile icon="pie-chart" value={pctText} label="Completado" highlight />
         <StatTile
@@ -142,7 +177,11 @@ export default function CycleDashboardScreen() {
       <View style={styles.tilesRow}>
         <StatTile
           icon="repeat"
-          value={stats.sessionsPerWeek != null ? String(stats.sessionsPerWeek) : '—'}
+          value={
+            stats.sessionsPerWeek != null
+              ? stats.sessionsPerWeek.toLocaleString('es-ES', { maximumFractionDigits: 1 })
+              : '—'
+          }
           label="Por semana"
         />
         <StatTile

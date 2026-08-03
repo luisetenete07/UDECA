@@ -1,12 +1,15 @@
 import React, { useCallback, useState } from 'react';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text } from 'react-native';
+import { BlockOverview } from '../../../../components/BlockOverview';
 import { Button } from '../../../../components/Button';
+import { Card } from '../../../../components/Card';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ProgressMatrix } from '../../../../components/ProgressMatrix';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { showToast } from '../../../../components/Toast';
 import { useAuth } from '../../../../lib/auth-context';
+import { getCyclesForClient } from '../../../../lib/firestore/cycles';
 import { getExerciseLibrary } from '../../../../lib/firestore/exercises';
 import { getUserProfile } from '../../../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
@@ -14,8 +17,16 @@ import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { getActiveRoutineForClient } from '../../../../lib/firestore/routines';
 import { buildClientReportHtml } from '../../../../lib/report';
 import { printReportHtml } from '../../../../lib/printReport';
+import { buildBlockView } from '../../../../lib/blockView';
 import { colors, spacing, typography } from '../../../../lib/theme';
-import type { Routine, UserProfile, WeightLog, WorkoutLog } from '../../../../lib/types';
+import {
+  CYCLE_LEVEL_LABEL,
+  type Routine,
+  type TrainingCycle,
+  type UserProfile,
+  type WeightLog,
+  type WorkoutLog,
+} from '../../../../lib/types';
 
 /**
  * Progreso total de un alumno: la mejor serie de cada ejercicio, semana a
@@ -36,6 +47,7 @@ export default function ClientOverviewScreen() {
   const [client, setClient] = useState<UserProfile | null>(null);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [routine, setRoutine] = useState<Routine | null>(null);
+  const [cycles, setCycles] = useState<TrainingCycle[]>([]);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
@@ -50,15 +62,17 @@ export default function ClientOverviewScreen() {
   const load = useCallback(async () => {
     if (!profile || !id) return;
     try {
-      const [data, rutina, ficha, pesos, biblioteca] = await Promise.all([
+      const [data, rutina, ficha, pesos, biblioteca, ciclos] = await Promise.all([
         getWorkoutLogsForClient(id, profile.uid),
         getActiveRoutineForClient(id, profile.uid).catch(() => null),
         getUserProfile(id).catch(() => null),
         getWeightLogsForClient(id, profile.uid).catch(() => []),
         getExerciseLibrary(profile.uid).catch(() => []),
+        getCyclesForClient(profile.uid, id).catch(() => []),
       ]);
       setLogs(data);
       setRoutine(rutina);
+      setCycles(ciclos);
       setClient(ficha);
       setWeightLogs(pesos);
       setMuscleByExercise(Object.fromEntries(biblioteca.map((e) => [e.id, e.muscleGroup])));
@@ -111,6 +125,15 @@ export default function ClientOverviewScreen() {
 
   if (loading) return <LoadingScreen />;
 
+  // El bloque que se está viviendo. Se prefiere el mesociclo al macro: el
+  // macro son meses y su reparto no dice nada accionable; el bloque sí.
+  const ahora = Date.now();
+  const enCurso = cycles.filter(
+    (c) => (c.startDate ?? 0) <= ahora && (c.endDate ?? Number.MAX_SAFE_INTEGER) >= ahora
+  );
+  const bloqueActual =
+    enCurso.find((c) => c.level === 'meso') ?? enCurso.find((c) => c.level === 'macro') ?? null;
+
   return (
     <ScreenContainer>
       <Stack.Screen options={{ title: 'Progreso total' }} />
@@ -119,6 +142,25 @@ export default function ClientOverviewScreen() {
         La mejor serie de cada ejercicio, semana a semana. Elige qué ejercicios seguir: es la
         misma tabla que ve tu alumno.
       </Text>
+
+      <Card style={styles.blockCard}>
+        <BlockOverview
+          view={buildBlockView({
+            cycle: bloqueActual,
+            cycles,
+            logs,
+            routine,
+            muscleByExercise,
+            measureByExercise,
+          })}
+          title={bloqueActual ? bloqueActual.name : 'Últimas 4 semanas'}
+          subtitle={
+            bloqueActual
+              ? CYCLE_LEVEL_LABEL[bloqueActual.level]
+              : 'Sin bloque en curso · reparto reciente'
+          }
+        />
+      </Card>
 
       <ProgressMatrix
         logs={logs}
@@ -147,6 +189,7 @@ export default function ClientOverviewScreen() {
 }
 
 const styles = StyleSheet.create({
+  blockCard: { marginBottom: spacing.md },
   title: { ...typography.h1, color: colors.text },
   subtitle: {
     ...typography.small,

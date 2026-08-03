@@ -30,6 +30,9 @@ import { muscleLoad, weightsOfExercise } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
 import { ProgressMatrix } from '../../components/ProgressMatrix';
+import { BlockOverview } from '../../components/BlockOverview';
+import { buildBlockView } from '../../lib/blockView';
+import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
@@ -109,6 +112,7 @@ export default function ProgressScreen() {
   const isAthlete = profile?.role === 'athlete';
   const [planExercises, setPlanExercises] = useState<{ id: string; name: string }[]>([]);
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
+  const [cycles, setCycles] = useState<import('../../lib/types').TrainingCycle[]>([]);
   const [fullOpen, setFullOpen] = useState(false);
   // Lo que la tabla está enseñando ahora mismo, para que el PDF salga igual.
   const [matrixView, setMatrixView] = useState<{ weeks: number; exerciseIds: string[] }>({
@@ -161,6 +165,11 @@ export default function ProgressScreen() {
         }
         setPlanExercises([...vistos.entries()].map(([exId, name]) => ({ id: exId, name })));
       })
+      .catch(() => {});
+    // Ciclos: si el entrenador planifica por bloques, el reparto se mide sobre
+    // el bloque en curso y no sobre las últimas cuatro semanas sueltas.
+    getCyclesForClientSelf(profile.uid)
+      .then(setCycles)
       .catch(() => {});
     setCached(cacheKey, {
       weightLogs: weightData,
@@ -406,6 +415,17 @@ export default function ProgressScreen() {
   const exercisesInLogs = useMemo(() => listExercisesInLogs(workoutLogs), [workoutLogs]);
   const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
 
+  // El bloque en curso, si el entrenador planifica. Se prefiere el mesociclo
+  // al macro: el macro son meses, y su reparto no dice nada que se pueda
+  // corregir esta semana.
+  const bloqueActual = useMemo(() => {
+    const ahora = Date.now();
+    const enCurso = cycles.filter(
+      (c) => (c.startDate ?? 0) <= ahora && (c.endDate ?? Number.MAX_SAFE_INTEGER) >= ahora
+    );
+    return enCurso.find((c) => c.level === 'meso') ?? enCurso.find((c) => c.level === 'macro') ?? null;
+  }, [cycles]);
+
   if (loading) return <LoadingScreen />;
 
   const toggleSession = (id: string) =>
@@ -467,6 +487,23 @@ export default function ProgressScreen() {
           </Card>
         ) : (
           <>
+            {/* El reparto del bloque va primero: es lo que dice si el plan está
+                equilibrado. El detalle por ejercicio viene después. */}
+            <Card style={styles.section}>
+              <BlockOverview
+                view={buildBlockView({
+                  cycle: bloqueActual,
+                  cycles,
+                  logs: workoutLogs,
+                  routine: activeRoutine,
+                  muscleByExercise,
+                  measureByExercise,
+                })}
+                title={bloqueActual ? bloqueActual.name : 'Últimas 4 semanas'}
+                subtitle={bloqueActual ? 'Tu bloque en curso' : 'Cómo se te reparte el trabajo'}
+              />
+            </Card>
+
             <Card style={styles.section}>
               <Text style={styles.sectionTitle}>Constancia (12 semanas)</Text>
               <Text style={styles.photoHint}>Cada punto dorado es un día entrenado.</Text>
