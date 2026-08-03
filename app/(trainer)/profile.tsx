@@ -6,6 +6,7 @@ import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { RateApp } from '../../components/RateApp';
+import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
@@ -869,6 +870,9 @@ export default function TrainerProfileScreen() {
           )}
         </Card>
       ) : null}
+
+      {/* El plan anual, hasta que lo active. */}
+      <UpgradeCard />
 
       <RateApp />
 

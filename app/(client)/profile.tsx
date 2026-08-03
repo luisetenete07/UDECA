@@ -7,6 +7,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { RateApp } from '../../components/RateApp';
+import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
@@ -428,6 +429,9 @@ export default function ClientProfileScreen() {
           {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
         </Text>
       </Card>
+
+      {/* El plan completo, hasta que den el paso (solo atleta, ver canUpgrade). */}
+      <UpgradeCard />
 
       {/* Valorar la app: solo al atleta. El alumno de un coach no elige la
           herramienta —se la pone su entrenador—, así que pedirle a él la

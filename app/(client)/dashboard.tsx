@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
+import { UpgradeReminder } from '../../components/UpgradeCard';
 import { Card } from '../../components/Card';
 import { CheckInCard } from '../../components/CheckInCard';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -392,6 +393,9 @@ export default function ClientDashboard() {
           <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
         </Pressable>
       </View>
+
+      {/* Solo al atleta que aún no paga, y se puede cerrar para siempre. */}
+      <UpgradeReminder />
 
       {paymentAlert ? (
         <View style={[styles.payCard, paymentAlert.bad ? styles.payCardBad : styles.payCardWarn]}>

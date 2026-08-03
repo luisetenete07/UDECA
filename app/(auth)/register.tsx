@@ -96,39 +96,48 @@ export default function RegisterScreen() {
       </View>
 
       <Card accent style={styles.formCard}>
-        {ROLE_CARDS.map((rc) => {
-          const on = role === rc.value;
-          return (
-            <Pressable
-              key={rc.value}
-              onPress={() => setRole(rc.value)}
-              style={[styles.roleCard, on && styles.roleCardOn]}
-            >
-              <View style={[styles.roleIcon, on && styles.roleIconOn]}>
-                <Ionicons
-                  name={rc.icon}
-                  size={20}
-                  color={on ? colors.primary : colors.textMuted}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={styles.roleCardTop}>
-                  <Text style={[styles.roleCardTitle, on && styles.roleCardTitleOn]}>{rc.title}</Text>
-                  <Text style={[styles.rolePrice, rc.free && styles.rolePriceFree]}>{rc.price}</Text>
+        {/* Tres tarjetas en columna, como un selector de plan: se comparan de
+            un vistazo en vez de leerse una debajo de otra. El detalle del rol
+            elegido va DEBAJO, no dentro: metido en la tarjeta obligaría a
+            hacerlas altas y estrechas, que es donde se rompen en pantallas
+            pequeñas. */}
+        <View style={styles.roleRow}>
+          {ROLE_CARDS.map((rc) => {
+            const on = role === rc.value;
+            return (
+              <Pressable
+                key={rc.value}
+                onPress={() => setRole(rc.value)}
+                style={[styles.roleCard, on && styles.roleCardOn]}
+              >
+                {on ? (
+                  <View style={styles.roleCheck}>
+                    <Ionicons name="checkmark" size={11} color={colors.onPrimary} />
+                  </View>
+                ) : null}
+                <View style={[styles.roleIcon, on && styles.roleIconOn]}>
+                  <Ionicons
+                    name={rc.icon}
+                    size={20}
+                    color={on ? colors.primary : colors.textMuted}
+                  />
                 </View>
-                {/* La descripción solo del rol elegido. Las otras dos quedan en
-                    una línea, y así el botón de crear cuenta sube casi una
-                    pantalla entera: es el paso que queremos que llegue antes. */}
-                {on ? <Text style={styles.roleCardDesc}>{rc.desc}</Text> : null}
-              </View>
-              <Ionicons
-                name={on ? 'checkmark-circle' : 'ellipse-outline'}
-                size={22}
-                color={on ? colors.primary : colors.border}
-              />
-            </Pressable>
-          );
-        })}
+                <Text style={[styles.roleCardTitle, on && styles.roleCardTitleOn]} numberOfLines={1}>
+                  {rc.title}
+                </Text>
+                <Text style={[styles.rolePrice, rc.free && styles.rolePriceFree]} numberOfLines={1}>
+                  {rc.price}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.roleDetail}>
+          <Text style={styles.roleDetailText}>
+            {ROLE_CARDS.find((rc) => rc.value === role)?.desc}
+          </Text>
+        </View>
 
         <TextField
           label="Nombre"
@@ -210,26 +219,25 @@ const ROLE_CARDS: {
     price: 'Gratis',
     free: true,
     icon: 'person-outline',
-    desc: 'Con tu entrenador. Necesitas su código.',
+    desc: 'Entrenas con tu entrenador, que te manda el plan. Necesitas su código para entrar; no pagas nada.',
   },
   {
     value: 'athlete',
     title: 'Atleta',
-    price: `${TRIAL_DAYS} días gratis`,
-    free: true,
+    // En la tarjeta va lo corto; el precio completo, en el detalle de abajo.
+    price: CAN_SELL_IN_APP ? `${TRIAL_DAYS} días` : 'Prueba',
     icon: 'barbell-outline',
     // En iOS no se nombran precios de la plataforma (ver CAN_SELL_IN_APP).
     desc: CAN_SELL_IN_APP
-      ? 'Por tu cuenta: tus rutinas, tu progreso y tu nutrición. Luego 10 €/mes.'
-      : 'Por tu cuenta: tus rutinas, tu progreso y tu nutrición.',
+      ? `Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición. ${TRIAL_DAYS} días con todo abierto y después 10 €/mes.`
+      : 'Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición.',
   },
   {
     value: 'trainer',
     title: 'Entrenador',
     // El alta es un euro para todos: filtra al curioso y deja una tarjeta
     // identificada, que es lo que impide multiplicar cuentas de entrenador.
-    price: CAN_SELL_IN_APP ? '1 € de alta' : 'Profesional',
-    free: true,
+    price: CAN_SELL_IN_APP ? '1 € de alta' : 'Pro',
     icon: 'people-outline',
     desc: CAN_SELL_IN_APP
       ? `Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos; a partir de ahí, ${ANNUAL_PRICE_EUR} €/año.`
@@ -270,37 +278,56 @@ const styles = StyleSheet.create({
   formCard: {
     padding: spacing.lg,
   },
+  roleRow: { flexDirection: 'row', gap: spacing.sm },
   roleCard: {
-    flexDirection: 'row',
-    // Arriba, no centrado: con descripción el icono se quedaría flotando a
-    // media tarjeta y la fila se vería descuadrada.
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    padding: spacing.sm + 2,
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.md,
+    paddingHorizontal: 4,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
-    marginBottom: spacing.sm,
   },
   roleCardOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  roleCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 17,
+    height: 17,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   roleIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
+    width: 42,
+    height: 42,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  roleIconOn: { borderColor: colors.hairline, backgroundColor: colors.surface },
-  roleCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  roleCardTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  roleIconOn: { borderColor: colors.hairline },
+  roleCardTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   roleCardTitleOn: { color: colors.primaryBright },
-  rolePrice: { ...typography.small, color: colors.primary, fontFamily: fonts.heading },
+  rolePrice: { ...typography.small, color: colors.primary, fontSize: 11 },
   rolePriceFree: { color: colors.success },
-  roleCardDesc: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
+  roleDetail: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  roleDetailText: {
+    ...typography.small,
+    color: colors.textMuted,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
   error: {
     ...typography.small,
     color: colors.danger,
