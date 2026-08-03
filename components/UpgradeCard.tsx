@@ -8,6 +8,7 @@ import { track } from '../lib/analytics';
 import {
   ANNUAL_PRICE_EUR,
   ATHLETE_MONTHLY_EUR,
+  COACH_MONTHLY_EQUIV_EUR,
   CAN_SELL_IN_APP,
   clientSlotsOf,
   isAdmin,
@@ -64,8 +65,14 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
   const url = subscriptionCheckoutUrl(profile);
   const diasRestantes = estado.trial ? estado.daysLeft : null;
 
-  const precio = esAtleta ? `${ATHLETE_MONTHLY_EUR} €` : `${ANNUAL_PRICE_EUR} €`;
-  const unidad = esAtleta ? '/ mes' : '/ año';
+  // Los dos planes se enseñan al MES, que es como se piensa el gasto. Lo que
+  // cambia es cómo se cobra, y eso se dice justo debajo en los dos casos.
+  const precio = esAtleta ? `${ATHLETE_MONTHLY_EUR} €` : `${COACH_MONTHLY_EQUIV_EUR} €`;
+  const unidad = '/ mes';
+  /** La letra pequeña que nunca puede faltar: cómo se cobra de verdad. */
+  const facturacion = esAtleta
+    ? 'Sin permanencia. Se cancela cuando quieras.'
+    : `${ANNUAL_PRICE_EUR} € facturados una vez al año.`;
 
   /**
    * Las plazas del entrenador, con nombre y apellidos.
@@ -97,11 +104,17 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
       ? 'Esta cuenta no incluye alumnos'
       : `Has llenado tus ${plazas} plazas`
     : `Tu alta incluye ${plazas} alumnos`;
+  /**
+   * El texto dice DOS cosas que no pueden faltar: lo que ya tiene pagado para
+   * siempre, y que a partir de la plaza siguiente el plan deja de ser opcional.
+   * Descubrir el tope el día que llega el alumno nuevo, y no antes, es lo que
+   * convierte una cuota razonable en una encerrona.
+   */
   const textoCoach = lleno
     ? plazas === 0
-      ? `El alta de tu tarjeta ya se usó en otra cuenta de entrenador, así que esta entra sin plazas. Con el plan anual (${precio}${unidad}) tienes alumnos ilimitados.`
-      : `Para seguir sumando gente necesitas el plan anual: ${precio}${unidad}, alumnos ilimitados. Los ${plazas} que ya tienes siguen igual, pagues o no.`
-    : `Ya llevas ${usados} de ${plazas}, y los tienes incluidos para siempre. El día que quieras pasar de ahí, el plan anual quita el tope: ${precio}${unidad}, sin límite de grupo.`;
+      ? `El alta de tu tarjeta ya se usó en otra cuenta de entrenador, así que esta entra sin plazas. Con el plan tienes alumnos ilimitados: ${precio}${unidad}, ${ANNUAL_PRICE_EUR} € facturados una vez al año.`
+      : `Para aceptar al alumno ${plazas + 1} hace falta el plan: ${precio}${unidad}, ${ANNUAL_PRICE_EUR} € facturados una vez al año. Los ${plazas} que ya tienes siguen contigo pagues o no.`
+    : `Ya llevas ${usados} de ${plazas}, y son tuyos para siempre. Del alumno ${plazas + 1} en adelante hace falta el plan: ${precio}${unidad}, ${ANNUAL_PRICE_EUR} € facturados una vez al año, y el grupo deja de tener tope.`;
 
   const abrir = () => {
     void track('checkout_start');
@@ -189,8 +202,8 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
             {plazas === 0
               ? 'El alta de tu tarjeta ya se usó en otra cuenta de entrenador.'
               : lleno
-                ? 'Están todas ocupadas. Los que ya tienes siguen contigo pagues o no; para sumar más, el plan anual.'
-                : `Son tuyas para siempre, sin caducidad. El plan anual es para el día que quieras pasar de ${plazas}.`}
+                ? `Están todas ocupadas. Los ${plazas} que ya tienes siguen contigo pagues o no; para aceptar al ${plazas + 1} hace falta el plan.`
+                : `Son tuyas para siempre, sin caducidad. Del alumno ${plazas + 1} en adelante hace falta el plan.`}
           </Text>
         </View>
       ) : null}
@@ -199,11 +212,7 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         <Text style={styles.precio}>{precio}</Text>
         <Text style={styles.precioUnidad}>{unidad}</Text>
       </View>
-      <Text style={styles.pie}>
-        {esAtleta
-          ? 'Sin permanencia. Se cancela cuando quieras.'
-          : 'Un único pago al año. Sale a 15 € al mes.'}
-      </Text>
+      <Text style={styles.pie}>{facturacion}</Text>
 
       {ventajas.map((v) => (
         <View key={v} style={styles.ventaja}>

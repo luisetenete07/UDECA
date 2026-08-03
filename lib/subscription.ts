@@ -33,6 +33,16 @@ import type { UserProfile } from './types';
 export const ENTRY_PRICE_EUR = 1;
 export const ANNUAL_PRICE_EUR = 180;
 /**
+ * Lo que sale al mes el plan del entrenador.
+ *
+ * Se enseña este número y no los 180 porque es el que se compara con lo que
+ * cobra por UN alumno: 180 de golpe parece una inversión, 15 al mes parece lo
+ * que es. Debajo va SIEMPRE, sin excepción, que el cobro es anual y de una
+ * vez: enseñar el mensual y cobrar el anual sin decirlo es lo que hace que la
+ * gente pida la devolución y se vaya.
+ */
+export const COACH_MONTHLY_EQUIV_EUR = Math.round(ANNUAL_PRICE_EUR / 12);
+/**
  * Alumnos incluidos en el alta de 1 €. Suficiente para llevar un grupo
  * pequeño de verdad; insuficiente para vivir de ello sin pasar por caja.
  *
@@ -298,7 +308,7 @@ export function clientDaysUntilLock(
 }
 
 /** Etiqueta del plan del entrenador para las pantallas de venta. */
-export const COACH_PLAN_LABEL = `Hasta ${FREE_CLIENT_LIMIT} alumnos incluidos · ${ANNUAL_PRICE_EUR} €/año para más`;
+export const COACH_PLAN_LABEL = `Hasta ${FREE_CLIENT_LIMIT} alumnos incluidos · ${COACH_MONTHLY_EQUIV_EUR} €/mes para más`;
 
 /** Fecha de fin de la prueba para una cuenta de atleta que se crea ahora. */
 export function trialUntil(from: number = Date.now()): number {

@@ -9,6 +9,7 @@ import { track, trackOnce } from '../lib/analytics';
 import {
   ANNUAL_PRICE_EUR,
   ATHLETE_MONTHLY_EUR,
+  COACH_MONTHLY_EQUIV_EUR,
   CAN_SELL_IN_APP,
   CONTACT_EMAIL,
   clientSlotsOf,
@@ -148,14 +149,14 @@ export function Paywall() {
             </Text>
             <View style={styles.priceRow}>
               <Text style={styles.price}>
-                {isAthlete ? ATHLETE_MONTHLY_EUR : (ANNUAL_PRICE_EUR / 12).toFixed(0)} €
+                {isAthlete ? ATHLETE_MONTHLY_EUR : COACH_MONTHLY_EQUIV_EUR} €
               </Text>
               <Text style={styles.priceUnit}>/ mes</Text>
             </View>
             <Text style={styles.priceHint}>
               {isAthlete
                 ? 'Cuota mensual, sin permanencia.'
-                : `Cuota anual: ${ANNUAL_PRICE_EUR} € / año (un único pago)`}
+                : `${ANNUAL_PRICE_EUR} € facturados una vez al año.`}
             </Text>
             {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
               <View key={b} style={styles.benefitRow}>

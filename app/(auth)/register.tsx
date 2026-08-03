@@ -14,6 +14,7 @@ import { friendlyAuthError } from '../../lib/firebase-errors';
 import {
   ANNUAL_PRICE_EUR,
   CAN_SELL_IN_APP,
+  COACH_MONTHLY_EQUIV_EUR,
   FREE_CLIENT_LIMIT,
   TRIAL_DAYS,
 } from '../../lib/subscription';
@@ -240,7 +241,7 @@ const ROLE_CARDS: {
     price: CAN_SELL_IN_APP ? '1 € de alta' : 'Pro',
     icon: 'people-outline',
     desc: CAN_SELL_IN_APP
-      ? `Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos; a partir de ahí, ${ANNUAL_PRICE_EUR} €/año.`
+      ? `Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos para siempre; del ${FREE_CLIENT_LIMIT + 1} en adelante, ${COACH_MONTHLY_EQUIV_EUR} €/mes (${ANNUAL_PRICE_EUR} € facturados anualmente).`
       : `Tus alumnos, tus cobros y tu negocio. El plan de entrada incluye ${FREE_CLIENT_LIMIT} alumnos.`,
   },
 ];
