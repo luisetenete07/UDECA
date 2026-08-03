@@ -118,7 +118,13 @@ service cloud.firestore {
               'clientSlots', 'entryPaidAt', 'payerFingerprint', 'sharedCardWith',
               // El número de fundador es correlativo y lo reparte el servidor.
               // Si cada uno se lo pusiera, mañana habría diez "fundador nº 1".
-              'founderNumber', 'founderSince'
+              'founderNumber', 'founderSince',
+              // Si a un alumno se le pregunta el esfuerzo (RIR) lo decide su
+              // ENTRENADOR, más abajo. Si pudiera quitárselo él, el entrenador
+              // seguiría creyendo que ese dato existe y se le quedaría la
+              // intensidad en blanco sin saber por qué. El atleta no lo
+              // necesita: se le pregunta por su rol, no por este campo.
+              'trackRir'
             ])
         )
         || (
@@ -133,8 +139,11 @@ service cloud.firestore {
             // alumno. Lo escribe el entrenador al confirmar un cobro (ver
             // lib/billing.ts); faltaba en esta lista, así que TODA confirmación
             // de pago se rechazaba con "permisos insuficientes".
+            // `trackRir`: si a ese alumno se le pregunta el esfuerzo al
+            // terminar cada ejercicio. Lo decide el entrenador, que es quien
+            // sabe si su alumno entiende lo que es un RIR.
             request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay'])
+              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)

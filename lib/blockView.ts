@@ -1,5 +1,6 @@
 import { startOfWeek, toNum } from './stats';
 import { planCalendar } from './cyclePlan';
+import { weekSetsByGroup } from './weekPlan';
 import type { Routine, TrainingCycle, WorkoutLog } from './types';
 
 /**
@@ -32,6 +33,18 @@ export interface BlockWeek {
   isPast: boolean;
   /** Todavía no ha empezado: no se le puede exigir nada. */
   isFuture: boolean;
+  /** Microciclo de esa semana, si el alumno tiene un plan por semanas. */
+  micro: TrainingCycle | null;
+}
+
+/** Intensidad de una semana: la que se pidió y la que se reportó. */
+export interface BlockIntensity {
+  /** RIR medio reportado por quien entrena; null si esa semana no dijo nada. */
+  reported: (number | null)[];
+  /** RIR medio programado; null si el entrenador no lo fijó. */
+  planned: (number | null)[];
+  /** ¿Hay algo que enseñar? Sin RIR reportado, esta sección no sale. */
+  hasData: boolean;
 }
 
 export interface BlockRow {
@@ -60,6 +73,8 @@ export interface BlockView {
   totalPlanned: number;
   /** false = la rutina no deja saber lo previsto (modo sensaciones). */
   hasPlan: boolean;
+  /** Solo si alguien está reportando el esfuerzo (ver UserProfile.trackRir). */
+  intensity: BlockIntensity;
 }
 
 // ---------------------------------------------------------------------------
@@ -217,6 +232,44 @@ function mejorProgreso(
 }
 
 // ---------------------------------------------------------------------------
+// Intensidad: lo que se pidió contra lo que costó
+// ---------------------------------------------------------------------------
+
+/** Media, ignorando lo que no se ha dicho. */
+function media(valores: number[]): number | null {
+  if (valores.length === 0) return null;
+  return Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 10) / 10;
+}
+
+/** RIR medio reportado en una semana. */
+function rirReportado(logs: WorkoutLog[]): number | null {
+  const valores: number[] = [];
+  for (const log of logs) {
+    for (const ex of log.exercises) {
+      if (typeof ex.rir === 'number') valores.push(ex.rir);
+    }
+  }
+  return media(valores);
+}
+
+/**
+ * RIR medio programado en una semana: el de la programación de esa semana si
+ * la hay, y si no el de la rutina.
+ */
+function rirProgramado(micro: TrainingCycle | null, routine: Routine | null): number | null {
+  const ajustes = micro?.weekPlan ?? [];
+  const dePlan = ajustes.map((a) => a.rir).filter((r): r is number => typeof r === 'number');
+  if (dePlan.length > 0) return media(dePlan);
+
+  const deRutina: number[] = [];
+  for (const dia of routine?.days ?? []) {
+    if (dia.isRest) continue;
+    for (const ex of dia.exercises) if (typeof ex.rir === 'number') deRutina.push(ex.rir);
+  }
+  return media(deRutina);
+}
+
+// ---------------------------------------------------------------------------
 // La vista
 // ---------------------------------------------------------------------------
 
@@ -245,7 +298,6 @@ export function buildBlockView({
   now = Date.now(),
 }: BlockViewInput): BlockView {
   const { byGroup: porSesion, sessionsPerWeek } = seriesPorSesion(routine, muscleByExercise);
-  const hasPlan = sessionsPerWeek !== null && Object.keys(porSesion).length > 0;
 
   // Semanas del bloque. Con ciclo se reutiliza el calendario del plan (que ya
   // sabe de descargas y de metas); sin ciclo, las últimas semanas naturales.
@@ -263,6 +315,7 @@ export function buildBlockView({
         isCurrent: w.isCurrent,
         isPast: w.isPast,
         isFuture: !w.isPast && !w.isCurrent,
+        micro: w.micro,
       });
     }
   } else {
@@ -280,6 +333,7 @@ export function buildBlockView({
         isCurrent: i === 0,
         isPast: i > 0,
         isFuture: false,
+        micro: null,
       });
     }
   }
@@ -301,12 +355,20 @@ export function buildBlockView({
   const grupos = new Set<string>([...Object.keys(porSesion)]);
   for (const p of porSemana) for (const g of Object.keys(p.porGrupo)) grupos.add(g);
 
+  // Lo previsto de cada semana: si el entrenador programó ESA semana, el número
+  // es el suyo, exacto. Si no, el promedio de la rutina por los entrenos
+  // previstos, que es lo mejor que se puede saber sin programación semanal.
+  const exactas = semanas.map((s) => weekSetsByGroup(s.micro, routine, muscleByExercise));
+  for (const e of exactas) if (e) for (const g of Object.keys(e)) grupos.add(g);
+
   const rows: BlockRow[] = [...grupos].map((group) => {
-    const planned = semanas.map((s) =>
-      porSesion[group] != null && s.sessionsPlanned != null
+    const planned = semanas.map((s, i) => {
+      const exacta = exactas[i];
+      if (exacta) return exacta[group] ?? 0;
+      return porSesion[group] != null && s.sessionsPlanned != null
         ? Math.round(porSesion[group] * s.sessionsPlanned)
-        : null
-    );
+        : null;
+    });
     const done = porSemana.map((p) => p.porGrupo[group] ?? 0);
     return {
       group,
@@ -331,14 +393,28 @@ export function buildBlockView({
     0
   );
 
+  const hasPlan =
+    rows.some((r) => r.planned.some((p) => p != null)) &&
+    (sessionsPerWeek !== null || exactas.some(Boolean));
+
+  const intensity: BlockIntensity = {
+    reported: semanas.map((s, i) =>
+      s.isFuture ? null : rirReportado(logs.filter((l) => l.date >= s.start && l.date < s.end + DAY_MS))
+    ),
+    planned: semanas.map((s) => rirProgramado(s.micro, routine)),
+    hasData: false,
+  };
+  intensity.hasData = intensity.reported.some((r) => r != null);
+
   return {
     weeks: semanas,
     rows,
-    alerts: avisos(semanas, rows, logs, measureByExercise),
+    alerts: avisos(semanas, rows, logs, measureByExercise, intensity),
     adherence: totalPlanned > 0 ? Math.min(1, totalDone / totalPlanned) : null,
     totalDone,
     totalPlanned,
     hasPlan,
+    intensity,
   };
 }
 
@@ -358,7 +434,8 @@ function avisos(
   semanas: BlockWeek[],
   rows: BlockRow[],
   logs: WorkoutLog[],
-  measureByExercise: Record<string, string>
+  measureByExercise: Record<string, string>,
+  intensity: BlockIntensity
 ): BlockAlert[] {
   const malos: BlockAlert[] = [];
 
@@ -458,6 +535,27 @@ function avisos(
       title: `${semanaCaida.label}: ${semanaCaida.sessionsDone} de ${semanaCaida.sessionsPlanned} entrenos`,
       detail: 'Esa semana se cayó; el resto del bloque va aparte.',
     });
+  }
+
+  // 5. Entrena más duro de lo que se le pide. Solo con datos de verdad: al
+  // menos dos semanas reportadas y una diferencia que no sea ruido.
+  if (intensity.hasData) {
+    const pares = intensity.reported
+      .map((r, i) => ({ r, p: intensity.planned[i] }))
+      .filter((x): x is { r: number; p: number } => x.r != null && x.p != null);
+    if (pares.length >= 2) {
+      const dif = media(pares.map((x) => x.p - x.r));
+      if (dif != null && dif >= 1.5) {
+        malos.push({
+          id: 'intensidad',
+          tone: 'warn',
+          title: 'Entrena más duro de lo que le pides',
+          detail: `Le pides ${media(pares.map((x) => x.p))} de RIR y entrena a ${media(
+            pares.map((x) => x.r)
+          )}.`,
+        });
+      }
+    }
   }
 
   // Dos problemas y una buena noticia. Con más, se convierte en una lista que

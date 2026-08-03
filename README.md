@@ -103,6 +103,13 @@ Implementado hasta ahora:
   salen de ahí (un grupo sin tocar, un plan descompensado, una descarga que
   no descargó). Sale en la ficha del ciclo, en el progreso del alumno y en
   el del propio atleta.
+- **Programación por semanas**: dentro de un bloque, cada semana lleva sus
+  propios números (series, repeticiones y RIR), partiendo de la semana
+  anterior. El alumno los ve en su entreno; la rutina no se toca.
+- **Esfuerzo real (RIR)**: al terminar cada ejercicio se pregunta cuántas
+  repeticiones quedaban, y la vista del bloque compara lo pedido con lo
+  reportado. Solo se le pregunta a los atletas y a los alumnos que el
+  entrenador marque.
 - **Editor de rutinas pro**: descanso y notas por ejercicio, superseries
   (sin descanso entre encadenados), reordenar y copiar la rutina de otro
   alumno.

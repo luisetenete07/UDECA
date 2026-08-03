@@ -12,6 +12,14 @@ export interface UserProfile {
   createdAt: number;
   /** Última vez que el alumno cambió su nombre (límite: 1 vez cada 30 días). */
   nameChangedAt?: number;
+  /**
+   * Pedirle el esfuerzo (RIR) al terminar cada ejercicio. Lo activa el
+   * entrenador por alumno; los atletas lo tienen siempre.
+   *
+   * No se pide a todo el mundo porque a quien empieza el RIR no le suena: lo
+   * rellenaría al azar, y un dato inventado es peor que no tener dato.
+   */
+  trackRir?: boolean;
   /** Solo entrenadores: categorías propias de ejercicios (crea/borra las suyas).
    * Sin valor = usa las de por defecto (MUSCLE_GROUPS). */
   exerciseCategories?: string[];
@@ -621,6 +629,16 @@ export const CYCLE_DEFAULT_WEEKS: Record<CycleLevel, number> = {
   micro: 1,
 };
 
+/** Ajuste de un ejercicio para una semana concreta. */
+export interface WeekPlanEntry {
+  exerciseId: string;
+  sets?: number;
+  /** Objetivo por serie, con el mismo formato que la rutina ("8", "8-12"). */
+  reps?: string;
+  /** RIR objetivo de la semana. */
+  rir?: number;
+}
+
 export interface TrainingCycle {
   id: string;
   trainerId: string;
@@ -646,6 +664,15 @@ export interface TrainingCycle {
   targetSessions?: number;
   /** Solo microciclo: semana de descarga (deload). */
   isDeload?: boolean;
+  /**
+   * Solo microciclo: qué cambia ESTA semana respecto a la rutina.
+   *
+   * La rutina sigue siendo la base (los ejercicios, el orden, los descansos);
+   * aquí solo van los números que se mueven de una semana a otra, que es lo
+   * que un entrenador escribía en su hoja: semana 1 a 4×8, semana 3 a 5×8.
+   * Vacío = esta semana se hace la rutina tal cual.
+   */
+  weekPlan?: WeekPlanEntry[];
   createdAt: number;
   updatedAt: number;
 }
@@ -731,6 +758,16 @@ export interface LoggedExercise {
   name: string;
   sets: LoggedSet[];
   notes?: string;
+  /**
+   * Repeticiones que quedaron en recámara (RIR), 0 = al fallo.
+   *
+   * Va por EJERCICIO y no por serie a propósito: por serie es lo que hace un
+   * laboratorio, por ejercicio es lo que un entrenador usa de verdad, y es un
+   * toque en vez de cuatro. Cada pregunta en mitad de una serie se paga en
+   * abandono, así que solo se pide a quien sabe contestarla (ver
+   * `UserProfile.trackRir`).
+   */
+  rir?: number;
   /** Cómo se midió (reps o segundos), para mostrar el histórico con su unidad. */
   measure?: ExerciseMeasure;
   /** Carga del ejercicio en su momento (normal/lastrado/asistido). */

@@ -21,6 +21,7 @@ import {
   connectFirestoreEmulator,
   doc,
   setDoc,
+  addDoc,
   deleteDoc,
   getDoc,
   getDocs,
@@ -177,6 +178,56 @@ await comprobar('borrar su propia ficha de la clasificación', true, () =>
     name: 'Prueba',
     updatedAt: Date.now(),
   }).then(() => deleteDoc(doc(db, 'socialStats', otro.user.uid)))
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+
+console.log('\nEsfuerzo (RIR) y programación de la semana');
+// El RIR se lo activa el ENTRENADOR a su alumno: si se lo pudiera activar (o
+// quitar) el propio alumno, el dato dejaría de significar lo que el entrenador
+// cree que significa.
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+// Se prueba QUITÁRSELO, que es el caso que hace daño: si el alumno pudiera
+// apagarlo, el entrenador seguiría creyendo que ese dato existe. (Ponerlo al
+// valor que ya tiene no cambia nada, así que no probaría nada.)
+await comprobar('el alumno NO se apaga el RIR que le puso su entrenador', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { trackRir: false }, { merge: true })
+);
+await comprobar('ni se lo borra del perfil', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { trackRir: deleteField() }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador SÍ se lo activa a su alumno', true, () =>
+  setDoc(doc(db, 'users', alumno.id), { trackRir: true }, { merge: true })
+);
+await comprobar('pero no puede colar otra cosa de paso', false, () =>
+  setDoc(
+    doc(db, 'users', alumno.id),
+    { trackRir: true, subscriptionUntil: Date.now() + 999999999 },
+    { merge: true }
+  )
+);
+await comprobar('programa la semana de SU alumno', true, () =>
+  addDoc(collection(db, 'trainingCycles'), {
+    trainerId: coach.user.uid,
+    clientId: alumno.id,
+    level: 'micro',
+    name: 'Semana de prueba',
+    weekPlan: [{ exerciseId: 'x', sets: 4, reps: '8' }],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  })
+);
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+await comprobar('el alumno NO se programa su propia semana', false, () =>
+  addDoc(collection(db, 'trainingCycles'), {
+    trainerId: coach.user.uid,
+    clientId: otro.user.uid,
+    level: 'micro',
+    name: 'La mía',
+    weekPlan: [{ exerciseId: 'x', sets: 99 }],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  })
 );
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
 

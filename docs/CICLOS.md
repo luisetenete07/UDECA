@@ -54,6 +54,29 @@ entrenador; lo que cambia es el cumplimiento que se ve en el calendario. Un plan
 que se desplaza solo deja de ser un plan a la tercera semana, y además haría
 imposible comparar dos alumnos con el mismo bloque.
 
+### Programar cada semana
+
+`components/WeekPlanSheet.tsx` → `lib/weekPlan.ts` → el campo `weekPlan` del
+microciclo.
+
+La rutina dice **qué** se hace (ejercicios, orden, descansos, superseries) y no
+cambia. El microciclo dice **cuánto** se hace esa semana: 4×8 la primera, 5×8 la
+tercera, la mitad en la de descarga. Era lo único que un entrenador escribía en
+columnas distintas de su hoja y lo único que la app no sabía guardar.
+
+Se resuelve **al leer, no al escribir** (`applyWeekPlan`): la rutina nunca se
+modifica. Si el plan se borra o el entrenador cambia de idea, el alumno se queda
+con su rutina intacta y no con los restos de la última semana programada.
+
+El punto de partida es "duplicar y ajustar": lo que se puso la semana anterior
+y, la primera vez, lo que dice la rutina. **No hay reglas automáticas** del tipo
+"+1 repetición por semana": se rompen en cuanto alguien se lesiona o se salta
+una semana, y entonces uno se pelea con el sistema en vez de con el
+entrenamiento.
+
+Lo que el alumno ve al entrenar son ya esos números — es lo que hace que esto no
+sea decorativo.
+
 ### La semana de descarga
 
 Marcada con `isDeload`, se pinta distinta y **pide un entreno menos** (nunca
@@ -102,14 +125,14 @@ es exactamente lo que una hoja de cálculo te daba hecho.
 
 ### De dónde sale "lo previsto"
 
-De la rutina activa, **por sesión**: series de cada grupo entre los días que no
-son de descanso, multiplicado por los entrenos previstos de esa semana. Hacerlo
-por sesión y no por semana tiene una consecuencia buena: en una semana de
-descarga, con menos entrenos previstos, lo previsto baja solo.
+Si esa semana está **programada** (§2), el número es exacto: el que escribió el
+entrenador.
 
-Es una aproximación, y se nota en qué: la rutina no distingue la semana 1 de la
-3, así que lo previsto se repite. Cuando el plan sepa de semanas (§2), esta
-columna dejará de ser un promedio.
+Si no lo está, se saca de la rutina **por sesión**: series de cada grupo entre
+los días que no son de descanso, multiplicado por los entrenos previstos de esa
+semana. Hacerlo por sesión y no por semana tiene una consecuencia buena: en una
+semana de descarga, con menos entrenos previstos, lo previsto baja solo. Es una
+aproximación, y se nota: sin programar, todas las semanas piden lo mismo.
 
 Si la rutina va **a sensaciones**, no hay previsión que enseñar y solo se
 muestra lo hecho. Inventar una meta para poder pintar un porcentaje sería
@@ -143,13 +166,26 @@ sobre lo hecho: si el plan está bien y falla la adherencia, el problema es otro
 y se dice con otras palabras, o no se dice si ya está reportado como semana
 caída. Sería el mismo aviso dos veces.
 
-### Lo que todavía no se puede medir
+### La intensidad
 
-**La intensidad real.** La app guarda el RIR que el entrenador programa, pero
-quien entrena no dice nunca cómo le fue: `LoggedSet` tiene repeticiones, peso y
-poco más. Está decidido que se pedirá **solo a atletas y a los alumnos que el
-entrenador marque como avanzados** —al principiante el RIR no le suena y lo
-rellenaría al azar, que es peor que no tenerlo— pero todavía no está hecho.
+Debajo de la tabla, el **RIR reportado** de cada semana y, más pequeño, el que
+se pidió. En rojo cuando entrena a más de un punto por debajo de lo programado;
+menos que eso es ruido, no una señal.
+
+Se pregunta **al terminar cada ejercicio** (`components/RirPicker.tsx`), no por
+serie: por serie es lo que hace un laboratorio, por ejercicio es lo que un
+entrenador usa, y es un toque en vez de cuatro. Se puede desmarcar volviendo a
+pulsar, porque un dato que no se puede corregir es un dato que la gente deja de
+meter.
+
+**Solo se le pregunta a quien sabe contestarlo**: a los atletas siempre (se
+autoentrenan) y a los alumnos que su entrenador marque, desde la ficha del
+alumno (`UserProfile.trackRir`). A quien empieza, el RIR no le suena: lo
+rellenaría al azar, y un dato inventado es peor que no tener dato.
+
+Ese interruptor lo escribe **solo el entrenador**: las reglas se lo prohíben al
+propio alumno. Si pudiera quitárselo, el entrenador seguiría creyendo que ese
+dato existe y se le quedaría la intensidad en blanco sin saber por qué.
 
 ---
 
@@ -167,6 +203,7 @@ que el historial del alumno sobrevive a cualquier replanificación.
 ```bash
 node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-cycle-plan.mjs
 node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-block-view.mjs
+node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-week-plan.mjs
 ```
 
 (El gancho de `scripts/_ts-hook.mjs` solo resuelve las extensiones de los
@@ -181,3 +218,8 @@ descuadra el mes siguiente.
 
 **`check-block-view`** comprueba los números y, sobre todo, los avisos: que
 salgan cuando deben y —lo que más importa— **que no salgan cuando no deben**.
+
+**`check-week-plan`** comprueba la programación semanal, que es lo que el alumno
+ve al entrenar: un fallo aquí no se queda en una pantalla fea, le hace hacer
+otras series de las que le tocan. Incluye que la rutina original **no** se
+modifique nunca y que la semana pasada no se cuele en la de hoy.

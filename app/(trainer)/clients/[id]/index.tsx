@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../../components/Avatar';
 import { Button } from '../../../../components/Button';
@@ -44,6 +44,7 @@ import {
   getUserProfile,
   removeClientFromTrainer,
   registerClientPayment,
+  setClientTrackRir,
   updateClientBilling,
   updateClientPaymentStatus,
   updateClientStatus,
@@ -598,6 +599,34 @@ export default function ClientDetailScreen() {
       </Card>
 
       <Card style={styles.section}>
+        <View style={styles.rirRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sectionTitle}>Pedirle el esfuerzo (RIR)</Text>
+            <Text style={styles.mutedText}>
+              Al terminar cada ejercicio le preguntamos cuántas repeticiones le quedaban. Actívalo
+              solo si entiende lo que es: quien empieza lo rellena al azar, y un dato inventado es
+              peor que no tenerlo.
+            </Text>
+          </View>
+          <Switch
+            value={client?.trackRir === true}
+            onValueChange={async (v) => {
+              if (!id || !client) return;
+              setClient({ ...client, trackRir: v });
+              try {
+                await setClientTrackRir(id, v);
+              } catch {
+                setClient({ ...client, trackRir: !v });
+                showToast('No se pudo guardar');
+              }
+            }}
+            trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
+            thumbColor={colors.white}
+          />
+        </View>
+      </Card>
+
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Planificación por ciclos</Text>
         <Text style={styles.mutedText}>
           Opcional. Agrupa el trabajo en macro, meso o microciclos y ve la evolución del alumno.
@@ -887,6 +916,7 @@ export default function ClientDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  rirRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingRight: spacing.sm },
   backText: { ...typography.body, color: colors.primary, fontFamily: fonts.medium },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },

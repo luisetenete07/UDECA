@@ -89,7 +89,7 @@ export function BlockOverview({
   onPressDetail?: () => void;
   detailLabel?: string;
 }) {
-  const { weeks, rows, alerts, adherence, totalDone, totalPlanned, hasPlan } = view;
+  const { weeks, rows, alerts, adherence, totalDone, totalPlanned, hasPlan, intensity } = view;
 
   if (rows.length === 0) {
     return (
@@ -217,6 +217,34 @@ export function BlockOverview({
         </View>
       </View>
 
+      {intensity.hasData ? (
+        <View style={styles.intensity}>
+          <Text style={styles.intensityLabel}>Intensidad · RIR reportado, y debajo el que pediste</Text>
+          <View style={styles.intensityRow}>
+            {weeks.map((w, i) => {
+              const pedido = intensity.planned[i];
+              const real = intensity.reported[i];
+              // Se pasa de duro cuando entrena a más de un punto por debajo de
+              // lo que se le pidió. Menos que eso es ruido, no una señal.
+              const pasado = pedido != null && real != null && pedido - real >= 1;
+              return (
+                <View key={w.start} style={styles.intensityCell}>
+                  <Text style={[styles.intensityValue, pasado && styles.intensityHot]}>
+                    {real != null ? real.toLocaleString('es-ES', { maximumFractionDigits: 1 }) : '·'}
+                  </Text>
+                  <Text style={styles.intensityPlanned}>
+                    {pedido != null
+                      ? pedido.toLocaleString('es-ES', { maximumFractionDigits: 1 })
+                      : '—'}
+                  </Text>
+                  <Text style={styles.intensityWeek}>{w.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
+
       <Text style={styles.footNote}>
         {hasPlan
           ? `Series hechas de previstas · ${totalDone} de ${totalPlanned} hasta hoy`
@@ -321,6 +349,19 @@ const styles = StyleSheet.create({
   },
   freqValue: { ...typography.small, ...tabularNums, color: colors.textMuted, fontFamily: fonts.semiBold },
 
+  intensity: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  intensityLabel: { fontSize: 11, color: colors.textFaint, fontFamily: fonts.semiBold, letterSpacing: 0.5 },
+  intensityRow: { flexDirection: 'row', gap: spacing.xs },
+  intensityCell: { flex: 1, alignItems: 'center' },
+  intensityValue: { ...typography.small, ...tabularNums, color: colors.text, fontFamily: fonts.semiBold },
+  intensityHot: { color: colors.danger },
+  intensityPlanned: { fontSize: 11, color: colors.textFaint, ...tabularNums },
+  intensityWeek: { fontSize: 10, color: colors.textFaint, fontFamily: fonts.medium, marginTop: 1 },
   footNote: { ...typography.small, color: colors.textFaint, fontSize: 12 },
   detailBtn: {
     flexDirection: 'row',

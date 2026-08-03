@@ -125,13 +125,25 @@ const alumnos = [
 for (const [uid, name, email, fee, dias, estado] of alumnos) {
   const due = now + dias * DAY;
   await como(email);
-  await setDoc(doc(db, 'users', uid), {
-    uid, role: 'client', name, email, createdAt: now - 120 * DAY, trainerId: coach,
-    emailVerificationRequired: false, monthlyFeeEur: fee, paymentStatus: estado,
-    nextPaymentDate: due, billingAnchorDay: new Date(due).getDate(),
-    weightKg: 74.5, heightCm: 178, goal: 'Muscle up estricto', level: 'Intermedio',
-  });
+  // Con `merge`: hay campos del perfil que el propio alumno NO puede tocar
+  // (como `trackRir`, que decide su entrenador), y reescribir el documento
+  // entero los borraría — que es exactamente lo que las reglas impiden.
+  await setDoc(
+    doc(db, 'users', uid),
+    {
+      uid, role: 'client', name, email, createdAt: now - 120 * DAY, trainerId: coach,
+      emailVerificationRequired: false, monthlyFeeEur: fee, paymentStatus: estado,
+      nextPaymentDate: due, billingAnchorDay: new Date(due).getDate(),
+      weightKg: 74.5, heightCm: 178, goal: 'Muscle up estricto', level: 'Intermedio',
+    },
+    { merge: true }
+  );
 }
+
+// El esfuerzo (RIR) lo activa el ENTRENADOR, no el alumno: las reglas se lo
+// prohíben a él. Marcos lo lleva activado para poder revisar la intensidad.
+await como('coach@demo.test');
+await setDoc(doc(db, 'users', cli), { trackRir: true }, { merge: true });
 
 // Limpieza previa: cada uno borra lo suyo (las reglas no dejan borrar lo
 // ajeno). El orden importa: primero los entrenos de cada alumno, luego lo del
@@ -218,6 +230,11 @@ await addDoc(collection(db, 'routines'), {
     });
     for (let w = 0; w < bloque.semanas; w++) {
       const descarga = w === bloque.semanas - 1;
+      const inicioSemana = cursor + w * SEMANA;
+      // A la semana EN CURSO se le pone programación propia: es lo que hace
+      // visible que el plan manda sobre la rutina (y lo que el alumno ve en su
+      // entreno de hoy).
+      const esLaDeHoy = lunesDe(now) === inicioSemana;
       await addDoc(collection(db, 'trainingCycles'), {
         trainerId: coach, clientId: cli, level: 'micro',
         name: `Semana ${w + 1}${descarga ? ' · descarga' : ''}`,
@@ -225,6 +242,14 @@ await addDoc(collection(db, 'routines'), {
         startDate: cursor + w * SEMANA, endDate: cursor + w * SEMANA + 6 * DAY,
         targetSessions: descarga ? 3 : 4,
         ...(descarga ? { isDeload: true } : {}),
+        ...(esLaDeHoy
+          ? {
+              weekPlan: [
+                { exerciseId: ids[0].id, sets: 5, reps: '6', rir: 1 },
+                { exerciseId: ids[1].id, sets: 5, reps: '8', rir: 2 },
+              ],
+            }
+          : {}),
         createdAt: now, updatedAt: now,
       });
     }
@@ -241,6 +266,9 @@ for (let d = 1; d <= 22; d++) {
     dayName: d % 2 ? 'Empuje' : 'Tirón', durationMin: 52 + (d % 9),
     exercises: ids.slice(0, 3).map((e) => ({
       exerciseId: e.id, name: e.name,
+      // Entrena más duro de lo que se le pide (el coach programa RIR 2): sirve
+      // para ver el aviso de intensidad sin tener que inventarlo a mano.
+      rir: d % 4 === 0 ? 1 : 0,
       // Las series van con `completed: true` y las marcas como TEXTO, que es
       // lo que escribe la app (ver LoggedSet). Sin `completed`, las tablas de
       // progreso las ignoran y la pantalla sale vacía con datos sembrados.

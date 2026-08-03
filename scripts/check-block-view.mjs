@@ -255,5 +255,75 @@ comprueba(
   !pocosDatos.alerts.some((a) => a.tone === 'good')
 );
 
+console.log('\n6) La semana programada manda sobre el promedio');
+// El entrenador programa la semana 2: dominadas a 6 series en vez de 4.
+const conSemana = buildBlockView({
+  cycle: macro,
+  cycles: semanas.map((w, i) =>
+    i === 1 ? { ...w, weekPlan: [{ exerciseId: 'dom', sets: 6, reps: '5', rir: 1 }] } : w
+  ),
+  logs: [],
+  routine,
+  muscleByExercise,
+  now: AHORA,
+});
+const tiron = conSemana.rows.find((r) => r.group === 'Tir\u00f3n');
+comprueba(
+  'la semana sin programar sigue con el promedio de la rutina',
+  tiron.planned[0] === 6,
+  String(tiron.planned[0])
+);
+comprueba(
+  'la semana programada usa el n\u00famero exacto del entrenador',
+  tiron.planned[1] === 8,
+  String(tiron.planned[1])
+);
+comprueba(
+  'y los dem\u00e1s grupos de esa semana salen de la rutina',
+  conSemana.rows.find((r) => r.group === 'Empuje').planned[1] === 8,
+  String(conSemana.rows.find((r) => r.group === 'Empuje').planned[1])
+);
+
+console.log('\n7) La intensidad (RIR)');
+const conEsfuerzo = (fecha, rir) => ({
+  ...entreno(fecha, [['fon', 4]]),
+  exercises: [
+    {
+      exerciseId: 'fon',
+      name: 'Fondos',
+      rir,
+      sets: [{ reps: '8', weight: '0', completed: true }],
+    },
+  ],
+});
+const conRir = buildBlockView({
+  cycle: macro,
+  cycles: semanas.map((w, i) => (i <= 1 ? { ...w, weekPlan: [{ exerciseId: 'fon', rir: 3 }] } : w)),
+  logs: [conEsfuerzo(L0, 0), conEsfuerzo(L0 + WEEK, 1)],
+  routine,
+  muscleByExercise,
+  now: AHORA,
+});
+comprueba('hay datos de intensidad', conRir.intensity.hasData === true);
+comprueba('RIR reportado de la S1: 0', conRir.intensity.reported[0] === 0);
+comprueba('RIR pedido de la S1: 3', conRir.intensity.planned[0] === 3);
+comprueba('las semanas futuras no reportan nada', conRir.intensity.reported[3] === null);
+comprueba(
+  'avisa de que entrena m\u00e1s duro de lo que se le pide',
+  conRir.alerts.some((a) => a.id === 'intensidad'),
+  conRir.alerts.map((a) => a.id).join()
+);
+
+const sinRir = buildBlockView({
+  cycle: macro,
+  cycles: semanas,
+  logs: [entreno(L0, [['fon', 4]])],
+  routine,
+  muscleByExercise,
+  now: AHORA,
+});
+comprueba('sin RIR reportado no se ense\u00f1a intensidad', sinRir.intensity.hasData === false);
+comprueba('ni se avisa de nada sobre ella', !sinRir.alerts.some((a) => a.id === 'intensidad'));
+
 console.log(fallos === 0 ? '\nTodo correcto ✔\n' : `\n${fallos} fallo(s) ✖\n`);
 process.exit(fallos === 0 ? 0 : 1);

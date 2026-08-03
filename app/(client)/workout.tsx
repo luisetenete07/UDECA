@@ -31,6 +31,9 @@ import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
+import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
+import { applyWeekPlan } from '../../lib/weekPlan';
+import { RirPicker } from '../../components/RirPicker';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
@@ -254,12 +257,16 @@ export default function WorkoutScreen() {
         // Sube entrenos que quedaron pendientes por falta de conexión.
         const uploaded = await flushPendingWorkouts().catch(() => 0);
         if (uploaded > 0) showToast(`${uploaded} entreno(s) pendiente(s) subido(s) ✓`);
-        const [data, logs] = await Promise.all([
+        const [data, logs, ciclos] = await Promise.all([
           getActiveRoutineForClient(profile.uid),
           getWorkoutLogsForClient(profile.uid),
+          // Si el entrenador programó ESTA semana (4×8 la primera, 5×8 la
+          // tercera), es eso lo que hay que entrenar hoy. Sin ciclos, la
+          // rutina se usa tal cual y aquí no cambia nada.
+          getCyclesForClientSelf(profile.uid).catch(() => []),
         ]);
         if (cancelled) return;
-        setRoutine(data);
+        setRoutine(applyWeekPlan(data, ciclos));
         setHistory(logs);
         setLastPerf(lastPerformanceByExercise(logs));
         // Vídeos de técnica de la biblioteca del entrenador (no bloquea).
@@ -897,6 +904,24 @@ export default function WorkoutScreen() {
       prev.map((ex, i) => (i === exerciseIndex ? { ...ex, notes: value } : ex))
     );
   };
+
+  /**
+   * Esfuerzo del ejercicio (RIR). Se puede desmarcar volviendo a pulsar: si no
+   * se puede quitar un dato que se ha metido sin querer, la gente deja de
+   * meterlo.
+   */
+  const updateExerciseRir = (exerciseIndex: number, value: number) => {
+    setLog((prev) =>
+      prev.map((ex, i) =>
+        i === exerciseIndex ? { ...ex, rir: ex.rir === value ? undefined : value } : ex
+      )
+    );
+  };
+
+  // El esfuerzo solo se le pregunta a quien sabe contestarlo: al atleta
+  // siempre (se autoentrena) y al alumno que su entrenador haya marcado. A
+  // quien empieza, el RIR no le suena y lo rellenaría al azar.
+  const pideRir = profile?.role === 'athlete' || profile?.trackRir === true;
 
   const totalSets = log.reduce((acc, ex) => acc + ex.sets.length, 0);
   const doneSets = log.reduce((acc, ex) => acc + ex.sets.filter((s) => s.completed).length, 0);
@@ -1957,6 +1982,12 @@ export default function WorkoutScreen() {
                   <Text style={[styles.setEditText, { color: colors.primary }]}>Añadir serie</Text>
                 </Pressable>
               </View>
+            ) : null}
+            {pideRir ? (
+              <RirPicker
+                value={exercise.rir}
+                onChange={(v) => updateExerciseRir(exerciseIndex, v)}
+              />
             ) : null}
             {noteOpenIndex === exerciseIndex || exercise.notes ? (
               <TextField

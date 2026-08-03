@@ -6,6 +6,7 @@ import { Button } from '../../../../../components/Button';
 import { Card } from '../../../../../components/Card';
 import { CycleProgress } from '../../../../../components/CycleProgress';
 import { CycleSheet } from '../../../../../components/CycleSheet';
+import { WeekPlanSheet } from '../../../../../components/WeekPlanSheet';
 import { EmptyState } from '../../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../../components/LoadingScreen';
 import { PlanCalendar } from '../../../../../components/PlanCalendar';
@@ -47,6 +48,7 @@ export default function CycleDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [weekOpen, setWeekOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile || !id || !cycleId) return;
@@ -144,23 +146,27 @@ export default function CycleDashboardScreen() {
         </View>
       ) : null}
 
-      <Card style={styles.section}>
-        <BlockOverview
-          view={buildBlockView({
-            cycle,
-            cycles,
-            logs,
-            routine,
-            muscleByExercise,
-            measureByExercise,
-          })}
-          title={cycle.name}
-          subtitle={`${CYCLE_LEVEL_LABEL[cycle.level]} · ${stats.sessionsDone} entreno${
-            stats.sessionsDone === 1 ? '' : 's'
-          }`}
-          onPressDetail={() => router.push(`/(trainer)/clients/${id}/overview`)}
-        />
-      </Card>
+      {/* Una sola semana no tiene reparto que analizar: sus números ya están
+          arriba, y hablar "del bloque" mirando siete días es confundir. */}
+      {cycle.level !== 'micro' ? (
+        <Card style={styles.section}>
+          <BlockOverview
+            view={buildBlockView({
+              cycle,
+              cycles,
+              logs,
+              routine,
+              muscleByExercise,
+              measureByExercise,
+            })}
+            title={cycle.name}
+            subtitle={`${CYCLE_LEVEL_LABEL[cycle.level]} · ${stats.sessionsDone} entreno${
+              stats.sessionsDone === 1 ? '' : 's'
+            }`}
+            onPressDetail={() => router.push(`/(trainer)/clients/${id}/overview`)}
+          />
+        </Card>
+      ) : null}
 
       <View style={styles.tilesRow}>
         <StatTile icon="pie-chart" value={pctText} label="Completado" highlight />
@@ -289,6 +295,23 @@ export default function CycleDashboardScreen() {
         )}
       </Card>
 
+      {cycle.level === 'micro' ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionLabel}>Programación de la semana</Text>
+          <Text style={styles.mutedText}>
+            {(cycle.weekPlan ?? []).length > 0
+              ? `${(cycle.weekPlan ?? []).length} ejercicios con números propios esta semana. Tu alumno los ve en su entreno.`
+              : 'Esta semana se hace la rutina tal cual. Prográmala si quieres subir series, repeticiones o apretar el RIR.'}
+          </Text>
+          <Button
+            title={(cycle.weekPlan ?? []).length > 0 ? 'Editar la semana' : 'Programar la semana'}
+            variant="secondary"
+            onPress={() => setWeekOpen(true)}
+            style={{ marginTop: spacing.md }}
+          />
+        </Card>
+      ) : null}
+
       <View style={styles.actions}>
         <Button
           title="Editar ciclo"
@@ -303,6 +326,17 @@ export default function CycleDashboardScreen() {
           style={{ flex: 1 }}
         />
       </View>
+
+      {cycle.level === 'micro' ? (
+        <WeekPlanSheet
+          visible={weekOpen}
+          micro={cycle}
+          cycles={cycles}
+          routine={routine}
+          onClose={() => setWeekOpen(false)}
+          onSaved={load}
+        />
+      ) : null}
 
       {profile && id ? (
         <CycleSheet
@@ -385,7 +419,7 @@ const styles = StyleSheet.create({
   },
   goalText: { ...typography.body, color: colors.text },
   notesText: { ...typography.body, color: colors.textMuted, lineHeight: 21 },
-  mutedText: { ...typography.small, color: colors.textFaint },
+  mutedText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
   logRow: {
     flexDirection: 'row',
     alignItems: 'center',

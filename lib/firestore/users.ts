@@ -177,6 +177,14 @@ export async function updateClientBilling(
   await setDoc(doc(db, 'users', clientId), stripUndefined(data), { merge: true });
 }
 
+/**
+ * Activa o desactiva que a ese alumno se le pregunte el esfuerzo (RIR) al
+ * terminar cada ejercicio. Lo decide su entrenador (ver firestore.rules).
+ */
+export async function setClientTrackRir(clientId: string, trackRir: boolean) {
+  await setDoc(doc(db, 'users', clientId), { trackRir }, { merge: true });
+}
+
 /** Quita la fecha de próximo pago de un cliente. */
 export async function clearClientNextPayment(clientId: string) {
   await updateDoc(doc(db, 'users', clientId), { nextPaymentDate: deleteField() });
