@@ -149,6 +149,7 @@ await como('coach@demo.test');
 await limpiar('exercises', 'trainerId', coach);
 await limpiar('routines', 'trainerId', coach);
 await limpiar('payments', 'trainerId', coach);
+await limpiar('trainingCycles', 'trainerId', coach);
 
 const EJ = [
   ['Dominadas', 'Tirón', 'reps'], ['Fondos en paralelas', 'Empuje', 'reps'],
@@ -173,6 +174,63 @@ await addDoc(collection(db, 'routines'), {
     { id: 'd3', name: 'Descanso', isRest: true, exercises: [] },
   ],
 });
+
+/**
+ * Plan de entrenamiento del alumno: un macrociclo con dos bloques de cuatro
+ * semanas (la última de cada uno, de descarga) y sus ocho microciclos.
+ *
+ * Arranca cinco semanas atrás para que el calendario tenga a la vez pasado,
+ * semana en curso y futuro: es la única forma de ver de un vistazo si el
+ * cumplimiento, la banda del bloque y la marca de "hoy" caen donde deben.
+ */
+{
+  const lunesDe = (ts) => {
+    const d = new Date(ts);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.getTime();
+  };
+  const SEMANA = 7 * DAY;
+  const inicio = lunesDe(now) - 5 * SEMANA;
+  const bloques = [
+    { nombre: 'Acumulación', semanas: 4, objetivo: 'Volumen y técnica' },
+    { nombre: 'Intensificación', semanas: 4, objetivo: 'Más carga, menos series' },
+  ];
+  const totalSemanas = bloques.reduce((n, b) => n + b.semanas, 0);
+
+  const macroRef = doc(collection(db, 'trainingCycles'));
+  await setDoc(macroRef, {
+    trainerId: coach, clientId: cli, level: 'macro', name: 'Temporada de otoño',
+    startDate: inicio, endDate: inicio + totalSemanas * SEMANA - DAY,
+    orderIndex: 1, goal: 'Muscle-up estricto por 3', targetSessions: 4 * totalSemanas,
+    createdAt: now, updatedAt: now,
+  });
+
+  let cursor = inicio;
+  for (const [bi, bloque] of bloques.entries()) {
+    const mesoRef = doc(collection(db, 'trainingCycles'));
+    await setDoc(mesoRef, {
+      trainerId: coach, clientId: cli, level: 'meso', name: bloque.nombre,
+      parentId: macroRef.id, orderIndex: bi + 1,
+      startDate: cursor, endDate: cursor + bloque.semanas * SEMANA - DAY,
+      goal: bloque.objetivo, targetSessions: 4 * bloque.semanas,
+      createdAt: now, updatedAt: now,
+    });
+    for (let w = 0; w < bloque.semanas; w++) {
+      const descarga = w === bloque.semanas - 1;
+      await addDoc(collection(db, 'trainingCycles'), {
+        trainerId: coach, clientId: cli, level: 'micro',
+        name: `Semana ${w + 1}${descarga ? ' · descarga' : ''}`,
+        parentId: mesoRef.id, orderIndex: w + 1,
+        startDate: cursor + w * SEMANA, endDate: cursor + w * SEMANA + 6 * DAY,
+        targetSessions: descarga ? 3 : 4,
+        ...(descarga ? { isDeload: true } : {}),
+        createdAt: now, updatedAt: now,
+      });
+    }
+    cursor += bloque.semanas * SEMANA;
+  }
+}
 
 // Los entrenos los registra el alumno, no el coach.
 await como('alumno@demo.test');

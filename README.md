@@ -93,6 +93,11 @@ Implementado hasta ahora:
   (duración, series, reps, volumen, PRs, racha).
 - **Planificación semanal**: cada día de rutina puede fijarse a un día de
   la semana; el alumno ve "Hoy toca"/descanso y el día preseleccionado.
+- **Planificación por ciclos**: el entrenador monta la temporada entera de
+  una vez (macrociclo → bloques → semanas, con descargas) y ve un
+  calendario semana a semana con lo que el alumno ha cumplido de verdad.
+  El alumno ve en su inicio el bloque, la semana del plan y si toca
+  descargar. Sigue siendo opcional: sin plan, la app funciona igual.
 - **Editor de rutinas pro**: descanso y notas por ejercicio, superseries
   (sin descanso entre encadenados), reordenar y copiar la rutina de otro
   alumno.

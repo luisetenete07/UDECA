@@ -7,9 +7,11 @@ import {
   query,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
+import { buildPlan, type PlanDraft } from '../cyclePlan';
 import type { TrainingCycle } from '../types';
 
 const collectionRef = () => collection(db, 'trainingCycles');
@@ -75,4 +77,51 @@ export async function updateCycle(
  */
 export async function deleteCycle(id: string): Promise<void> {
   await deleteDoc(doc(db, 'trainingCycles', id));
+}
+
+/** Borra un ciclo y todo lo que cuelga de él (un plan entero). */
+export async function deleteCycles(ids: string[]): Promise<void> {
+  // 500 escrituras por lote es el tope de Firestore; un plan de un año no llega,
+  // pero el troceo cuesta cuatro líneas y evita un fallo imposible de reproducir.
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const id of ids.slice(i, i + 400)) batch.delete(doc(db, 'trainingCycles', id));
+    await batch.commit();
+  }
+}
+
+/**
+ * Crea el plan completo (macro + mesos + micros) en un solo lote.
+ *
+ * Los ids se generan aquí, antes de escribir, porque un hijo necesita el id de
+ * su padre y en un lote no hay forma de leerlo después. En un lote entra todo o
+ * no entra nada: nunca queda un macrociclo a medio poblar si se va la conexión.
+ */
+export async function createCyclePlan(
+  trainerId: string,
+  clientId: string,
+  draft: PlanDraft
+): Promise<string> {
+  const planned = buildPlan(draft);
+  const now = Date.now();
+  const ids = new Map<string, string>();
+  for (const p of planned) ids.set(p.key, doc(collectionRef()).id);
+
+  const batch = writeBatch(db);
+  for (const p of planned) {
+    const { key, parentKey, ...rest } = p;
+    batch.set(
+      doc(db, 'trainingCycles', ids.get(key)!),
+      stripUndefined({
+        ...rest,
+        trainerId,
+        clientId,
+        parentId: parentKey ? ids.get(parentKey) : undefined,
+        createdAt: now,
+        updatedAt: now,
+      })
+    );
+  }
+  await batch.commit();
+  return ids.get('macro')!;
 }

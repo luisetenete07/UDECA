@@ -627,6 +627,14 @@ export interface TrainingCycle {
   clientId: string;
   level: CycleLevel;
   name: string;
+  /**
+   * Ciclo que lo contiene: un mesociclo cuelga de su macro, un microciclo de su
+   * meso. Vacío = ciclo suelto. Es OPCIONAL a propósito: los ciclos creados a
+   * mano (y todos los que ya existían) siguen funcionando sin padre.
+   */
+  parentId?: string;
+  /** Posición dentro del padre (1 = primer bloque / primera semana). */
+  orderIndex?: number;
   /** Fechas (medianoche). Opcionales: un ciclo puede quedar abierto. */
   startDate?: number;
   endDate?: number;

@@ -8,14 +8,16 @@ import { CycleProgress } from '../../../../../components/CycleProgress';
 import { CycleSheet } from '../../../../../components/CycleSheet';
 import { EmptyState } from '../../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../../components/LoadingScreen';
+import { PlanCalendar } from '../../../../../components/PlanCalendar';
 import { ProgressBar } from '../../../../../components/ProgressBar';
 import { ScreenContainer } from '../../../../../components/ScreenContainer';
 import { StatTile } from '../../../../../components/StatTile';
 import { showToast } from '../../../../../components/Toast';
 import { useAuth } from '../../../../../lib/auth-context';
-import { deleteCycle, getCyclesForClient } from '../../../../../lib/firestore/cycles';
+import { deleteCycles, getCyclesForClient } from '../../../../../lib/firestore/cycles';
 import { getWorkoutLogsForClient } from '../../../../../lib/firestore/workoutLogs';
 import { computeCycleStats } from '../../../../../lib/cycleStats';
+import { descendantIds } from '../../../../../lib/cyclePlan';
 import { colors, fonts, radius, spacing, typography } from '../../../../../lib/theme';
 import { CYCLE_LEVEL_LABEL, type TrainingCycle, type WorkoutLog } from '../../../../../lib/types';
 
@@ -27,6 +29,7 @@ export default function CycleDashboardScreen() {
   const { id, cycleId } = useLocalSearchParams<{ id: string; cycleId: string }>();
   const { profile } = useAuth();
   const router = useRouter();
+  const [cycles, setCycles] = useState<TrainingCycle[]>([]);
   const [cycle, setCycle] = useState<TrainingCycle | null>(null);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +42,7 @@ export default function CycleDashboardScreen() {
       getCyclesForClient(profile.uid, id),
       getWorkoutLogsForClient(id, profile.uid),
     ]);
+    setCycles(cyclesData);
     setCycle(cyclesData.find((c) => c.id === cycleId) ?? null);
     setLogs(logsData);
     setLoading(false);
@@ -50,11 +54,13 @@ export default function CycleDashboardScreen() {
     }, [load])
   );
 
+  const cuelgan = cycleId ? descendantIds(cycles, cycleId) : [];
+
   const handleDelete = async () => {
     if (!cycleId) return;
     try {
-      await deleteCycle(cycleId);
-      showToast('Ciclo eliminado');
+      await deleteCycles([cycleId, ...cuelgan]);
+      showToast(cuelgan.length > 0 ? 'Plan eliminado' : 'Ciclo eliminado');
       router.replace(`/(trainer)/clients/${id}/planning`);
     } catch {
       showToast('No se pudo eliminar');
@@ -72,10 +78,26 @@ export default function CycleDashboardScreen() {
 
   const stats = computeCycleStats(cycle, logs);
   const pctText = stats.pctComplete != null ? `${Math.round(stats.pctComplete * 100)}%` : '—';
+  const padre = cycle.parentId ? (cycles.find((c) => c.id === cycle.parentId) ?? null) : null;
+  const hijos = cycles
+    .filter((c) => c.parentId === cycle.id)
+    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
   return (
     <ScreenContainer>
       <Stack.Screen options={{ title: CYCLE_LEVEL_LABEL[cycle.level] }} />
+
+      {padre ? (
+        <Pressable
+          style={styles.breadcrumb}
+          onPress={() => router.push(`/(trainer)/clients/${id}/cycles/${padre.id}`)}
+        >
+          <Ionicons name="chevron-back" size={14} color={colors.textMuted} />
+          <Text style={styles.breadcrumbText} numberOfLines={1}>
+            {padre.name}
+          </Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.headRow}>
         <Text style={styles.level}>{CYCLE_LEVEL_LABEL[cycle.level]}</Text>
@@ -133,9 +155,54 @@ export default function CycleDashboardScreen() {
       </View>
 
       <Card style={styles.section}>
-        <Text style={styles.sectionLabel}>Progreso del mesociclo</Text>
-        <CycleProgress cycle={cycle} logs={logs} />
+        {hijos.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>Calendario del plan</Text>
+            <PlanCalendar
+              root={cycle}
+              cycles={cycles}
+              logs={logs}
+              onPressWeek={(w) =>
+                w.micro && router.push(`/(trainer)/clients/${id}/cycles/${w.micro.id}`)
+              }
+            />
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionLabel}>Días entrenados</Text>
+            <CycleProgress cycle={cycle} logs={logs} />
+          </>
+        )}
       </Card>
+
+      {hijos.length > 0 ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            {CYCLE_LEVEL_LABEL[hijos[0].level]}s ({hijos.length})
+          </Text>
+          {hijos.map((h) => {
+            const hs = computeCycleStats(h, logs);
+            return (
+              <Pressable
+                key={h.id}
+                style={styles.logRow}
+                onPress={() => router.push(`/(trainer)/clients/${id}/cycles/${h.id}`)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.logDay}>{h.name}</Text>
+                  <Text style={styles.logMeta}>
+                    {h.startDate ? fmt(h.startDate) : '—'}
+                    {h.endDate ? ` – ${fmt(h.endDate)}` : ''} · {hs.sessionsDone}
+                    {h.targetSessions ? `/${h.targetSessions}` : ''} entrenos
+                    {h.isDeload ? ' · descarga' : ''}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+              </Pressable>
+            );
+          })}
+        </Card>
+      ) : null}
 
       {cycle.goal ? (
         <Card style={styles.section}>
@@ -212,9 +279,14 @@ export default function CycleDashboardScreen() {
       <Modal visible={confirmDelete} transparent animationType="fade" onRequestClose={() => setConfirmDelete(false)}>
         <View style={styles.confirmBackdrop}>
           <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>¿Eliminar este ciclo?</Text>
+            <Text style={styles.confirmTitle}>
+              {cuelgan.length > 0 ? '¿Eliminar el plan entero?' : '¿Eliminar este ciclo?'}
+            </Text>
             <Text style={styles.confirmText}>
-              Se borra solo el ciclo. Los entrenos del alumno y su historial no se tocan.
+              {cuelgan.length > 0
+                ? `Se borran también los ${cuelgan.length} ciclos que cuelgan de él (bloques y semanas). `
+                : 'Se borra solo el ciclo. '}
+              Los entrenos del alumno y su historial no se tocan.
             </Text>
             <View style={styles.actions}>
               <Button
@@ -233,6 +305,14 @@ export default function CycleDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  breadcrumb: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    marginBottom: spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  breadcrumbText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.medium },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
   level: {
     ...typography.label,

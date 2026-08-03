@@ -37,6 +37,7 @@ import { clientDaysUntilLock } from '../../lib/subscription';
 import { notifyUser } from '../../lib/notifications';
 import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
+import { planCalendar, planSummary } from '../../lib/cyclePlan';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
@@ -95,6 +96,7 @@ export default function ClientDashboard() {
   // Ciclo en curso (si el coach usa planificación). Best-effort: si las reglas
   // de ciclos aún no están publicadas, la consulta falla en silencio y no se
   // muestra la tarjeta — nunca rompe el resto del inicio.
+  const [cycles, setCycles] = useState<TrainingCycle[]>([]);
   const [activeCyc, setActiveCyc] = useState<TrainingCycle | null>(null);
   const [trainerPayLink, setTrainerPayLink] = useState<string | null>(null);
   // Cobros del coach por Stripe Connect (directo, sin comisión de UDECA).
@@ -159,7 +161,10 @@ export default function ClientDashboard() {
   useEffect(() => {
     if (!profile) return;
     getCyclesForClientSelf(profile.uid)
-      .then((cs) => setActiveCyc(activeCycle(cs)))
+      .then((cs) => {
+        setCycles(cs);
+        setActiveCyc(activeCycle(cs));
+      })
       .catch(() => {});
   }, [profile]);
 
@@ -575,11 +580,25 @@ export default function ClientDashboard() {
       {activeCyc
         ? (() => {
             const cs = computeCycleStats(activeCyc, workoutLogs);
-            const wk = cycleWeekInfo(activeCyc);
+            // Si el ciclo forma parte de un plan, la semana se cuenta sobre el
+            // plan entero: al alumno le dice más "semana 6 de 12" que "semana 2".
+            const bloque = activeCyc.parentId
+              ? (cycles.find((c) => c.id === activeCyc.parentId) ?? null)
+              : null;
+            const raiz = bloque?.parentId
+              ? (cycles.find((c) => c.id === bloque.parentId) ?? bloque)
+              : bloque;
+            const plan = raiz ? planSummary(planCalendar(raiz, cycles, workoutLogs)) : null;
+            const wk =
+              plan && plan.totalWeeks > 0 && plan.week > 0
+                ? { week: plan.week, totalWeeks: plan.totalWeeks }
+                : cycleWeekInfo(activeCyc);
             return (
               <View style={styles.cycleCard}>
                 <View style={styles.cycleTop}>
-                  <Text style={styles.cycleLevel}>{CYCLE_LEVEL_LABEL[activeCyc.level]}</Text>
+                  <Text style={styles.cycleLevel} numberOfLines={1}>
+                    {bloque ? bloque.name : CYCLE_LEVEL_LABEL[activeCyc.level]}
+                  </Text>
                   <View style={styles.cycleWeekBadge}>
                     <Ionicons name="calendar-outline" size={12} color={colors.primaryBright} />
                     <Text style={styles.cycleWeekText}>
@@ -591,7 +610,10 @@ export default function ClientDashboard() {
                     <Text style={styles.cycleDeload}>Semana de descarga</Text>
                   ) : null}
                 </View>
-                <Text style={styles.cycleName}>{activeCyc.name}</Text>
+                <Text style={styles.cycleName}>
+                  {raiz && raiz !== bloque ? `${raiz.name} · ` : ''}
+                  {activeCyc.name}
+                </Text>
                 {cs.pctComplete != null ? (
                   <View style={{ marginTop: spacing.sm }}>
                     <ProgressBar progress={cs.pctComplete} height={7} />
@@ -608,7 +630,11 @@ export default function ClientDashboard() {
                       })}`
                     : ''}
                 </Text>
-                {activeCyc.goal ? <Text style={styles.cycleGoal}>{activeCyc.goal}</Text> : null}
+                {activeCyc.goal || bloque?.goal || raiz?.goal ? (
+                  <Text style={styles.cycleGoal}>
+                    {activeCyc.goal || bloque?.goal || raiz?.goal}
+                  </Text>
+                ) : null}
               </View>
             );
           })()

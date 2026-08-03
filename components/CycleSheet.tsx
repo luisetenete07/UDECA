@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
+import { DateField, fmtDate as fmt, startOfToday } from './DateField';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { createCycle, updateCycle } from '../lib/firestore/cycles';
@@ -15,32 +16,6 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LEVELS: CycleLevel[] = ['macro', 'meso', 'micro'];
-
-function startOfToday(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function fmt(ts: number): string {
-  return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-const two = (n: number) => String(n).padStart(2, '0');
-
-/** yyyy-mm-dd local para el <input type="date"> de la web. */
-function toISO(ts: number): string {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
-}
-
-function fromISO(value: string): number | null {
-  const [y, m, d] = value.split('-').map(Number);
-  if (!y || !m || !d) return null;
-  const nd = new Date(y, m - 1, d);
-  nd.setHours(0, 0, 0, 0);
-  return nd.getTime();
-}
 
 interface Props {
   visible: boolean;
@@ -104,8 +79,6 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
     if (!editing) setWeeks(CYCLE_DEFAULT_WEEKS[l]);
     if (l !== 'micro') setIsDeload(false);
   };
-
-  const shiftStart = (deltaDays: number) => setStartDate((s) => s + deltaDays * DAY_MS);
 
   const endDate = open ? undefined : startDate + (weeks * 7 - 1) * DAY_MS;
 
@@ -174,54 +147,7 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
             />
 
             <Text style={styles.label}>Empieza</Text>
-            {Platform.OS === 'web' ? (
-              <View style={styles.dateWebRow}>
-                {React.createElement('input', {
-                  type: 'date',
-                  value: toISO(startDate),
-                  onChange: (e: { target: { value: string } }) => {
-                    const ts = fromISO(e.target.value);
-                    if (ts != null) setStartDate(ts);
-                  },
-                  style: {
-                    flex: 1,
-                    colorScheme: 'dark',
-                    background: colors.surfaceAlt,
-                    color: colors.text,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: radius.md,
-                    padding: '13px 14px',
-                    fontSize: 15,
-                    fontFamily: 'inherit',
-                    minHeight: 52,
-                  },
-                })}
-                <Pressable onPress={() => setStartDate(startOfToday())} style={styles.todayBtn} hitSlop={6}>
-                  <Text style={styles.todayText}>Hoy</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={styles.dateRow}>
-                <Pressable onPress={() => shiftStart(-7)} style={styles.stepBtn} hitSlop={6}>
-                  <Ionicons name="play-back" size={15} color={colors.primary} />
-                </Pressable>
-                <Pressable onPress={() => shiftStart(-1)} style={styles.stepBtn} hitSlop={6}>
-                  <Ionicons name="chevron-back" size={18} color={colors.primary} />
-                </Pressable>
-                <Text style={styles.dateText}>{fmt(startDate)}</Text>
-                <Pressable onPress={() => shiftStart(1)} style={styles.stepBtn} hitSlop={6}>
-                  <Ionicons name="chevron-forward" size={18} color={colors.primary} />
-                </Pressable>
-                <Pressable onPress={() => shiftStart(7)} style={styles.stepBtn} hitSlop={6}>
-                  <Ionicons name="play-forward" size={15} color={colors.primary} />
-                </Pressable>
-              </View>
-            )}
-            {Platform.OS !== 'web' ? (
-              <Pressable onPress={() => setStartDate(startOfToday())} style={styles.todayInline} hitSlop={6}>
-                <Text style={styles.todayText}>Hoy</Text>
-              </Pressable>
-            ) : null}
+            <DateField value={startDate} onChange={setStartDate} />
 
             <View style={styles.rowBetween}>
               <Text style={styles.label}>Sin fecha de fin (abierto)</Text>
@@ -359,8 +285,6 @@ const styles = StyleSheet.create({
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   chipTextActive: { color: colors.primaryBright },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  dateWebRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  todayInline: { alignSelf: 'flex-start', marginBottom: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.hairline },
   stepBtn: {
     width: 40,
     height: 40,
@@ -372,14 +296,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dateText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, minWidth: 120, textAlign: 'center' },
-  todayBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  todayText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   endHint: { ...typography.small, color: colors.textFaint, flex: 1 },
   rowBetween: {
     flexDirection: 'row',
