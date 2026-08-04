@@ -140,6 +140,35 @@ Implementado hasta ahora:
 - **Estado del alumno** (activo/pausa/inactivo) gestionado por el
   entrenador.
 
+**Fase 5 — Rediseño**
+
+El oro se queda: la marca es el color, no la letra. Cambia todo lo demás.
+
+- **Fuera Cinzel, entra Sora.** La romana de capitales daba ceremonia, pero
+  en una pantalla que se abre veinte veces al día para mirar números la
+  ceremonia se lee como lentitud. El interletrado de los titulares pasa a
+  negativo, y cuanto más grande, más apretado. También en la web, porque
+  una marca con dos letras distintas parece dos productos.
+- **Un tamaño para lo que manda** (`hero`, 34 px). Sin un escalón reservado
+  a lo importante, todo acaba a 21 y no manda nada.
+- **Bordes casi invisibles** (blanco al 7 %): un borde que se ve compite con
+  el contenido y llena la pantalla de rectángulos.
+- **Jerarquía por pantalla**: en el entreno manda el ejercicio, no el nombre
+  de la rutina; en el descanso manda la cuenta atrás; en Peso, el peso de
+  hoy. Cada pantalla tiene una pregunta y una cifra que la contesta.
+- **Cifras en vitrina** (`components/Vitrina.tsx`): números grandes sin caja
+  y separados por un filo, en el perfil, el resumen del entreno y la
+  comunidad. Sustituyen a los cuadraditos iguales con icono y borde.
+- **Lo que se toca, responde**: muelle al pulsar en botones y en las series
+  del entreno (`components/PressableScale.tsx`).
+- **Cifras tabulares** en todo número que cambia o que cuenta: los dígitos
+  de Sora e Inter son de ancho proporcional y, sin esto, un contador se
+  ensancha y se estrecha mientras sube.
+- **Una sola cabecera** (`components/ScreenHeader.tsx`) en todas las
+  pantallas, con el tamaño creciendo en tablet y ordenador.
+- **Tarjetas que se pliegan y se acuerdan** (`components/CollapsibleCard.tsx`)
+  en el panel del entrenador y en la ficha del alumno.
+
 ## 1. Requisitos
 
 - Node.js 20+

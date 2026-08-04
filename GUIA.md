@@ -81,6 +81,14 @@ y recordatorio diario de entrenamiento.
 
 ## Pendiente / siguientes pasos
 
+0. **Rehacer las 3 capturas de la web** (`web/assets/app-entreno.png`,
+   `app-inicio.png`, `app-coach.png`). Son fotos de la app de ANTES del
+   rediseño: se ven los títulos en Cinzel y las cifras del resumen en
+   cuadraditos con icono, que ya no existen. Ahora mismo www.udeca.app
+   anuncia una versión de la app que nadie se va a encontrar al entrar.
+   Para rehacerlas: abre app.udeca.app en el móvil (o en el navegador con
+   la vista de móvil), ve a esas tres pantallas y haz captura. Se
+   sustituyen los ficheros con el mismo nombre y ya está.
 1. **Vídeos de los cursos (Vimeo)** — ya integrado en la app:
    1. Crea cuenta en vimeo.com (el plan gratuito vale para empezar;
       Starter da más almacenamiento).
