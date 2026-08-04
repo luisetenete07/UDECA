@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /** 0 = no le quedaba ninguna (al fallo). 4 significa "4 o más". */
@@ -33,7 +34,12 @@ export function RirPicker({
           return (
             <Pressable
               key={n}
-              onPress={() => onChange(n)}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.selectionAsync().catch(() => {});
+                }
+                onChange(n);
+              }}
               style={[styles.chip, activo && styles.chipActive, n === 0 && styles.chipFail]}
               hitSlop={4}
               accessibilityRole="radio"

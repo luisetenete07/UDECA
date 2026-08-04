@@ -91,6 +91,10 @@ Implementado hasta ahora:
   destacado, cronómetro de descanso entre series (+30s/saltar),
   detección de récords personales y pantalla resumen post-entreno
   (duración, series, reps, volumen, PRs, racha).
+- **El récord, en el momento**: al marcar la serie que bate una marca sale
+  una banda dorada con la marca nueva y la anterior, con vibración de
+  celebración. Una vez por ejercicio y sesión, y usando la misma función que
+  el resumen final para que nunca celebre algo que luego no aparezca.
 - **Planificación semanal**: cada día de rutina puede fijarse a un día de
   la semana; el alumno ve "Hoy toca"/descanso y el día preseleccionado.
 - **Planificación por ciclos**: el entrenador monta la temporada entera de

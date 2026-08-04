@@ -18,6 +18,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Confetti } from '../../components/Confetti';
+import { PRBurst } from '../../components/PRBurst';
+import { checkLivePR, type LivePR } from '../../lib/livePR';
 import { FadeIn, PopIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
 import { IntervalTimer } from '../../components/IntervalTimer';
@@ -185,6 +187,11 @@ export default function WorkoutScreen() {
   );
 
   const [routine, setRoutine] = useState<Routine | null>(null);
+  // Récord que se está celebrando ahora mismo, y los ya celebrados en esta
+  // sesión: el mismo ejercicio no vuelve a saltar aunque siga subiendo serie a
+  // serie, o el aviso pasaría de premio a ruido.
+  const [prVivo, setPrVivo] = useState<LivePR | null>(null);
+  const prCelebrados = useRef<Set<string>>(new Set());
   const [history, setHistory] = useState<import('../../lib/types').WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
@@ -267,6 +274,7 @@ export default function WorkoutScreen() {
         ]);
         if (cancelled) return;
         setRoutine(applyWeekPlan(data, ciclos));
+        prCelebrados.current = new Set();
         setHistory(logs);
         setLastPerf(lastPerformanceByExercise(logs));
         // Vídeos de técnica de la biblioteca del entrenador (no bloquea).
@@ -830,6 +838,20 @@ export default function WorkoutScreen() {
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       }
+
+      // ¿Acaba de batir su marca? Se comprueba con el estado NUEVO, porque el
+      // de React todavía no se ha actualizado cuando llega aquí.
+      const ejercicio = log[exerciseIndex];
+      if (ejercicio && !prCelebrados.current.has(ejercicio.exerciseId)) {
+        const conLaSerie = ejercicio.sets.map((s2, j) =>
+          j === setIndex ? { ...s2, completed: true } : s2
+        );
+        const record = checkLivePR(history, ejercicio, conLaSerie);
+        if (record) {
+          prCelebrados.current.add(record.exerciseId);
+          setPrVivo(record);
+        }
+      }
       // En superserie no hay descanso: se encadena con el siguiente ejercicio.
       const nextIsLinked = day?.exercises[exerciseIndex + 1]?.supersetWithPrevious === true;
       if (!nextIsLinked) {
@@ -1217,6 +1239,16 @@ export default function WorkoutScreen() {
   // ---------- Modo entreno ----------
   return (
     <ScreenContainer contentStyle={activeRest ? styles.restSpacer : undefined}>
+      {prVivo ? (
+        <PRBurst
+          key={`${prVivo.exerciseId}-${prVivo.label}`}
+          exerciseName={prVivo.exerciseName}
+          label={prVivo.label}
+          previous={prVivo.previous}
+          onDone={() => setPrVivo(null)}
+        />
+      ) : null}
+
       <View style={styles.topBarRow}>
         <Pressable
           onPress={() => {
