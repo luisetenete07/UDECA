@@ -244,7 +244,17 @@ export default function NutritionScreen() {
             </View>
 
             <View style={styles.calSummary}>
-              <Text style={styles.calBig}>{Math.max(0, targets.dailyCalories - totals.calories)}</Text>
+              {/* Al pasarte, el número era siempre 0.
+                  `Math.max(0, objetivo - consumidas)` da cero en cuanto te
+                  pasas, pero el rótulo de debajo seguía diciendo "kcal de
+                  más": la pantalla anunciaba "0 kcal de más" con trescientas
+                  de más encima. Se enseña la diferencia en valor absoluto, que
+                  es la que el rótulo lleva describiendo desde el principio. */}
+              <Text
+                style={[styles.calBig, totals.calories > targets.dailyCalories && styles.calPasado]}
+              >
+                {Math.abs(targets.dailyCalories - totals.calories)}
+              </Text>
               <Text style={styles.calUnit}>
                 {totals.calories > targets.dailyCalories ? 'kcal de más' : 'kcal restantes'}
               </Text>
@@ -498,14 +508,23 @@ const styles = StyleSheet.create({
   },
   planName: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   calSummary: { alignItems: 'center', marginBottom: spacing.md },
+  /**
+   * En la display y bien apretado. Iba en Inter y con el interletrado de `h1`,
+   * que está calculado para 28 px: a 44 esa misma cifra se abre y el número
+   * pierde el bloque. Las cifras grandes del rediseño —la cuenta atrás del
+   * descanso, la vitrina— van todas en Sora.
+   */
   calBig: {
     ...typography.h1,
     ...tabularNums,
     color: colors.primaryBright,
-    fontFamily: fonts.heading,
+    fontFamily: fonts.display,
     fontSize: 44,
     lineHeight: 48,
+    letterSpacing: -1.4,
   },
+  // Pasarse no es un error, pero tampoco es lo mismo: ámbar de aviso, no rojo.
+  calPasado: { color: colors.warning },
   calUnit: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
   calSub: { ...typography.small, color: colors.textFaint, marginTop: 4 },
   recalcBtn: {
