@@ -463,41 +463,9 @@ export default function ClientDashboard() {
         </View>
       ) : null}
 
-      <View style={styles.quoteWrap}>
-        <View style={styles.quoteRule} />
-        <Text style={styles.quoteText}>{quoteOfTheDay()}</Text>
-      </View>
-
-      {/* Atleta: acceso a gestionar su propio plan de entreno. */}
-      {profile?.role === 'athlete' ? (
-        <Pressable
-          onPress={() => router.push('/(client)/my-plan')}
-          style={styles.myPlanEntry}
-        >
-          <View style={styles.myPlanIcon}>
-            <Ionicons name="construct-outline" size={18} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.myPlanTitle}>Mi plan de entreno</Text>
-            <Text style={styles.myPlanSub}>Crea y edita tus días y ejercicios.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </Pressable>
-      ) : null}
-
-      {showWeightReminder ? (
-        <Pressable onPress={() => router.push('/(client)/progress')}>
-          <View style={styles.reminderBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
-            <Text style={styles.reminderText}>
-              {lastWeightLog
-                ? 'Llevas más de una semana sin registrar tu peso.'
-                : 'Todavía no has registrado tu peso. Empieza tu seguimiento.'}
-            </Text>
-          </View>
-        </Pressable>
-      ) : null}
-
+      {/* La acción del día va PRIMERO: es a lo que se entra. Todo lo
+          demás —avisos, plan, frase— se lee después de saber si hoy toca
+          entrenar y qué toca. */}
       {/* Acción principal del día */}
       <Pressable
         onPress={() =>
@@ -576,6 +544,38 @@ export default function ClientDashboard() {
           })()}
         </LinearGradient>
       </Pressable>
+
+
+      {/* Atleta: acceso a gestionar su propio plan de entreno. */}
+      {profile?.role === 'athlete' ? (
+        <Pressable
+          onPress={() => router.push('/(client)/my-plan')}
+          style={styles.myPlanEntry}
+        >
+          <View style={styles.myPlanIcon}>
+            <Ionicons name="construct-outline" size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.myPlanTitle}>Mi plan de entreno</Text>
+            <Text style={styles.myPlanSub}>Crea y edita tus días y ejercicios.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </Pressable>
+      ) : null}
+
+      {showWeightReminder ? (
+        <Pressable onPress={() => router.push('/(client)/progress')}>
+          <View style={styles.reminderBanner}>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
+            <Text style={styles.reminderText}>
+              {lastWeightLog
+                ? 'Llevas más de una semana sin registrar tu peso.'
+                : 'Todavía no has registrado tu peso. Empieza tu seguimiento.'}
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
+
 
       {/* Ciclo en curso (solo si el coach usa planificación) */}
       {activeCyc
@@ -657,11 +657,20 @@ export default function ClientDashboard() {
                   ? 'Semana cerrada'
                   : `${targetSessions - sessions} para cerrarla`}
               </Text>
-              <Text style={styles.weekHint}>
-                {sessions >= targetSessions
-                  ? 'Objetivo cumplido. Lo que venga es de propina.'
-                  : `Llevas ${sessions} de ${targetSessions} sesiones.`}
-              </Text>
+              {streak > 0 ? (
+                <View style={styles.streakInline}>
+                  <Ionicons name="flame" size={14} color={colors.primaryBright} />
+                  <Text style={styles.streakInlineText}>
+                    {streak} día{streak === 1 ? '' : 's'} de racha
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.weekHint}>
+                  {sessions >= targetSessions
+                    ? 'Objetivo cumplido. Lo que venga es de propina.'
+                    : `Llevas ${sessions} de ${targetSessions} sesiones.`}
+                </Text>
+              )}
             </View>
           </View>
         ) : (
@@ -696,15 +705,17 @@ export default function ClientDashboard() {
         </View>
       </Card>
 
-      <View style={styles.statsRow}>
-        <StatTile icon="flame" value={String(streak)} label="Racha (días)" highlight={streak > 0} />
-        <StatTile icon="checkmark-done" value={String(sessions)} label="Esta semana" />
-        <StatTile
-          icon="body"
-          value={currentWeight != null ? currentWeight.toLocaleString('es-ES') : '—'}
-          label="Peso (kg)"
-        />
-      </View>
+      {/* La racha y las sesiones ya están en el anillo de arriba: repetirlas
+          aquí en tres cuadros iguales le quitaba peso a las dos. Queda el peso,
+          que no está en ningún otro sitio de esta pantalla. */}
+      <Pressable onPress={() => router.push('/(client)/progress')} style={styles.weightRow}>
+        <Ionicons name="body-outline" size={17} color={colors.textMuted} />
+        <Text style={styles.weightLabel}>Peso</Text>
+        <Text style={styles.weightValue}>
+          {currentWeight != null ? `${currentWeight.toLocaleString('es-ES')} kg` : 'Sin registrar'}
+        </Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+      </Pressable>
 
       {showFirstSteps ? (
         <Card accent style={styles.section}>
@@ -770,6 +781,12 @@ export default function ClientDashboard() {
           <Text style={styles.goalText}>{profile.goal}</Text>
         </Card>
       ) : null}
+      {/* La frase cierra la pantalla. Está para acompañar, no para informar:
+          arriba estorbaba a lo único que hay que decidir cada día. */}
+      <View style={styles.quoteWrap}>
+        <View style={styles.quoteRule} />
+        <Text style={styles.quoteText}>{quoteOfTheDay()}</Text>
+      </View>
     </ScreenContainer>
   );
 }
@@ -865,6 +882,26 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  streakInline: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
+  streakInlineText: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+  },
+  weightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.md,
+  },
+  weightLabel: { ...typography.body, color: colors.textMuted, flex: 1 },
+  weightValue: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   cycleCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
