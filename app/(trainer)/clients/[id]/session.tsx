@@ -6,9 +6,20 @@ import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../../components/ScreenHeader';
 import { getWorkoutLog } from '../../../../lib/firestore/workoutLogs';
 import { colors, fonts, spacing, typography } from '../../../../lib/theme';
 import { isDualMeasure, setMarks, type WorkoutLog } from '../../../../lib/types';
+
+/**
+ * Mayúscula solo en la primera letra.
+ *
+ * La fecha se pintaba con `textTransform: 'capitalize'`, que en CSS ataca a
+ * TODAS las palabras: "Lunes, 4 De Agosto De 2026". Lo que hacía falta era
+ * subir la inicial del día de la semana, que es lo único que el español pone en
+ * minúscula y aquí abre frase.
+ */
+const capitalizar = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export default function SessionDetailScreen() {
   const { logId, id } = useLocalSearchParams<{ logId: string; id: string }>();
@@ -56,14 +67,16 @@ export default function SessionDetailScreen() {
   return (
     <ScreenContainer>
       <Stack.Screen options={{ headerLeft: backButton }} />
-      <Text style={styles.title}>{log.dayName}</Text>
-      <Text style={styles.subtitle}>
-        {log.routineName} · {new Date(log.date).toLocaleDateString('es-ES', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-        })}
-      </Text>
+      <ScreenHeader
+        title={log.dayName}
+        subtitle={`${log.routineName} · ${capitalizar(
+          new Date(log.date).toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+          })
+        )}`}
+      />
 
       {log.exercises.map((ex, i) => {
         const done = ex.sets.filter((s) => s.completed).length;
@@ -122,13 +135,6 @@ export default function SessionDetailScreen() {
 const styles = StyleSheet.create({
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingRight: spacing.sm },
   backText: { ...typography.body, color: colors.primary, fontFamily: fonts.medium },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
-    textTransform: 'capitalize',
-  },
   card: { marginBottom: spacing.md },
   exHeader: {
     flexDirection: 'row',

@@ -218,7 +218,7 @@ export default function ClientsScreen() {
   if (error) {
     return (
       <ScreenContainer>
-        <Text style={styles.title}>Tus clientes</Text>
+        <ScreenHeader title="Tus clientes" />
         <ErrorState
           title="No se pudo cargar la lista"
           subtitle={error}
@@ -478,8 +478,6 @@ export default function ClientsScreen() {
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted },
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,6 +7,7 @@ import { Card } from '../../../../components/Card';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ProgressMatrix } from '../../../../components/ProgressMatrix';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../../components/ScreenHeader';
 import { showToast } from '../../../../components/Toast';
 import { useAuth } from '../../../../lib/auth-context';
 import { getCyclesForClient } from '../../../../lib/firestore/cycles';
@@ -137,11 +138,10 @@ export default function ClientOverviewScreen() {
   return (
     <ScreenContainer>
       <Stack.Screen options={{ title: 'Progreso total' }} />
-      <Text style={styles.title}>Progreso total</Text>
-      <Text style={styles.subtitle}>
-        La mejor serie de cada ejercicio, semana a semana. Elige qué ejercicios seguir: es la
-        misma tabla que ve tu alumno.
-      </Text>
+      <ScreenHeader
+        title="Progreso total"
+        subtitle="La mejor serie de cada ejercicio, semana a semana. Elige qué ejercicios seguir: es la misma tabla que ve tu alumno."
+      />
 
       <Card style={styles.blockCard}>
         <BlockOverview
@@ -190,13 +190,6 @@ export default function ClientOverviewScreen() {
 
 const styles = StyleSheet.create({
   blockCard: { marginBottom: spacing.md },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: {
-    ...typography.small,
-    color: colors.textMuted,
-    marginTop: 2,
-    marginBottom: spacing.md,
-  },
   exportHint: {
     ...typography.small,
     color: colors.textFaint,

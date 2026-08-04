@@ -17,6 +17,7 @@ import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { DragList } from '../../../components/DragList';
 import { moveItem } from '../../../lib/useDragReorder';
 import { TextField } from '../../../components/TextField';
@@ -187,11 +188,10 @@ export default function MealBooksScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Libretas de comida</Text>
-      <Text style={styles.subtitle}>
-        Sube tus cuadernos de recetas y platos por foto. Los verán TODOS tus alumnos dentro
-        de la app, al final de su pestaña de nutrición.
-      </Text>
+      <ScreenHeader
+        title="Libretas de comida"
+        subtitle="Sube tus cuadernos de recetas y platos por foto. Los verán TODOS tus alumnos dentro de la app, al final de su pestaña de nutrición."
+      />
 
       <Card style={styles.createCard}>
         <Text style={styles.sectionTitle}>Nueva libreta</Text>
@@ -290,8 +290,6 @@ export default function MealBooksScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.xs },
-  subtitle: { ...typography.small, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.lg },
   createCard: { marginBottom: spacing.md },
   section: { marginBottom: 0 },
   sectionDragging: { borderColor: colors.hairline },

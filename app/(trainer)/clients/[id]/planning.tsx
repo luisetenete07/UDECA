@@ -10,6 +10,7 @@ import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { PlanCalendar } from '../../../../components/PlanCalendar';
 import { ProgressBar } from '../../../../components/ProgressBar';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../../components/ScreenHeader';
 import { useAuth } from '../../../../lib/auth-context';
 import { getCyclesForClient } from '../../../../lib/firestore/cycles';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
@@ -72,10 +73,10 @@ export default function PlanningScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Planificación</Text>
-      <Text style={styles.subtitle}>
-        Monta la temporada en bloques y comprueba semana a semana si el alumno la está cumpliendo.
-      </Text>
+      <ScreenHeader
+        title="Planificación"
+        subtitle="Monta la temporada en bloques y comprueba semana a semana si el alumno la está cumpliendo."
+      />
 
       <Pressable style={styles.createBtn} onPress={() => setPlanOpen(true)}>
         <Ionicons name="calendar" size={20} color={colors.onPrimary} />
@@ -189,13 +190,6 @@ export default function PlanningScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text },
-  subtitle: {
-    ...typography.small,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-  },
   createBtn: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,6 +7,7 @@ import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { TextField } from '../../../components/TextField';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
@@ -252,15 +253,11 @@ export default function TemplateExercisesScreen() {
 
   return (
     <ScreenContainer>
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Plantilla UDECA</Text>
-          <Text style={styles.subtitle}>
-            {items.length} ejercicio(s) · precarga oficial para entrenadores
-          </Text>
-        </View>
-        <Button title="+ Nuevo" onPress={openNew} />
-      </View>
+      <ScreenHeader
+        title="Plantilla UDECA"
+        subtitle={`${items.length} ${items.length === 1 ? 'ejercicio' : 'ejercicios'} · precarga oficial para entrenadores`}
+        actions={<Button title="+ Nuevo" onPress={openNew} />}
+      />
 
       <Text style={styles.note}>
         Solo tú (CEO) editas esta plantilla. Cada entrenador nuevo puede precargarla en su
@@ -469,9 +466,6 @@ export default function TemplateExercisesScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   note: {
     ...typography.small,
     color: colors.textMuted,
