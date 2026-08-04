@@ -2195,7 +2195,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   // Hueco al pie para que el crono flotante de descanso no tape la navegación.
-  restSpacer: { paddingBottom: 210 },
+  // Sube con él: la cuenta atrás pasó de 40 a 52 px y la tarjeta creció.
+  restSpacer: { paddingBottom: 240 },
   exitBtn: {
     flexDirection: 'row',
     alignItems: 'center',

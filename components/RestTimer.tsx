@@ -129,25 +129,51 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
+  /**
+   * Los últimos diez segundos se avisan por color, no por texto.
+   *
+   * El descanso no termina cuando suena: termina cuando estás colocado. Diez
+   * segundos es lo que se tarda en levantarse, secarse las manos y ponerse bajo
+   * la barra, y hasta ahora nada lo decía — el número seguía igual de dorado a
+   * 1:30 que a 0:04. En ámbar es la misma información que da un semáforo: sin
+   * leer, y a un metro de distancia.
+   */
+  const casiListo = remaining <= 10;
+  const colorCuenta = casiListo ? colors.warning : colors.primaryBright;
 
   return (
     <View style={styles.container}>
       <View style={styles.topRow}>
-        <View style={styles.labelWrap}>
-          <View style={styles.labelRow}>
-            <Ionicons name="hourglass-outline" size={15} color={colors.primary} />
-            <Text style={styles.label}>Descanso</Text>
-          </View>
-          {title ? <Text style={styles.title} numberOfLines={1}>{title}</Text> : null}
-        </View>
-        <Text style={styles.time}>
+        {/* El número manda. Estaba a la derecha, compartiendo fila con dos
+            líneas de texto que se llevaban todo el ancho flexible; en un
+            componente cuyo único trabajo es decir cuánto queda, la cuenta es el
+            contenido y lo demás es la etiqueta. */}
+        <Text style={[styles.time, { color: colorCuenta }]}>
           {mins}:{secs.toString().padStart(2, '0')}
         </Text>
+        <View style={styles.labelWrap}>
+          <View style={styles.labelRow}>
+            <Ionicons
+              name={casiListo ? 'flash' : 'hourglass-outline'}
+              size={14}
+              color={casiListo ? colors.warning : colors.primary}
+            />
+            <Text style={[styles.label, casiListo && styles.labelReady]}>
+              {casiListo ? 'Prepárate' : 'Descanso'}
+            </Text>
+          </View>
+          {title ? (
+            <Text style={styles.title} numberOfLines={2}>
+              {title}
+            </Text>
+          ) : null}
+        </View>
       </View>
       <View style={styles.track}>
         <Animated.View
           style={[
             styles.fill,
+            casiListo && styles.fillReady,
             {
               width: barAnim.interpolate({
                 inputRange: [0, 1],
@@ -158,16 +184,16 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
         />
       </View>
       <View style={styles.actionsRow}>
-        <Pressable onPress={() => addTime(15)} style={styles.action} hitSlop={8}>
-          <Ionicons name="add" size={14} color={colors.text} />
-          <Text style={styles.actionText}>15s</Text>
-        </Pressable>
+        {/* "−15" y "+15", no un icono diminuto junto a dos "15s" idénticos:
+            eran el mismo botón dos veces salvo por un signo de 14 px. */}
         <Pressable onPress={() => addTime(-15)} style={styles.action} hitSlop={8}>
-          <Ionicons name="remove" size={14} color={colors.text} />
-          <Text style={styles.actionText}>15s</Text>
+          <Text style={styles.actionText}>−15</Text>
+        </Pressable>
+        <Pressable onPress={() => addTime(15)} style={styles.action} hitSlop={8}>
+          <Text style={styles.actionText}>+15</Text>
         </Pressable>
         <Pressable onPress={handleSkip} style={[styles.action, styles.actionSkip]} hitSlop={8}>
-          <Text style={[styles.actionText, styles.actionSkipText]}>Saltar descanso</Text>
+          <Text style={[styles.actionText, styles.actionSkipText]}>Saltar</Text>
           <Ionicons name="play-skip-forward" size={13} color={colors.onPrimary} />
         </Pressable>
       </View>
@@ -189,27 +215,36 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: spacing.md,
     marginBottom: spacing.sm,
   },
-  labelWrap: { flex: 1, gap: 2 },
+  labelWrap: { flex: 1, gap: 2, minWidth: 0 },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   label: {
     ...typography.label,
     color: colors.textMuted,
     textTransform: 'uppercase',
   },
+  labelReady: { color: colors.warning },
   title: {
     ...typography.small,
     color: colors.text,
     fontFamily: fonts.semiBold,
+    lineHeight: 17,
   },
+  /**
+   * La cuenta atrás, a tamaño de cuenta atrás: se mira desde el banco, con el
+   * móvil en el suelo y a un metro. Va en la display (Sora) y con el
+   * interletrado apretado del rediseño, no en la de texto.
+   */
   time: {
-    fontSize: 40,
-    lineHeight: 44,
-    color: colors.primaryBright,
-    fontFamily: fonts.heading,
+    fontSize: 52,
+    lineHeight: 56,
+    letterSpacing: -2,
+    fontFamily: fonts.display,
+    // Imprescindible aquí: los dígitos de Sora son de ancho proporcional (su
+    // "1" mide poco más de la mitad que su "0"), así que sin cifras tabulares
+    // la cuenta atrás daría un salto lateral en cada segundo.
     fontVariant: ['tabular-nums'],
   },
   actionsRow: {
@@ -239,18 +274,22 @@ const styles = StyleSheet.create({
     ...typography.small,
     color: colors.text,
     fontFamily: fonts.semiBold,
-    fontSize: 12,
+    fontSize: 13,
+    fontVariant: ['tabular-nums'],
   },
   actionSkipText: { color: colors.onPrimary },
   track: {
-    height: 4,
-    borderRadius: 2,
+    // De 4 a 6 px: es la única pista de "cuánto queda" que se ve de reojo sin
+    // llegar a leer el número.
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.border,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
     backgroundColor: colors.primary,
   },
+  fillReady: { backgroundColor: colors.warning },
 });
