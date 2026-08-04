@@ -15,6 +15,7 @@ import { UpgradePopup } from '../../components/UpgradeCard';
 import { ClientPulse, pulsoDeAlumnos } from '../../components/ClientPulse';
 import { destacados, tendenciaDeAlumnos } from '../../lib/coachInsights';
 import { getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
+import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { CountUp } from '../../components/CountUp';
 import { PressableScale } from '../../components/PressableScale';
 import { FadeIn } from '../../components/FadeIn';
@@ -898,11 +899,13 @@ export default function TrainerDashboard() {
 
       {showBilling ? (
         <FadeIn delay={210}>
-        <Card style={styles.section}>
-          <View style={styles.titleRow}>
-            <Ionicons name="cash-outline" size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Cobros del mes</Text>
-          </View>
+        <View style={styles.section}>
+        <CollapsibleCard
+          id="cobros"
+          icon="cash-outline"
+          title="Cobros del mes"
+          hint={`${incomeThisMonth} € · ${pendingAmount} € pendiente`}
+        >
           <View style={styles.revenueRow}>
             <Pressable style={styles.revenueBox} onPress={() => setIncomeOpen(true)}>
               <CountUp value={incomeThisMonth} suffix=" €" style={styles.revenueValue} />
@@ -995,16 +998,14 @@ export default function TrainerDashboard() {
               <Ionicons name="chevron-forward" size={14} color={colors.danger} />
             </Pressable>
           ) : null}
-        </Card>
+        </CollapsibleCard>
+        </View>
         </FadeIn>
       ) : null}
 
       <FadeIn delay={280}>
-      <Card style={styles.section}>
-        <View style={styles.titleRow}>
-          <Ionicons name="pulse-outline" size={16} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Actividad reciente</Text>
-        </View>
+      <View style={styles.section}>
+      <CollapsibleCard id="actividad" icon="pulse-outline" title="Actividad reciente">
         {logs.length === 0 ? (
           <EmptyState icon="pulse-outline" title="Aún no hay actividad" subtitle="Cuando tus alumnos entrenen, sus sesiones aparecerán aquí." />
         ) : (
@@ -1030,7 +1031,8 @@ export default function TrainerDashboard() {
             );
           })
         )}
-      </Card>
+      </CollapsibleCard>
+      </View>
       </FadeIn>
 
       {/* Lista de alumnos con pago pendiente/vencido (desde la alerta roja). */}
