@@ -585,17 +585,33 @@ export default function ClientDetailScreen() {
         />
       </Card>
 
+      {/* Dos destinos que solo eran título, párrafo y botón. Una tarjeta
+          entera para "pulsa aquí" ocupa lo mismo que una con datos y no dice
+          nada; juntas caben en el sitio de una y se llega igual de rápido. */}
       <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Progreso total</Text>
-        <Text style={styles.mutedText}>
-          La mejor serie de cada ejercicio, semana a semana, desde que entrena. Aquí eliges qué
-          ejercicios se siguen; tu alumno ve la misma tabla.
-        </Text>
-        <Button
-          title="Ver progreso total"
+        <Text style={styles.sectionTitle}>Seguimiento</Text>
+        <Pressable
+          style={styles.navRow}
           onPress={() => router.push(`/(trainer)/clients/${id}/overview`)}
-          style={{ marginTop: spacing.md }}
-        />
+        >
+          <Ionicons name="trending-up-outline" size={18} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.navTitle}>Progreso total</Text>
+            <Text style={styles.navHint}>La mejor serie de cada ejercicio, semana a semana.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </Pressable>
+        <Pressable
+          style={[styles.navRow, styles.navRowLast]}
+          onPress={() => router.push(`/(trainer)/clients/${id}/planning`)}
+        >
+          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.navTitle}>Planificación por ciclos</Text>
+            <Text style={styles.navHint}>La temporada en bloques y semanas, y su cumplimiento.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </Pressable>
       </Card>
 
       <Card style={styles.section}>
@@ -626,18 +642,6 @@ export default function ClientDetailScreen() {
         </View>
       </Card>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Planificación por ciclos</Text>
-        <Text style={styles.mutedText}>
-          Opcional. Agrupa el trabajo en macro, meso o microciclos y ve la evolución del alumno.
-        </Text>
-        <Button
-          title="Ver planificación"
-          variant="secondary"
-          onPress={() => router.push(`/(trainer)/clients/${id}/planning`)}
-          style={{ marginTop: spacing.md }}
-        />
-      </Card>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Plan nutricional</Text>
@@ -916,6 +920,17 @@ export default function ClientDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: spacing.md - 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  navRowLast: { borderBottomWidth: 0, paddingBottom: 0 },
+  navTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  navHint: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   rirRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingRight: spacing.sm },
   backText: { ...typography.body, color: colors.primary, fontFamily: fonts.medium },
