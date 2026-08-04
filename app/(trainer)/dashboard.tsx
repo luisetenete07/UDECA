@@ -12,6 +12,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { ListSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
+import { ProgressRing } from '../../components/ProgressRing';
 import { StatTile } from '../../components/StatTile';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -705,6 +706,37 @@ export default function TrainerDashboard() {
         </Card>
       ) : null}
 
+      {/* El pulso del grupo: cuántos alumnos han entrenado ESTA semana. Es el
+          número que un entrenador mira primero, y el que dice si hay que
+          escribirle a alguien hoy. */}
+      {clients.length > 0 ? (
+        <Card style={styles.section}>
+          <View style={styles.pulseRow}>
+            <ProgressRing
+              progress={wk.activeClients / clients.length}
+              value={`${wk.activeClients}/${clients.length}`}
+              label="activos"
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionTitle}>Tu grupo esta semana</Text>
+              <Text style={styles.pulseBig}>
+                {wk.activeClients === clients.length
+                  ? 'Han entrenado todos'
+                  : `${clients.length - wk.activeClients} sin entrenar`}
+              </Text>
+              <Text style={styles.subtleHint}>
+                {wk.thisWeek} entreno{wk.thisWeek === 1 ? '' : 's'} en total
+                {wk.lastWeek > 0
+                  ? wk.thisWeek >= wk.lastWeek
+                    ? ` · ${wk.thisWeek - wk.lastWeek} más que la semana pasada`
+                    : ` · ${wk.lastWeek - wk.thisWeek} menos que la semana pasada`
+                  : ''}
+              </Text>
+            </View>
+          </View>
+        </Card>
+      ) : null}
+
       <View style={styles.statsRow}>
         <StatTile icon="people" value={String(clients.length)} label="Clientes" />
         <StatTile icon="barbell" value={String(wk.thisWeek)} label="Entrenos (semana)" />
@@ -1057,6 +1089,8 @@ export default function TrainerDashboard() {
 }
 
 const styles = StyleSheet.create({
+  pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pulseBig: { ...typography.h2, color: colors.text, marginTop: 2, marginBottom: 2 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
   greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
   greeting: { ...typography.h1, color: colors.text, marginTop: 2 },

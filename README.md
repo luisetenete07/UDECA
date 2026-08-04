@@ -95,6 +95,11 @@ Implementado hasta ahora:
   una banda dorada con la marca nueva y la anterior, con vibración de
   celebración. Una vez por ejercicio y sesión, y usando la misma función que
   el resumen final para que nunca celebre algo que luego no aparezca.
+- **Anillos de progreso**: la semana del alumno y el pulso del grupo del
+  entrenador se cierran como un anillo, no como una barra. Se anima al
+  entrar y vibra al cerrarse.
+- **Hitos de racha**: 7, 30, 100 o 365 días se celebran distinto que un día
+  cualquiera, porque no son lo mismo.
 - **La goma resta, no suma**: en calistenia la asistencia hace el ejercicio
   MÁS fácil, así que sus kilos cuentan en negativo en récords, tablas,
   gráficas y volumen. Diez segundos de planche con goma no baten tres sin

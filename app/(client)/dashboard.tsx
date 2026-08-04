@@ -10,6 +10,7 @@ import { Card } from '../../components/Card';
 import { CheckInCard } from '../../components/CheckInCard';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
+import { ProgressRing } from '../../components/ProgressRing';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
@@ -640,31 +641,38 @@ export default function ClientDashboard() {
           })()
         : null}
 
-      {/* Plan semanal: tira de días + objetivo, todo junto y ordenado */}
+      {/* Plan semanal: el anillo manda, y debajo la tira de días. */}
       <Card style={styles.section}>
-        <View style={styles.weekHeader}>
-          <Text style={styles.sectionLabel}>Tu semana</Text>
-          {targetSessions > 0 ? (
-            <Text style={styles.weekCount}>
-              {sessions}/{targetSessions} sesiones
-            </Text>
-          ) : null}
-        </View>
+        {targetSessions > 0 ? (
+          <View style={styles.weekTop}>
+            <ProgressRing
+              progress={weekProgress}
+              value={`${sessions}/${targetSessions}`}
+              label="semana"
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionLabel}>Tu semana</Text>
+              <Text style={styles.weekBig}>
+                {sessions >= targetSessions
+                  ? 'Semana cerrada'
+                  : `${targetSessions - sessions} para cerrarla`}
+              </Text>
+              <Text style={styles.weekHint}>
+                {sessions >= targetSessions
+                  ? 'Objetivo cumplido. Lo que venga es de propina.'
+                  : `Llevas ${sessions} de ${targetSessions} sesiones.`}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.weekHeader}>
+            <Text style={styles.sectionLabel}>Tu semana</Text>
+          </View>
+        )}
 
         <WeekStrip routine={routine} trainedDays={trainingDays(workoutLogs)} />
 
-        {targetSessions > 0 ? (
-          <>
-            <View style={{ marginTop: spacing.xs, marginBottom: spacing.sm }}>
-              <ProgressBar progress={weekProgress} height={8} />
-            </View>
-            <Text style={styles.weekHint}>
-              {sessions >= targetSessions
-                ? '¡Objetivo de la semana cumplido!'
-                : `Te faltan ${targetSessions - sessions} sesión(es) para cumplir tu semana.`}
-            </Text>
-          </>
-        ) : (
+        {targetSessions > 0 ? null : (
           <Text style={styles.weekHint}>
             {isAthlete
               ? 'Crea tu plan para ver aquí tu semana y tu objetivo de sesiones.'
@@ -931,6 +939,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   // ----- Tarjeta "Tu semana" -----
+  weekTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  weekBig: { ...typography.h2, color: colors.text, marginTop: 2 },
   weekHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

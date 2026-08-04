@@ -1213,10 +1213,33 @@ export default function WorkoutScreen() {
         ) : null}
 
         {summary.streak > 1 ? (
-          <View style={styles.streakRow}>
-            <Ionicons name="flame" size={18} color={colors.primary} />
-            <Text style={styles.streakText}>Racha de {summary.streak} días. Sigue así.</Text>
-          </View>
+          (() => {
+            // Los hitos se celebran aparte: una racha de 30 días no puede
+            // anunciarse con la misma frase que una de 3. Los números son los
+            // que la gente cuenta de verdad (una semana, un mes, cien días).
+            const HITOS = [7, 14, 30, 50, 100, 200, 365];
+            const hito = HITOS.includes(summary.streak) ? summary.streak : null;
+            return (
+              <View style={[styles.streakRow, hito ? styles.streakMilestone : null]}>
+                <Ionicons
+                  name="flame"
+                  size={hito ? 22 : 18}
+                  color={hito ? colors.primaryBright : colors.primary}
+                />
+                <Text style={[styles.streakText, hito ? styles.streakTextBig : null]}>
+                  {hito === 7
+                    ? 'Una semana seguida entrenando.'
+                    : hito === 30
+                      ? '¡Un mes entero de racha!'
+                      : hito === 365
+                        ? 'Un año. Trescientos sesenta y cinco días.'
+                        : hito
+                          ? `¡${hito} días de racha!`
+                          : `Racha de ${summary.streak} días. Sigue así.`}
+                </Text>
+              </View>
+            );
+          })()
         ) : null}
 
         <Text style={styles.completedNote}>
@@ -2655,6 +2678,15 @@ const styles = StyleSheet.create({
   prLabel: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
   achRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   achDesc: { ...typography.small, color: colors.textMuted, flexShrink: 1, textAlign: 'right' },
+  streakMilestone: {
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  streakTextBig: { ...typography.h3, color: colors.primaryBright },
   streakRow: {
     flexDirection: 'row',
     alignItems: 'center',
