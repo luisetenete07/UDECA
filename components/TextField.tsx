@@ -8,7 +8,7 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
-import { colors, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 interface TextFieldProps extends TextInputProps {
   label?: string;
@@ -92,6 +92,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 4,
     color: colors.text,
     fontSize: 15,
+    /**
+     * Los campos escribían en la letra del sistema.
+     *
+     * Es el único sitio de la app donde no mandaba Inter, porque un TextInput
+     * sin `fontFamily` cae en la del móvil: Roboto en Android, San Francisco en
+     * iPhone, Helvetica en el navegador. No se nota mirando un campo — se nota
+     * al mirar el formulario entero, donde la etiqueta y el texto tecleado
+     * parecen de dos aplicaciones distintas. En media, además, porque lo que
+     * escribe el usuario es un dato, no un párrafo.
+     */
+    fontFamily: fonts.medium,
     width: '100%',
   },
   inputFocused: {

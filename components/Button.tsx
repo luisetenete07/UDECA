@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Platform,
   Pressable,
   StyleSheet,
@@ -32,6 +33,22 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
+  /**
+   * El botón se hunde y vuelve con muelle, como todo lo que se toca desde el
+   * rediseño (ver PressableScale). Antes cambiaba de escala de golpe: el salto
+   * se ve como un parpadeo, no como una respuesta, y en el elemento que más se
+   * pulsa de la app esa diferencia es la mitad de la sensación de calidad.
+   */
+  const scale = useRef(new Animated.Value(1)).current;
+  const anima = (hacia: number, muelle: boolean) => {
+    Animated.spring(scale, {
+      toValue: hacia,
+      useNativeDriver: true,
+      friction: muelle ? 5 : 9,
+      tension: muelle ? 140 : 220,
+    }).start();
+  };
+
   const handlePress = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(
@@ -52,30 +69,35 @@ export function Button({
   return (
     <Pressable
       onPress={handlePress}
+      onPressIn={() => {
+        if (!isDisabled) anima(0.97, false);
+      }}
+      onPressOut={() => anima(1, true)}
       disabled={isDisabled}
       role="button"
-      style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
+      style={({ hovered }: { pressed: boolean; hovered?: boolean }) => [
         styles.outer,
         isDisabled && styles.disabled,
         hovered && !isDisabled && styles.hovered,
-        pressed && !isDisabled && styles.pressed,
         style,
       ]}
     >
-      {variant === 'primary' ? (
-        // Acabado oro con degradado de marca y filo brillante superior.
-        <LinearGradient
-          colors={gradients.gold}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.base}
-        >
-          <View style={styles.sheen} />
-          {inner}
-        </LinearGradient>
-      ) : (
-        <View style={[styles.base, variantStyles[variant]]}>{inner}</View>
-      )}
+      <Animated.View style={{ transform: [{ scale }] }}>
+        {variant === 'primary' ? (
+          // Acabado oro con degradado de marca y filo brillante superior.
+          <LinearGradient
+            colors={gradients.gold}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.base}
+          >
+            <View style={styles.sheen} />
+            {inner}
+          </LinearGradient>
+        ) : (
+          <View style={[styles.base, variantStyles[variant]]}>{inner}</View>
+        )}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -103,20 +125,20 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.35)',
   },
-  pressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
   hovered: {
     opacity: 0.92,
   },
   disabled: {
     opacity: 0.5,
   },
+  /**
+   * Sin interletrado positivo. Lo pedía Cinzel, que iba en capitales; con Sora
+   * e Inter, abrir las letras de un rótulo corto lo deja flojo. Se queda el de
+   * `h3`, que ya es ligeramente negativo.
+   */
   text: {
     ...typography.h3,
     color: colors.text,
-    letterSpacing: 0.3,
   },
   textPrimary: {
     color: colors.onPrimary,
@@ -124,7 +146,12 @@ const styles = StyleSheet.create({
 });
 
 const variantStyles: Record<Exclude<NonNullable<ButtonProps['variant']>, 'primary'>, ViewStyle> = {
-  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.hairline },
+  /**
+   * Gris, no oro. El borde era dorado y lo convertía en un segundo botón de
+   * marca: dos llamadas del mismo color en la misma pantalla y ninguna manda.
+   * El oro se reserva para lo que se propone; lo demás acompaña.
+   */
+  secondary: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
   ghost: { backgroundColor: 'transparent' },
   danger: { backgroundColor: colors.dangerMuted, borderWidth: 1, borderColor: colors.danger },
 };

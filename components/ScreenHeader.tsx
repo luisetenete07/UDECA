@@ -26,12 +26,26 @@ interface ScreenHeaderProps {
 export function ScreenHeader({ title, subtitle, eyebrow, actions }: ScreenHeaderProps) {
   const layout = useLayout();
   const size = layout.isPhone ? 28 : layout.bp === 'tablet' ? 32 : 36;
+  /**
+   * El interletrado aprieta con el tamaño.
+   *
+   * El título crecía de 28 a 36 px pero se quedaba con el -0,7 de `h1`, que
+   * está calculado para 28: a 36 esa misma cifra se lee como letras sueltas.
+   * La regla del rediseño es "cuanto más grande, más apretada", así que el
+   * ajuste se calcula, no se copia.
+   */
+  const letterSpacing = -size / 40;
 
   return (
     <View style={styles.row}>
       <View style={styles.textCol}>
         {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-        <Text style={[styles.title, { fontSize: size, lineHeight: Math.round(size * 1.24) }]}>
+        <Text
+          style={[
+            styles.title,
+            { fontSize: size, lineHeight: Math.round(size * 1.24), letterSpacing },
+          ]}
+        >
           {title}
         </Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}

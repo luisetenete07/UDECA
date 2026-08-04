@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients, radius, spacing, typography } from '../lib/theme';
+import { colors, gradients, radius, spacing, tabularNums, typography } from '../lib/theme';
 
 interface StatTileProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -93,7 +93,14 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
   },
   icon: { marginBottom: spacing.xs },
-  value: { ...typography.h2, color: colors.text },
+  /**
+   * Cifras tabulares, y aquí no es un capricho: la baldosa cuenta de 0 al valor
+   * al aparecer, y los dígitos de Sora son de ancho proporcional (su "1" mide
+   * poco más de la mitad que su "0"). Sin esto, el número se ensancha y se
+   * estrecha mientras sube, que es justo lo contrario de lo que busca la
+   * animación.
+   */
+  value: { ...typography.h2, ...tabularNums, color: colors.text },
   label: {
     ...typography.small,
     color: colors.textMuted,

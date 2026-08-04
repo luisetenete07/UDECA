@@ -42,7 +42,7 @@ import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
 import { planCalendar, planSummary } from '../../lib/cyclePlan';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
-import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
+import { fonts, colors, gradients, radius, shadows, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
   todayWeekday,
@@ -894,6 +894,7 @@ const styles = StyleSheet.create({
   streakInline: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   streakInlineText: {
     ...typography.small,
+    ...tabularNums,
     color: colors.primaryBright,
     fontFamily: fonts.semiBold,
   },

@@ -1381,7 +1381,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  revenueValue: { ...typography.h2, color: colors.success, fontFamily: fonts.heading },
+  // Cifras tabulares: la caja cuenta de 0 al importe al abrir el panel, y los
+  // dígitos de Inter son de ancho proporcional —su "1" no llega a dos tercios
+  // del "0"—, así que sin esto el número se ensancha y se estrecha mientras sube.
+  revenueValue: {
+    ...typography.h2,
+    ...tabularNums,
+    color: colors.success,
+    fontFamily: fonts.heading,
+  },
   revenueLabel: { ...typography.small, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
   revenueBoxIcon: { position: 'absolute', top: 6, right: 6 },
   amountInput: {
