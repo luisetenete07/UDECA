@@ -13,7 +13,9 @@ import { DashboardSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
 import { ClientPulse, pulsoDeAlumnos } from '../../components/ClientPulse';
+import { destacados, tendenciaDeAlumnos } from '../../lib/coachInsights';
 import { CountUp } from '../../components/CountUp';
+import { PressableScale } from '../../components/PressableScale';
 import { FadeIn } from '../../components/FadeIn';
 import { ProgressRing } from '../../components/ProgressRing';
 import { showToast } from '../../components/Toast';
@@ -42,7 +44,7 @@ import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
 import { weekComparison } from '../../lib/stats';
-import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, typography, tabularNums } from '../../lib/theme';
 import {
   PAYMENT_STATUSES,
   PAYMENT_STATUS_LABEL,
@@ -187,6 +189,7 @@ export default function TrainerDashboard() {
 
   const wk = weekComparison(logs);
   const pulso = pulsoDeAlumnos(clients, logs);
+  const tendencias = destacados(tendenciaDeAlumnos(clients, logs));
   const byId = (id: string) => clients.find((c) => c.uid === id);
   // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
   const todayStart = new Date();
@@ -741,6 +744,60 @@ export default function TrainerDashboard() {
         </FadeIn>
       ) : null}
 
+      {/* Quién mejora y quién empeora. Es la pregunta que justifica el trabajo
+          del entrenador y la única de las suyas que no se podía contestar sin
+          entrar en cada ficha: con cinco alumnos son cinco viajes, con veinte
+          no se hace nunca. */}
+      {tendencias.bajan.length > 0 || tendencias.suben.length > 0 ? (
+        <FadeIn delay={105}>
+          <Card style={styles.section}>
+            <View style={styles.titleRow}>
+              <Ionicons name="pulse-outline" size={16} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Cómo van</Text>
+            </View>
+            <Text style={styles.trendPeriod}>Estas dos semanas frente a las dos anteriores</Text>
+
+            {tendencias.bajan.map((a) => (
+              <PressableScale
+                key={a.uid}
+                style={styles.trendRow}
+                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
+              >
+                <Ionicons name="trending-down" size={17} color={colors.warning} />
+                <Text style={styles.trendName} numberOfLines={1}>
+                  {a.name}
+                </Text>
+                <Text style={[styles.trendDelta, { color: colors.warning }]}>
+                  {Math.round(a.cambio * 100)} %
+                </Text>
+                <Text style={styles.trendDetail}>
+                  {a.seriesAntes} a {a.seriesAhora} series
+                </Text>
+              </PressableScale>
+            ))}
+
+            {tendencias.suben.slice(0, 3).map((a) => (
+              <PressableScale
+                key={a.uid}
+                style={styles.trendRow}
+                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
+              >
+                <Ionicons name="trending-up" size={17} color={colors.success} />
+                <Text style={styles.trendName} numberOfLines={1}>
+                  {a.name}
+                </Text>
+                <Text style={[styles.trendDelta, { color: colors.success }]}>
+                  +{Math.round(a.cambio * 100)} %
+                </Text>
+                <Text style={styles.trendDetail}>
+                  {a.seriesAntes} a {a.seriesAhora} series
+                </Text>
+              </PressableScale>
+            ))}
+          </Card>
+        </FadeIn>
+      ) : null}
+
       {/* Los accesos van DESPUÉS de saber cómo va el grupo: son herramientas,
           y una herramienta antes del diagnóstico se usa a ciegas. */}
       <FadeIn delay={140}>
@@ -1135,6 +1192,18 @@ export default function TrainerDashboard() {
 const styles = StyleSheet.create({
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   pulseStrip: { marginTop: spacing.md },
+  trendPeriod: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm },
+  trendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  trendName: { ...typography.body, color: colors.text, flex: 1 },
+  trendDelta: { ...typography.body, fontFamily: fonts.semiBold, ...tabularNums },
+  trendDetail: { ...typography.small, color: colors.textFaint, fontSize: 11, width: 96, textAlign: 'right' },
   pulseAction: {
     flexDirection: 'row',
     alignItems: 'center',
