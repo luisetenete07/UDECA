@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Confetti } from '../../components/Confetti';
+import { CountUp } from '../../components/CountUp';
 import { PRBurst } from '../../components/PRBurst';
 import { checkLivePR, type LivePR } from '../../lib/livePR';
 import { FadeIn, PopIn } from '../../components/FadeIn';
@@ -28,7 +29,6 @@ import { PressableScale } from '../../components/PressableScale';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { VideoPlayer } from '../../components/VideoPlayer';
-import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -113,6 +113,75 @@ const draftHasProgress = (d: WorkoutDraft) =>
         (st) => st.completed || (st.reps ?? '').trim() !== '' || (st.weight ?? '').trim() !== ''
       )
   );
+
+/**
+ * Las cifras de una sesión, en vitrina.
+ *
+ * Estaban en hasta cinco cuadraditos idénticos —duración, series, reps,
+ * isométrico, volumen— repetidos además en dos pantallas distintas. Cinco
+ * números del mismo tamaño no son cinco datos: son ninguno, porque no hay
+ * dónde mirar primero.
+ *
+ * Se quedan tres, al tamaño `hero` y separados por hairlines en vez de metidos
+ * en cajas: cuando la cifra es lo importante, todo lo que la rodea le quita. Lo
+ * que no cabe no se tira, baja a una línea de apoyo — y el orden lo decide lo
+ * que tiene la sesión, así que un entreno a peso corporal enseña reps donde uno
+ * lastrado enseña kilos.
+ */
+function CifrasDeSesion({
+  durationMin,
+  sets,
+  reps,
+  seconds,
+  volumeKg,
+}: {
+  durationMin?: number;
+  sets: number;
+  reps: number;
+  seconds: number;
+  volumeKg: number;
+}) {
+  const todas = [
+    durationMin && durationMin > 0
+      ? { valor: durationMin, etiqueta: 'Minutos', suelto: `${durationMin} min` }
+      : null,
+    sets > 0 ? { valor: sets, etiqueta: 'Series', suelto: `${sets} series` } : null,
+    volumeKg > 0
+      ? {
+          valor: volumeKg,
+          etiqueta: 'Kg movidos',
+          suelto: `${volumeKg.toLocaleString('es-ES')} kg`,
+        }
+      : null,
+    reps > 0 ? { valor: reps, etiqueta: 'Reps', suelto: `${reps} reps` } : null,
+    seconds > 0
+      ? { valor: seconds, etiqueta: 'Seg. aguante', suelto: `${seconds} s de aguante` }
+      : null,
+  ].filter((c) => c !== null);
+
+  if (todas.length === 0) return null;
+  const vitrina = todas.slice(0, 3);
+  const resto = todas.slice(3);
+
+  return (
+    <View>
+      <View style={styles.vitrina}>
+        {vitrina.map((c, i) => (
+          <React.Fragment key={c.etiqueta}>
+            {i > 0 ? <View style={styles.vitrinaSep} /> : null}
+            <View style={styles.vitrinaItem}>
+              <CountUp value={c.valor} style={styles.vitrinaCifra} />
+              <Text style={styles.vitrinaEtiqueta}>{c.etiqueta}</Text>
+            </View>
+          </React.Fragment>
+        ))}
+      </View>
+      {resto.length > 0 ? (
+        <Text style={styles.vitrinaResto}>{resto.map((c) => c.suelto).join('  ·  ')}</Text>
+      ) : null}
+    </View>
+  );
+}
 
 /** Descanso en formato min:seg para las etiquetas: 90 → "1:30", 210 → "3:30". */
 function formatRest(seconds: number): string {
@@ -1132,32 +1201,14 @@ export default function WorkoutScreen() {
           </Text>
         </FadeIn>
 
-        <FadeIn delay={300} style={styles.summaryTiles}>
-          {summary.durationMin > 0 ? (
-            <View style={styles.tileHalf}>
-              <StatTile icon="time" value={`${summary.durationMin} min`} label="Duración" />
-            </View>
-          ) : null}
-          <View style={styles.tileHalf}>
-            <StatTile icon="layers" value={`${summary.sets}`} label="Series" />
-          </View>
-          <View style={styles.tileHalf}>
-            <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
-          </View>
-          {summary.seconds > 0 ? (
-            <View style={styles.tileHalf}>
-              <StatTile icon="hourglass" value={`${summary.seconds}s`} label="Isométrico" />
-            </View>
-          ) : null}
-          {summary.volumeKg > 0 ? (
-            <View style={styles.tileHalf}>
-              <StatTile
-                icon="barbell"
-                value={`${summary.volumeKg.toLocaleString('es-ES')} kg`}
-                label="Volumen"
-              />
-            </View>
-          ) : null}
+        <FadeIn delay={300}>
+          <CifrasDeSesion
+            durationMin={summary.durationMin}
+            sets={summary.sets}
+            reps={summary.reps}
+            seconds={summary.seconds}
+            volumeKg={summary.volumeKg}
+          />
         </FadeIn>
 
         {summary.prs.length > 0 ? (
@@ -1251,8 +1302,12 @@ export default function WorkoutScreen() {
           onPress={handleShareSummary}
           style={{ marginTop: spacing.md }}
         />
+        {/* En oro solo lo que se propone; el resto acompaña. Los dos botones
+            iban dorados y a la misma altura, así que la pantalla pedía dos
+            cosas a la vez y no pedía ninguna. */}
         <Button
           title="Ir a inicio"
+          variant="secondary"
           onPress={() => router.push('/(client)/dashboard')}
           style={{ marginTop: spacing.sm }}
         />
@@ -1609,37 +1664,13 @@ export default function WorkoutScreen() {
                   {completedTodayLog.routineName || routine.name}
                   {completedTodayLog.dayName ? ` · ${completedTodayLog.dayName}` : ''}
                 </Text>
-                <View style={styles.completedTiles}>
-                  {completedTodayLog.durationMin ? (
-                    <View style={styles.tileHalf}>
-                      <StatTile
-                        icon="time"
-                        value={`${completedTodayLog.durationMin} min`}
-                        label="Duración"
-                      />
-                    </View>
-                  ) : null}
-                  <View style={styles.tileHalf}>
-                    <StatTile icon="layers" value={`${t.sets}`} label="Series" />
-                  </View>
-                  <View style={styles.tileHalf}>
-                    <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
-                  </View>
-                  {t.seconds > 0 ? (
-                    <View style={styles.tileHalf}>
-                      <StatTile icon="hourglass" value={`${t.seconds}s`} label="Isométrico" />
-                    </View>
-                  ) : null}
-                  {t.volumeKg > 0 ? (
-                    <View style={styles.tileHalf}>
-                      <StatTile
-                        icon="barbell"
-                        value={`${t.volumeKg.toLocaleString('es-ES')} kg`}
-                        label="Volumen"
-                      />
-                    </View>
-                  ) : null}
-                </View>
+                <CifrasDeSesion
+                  durationMin={completedTodayLog.durationMin}
+                  sets={t.sets}
+                  reps={t.reps}
+                  seconds={t.seconds}
+                  volumeKg={t.volumeKg}
+                />
                 <Text style={styles.completedNote}>
                   Guardado en tu progreso · pestaña Entrenos. Vuelve mañana para tu próxima sesión.
                 </Text>
@@ -2718,13 +2749,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     marginBottom: spacing.md,
   },
-  completedTiles: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: spacing.sm,
-  },
-  tileHalf: { width: '48%' },
   completedNote: {
     ...typography.small,
     color: colors.textFaint,
@@ -2746,6 +2770,35 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   againLinkText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
+  // ----- Cifras de la sesión (vitrina) -----
+  vitrina: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
+  vitrinaItem: { flex: 1, alignItems: 'center', gap: 2, minWidth: 0 },
+  vitrinaSep: { width: 1, height: 34, backgroundColor: colors.border },
+  vitrinaCifra: {
+    ...typography.hero,
+    ...tabularNums,
+    color: colors.text,
+  },
+  vitrinaEtiqueta: {
+    fontSize: 11,
+    color: colors.textFaint,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  // Lo que no cabe en la vitrina, en una línea y sin competir con ella.
+  vitrinaResto: {
+    ...typography.small,
+    color: colors.textFaint,
+    textAlign: 'center',
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   // ----- Resumen -----
   summaryContent: { flexGrow: 1, justifyContent: 'center' },
   summaryBadge: {
@@ -2770,13 +2823,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.lg,
     marginTop: spacing.xs,
-  },
-  summaryTiles: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: spacing.sm,
-    marginBottom: spacing.md,
   },
   prCard: { marginBottom: spacing.md },
   prHeader: {
