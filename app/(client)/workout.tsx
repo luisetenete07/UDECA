@@ -24,6 +24,7 @@ import { FadeIn, PopIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
 import { IntervalTimer } from '../../components/IntervalTimer';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { PressableScale } from '../../components/PressableScale';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { VideoPlayer } from '../../components/VideoPlayer';
@@ -63,7 +64,7 @@ import {
   type LastPerformance,
   type PersonalRecord,
 } from '../../lib/stats';
-import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, shadows, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   clusterBlocks,
   EXERCISE_MEASURES,
@@ -1292,7 +1293,13 @@ export default function WorkoutScreen() {
           </Pressable>
         ) : null}
       </View>
-      <Text style={styles.title}>{routine.name}</Text>
+      {/* El nombre de la rutina es CONTEXTO, no contenido: ya sabes qué rutina
+          haces. Ocupaba 28 px arriba del todo; ahora es un rótulo y le deja el
+          tamaño al ejercicio, que es lo que de verdad se mira entre serie y
+          serie con el móvil en el suelo. */}
+      <Text style={styles.routineName} numberOfLines={1}>
+        {routine.name}
+      </Text>
 
       {/* Entreno de un día anterior sin finalizar: rellenarlo o dejarlo para luego. */}
       {pastDraft && !pastDismissed && !restored ? (
@@ -1805,6 +1812,16 @@ export default function WorkoutScreen() {
         ]
           .filter(Boolean)
           .join(' · ');
+        // Series × reps se ha ido arriba, junto al nombre, así que la fila de
+        // chapitas puede quedarse vacía: sin esto dejaría un hueco muerto.
+        const hayChips =
+          !!planned &&
+          ((planned.rir !== undefined && planned.rir !== null) ||
+            !!planned.restSeconds ||
+            load !== 'none' ||
+            !!planned.grip ||
+            !!planned.goal ||
+            !!cluster);
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
@@ -1816,9 +1833,7 @@ export default function WorkoutScreen() {
             ) : null}
             <View style={styles.exerciseHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>
-                  {exercise.name}
-                </Text>
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
                 {/* Categoría y subgrupo bajo el nombre: entrenando, dos
                     ejercicios que se llaman parecido solo se distinguen así
                     ("Dominadas · Tirón · Aguantes"). Viene del plan, y si es
@@ -1827,18 +1842,32 @@ export default function WorkoutScreen() {
                   <Text style={styles.exerciseCategory}>{categoriaEjercicio}</Text>
                 ) : null}
               </View>
+              {/* El objetivo, al lado del nombre y en grande. Estaba en una
+                  chapita gris entre otras cinco, y es el segundo dato que se
+                  mira: qué ejercicio y cuántas. Cuando el ejercicio queda
+                  hecho, el mismo hueco lo dice. */}
               {isDone ? (
-                <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+                <View style={styles.objetivo}>
+                  <Ionicons name="checkmark-circle" size={30} color={colors.primary} />
+                  <Text style={styles.objetivoLabel}>hecho</Text>
+                </View>
+              ) : planned ? (
+                <View style={styles.objetivo}>
+                  {/* Las reps no siempre son un número: "8-10", "AMRAP", "máx".
+                      Una línea y encogiendo, para que un objetivo largo no le
+                      coma el ancho al nombre del ejercicio. */}
+                  <Text style={styles.objetivoCifra} numberOfLines={1} adjustsFontSizeToFit>
+                    {planned.sets}
+                    <Text style={styles.objetivoPor}> × </Text>
+                    {planned.reps}
+                    {isSeconds ? <Text style={styles.objetivoPor}>s</Text> : null}
+                  </Text>
+                  <Text style={styles.objetivoLabel}>objetivo</Text>
+                </View>
               ) : null}
             </View>
-            {planned ? (
+            {planned && hayChips ? (
               <View style={styles.metaRow}>
-                <View style={styles.metaChip}>
-                  <Text style={styles.metaChipText}>
-                    {planned.sets} × {planned.reps}
-                    {isSeconds ? 's' : ''}
-                  </Text>
-                </View>
                 {planned.rir !== undefined && planned.rir !== null ? (
                   <View style={styles.metaChip}>
                     <Text style={styles.metaChipText}>RIR {planned.rir}</Text>
@@ -1919,6 +1948,11 @@ export default function WorkoutScreen() {
               </View>
             ) : null}
             <View style={styles.setHead}>
+              {/* Hueco del botón de la serie: los rótulos se apoyaban en el
+                  borde derecho y las casillas empezaban por la izquierda, así
+                  que "PESO KG" no siempre caía sobre su casilla. Ahora ambas
+                  filas se cuentan desde el mismo sitio. */}
+              <View style={styles.setHeadSpacer} />
               <Text style={styles.setHeadCap}>
                 {cluster
                   ? 'BLOQUE 1'
@@ -1948,27 +1982,38 @@ export default function WorkoutScreen() {
               ) : null}
             </View>
             {exercise.sets.map((set, setIndex) => (
-              <View key={setIndex} style={styles.setRow}>
-                <Pressable
+              <View key={setIndex} style={[styles.setRow, set.completed && styles.setRowDone]}>
+                {/* El botón LLEVA el número de la serie. Antes la fila decía
+                    "Serie 3" en una columna de texto al lado de un círculo
+                    vacío: dos elementos para un dato que cabe dentro del que
+                    se toca. Al marcarla, el número se convierte en el ✓ y la
+                    fila se tiñe — se ve cuánto llevas bajando la vista por la
+                    columna, sin leer nada.
+
+                    Y crece: es el gesto que se repite veinte veces por sesión,
+                    con la mano sudada y a media respiración. Un botón de 40 px
+                    entre casillas de texto pide puntería; uno de 52 no. */}
+                <PressableScale
                   onPress={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
                   style={[styles.checkButton, set.completed && styles.checkButtonDone]}
-                  hitSlop={6}
+                  hitSlop={8}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: set.completed }}
+                  accessibilityLabel={`Serie ${setIndex + 1}`}
                 >
-                  <Ionicons
-                    name="checkmark"
-                    size={20}
-                    color={set.completed ? colors.onPrimary : colors.textFaint}
-                  />
-                </Pressable>
-                <Text style={[styles.setLabel, set.completed && styles.setLabelDone]}>
-                  Serie {setIndex + 1}
-                </Text>
+                  {set.completed ? (
+                    <Ionicons name="checkmark" size={26} color={colors.onPrimary} />
+                  ) : (
+                    <Text style={styles.checkNum}>{setIndex + 1}</Text>
+                  )}
+                </PressableScale>
                 <TextField
                   value={set.reps}
                   onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
                   placeholder={planned?.reps || (isSeconds ? 'seg' : 'reps')}
                   keyboardType="numeric"
                   style={styles.setFieldInput}
+                  containerStyle={styles.setFieldWrap}
                 />
                 {/* Un bloque más de la misma serie: se apunta lo que salió en
                     cada uno, que es justo lo que un clúster quiere medir. */}
@@ -1981,6 +2026,7 @@ export default function WorkoutScreen() {
                         placeholder={planned?.reps || (isSeconds ? 'seg' : 'reps')}
                         keyboardType="numeric"
                         style={styles.setFieldInput}
+                        containerStyle={styles.setFieldWrap}
                       />
                     ))
                   : null}
@@ -1991,6 +2037,7 @@ export default function WorkoutScreen() {
                     placeholder={planned?.seconds ? String(planned.seconds) : 'seg'}
                     keyboardType="numeric"
                     style={styles.setFieldInput}
+                    containerStyle={styles.setFieldWrap}
                   />
                 ) : isDual ? (
                   <TextField
@@ -1999,6 +2046,7 @@ export default function WorkoutScreen() {
                     placeholder={planned?.side2 || planned?.reps || (isSeconds ? 'seg' : 'reps')}
                     keyboardType="numeric"
                     style={styles.setFieldInput}
+                    containerStyle={styles.setFieldWrap}
                   />
                 ) : null}
                 {load !== 'none' ? (
@@ -2010,6 +2058,7 @@ export default function WorkoutScreen() {
                     placeholder={prev?.weight || '—'}
                     keyboardType="decimal-pad"
                     style={styles.setFieldInput}
+                    containerStyle={styles.setFieldWrap}
                   />
                 ) : null}
               </View>
@@ -2129,8 +2178,22 @@ export default function WorkoutScreen() {
   );
 }
 
+/**
+ * El botón de la serie y las casillas mandan sobre la fila y sobre sus
+ * rótulos. Como constantes, porque cabecera y fila TIENEN que medir igual: en
+ * cuanto se separan, "PESO KG" deja de caer sobre la casilla del peso.
+ */
+const CHECK_SIZE = 52;
+const FIELD_WIDTH = 68;
+
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
+  routineName: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: spacing.md,
+  },
   // Hueco al pie para que el crono flotante de descanso no tape la navegación.
   restSpacer: { paddingBottom: 210 },
   exitBtn: {
@@ -2365,9 +2428,12 @@ const styles = StyleSheet.create({
   exerciseCardDone: { opacity: 0.55 },
   exerciseHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Arriba, no centrado: el nombre puede irse a dos líneas y el objetivo debe
+    // quedarse a la altura de la primera, no flotando en medio del bloque.
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: spacing.xs,
+    gap: spacing.md,
+    marginBottom: spacing.sm,
   },
   exerciseCategory: {
     ...typography.small,
@@ -2376,8 +2442,31 @@ const styles = StyleSheet.create({
     marginTop: 2,
     letterSpacing: 0.3,
   },
-  exerciseName: { ...typography.h3, color: colors.text, flex: 1 },
-  exerciseNameCurrent: { color: colors.primaryBright },
+  /**
+   * El nombre del ejercicio, a tamaño de titular.
+   *
+   * Estaba a 17 px, lo mismo que un rótulo de sección, mientras el nombre de la
+   * rutina —el único dato que ya te sabes— ocupaba 28 arriba del todo. Se mira
+   * entre serie y serie, de pie, a un metro del móvil y con pulsaciones: es el
+   * texto que tiene que ganarse el tamaño.
+   */
+  exerciseName: { ...typography.h1, color: colors.primaryBright },
+  objetivo: { alignItems: 'flex-end', flexShrink: 0, maxWidth: 132, paddingTop: 2 },
+  objetivoCifra: {
+    ...typography.h2,
+    ...tabularNums,
+    color: colors.text,
+  },
+  // El "×" y la "s" son gramática, no dato: se quedan detrás del número.
+  objetivoPor: { color: colors.textFaint, fontFamily: fonts.body },
+  objetivoLabel: {
+    fontSize: 10,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: colors.textFaint,
+    marginTop: 1,
+  },
   nowChip: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
@@ -2520,17 +2609,21 @@ const styles = StyleSheet.create({
   },
   setHead: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     gap: spacing.sm,
     marginBottom: 4,
   },
+  setHeadSpacer: { width: CHECK_SIZE, flexShrink: 0 },
   setHeadCap: {
     ...typography.small,
     color: colors.textFaint,
     fontSize: 10,
     fontFamily: fonts.semiBold,
     letterSpacing: 0.8,
-    width: 66,
+    width: FIELD_WIDTH,
+    // Un clúster de tres bloques con lastre son cinco columnas: en un móvil
+    // estrecho no caben a lo ancho. Encogen todas por igual —cabecera y
+    // casillas comparten el mismo flexShrink— en vez de salirse de la tarjeta.
+    flexShrink: 1,
     textAlign: 'center',
   },
   setRow: {
@@ -2538,14 +2631,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
+    // El tinte de "hecha" necesita algo a lo que agarrarse: sin este relleno,
+    // el color acabaría pegado al texto.
+    paddingVertical: 3,
+    paddingHorizontal: spacing.xs,
+    marginHorizontal: -spacing.xs,
+    borderRadius: radius.md,
   },
-  setLabel: { ...typography.small, color: colors.text, flex: 1, fontFamily: fonts.semiBold },
-  setLabelDone: { color: colors.textMuted },
+  /**
+   * La serie hecha se tiñe. Antes solo se apagaba el rótulo "Serie 3", así que
+   * para saber por dónde ibas había que leer fila por fila; un fondo dorado
+   * tenue se cuenta de un vistazo bajando la vista por la columna.
+   */
+  setRowDone: { backgroundColor: colors.primaryMuted },
+  setFieldWrap: { width: FIELD_WIDTH, flexShrink: 1, marginBottom: 0 },
   setFieldInput: {
-    width: 66,
+    width: '100%',
     marginBottom: 0,
     paddingHorizontal: spacing.sm,
     textAlign: 'center',
+    // Cifras de ancho fijo: al teclear, un "11" y un "88" ocupan lo mismo y la
+    // fila no se mueve.
+    ...tabularNums,
+    fontFamily: fonts.semiBold,
+    fontSize: 17,
   },
   noteField: { marginTop: spacing.sm, marginBottom: 0 },
   noteBtn: {
@@ -2557,18 +2666,27 @@ const styles = StyleSheet.create({
   },
   noteBtnText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
   checkButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: CHECK_SIZE,
+    height: CHECK_SIZE,
+    borderRadius: CHECK_SIZE / 2,
+    // El botón nunca encoge: si algo tiene que estrecharse cuando la fila va
+    // justa, son las casillas, no lo que se toca.
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     backgroundColor: colors.surfaceAlt,
   },
   checkButtonDone: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+  },
+  // El número de la serie vive dentro del botón hasta que se marca.
+  checkNum: {
+    ...typography.h3,
+    ...tabularNums,
+    color: colors.textMuted,
   },
   // ----- Descanso opcional (Día 7 TENA) -----
   optionalCard: { marginBottom: spacing.md },
