@@ -57,12 +57,12 @@ function startOfDay(ts: number): number {
  * "ayer" cuadran con el día real aunque hayan pasado más o menos de 24 horas.
  */
 function activityInfo(last?: number): { label: string; color: string } {
-  if (!last) return { label: 'Sin entrenos aún', color: colors.textFaint };
+  if (!last) return { label: 'Sin entrenos', color: colors.textFaint };
   const days = Math.round((startOfDay(Date.now()) - startOfDay(last)) / DAY_MS);
-  if (days <= 0) return { label: 'Entrenó hoy', color: colors.success };
-  if (days === 1) return { label: 'Entrenó ayer', color: colors.success };
-  if (days < 7) return { label: `Entrenó hace ${days} días`, color: '#C9902B' };
-  return { label: `Sin entrenar ${days} días`, color: colors.danger };
+  if (days <= 0) return { label: 'Hoy', color: colors.success };
+  if (days === 1) return { label: 'Ayer', color: colors.success };
+  if (days < 7) return { label: `Hace ${days} días`, color: '#C9902B' };
+  return { label: `${days} días parado`, color: colors.danger };
 }
 
 /** Medianoche local del lunes de la semana que contiene ts (lunes=inicio). */
@@ -270,7 +270,9 @@ export default function ClientsScreen() {
     <ScreenContainer refreshing={refreshing} onRefresh={onRefresh}>
       <ScreenHeader
         title="Tus clientes"
-        subtitle={`${clients.length} cliente(s) activos`}
+        subtitle={`${clients.length} alumno${clients.length === 1 ? '' : 's'} activo${
+          clients.length === 1 ? '' : 's'
+        }`}
         actions={
           clients.length > 0 && Platform.OS === 'web' ? (
             <Pressable onPress={handleExportCsv} style={styles.exportBtn} hitSlop={6}>
@@ -369,7 +371,12 @@ export default function ClientsScreen() {
             onPress={() => router.push(`/(trainer)/clients/${client.uid}`)}
             style={styles.clientCard}
           >
-              <Avatar name={client.name} photoURL={client.photoURL} size={44} />
+              {/* El aro dice cuándo entrenó sin que haya que leer nada: es el
+                  mismo lenguaje que las caras del panel, para que no haya que
+                  aprender dos códigos distintos en la misma app. */}
+              <View style={[styles.aro, { borderColor: activity.color }]}>
+                <Avatar name={client.name} photoURL={client.photoURL} size={40} />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.clientName}>{client.name}</Text>
                 <Text style={styles.clientGoal}>{client.goal || 'Sin objetivo definido'}</Text>
@@ -495,6 +502,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     // La separación entre fichas la pone la rejilla, no la tarjeta.
     flex: 1,
+  },
+  aro: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   clientName: { ...typography.h3, color: colors.text },
   clientGoal: { ...typography.small, color: colors.textMuted, marginTop: 2 },
