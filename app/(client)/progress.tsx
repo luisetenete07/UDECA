@@ -59,7 +59,7 @@ import {
 } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
-import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   setMarks,
   type Routine,
@@ -819,6 +819,8 @@ export default function ProgressScreen() {
 
       {tab === 'weight' ? (
         <>
+          <PesoDeHoy logs={weightLogs} />
+
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Evolución del peso</Text>
             <WeightChart logs={weightLogs} />
@@ -1087,6 +1089,49 @@ function CompareRow({
   );
 }
 
+/**
+ * El peso de hoy, al tamaño de la pregunta que lo trae.
+ *
+ * A la pestaña Peso se entra a saber dos cosas: cuánto peso ahora y si voy en la
+ * dirección que quiero. La primera estaba dentro de la gráfica y repetida en una
+ * fila del historial, a 15 px y entre otras veinte iguales; la segunda no estaba
+ * en ninguna parte — había que mirar la curva y calcular a ojo.
+ *
+ * El cambio va en gris a propósito. Subir o bajar de peso no es bueno ni malo por
+ * sí mismo: depende de lo que cada uno busque, y pintar de rojo un "+1,2 kg" sería
+ * la app opinando sobre algo que no sabe.
+ */
+function PesoDeHoy({ logs }: { logs: WeightLog[] }) {
+  if (logs.length === 0) return null;
+  const fmt = (n: number) => n.toFixed(1).replace('.', ',');
+  const ultimo = logs[logs.length - 1];
+
+  // Referencia: el registro más reciente de hace 30 días o más. Si todos son
+  // recientes, el primero que haya — y entonces el pie lo dice, en vez de
+  // llamar "30 días" a lo que igual son cuatro.
+  const hace30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const viejos = logs.filter((l) => l.date <= hace30);
+  const ref = viejos.length > 0 ? viejos[viejos.length - 1] : logs[0];
+  const delta = ultimo.weightKg - ref.weightKg;
+  const signo = delta > 0 ? '+' : delta < 0 ? '−' : '';
+
+  return (
+    <View style={styles.pesoHoy}>
+      <Text style={styles.pesoCifra}>
+        {fmt(ultimo.weightKg)}
+        <Text style={styles.pesoUnidad}> kg</Text>
+      </Text>
+      <Text style={styles.pesoPie}>
+        {ref === ultimo
+          ? 'Tu primer registro'
+          : `${signo}${fmt(Math.abs(delta))} kg ${
+              viejos.length > 0 ? 'en 30 días' : 'desde tu primer registro'
+            }`}
+      </Text>
+    </View>
+  );
+}
+
 function MonthStat({ value, label }: { value: string; label: string }) {
   return (
     <View style={styles.monthStat}>
@@ -1097,6 +1142,17 @@ function MonthStat({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  // El peso de hoy: sin caja ni borde, como la vitrina del perfil. Cuando la
+  // cifra es lo importante, todo lo que la rodea le quita.
+  pesoHoy: { alignItems: 'center', paddingVertical: spacing.lg, marginBottom: spacing.xs },
+  pesoCifra: { ...typography.hero, ...tabularNums, color: colors.text },
+  pesoUnidad: { ...typography.h2, color: colors.textFaint },
+  pesoPie: {
+    ...typography.small,
+    ...tabularNums,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1292,7 +1348,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  monthStatValue: { ...typography.h3, color: colors.primaryBright, fontSize: 18 },
+  monthStatValue: { ...typography.h3, ...tabularNums, color: colors.primaryBright, fontSize: 18 },
   monthStatLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fonts.medium, marginTop: 2 },
   sessionRow: {
     flexDirection: 'row',
