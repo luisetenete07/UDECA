@@ -7,7 +7,17 @@
   --bg: #000000;
   --surface: #0d0d0d;
   --surface-alt: #141414;
-  --border: #232323;
+  /*
+   * Borde casi invisible, como en la app.
+   *
+   * La app bajó a blanco al 7 % y la web se quedó en #232323 —el doble de
+   * visible—, con lo que las mismas tarjetas se dibujaban más duras aquí que
+   * dentro del producto. Un borde que se ve compite con el contenido; a este
+   * solo se le nota la ausencia.
+   */
+  --border: rgba(255, 255, 255, 0.07);
+  /* Para lo poquísimo que sí necesita marcar un límite. */
+  --border-strong: #2a2a2a;
   --gold: #a2968b;
   --gold-bright: #c9bdb0;
   --gold-dark: #7a6f66;
@@ -40,9 +50,17 @@ a { color: inherit; text-decoration: none; }
 
 h1, h2, h3 {
   font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
-  letter-spacing: -0.02em;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  /*
+   * Un solo interletrado, y negativo.
+   *
+   * Al cambiar Cinzel por Sora se añadió el -0.02em pero se dejó debajo el
+   * +0.02em de antes, y en CSS gana la última: los titulares de la web se
+   * quedaron con el interletrado abierto que pedían las capitales romanas,
+   * mientras la app entera se apretaba. Un mes de web y app tirando cada una
+   * para su lado por una línea de más.
+   */
+  letter-spacing: -0.02em;
   line-height: 1.15;
   margin: 0;
 }
@@ -69,14 +87,17 @@ header {
   border-bottom: 1px solid transparent;
   transition: border-color 0.25s ease;
 }
-header.scrolled { border-bottom-color: var(--border); }
+/* La cabecera pegajosa SÍ necesita marcar el límite: es lo único que separa la
+   navegación del contenido que pasa por debajo. Es el caso para `strong`. */
+header.scrolled { border-bottom-color: var(--border-strong); }
 .nav { display: flex; align-items: center; gap: 20px; height: 68px; }
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
 .brand img { width: 34px; height: 34px; }
 .brand span {
   font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
-  letter-spacing: -0.02em;
   font-weight: 700;
+  /* El logotipo va en capitales y MUY abierto: es la excepción a la regla, no
+     un olvido. Apretar "UDECA" a 15 px lo convierte en una palabra cualquiera. */
   letter-spacing: 0.22em;
   font-size: 15px;
 }
@@ -135,7 +156,9 @@ section { position: relative; z-index: 1; padding: 84px 0; }
 
 /* ---------- Portada ---------- */
 .hero { padding: 64px 0 30px; }
-.hero h1 { font-size: clamp(38px, 9vw, 68px); letter-spacing: 0.01em; }
+/* Hasta 68 px: el titular más grande del sitio llevaba el interletrado MÁS
+   abierto, justo al revés de la regla. Cuanto más grande, más apretada. */
+.hero h1 { font-size: clamp(38px, 9vw, 68px); letter-spacing: -0.03em; }
 .hero h1 em { font-style: normal; color: var(--gold-bright); }
 .hero p.lead { margin-top: 20px; font-size: 18px; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }

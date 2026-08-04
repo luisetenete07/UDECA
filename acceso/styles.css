@@ -6,7 +6,17 @@
   --bg: #000000;
   --surface: #0d0d0d;
   --surface-alt: #141414;
-  --border: #232323;
+  /*
+   * Borde casi invisible, como en la app.
+   *
+   * La app bajó a blanco al 7 % y la web se quedó en #232323 —el doble de
+   * visible—, con lo que las mismas tarjetas se dibujaban más duras aquí que
+   * dentro del producto. Un borde que se ve compite con el contenido; a este
+   * solo se le nota la ausencia.
+   */
+  --border: rgba(255, 255, 255, 0.07);
+  /* Para lo poquísimo que sí necesita marcar un límite. */
+  --border-strong: #2a2a2a;
   --gold: #a2968b;
   --gold-bright: #c9bdb0;
   --hairline: rgba(162, 150, 139, 0.35);
