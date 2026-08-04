@@ -28,6 +28,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { PressableScale } from '../../components/PressableScale';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
@@ -1174,7 +1175,7 @@ export default function WorkoutScreen() {
           <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
           <Text style={styles.exitText}>Volver a inicio</Text>
         </Pressable>
-        <Text style={styles.title}>Mi entrenamiento</Text>
+        <ScreenHeader title="Mi entrenamiento" />
         <EmptyState
           icon="barbell-outline"
           title="Sin rutina asignada"
@@ -2218,7 +2219,6 @@ const CHECK_SIZE = 52;
 const FIELD_WIDTH = 68;
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   routineName: {
     ...typography.label,
     color: colors.textMuted,

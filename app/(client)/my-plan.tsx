@@ -6,6 +6,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import { DragList } from '../../components/DragList';
 import { moveItem } from '../../lib/useDragReorder';
 import { TextField } from '../../components/TextField';
@@ -267,10 +268,10 @@ export default function MyPlanScreen() {
   return (
     <ScreenContainer>
       <Stack.Screen options={{ title: 'Mi plan' }} />
-      <Text style={styles.title}>Mi plan</Text>
-      <Text style={styles.subtitle}>
-        Diseña tu entrenamiento con el método que prefieras. Tú lo creas, tú lo ajustas.
-      </Text>
+      <ScreenHeader
+        title="Mi plan"
+        subtitle="Diseña tu entrenamiento con el método que prefieras. Tú lo creas, tú lo ajustas."
+      />
 
       {/* Plantillas de arranque (sobre todo útil cuando el plan está vacío). */}
       {empty ? (
@@ -824,8 +825,6 @@ export default function MyPlanScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
   dim: { opacity: 0.3 },
   starterCard: { marginBottom: spacing.md },
   starterTitle: { ...typography.h3, color: colors.text },

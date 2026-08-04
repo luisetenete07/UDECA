@@ -6,6 +6,7 @@ import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
+import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useAuth } from '../../../lib/auth-context';
 import { getPublishedCourses } from '../../../lib/firestore/courses';
 import { colors, radius, spacing, typography } from '../../../lib/theme';
@@ -51,8 +52,7 @@ export default function ClientCoursesScreen() {
         load();
       }}
     >
-      <Text style={styles.title}>Academia</Text>
-      <Text style={styles.subtitle}>Cursos exclusivos de tu coaching</Text>
+      <ScreenHeader title="Academia" subtitle="Cursos exclusivos de tu coaching" />
 
       {courses.length === 0 ? (
         <EmptyState
@@ -92,8 +92,6 @@ export default function ClientCoursesScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
   coverThumb: { width: 84, height: 52, borderRadius: radius.sm },
   thumb: {

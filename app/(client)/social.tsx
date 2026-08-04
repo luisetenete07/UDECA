@@ -8,6 +8,7 @@ import { showToast } from '../../components/Toast';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveChallenge } from '../../lib/firestore/challenges';
 import {
@@ -97,7 +98,7 @@ export default function SocialScreen() {
   if (!profile?.trainerId) {
     return (
       <ScreenContainer>
-        <Text style={styles.title}>Social</Text>
+        <ScreenHeader title="Social" />
         <EmptyState
           icon="people-outline"
           title="Sin comunidad todavía"
@@ -150,8 +151,10 @@ export default function SocialScreen() {
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={onRefresh}>
-      <Text style={styles.title}>Comunidad UDECA</Text>
-      <Text style={styles.subtitle}>El ranking de constancia de tu coaching</Text>
+      <ScreenHeader
+        title="Comunidad UDECA"
+        subtitle="El ranking de constancia de tu coaching"
+      />
 
       <View style={styles.summaryRow}>
         <Card style={styles.summaryCard}>
@@ -336,8 +339,6 @@ const styles = StyleSheet.create({
   },
   prBoardDetail: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   prBoardValue: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
   podium: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

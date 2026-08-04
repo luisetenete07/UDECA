@@ -7,6 +7,7 @@ import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -223,7 +224,7 @@ export default function NutritionScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Mi nutrición</Text>
+      <ScreenHeader title="Mi nutrición" />
 
       {!targets ? (
         <Card style={styles.section}>
@@ -431,7 +432,7 @@ export default function NutritionScreen() {
       <Modal visible={calcOpen} animationType="slide" onRequestClose={() => setCalcOpen(false)}>
         <ScreenContainer>
           <View style={styles.calcHeader}>
-            <Text style={styles.title}>Calcular mis macros</Text>
+            <Text style={styles.sheetTitle}>Calcular mis macros</Text>
             <Pressable onPress={() => setCalcOpen(false)} hitSlop={8}>
               <Ionicons name="close" size={24} color={colors.textMuted} />
             </Pressable>
@@ -483,7 +484,9 @@ function MacroTile({
 }
 
 const styles = StyleSheet.create({
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
+  // El título de una hoja, no el de una pantalla: a 28 px competía con lo
+  // que la hoja viene a pedir.
+  sheetTitle: { ...typography.h2, color: colors.text },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   hint: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm, lineHeight: 18 },

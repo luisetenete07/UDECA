@@ -20,6 +20,7 @@ import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { LineChart } from '../../components/LineChart';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { MuscleMap } from '../../components/MuscleMap';
@@ -459,7 +460,17 @@ export default function ProgressScreen() {
         load();
       }}
     >
-      <Text style={styles.title}>Mi progreso</Text>
+      {/* La misma cabecera que el lado del entrenador. Cada pantalla del alumno
+          se montaba su propio título con sus propios estilos, así que crecía en
+          tablet y ordenador la del coach y no la suya. */}
+      <ScreenHeader
+        title="Mi progreso"
+        subtitle={
+          workoutLogs.length > 0
+            ? `${workoutLogs.length} ${workoutLogs.length === 1 ? 'sesión registrada' : 'sesiones registradas'}`
+            : undefined
+        }
+      />
 
       <ScrollView
         horizontal
@@ -1131,7 +1142,6 @@ const styles = StyleSheet.create({
   fullTitle: { ...typography.h2, color: colors.text },
   fullSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   tabsScroll: { marginBottom: spacing.lg, flexGrow: 0 },
   tabs: {
     flexDirection: 'row',
