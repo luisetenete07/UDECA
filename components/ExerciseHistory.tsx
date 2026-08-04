@@ -5,7 +5,7 @@ import { Card } from './Card';
 import { LineChart } from './LineChart';
 import { exerciseProgression, exerciseRecord, exerciseSessions } from '../lib/stats';
 import { isHoldMeasure, type ExerciseMeasure, type WorkoutLog } from '../lib/types';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 
 /** Número corto en español: sin decimales si no los tiene (7,5 / 10). */
 function num(n: number): string {
@@ -292,7 +292,19 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   hero: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  heroValor: { fontSize: 46, lineHeight: 50, color: colors.text, fontFamily: fonts.heading },
+  /**
+   * La marca de ahora. A 46 px va en la display del rediseño y apretada, como
+   * la cuenta atrás del descanso y la vitrina; e importa que sea tabular,
+   * porque el número cambia al saltar de un ejercicio a otro.
+   */
+  heroValor: {
+    fontSize: 46,
+    lineHeight: 50,
+    letterSpacing: -1.6,
+    color: colors.text,
+    fontFamily: fonts.display,
+    ...tabularNums,
+  },
   heroUnidad: { ...typography.body, color: colors.textMuted },
   heroLado: { alignItems: 'flex-end' },
   cambioFila: { flexDirection: 'row', alignItems: 'center', gap: 4 },

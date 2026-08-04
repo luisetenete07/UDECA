@@ -591,8 +591,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Las horas cambian al tocar las flechas: con dígitos proporcionales, pasar
+  // de "11" a "08" ensancha el número y mueve los dos botones de sitio.
   clockValue: {
     ...typography.h1,
+    ...tabularNums,
     color: colors.text,
     fontFamily: fonts.heading,
     marginVertical: 6,

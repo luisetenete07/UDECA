@@ -9,7 +9,7 @@ import { useAuth } from '../lib/auth-context';
 import { createCoachCheckoutUrl } from '../lib/connect';
 import { getUserProfile, reportClientPayment } from '../lib/firestore/users';
 import { notifyUser } from '../lib/notifications';
-import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, shadows, spacing, tabularNums, typography } from '../lib/theme';
 
 /**
  * Bloqueo del alumno por impago.
@@ -175,6 +175,7 @@ const styles = StyleSheet.create({
   },
   amount: {
     ...typography.h1,
+    ...tabularNums,
     color: colors.primaryBright,
     textAlign: 'center',
     marginTop: 2,

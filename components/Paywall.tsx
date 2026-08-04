@@ -17,7 +17,7 @@ import {
   verifySubscriptionNow,
 } from '../lib/subscription';
 import { showToast } from './Toast';
-import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, shadows, spacing, tabularNums, typography } from '../lib/theme';
 
 const BENEFITS = [
   'Alumnos ilimitados con tu código de coach',
@@ -251,7 +251,15 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: spacing.xs,
   },
-  price: { fontSize: 44, lineHeight: 48, color: colors.text, fontFamily: fonts.heading },
+  // El precio, en la display y apretado: es la cifra que manda en la pantalla.
+  price: {
+    fontSize: 44,
+    lineHeight: 48,
+    letterSpacing: -1.4,
+    color: colors.text,
+    fontFamily: fonts.display,
+    ...tabularNums,
+  },
   priceUnit: { ...typography.body, color: colors.textMuted },
   priceHint: {
     ...typography.small,
