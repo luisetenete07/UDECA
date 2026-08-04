@@ -6,6 +6,7 @@ import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { CountUp } from '../../components/CountUp';
 import { MemberCard } from '../../components/MemberCard';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
@@ -29,7 +30,7 @@ import {
   currentStreak,
   type Achievement,
 } from '../../lib/stats';
-import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
+import { colors, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import { EXPERIENCE_LEVELS, type ExperienceLevel } from '../../lib/types';
 
 const REMINDER_PRESETS = [
@@ -243,10 +244,25 @@ export default function ClientProfileScreen() {
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
       <MemberCard />
 
-      <View style={styles.statsRow}>
-        <StatTile icon="flame" value={String(streak)} label="Racha (días)" highlight={streak > 0} />
-        <StatTile icon="barbell" value={String(totalWorkouts)} label="Entrenos" />
-        <StatTile icon="calendar" value={String(weeks)} label="Semanas activo" />
+      {/* Las cifras de una vida de entrenamiento, al tamaño que merecen.
+          Estaban en tres cuadraditos iguales, con el mismo peso que un botón
+          cualquiera: son lo que alguien enseña cuando le preguntan cuánto
+          lleva, y lo que da ganas de hacer una captura. */}
+      <View style={styles.vitrina}>
+        <View style={styles.vitrinaItem}>
+          <CountUp value={totalWorkouts} style={styles.vitrinaCifra} />
+          <Text style={styles.vitrinaEtiqueta}>Entrenos</Text>
+        </View>
+        <View style={styles.vitrinaSep} />
+        <View style={styles.vitrinaItem}>
+          <CountUp value={streak} style={styles.vitrinaCifra} />
+          <Text style={styles.vitrinaEtiqueta}>Días de racha</Text>
+        </View>
+        <View style={styles.vitrinaSep} />
+        <View style={styles.vitrinaItem}>
+          <CountUp value={weeks} style={styles.vitrinaCifra} />
+          <Text style={styles.vitrinaEtiqueta}>Semanas</Text>
+        </View>
       </View>
 
       <Card style={styles.section}>
@@ -455,6 +471,26 @@ export default function ClientProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  vitrina: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  vitrinaItem: { flex: 1, alignItems: 'center', gap: 2 },
+  vitrinaSep: { width: 1, height: 34, backgroundColor: colors.border },
+  vitrinaCifra: {
+    ...typography.hero,
+    color: colors.text,
+    ...tabularNums,
+  },
+  vitrinaEtiqueta: {
+    fontSize: 11,
+    color: colors.textFaint,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   borrarCuenta: { alignSelf: 'center', paddingVertical: spacing.lg },
   borrarCuentaTexto: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
   hero: { alignItems: 'center', marginBottom: spacing.lg },
