@@ -14,6 +14,7 @@ import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
 import { ClientPulse, pulsoDeAlumnos } from '../../components/ClientPulse';
 import { destacados, tendenciaDeAlumnos } from '../../lib/coachInsights';
+import { getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
 import { CountUp } from '../../components/CountUp';
 import { PressableScale } from '../../components/PressableScale';
 import { FadeIn } from '../../components/FadeIn';
@@ -81,6 +82,7 @@ export default function TrainerDashboard() {
   const cached = getCached<DashboardData>(cacheKey);
   const [clients, setClients] = useState<UserProfile[]>(cached?.clients ?? []);
   const [logs, setLogs] = useState<WorkoutLog[]>(cached?.logs ?? []);
+  const [tasks, setTasks] = useState<import('../../lib/types').CoachTask[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>(cached?.requests ?? []);
   const [payments, setPayments] = useState<import('../../lib/types').Payment[]>(
     cached?.payments ?? []
@@ -105,15 +107,17 @@ export default function TrainerDashboard() {
       let cancelled = false;
       (async () => {
         try {
-          const [clientData, logData, requestData, paymentData] = await Promise.all([
+          const [clientData, logData, requestData, paymentData, taskData] = await Promise.all([
             getClientsForTrainer(profile.uid),
             getWorkoutLogsForTrainer(profile.uid),
             getJoinRequestsForTrainer(profile.uid),
             getPaymentsForTrainer(profile.uid),
+            getCoachTasks(profile.uid).catch(() => []),
           ]);
           if (cancelled) return;
           setClients(clientData);
           setLogs(logData);
+          setTasks(taskData);
           setRequests(requestData);
           setPayments(paymentData);
           setCached(cacheKey, {
@@ -189,6 +193,17 @@ export default function TrainerDashboard() {
 
   const wk = weekComparison(logs);
   const pulso = pulsoDeAlumnos(clients, logs);
+  // Tareas de hoy: las del día sin terminar. Estaban solo en la agenda, y una
+  // tarea que hay que ir a buscar es una tarea que se olvida.
+  const hoyCero = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  })();
+  const tareasHoy = tasks
+    .filter((t) => !t.done && t.scope === 'day' && (t.dueDate ?? hoyCero) <= hoyCero)
+    .sort((a, b) => Number(b.flagged ?? false) - Number(a.flagged ?? false))
+    .slice(0, 4);
   const tendencias = destacados(tendenciaDeAlumnos(clients, logs));
   const byId = (id: string) => clients.find((c) => c.uid === id);
   // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
@@ -798,6 +813,49 @@ export default function TrainerDashboard() {
         </FadeIn>
       ) : null}
 
+      {/* Las tareas de hoy, aquí y no solo en la agenda: una tarea que hay que
+          ir a buscar es una tarea que se olvida. Se marcan desde aquí mismo. */}
+      {tareasHoy.length > 0 ? (
+        <FadeIn delay={175}>
+          <Card style={styles.section}>
+            <View style={styles.titleRow}>
+              <Ionicons name="checkbox-outline" size={16} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Hoy</Text>
+            </View>
+            {tareasHoy.map((t) => (
+              <PressableScale
+                key={t.id}
+                haptic
+                style={styles.taskRow}
+                onPress={async () => {
+                  // Se tacha al momento y se guarda detrás: esperar a la red
+                  // para ver un tic es lo que hace que una app parezca lenta.
+                  setTasks((prev) =>
+                    prev.map((x) => (x.id === t.id ? { ...x, done: true } : x))
+                  );
+                  try {
+                    await updateCoachTask(t.id, { done: true, doneAt: Date.now() });
+                  } catch {
+                    setTasks((prev) =>
+                      prev.map((x) => (x.id === t.id ? { ...x, done: false } : x))
+                    );
+                    showToast('No se pudo marcar');
+                  }
+                }}
+              >
+                <View style={styles.taskCheck} />
+                <Text style={styles.taskTitle} numberOfLines={1}>
+                  {t.title}
+                </Text>
+                {t.flagged ? (
+                  <Ionicons name="flag" size={13} color={colors.primary} />
+                ) : null}
+              </PressableScale>
+            ))}
+          </Card>
+        </FadeIn>
+      ) : null}
+
       {/* Los accesos van DESPUÉS de saber cómo va el grupo: son herramientas,
           y una herramienta antes del diagnóstico se usa a ciegas. */}
       <FadeIn delay={140}>
@@ -1192,6 +1250,22 @@ export default function TrainerDashboard() {
 const styles = StyleSheet.create({
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   pulseStrip: { marginTop: spacing.md },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: spacing.sm + 2,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  taskCheck: {
+    width: 19,
+    height: 19,
+    borderRadius: radius.sm,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+  },
+  taskTitle: { ...typography.body, color: colors.text, flex: 1 },
   trendPeriod: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm },
   trendRow: {
     flexDirection: 'row',
