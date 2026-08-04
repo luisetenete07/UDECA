@@ -231,6 +231,33 @@ await comprobar('el alumno NO se programa su propia semana', false, () =>
 );
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
 
+console.log('\nPlantillas de plan (planTemplates)');
+// La plantilla es el método del entrenador. Ni sus alumnos ni otro entrenador
+// tienen por qué verla: lo que el alumno necesita es SU plan, no el molde.
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+const plantilla = await addDoc(collection(db, 'planTemplates'), {
+  trainerId: coach.user.uid,
+  name: 'Mi método',
+  blocks: [{ name: 'Bloque', weeks: [{ name: 'Semana 1', targetSessions: 4 }] }],
+  createdAt: Date.now(),
+});
+await comprobar('el entrenador crea la suya', true, () => getDoc(plantilla));
+await comprobar('no puede crearla a nombre de otro', false, () =>
+  addDoc(collection(db, 'planTemplates'), {
+    trainerId: 'otro-entrenador',
+    name: 'Robada',
+    blocks: [],
+    createdAt: Date.now(),
+  })
+);
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+await comprobar('un alumno NO lee la plantilla de su entrenador', false, () =>
+  getDoc(plantilla)
+);
+await comprobar('ni la borra', false, () => deleteDoc(plantilla));
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await deleteDoc(plantilla).catch(() => {});
+
 console.log('\nTabla de progreso (progressTrackers)');
 // Se limpia al final: esta prueba escribe en la misma base que usa la app para
 // revisarla a mano, y dejar ejercicios inventados ahí ensucia la pantalla.

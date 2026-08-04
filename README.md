@@ -106,6 +106,9 @@ Implementado hasta ahora:
 - **Programación por semanas**: dentro de un bloque, cada semana lleva sus
   propios números (series, repeticiones y RIR), partiendo de la semana
   anterior. El alumno los ve en su entreno; la rutina no se toca.
+- **Plantillas de plan**: guardar una temporada entera —con los números de
+  cada semana— y aplicarla a otro alumno de un toque, o copiar una semana a
+  varios alumnos a la vez. Sin fechas: esas se eligen al aplicarla.
 - **Esfuerzo real (RIR)**: al terminar cada ejercicio se pregunta cuántas
   repeticiones quedaban, y la vista del bloque compara lo pedido con lo
   reportado. Solo se le pregunta a los atletas y a los alumnos que el

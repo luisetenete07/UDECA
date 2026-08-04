@@ -463,6 +463,16 @@ service cloud.firestore {
         && resource.data.trainerId == request.auth.uid;
     }
 
+    // Plantillas de plan del entrenador: la temporada que aplica a varios
+    // alumnos. Son suyas y de nadie más — ni siquiera sus alumnos las ven,
+    // porque lo que el alumno tiene que ver es SU plan, no el molde.
+    match /planTemplates/{templateId} {
+      allow read, update, delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid;
+    }
+
     // Agenda del coach: tareas y objetivos de negocio. Totalmente privadas del
     // entrenador; nadie más las lee ni escribe.
     match /coachTasks/{taskId} {

@@ -17,6 +17,8 @@ import { showToast } from '../../../../../components/Toast';
 import { useAuth } from '../../../../../lib/auth-context';
 import { BlockOverview } from '../../../../../components/BlockOverview';
 import { deleteCycles, getCyclesForClient } from '../../../../../lib/firestore/cycles';
+import { savePlanAsTemplate } from '../../../../../lib/firestore/planTemplates';
+import { TextField } from '../../../../../components/TextField';
 import { getExerciseLibrary } from '../../../../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../../../../lib/firestore/routines';
 import { getWorkoutLogsForClient } from '../../../../../lib/firestore/workoutLogs';
@@ -49,6 +51,9 @@ export default function CycleDashboardScreen() {
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [weekOpen, setWeekOpen] = useState(false);
+  const [tplOpen, setTplOpen] = useState(false);
+  const [tplName, setTplName] = useState('');
+  const [tplSaving, setTplSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile || !id || !cycleId) return;
@@ -74,6 +79,20 @@ export default function CycleDashboardScreen() {
   );
 
   const cuelgan = cycleId ? descendantIds(cycles, cycleId) : [];
+
+  const guardarPlantilla = async () => {
+    if (!profile || !cycle) return;
+    setTplSaving(true);
+    try {
+      await savePlanAsTemplate(profile.uid, cycle, cycles, tplName);
+      showToast('Plantilla guardada');
+      setTplOpen(false);
+    } catch {
+      showToast('No se pudo guardar la plantilla');
+    } finally {
+      setTplSaving(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!cycleId) return;
@@ -295,6 +314,26 @@ export default function CycleDashboardScreen() {
         )}
       </Card>
 
+      {hijos.length > 0 ? (
+        <Card style={styles.section}>
+          <Text style={styles.sectionLabel}>Guardar como plantilla</Text>
+          <Text style={styles.mutedText}>
+            Guarda este plan entero —bloques, semanas y los números que hayas programado— para
+            montárselo a otro alumno de un toque. No se guardan las fechas: esas se eligen al
+            aplicarlo.
+          </Text>
+          <Button
+            title="Guardar como plantilla"
+            variant="secondary"
+            onPress={() => {
+              setTplName(cycle.name);
+              setTplOpen(true);
+            }}
+            style={{ marginTop: spacing.md }}
+          />
+        </Card>
+      ) : null}
+
       {cycle.level === 'micro' ? (
         <Card style={styles.section}>
           <Text style={styles.sectionLabel}>Programación de la semana</Text>
@@ -333,6 +372,7 @@ export default function CycleDashboardScreen() {
           micro={cycle}
           cycles={cycles}
           routine={routine}
+          trainerId={profile?.uid}
           onClose={() => setWeekOpen(false)}
           onSaved={load}
         />
@@ -348,6 +388,37 @@ export default function CycleDashboardScreen() {
           onSaved={load}
         />
       ) : null}
+
+      <Modal visible={tplOpen} transparent animationType="fade" onRequestClose={() => setTplOpen(false)}>
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>Nombre de la plantilla</Text>
+            <Text style={styles.confirmText}>
+              Con este nombre te saldrá al crear el plan de otro alumno.
+            </Text>
+            <TextField
+              value={tplName}
+              onChangeText={setTplName}
+              placeholder="Ej. Mi bloque de fuerza"
+              containerStyle={{ marginTop: spacing.md, marginBottom: 0 }}
+            />
+            <View style={styles.actions}>
+              <Button
+                title="Cancelar"
+                variant="ghost"
+                onPress={() => setTplOpen(false)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Guardar"
+                onPress={guardarPlantilla}
+                loading={tplSaving}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={confirmDelete} transparent animationType="fade" onRequestClose={() => setConfirmDelete(false)}>
         <View style={styles.confirmBackdrop}>

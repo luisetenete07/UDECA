@@ -11,7 +11,7 @@ import {
 } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
-import { buildPlan, type PlanDraft } from '../cyclePlan';
+import { buildPlan, type PlanDraft, type PlannedCycle } from '../cyclePlan';
 import type { TrainingCycle } from '../types';
 
 const collectionRef = () => collection(db, 'trainingCycles');
@@ -102,7 +102,19 @@ export async function createCyclePlan(
   clientId: string,
   draft: PlanDraft
 ): Promise<string> {
-  const planned = buildPlan(draft);
+  return writePlan(trainerId, clientId, buildPlan(draft));
+}
+
+/**
+ * Escribe un plan ya calculado. Lo usan el generador de planes y las
+ * plantillas: los dos producen la misma lista, así que solo hay un sitio donde
+ * se guarda y no puede divergir.
+ */
+export async function writePlan(
+  trainerId: string,
+  clientId: string,
+  planned: PlannedCycle[]
+): Promise<string> {
   const now = Date.now();
   const ids = new Map<string, string>();
   for (const p of planned) ids.set(p.key, doc(collectionRef()).id);

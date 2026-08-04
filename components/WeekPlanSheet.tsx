@@ -4,7 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
-import { updateCycle } from '../lib/firestore/cycles';
+import { getCyclesForClient, updateCycle } from '../lib/firestore/cycles';
+import { applyWeekToClients } from '../lib/firestore/planTemplates';
+import { getClientsForTrainer } from '../lib/firestore/users';
+import { suggestProgression } from '../lib/planTemplates';
 import { exerciseNames, semanaAnterior, weekPlanDraft } from '../lib/weekPlan';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { Routine, TrainingCycle, WeekPlanEntry } from '../lib/types';
@@ -27,6 +30,7 @@ export function WeekPlanSheet({
   micro,
   cycles,
   routine,
+  trainerId,
   onClose,
   onSaved,
 }: {
@@ -34,11 +38,15 @@ export function WeekPlanSheet({
   micro: TrainingCycle;
   cycles: TrainingCycle[];
   routine: Routine | null;
+  /** Para poder copiar esta semana a otros alumnos del mismo entrenador. */
+  trainerId?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [entries, setEntries] = useState<WeekPlanEntry[]>([]);
   const [saving, setSaving] = useState(false);
+  const [otros, setOtros] = useState<{ uid: string; name: string }[]>([]);
+  const [tambien, setTambien] = useState<string[]>([]);
 
   const nombres = exerciseNames(routine);
   const previa = semanaAnterior(cycles, micro);
@@ -49,7 +57,23 @@ export function WeekPlanSheet({
     setEntries(
       yaProgramada ? (micro.weekPlan ?? []).map((e) => ({ ...e })) : weekPlanDraft(routine, cycles, micro)
     );
+    setTambien([]);
   }, [visible, micro, cycles, routine, yaProgramada]);
+
+  // Los demás alumnos del entrenador, para copiarles la misma semana. Si tres
+  // van en el mismo bloque, se programa una vez y no tres.
+  useEffect(() => {
+    if (!visible || !trainerId) return;
+    getClientsForTrainer(trainerId)
+      .then((cs) =>
+        setOtros(
+          cs
+            .filter((c) => c.uid !== micro.clientId)
+            .map((c) => ({ uid: c.uid, name: c.name }))
+        )
+      )
+      .catch(() => setOtros([]));
+  }, [visible, trainerId, micro.clientId]);
 
   const editar = (exerciseId: string, cambio: Partial<WeekPlanEntry>) =>
     setEntries((prev) =>
@@ -59,6 +83,12 @@ export function WeekPlanSheet({
   const traerAnterior = () => {
     setEntries(weekPlanDraft(routine, cycles, micro));
     showToast(previa ? 'Copiado de la semana anterior' : 'Copiado de la rutina');
+  };
+
+  /** Sugerencia, no regla: se pinta en la hoja y el entrenador la corrige. */
+  const sugerir = () => {
+    setEntries((prev) => suggestProgression(prev));
+    showToast('Una repetición más donde el objetivo era exacto');
   };
 
   const guardar = async () => {
@@ -76,7 +106,29 @@ export function WeekPlanSheet({
         }))
         .filter((e) => 'sets' in e || 'reps' in e || 'rir' in e);
       await updateCycle(micro.id, { weekPlan: limpias });
-      showToast('Semana programada');
+
+      // Y a los alumnos marcados, si esa semana existe en su plan. A quien no
+      // la tenga no se le inventa un ciclo: se dice y ya.
+      let extra = '';
+      if (tambien.length > 0 && trainerId && micro.startDate != null) {
+        const cargas = await Promise.all(
+          tambien.map(async (uid) => ({
+            clientId: uid,
+            cycles: await getCyclesForClient(trainerId, uid).catch(() => []),
+          }))
+        );
+        const { aplicados, sinSemana } = await applyWeekToClients(
+          micro.startDate,
+          limpias,
+          cargas
+        );
+        extra =
+          sinSemana.length > 0
+            ? ` · ${aplicados} alumno${aplicados === 1 ? '' : 's'} más (${sinSemana.length} sin esa semana)`
+            : ` · y ${aplicados} alumno${aplicados === 1 ? '' : 's'} más`;
+      }
+
+      showToast(`Semana programada${extra}`);
       onSaved();
       onClose();
     } catch {
@@ -121,12 +173,18 @@ export function WeekPlanSheet({
               </Text>
             ) : (
               <>
-                <Pressable onPress={traerAnterior} style={styles.copyBtn}>
-                  <Ionicons name="copy-outline" size={16} color={colors.primary} />
-                  <Text style={styles.copyText}>
-                    {previa ? `Traer de ${previa.name}` : 'Traer de la rutina'}
-                  </Text>
-                </Pressable>
+                <View style={styles.toolRow}>
+                  <Pressable onPress={traerAnterior} style={[styles.copyBtn, { flex: 1 }]}>
+                    <Ionicons name="copy-outline" size={15} color={colors.primary} />
+                    <Text style={styles.copyText} numberOfLines={1}>
+                      {previa ? `Traer de ${previa.name}` : 'Traer de la rutina'}
+                    </Text>
+                  </Pressable>
+                  <Pressable onPress={sugerir} style={[styles.copyBtn, { flex: 1 }]}>
+                    <Ionicons name="trending-up" size={15} color={colors.primary} />
+                    <Text style={styles.copyText}>Sugerir +1 rep</Text>
+                  </Pressable>
+                </View>
 
                 <View style={styles.headRow}>
                   <Text style={[styles.colLabel, { flex: 1 }]}>Ejercicio</Text>
@@ -175,6 +233,40 @@ export function WeekPlanSheet({
                 <Text style={styles.nota}>
                   Tu alumno verá estos números en su entreno de esta semana.
                 </Text>
+
+                {otros.length > 0 ? (
+                  <View style={styles.tambien}>
+                    <Text style={styles.label}>Aplicar también a</Text>
+                    <View style={styles.chips}>
+                      {otros.map((o) => {
+                        const puesto = tambien.includes(o.uid);
+                        return (
+                          <Pressable
+                            key={o.uid}
+                            onPress={() =>
+                              setTambien((prev) =>
+                                puesto ? prev.filter((x) => x !== o.uid) : [...prev, o.uid]
+                              )
+                            }
+                            style={[styles.chip, puesto && styles.chipOn]}
+                          >
+                            <Ionicons
+                              name={puesto ? 'checkmark-circle' : 'ellipse-outline'}
+                              size={14}
+                              color={puesto ? colors.primaryBright : colors.textFaint}
+                            />
+                            <Text style={[styles.chipText, puesto && styles.chipTextOn]}>
+                              {o.name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                    <Text style={styles.nota}>
+                      Se les copia en la misma semana. A quien no la tenga en su plan, se le salta.
+                    </Text>
+                  </View>
+                ) : null}
               </>
             )}
 
@@ -235,11 +327,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: colors.border,
-    marginBottom: spacing.md,
   },
   copyText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   headRow: {
@@ -276,6 +368,29 @@ const styles = StyleSheet.create({
     ...tabularNums,
   },
   nota: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm },
+  toolRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  tambien: { marginTop: spacing.md },
+  label: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  chipOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  chipText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
+  chipTextOn: { color: colors.primaryBright, fontFamily: fonts.semiBold },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   resetBtn: { alignSelf: 'center', marginTop: spacing.md, padding: spacing.sm },
   resetText: { ...typography.small, color: colors.danger },

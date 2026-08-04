@@ -189,7 +189,41 @@ dato existe y se le quedaría la intensidad en blanco sin saber por qué.
 
 ---
 
-## 5 · Borrar
+## 5 · Plantillas: el mismo método en varios alumnos
+
+`lib/planTemplates.ts` → `lib/firestore/planTemplates.ts` → colección
+`planTemplates`.
+
+Es el mismo argumento de §2, un nivel más arriba. Montar doce semanas dejó de
+ser dieciséis formularios, pero con cinco alumnos vuelven a ser **sesenta hojas
+de programación**. Un entrenador que trabaja con el mismo método en varias
+personas no puede escribirlo cinco veces: lo escribe una y lo aplica.
+
+- **Guardar un plan como plantilla** (desde la ficha del macro o del bloque):
+  se lleva la estructura, las descargas, las metas y **los números de cada
+  semana**.
+- **Aplicarla** desde "Nuevo plan": las plantillas propias salen arriba del
+  todo, antes que las de fábrica.
+- **Aplicar una semana a varios alumnos** desde la hoja de programación. Los
+  ejercicios son los de la biblioteca del entrenador, la misma para todos sus
+  alumnos, así que los números viajan sin traducir nada. A quien no tenga esa
+  semana en su plan **se le salta y se dice**; no se le inventa un ciclo.
+- **Progresión sugerida**: "+1 rep" donde el objetivo es un número exacto. Un
+  rango ("8-12") o un texto ("AMRAP") no se tocan, porque ahí el número no
+  significa lo que parece. Es una sugerencia que se pinta para corregirla, no
+  una regla que se aplique sola.
+
+**Una plantilla no lleva fechas.** Se guardan nombres y números; el calendario
+se calcula entero al aplicarla, desde el lunes que elija el entrenador. Un plan
+de septiembre aplicado en enero con sus fechas de septiembre no sería un plan,
+sería un archivo.
+
+Las plantillas son **privadas del entrenador**: ni sus alumnos las ven. Lo que
+el alumno necesita ver es su plan, no el molde.
+
+---
+
+## 6 · Borrar
 
 Borrar un ciclo con hijos borra **el plan entero** (`deleteCycles` con
 `descendantIds`), y el aviso dice cuántos ciclos se llevará por delante. Los
@@ -198,12 +232,13 @@ que el historial del alumno sobrevive a cualquier replanificación.
 
 ---
 
-## 6 · Comprobaciones
+## 7 · Comprobaciones
 
 ```bash
 node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-cycle-plan.mjs
 node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-block-view.mjs
 node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-week-plan.mjs
+node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-plan-templates.mjs
 ```
 
 (El gancho de `scripts/_ts-hook.mjs` solo resuelve las extensiones de los
@@ -218,6 +253,10 @@ descuadra el mes siguiente.
 
 **`check-block-view`** comprueba los números y, sobre todo, los avisos: que
 salgan cuando deben y —lo que más importa— **que no salgan cuando no deben**.
+
+**`check-plan-templates`** comprueba que la plantilla conserve la estructura y
+que **ninguna fecha** se cuele en ella, incluido el viaje de ida y vuelta
+(plan → plantilla → plan).
 
 **`check-week-plan`** comprueba la programación semanal, que es lo que el alumno
 ve al entrenar: un fallo aquí no se queda en una pantalla fea, le hace hacer

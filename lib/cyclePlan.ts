@@ -1,4 +1,4 @@
-import type { CycleLevel, TrainingCycle, WorkoutLog } from './types';
+import type { CycleLevel, TrainingCycle, WeekPlanEntry, WorkoutLog } from './types';
 
 /**
  * Planificación por bloques: de "quiero 12 semanas en 3 bloques" a un
@@ -68,6 +68,8 @@ export interface PlannedCycle {
   isDeload?: boolean;
   targetSessions?: number;
   goal?: string;
+  /** Solo microciclos que vienen de una plantilla ya programada. */
+  weekPlan?: WeekPlanEntry[];
 }
 
 /** Plantillas de arranque. La estructura clásica de acumular → apretar → soltar. */

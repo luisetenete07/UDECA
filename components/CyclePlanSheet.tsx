@@ -6,6 +6,8 @@ import { DateField, startOfToday } from './DateField';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { createCyclePlan } from '../lib/firestore/cycles';
+import { applyPlanTemplate, getPlanTemplates } from '../lib/firestore/planTemplates';
+import { templateSessions, templateWeeks, type PlanTemplate } from '../lib/planTemplates';
 import {
   PLAN_TEMPLATES,
   planEndDate,
@@ -47,6 +49,8 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
   const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [goal, setGoal] = useState('');
   const [saving, setSaving] = useState(false);
+  const [misPlantillas, setMisPlantillas] = useState<PlanTemplate[]>([]);
+  const [plantillaPropia, setPlantillaPropia] = useState<PlanTemplate | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -56,9 +60,16 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
     setBlocks(PLAN_TEMPLATES[0].blocks.map((b) => ({ ...b })));
     setSessionsPerWeek(4);
     setGoal('');
-  }, [visible]);
+    setPlantillaPropia(null);
+    // Las plantillas guardadas van primero: si el entrenador ya montó su método
+    // una vez, lo normal es que quiera repetirlo, no volver a construirlo.
+    getPlanTemplates(trainerId)
+      .then(setMisPlantillas)
+      .catch(() => setMisPlantillas([]));
+  }, [visible, trainerId]);
 
   const usarPlantilla = (id: string) => {
+    setPlantillaPropia(null);
     setPlantilla(id);
     const t = PLAN_TEMPLATES.find((x) => x.id === id);
     if (t) setBlocks(t.blocks.map((b) => ({ ...b })));
@@ -99,8 +110,14 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
   const guardar = async () => {
     setSaving(true);
     try {
-      const macroId = await createCyclePlan(trainerId, clientId, draft);
-      showToast(`Plan creado · ${semanas} semanas`);
+      const macroId = plantillaPropia
+        ? await applyPlanTemplate(trainerId, clientId, plantillaPropia, startDate)
+        : await createCyclePlan(trainerId, clientId, draft);
+      showToast(
+        plantillaPropia
+          ? `Plantilla aplicada · ${templateWeeks(plantillaPropia)} semanas`
+          : `Plan creado · ${semanas} semanas`
+      );
       onSaved(macroId);
       onClose();
     } catch {
@@ -123,7 +140,47 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
               semanas.
             </Text>
 
-            <Text style={styles.label}>Estructura</Text>
+            {misPlantillas.length > 0 ? (
+              <>
+                <Text style={styles.label}>Tus plantillas</Text>
+                {misPlantillas.map((t) => (
+                  <Pressable
+                    key={t.id}
+                    onPress={() => setPlantillaPropia(plantillaPropia?.id === t.id ? null : t)}
+                    style={[styles.tpl, plantillaPropia?.id === t.id && styles.tplActive]}
+                  >
+                    <Ionicons
+                      name={plantillaPropia?.id === t.id ? 'radio-button-on' : 'radio-button-off'}
+                      size={18}
+                      color={plantillaPropia?.id === t.id ? colors.primaryBright : colors.textFaint}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[
+                          styles.tplName,
+                          plantillaPropia?.id === t.id && styles.tplNameActive,
+                        ]}
+                      >
+                        {t.name}
+                      </Text>
+                      <Text style={styles.tplHint}>
+                        {templateWeeks(t)} semanas · {t.blocks.length} bloque
+                        {t.blocks.length === 1 ? '' : 's'}
+                        {templateSessions(t) > 0 ? ` · ${templateSessions(t)} entrenos` : ''}
+                        {t.blocks.some((b) => b.weeks.some((w) => w.weekPlan?.length))
+                          ? ' · con los números'
+                          : ''}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+                <View style={styles.divider} />
+              </>
+            ) : null}
+
+            <Text style={styles.label}>
+              {misPlantillas.length > 0 ? 'O empezar de cero' : 'Estructura'}
+            </Text>
             {PLAN_TEMPLATES.map((t) => (
               <Pressable
                 key={t.id}
@@ -248,16 +305,25 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
 
             <View style={styles.resumen}>
               <Text style={styles.resumenBig}>
-                {semanas} semanas · {blocks.length} bloque{blocks.length === 1 ? '' : 's'}
+                {plantillaPropia ? templateWeeks(plantillaPropia) : semanas} semanas ·{' '}
+                {plantillaPropia ? plantillaPropia.blocks.length : blocks.length} bloque
+                {(plantillaPropia ? plantillaPropia.blocks.length : blocks.length) === 1 ? '' : 's'}
               </Text>
               <Text style={styles.resumenText}>
-                Del {fmtCorta(inicio)} al {fmtCorta(fin)} · {entrenos} entrenos previstos
+                {plantillaPropia
+                  ? `${plantillaPropia.name} · desde el ${fmtCorta(inicio)}`
+                  : `Del ${fmtCorta(inicio)} al ${fmtCorta(fin)} · ${entrenos} entrenos previstos`}
               </Text>
             </View>
 
             <View style={styles.actions}>
               <Button title="Cancelar" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-              <Button title="Crear plan" onPress={guardar} loading={saving} style={{ flex: 1 }} />
+              <Button
+                title={plantillaPropia ? 'Aplicar plantilla' : 'Crear plan'}
+                onPress={guardar}
+                loading={saving}
+                style={{ flex: 1 }}
+              />
             </View>
           </ScrollView>
         </View>
