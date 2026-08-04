@@ -235,8 +235,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: spacing.lg,
   },
+  /**
+   * El titular de una diapositiva ES la diapositiva.
+   *
+   * Iba a 21 px, el mismo escalón que un rótulo de sección, sobre un cuerpo de
+   * 15: tres puntos de diferencia no son una jerarquía, son un descuido. En la
+   * primera pantalla que alguien ve de UDECA —donde no hay datos que mirar, solo
+   * una idea por pantalla— el titular tiene que llevarse la mirada solo.
+   */
   title: {
-    ...typography.h2,
+    ...typography.h1,
     color: colors.text,
     textAlign: 'center',
     marginBottom: spacing.sm,

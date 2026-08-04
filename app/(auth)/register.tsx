@@ -265,8 +265,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
+  // El saludo es el título de la pantalla, no un rótulo de sección.
   title: {
-    ...typography.h2,
+    ...typography.h1,
     color: colors.text,
     marginBottom: spacing.xs,
     textAlign: 'center',

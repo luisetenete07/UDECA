@@ -243,8 +243,9 @@ const styles = StyleSheet.create({
     gap: 2,
     marginBottom: spacing.md,
   },
+  // El saludo es el título de la pantalla, no un rótulo de sección.
   title: {
-    ...typography.h2,
+    ...typography.h1,
     color: colors.text,
     marginTop: spacing.lg,
     marginBottom: spacing.xs,
