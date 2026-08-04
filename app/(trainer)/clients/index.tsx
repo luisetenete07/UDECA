@@ -19,6 +19,7 @@ import { useAuth } from '../../../lib/auth-context';
 import { syncClientCountOnServer } from '../../../lib/join';
 import { getClientsForTrainer, subscribeClientsForTrainer } from '../../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
+import { QuickSheet } from '../../../components/QuickSheet';
 import { getActiveRoutineForClient } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
@@ -118,6 +119,8 @@ export default function ClientsScreen() {
   // primero, para actuar rápido con grupos grandes).
   const [sortMode, setSortMode] = useState<'name' | 'activity'>('name');
   const [error, setError] = useState<string | null>(null);
+  // Alumno sobre el que se mantiene pulsado, para las acciones rápidas.
+  const [rapidas, setRapidas] = useState<UserProfile | null>(null);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -208,7 +211,7 @@ export default function ClientsScreen() {
       <ScreenContainer>
         <ScreenHeader title="Tus clientes" subtitle="Cargando tu grupo..." />
         <ListSkeleton rows={6} />
-      </ScreenContainer>
+    </ScreenContainer>
     );
   }
 
@@ -369,6 +372,8 @@ export default function ClientsScreen() {
           <FadeIn key={client.uid} delay={Math.min(index * 40, 280)}>
           <CardButton
             onPress={() => router.push(`/(trainer)/clients/${client.uid}`)}
+            onLongPress={() => setRapidas(client)}
+            delayLongPress={280}
             style={styles.clientCard}
           >
               {/* El aro dice cuándo entrenó sin que haya que leer nada: es el
@@ -415,13 +420,58 @@ export default function ClientsScreen() {
                   <Text style={styles.statusDotText}>{CLIENT_STATUS_LABEL[client.status]}</Text>
                 </View>
               ) : null}
-              <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+              {/* Las acciones rápidas, con botón visible además del gesto: un
+                  atajo que solo existe si lo mantienes pulsado es un atajo que
+                  nadie descubre, y por tanto una función que no existe. */}
+              <Pressable
+                onPress={() => setRapidas(client)}
+                hitSlop={10}
+                style={styles.masBtn}
+                accessibilityLabel={`Acciones de ${client.name}`}
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+              </Pressable>
           </CardButton>
           </FadeIn>
           );
         })}
         </Grid>
       )}
+        {rapidas ? (
+        <QuickSheet
+          visible
+          titulo={rapidas.name}
+          subtitulo="Mantén pulsado sobre cualquier alumno para llegar aquí"
+          onClose={() => setRapidas(null)}
+          acciones={[
+            {
+              icono: 'barbell-outline',
+              texto: 'Editar rutina',
+              onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}/routine`),
+            },
+            {
+              icono: 'calendar-outline',
+              texto: 'Planificación',
+              onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}/planning`),
+            },
+            {
+              icono: 'trending-up-outline',
+              texto: 'Progreso total',
+              onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}/overview`),
+            },
+            {
+              icono: 'nutrition-outline',
+              texto: 'Plan nutricional',
+              onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}/nutrition`),
+            },
+            {
+              icono: 'person-outline',
+              texto: 'Abrir ficha',
+              onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}`),
+            },
+          ]}
+        />
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -502,6 +552,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     // La separación entre fichas la pone la rejilla, no la tarjeta.
     flex: 1,
+  },
+  masBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   aro: {
     width: 50,

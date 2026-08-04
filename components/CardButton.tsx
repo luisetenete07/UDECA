@@ -5,6 +5,9 @@ import { colors, radius, shadows, spacing, surfaceHighlight } from '../lib/theme
 interface CardButtonProps {
   children: React.ReactNode;
   onPress: () => void;
+  /** Mantener pulsado: atajo a las acciones rápidas de esa tarjeta. */
+  onLongPress?: () => void;
+  delayLongPress?: number;
   /** Tarjeta destacada: filo dorado en lugar del borde neutro. */
   accent?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -24,10 +27,20 @@ interface CardButtonProps {
  * Al pasar el cursor se aclara la superficie y el borde en vez de mover la
  * tarjeta: un desplazamiento haría "saltar" las filas de una lista larga.
  */
-export function CardButton({ children, onPress, accent, style, disabled }: CardButtonProps) {
+export function CardButton({
+  children,
+  onPress,
+  onLongPress,
+  delayLongPress,
+  accent,
+  style,
+  disabled,
+}: CardButtonProps) {
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={delayLongPress}
       disabled={disabled}
       role="button"
       style={({ pressed, hovered }: { pressed: boolean; hovered?: boolean }) => [
