@@ -69,9 +69,15 @@ El aviso guarda el **hito** enviado (3 o 1) y no la fecha, para que los dos
 puedan salir con un día de diferencia sin pisarse, y deja de aplicar solo en
 cuanto la persona paga.
 
-**Solo llega a quien tiene la app de móvil instalada** y las notificaciones
-concedidas: en web no hay push. Para cubrir a los demás haría falta correo, que
-todavía no está montado.
+Sale por **notificación push y por correo**. Es el único aviso de la tarea
+diaria que va por los dos caminos, y con razón: el push solo existe si la
+persona tiene la app de móvil instalada y ha dado permiso, y quien usa UDECA
+desde el navegador no tendría forma de enterarse. Encontrarse el muro de pago el
+día 15 sin aviso, después de que la app lo prometiera por escrito, convierte a
+alguien que iba a pagar en alguien que se va.
+
+El hito se marca aunque no salga ningún aviso (ni push ni correo). Si no, se
+reintentaría a diario con quien no tiene ninguno de los dos.
 
 ### Cuándo empiezan los 14 días del atleta
 
@@ -171,7 +177,45 @@ webhook de prueba; el día que pases a real hay que cambiar los tres a la vez
 
 ---
 
-## 5 · La campaña de fundadores
+## 5 · El correo
+
+`payments-webhook/api/_correo.js`, con **Resend**.
+
+**Sin clave no pasa nada**: si `RESEND_API_KEY` no está puesta, no se envía y se
+dice en la respuesta de la tarea diaria (`correo: "sin-configurar"`). El resto
+sigue funcionando igual. Así el código puede estar publicado antes de que exista
+la cuenta, y el día que se pegue la clave empieza a funcionar solo.
+
+### Qué hay que hacer una vez
+
+1. Crear la cuenta en [resend.com](https://resend.com) (3.000 correos al mes
+   gratis, de sobra para empezar).
+2. **Domains → Add Domain → `udeca.app`**. Resend da unos registros DNS (SPF y
+   DKIM) que hay que añadir donde esté el dominio. Sin verificarlo, los correos
+   salen desde una dirección de pruebas y acaban en spam.
+3. **API Keys → Create**, permiso de solo envío.
+4. En Vercel, en el proyecto del webhook: **Settings → Environment Variables**
+   - `RESEND_API_KEY` = la clave
+   - `MAIL_FROM` = `UDECA <avisos@udeca.app>` (opcional; es el valor por defecto)
+5. **Volver a desplegar.** Las variables no entran en vigor hasta el siguiente
+   despliegue.
+
+La clave **no va en el repositorio**, que es público, ni se pega en ningún chat:
+solo en Vercel.
+
+### Qué se envía hoy
+
+Solo el aviso de fin de prueba del atleta (a 3 días y el último día). Los demás
+recordatorios —inactividad, cuota— siguen siendo solo push: son de trato diario
+entre entrenador y alumno, y un correo por cada uno se lee como spam propio.
+
+Los correos van sin imágenes ni tipografías externas a propósito: lo que depende
+de recursos remotos se ve roto en media bandeja de entrada y puntúa peor en los
+filtros de spam.
+
+---
+
+## 6 · La campaña de fundadores
 
 Quien paga su alta mientras la campaña está abierta recibe un **número de
 fundador** correlativo: el 7 es el séptimo, y lo sigue siendo aunque los seis

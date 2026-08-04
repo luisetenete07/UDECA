@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import { correoConfigurado, enviarCorreos } from './_correo.js';
 
 /**
  * Tarea diaria de UDECA (Vercel Cron).
@@ -34,6 +35,8 @@ const PAYMENT_DUE_DAYS = 3;
  * alguien que iba a pagar en alguien que se va.
  */
 const TRIAL_NUDGE_DAYS = [3, 1];
+/** A dónde lleva el botón del correo. */
+const APP_URL = 'https://app.udeca.app';
 /** Cuota mensual del atleta (la misma que ATHLETE_MONTHLY_EUR en la app). */
 const ATHLETE_MONTHLY_EUR = 10;
 /** No se repite el mismo tipo de aviso antes de este plazo. */
@@ -153,6 +156,7 @@ export default async function handler(req, res) {
 
     const writes = [];
     const messages = [];
+    const correos = [];
     const nudged = [];
     let statsUpdated = 0;
 
@@ -209,8 +213,12 @@ export default async function handler(req, res) {
       //
       // Solo mientras SIGUE siendo prueba: al pagar, `subscriptionUntil` pasa
       // de largo de `trialEndsAt` y esto deja de aplicar solo.
+      //
+      // NO depende de tener la app instalada: este aviso sale por push Y por
+      // correo. Es el único de la tarea que la app promete por escrito en la
+      // tarjeta del plan, y quien usa UDECA desde el navegador no tiene push:
+      // se encontraba el muro de pago el día 15 sin haber sido avisado nunca.
       if (
-        u.pushToken &&
         u.role === 'athlete' &&
         typeof u.subscriptionUntil === 'number' &&
         typeof u.trialEndsAt === 'number' &&
@@ -222,13 +230,28 @@ export default async function handler(req, res) {
         const hito = TRIAL_NUDGE_DAYS.filter((d) => restantes <= d).pop() ?? null;
         if (hito !== null && u.trialNudgeStage !== hito) {
           const ultimoDia = hito === 1;
-          messages.push({
-            to: u.pushToken,
-            title: ultimoDia ? 'Hoy es tu último día de prueba' : `Te quedan ${restantes} días de prueba`,
-            body: ultimoDia
-              ? `Para seguir sin cortes, actívalo desde la app: ${ATHLETE_MONTHLY_EUR} €/mes, sin permanencia. Tu progreso se queda contigo decidas lo que decidas.`
-              : `Después, seguir cuesta ${ATHLETE_MONTHLY_EUR} €/mes. Lo que has registrado no se borra pase lo que pase.`,
-          });
+          const titulo = ultimoDia
+            ? 'Hoy es tu último día de prueba'
+            : `Te quedan ${restantes} días de prueba`;
+          const cuerpo = ultimoDia
+            ? `Para seguir sin cortes, actívalo desde la app: ${ATHLETE_MONTHLY_EUR} €/mes, sin permanencia. Tu progreso se queda contigo decidas lo que decidas.`
+            : `Después, seguir cuesta ${ATHLETE_MONTHLY_EUR} €/mes. Lo que has registrado no se borra pase lo que pase.`;
+
+          if (u.pushToken) messages.push({ to: u.pushToken, title: titulo, body: cuerpo });
+          if (u.email) {
+            correos.push({
+              to: u.email,
+              subject: titulo,
+              titulo,
+              parrafos: [
+                cuerpo,
+                'Si decides no seguir, no hay que hacer nada: la prueba se acaba sola y no se cobra.',
+              ],
+              boton: { texto: 'Abrir UDECA', url: APP_URL },
+            });
+          }
+          // El hito se marca aunque no haya salido ningún aviso: si no, se
+          // reintentaría cada día a alguien que no tiene ni push ni correo.
           nudged.push({ id: doc.id, data: { trialNudgeStage: hito } });
         }
       }
@@ -256,12 +279,21 @@ export default async function handler(req, res) {
 
     await Promise.all(writes);
     const sent = await sendPush(messages);
+    const mailed = await enviarCorreos(correos);
     // Marca de envío para no repetir el mismo aviso a diario.
     await Promise.all(
       nudged.map((n) => db.collection('users').doc(n.id).set(n.data, { merge: true }))
     );
 
-    res.status(200).json({ ok: true, statsUpdated, notified: sent });
+    res.status(200).json({
+      ok: true,
+      statsUpdated,
+      notified: sent,
+      mailed,
+      // Se dice si el correo no está configurado: así, mirando la respuesta de
+      // la tarea, se ve de un vistazo si falta pegar la clave en Vercel.
+      correo: correoConfigurado() ? 'ok' : 'sin-configurar',
+    });
   } catch (e) {
     res.status(200).json({ ok: false, reason: e?.message ?? String(e) });
   }
