@@ -13,7 +13,6 @@ import { ListSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
 import { ProgressRing } from '../../components/ProgressRing';
-import { StatTile } from '../../components/StatTile';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import {
@@ -581,40 +580,6 @@ export default function TrainerDashboard() {
       ) : null}
 
       {/* Atajos: lo más usado, a un toque */}
-      <View style={styles.quickRow}>
-        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/agenda')}>
-          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Calendario y tareas</Text>
-        </Pressable>
-        <Pressable
-          style={styles.quickBtn}
-          onPress={() => router.push('/(trainer)/exercises/new')}
-        >
-          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Nuevo ejercicio</Text>
-        </Pressable>
-        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/courses/new')}>
-          <Ionicons name="videocam-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Nuevo curso</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.quickBtn, paysReminded && { opacity: 0.5 }]}
-          onPress={handleRemindAllPayments}
-          disabled={remindingPays || paysReminded}
-        >
-          <View>
-            <Ionicons name="cash-outline" size={20} color={colors.primary} />
-            {duePayClients.length > 0 && !paysReminded ? (
-              <View style={styles.quickBadge}>
-                <Text style={styles.quickBadgeText}>{duePayClients.length}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={styles.quickLabel}>
-            {paysReminded ? 'Pagos avisados ✓' : 'Recordar pagos'}
-          </Text>
-        </Pressable>
-      </View>
 
       {/* Primeros pasos: guía para el coach recién llegado (sin alumnos todavía). */}
       {clients.length === 0 && requests.length === 0 ? (
@@ -734,18 +699,62 @@ export default function TrainerDashboard() {
               </Text>
             </View>
           </View>
+
+          {/* Lo único accionable del bloque: a quién hay que escribirle. Antes
+              era una cifra suelta en un cuadro que no llevaba a ninguna parte. */}
+          {inactiveClients.length > 0 ? (
+            <Pressable
+              style={styles.pulseAction}
+              onPress={() => router.push('/(trainer)/clients')}
+            >
+              <Ionicons name="alert-circle-outline" size={16} color={colors.warning} />
+              <Text style={styles.pulseActionText}>
+                {inactiveClients.length} sin entrenar hace más de una semana
+              </Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
         </Card>
       ) : null}
 
-      <View style={styles.statsRow}>
-        <StatTile icon="people" value={String(clients.length)} label="Clientes" />
-        <StatTile icon="barbell" value={String(wk.thisWeek)} label="Entrenos (semana)" />
-        <StatTile
-          icon="alert-circle"
-          value={String(inactiveClients.length)}
-          label="Inactivos"
-        />
+      {/* Los accesos van DESPUÉS de saber cómo va el grupo: son herramientas,
+          y una herramienta antes del diagnóstico se usa a ciegas. */}
+      <View style={styles.quickRow}>
+        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/agenda')}>
+          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Calendario y tareas</Text>
+        </Pressable>
+        <Pressable
+          style={styles.quickBtn}
+          onPress={() => router.push('/(trainer)/exercises/new')}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Nuevo ejercicio</Text>
+        </Pressable>
+        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/courses/new')}>
+          <Ionicons name="videocam-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Nuevo curso</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.quickBtn, paysReminded && { opacity: 0.5 }]}
+          onPress={handleRemindAllPayments}
+          disabled={remindingPays || paysReminded}
+        >
+          <View>
+            <Ionicons name="cash-outline" size={20} color={colors.primary} />
+            {duePayClients.length > 0 && !paysReminded ? (
+              <View style={styles.quickBadge}>
+                <Text style={styles.quickBadgeText}>{duePayClients.length}</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.quickLabel}>
+            {paysReminded ? 'Pagos avisados ✓' : 'Recordar pagos'}
+          </Text>
+        </Pressable>
       </View>
+
+
       {showBilling ? (
         <Card style={styles.section}>
           <View style={styles.titleRow}>
@@ -1090,6 +1099,16 @@ export default function TrainerDashboard() {
 
 const styles = StyleSheet.create({
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pulseAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  pulseActionText: { ...typography.small, color: colors.warning, flex: 1 },
   pulseBig: { ...typography.h2, color: colors.text, marginTop: 2, marginBottom: 2 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
   greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
