@@ -803,7 +803,16 @@ export default function ClientDashboard() {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
   greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
-  greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
+  /**
+   * El saludo, un escalón por debajo de lo que toca hoy.
+   *
+   * Iba a 28 px —el nombre propio, el único dato de la pantalla que ya te
+   * sabes— mientras "Empuje A", que es a lo que se entra, iba a 24. El código
+   * ya tenía escrito arriba que "la acción del día va PRIMERO"; los tamaños
+   * decían lo contrario. Sigue siendo un saludo con nombre, que es cálido, pero
+   * deja de competir.
+   */
+  greeting: { ...typography.h2, color: colors.text, marginTop: 2 },
   reminderBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -964,7 +973,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: spacing.xs,
   },
-  todayTitle: { ...typography.h1, color: colors.text, fontSize: 24 },
+  // Lo que toca hoy: el titular de la pantalla. Llevaba `h1` pero pisado a 24
+  // px, así que además arrastraba un interletrado calculado para 28.
+  todayTitle: { ...typography.h1, color: colors.text },
   todaySub: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   todayPlay: {
     width: 56,

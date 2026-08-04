@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { EmptyState } from '../../components/EmptyState';
 import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { LineChart } from '../../components/LineChart';
@@ -717,8 +718,13 @@ export default function ProgressScreen() {
               </FadeIn>
             ))}
 
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Volumen semanal (kg)</Text>
+            <View style={styles.section}>
+            <CollapsibleCard
+              id="prog-volumen"
+              icon="barbell-outline"
+              title="Volumen semanal (kg)"
+              defaultOpen={false}
+            >
               <LineChart
                 points={weeklyActivity(workoutLogs).map((w) => ({
                   date: w.weekStart,
@@ -729,10 +735,16 @@ export default function ProgressScreen() {
                 lowerIsBetter={false}
                 emptyMessage="Registra entrenamientos con peso para ver tu volumen semanal."
               />
-            </Card>
+            </CollapsibleCard>
+            </View>
 
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Series semanales</Text>
+            <View style={styles.section}>
+            <CollapsibleCard
+              id="prog-series"
+              icon="layers-outline"
+              title="Series semanales"
+              defaultOpen={false}
+            >
               <Text style={styles.photoHint}>
                 Series completadas cada semana en lo que más entrenas. Toca una categoría
                 para seguirla o dejar de seguirla.
@@ -777,11 +789,17 @@ export default function ProgressScreen() {
                   </View>
                 ))
               )}
-            </Card>
+            </CollapsibleCard>
+            </View>
 
             {muscleMap.length > 0 ? (
-              <Card style={styles.section}>
-                <Text style={styles.sectionTitle}>Mapa muscular (28 días)</Text>
+              <View style={styles.section}>
+              <CollapsibleCard
+                id="prog-mapa"
+                icon="body-outline"
+                title="Mapa muscular (28 días)"
+                defaultOpen={false}
+              >
                 <Text style={styles.photoHint}>Series completadas por patrón de movimiento.</Text>
                 {muscleMap.map((m) => (
                   <View key={m.group} style={styles.muscleRow}>
@@ -799,11 +817,17 @@ export default function ProgressScreen() {
                     <Text style={styles.muscleValue}>{m.sets}</Text>
                   </View>
                 ))}
-              </Card>
+              </CollapsibleCard>
+              </View>
             ) : null}
 
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Ejercicios más entrenados</Text>
+            <View style={styles.section}>
+            <CollapsibleCard
+              id="prog-top"
+              icon="trophy-outline"
+              title="Ejercicios más entrenados"
+              defaultOpen={false}
+            >
               {topExercises(workoutLogs).map((ex, i) => (
                 <View key={ex.name} style={styles.logRow}>
                   <Text style={styles.logValue}>
@@ -812,7 +836,8 @@ export default function ProgressScreen() {
                   <Text style={styles.logDate}>{ex.count} sesiones</Text>
                 </View>
               ))}
-            </Card>
+            </CollapsibleCard>
+            </View>
           </>
         )
       ) : null}

@@ -1292,8 +1292,6 @@ const styles = StyleSheet.create({
   pulseActionText: { ...typography.small, color: colors.warning, flex: 1 },
   pulseBig: { ...typography.h2, color: colors.text, marginTop: 2, marginBottom: 2 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
-  greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
-  greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   stepRow: {
