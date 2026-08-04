@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { shareMemberImage } from '../lib/brandCards';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
-import { colors, fonts, gradients, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, gradients, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { UserProfile } from '../lib/types';
 
 /** Cómo se llama cada tipo de cuenta y qué hace, en una línea. */
@@ -90,18 +90,16 @@ export function MemberCard() {
         </Pressable>
       </View>
 
+      {/* El número manda. Es lo que se enseña, lo que no se puede volver a
+          conseguir y lo único de esta tarjeta que nadie más va a tener: darle
+          el tamaño de un párrafo era esconderlo. El texto explicativo sobra —
+          un número con almohadilla se entiende solo. */}
       {esFundador ? (
-        <View style={styles.sello}>
-          <View style={styles.selloAnilla}>
-            <Text style={styles.selloNumero}>{profile.founderNumber}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.fundadorTitulo}>Miembro fundador</Text>
-            <Text style={styles.fundadorTexto}>
-              Nº {profile.founderNumber} de UDECA. Estuviste aquí desde el principio, y eso
-              no se puede volver a conseguir.
-            </Text>
-          </View>
+        <View style={styles.numeroBloque}>
+          <Text style={styles.numeroEtiqueta}>Miembro fundador</Text>
+          <Text style={styles.numeroGrande}>
+            #{String(profile.founderNumber).padStart(4, '0')}
+          </Text>
         </View>
       ) : (
         <Text style={styles.frase}>{tipo.frase}</Text>
@@ -151,6 +149,21 @@ const styles = StyleSheet.create({
   fundadorTitulo: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.semiBold },
   fundadorTexto: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
   frase: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm },
+  numeroBloque: { marginTop: spacing.lg, marginBottom: spacing.xs },
+  numeroEtiqueta: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
+  numeroGrande: {
+    fontFamily: fonts.display,
+    fontSize: 46,
+    lineHeight: 52,
+    letterSpacing: -2,
+    color: colors.text,
+    ...tabularNums,
+  },
   pie: {
     marginTop: spacing.lg,
     paddingTop: spacing.md,
