@@ -1,6 +1,18 @@
+/**
+ * Dos familias y ya.
+ *
+ * El display era Cinzel, una romana con capitales imperiales. Daba ceremonia,
+ * pero también daba "diploma": en una pantalla que se abre veinte veces al día
+ * para ver números, la ceremonia se lee como lentitud. Sora es geométrica, de
+ * las que usan las herramientas técnicas — rendimiento y tecnología en vez de
+ * solemnidad— y a tamaño grande con el interletrado apretado tiene la misma
+ * presencia sin el disfraz.
+ *
+ * El oro no se toca: la marca es el color, no la letra.
+ */
 export const fonts = {
-  display: 'Cinzel_700Bold',
-  displaySemiBold: 'Cinzel_600SemiBold',
+  display: 'Sora_700Bold',
+  displaySemiBold: 'Sora_600SemiBold',
   heading: 'Inter_700Bold',
   body: 'Inter_400Regular',
   medium: 'Inter_500Medium',
@@ -11,7 +23,14 @@ export const colors = {
   background: '#000000',
   surface: '#0D0D0D',
   surfaceAlt: '#181818',
-  border: '#2A2A2A',
+  /**
+   * Borde casi invisible: solo separa, no dibuja. Un borde que se ve compite
+   * con el contenido y llena la pantalla de rectángulos; a este solo se le
+   * nota la ausencia.
+   */
+  border: 'rgba(255,255,255,0.07)',
+  /** Para lo poquísimo que de verdad necesita marcar un límite. */
+  borderStrong: '#2A2A2A',
   primary: '#A2968B',
   /** Oro claro: brillos, extremos de degradado, estados resaltados. */
   primaryBright: '#C9BDB0',
@@ -104,12 +123,26 @@ export const radius = {
  */
 export const tabularNums = { fontVariant: ['tabular-nums' as const] };
 
+/**
+ * Escala tipográfica.
+ *
+ * El interletrado de los títulos pasa a NEGATIVO. Cinzel iba en capitales y
+ * pedía aire entre letras; una geométrica a tamaño grande pide lo contrario:
+ * apretarla es lo que la hace parecer una herramienta y no un cartel. Cuanto
+ * más grande, más apretada — la misma regla que usan Apple, Linear o Stripe.
+ *
+ * Y hay un escalón nuevo arriba (`hero`) para el dato que manda en cada
+ * pantalla. Sin un tamaño reservado a "lo importante", todo acaba a 21 y no
+ * manda nada.
+ */
 export const typography = {
-  h1: { fontSize: 28, fontFamily: fonts.display, letterSpacing: 0.4, lineHeight: 36 },
-  h2: { fontSize: 21, fontFamily: fonts.displaySemiBold, letterSpacing: 0.3, lineHeight: 28 },
-  h3: { fontSize: 17, fontFamily: fonts.heading, lineHeight: 23 },
+  hero: { fontSize: 34, fontFamily: fonts.display, letterSpacing: -1, lineHeight: 40 },
+  h1: { fontSize: 28, fontFamily: fonts.display, letterSpacing: -0.7, lineHeight: 34 },
+  h2: { fontSize: 21, fontFamily: fonts.displaySemiBold, letterSpacing: -0.4, lineHeight: 27 },
+  h3: { fontSize: 17, fontFamily: fonts.heading, letterSpacing: -0.2, lineHeight: 23 },
   body: { fontSize: 15, fontFamily: fonts.body, lineHeight: 22 },
   small: { fontSize: 13, fontFamily: fonts.body, lineHeight: 19 },
+  // Los rótulos sí van abiertos: en mayúsculas y a 12, apretar los hace ilegibles.
   label: { fontSize: 12, fontFamily: fonts.semiBold, letterSpacing: 1.4, lineHeight: 16 },
 };
 

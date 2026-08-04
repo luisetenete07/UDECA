@@ -58,7 +58,8 @@ body {
 }
 
 h1 {
-  font-family: Cinzel, Georgia, 'Times New Roman', serif;
+  font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -0.02em;
   font-size: clamp(32px, 8vw, 44px);
   font-weight: 700;
   line-height: 1.14;

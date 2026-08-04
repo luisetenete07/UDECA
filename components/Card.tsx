@@ -29,7 +29,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
+    // Más aire dentro: la tarjeta respira y el contenido deja de tocar el
+    // borde. Es lo que separa una tarjeta cara de un rectángulo con datos.
+    padding: spacing.lg - 2,
     ...shadows.card,
   },
   highlight: surfaceHighlight,

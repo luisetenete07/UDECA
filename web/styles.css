@@ -1,5 +1,5 @@
 /*
- * Identidad de UDECA en web: negro, oro cálido, Cinzel para los títulos e Inter
+ * Identidad de UDECA en web: negro, oro cálido, Sora para los títulos e Inter
  * para el texto. Los mismos valores que usa la app (lib/theme.ts), para que
  * quien llega desde la web y abre la app no note que ha cambiado de sitio.
  */
@@ -39,7 +39,8 @@ img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
 
 h1, h2, h3 {
-  font-family: Cinzel, Georgia, 'Times New Roman', serif;
+  font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -0.02em;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1.15;
@@ -73,7 +74,8 @@ header.scrolled { border-bottom-color: var(--border); }
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
 .brand img { width: 34px; height: 34px; }
 .brand span {
-  font-family: Cinzel, Georgia, serif;
+  font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -0.02em;
   font-weight: 700;
   letter-spacing: 0.22em;
   font-size: 15px;
@@ -210,7 +212,8 @@ section { position: relative; z-index: 1; padding: 84px 0; }
 .plan h3 { font-size: 22px; }
 .plan .who { color: var(--gold); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 18px; }
 .price { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 4px; }
-.price b { font-family: Cinzel, Georgia, serif; font-size: 44px; font-weight: 700; }
+.price b { font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -0.02em; font-size: 44px; font-weight: 700; }
 .price span { color: var(--muted); font-size: 15px; }
 .plan .sub { color: var(--faint); font-size: 13px; margin-bottom: 22px; }
 .plan ul { list-style: none; margin: 0 0 26px; padding: 0; display: grid; gap: 11px; }
@@ -254,7 +257,8 @@ section { position: relative; z-index: 1; padding: 84px 0; }
 .quote {
   border-left: 2px solid var(--hairline);
   padding-left: 22px;
-  font-family: Cinzel, Georgia, serif;
+  font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -0.02em;
   font-size: 20px;
   line-height: 1.5;
   color: var(--gold-bright);
@@ -269,7 +273,8 @@ section { position: relative; z-index: 1; padding: 84px 0; }
   background: var(--surface-alt);
   display: grid;
   place-items: center;
-  font-family: Cinzel, Georgia, serif;
+  font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -0.02em;
   font-size: 20px;
   color: var(--gold-bright);
   flex: none;

@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
-import { Cinzel_600SemiBold, Cinzel_700Bold } from '@expo-google-fonts/cinzel';
+import { Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -42,8 +42,8 @@ function GlobalErrorLogger() {
 export default function RootLayout() {
   const [splashDone, setSplashDone] = useState(false);
   const [fontsLoaded] = useFonts({
-    Cinzel_600SemiBold,
-    Cinzel_700Bold,
+    Sora_600SemiBold,
+    Sora_700Bold,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
