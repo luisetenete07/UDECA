@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../../components/Avatar';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
+import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { EmptyState } from '../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
@@ -676,13 +677,26 @@ export default function ClientDetailScreen() {
         />
       </Card>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Evolución del peso</Text>
+      <View style={styles.section}>
+      <CollapsibleCard
+        id="ficha-peso"
+        icon="trending-up-outline"
+        title="Evolución del peso"
+        hint={weightLogs.length > 0 ? `${weightLogs[weightLogs.length - 1].weightKg} kg` : 'sin registros'}
+        defaultOpen={false}
+      >
         <WeightChart logs={weightLogs} />
-      </Card>
+      </CollapsibleCard>
+      </View>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Fotos de progreso</Text>
+      <View style={styles.section}>
+      <CollapsibleCard
+        id="ficha-fotos"
+        icon="images-outline"
+        title="Fotos de progreso"
+        hint={photos.length > 0 ? `${photos.length} subidas` : 'ninguna'}
+        defaultOpen={false}
+      >
         {photos.length === 0 ? (
           <Text style={styles.mutedText}>El cliente todavía no ha subido fotos.</Text>
         ) : (
@@ -697,10 +711,17 @@ export default function ClientDetailScreen() {
             ))}
           </ScrollView>
         )}
-      </Card>
+      </CollapsibleCard>
+      </View>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Hábitos diarios</Text>
+      <View style={styles.section}>
+      <CollapsibleCard
+        id="ficha-habitos"
+        icon="checkmark-circle-outline"
+        title="Hábitos diarios"
+        hint={habits.length > 0 ? `${habits.length} asignados` : 'ninguno'}
+        defaultOpen={false}
+      >
         <Text style={styles.mutedText}>
           Asigna hábitos que el alumno marcará cada día desde su inicio.
         </Text>
@@ -733,10 +754,16 @@ export default function ClientDetailScreen() {
             disabled={!newHabit.trim()}
           />
         </View>
-      </Card>
+      </CollapsibleCard>
+      </View>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Actividad (12 semanas)</Text>
+      <View style={styles.section}>
+      <CollapsibleCard
+        id="ficha-actividad"
+        icon="pulse-outline"
+        title="Actividad (12 semanas)"
+        defaultOpen={false}
+      >
         <Text style={styles.mutedText}>Cada punto dorado es un día entrenado.</Text>
         <View style={{ marginTop: spacing.sm }}>
           <ConsistencyMap days={trainingDays(workoutLogs)} />
@@ -823,10 +850,16 @@ export default function ClientDetailScreen() {
             </>
           );
         })()}
-      </Card>
+      </CollapsibleCard>
+      </View>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Check-ins semanales</Text>
+      <View style={styles.section}>
+      <CollapsibleCard
+        id="ficha-checkins"
+        icon="chatbox-ellipses-outline"
+        title="Check-ins semanales"
+        defaultOpen={false}
+      >
         {checkIns.length === 0 ? (
           <Text style={styles.mutedText}>Todavía no ha enviado ningún check-in.</Text>
         ) : (
@@ -851,10 +884,17 @@ export default function ClientDetailScreen() {
             </View>
           ))
         )}
-      </Card>
+      </CollapsibleCard>
+      </View>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Historial de entrenamientos</Text>
+      <View style={styles.section}>
+      <CollapsibleCard
+        id="ficha-historial"
+        icon="list-outline"
+        title="Historial de entrenamientos"
+        hint={workoutLogs.length > 0 ? `${workoutLogs.length} sesiones` : 'sin sesiones'}
+        defaultOpen={false}
+      >
         {workoutLogs.length === 0 ? (
           <Text style={styles.mutedText}>Todavía no ha registrado entrenamientos.</Text>
         ) : (
@@ -876,7 +916,8 @@ export default function ClientDetailScreen() {
             </Pressable>
           ))
         )}
-      </Card>
+      </CollapsibleCard>
+      </View>
 
       <Button
         title="Compartir resumen (imagen)"
