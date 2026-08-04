@@ -12,6 +12,8 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { ListSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
+import { CountUp } from '../../components/CountUp';
+import { FadeIn } from '../../components/FadeIn';
 import { ProgressRing } from '../../components/ProgressRing';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -527,7 +529,12 @@ export default function TrainerDashboard() {
           Antes esto eran tres pastillas diminutas: lo más urgente del panel
           era también lo más pequeño de la pantalla. Solo aparece si hay algo
           que hacer, para que un día tranquilo no tenga ruido. */}
+      {/* Entrada escalonada: los bloques aparecen de arriba abajo, unos
+          milisegundos por detrás del anterior. Es lo que hace que la pantalla
+          se sienta viva sin que nada se mueva mientras se usa — una animación
+          que sigue en marcha cuando ya estás leyendo, molesta. */}
       {requests.length > 0 || overdueCount > 0 ? (
+        <FadeIn>
         <Card accent style={styles.section}>
           <View style={styles.titleRow}>
             <Ionicons name="alert-circle-outline" size={16} color={colors.primary} />
@@ -547,7 +554,6 @@ export default function TrainerDashboard() {
                   {overdueCount} pago{overdueCount === 1 ? '' : 's'} vencido
                   {overdueCount === 1 ? '' : 's'}
                 </Text>
-                <Text style={styles.attentionSub}>Revisa a quién hay que cobrar.</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
             </Pressable>
@@ -566,6 +572,7 @@ export default function TrainerDashboard() {
             </View>
           ) : null}
         </Card>
+        </FadeIn>
       ) : null}
 
       {/* Lo bueno no es una alerta: se cuenta en una línea tranquila. */}
@@ -675,6 +682,7 @@ export default function TrainerDashboard() {
           número que un entrenador mira primero, y el que dice si hay que
           escribirle a alguien hoy. */}
       {clients.length > 0 ? (
+        <FadeIn delay={70}>
         <Card style={styles.section}>
           <View style={styles.pulseRow}>
             <ProgressRing
@@ -715,10 +723,12 @@ export default function TrainerDashboard() {
             </Pressable>
           ) : null}
         </Card>
+        </FadeIn>
       ) : null}
 
       {/* Los accesos van DESPUÉS de saber cómo va el grupo: son herramientas,
           y una herramienta antes del diagnóstico se usa a ciegas. */}
+      <FadeIn delay={140}>
       <View style={styles.quickRow}>
         <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/agenda')}>
           <Ionicons name="calendar-outline" size={20} color={colors.primary} />
@@ -749,22 +759,23 @@ export default function TrainerDashboard() {
             ) : null}
           </View>
           <Text style={styles.quickLabel}>
-            {paysReminded ? 'Pagos avisados ✓' : 'Recordar pagos'}
+            {paysReminded ? 'Pagos avisados' : 'Recordar pagos'}
           </Text>
         </Pressable>
       </View>
+      </FadeIn>
 
 
       {showBilling ? (
+        <FadeIn delay={210}>
         <Card style={styles.section}>
           <View style={styles.titleRow}>
             <Ionicons name="cash-outline" size={16} color={colors.primary} />
             <Text style={styles.sectionTitle}>Cobros del mes</Text>
           </View>
-          <Text style={styles.subtleHint}>Toca cada dato para ver y gestionar de quién se trata.</Text>
           <View style={styles.revenueRow}>
             <Pressable style={styles.revenueBox} onPress={() => setIncomeOpen(true)}>
-              <Text style={styles.revenueValue}>{incomeThisMonth} €</Text>
+              <CountUp value={incomeThisMonth} suffix=" €" style={styles.revenueValue} />
               <Text style={styles.revenueLabel}>Ingresado este mes</Text>
               <Ionicons
                 name="create-outline"
@@ -774,7 +785,11 @@ export default function TrainerDashboard() {
               />
             </Pressable>
             <Pressable style={styles.revenueBox} onPress={() => setPayListOpen(true)}>
-              <Text style={[styles.revenueValue, { color: '#C9902B' }]}>{pendingAmount} €</Text>
+              <CountUp
+                value={pendingAmount}
+                suffix=" €"
+                style={[styles.revenueValue, { color: '#C9902B' }]}
+              />
               <Text style={styles.revenueLabel}>Pendiente ({duePayClients.length})</Text>
               <Ionicons
                 name="chevron-forward"
@@ -785,9 +800,11 @@ export default function TrainerDashboard() {
             </Pressable>
             {projected30 > 0 ? (
               <Pressable style={styles.revenueBox} onPress={() => setUpcomingOpen(true)}>
-                <Text style={[styles.revenueValue, { color: colors.textMuted }]}>
-                  {projected30} €
-                </Text>
+                <CountUp
+                  value={projected30}
+                  suffix=" €"
+                  style={[styles.revenueValue, { color: colors.textMuted }]}
+                />
                 <Text style={styles.revenueLabel}>
                   Previsto 30 días ({upcoming.length})
                 </Text>
@@ -849,8 +866,10 @@ export default function TrainerDashboard() {
             </Pressable>
           ) : null}
         </Card>
+        </FadeIn>
       ) : null}
 
+      <FadeIn delay={280}>
       <Card style={styles.section}>
         <View style={styles.titleRow}>
           <Ionicons name="pulse-outline" size={16} color={colors.primary} />
@@ -882,6 +901,7 @@ export default function TrainerDashboard() {
           })
         )}
       </Card>
+      </FadeIn>
 
       {/* Lista de alumnos con pago pendiente/vencido (desde la alerta roja). */}
       <Modal
