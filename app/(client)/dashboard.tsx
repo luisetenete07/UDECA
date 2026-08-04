@@ -10,6 +10,8 @@ import { Card } from '../../components/Card';
 import { CheckInCard } from '../../components/CheckInCard';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
+import { CountUp } from '../../components/CountUp';
+import { FadeIn } from '../../components/FadeIn';
 import { ProgressRing } from '../../components/ProgressRing';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
@@ -466,7 +468,7 @@ export default function ClientDashboard() {
       {/* La acción del día va PRIMERO: es a lo que se entra. Todo lo
           demás —avisos, plan, frase— se lee después de saber si hoy toca
           entrenar y qué toca. */}
-      {/* Acción principal del día */}
+      <FadeIn>
       <Pressable
         onPress={() =>
           router.push(isAthlete && !routine ? '/(client)/my-plan' : '/(client)/workout')
@@ -544,6 +546,7 @@ export default function ClientDashboard() {
           })()}
         </LinearGradient>
       </Pressable>
+      </FadeIn>
 
 
       {/* Atleta: acceso a gestionar su propio plan de entreno. */}
@@ -642,6 +645,7 @@ export default function ClientDashboard() {
         : null}
 
       {/* Plan semanal: el anillo manda, y debajo la tira de días. */}
+      <FadeIn delay={140}>
       <Card style={styles.section}>
         {targetSessions > 0 ? (
           <View style={styles.weekTop}>
@@ -660,9 +664,11 @@ export default function ClientDashboard() {
               {streak > 0 ? (
                 <View style={styles.streakInline}>
                   <Ionicons name="flame" size={14} color={colors.primaryBright} />
-                  <Text style={styles.streakInlineText}>
-                    {streak} día{streak === 1 ? '' : 's'} de racha
-                  </Text>
+                  <CountUp
+                    value={streak}
+                    suffix={` día${streak === 1 ? '' : 's'} de racha`}
+                    style={styles.streakInlineText}
+                  />
                 </View>
               ) : (
                 <Text style={styles.weekHint}>
@@ -704,10 +710,12 @@ export default function ClientDashboard() {
           </View>
         </View>
       </Card>
+      </FadeIn>
 
       {/* La racha y las sesiones ya están en el anillo de arriba: repetirlas
           aquí en tres cuadros iguales le quitaba peso a las dos. Queda el peso,
           que no está en ningún otro sitio de esta pantalla. */}
+      <FadeIn delay={210}>
       <Pressable onPress={() => router.push('/(client)/progress')} style={styles.weightRow}>
         <Ionicons name="body-outline" size={17} color={colors.textMuted} />
         <Text style={styles.weightLabel}>Peso</Text>
@@ -716,6 +724,7 @@ export default function ClientDashboard() {
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
       </Pressable>
+      </FadeIn>
 
       {showFirstSteps ? (
         <Card accent style={styles.section}>
