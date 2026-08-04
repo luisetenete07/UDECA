@@ -11,7 +11,6 @@ import { Vitrina } from '../../components/Vitrina';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { updateUserProfile } from '../../lib/firestore/users';
@@ -498,7 +497,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   memberSince: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text },
   sectionSub: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md },

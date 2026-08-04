@@ -12,7 +12,7 @@ import { LoadingScreen } from '../../../../../components/LoadingScreen';
 import { PlanCalendar } from '../../../../../components/PlanCalendar';
 import { ProgressBar } from '../../../../../components/ProgressBar';
 import { ScreenContainer } from '../../../../../components/ScreenContainer';
-import { StatTile } from '../../../../../components/StatTile';
+import { Vitrina } from '../../../../../components/Vitrina';
 import { showToast } from '../../../../../components/Toast';
 import { useAuth } from '../../../../../lib/auth-context';
 import { BlockOverview } from '../../../../../components/BlockOverview';
@@ -187,36 +187,37 @@ export default function CycleDashboardScreen() {
         </Card>
       ) : null}
 
-      <View style={styles.tilesRow}>
-        <StatTile icon="pie-chart" value={pctText} label="Completado" highlight />
-        <StatTile
-          icon="checkmark-done"
-          value={
-            stats.targetSessions
+      {/* Las cifras del bloque, en la vitrina del rediseño.
+          Eran cuatro baldosas iguales en rejilla 2×2 —icono, borde y fondo cada
+          una—, el último resto del patrón que ya salió del perfil, del resumen
+          del entreno y de la comunidad. Cuatro números del mismo tamaño no son
+          cuatro datos: son ninguno, porque no hay dónde mirar primero.
+
+          Manda el porcentaje, que es lo que se viene a saber de un bloque; y el
+          ritmo por semana, que es un promedio y no un total, baja a la línea de
+          apoyo en vez de disputarle el sitio. */}
+      <Vitrina
+        style={styles.cifras}
+        cifras={[
+          { valor: 0, texto: pctText, etiqueta: 'Completado' },
+          {
+            valor: 0,
+            texto: stats.targetSessions
               ? `${stats.sessionsDone}/${stats.targetSessions}`
-              : String(stats.sessionsDone)
-          }
-          label="Sesiones"
-        />
-      </View>
-      <View style={styles.tilesRow}>
-        <StatTile
-          icon="repeat"
-          value={
-            stats.sessionsPerWeek != null
-              ? stats.sessionsPerWeek.toLocaleString('es-ES', { maximumFractionDigits: 1 })
-              : '—'
-          }
-          label="Por semana"
-        />
-        <StatTile
-          icon="barbell"
-          value={
-            stats.totalVolumeKg > 0 ? stats.totalVolumeKg.toLocaleString('es-ES') : '—'
-          }
-          label="Volumen (kg)"
-        />
-      </View>
+              : String(stats.sessionsDone),
+            etiqueta: 'Sesiones',
+          },
+          stats.totalVolumeKg > 0
+            ? { valor: stats.totalVolumeKg, etiqueta: 'Kg movidos' }
+            : { valor: 0, texto: '—', etiqueta: 'Kg movidos' },
+        ]}
+      />
+      {stats.sessionsPerWeek != null ? (
+        <Text style={styles.cifrasPie}>
+          {stats.sessionsPerWeek.toLocaleString('es-ES', { maximumFractionDigits: 1 })} sesiones
+          por semana
+        </Text>
+      ) : null}
 
       <Card style={styles.section}>
         {hijos.length > 0 ? (
@@ -480,7 +481,15 @@ const styles = StyleSheet.create({
   deloadText: { ...typography.small, color: colors.primaryBright, fontSize: 11, fontFamily: fonts.semiBold },
   name: { ...typography.h1, color: colors.text, fontSize: 26 },
   dates: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  tilesRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  cifras: { marginTop: spacing.xs },
+  // Lo que no es un total, debajo y sin competir con la vitrina.
+  cifrasPie: {
+    ...typography.small,
+    color: colors.textFaint,
+    textAlign: 'center',
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
+  },
   section: { marginTop: spacing.md },
   sectionLabel: {
     ...typography.label,

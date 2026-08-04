@@ -14,7 +14,6 @@ import { CountUp } from '../../components/CountUp';
 import { FadeIn } from '../../components/FadeIn';
 import { ProgressRing } from '../../components/ProgressRing';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
@@ -899,7 +898,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 21,
   },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   streakInline: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   streakInlineText: {
     ...typography.small,
