@@ -9,9 +9,10 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { ListSkeleton } from '../../components/Skeleton';
+import { DashboardSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
+import { ClientPulse, pulsoDeAlumnos } from '../../components/ClientPulse';
 import { CountUp } from '../../components/CountUp';
 import { FadeIn } from '../../components/FadeIn';
 import { ProgressRing } from '../../components/ProgressRing';
@@ -164,7 +165,9 @@ export default function TrainerDashboard() {
           eyebrow="Panel del entrenador"
           title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
         />
-        <ListSkeleton rows={5} />
+        {/* Esqueleto con la FORMA del panel, no una lista genérica: al llegar
+            los datos nada salta de sitio. */}
+        <DashboardSkeleton />
       </ScreenContainer>
     );
   }
@@ -183,6 +186,7 @@ export default function TrainerDashboard() {
   });
 
   const wk = weekComparison(logs);
+  const pulso = pulsoDeAlumnos(clients, logs);
   const byId = (id: string) => clients.find((c) => c.uid === id);
   // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
   const todayStart = new Date();
@@ -722,6 +726,17 @@ export default function TrainerDashboard() {
               <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
             </Pressable>
           ) : null}
+
+          {/* Las caras, ordenadas por quién necesita algo primero. La pregunta
+              "quién ha entrenado y quién no" se contestaba entre una cifra, una
+              lista de actividad y la ficha de cada alumno: tres sitios para una
+              pregunta de tres segundos. */}
+          <View style={styles.pulseStrip}>
+            <ClientPulse
+              alumnos={pulso}
+              onPress={(uid) => router.push(`/(trainer)/clients/${uid}`)}
+            />
+          </View>
         </Card>
         </FadeIn>
       ) : null}
@@ -1119,6 +1134,7 @@ export default function TrainerDashboard() {
 
 const styles = StyleSheet.create({
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pulseStrip: { marginTop: spacing.md },
   pulseAction: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -37,6 +37,16 @@ export function ListSkeleton({ rows = 4 }: { rows?: number }) {
 }
 
 const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  panelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  circle: { width: 92, height: 92, borderRadius: 46, overflow: 'hidden' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -51,3 +61,41 @@ const styles = StyleSheet.create({
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceAlt },
   bar: { backgroundColor: colors.surfaceAlt, borderRadius: radius.sm },
 });
+
+/**
+ * El esqueleto del panel: una alerta, el bloque grande con su círculo y dos
+ * tarjetas. Imita la pantalla de verdad para que al llegar los datos nada
+ * salte de sitio.
+ *
+ * No es maquillaje: una rueda girando dice "espera"; un esqueleto dice "ya
+ * llega, y va a tener esta pinta". Se percibe más rápido aunque tarde
+ * exactamente lo mismo, que es la parte de la velocidad que sí se arregla
+ * desde el diseño.
+ */
+export function DashboardSkeleton() {
+  return (
+    <View style={{ gap: spacing.md }}>
+      <View style={styles.card}>
+        <Bar width="45%" height={13} />
+        <Bar width="70%" height={11} />
+      </View>
+      <View style={styles.card}>
+        <View style={styles.panelRow}>
+          <View style={styles.circle}>
+            <Bar width={92} height={92} />
+          </View>
+          <View style={{ flex: 1, gap: spacing.sm }}>
+            <Bar width="60%" height={12} />
+            <Bar width="85%" height={20} />
+            <Bar width="70%" height={11} />
+          </View>
+        </View>
+      </View>
+      <View style={styles.card}>
+        <Bar width="40%" height={13} />
+        <Bar width="100%" height={11} />
+        <Bar width="80%" height={11} />
+      </View>
+    </View>
+  );
+}
