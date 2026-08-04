@@ -18,7 +18,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Confetti } from '../../components/Confetti';
-import { CountUp } from '../../components/CountUp';
 import { PRBurst } from '../../components/PRBurst';
 import { checkLivePR, type LivePR } from '../../lib/livePR';
 import { FadeIn, PopIn } from '../../components/FadeIn';
@@ -31,6 +30,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { TextField } from '../../components/TextField';
+import { Vitrina } from '../../components/Vitrina';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
@@ -166,17 +166,7 @@ function CifrasDeSesion({
 
   return (
     <View>
-      <View style={styles.vitrina}>
-        {vitrina.map((c, i) => (
-          <React.Fragment key={c.etiqueta}>
-            {i > 0 ? <View style={styles.vitrinaSep} /> : null}
-            <View style={styles.vitrinaItem}>
-              <CountUp value={c.valor} style={styles.vitrinaCifra} />
-              <Text style={styles.vitrinaEtiqueta}>{c.etiqueta}</Text>
-            </View>
-          </React.Fragment>
-        ))}
-      </View>
+      <Vitrina cifras={vitrina} />
       {resto.length > 0 ? (
         <Text style={styles.vitrinaResto}>{resto.map((c) => c.suelto).join('  ·  ')}</Text>
       ) : null}
@@ -2770,27 +2760,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   againLinkText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
-  // ----- Cifras de la sesión (vitrina) -----
-  vitrina: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  vitrinaItem: { flex: 1, alignItems: 'center', gap: 2, minWidth: 0 },
-  vitrinaSep: { width: 1, height: 34, backgroundColor: colors.border },
-  vitrinaCifra: {
-    ...typography.hero,
-    ...tabularNums,
-    color: colors.text,
-  },
-  vitrinaEtiqueta: {
-    fontSize: 11,
-    color: colors.textFaint,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
   // Lo que no cabe en la vitrina, en una línea y sin competir con ella.
   vitrinaResto: {
     ...typography.small,

@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { Vitrina } from '../../components/Vitrina';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveChallenge } from '../../lib/firestore/challenges';
 import {
@@ -156,23 +157,16 @@ export default function SocialScreen() {
         subtitle="El ranking de constancia de tu coaching"
       />
 
-      <View style={styles.summaryRow}>
-        <Card style={styles.summaryCard}>
-          <Ionicons name="people" size={18} color={colors.primary} />
-          <Text style={styles.summaryValue}>{members.length}</Text>
-          <Text style={styles.summaryLabel}>Miembros</Text>
-        </Card>
-        <Card style={styles.summaryCard}>
-          <Ionicons name="flame" size={18} color={colors.primary} />
-          <Text style={styles.summaryValue}>{topStreak}</Text>
-          <Text style={styles.summaryLabel}>Mejor racha (mes)</Text>
-        </Card>
-        <Card style={styles.summaryCard}>
-          <Ionicons name="checkmark-done" size={18} color={colors.primary} />
-          <Text style={styles.summaryValue}>{totalSessions}</Text>
-          <Text style={styles.summaryLabel}>Entrenos (semana)</Text>
-        </Card>
-      </View>
+      {/* Los tres números del grupo, en la misma vitrina que el perfil y el
+          resumen del entreno. Eran tres tarjetas con icono, borde y fondo. */}
+      <Vitrina
+        style={styles.resumen}
+        cifras={[
+          { valor: members.length, etiqueta: 'Miembros' },
+          { valor: topStreak, etiqueta: 'Mejor racha del mes' },
+          { valor: totalSessions, etiqueta: 'Entrenos esta semana' },
+        ]}
+      />
 
       {podium.length > 0 ? (
         <View style={styles.podium}>
@@ -285,11 +279,23 @@ export default function SocialScreen() {
           subtitle="Cuando tú y tus compañeros registréis entrenamientos, apareceréis aquí."
         />
       ) : (
-        members.map((member, index) => {
+        /* Un ranking es una lista, no veinte cosas sueltas. Cada puesto era una
+           tarjeta entera: veinte bordes, veinte sombras y veinte rectángulos
+           para lo que se lee de arriba abajo de un tirón. Ahora es una sola
+           tarjeta con filas separadas por un filo, y quien mira eres tú se
+           tiñe en oro — el mismo recurso que la serie hecha en el entreno. */
+        <Card style={styles.ranking}>
+          {members.map((member, index) => {
           const isMe = member.uid === profile.uid;
           const medalColor = index < 3 ? MEDALS[index] : undefined;
           return (
-            <Card key={member.uid} style={[styles.row, isMe && styles.rowMe]}>
+            <View
+              key={member.uid}
+              /* La fila teñida no lleva filo: el color ya la separa, y una
+                 línea recta cruzando una banda con esquinas redondeadas se ve
+                 como un defecto. */
+              style={[styles.row, index > 0 && !isMe && styles.rowSep, isMe && styles.rowMe]}
+            >
               <View style={styles.rankWrap}>
                 {medalColor ? (
                   <Ionicons name="medal" size={22} color={medalColor} />
@@ -320,9 +326,10 @@ export default function SocialScreen() {
                 </View>
                 <Text style={styles.streakLabel}>días</Text>
               </View>
-            </Card>
+            </View>
           );
-        })
+          })}
+        </Card>
       )}
     </ScreenContainer>
   );
@@ -365,18 +372,22 @@ const styles = StyleSheet.create({
   podiumName: { ...typography.small, color: colors.text, flex: 1 },
   podiumDias: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   podiumVacio: { color: colors.textFaint },
-  summaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  summaryCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
-  summaryValue: { ...typography.h2, color: colors.text, marginTop: spacing.xs },
-  summaryLabel: { ...typography.small, color: colors.textMuted, textAlign: 'center', marginTop: 2 },
+  resumen: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  ranking: { paddingVertical: spacing.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    marginBottom: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    // El tinte de "eres tú" se sale un poco de la tarjeta para leerse como una
+    // banda y no como un recuadro pegado al texto.
+    paddingHorizontal: spacing.sm,
+    marginHorizontal: -spacing.sm,
+    borderRadius: radius.md,
   },
-  rowMe: { borderColor: colors.primary },
+  rowSep: { borderTopWidth: 1, borderTopColor: colors.border },
+  rowMe: { backgroundColor: colors.primaryMuted },
   rankWrap: { width: 26, alignItems: 'center' },
   rankNumber: { ...typography.h3, color: colors.textFaint },
   name: { ...typography.h3, color: colors.text },
