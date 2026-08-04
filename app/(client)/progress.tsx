@@ -510,20 +510,21 @@ export default function ProgressScreen() {
               <ConsistencyMap days={trainingDays(workoutLogs)} />
             </Card>
 
-            {/* Exactamente la misma tabla que ve el entrenador. */}
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Tu progreso completo</Text>
-              <Text style={styles.photoHint}>
-                {isAthlete
-                  ? 'La mejor serie de cada ejercicio, semana a semana. Elige qué ejercicios quieres seguir.'
-                  : 'La mejor serie de cada ejercicio, semana a semana. Es la misma tabla que ve tu entrenador.'}
-              </Text>
-              <Button
-                title="Ver progreso completo"
-                onPress={() => setFullOpen(true)}
-                style={{ marginTop: spacing.md }}
-              />
-            </Card>
+            {/* Una tarjeta entera con un botón grande partía en dos lo que se
+                lee de corrido: el reparto del bloque, la constancia y el mes a
+                mes. Como fila cabe en su sitio sin cortar nada. */}
+            <Pressable style={styles.navRow} onPress={() => setFullOpen(true)}>
+              <Ionicons name="grid-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.navTitle}>Tu progreso completo</Text>
+                <Text style={styles.navHint}>
+                  {isAthlete
+                    ? 'La mejor serie de cada ejercicio, semana a semana.'
+                    : 'La misma tabla que ve tu entrenador.'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </Pressable>
 
             {comparison ? (
               <Card accent style={styles.section}>
@@ -1085,6 +1086,20 @@ function MonthStat({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.md,
+  },
+  navTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  navHint: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   groupPicker: {
     flexDirection: 'row',
     flexWrap: 'wrap',
