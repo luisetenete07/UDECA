@@ -241,7 +241,11 @@ const subiendo = buildBlockView({
 });
 const bueno = subiendo.alerts.find((a) => a.tone === 'good');
 comprueba('detecta la mejor progresión', !!bueno, subiendo.alerts.map((a) => a.id).join());
-comprueba('y la cuenta con marcas reales', !!bueno && bueno.title.includes('10×10'), bueno?.title);
+comprueba(
+  'y la cuenta con marcas reales, diciendo si son kilos',
+  !!bueno && bueno.title.includes('10 × 10 kg'),
+  bueno?.title
+);
 
 const pocosDatos = buildBlockView({
   logs: [entreno(L0, [['fon', 3, '10', '0']]), entreno(L0 + WEEK, [['fon', 3, '10', '20']])],
@@ -324,6 +328,46 @@ const sinRir = buildBlockView({
 });
 comprueba('sin RIR reportado no se ense\u00f1a intensidad', sinRir.intensity.hasData === false);
 comprueba('ni se avisa de nada sobre ella', !sinRir.alerts.some((a) => a.id === 'intensidad'));
+
+console.log('\n8) La goma no cuenta como progreso');
+// Empieza la planche con 20 kg de goma y baja a 15: eso SÍ es progresar.
+const conGoma = (fecha, kg) => ({
+  id: `g${fecha}`, trainerId: 't', clientId: 'a', routineId: 'r1', routineName: 'Fuerza',
+  dayName: 'X', date: fecha, createdAt: fecha,
+  exercises: [
+    {
+      exerciseId: 'fro', name: 'Front lever', measure: 'seconds', load: 'assisted',
+      sets: [{ reps: '10', weight: String(kg), completed: true }],
+    },
+  ],
+});
+const quitaGoma = buildBlockView({
+  logs: [conGoma(L0, 20), conGoma(L0 + DAY, 18), conGoma(L0 + 2 * DAY, 15)],
+  routine: null,
+  muscleByExercise,
+  measureByExercise: {},
+  weeks: 4,
+  now: AHORA,
+});
+comprueba(
+  'bajar de 20 a 15 kg de goma se celebra',
+  quitaGoma.alerts.some((a) => a.tone === 'good'),
+  quitaGoma.alerts.map((a) => a.id).join()
+);
+
+const masGoma = buildBlockView({
+  logs: [conGoma(L0, 15), conGoma(L0 + DAY, 18), conGoma(L0 + 2 * DAY, 20)],
+  routine: null,
+  muscleByExercise,
+  measureByExercise: {},
+  weeks: 4,
+  now: AHORA,
+});
+comprueba(
+  'ponerse MÁS goma no se celebra',
+  !masGoma.alerts.some((a) => a.tone === 'good'),
+  masGoma.alerts.map((a) => a.id).join()
+);
 
 console.log(fallos === 0 ? '\nTodo correcto ✔\n' : `\n${fallos} fallo(s) ✖\n`);
 process.exit(fallos === 0 ? 0 : 1);

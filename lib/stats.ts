@@ -1,6 +1,7 @@
 import {
   resolveLoad,
   setMarks,
+  type ExerciseLoad,
   type ExerciseMeasure,
   type LoggedExercise,
   type WeightLog,
@@ -42,13 +43,15 @@ export function lastPerformanceByExercise(
       // para no mostrar "última vez" en blanco.
       const done = ex.sets.filter((s) => s.completed && s.reps.trim() !== '');
       if (done.length === 0) continue;
-      // Serie con más peso registrado; si ninguna tiene peso, la última hecha.
+      // Serie más DURA por carga efectiva (la goma resta); si ninguna lleva
+      // peso, la última hecha. Sin esto, "la última vez" de un ejercicio
+      // asistido enseñaba la serie con MÁS goma, o sea la más fácil.
       let best: { weight?: string; reps?: string } | null = null;
-      let bestWeight = -1;
+      let bestWeight = -Infinity;
       for (const set of done) {
-        const w = toNum(set.weight);
-        if (set.weight && !Number.isNaN(w) && w > bestWeight) {
-          bestWeight = w;
+        const kg = effectiveLoadKg(ex, set.weight);
+        if (set.weight && kg !== 0 && kg > bestWeight) {
+          bestWeight = kg;
           best = { weight: set.weight, reps: set.reps };
         }
       }
@@ -368,10 +371,42 @@ export function computeAchievements(
 }
 
 /** Marcas históricas de un ejercicio: mejor peso y mejores reps sin lastre. */
+/**
+ * Carga efectiva de una serie en kilos: el lastre SUMA y la asistencia RESTA.
+ *
+ * Es la diferencia entre una marca y su contraria. Diez segundos de planche
+ * con 15 kg de goma no son un récord frente a tres segundos sin goma: son un
+ * ejercicio MÁS FÁCIL. Tratar esos 15 kg como carga positiva —que es lo que se
+ * hacía— celebraba retrocesos como si fueran progresos, que es la forma más
+ * rápida de que alguien deje de creerse los récords de la app.
+ *
+ * Sin carga declarada se asume lastre, que es como se comportaban los registros
+ * antiguos: quien apuntaba kilos, los estaba añadiendo.
+ */
+export function effectiveLoadKg(
+  ex: { load?: ExerciseLoad; band?: boolean },
+  weight: string | number | undefined | null
+): number {
+  const w = Math.abs(toNum(weight));
+  if (!w) return 0;
+  return resolveLoad(ex) === 'assisted' ? -w : w;
+}
+
+/** Cómo se dice una carga: "15 kg" si es lastre, "15 kg de goma" si asiste. */
+export function loadLabel(kg: number): string {
+  return kg < 0 ? `${Math.abs(kg)} kg de goma` : `${kg} kg`;
+}
+
 export interface ExerciseBest {
-  bestWeightKg: number;
-  bestRepsAtWeight: number;
+  /** Mejor carga EFECTIVA (negativa si lo mejor que hizo fue con asistencia). */
+  bestLoadKg: number;
+  /** Repeticiones (o segundos) logradas con esa carga. */
+  bestRepsAtLoad: number;
+  /** Máximo a peso corporal exacto: ni lastre ni goma. */
   bestReps: number;
+  /** ¿Ha llegado alguna vez a peso corporal o más? Sin esto, el 0 no se puede
+   *  distinguir de "nunca ha hecho una serie". */
+  hasUnassisted: boolean;
 }
 
 function parseReps(reps: string): number {
@@ -384,20 +419,26 @@ export function bestsByExercise(logs: WorkoutLog[]): Record<string, ExerciseBest
   const bests: Record<string, ExerciseBest> = {};
   for (const log of logs) {
     for (const ex of log.exercises) {
-      const b = (bests[ex.exerciseId] ??= { bestWeightKg: 0, bestRepsAtWeight: 0, bestReps: 0 });
+      const b = (bests[ex.exerciseId] ??= {
+        // Empieza por debajo de todo para que la PRIMERA serie, aunque sea con
+        // mucha goma, quede registrada como su mejor marca hasta ahora.
+        bestLoadKg: -Infinity,
+        bestRepsAtLoad: 0,
+        bestReps: 0,
+        hasUnassisted: false,
+      });
       for (const set of ex.sets) {
         if (!set.completed) continue;
-        const w = toNum(set.weight) || 0;
+        const kg = effectiveLoadKg(ex, set.weight);
         const r = parseReps(set.reps);
-        if (w > b.bestWeightKg || (w === b.bestWeightKg && r > b.bestRepsAtWeight)) {
-          if (w > 0) {
-            b.bestWeightKg = w;
-            b.bestRepsAtWeight = r;
-          }
+        if (r === 0 && kg === 0) continue;
+        if (kg > b.bestLoadKg || (kg === b.bestLoadKg && r > b.bestRepsAtLoad)) {
+          b.bestLoadKg = kg;
+          b.bestRepsAtLoad = r;
         }
-        // bestReps = máximo de reps/segundos a PESO CORPORAL (sin lastre), para
-        // que el récord de "dominadas" refleje el máximo real sin lastre.
-        if (w === 0 && r > b.bestReps) b.bestReps = r;
+        if (kg >= 0) b.hasUnassisted = true;
+        // Máximo a peso corporal EXACTO: ni lastre ni goma.
+        if (kg === 0 && r > b.bestReps) b.bestReps = r;
       }
     }
   }
@@ -432,13 +473,17 @@ export function exerciseRecord(
     const ex = log.exercises.find((e) => e.exerciseId === exerciseId);
     if (ex?.measure) measure = ex.measure;
   }
-  if (measure === 'seconds') {
-    return best.bestReps > 0 ? { label: `${best.bestReps} s`, metric: 's' } : null;
+  if (measure === 'seconds' && best.bestReps > 0) {
+    return { label: `${best.bestReps} s`, metric: 's' };
   }
-  if (best.bestWeightKg > 0) {
-    const reps = best.bestRepsAtWeight > 0 ? `${best.bestRepsAtWeight} × ` : '';
-    return { label: `${reps}${best.bestWeightKg} kg`, metric: 'kg' };
+  if (best.bestLoadKg !== 0 && Number.isFinite(best.bestLoadKg)) {
+    // También se anuncia la mejor marca CON goma cuando es lo único que hay:
+    // esconderla dejaría sin récord a quien todavía está progresando con
+    // asistencia, que es justo quien más necesita verlo.
+    const reps = best.bestRepsAtLoad > 0 ? `${best.bestRepsAtLoad} × ` : '';
+    return { label: `${reps}${loadLabel(best.bestLoadKg)}`, metric: 'kg' };
   }
+  if (measure === 'seconds') return null;
   return best.bestReps > 0 ? { label: `${best.bestReps} reps`, metric: 'reps' } : null;
 }
 
@@ -455,25 +500,38 @@ export function detectNewPRs(
   const prs: PersonalRecord[] = [];
 
   for (const ex of session) {
-    const b = bests[ex.exerciseId] ?? { bestWeightKg: 0, bestRepsAtWeight: 0, bestReps: 0 };
+    const b = bests[ex.exerciseId] ?? {
+      bestLoadKg: -Infinity,
+      bestRepsAtLoad: 0,
+      bestReps: 0,
+      hasUnassisted: false,
+    };
     const unit = ex.measure === 'seconds' ? 's' : 'reps';
     // Recorremos TODAS las series de hoy y nos quedamos con la MEJOR (el máximo),
     // no con la última que supere la marca. Así "9 dominadas" no queda tapado por
     // una serie posterior de 6.
-    let heavy: { w: number; r: number } | null = null; // serie más pesada
-    let maxReps = 0; // máximo de reps/segundos SIN lastre (peso corporal)
+    // La serie más DURA de hoy por carga efectiva: con goma cuenta en
+    // negativo, así que una serie asistida nunca puede tapar a una sin goma.
+    let heavy: { kg: number; r: number } | null = null;
+    let maxReps = 0; // máximo de reps/segundos a peso corporal exacto
     for (const set of ex.sets) {
       if (!set.completed) continue;
-      const w = toNum(set.weight) || 0;
+      const kg = effectiveLoadKg(ex, set.weight);
       const r = parseReps(set.reps);
-      if (r === 0 && w === 0) continue;
-      if (w > 0 && (!heavy || w > heavy.w || (w === heavy.w && r > heavy.r))) heavy = { w, r };
-      if (w === 0 && r > maxReps) maxReps = r;
+      if (r === 0 && kg === 0) continue;
+      if (kg !== 0 && (!heavy || kg > heavy.kg || (kg === heavy.kg && r > heavy.r))) {
+        heavy = { kg, r };
+      }
+      if (kg === 0 && r > maxReps) maxReps = r;
     }
     let record: PersonalRecord | null = null;
-    // Récord de lastre: la serie más pesada de hoy supera la mejor histórica.
-    if (heavy && (heavy.w > b.bestWeightKg || (heavy.w === b.bestWeightKg && heavy.r > b.bestRepsAtWeight))) {
-      record = { exerciseName: ex.name, label: `${heavy.w} kg × ${heavy.r || '—'}` };
+    // Récord de carga: la serie más dura de hoy supera la mejor histórica.
+    // Quitarle goma también es récord: menos asistencia es más carga efectiva.
+    if (heavy && (heavy.kg > b.bestLoadKg || (heavy.kg === b.bestLoadKg && heavy.r > b.bestRepsAtLoad))) {
+      record = {
+        exerciseName: ex.name,
+        label: `${loadLabel(heavy.kg)} × ${heavy.r || '—'}`,
+      };
     } else if (maxReps > 0 && b.bestReps > 0 && maxReps > b.bestReps) {
       // Récord de repeticiones/segundos a peso corporal: el máximo real de hoy.
       record = { exerciseName: ex.name, label: `${maxReps} ${unit}` };
@@ -811,7 +869,8 @@ export function weeklyVolume(
           if (group === 'Empuje') bucket.isoPushSeconds += n;
           else if (group === 'Tirón') bucket.isoPullSeconds += n;
         } else if (weightCounts) {
-          bucket.volumeKg += (toNum(set.weight) || 0) * n;
+          // La goma asiste: no se levanta, así que no suma volumen.
+          bucket.volumeKg += Math.max(0, effectiveLoadKg(ex, set.weight)) * n;
         }
       }
     }
@@ -978,12 +1037,13 @@ export function weeklyExerciseMatrix(
       // De ESTA sesión tomamos DOS series REALES, sin mezclar sus datos:
       // la más pesada y la de más repeticiones. Si son la misma serie, se
       // muestra una sola; si difieren, ambas + una "marca" del día.
-      let heavy: { r: number; w: number } | null = null; // serie con más lastre
+      let heavy: { r: number; w: number } | null = null; // serie más dura
       let topReps: { r: number; w: number } | null = null; // serie con más reps
       for (const set of ex.sets) {
         if (!set.completed) continue;
-        const wn = toNum(set.weight);
-        const w = set.weight && !Number.isNaN(wn) ? wn : 0;
+        // Carga EFECTIVA: la goma resta. Sin esto, una serie asistida salía
+        // como "la más pesada" y tapaba a la que se hizo sin ayuda.
+        const w = effectiveLoadKg(ex, set.weight);
         // Cada bloque de un clúster compite por su cuenta. Sumarlos daría una
         // marca que nunca se hizo del tirón, y esta tabla enseña series reales.
         for (const marca of [set.reps, ...(set.clusters ?? [])]) {
@@ -996,7 +1056,8 @@ export function weeklyExerciseMatrix(
       }
       if (!heavy || !topReps) continue;
 
-      const fmt = (s: { r: number; w: number }) => (s.w > 0 ? `${s.r}×${s.w}` : `${s.r}`);
+      const fmt = (s: { r: number; w: number }) =>
+        s.w > 0 ? `${s.r}×${s.w}` : s.w < 0 ? `${s.r}×${Math.abs(s.w)}g` : `${s.r}`;
       let label: string;
       let alt: string | undefined;
       let mark = false;
@@ -1013,7 +1074,7 @@ export function weeklyExerciseMatrix(
       } else {
         // Serie principal = la más pesada (una serie real, tal cual se hizo).
         label = fmt(heavy);
-        score = heavy.w > 0 ? heavy.w * 1000 + heavy.r : heavy.r;
+        score = heavy.w !== 0 ? heavy.w * 1000 + heavy.r : heavy.r;
         mainReps = heavy.r;
         mainWeight = heavy.w;
         // Si la de más reps es OTRA serie distinta, se muestra aparte + marca.
@@ -1102,10 +1163,12 @@ export function exerciseProgression(
       }
       const s = parseInt(set.seconds ?? '', 10);
       if (!Number.isNaN(s)) bestSeconds = Math.max(bestSeconds, s);
-      const w = toNum(set.weight);
-      if (set.weight && !Number.isNaN(w)) {
-        bestWeight = Math.max(bestWeight, w);
-        if (w > 0) hasWeight = true;
+      // Carga efectiva: con goma va en negativo, así que quitarse asistencia
+      // se ve SUBIR en la gráfica, que es lo que de verdad está pasando.
+      const kg = effectiveLoadKg(ex, set.weight);
+      if (set.weight && kg !== 0) {
+        bestWeight = bestWeight === 0 ? kg : Math.max(bestWeight, kg);
+        hasWeight = true;
       }
     }
     points.push({
@@ -1175,9 +1238,11 @@ export function exerciseSessions(
       const seconds = parseInt(st.seconds ?? '', 10);
       const conAguante = !Number.isNaN(seconds) && seconds > 0;
       if (esCombo && conAguante) label += ` + ${seconds}s`;
-      const weight = toNum(st.weight);
-      const conPeso = st.weight !== undefined && !Number.isNaN(weight) && weight > 0;
-      if (conPeso) label += ` × ${weight} kg`;
+      // Con goma se escribe "× 15 kg de goma": leer "× 15 kg" en una serie
+      // asistida hace pensar que llevaba lastre, que es lo contrario.
+      const weight = effectiveLoadKg(ex, st.weight);
+      const conPeso = weight !== 0;
+      if (conPeso) label += ` × ${loadLabel(weight)}`;
       let mejor = 0;
       for (const m of marcas) {
         const n = parseInt(m, 10);

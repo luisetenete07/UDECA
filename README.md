@@ -95,6 +95,10 @@ Implementado hasta ahora:
   una banda dorada con la marca nueva y la anterior, con vibración de
   celebración. Una vez por ejercicio y sesión, y usando la misma función que
   el resumen final para que nunca celebre algo que luego no aparezca.
+- **La goma resta, no suma**: en calistenia la asistencia hace el ejercicio
+  MÁS fácil, así que sus kilos cuentan en negativo en récords, tablas,
+  gráficas y volumen. Diez segundos de planche con goma no baten tres sin
+  ella; quitarse goma sí es progresar, y se celebra.
 - **Planificación semanal**: cada día de rutina puede fijarse a un día de
   la semana; el alumno ve "Hoy toca"/descanso y el día preseleccionado.
 - **Planificación por ciclos**: el entrenador monta la temporada entera de

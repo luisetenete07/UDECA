@@ -1,4 +1,4 @@
-import { bestsByExercise, detectNewPRs } from './stats';
+import { bestsByExercise, detectNewPRs, loadLabel } from './stats';
 import type { LoggedExercise, LoggedSet, WorkoutLog } from './types';
 
 /**
@@ -21,13 +21,13 @@ export interface LivePR {
 function marcaAnterior(
   history: WorkoutLog[],
   exercise: LoggedExercise,
-  esLastre: boolean
+  esDeCarga: boolean
 ): string | null {
   const b = bestsByExercise(history)[exercise.exerciseId];
   if (!b) return null;
-  if (esLastre) {
-    if (b.bestWeightKg <= 0) return null;
-    return `${b.bestWeightKg} kg × ${b.bestRepsAtWeight || '—'}`;
+  if (esDeCarga) {
+    if (!Number.isFinite(b.bestLoadKg) || b.bestLoadKg === 0) return null;
+    return `${loadLabel(b.bestLoadKg)} × ${b.bestRepsAtLoad || '—'}`;
   }
   if (b.bestReps <= 0) return null;
   return `${b.bestReps} ${exercise.measure === 'seconds' ? 's' : 'reps'}`;

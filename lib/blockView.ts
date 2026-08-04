@@ -1,4 +1,4 @@
-import { startOfWeek, toNum } from './stats';
+import { effectiveLoadKg, loadLabel, startOfWeek } from './stats';
 import { planCalendar } from './cyclePlan';
 import { weekSetsByGroup } from './weekPlan';
 import type { Routine, TrainingCycle, WorkoutLog } from './types';
@@ -172,8 +172,9 @@ function mejorSerie(log: WorkoutLog, exerciseId: string, seconds: boolean): Marc
     if (ex.exerciseId !== exerciseId) continue;
     for (const set of ex.sets) {
       if (!set.completed) continue;
-      const w = toNum(set.weight);
-      const peso = Number.isNaN(w) ? 0 : w;
+      // Con goma la carga es NEGATIVA: quitarse asistencia es progresar, y
+      // ponérsela no puede contar como mejora.
+      const peso = effectiveLoadKg(ex, set.weight);
       for (const marca of [set.reps, ...(set.clusters ?? [])]) {
         const r = parseInt(marca, 10);
         if (Number.isNaN(r) || (r === 0 && peso === 0)) continue;
@@ -189,7 +190,7 @@ const puntua = (m: Marca) => (m.seconds ? m.reps : m.weight * 1000 + m.reps);
 
 function formatMarca(m: Marca): string {
   if (m.seconds) return `${m.reps}s`;
-  return m.weight > 0 ? `${m.reps}×${m.weight}` : `${m.reps}`;
+  return m.weight !== 0 ? `${m.reps} × ${loadLabel(m.weight)}` : `${m.reps}`;
 }
 
 /**
