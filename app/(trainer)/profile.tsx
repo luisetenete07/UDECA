@@ -40,7 +40,7 @@ import {
   type FunnelStep,
 } from '../../lib/firestore/analytics';
 import { isOnline } from '../../lib/presence';
-import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
+import { colors, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
 
 const fmtDate = (ts: number) =>
@@ -1122,6 +1122,9 @@ const styles = StyleSheet.create({
   },
   code: {
     ...typography.h1,
+    // Ancho fijo: con las letras tan separadas, un "1" proporcional deja un
+    // hueco distinto al de los demás y el código parece mal escrito.
+    ...tabularNums,
     color: colors.primary,
     letterSpacing: 4,
     fontFamily: fonts.display,

@@ -183,6 +183,7 @@ export default function RegisterScreen() {
             placeholder="Ej. 7XQK2M"
             returnKeyType="go"
             onSubmitEditing={handleSubmit}
+            style={styles.codigo}
           />
         ) : null}
 
@@ -276,6 +277,22 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textMuted,
     textAlign: 'center',
+  },
+  /**
+   * El campo del código, con la pinta de un código.
+   *
+   * El entrenador lo ve en su perfil a 28 px y con las letras muy separadas —es
+   * lo que se lee en voz alta y se copia carácter a carácter— y el alumno lo
+   * tecleaba en un campo normal y corriente. Son las dos mitades de la misma
+   * tarea, y al no parecerse cuesta comprobar si lo que has escrito es lo que te
+   * pasaron. Ancho fijo, además: con dígitos proporcionales las separaciones
+   * salen desiguales y un código bien copiado parece mal copiado.
+   */
+  codigo: {
+    fontSize: 20,
+    letterSpacing: 3,
+    fontFamily: fonts.semiBold,
+    fontVariant: ['tabular-nums'],
   },
   formCard: {
     padding: spacing.lg,
