@@ -92,11 +92,15 @@ export function MemberCard() {
 
       {/* El número manda. Es lo que se enseña, lo que no se puede volver a
           conseguir y lo único de esta tarjeta que nadie más va a tener: darle
-          el tamaño de un párrafo era esconderlo. El texto explicativo sobra —
-          un número con almohadilla se entiende solo. */}
+          el tamaño de un párrafo era esconderlo.
+
+          Y va CON SU OFICIO. Ponía "Miembro fundador" a secas, así que el carné
+          de un entrenador y el de un atleta eran el mismo: no es lo mismo ser
+          el entrenador número 3 que el atleta número 3, y es lo primero que
+          pregunta quien ve la captura. */}
       {esFundador ? (
         <View style={styles.numeroBloque}>
-          <Text style={styles.numeroEtiqueta}>Miembro fundador</Text>
+          <Text style={styles.numeroEtiqueta}>{tipo.etiqueta} fundador</Text>
           <Text style={styles.numeroGrande}>
             #{String(profile.founderNumber).padStart(4, '0')}
           </Text>

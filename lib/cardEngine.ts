@@ -79,7 +79,22 @@ var GOLD_SOFT = '#C9BDB0';
 var TEXT = '#FFFFFF';
 var MUTED = '#ADADAD';
 var FAINT = '#666666';
-var DISPLAY = 'Georgia, "Times New Roman", serif';
+/*
+ * La letra de las imágenes que se comparten.
+ *
+ * Era una SERIF —Georgia, Times—, que es la voz de antes del rediseño: cuando
+ * la app cambió Cinzel por Sora, estas tarjetas se quedaron atrás. Y son
+ * precisamente lo que sale de la app: la sesión que alguien sube a Instagram, su
+ * récord, su carné. La marca hablando con dos voces justo donde más se la ve.
+ *
+ * No se carga Sora de la red a propósito. La imagen se genera dentro de un
+ * WebView, muchas veces al terminar de entrenar y a veces en un sótano sin
+ * cobertura: una tarjeta que depende de descargar una fuente es una tarjeta que
+ * a veces no sale. Se usa la geométrica del sistema, que en iPhone y en Android
+ * está siempre y se parece mucho más a Sora que una romana.
+ */
+var DISPLAY = '"Avenir Next", "Segoe UI", Roboto, system-ui, sans-serif';
+var BODY = '"Avenir Next", "Segoe UI", Roboto, system-ui, sans-serif';
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -89,6 +104,25 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+/**
+ * Elige el cuerpo más grande con el que el texto CABE, en vez de recortarlo.
+ *
+ * Recortar vale para un nombre largo, donde "Marcos Ruiz Fernán…" sigue
+ * diciendo quién es. No vale para una palabra suelta que ES el contenido: el
+ * oficio dentro de la anilla salía "ENTR…", que no es una abreviatura, es un
+ * defecto. Aquí se encoge la letra hasta que entra.
+ */
+function fitFont(ctx, text, maxWidth, maxSize, minSize, weight, family) {
+  var tam = maxSize;
+  while (tam > minSize) {
+    ctx.font = weight + ' ' + tam + 'px ' + family;
+    if (ctx.measureText(text).width <= maxWidth) return tam;
+    tam -= 2;
+  }
+  ctx.font = weight + ' ' + minSize + 'px ' + family;
+  return minSize;
 }
 
 /** Recorta el texto con … si excede el ancho disponible. */
@@ -128,7 +162,7 @@ function drawFrame(ctx, logo) {
   ctx.font = '600 54px ' + DISPLAY;
   ctx.fillText('U D E C A', W / 2, 198);
   ctx.fillStyle = MUTED;
-  ctx.font = '600 23px sans-serif';
+  ctx.font = '600 23px ' + BODY;
   ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 238);
   ctx.fillStyle = GOLD;
   ctx.fillRect(W / 2 - 40, 262, 80, 3);
@@ -136,7 +170,7 @@ function drawFrame(ctx, logo) {
 
 function drawFooter(ctx) {
   ctx.fillStyle = FAINT;
-  ctx.font = '600 30px sans-serif';
+  ctx.font = '600 30px ' + BODY;
   ctx.textAlign = 'center';
   ctx.fillText('w w w . u d e c a . a p p', W / 2, 1265);
 }
@@ -152,10 +186,10 @@ function drawStat(ctx, x, y, w, h, value, label) {
   ctx.stroke();
   ctx.textAlign = 'center';
   ctx.fillStyle = TEXT;
-  ctx.font = '800 64px sans-serif';
+  ctx.font = '800 64px ' + BODY;
   ctx.fillText(fit(ctx, value, w - 50), x + w / 2, y + h / 2 + 4);
   ctx.fillStyle = GOLD_SOFT;
-  ctx.font = '600 25px sans-serif';
+  ctx.font = '600 25px ' + BODY;
   ctx.fillText(label.toUpperCase(), x + w / 2, y + h - 32);
 }
 
@@ -172,7 +206,7 @@ function drawSession(ctx, data) {
   ctx.font = '600 62px ' + DISPLAY;
   ctx.fillText('SESIÓN COMPLETADA', W / 2, 362);
   ctx.fillStyle = GOLD_SOFT;
-  ctx.font = '700 38px sans-serif';
+  ctx.font = '700 38px ' + BODY;
   var sub = data.routineName + (data.dayName ? ' · ' + data.dayName : '');
   ctx.fillText(fit(ctx, sub, W - 200), W / 2, 424);
 
@@ -196,20 +230,20 @@ function drawSession(ctx, data) {
   if (data.prCount > 0) {
     extras.push({
       text: data.prCount === 1 ? 'NUEVO RÉCORD PERSONAL' : data.prCount + ' RÉCORDS PERSONALES',
-      color: GOLD_SOFT, font: '800 40px sans-serif', gapBefore: 70
+      color: GOLD_SOFT, font: '800 40px ' + BODY, gapBefore: 70
     });
   }
   if (data.streak > 1) {
     extras.push({
       text: 'Racha de ' + data.streak + ' días',
-      color: '#ECEDEF', font: '600 36px sans-serif',
+      color: '#ECEDEF', font: '600 36px ' + BODY,
       gapBefore: extras.length > 0 ? 56 : 70
     });
   }
   if (data.date) {
     extras.push({
       text: formatSessionDate(data.date),
-      color: MUTED, font: '600 32px sans-serif',
+      color: MUTED, font: '600 32px ' + BODY,
       gapBefore: extras.length > 0 ? 54 : 70
     });
   }
@@ -253,7 +287,7 @@ function drawRecord(ctx, data, logo) {
   ctx.font = '600 54px ' + DISPLAY;
   ctx.fillText('U D E C A', W / 2, 198);
   ctx.fillStyle = MUTED;
-  ctx.font = '600 26px sans-serif';
+  ctx.font = '600 26px ' + BODY;
   ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 240);
   ctx.fillStyle = GOLD;
   ctx.fillRect(W / 2 - 44, 272, 88, 4);
@@ -270,10 +304,10 @@ function drawRecord(ctx, data, logo) {
   ctx.lineWidth = 3;
   ctx.stroke();
   ctx.fillStyle = GOLD_SOFT;
-  ctx.font = '900 64px sans-serif';
+  ctx.font = '900 64px ' + BODY;
   ctx.fillText('PR', W / 2, 443);
   ctx.fillStyle = TEXT;
-  ctx.font = '900 64px sans-serif';
+  ctx.font = '900 64px ' + BODY;
   ctx.fillText('NUEVO RÉCORD PERSONAL', W / 2, 590);
 
   var prs = (data.prs || []).slice(0, 3);
@@ -281,16 +315,16 @@ function drawRecord(ctx, data, logo) {
   var y = prs.length === 1 ? 790 : 730;
   for (var i = 0; i < prs.length; i++) {
     ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '700 ' + (compact ? 40 : 46) + 'px sans-serif';
+    ctx.font = '700 ' + (compact ? 40 : 46) + 'px ' + BODY;
     ctx.fillText(fit(ctx, prs[i].exerciseName.toUpperCase(), W - 200), W / 2, y);
     ctx.fillStyle = TEXT;
-    ctx.font = '900 ' + (compact ? 76 : 104) + 'px sans-serif';
+    ctx.font = '900 ' + (compact ? 76 : 104) + 'px ' + BODY;
     ctx.fillText(fit(ctx, prs[i].label, W - 200), W / 2, y + (compact ? 84 : 112));
     y += compact ? 190 : 240;
   }
   if (data.streak && data.streak > 1) {
     ctx.fillStyle = '#ECEDEF';
-    ctx.font = '600 40px sans-serif';
+    ctx.font = '600 40px ' + BODY;
     ctx.fillText('Racha de ' + data.streak + ' días', W / 2, 1170);
   }
 }
@@ -300,11 +334,11 @@ function drawReport(ctx, data) {
   ctx.font = '600 56px ' + DISPLAY;
   ctx.fillText('INFORME DE PROGRESO', W / 2, 350);
   ctx.fillStyle = GOLD_SOFT;
-  ctx.font = '700 40px sans-serif';
+  ctx.font = '700 40px ' + BODY;
   ctx.fillText(fit(ctx, data.clientName.toUpperCase(), W - 200), W / 2, 414);
   if (data.periodLabel) {
     ctx.fillStyle = MUTED;
-    ctx.font = '600 28px sans-serif';
+    ctx.font = '600 28px ' + BODY;
     ctx.fillText(data.periodLabel, W / 2, 458);
   }
   var bw = 440, bh = 190, gap = 36;
@@ -322,7 +356,7 @@ function drawReport(ctx, data) {
   y += bh + gap + 40;
 
   ctx.fillStyle = GOLD;
-  ctx.font = '800 32px sans-serif';
+  ctx.font = '800 32px ' + BODY;
   ctx.fillText('MEJORES MARCAS', W / 2, y);
   y += 56;
   var lines = [];
@@ -332,7 +366,7 @@ function drawReport(ctx, data) {
   if (data.bestPullReps) lines.push('Tirón · ' + data.bestPullReps);
   if (lines.length === 0) lines.push('Aún sin marcas registradas');
   ctx.fillStyle = '#ECEDEF';
-  ctx.font = '600 34px sans-serif';
+  ctx.font = '600 34px ' + BODY;
   for (var i = 0; i < Math.min(lines.length, 4); i++) {
     ctx.fillText(fit(ctx, lines[i], W - 220), W / 2, y);
     y += 52;
@@ -371,7 +405,7 @@ function drawMember(ctx, data, logo) {
   ctx.font = '600 54px ' + DISPLAY;
   ctx.fillText('U D E C A', W / 2, 252);
   ctx.fillStyle = MUTED;
-  ctx.font = '600 23px sans-serif';
+  ctx.font = '600 23px ' + BODY;
   ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 292);
 
   if (fundador) {
@@ -388,28 +422,50 @@ function drawMember(ctx, data, logo) {
     ctx.arc(W / 2, 520, 146, 0, Math.PI * 2);
     ctx.stroke();
     ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '600 34px sans-serif';
+    ctx.font = '600 34px ' + BODY;
     ctx.fillText('Nº', W / 2, 468);
     ctx.fillStyle = TEXT;
-    ctx.font = '900 116px sans-serif';
+    ctx.font = '900 116px ' + BODY;
     ctx.fillText(String(data.founderNumber), W / 2, 578);
 
+    // El número CON su oficio. Ponía "MIEMBRO FUNDADOR" a secas, así que el
+    // carné de un entrenador y el de un atleta eran idénticos salvo por la
+    // línea pequeña de abajo. Y no es lo mismo ser el entrenador número 3 que
+    // el atleta número 3: es lo primero que pregunta quien ve la captura.
     ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '900 62px sans-serif';
-    ctx.fillText('MIEMBRO FUNDADOR', W / 2, 748);
+    ctx.font = '900 56px ' + BODY;
+    ctx.fillText(data.roleLabel.toUpperCase() + ' FUNDADOR', W / 2, 748);
     ctx.fillStyle = MUTED;
-    ctx.font = '600 30px sans-serif';
+    ctx.font = '600 30px ' + BODY;
     ctx.fillText('Estuvo aquí desde el principio', W / 2, 800);
   } else {
-    ctx.fillStyle = GOLD;
-    ctx.fillRect(W / 2 - 44, 336, 88, 3);
+    // El carné de quien no es fundador tenía un agujero: el sello del fundador
+    // ocupa el centro y aquí no había nada entre el filete de arriba y el rol,
+    // trescientos píxeles más abajo. La tarjeta se veía a medio hacer, y es la
+    // que va a tener la inmensa mayoría.
+    //
+    // Se resuelve sin inventarse un dato que no existe: el oficio sube al
+    // centro, que es donde la vista va, y se le pone la misma anilla. Las dos
+    // tarjetas pasan a ser hermanas —una con tu número dentro, otra con lo que
+    // eres— en vez de una completa y otra descolgada.
+    ctx.strokeStyle = 'rgba(162, 150, 139, 0.3)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(W / 2, 520, 146, 0, Math.PI * 2);
+    ctx.stroke();
+
     ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '900 68px sans-serif';
-    ctx.fillText(data.roleLabel.toUpperCase(), W / 2, 660);
+    // "ATLETA" cabe a 52 px y "ENTRENADOR" no: la letra se ajusta al ancho de
+    // la anilla en vez de cortar la palabra.
+    fitFont(ctx, data.roleLabel.toUpperCase(), 236, 52, 26, '900', BODY);
+    ctx.fillText(data.roleLabel.toUpperCase(), W / 2, 512);
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(W / 2 - 34, 548, 68, 3);
+
     if (data.tagline) {
       ctx.fillStyle = MUTED;
-      ctx.font = '600 34px sans-serif';
-      ctx.fillText(fit(ctx, data.tagline, W - 220), W / 2, 724);
+      ctx.font = '600 34px ' + BODY;
+      ctx.fillText(fit(ctx, data.tagline, W - 220), W / 2, 748);
     }
   }
 
@@ -422,16 +478,13 @@ function drawMember(ctx, data, logo) {
   ctx.fillText(fit(ctx, data.name, W - 220), W / 2, yNombre);
   // El rol solo se repite bajo el nombre en la tarjeta de fundador: en la otra
   // ya está escrito en grande justo encima.
+  // El rol ya no se repite bajo el nombre del fundador: desde que el sello dice
+  // "ENTRENADOR FUNDADOR", escribirlo otra vez cincuenta píxeles más abajo es
+  // decir dos veces lo mismo en la misma tarjeta.
   var ySiguiente = yNombre + 56;
-  if (fundador) {
-    ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '700 30px sans-serif';
-    ctx.fillText(data.roleLabel.toUpperCase(), W / 2, ySiguiente);
-    ySiguiente += 52;
-  }
   if (data.since) {
     ctx.fillStyle = MUTED;
-    ctx.font = '600 28px sans-serif';
+    ctx.font = '600 28px ' + BODY;
     ctx.fillText('Miembro desde ' + data.since, W / 2, ySiguiente);
   }
 }
