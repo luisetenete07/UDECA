@@ -1,31 +1,33 @@
 # Rediseño: lo que queda
 
-Estado a cierre de la sesión del 4 de agosto de 2026. Los puntos 1, 2, 3 y 5
-siguen pendientes; el 4 está hecho. El rediseño ya pasó por la
+Estado a cierre de la sesión del 4 de agosto de 2026. Los puntos 1 y 4 están hechos.
+El 2 y el 3 no son rediseño sino funcionalidad nueva; el 5 es una decisión de
+producto. El rediseño ya pasó por la
 tipografía, los bordes, la jerarquía de cada pantalla, la vitrina de cifras, las
 cabeceras y las tarjetas plegables (ver la fase 5 del README). Aquí está lo que
 NO se hizo, con lo que se sabe de cada cosa para no empezar de cero.
 
 ---
 
-## 1. Widgets reordenables en el panel
+## 1. Widgets reordenables en el panel — HECHO
 
-Hoy las tarjetas del panel del entrenador se **pliegan** y recuerdan cómo las
-dejaste (`components/CollapsibleCard.tsx`, clave `panel-plegado-<id>` en
-AsyncStorage). Falta poder **arrastrarlas** para cambiar su orden.
+El panel del entrenador se ordena desde el icono de la cabecera. Seis bloques
+—grupo, cómo van, hoy, accesos, cobros y actividad—; los avisos de arriba no
+entran a propósito.
 
-Lo que ya existe y sirve:
+Dos decisiones que conviene no deshacer sin pensarlo:
 
-- `components/DragList.tsx` y `lib/useDragReorder.ts` — el gesto de reordenar
-  con asa, ya usado en el editor de rutinas y en las categorías de ejercicios.
-  El patrón de la app es **mantener pulsado el asa y mover**, no arrastrar desde
-  cualquier punto: las tarjetas están llenas de cosas que se tocan.
-- El mismo criterio de persistencia que el plegado: es una preferencia de cómo
-  miras ESTA pantalla en ESTE dispositivo, así que va en AsyncStorage y no en la
-  cuenta. Si se sincronizara, reordenar en el ordenador te cambiaría el móvil.
+- **Se ordena en una lista, no arrastrando las tarjetas donde están.** Con
+  tarjetas de cuatrocientos píxeles, bajar una tres puestos obliga a arrastrar
+  por media pantalla mientras el contenido se desplaza solo. En la hoja cada
+  bloque es una fila mínima y los seis se ven a la vez.
+- **Lo guardado no manda sobre lo que existe** (`lib/panelOrder.ts`). Un bloque
+  nuevo entra al final aunque el orden esté guardado de antes; uno que
+  desaparece se cae. Sin eso, una preferencia vieja escondería secciones nuevas
+  para siempre. Cubierto por `scripts/check-panel-order.mjs`.
 
-Trabajo real: dar identidad estable a cada widget, guardar el orden, y que las
-tarjetas nuevas que se añadan en el futuro caigan al final en vez de perderse.
+Si algún día se ordena también el inicio del ALUMNO, el trabajo está hecho:
+`usePanelOrder('alumno', ids)` y `PanelOrderSheet` sirven tal cual.
 
 ## 2. Progreso de cursos en el panel — EL DATO NO EXISTE
 
