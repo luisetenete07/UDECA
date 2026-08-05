@@ -18,6 +18,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { Dialog } from '../../components/Dialog';
 import { capitalizar } from '../../lib/texto';
 import { ListSkeleton } from '../../components/Skeleton';
 import { TaskEditSheet } from '../../components/TaskEditSheet';
@@ -668,72 +669,70 @@ function MoveTaskModal({
     setAnchor(new Date(a.getFullYear(), a.getMonth() + delta, 1).getTime());
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.moveBackdrop} onPress={onClose}>
-        <Pressable style={styles.moveSheet} onPress={() => {}}>
-          <Text style={styles.moveTitle} numberOfLines={2}>
-            Mover “{task.title}”
-          </Text>
-          <Text style={styles.moveHint}>Elige el nuevo día para esta tarea.</Text>
+    <Dialog
+      visible
+      onClose={onClose}
+      title={`Mover “${task.title}”`}
+      align="stretch"
+    >
+      <Text style={styles.moveHint}>Elige el nuevo día para esta tarea.</Text>
 
-          <View style={styles.moveMonthRow}>
-            <Pressable onPress={() => shift(-1)} style={styles.moveNav} hitSlop={8}>
-              <Ionicons name="chevron-back" size={18} color={colors.primary} />
-            </Pressable>
-            <Text style={styles.moveMonthLabel}>{monthLabel}</Text>
-            <Pressable onPress={() => shift(1)} style={styles.moveNav} hitSlop={8}>
-              <Ionicons name="chevron-forward" size={18} color={colors.primary} />
-            </Pressable>
-          </View>
-
-          <View style={styles.moveGridHead}>
-            {WEEKDAY_HEADS.map((w, i) => (
-              <Text key={i} style={styles.moveHeadCell}>
-                {w}
-              </Text>
-            ))}
-          </View>
-          <View style={styles.moveGrid}>
-            {cells.map((ts, i) => {
-              if (ts == null) return <View key={`b${i}`} style={styles.moveCell} />;
-              const isToday = ts === today;
-              const isCurrent = ts === current;
-              return (
-                <Pressable key={ts} style={styles.moveCell} onPress={() => onPick(ts)}>
-                  <View
-                    style={[
-                      styles.moveCellInner,
-                      isToday && styles.moveCellToday,
-                      isCurrent && styles.moveCellCurrent,
-                    ]}
-                  >
-                    <Text style={[styles.moveCellText, isCurrent && styles.moveCellTextOn]}>
-                      {new Date(ts).getDate()}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={styles.moveQuickRow}>
-            <Pressable style={styles.moveQuick} onPress={() => onPick(today)} hitSlop={6}>
-              <Text style={styles.moveQuickText}>Hoy</Text>
-            </Pressable>
-            <Pressable
-              style={styles.moveQuick}
-              onPress={() => onPick(today + 24 * 60 * 60 * 1000)}
-              hitSlop={6}
-            >
-              <Text style={styles.moveQuickText}>Mañana</Text>
-            </Pressable>
-            <Pressable style={[styles.moveQuick, styles.moveCancel]} onPress={onClose} hitSlop={6}>
-              <Text style={styles.moveCancelText}>Cancelar</Text>
-            </Pressable>
-          </View>
+      <View style={styles.moveMonthRow}>
+        <Pressable onPress={() => shift(-1)} style={styles.moveNav} hitSlop={8}>
+          <Ionicons name="chevron-back" size={18} color={colors.primary} />
         </Pressable>
-      </Pressable>
-    </Modal>
+        <Text style={styles.moveMonthLabel}>{monthLabel}</Text>
+        <Pressable onPress={() => shift(1)} style={styles.moveNav} hitSlop={8}>
+          <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+        </Pressable>
+      </View>
+
+      <View style={styles.moveGridHead}>
+        {WEEKDAY_HEADS.map((w, i) => (
+          <Text key={i} style={styles.moveHeadCell}>
+            {w}
+          </Text>
+        ))}
+      </View>
+      <View style={styles.moveGrid}>
+        {cells.map((ts, i) => {
+          if (ts == null) return <View key={`b${i}`} style={styles.moveCell} />;
+          const isToday = ts === today;
+          const isCurrent = ts === current;
+          return (
+            <Pressable key={ts} style={styles.moveCell} onPress={() => onPick(ts)}>
+              <View
+                style={[
+                  styles.moveCellInner,
+                  isToday && styles.moveCellToday,
+                  isCurrent && styles.moveCellCurrent,
+                ]}
+              >
+                <Text style={[styles.moveCellText, isCurrent && styles.moveCellTextOn]}>
+                  {new Date(ts).getDate()}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.moveQuickRow}>
+        <Pressable style={styles.moveQuick} onPress={() => onPick(today)} hitSlop={6}>
+          <Text style={styles.moveQuickText}>Hoy</Text>
+        </Pressable>
+        <Pressable
+          style={styles.moveQuick}
+          onPress={() => onPick(today + 24 * 60 * 60 * 1000)}
+          hitSlop={6}
+        >
+          <Text style={styles.moveQuickText}>Mañana</Text>
+        </Pressable>
+        <Pressable style={[styles.moveQuick, styles.moveCancel]} onPress={onClose} hitSlop={6}>
+          <Text style={styles.moveCancelText}>Cancelar</Text>
+        </Pressable>
+      </View>
+    </Dialog>
   );
 }
 
@@ -982,13 +981,6 @@ const styles = StyleSheet.create({
   },
   selectedDate: { ...typography.h3, color: colors.text, flexShrink: 1 },
   noEvents: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
-  dayGroup: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  dayCol: { width: 40, alignItems: 'center', paddingTop: 2 },
-  dayNum: { ...typography.h2, ...tabularNums, color: colors.text, fontFamily: fonts.heading, fontSize: 22 },
-  dayNumToday: { color: colors.primaryBright },
-  dayWk: { ...typography.small, color: colors.textFaint, fontSize: 11, textTransform: 'uppercase' },
-  dayWkToday: { color: colors.primary },
-  dayEvents: { flex: 1, gap: spacing.sm },
   todayTag: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 10, letterSpacing: 1 },
   event: {
     flexDirection: 'row',
@@ -1001,7 +993,6 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
     overflow: 'hidden',
   },
-  eventPast: { opacity: 0.55 },
   eventBar: { width: 4, alignSelf: 'stretch' },
   eventIcon: {
     width: 34,
@@ -1164,23 +1155,6 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
   emptySub: { ...typography.small, color: colors.textMuted, textAlign: 'center', maxWidth: 320, lineHeight: 19 },
   // Mover tarea a otro día
-  moveBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  moveSheet: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-  },
-  moveTitle: { ...typography.h3, color: colors.text },
   moveHint: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
   moveMonthRow: {
     flexDirection: 'row',

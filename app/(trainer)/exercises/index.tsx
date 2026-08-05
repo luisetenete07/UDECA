@@ -19,6 +19,7 @@ import { DragList } from '../../../components/DragList';
 import { moveItem } from '../../../lib/useDragReorder';
 import { CardButton } from '../../../components/CardButton';
 import { Card } from '../../../components/Card';
+import { Dialog } from '../../../components/Dialog';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ListSkeleton } from '../../../components/Skeleton';
@@ -798,210 +799,181 @@ export default function ExercisesScreen() {
       )}
 
       {/* Confirmación previa de "Actualizar a pack UDECA" (destructivo) */}
-      <Modal
+      <Dialog
         visible={confirmPack}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmPack(false)}
+        onClose={() => setConfirmPack(false)}
+        icon="warning-outline"
+        tone="danger"
+        title="¿Actualizar a pack UDECA?"
       >
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <View style={styles.confirmIcon}>
-              <Ionicons name="warning-outline" size={26} color={colors.danger} />
-            </View>
-            <Text style={styles.confirmTitle}>¿Actualizar a pack UDECA?</Text>
-            <Text style={styles.confirmText}>
-              Tu biblioteca quedará EXACTAMENTE igual que el pack UDECA actual
-              ({packItems.length} ejercicios): se sustituyen los datos de los que ya tienes,
-              se añaden los que falten y se BORRAN tus {exercises.length} ejercicio(s) que no
-              estén en el pack. También se reemplazan tus categorías. No se puede deshacer.
-            </Text>
-            <Button
-              title="Sí, sustituirlo todo"
-              variant="danger"
-              onPress={handleUpdatePackFull}
-              loading={importing}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setConfirmPack(false)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+    <Text style={styles.confirmText}>
+      Tu biblioteca quedará EXACTAMENTE igual que el pack UDECA actual
+      ({packItems.length} ejercicios): se sustituyen los datos de los que ya tienes,
+      se añaden los que falten y se BORRAN tus {exercises.length} ejercicio(s) que no
+      estén en el pack. También se reemplazan tus categorías. No se puede deshacer.
+    </Text>
+    <Button
+      title="Sí, sustituirlo todo"
+      variant="danger"
+      onPress={handleUpdatePackFull}
+      loading={importing}
+      style={{ marginTop: spacing.md }}
+    />
+    <Button
+      title="Cancelar"
+      variant="ghost"
+      onPress={() => setConfirmPack(false)}
+      style={{ marginTop: spacing.sm }}
+    />
+  </Dialog>
 
-      {/* Color de una categoría: paleta + color personalizado */}
-      <Modal
-        visible={!!colorTarget}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setColorTarget(null)}
-      >
-        <View style={styles.confirmBackdrop}>
-          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
-            <Text style={styles.confirmTitle}>{colorTarget}</Text>
-            <Text style={[styles.confirmText, { marginBottom: spacing.md }]}>
-              Elige un color o escribe el tuyo.
-            </Text>
-            <View style={styles.paletteGrid}>
-              {CATEGORY_PALETTE.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => colorTarget && setCategoryColor(colorTarget, c)}
-                  style={[
-                    styles.paletteDot,
-                    { backgroundColor: c },
-                    colorTarget && categoryColor(colorTarget).toLowerCase() === c.toLowerCase()
-                      ? styles.paletteDotOn
-                      : null,
-                  ]}
-                />
-              ))}
-            </View>
-            <View style={styles.customRow}>
-              <View
-                style={[
-                  styles.catDotBig,
-                  { backgroundColor: normalizeHex(customColor) ?? colors.surfaceAlt },
-                ]}
-              />
-              <TextInput
-                value={customColor}
-                onChangeText={setCustomColor}
-                placeholder="#FF9900"
-                placeholderTextColor={colors.textFaint}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={7}
-                style={styles.addCatInput}
-                onSubmitEditing={applyCustomColor}
-                returnKeyType="done"
-              />
-              <Pressable onPress={applyCustomColor} style={styles.addCatBtn} hitSlop={6}>
-                <Text style={styles.addCatText}>Usar</Text>
-              </Pressable>
-            </View>
-            <Button
-              title="Cerrar"
-              variant="ghost"
-              onPress={() => setColorTarget(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+  {/* Color de una categoría: paleta + color personalizado */}
+  <Dialog
+    visible={!!colorTarget}
+    onClose={() => setColorTarget(null)}
+    title={colorTarget ?? ''}
+    align="stretch"
+  >
+    <Text style={[styles.confirmText, { marginBottom: spacing.md }]}>
+      Elige un color o escribe el tuyo.
+    </Text>
+    <View style={styles.paletteGrid}>
+      {CATEGORY_PALETTE.map((c) => (
+        <Pressable
+          key={c}
+          onPress={() => colorTarget && setCategoryColor(colorTarget, c)}
+          style={[
+            styles.paletteDot,
+            { backgroundColor: c },
+            colorTarget && categoryColor(colorTarget).toLowerCase() === c.toLowerCase()
+              ? styles.paletteDotOn
+              : null,
+          ]}
+        />
+      ))}
+    </View>
+    <View style={styles.customRow}>
+      <View
+        style={[
+          styles.catDotBig,
+          { backgroundColor: normalizeHex(customColor) ?? colors.surfaceAlt },
+        ]}
+      />
+      <TextInput
+        value={customColor}
+        onChangeText={setCustomColor}
+        placeholder="#FF9900"
+        placeholderTextColor={colors.textFaint}
+        autoCapitalize="characters"
+        autoCorrect={false}
+        maxLength={7}
+        style={styles.addCatInput}
+        onSubmitEditing={applyCustomColor}
+        returnKeyType="done"
+      />
+      <Pressable onPress={applyCustomColor} style={styles.addCatBtn} hitSlop={6}>
+        <Text style={styles.addCatText}>Usar</Text>
+      </Pressable>
+    </View>
+    <Button
+      title="Cerrar"
+      variant="ghost"
+      onPress={() => setColorTarget(null)}
+      style={{ marginTop: spacing.sm }}
+    />
+  </Dialog>
 
-      {/* Renombrar un subgrupo (arrastra a sus ejercicios) */}
-      <Modal
-        visible={!!renameSub}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenameSub(null)}
-      >
-        <View style={styles.confirmBackdrop}>
-          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
-            <Text style={styles.confirmTitle}>Renombrar subgrupo</Text>
-            <Text style={[styles.confirmText, { marginBottom: spacing.md }]}>
-              Se actualizarán también los ejercicios que ya están en «{renameSub?.from}».
-            </Text>
-            <TextInput
-              value={renameText}
-              onChangeText={setRenameText}
-              placeholder="Nuevo nombre"
-              placeholderTextColor={colors.textFaint}
-              style={styles.addCatInput}
-              onSubmitEditing={applyRenameSub}
-              returnKeyType="done"
-              autoFocus
-            />
-            <Button
-              title="Guardar"
-              onPress={applyRenameSub}
-              loading={renaming}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setRenameSub(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+  {/* Renombrar un subgrupo (arrastra a sus ejercicios) */}
+  <Dialog
+    visible={!!renameSub}
+    onClose={() => setRenameSub(null)}
+    title="Renombrar subgrupo"
+    align="stretch"
+  >
+    <Text style={[styles.confirmText, { marginBottom: spacing.md }]}>
+      Se actualizarán también los ejercicios que ya están en «{renameSub?.from}».
+    </Text>
+    <TextInput
+      value={renameText}
+      onChangeText={setRenameText}
+      placeholder="Nuevo nombre"
+      placeholderTextColor={colors.textFaint}
+      style={styles.addCatInput}
+      onSubmitEditing={applyRenameSub}
+      returnKeyType="done"
+      autoFocus
+    />
+    <Button
+      title="Guardar"
+      onPress={applyRenameSub}
+      loading={renaming}
+      style={{ marginTop: spacing.md }}
+    />
+    <Button
+      title="Cancelar"
+      variant="ghost"
+      onPress={() => setRenameSub(null)}
+      style={{ marginTop: spacing.sm }}
+    />
+  </Dialog>
 
-      {/* Importar por pegado de texto (móvil) */}
-      <Modal
-        visible={pasteOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setPasteOpen(false)}
-      >
-        <View style={styles.confirmBackdrop}>
-          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
-            <Text style={styles.confirmTitle}>Pegar plantilla</Text>
-            <Text style={[styles.confirmText, { textAlign: 'left' }]}>
-              Pega aquí el texto de la plantilla que te ha compartido otro entrenador.
-            </Text>
-            <TextInput
-              value={pasteText}
-              onChangeText={setPasteText}
-              placeholder="Pega el contenido JSON…"
-              placeholderTextColor={colors.textFaint}
-              multiline
-              style={styles.pasteInput}
-            />
-            <Button
-              title="Continuar"
-              onPress={handlePasteImport}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setPasteOpen(false)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+  {/* Importar por pegado de texto (móvil) */}
+  <Dialog
+    visible={pasteOpen}
+    onClose={() => setPasteOpen(false)}
+    title="Pegar plantilla"
+    align="stretch"
+  >
+        <Text style={[styles.confirmText, { textAlign: 'left' }]}>
+          Pega aquí el texto de la plantilla que te ha compartido otro entrenador.
+        </Text>
+        <TextInput
+          value={pasteText}
+          onChangeText={setPasteText}
+          placeholder="Pega el contenido JSON…"
+          placeholderTextColor={colors.textFaint}
+          multiline
+          style={styles.pasteInput}
+        />
+        <Button
+          title="Continuar"
+          onPress={handlePasteImport}
+          style={{ marginTop: spacing.md }}
+        />
+        <Button
+          title="Cancelar"
+          variant="ghost"
+          onPress={() => setPasteOpen(false)}
+          style={{ marginTop: spacing.sm }}
+        />
+      </Dialog>
 
       {/* Aviso de confirmación al importar (sustituye TODA la biblioteca) */}
-      <Modal
+      <Dialog
         visible={!!pendingImport}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPendingImport(null)}
+        onClose={() => setPendingImport(null)}
+        icon="warning-outline"
+        tone="danger"
+        title="¿Sustituir tu plantilla actual?"
       >
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <View style={styles.confirmIcon}>
-              <Ionicons name="warning-outline" size={26} color={colors.danger} />
-            </View>
-            <Text style={styles.confirmTitle}>¿Sustituir tu plantilla actual?</Text>
-            <Text style={styles.confirmText}>
-              Esto borrará tus {exercises.length} ejercicio(s) actuales y los reemplazará por los{' '}
-              {pendingImport?.length ?? 0} de la plantilla importada. No se puede deshacer.
-            </Text>
-            <Button
-              title={`Sustituir por ${pendingImport?.length ?? 0} ejercicios`}
-              variant="danger"
-              onPress={confirmReplace}
-              loading={replacing}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setPendingImport(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.confirmText}>
+          Esto borrará tus {exercises.length} ejercicio(s) actuales y los reemplazará por los{' '}
+          {pendingImport?.length ?? 0} de la plantilla importada. No se puede deshacer.
+        </Text>
+        <Button
+          title={`Sustituir por ${pendingImport?.length ?? 0} ejercicios`}
+          variant="danger"
+          onPress={confirmReplace}
+          loading={replacing}
+          style={{ marginTop: spacing.md }}
+        />
+        <Button
+          title="Cancelar"
+          variant="ghost"
+          onPress={() => setPendingImport(null)}
+          style={{ marginTop: spacing.sm }}
+        />
+      </Dialog>
     </ScreenContainer>
   );
 }
@@ -1037,14 +1009,6 @@ function FilterChip({
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  headerText: { flex: 1, minWidth: 130 },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1086,7 +1050,6 @@ const styles = StyleSheet.create({
   },
   catLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   catEdit: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  catWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   catColorHint: {
     ...typography.small,
     color: colors.textMuted,
@@ -1143,19 +1106,6 @@ const styles = StyleSheet.create({
   catRowDragging: { borderColor: colors.hairline },
   dragHandle: { padding: spacing.xs },
   catRowText: { ...typography.body, color: colors.text, flex: 1 },
-  catChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  catChipText: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  catX: { marginLeft: -2, marginRight: -4 },
   addCatRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   addCatInput: {
     flex: 1,
@@ -1184,33 +1134,6 @@ const styles = StyleSheet.create({
   catActionsSep: { width: 1, height: 12, backgroundColor: colors.border },
   toolBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   toolText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
-  confirmBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: spacing.lg,
-  },
-  confirmCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
-  },
-  confirmIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.dangerMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  confirmTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
   confirmText: {
     ...typography.small,
     color: colors.textMuted,
@@ -1231,8 +1154,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlignVertical: 'top',
   },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted },
   filters: { marginVertical: spacing.md },
   chip: {
     paddingHorizontal: spacing.md,

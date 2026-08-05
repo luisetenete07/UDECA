@@ -1008,7 +1008,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  weekCount: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   weekHint: { ...typography.small, color: colors.textMuted },
   weekLegend: {
     flexDirection: 'row',
@@ -1025,7 +1024,6 @@ const styles = StyleSheet.create({
   legendTodayDot: { backgroundColor: colors.surfaceAlt, borderColor: colors.primaryBright, borderWidth: 2 },
   legendText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
   goalText: { ...typography.body, color: colors.text, marginTop: spacing.xs },
-  mutedText: { ...typography.small, color: colors.textMuted },
   habitRow: {
     flexDirection: 'row',
     alignItems: 'center',

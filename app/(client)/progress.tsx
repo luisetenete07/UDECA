@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
+import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { LineChart } from '../../components/LineChart';
@@ -977,48 +978,41 @@ export default function ProgressScreen() {
       ) : null}
 
       {/* Borrar entrenamiento: hay que escribir CONFIRMAR (evita borrados por error) */}
-      <Modal
+      <Dialog
         visible={!!deleteId}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDeleteId(null)}
+        onClose={() => setDeleteId(null)}
+        icon="trash-outline"
+        tone="danger"
+        title="Borrar entrenamiento"
       >
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <View style={styles.confirmIcon}>
-              <Ionicons name="trash-outline" size={24} color={colors.danger} />
-            </View>
-            <Text style={styles.confirmTitle}>Borrar entrenamiento</Text>
-            <Text style={styles.confirmText}>
-              Esta acción no se puede deshacer. Para confirmar, escribe{' '}
-              <Text style={styles.confirmWordHint}>CONFIRMAR</Text> abajo.
-            </Text>
-            <TextInput
-              value={confirmWord}
-              onChangeText={setConfirmWord}
-              placeholder="CONFIRMAR"
-              placeholderTextColor={colors.textFaint}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              style={styles.confirmInput}
-            />
-            <Button
-              title="Borrar entrenamiento"
-              variant="danger"
-              onPress={doDeleteWorkout}
-              loading={deleting}
-              disabled={confirmWord.trim().toUpperCase() !== 'CONFIRMAR'}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setDeleteId(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.confirmText}>
+          Esta acción no se puede deshacer. Para confirmar, escribe{' '}
+          <Text style={styles.confirmWordHint}>CONFIRMAR</Text> abajo.
+        </Text>
+        <TextInput
+          value={confirmWord}
+          onChangeText={setConfirmWord}
+          placeholder="CONFIRMAR"
+          placeholderTextColor={colors.textFaint}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          style={styles.confirmInput}
+        />
+        <Button
+          title="Borrar entrenamiento"
+          variant="danger"
+          onPress={doDeleteWorkout}
+          loading={deleting}
+          disabled={confirmWord.trim().toUpperCase() !== 'CONFIRMAR'}
+          style={{ marginTop: spacing.md }}
+        />
+        <Button
+          title="Cancelar"
+          variant="ghost"
+          onPress={() => setDeleteId(null)}
+          style={{ marginTop: spacing.sm }}
+        />
+      </Dialog>
 
       {/* Progreso completo: la tabla se CONSULTA aquí dentro. El PDF queda
           como exportación opcional, no como única forma de verlo. */}
@@ -1248,26 +1242,11 @@ const styles = StyleSheet.create({
   exChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   exChipTextActive: { color: colors.onPrimary },
   exHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  recordPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    marginBottom: spacing.sm,
-  },
-  recordText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, fontSize: 11 },
   tabButtonActive: { backgroundColor: colors.primary },
   tabButtonText: { ...typography.small, fontFamily: fonts.heading, color: colors.textMuted },
   tabButtonTextActive: { color: colors.onPrimary },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  row: { flexDirection: 'row', gap: spacing.sm },
-  smallField: { flex: 1 },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
   logRow: {
     flexDirection: 'row',
@@ -1387,33 +1366,6 @@ const styles = StyleSheet.create({
   },
   sessionShare: { padding: spacing.xs },
   sessionDelete: { padding: spacing.xs },
-  confirmBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: spacing.lg,
-  },
-  confirmCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
-  },
-  confirmIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.dangerMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  confirmTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
   confirmText: {
     ...typography.small,
     color: colors.textMuted,
@@ -1470,19 +1422,4 @@ const styles = StyleSheet.create({
   detailMarkText: { ...typography.small, color: colors.text, fontSize: 12 },
   detailDone: { ...typography.small, color: colors.textFaint },
   photoHint: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md },
-  poseRow: { flexDirection: 'row', gap: spacing.sm },
-  poseBtn: { flex: 1, paddingHorizontal: spacing.sm },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  photoCard: { width: '31%' },
-  photo: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  photoInfo: { marginTop: 4 },
-  photoPose: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, fontSize: 11 },
-  photoDate: { ...typography.small, color: colors.textFaint, fontSize: 10 },
 });

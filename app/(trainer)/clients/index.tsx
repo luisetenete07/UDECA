@@ -477,7 +477,6 @@ export default function ClientsScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg },
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -536,14 +535,6 @@ const styles = StyleSheet.create({
   badgeSep: { color: colors.textFaint, fontSize: 11 },
   skipRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   skipText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold, fontSize: 11 },
-  inviteCard: { alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
-  inviteTitle: { ...typography.h3, color: colors.text },
-  inviteText: {
-    ...typography.small,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
   clientCard: {
     flexDirection: 'row',
     alignItems: 'center',

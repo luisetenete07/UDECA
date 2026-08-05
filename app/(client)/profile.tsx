@@ -546,7 +546,6 @@ const styles = StyleSheet.create({
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   chipTextSelected: { color: colors.onPrimary },
   savedText: { ...typography.small, color: colors.primary, marginBottom: spacing.sm },
-  inputLocked: { opacity: 0.55 },
   nameHintRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.md },
   nameHint: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 17 },
   reminderTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

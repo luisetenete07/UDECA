@@ -28,6 +28,7 @@ import { PressableScale } from '../../components/PressableScale';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { Dialog } from '../../components/Dialog';
 import { Sheet } from '../../components/Sheet';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { TextField } from '../../components/TextField';
@@ -1386,37 +1387,31 @@ export default function WorkoutScreen() {
         </FadeIn>
       ) : null}
 
-      <Modal
+      <Dialog
         visible={exitConfirmOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setExitConfirmOpen(false)}
+        onClose={() => setExitConfirmOpen(false)}
+        icon="barbell"
+        title="Estás entrenando"
       >
-        <View style={styles.exitBackdrop}>
-          <Card accent style={styles.exitCard}>
-            <Ionicons name="barbell" size={26} color={colors.primary} style={{ alignSelf: 'center' }} />
-            <Text style={styles.exitTitle}>Estás entrenando</Text>
-            <Text style={styles.exitMsg}>
-              Termina tu sesión antes de salir: tu progreso lo merece. Si sales, la sesión queda
-              guardada y podrás retomarla.
-            </Text>
-            <Button
-              title="Seguir entrenando"
-              onPress={() => setExitConfirmOpen(false)}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Salir (emergencia)"
-              variant="ghost"
-              onPress={() => {
-                setExitConfirmOpen(false);
-                router.push('/(client)/dashboard');
-              }}
-              style={{ marginTop: spacing.xs }}
-            />
-          </Card>
-        </View>
-      </Modal>
+        <Text style={styles.exitMsg}>
+          Termina tu sesión antes de salir: tu progreso lo merece. Si sales, la sesión queda
+          guardada y podrás retomarla.
+        </Text>
+        <Button
+          title="Seguir entrenando"
+          onPress={() => setExitConfirmOpen(false)}
+          style={{ marginTop: spacing.md, alignSelf: 'stretch' }}
+        />
+        <Button
+          title="Salir (emergencia)"
+          variant="ghost"
+          onPress={() => {
+            setExitConfirmOpen(false);
+            router.push('/(client)/dashboard');
+          }}
+          style={{ marginTop: spacing.xs, alignSelf: 'stretch' }}
+        />
+      </Dialog>
 
       {isFlex ? null : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayTabs}>
@@ -2273,13 +2268,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     alignSelf: 'flex-start',
   },
-  exitBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-  },
-  exitCard: { paddingVertical: spacing.lg },
   flexPick: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2343,7 +2331,6 @@ const styles = StyleSheet.create({
   },
   clusterRestText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   setEditText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  exitTitle: { ...typography.h2, color: colors.text, textAlign: 'center', marginTop: spacing.sm },
   exitMsg: {
     ...typography.small,
     color: colors.textMuted,

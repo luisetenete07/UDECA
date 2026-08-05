@@ -186,8 +186,6 @@ const styles = StyleSheet.create({
   sexBtnOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   sexText: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold },
   sexTextOn: { color: colors.onPrimary },
-  row: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  field: { flex: 1 },
   actRow: {
     flexDirection: 'row',
     alignItems: 'center',

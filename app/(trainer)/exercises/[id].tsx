@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Dialog } from '../../../components/Dialog';
 import { Button } from '../../../components/Button';
 import { updateUserProfile } from '../../../lib/firestore/users';
 import { LoadingScreen } from '../../../components/LoadingScreen';
@@ -411,43 +412,38 @@ export default function ExerciseEditorScreen() {
       ) : null}
 
       {/* Renombrar subgrupo (arrastra a todos los ejercicios que lo usan) */}
-      <Modal
+      <Dialog
         visible={!!renameSub}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenameSub(null)}
+        onClose={() => setRenameSub(null)}
+        title="Renombrar subgrupo"
+        align="stretch"
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Renombrar subgrupo</Text>
-            <Text style={styles.modalText}>
-              Se actualizarán también los ejercicios que ya están en «{renameSub}».
-            </Text>
-            <TextInput
-              value={renameText}
-              onChangeText={setRenameText}
-              placeholder="Nuevo nombre"
-              placeholderTextColor={colors.textFaint}
-              style={styles.addCatInput}
-              onSubmitEditing={applyRenameSub}
-              returnKeyType="done"
-              autoFocus
-            />
-            <Button
-              title="Guardar"
-              onPress={applyRenameSub}
-              loading={renaming}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setRenameSub(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.modalText}>
+          Se actualizarán también los ejercicios que ya están en «{renameSub}».
+        </Text>
+        <TextInput
+          value={renameText}
+          onChangeText={setRenameText}
+          placeholder="Nuevo nombre"
+          placeholderTextColor={colors.textFaint}
+          style={styles.addCatInput}
+          onSubmitEditing={applyRenameSub}
+          returnKeyType="done"
+          autoFocus
+        />
+        <Button
+          title="Guardar"
+          onPress={applyRenameSub}
+          loading={renaming}
+          style={{ marginTop: spacing.md }}
+        />
+        <Button
+          title="Cancelar"
+          variant="ghost"
+          onPress={() => setRenameSub(null)}
+          style={{ marginTop: spacing.sm }}
+        />
+      </Dialog>
     </ScreenContainer>
   );
 }
@@ -508,25 +504,6 @@ const styles = StyleSheet.create({
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
   chipTextSelected: { color: colors.onPrimary },
   textarea: { height: 100, textAlignVertical: 'top' },
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: spacing.xs,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.xs,
-  },
-  segmentBtn: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-  },
-  segmentBtnActive: { backgroundColor: colors.primary },
-  segmentText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  segmentTextActive: { color: colors.onPrimary },
   measureHint: {
     ...typography.small,
     color: colors.textMuted,
@@ -550,23 +527,6 @@ const styles = StyleSheet.create({
   measureText: { ...typography.body, color: colors.textMuted },
   measureTextActive: { color: colors.text, fontFamily: fonts.semiBold },
   chipPencil: { marginLeft: -1, marginRight: -3, opacity: 0.8 },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: spacing.lg,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modalTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
   modalText: {
     ...typography.small,
     color: colors.textMuted,
