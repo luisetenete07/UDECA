@@ -190,6 +190,50 @@ correo se encarga de las bajas y esta lista pasa a ser solo el origen.
 
 ---
 
+## 3.5 · Si `www.udeca.app` deja de responder
+
+La web pública **no se despliega desde este repositorio**: no hay ningún workflow
+que la publique. Sale de un `npx vercel --prod` lanzado a mano desde `web/` (ver
+1.2). Eso quiere decir dos cosas útiles cuando algo falla:
+
+- **Un push a una rama no puede tumbarla.** Si acaba de caerse justo después de
+  tocar código, el código casi seguro no es la causa.
+- **Tampoco se arregla sola con otro push.** Hay que ir a Vercel o al DNS.
+
+Comprueba en este orden, que va de lo más probable a lo más raro:
+
+1. **¿Es solo `www` o también la app?** Abre `https://app.udeca.app`. Vive en
+   GitHub Pages, en otro sitio y con otro DNS. Si las dos están caídas, mira el
+   dominio (punto 4); si solo `www`, mira Vercel (punto 2).
+2. **Vercel → proyecto `udeca-web` → Deployments.** ¿El último despliegue está
+   en «Ready» o en «Error»? Si está en error, **Redeploy** del último que sí
+   funcionó: eso devuelve la web en un minuto y te deja investigar sin prisa.
+   Mira también **Settings → Domains**: `www.udeca.app` tiene que aparecer con
+   marca verde. Un dominio que se cae de un proyecto da error de certificado o
+   404, no una página rota.
+3. **La cuenta.** Vercel suspende despliegues por facturación o por exceso de
+   uso del plan gratuito. Sale avisado en el panel, arriba.
+4. **El dominio y su DNS.** Que `udeca.app` no haya caducado en el registrador
+   (es la causa que más asusta y la más fácil de descartar), y que sigan los
+   registros de 1.1: `CNAME www → cname.vercel-dns.com` y `A @ → 76.76.21.21`.
+5. **El certificado.** Si el navegador se queja de HTTPS pero el sitio responde,
+   es renovación de certificado: Vercel → Domains → «Refresh».
+
+Para saber qué ve el mundo y no tu navegador —que puede estar sirviéndote caché
+o un DNS viejo—:
+
+```bash
+curl -I https://www.udeca.app          # ¿responde? ¿con qué código?
+dig +short www.udeca.app               # ¿a dónde apunta ahora mismo?
+```
+
+Un `curl` que se queda colgado apunta a DNS o red; un 404 o un 500 apuntan a
+Vercel, que es mejor noticia porque se arregla con un Redeploy.
+
+**Lo que NO es la causa, para no perder tiempo:** el contenido de `web/` se
+prueba en local con `npx serve web -l 4600` (punto 4) y ahí se ve entero. Si en
+local carga bien, la fuente está sana y el problema está entre Vercel y el DNS.
+
 ## 4 · Probar en local
 
 ```bash
