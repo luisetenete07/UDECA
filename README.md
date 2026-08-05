@@ -169,6 +169,10 @@ El oro se queda: la marca es el color, no la letra. Cambia todo lo demás.
 - **Tarjetas que se pliegan y se acuerdan** (`components/CollapsibleCard.tsx`)
   en el panel del entrenador y en la ficha del alumno.
 
+Lo que queda pendiente del rediseño —widgets reordenables, el barrido de
+modales y tabs, y la estructura de la pantalla de entreno— está en
+`docs/REDISENO.md`, con lo que ya se sabe de cada cosa.
+
 ## 1. Requisitos
 
 - Node.js 20+
