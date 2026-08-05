@@ -256,7 +256,8 @@ export default function TemplateExercisesScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Plantilla UDECA</Text>
           <Text style={styles.subtitle}>
-            {items.length} ejercicio(s) · precarga oficial para entrenadores
+            {items.length} {items.length === 1 ? 'ejercicio' : 'ejercicios'} · precarga oficial
+            para entrenadores
           </Text>
         </View>
         <Button title="+ Nuevo" onPress={openNew} />

@@ -35,6 +35,7 @@ import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { applyWeekPlan } from '../../lib/weekPlan';
 import { RirPicker } from '../../components/RirPicker';
+import { mayusculaInicial } from '../../lib/fechas';
 import { PressableScale } from '../../components/PressableScale';
 import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
@@ -1328,12 +1329,15 @@ export default function WorkoutScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.pastDraftTitle}>Tienes un entreno sin terminar</Text>
               <Text style={styles.pastDraftSub}>
-                {pastDraft.dayName ? `${pastDraft.dayName} · ` : ''}
-                {new Date(pastDraft.startedAt ?? pastDraft.savedAt).toLocaleDateString('es-ES', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'short',
-                })}
+                {mayusculaInicial(
+                  `${pastDraft.dayName ? `${pastDraft.dayName} · ` : ''}${new Date(
+                    pastDraft.startedAt ?? pastDraft.savedAt
+                  ).toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'short',
+                  })}`
+                )}
               </Text>
             </View>
             <View style={styles.pastDraftActions}>
@@ -2366,7 +2370,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   pastDraftTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  pastDraftSub: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 1, textTransform: 'capitalize' },
+  pastDraftSub: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 1 },
   pastDraftActions: { alignItems: 'flex-end', gap: 4 },
   pastDraftFill: {
     backgroundColor: colors.primary,

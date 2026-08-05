@@ -343,7 +343,7 @@ export default function TrainerDashboard() {
       const sent = results.filter((r) => r.status === 'fulfilled').length;
       if (sent > 0) {
         setPaysReminded(true);
-        showToast(`Recordatorio enviado a ${sent} alumno(s)`);
+        showToast(`Recordatorio enviado a ${sent} ${sent === 1 ? 'alumno' : 'alumnos'}`);
       } else {
         showToast('No se pudo enviar el recordatorio. Reinténtalo.');
       }

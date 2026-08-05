@@ -50,7 +50,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  textCol: { flex: 1, minWidth: 0 },
+  // El título manda: si las acciones se hacen anchas, se encogen ellas. Sin
+  // este suelo, dos botones largos estrujaban la columna hasta partir la
+  // palabra por la mitad ("Bibliot / eca"), que es de las cosas que más barata
+  // hacen parecer una pantalla.
+  textCol: { flex: 1, minWidth: 150 },
   eyebrow: {
     ...typography.label,
     color: colors.textMuted,
@@ -59,5 +63,11 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted, marginTop: 2 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 0 },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    flexShrink: 1,
+  },
 });

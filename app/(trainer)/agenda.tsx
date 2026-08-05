@@ -29,6 +29,7 @@ import {
 } from '../../lib/firestore/coachTasks';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
+import { diaLargo, mesLargo } from '../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
@@ -290,7 +291,7 @@ export default function CoachCalendarScreen() {
 
   const today = startOfDay(Date.now());
   const anchor = new Date(monthAnchor);
-  const monthLabel = anchor.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const monthLabel = mesLargo(anchor);
   const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1).getTime();
   const days = [...eventsByDay.keys()].filter((d) => d >= monthAnchor && d < monthEnd).sort((a, b) => a - b);
   const monthCount = days.reduce((n, d) => n + (eventsByDay.get(d)?.length ?? 0), 0);
@@ -385,13 +386,7 @@ export default function CoachCalendarScreen() {
 
       {/* Eventos del día seleccionado */}
       <View style={styles.selectedHead}>
-        <Text style={styles.selectedDate}>
-          {new Date(selectedDay).toLocaleDateString('es-ES', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}
-        </Text>
+        <Text style={styles.selectedDate}>{diaLargo(selectedDay)}</Text>
         {selectedDay === today ? <Text style={styles.todayTag}>HOY</Text> : null}
       </View>
       {selectedEvents.length === 0 ? (
@@ -646,7 +641,7 @@ function MoveTaskModal({
 
   if (!task) return null;
   const a = new Date(anchor);
-  const monthLabel = a.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const monthLabel = mesLargo(a);
   const daysInMonth = new Date(a.getFullYear(), a.getMonth() + 1, 0).getDate();
   const leadRaw = new Date(a.getFullYear(), a.getMonth(), 1).getDay(); // 0=domingo
   const lead = (leadRaw + 6) % 7; // 0 = lunes
@@ -904,7 +899,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   monthCenter: { alignItems: 'center' },
-  monthLabel: { ...typography.h3, color: colors.text, textTransform: 'capitalize' },
+  monthLabel: { ...typography.h3, color: colors.text },
   monthCount: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   todayBtn: {
     flexDirection: 'row',
@@ -954,7 +949,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  selectedDate: { ...typography.h3, color: colors.text, textTransform: 'capitalize', flexShrink: 1 },
+  selectedDate: { ...typography.h3, color: colors.text, flexShrink: 1 },
   noEvents: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
   dayGroup: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   dayCol: { width: 40, alignItems: 'center', paddingTop: 2 },
@@ -1172,7 +1167,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  moveMonthLabel: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, textTransform: 'capitalize' },
+  moveMonthLabel: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   moveGridHead: { flexDirection: 'row', marginBottom: 4 },
   moveHeadCell: { flex: 1, textAlign: 'center', ...typography.small, color: colors.textFaint, fontSize: 11 },
   moveGrid: { flexDirection: 'row', flexWrap: 'wrap' },

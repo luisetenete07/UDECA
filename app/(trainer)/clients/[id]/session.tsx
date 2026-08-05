@@ -127,7 +127,6 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textMuted,
     marginBottom: spacing.lg,
-    textTransform: 'capitalize',
   },
   card: { marginBottom: spacing.md },
   exHeader: {

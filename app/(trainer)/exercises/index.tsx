@@ -540,38 +540,40 @@ export default function ExercisesScreen() {
     >
       <ScreenHeader
         title="Biblioteca"
-        subtitle={`${exercises.length} ejercicio(s)`}
+        subtitle={`${exercises.length} ${exercises.length === 1 ? 'ejercicio' : 'ejercicios'}`}
         actions={
-          <>
-        {/* Acciones secundarias en pastilla pequeña, a la izquierda de la
-            principal: no compiten con "+ Nuevo" ni ocupan filas enteras. */}
-        {isAdmin(profile) && packItems.length > 0 ? (
-          <Pressable
-            onPress={() => setConfirmPack(true)}
-            disabled={importing}
-            style={[styles.pill, styles.pillDanger, importing && styles.pillBusy]}
-            hitSlop={4}
-          >
-            <Ionicons name="sync-outline" size={14} color={colors.danger} />
-            <Text style={[styles.pillText, { color: colors.danger }]}>
-              Actualizar a pack UDECA
-            </Text>
-          </Pressable>
-        ) : missingPack.length > 0 ? (
-          <Pressable
-            onPress={handleImportPack}
-            disabled={importing}
-            style={[styles.pill, importing && styles.pillBusy]}
-            hitSlop={4}
-          >
-            <Ionicons name="cube-outline" size={14} color={colors.primary} />
-            <Text style={styles.pillText}>Pack ({missingPack.length})</Text>
-          </Pressable>
-        ) : null}
-        <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
-          </>
+          <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
         }
       />
+
+      {/* El pack se toca una vez y no se vuelve a mirar: en la cabecera le
+          robaba el sitio al título hasta partirlo por la mitad. Aquí sigue a un
+          toque, pero deja mandar a lo que se usa todos los días. */}
+      {isAdmin(profile) && packItems.length > 0 ? (
+        <Pressable
+          onPress={() => setConfirmPack(true)}
+          disabled={importing}
+          style={[styles.pill, styles.pillDanger, importing && styles.pillBusy]}
+          hitSlop={4}
+        >
+          <Ionicons name="sync-outline" size={14} color={colors.danger} />
+          <Text style={[styles.pillText, { color: colors.danger }]}>
+            Actualizar a pack UDECA
+          </Text>
+        </Pressable>
+      ) : missingPack.length > 0 ? (
+        <Pressable
+          onPress={handleImportPack}
+          disabled={importing}
+          style={[styles.pill, importing && styles.pillBusy]}
+          hitSlop={4}
+        >
+          <Ionicons name="cube-outline" size={14} color={colors.primary} />
+          <Text style={styles.pillText}>
+            Añadir el pack UDECA ({missingPack.length} ejercicios)
+          </Text>
+        </Pressable>
+      ) : null}
 
       {isAdmin(profile) ? (
         <Pressable
@@ -813,7 +815,8 @@ export default function ExercisesScreen() {
             <Text style={styles.confirmText}>
               Tu biblioteca quedará EXACTAMENTE igual que el pack UDECA actual
               ({packItems.length} ejercicios): se sustituyen los datos de los que ya tienes,
-              se añaden los que falten y se BORRAN tus {exercises.length} ejercicio(s) que no
+              se añaden los que falten y se BORRAN tus {exercises.length}{' '}
+              {exercises.length === 1 ? 'ejercicio' : 'ejercicios'} que no
               estén en el pack. También se reemplazan tus categorías. No se puede deshacer.
             </Text>
             <Button
@@ -983,7 +986,8 @@ export default function ExercisesScreen() {
             </View>
             <Text style={styles.confirmTitle}>¿Sustituir tu plantilla actual?</Text>
             <Text style={styles.confirmText}>
-              Esto borrará tus {exercises.length} ejercicio(s) actuales y los reemplazará por los{' '}
+              Esto borrará tus {exercises.length}{' '}
+              {exercises.length === 1 ? 'ejercicio' : 'ejercicios'} y los reemplazará por los{' '}
               {pendingImport?.length ?? 0} de la plantilla importada. No se puede deshacer.
             </Text>
             <Button
@@ -1048,9 +1052,11 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 5,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 7,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    marginBottom: spacing.md,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.hairline,

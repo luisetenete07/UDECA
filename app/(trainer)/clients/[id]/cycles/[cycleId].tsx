@@ -25,6 +25,7 @@ import { getWorkoutLogsForClient } from '../../../../../lib/firestore/workoutLog
 import { computeCycleStats } from '../../../../../lib/cycleStats';
 import { descendantIds } from '../../../../../lib/cyclePlan';
 import { buildBlockView } from '../../../../../lib/blockView';
+import { mayusculaInicial } from '../../../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
@@ -300,11 +301,13 @@ export default function CycleDashboardScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.logDay}>{log.dayName}</Text>
                 <Text style={styles.logMeta}>
-                  {new Date(log.date).toLocaleDateString('es-ES', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                  })}
+                  {mayusculaInicial(
+                    new Date(log.date).toLocaleDateString('es-ES', {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                    })
+                  )}
                   {log.durationMin ? ` · ${log.durationMin} min` : ''}
                 </Text>
               </View>
@@ -500,7 +503,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   logDay: { ...typography.body, color: colors.text, fontFamily: fonts.medium },
-  logMeta: { ...typography.small, color: colors.textFaint, marginTop: 1, textTransform: 'capitalize' },
+  logMeta: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
   confirmBackdrop: {
     flex: 1,

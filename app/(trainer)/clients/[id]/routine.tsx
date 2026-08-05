@@ -1617,7 +1617,8 @@ export default function RoutineEditorScreen() {
                         {isSource ? '  · actual' : ''}
                       </Text>
                       <Text style={styles.pickerRowMuscle}>
-                        {d.exercises.length} ejercicio(s)
+                        {d.exercises.length}{' '}
+                        {d.exercises.length === 1 ? 'ejercicio' : 'ejercicios'}
                         {d.isRest ? ' · descanso' : ''}
                       </Text>
                     </View>
