@@ -1363,7 +1363,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.surfaceAlt,
   },
-  amountEuro: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold },
+  amountEuro: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold, ...tabularNums },
   payAmount: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   payIconBtn: { padding: 4 },
   scopeSeg: { marginBottom: spacing.sm },

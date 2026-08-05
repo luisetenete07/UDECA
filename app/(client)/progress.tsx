@@ -1200,7 +1200,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
+  logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm, ...tabularNums },
   testMark: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
   logDate: { ...typography.small, color: colors.textMuted },
   // ----- Mapa muscular -----

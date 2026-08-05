@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  totalCol: { width: ANCHO_TOTAL, alignItems: 'flex-end' },
+  totalCol: { width: ANCHO_TOTAL, alignItems: 'flex-end', ...tabularNums },
   colHead: {
     fontSize: 11,
     color: colors.textFaint,

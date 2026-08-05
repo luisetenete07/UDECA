@@ -11,7 +11,7 @@ import {
   type MacroResult,
   type Sex,
 } from '../lib/nutritionCalc';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, typography, tabularNums } from '../lib/theme';
 
 /**
  * Formulario simple para calcular calorías y macros. Muestra el resultado en
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   },
   resultMacros: { flexDirection: 'row', justifyContent: 'space-around', alignSelf: 'stretch' },
   resultMacro: { alignItems: 'center' },
-  resultMacroValue: { ...typography.h3, color: colors.text, fontFamily: fonts.semiBold },
+  resultMacroValue: { ...typography.h3, color: colors.text, fontFamily: fonts.semiBold, ...tabularNums },
   resultMacroLabel: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   hint: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.lg },
   error: { ...typography.small, color: colors.danger, textAlign: 'center', marginTop: spacing.sm },

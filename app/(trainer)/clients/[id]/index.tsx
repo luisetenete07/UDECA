@@ -51,7 +51,7 @@ import {
   updateClientStatus,
 } from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
-import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
+import { fonts, colors, radius, spacing, typography, tabularNums } from '../../../../lib/theme';
 import {
   CHECKIN_FIELDS,
   CLIENT_STATUSES,
@@ -1100,7 +1100,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  isoStatValue: { ...typography.h3, color: colors.primaryBright },
+  isoStatValue: { ...typography.h3, color: colors.primaryBright, ...tabularNums },
   isoStatLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fonts.medium, marginTop: 2 },
   habitManageRow: {
     flexDirection: 'row',

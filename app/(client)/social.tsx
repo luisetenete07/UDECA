@@ -20,7 +20,7 @@ import {
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { monthKeyOf, startOfWeek } from '../../lib/stats';
 import { isOnline } from '../../lib/presence';
-import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, typography, tabularNums } from '../../lib/theme';
 import type { Challenge, SocialStats } from '../../lib/types';
 
 const MEDALS = ['#D4AF37', '#B8B8B8', '#B87333']; // oro, plata, bronce
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
   },
-  streakValue: { ...typography.body, color: colors.primary, fontFamily: fonts.heading },
+  streakValue: { ...typography.body, color: colors.primary, fontFamily: fonts.heading, ...tabularNums },
   streakLabel: { ...typography.small, color: colors.textFaint, marginTop: 2, fontSize: 11 },
   challengeCard: { marginBottom: spacing.lg },
   challengeHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -420,5 +420,5 @@ const styles = StyleSheet.create({
   },
   challengeRank: { ...typography.h3, color: colors.textFaint, width: 18 },
   challengeName: { ...typography.body, color: colors.text, flex: 1 },
-  challengeCount: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
+  challengeCount: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold, ...tabularNums },
 });

@@ -8,7 +8,7 @@ import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { ScreenHeader } from '../../../../components/ScreenHeader';
 import { getWorkoutLog } from '../../../../lib/firestore/workoutLogs';
-import { colors, fonts, spacing, typography } from '../../../../lib/theme';
+import { colors, fonts, spacing, typography, tabularNums } from '../../../../lib/theme';
 import { capitalizar } from '../../../../lib/texto';
 import { isDualMeasure, setMarks, type WorkoutLog } from '../../../../lib/types';
 
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   setLabel: { ...typography.small, color: colors.textMuted, width: 56 },
-  setValue: { ...typography.body, color: colors.text, flex: 1 },
+  setValue: { ...typography.body, color: colors.text, flex: 1, ...tabularNums },
   notes: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm, fontStyle: 'italic' },
   feedbackLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   feedback: { ...typography.body, color: colors.text, marginTop: spacing.xs },

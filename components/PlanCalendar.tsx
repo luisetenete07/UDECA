@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from './ProgressBar';
 import { planCalendar, planSummary, type CalendarWeek } from '../lib/cyclePlan';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { TrainingCycle, WorkoutLog } from '../lib/types';
 
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -157,11 +157,18 @@ export function PlanCalendar({
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.sm },
-  weekBig: { ...typography.h2, color: colors.text },
+  weekBig: { ...typography.h2, ...tabularNums, color: colors.text },
   weekOf: { ...typography.h3, color: colors.textMuted, fontFamily: fonts.medium },
   headHint: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   adherenceBox: { alignItems: 'flex-end' },
-  adherencePct: { ...typography.h3, color: colors.primaryBright },
+  /**
+   * El calendario del plan es una TABLA: semana a semana, en columnas que se
+   * leen de arriba abajo. Los dígitos de Inter son de ancho proporcional, así
+   * que "S1" y "S11" o "2/4" y "3/5" no ocupan lo mismo y las columnas quedan
+   * dentadas — el defecto que hace que una tabla parezca mal alineada sin que
+   * se sepa por qué. Cifras tabulares en todo lo que forma columna.
+   */
+  adherencePct: { ...typography.h3, ...tabularNums, color: colors.primaryBright },
   adherenceLabel: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   blockHead: {
     flexDirection: 'row',
@@ -191,9 +198,9 @@ const styles = StyleSheet.create({
   bandDeload: { backgroundColor: colors.textMuted },
   bandPast: { opacity: 0.45 },
   weekLabelBox: { width: 46 },
-  weekNum: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  weekNum: { ...typography.small, ...tabularNums, color: colors.textMuted, fontFamily: fonts.semiBold },
   weekNumNow: { color: colors.primaryBright },
-  weekDates: { fontSize: 10, color: colors.textFaint, fontFamily: fonts.medium },
+  weekDates: { fontSize: 10, ...tabularNums, color: colors.textFaint, fontFamily: fonts.medium },
   daysRow: { flexDirection: 'row', flex: 1, gap: 2 },
   dayCell: { flex: 1, alignItems: 'center', gap: 2 },
   dayDot: {
@@ -208,7 +215,7 @@ const styles = StyleSheet.create({
   dayDotDeload: { backgroundColor: colors.textMuted, borderColor: colors.textMuted },
   dayLetter: { fontSize: 9, color: colors.textFaint, fontFamily: fonts.medium },
   countBox: { width: 46, alignItems: 'flex-end' },
-  count: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  count: { ...typography.small, ...tabularNums, color: colors.textMuted, fontFamily: fonts.semiBold },
   countOk: { color: colors.primaryBright },
   countTarget: { color: colors.textFaint, fontFamily: fonts.medium },
   deloadTag: { fontSize: 9, color: colors.textFaint, fontFamily: fonts.medium },

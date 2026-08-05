@@ -3,7 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { playBeep, primeAudio } from '../lib/sound';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, typography, tabularNums } from '../lib/theme';
 
 /**
  * Temporizador EMOM (Every Minute On the Minute): cada intervalo arranca una
@@ -167,6 +167,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepperValue: {
+    ...tabularNums,
     ...typography.body,
     color: colors.text,
     fontFamily: fonts.semiBold,

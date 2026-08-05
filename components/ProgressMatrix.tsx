@@ -11,7 +11,7 @@ import {
 } from '../lib/firestore/progressTrackers';
 import { startOfWeek, weeklyExerciseMatrix, type MatrixCell } from '../lib/stats';
 import { moveItem, useDragReorder } from '../lib/useDragReorder';
-import { fonts, colors, radius, spacing, typography } from '../lib/theme';
+import { fonts, colors, radius, spacing, typography, tabularNums } from '../lib/theme';
 import type { WorkoutLog } from '../lib/types';
 
 const NAME_W = 132;
@@ -526,6 +526,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   weekHeadText: {
+    ...tabularNums,
     ...typography.small,
     color: colors.textFaint,
     fontSize: 11,
