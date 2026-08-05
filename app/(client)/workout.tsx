@@ -24,7 +24,6 @@ import { FadeIn, PopIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
 import { IntervalTimer } from '../../components/IntervalTimer';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { StatTile } from '../../components/StatTile';
@@ -36,6 +35,9 @@ import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { applyWeekPlan } from '../../lib/weekPlan';
 import { RirPicker } from '../../components/RirPicker';
+import { PressableScale } from '../../components/PressableScale';
+import { SessionHeader } from '../../components/SessionHeader';
+import type { AccionRapida } from '../../components/QuickSheet';
 import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
@@ -947,7 +949,6 @@ export default function WorkoutScreen() {
 
   const totalSets = log.reduce((acc, ex) => acc + ex.sets.length, 0);
   const doneSets = log.reduce((acc, ex) => acc + ex.sets.filter((s) => s.completed).length, 0);
-  const progress = totalSets > 0 ? doneSets / totalSets : 0;
   // Índice visible en el modo enfocado (acotado por si la lista cambió).
   const safeIndex = Math.min(viewIndex, Math.max(0, log.length - 1));
   const isLastExercise = safeIndex >= log.length - 1;
@@ -963,6 +964,39 @@ export default function WorkoutScreen() {
   // En Sensaciones, "flexAgain" permite ignorar la tarjeta de completado para
   // encadenar un segundo entreno el mismo día.
   const showCompleted = !!completedTodayLog && !inProgress && !(isFlex && flexAgain);
+
+  // Lo que se toca una vez al mes vive detrás del punto de la cabecera, no
+  // ocupando dos filas encima de la primera serie.
+  const accionesSesion: AccionRapida[] = [
+    ...(routine?.schedule === 'cycle'
+      ? ([
+          {
+            icono: 'refresh' as const,
+            texto: todaySession.cycleLabel
+              ? `Reiniciar ciclo (hoy: ${todaySession.cycleLabel})`
+              : 'Reiniciar ciclo',
+            onPress: () => {
+              handleStartCycleToday();
+            },
+          },
+          {
+            icono: 'calendar-outline' as const,
+            texto: 'Fijar el día de hoy',
+            onPress: () => setDayPickerOpen(true),
+          },
+        ] satisfies AccionRapida[])
+      : []),
+    ...(isFlex && combinedDay
+      ? ([
+          {
+            icono: 'close-circle-outline' as const,
+            texto: 'Cancelar este entreno',
+            onPress: cancelFlexSession,
+            peligro: true,
+          },
+        ] satisfies AccionRapida[])
+      : []),
+  ];
 
   const handleSave = async () => {
     if (!profile || !routine || !day) return;
@@ -1272,27 +1306,19 @@ export default function WorkoutScreen() {
         />
       ) : null}
 
-      <View style={styles.topBarRow}>
-        <Pressable
-          onPress={() => {
-            // Con la sesión en marcha no se sale a la ligera: confirmación.
-            if (inProgress) setExitConfirmOpen(true);
-            else router.push('/(client)/dashboard');
-          }}
-          style={styles.exitBtn}
-          hitSlop={8}
-        >
-          <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
-          <Text style={styles.exitText}>Salir del entreno</Text>
-        </Pressable>
-        {isFlex && combinedDay ? (
-          <Pressable onPress={cancelFlexSession} style={styles.cancelFlexBtn} hitSlop={8}>
-            <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
-            <Text style={styles.cancelFlexText}>Cancelar entreno</Text>
-          </Pressable>
-        ) : null}
-      </View>
-      <Text style={styles.title}>{routine.name}</Text>
+      <SessionHeader
+        titulo={routine.name}
+        dia={day && !showCompleted ? day.name : null}
+        intensidad={showCompleted ? null : day?.intensity}
+        hechas={doneSets}
+        totales={showCompleted ? 0 : totalSets}
+        acciones={accionesSesion}
+        onSalir={() => {
+          // Con la sesión en marcha no se sale a la ligera: confirmación.
+          if (inProgress) setExitConfirmOpen(true);
+          else router.push('/(client)/dashboard');
+        }}
+      />
 
       {/* Entreno de un día anterior sin finalizar: rellenarlo o dejarlo para luego. */}
       {pastDraft && !pastDismissed && !restored ? (
@@ -1386,22 +1412,6 @@ export default function WorkoutScreen() {
           })}
         </ScrollView>
       )}
-
-      {routine.schedule === 'cycle' ? (
-        <View style={styles.cycleActionsRow}>
-          <Pressable onPress={handleStartCycleToday} style={styles.resetCycleBtn} hitSlop={6}>
-            <Ionicons name="refresh" size={13} color={colors.primary} />
-            <Text style={styles.resetCycleText}>
-              {todaySession.cycleLabel ? `Hoy: ${todaySession.cycleLabel} · ` : ''}
-              Reiniciar ciclo
-            </Text>
-          </Pressable>
-          <Pressable onPress={() => setDayPickerOpen(true)} style={styles.resetCycleBtn} hitSlop={6}>
-            <Ionicons name="calendar-outline" size={13} color={colors.primary} />
-            <Text style={styles.resetCycleText}>Fijar día actual</Text>
-          </Pressable>
-        </View>
-      ) : null}
 
       {!showCompleted && isFlex && flexResting ? (
         <FadeIn>
@@ -1516,15 +1526,6 @@ export default function WorkoutScreen() {
           </View>
         </View>
       </Modal>
-
-      {day?.intensity ? (
-        <View style={styles.intensityBanner}>
-          <Ionicons name="flame" size={15} color={colors.primary} />
-          <Text style={styles.intensityBannerText}>
-            Intensidad de hoy: {day.intensity}/10
-          </Text>
-        </View>
-      ) : null}
 
       {showOptionalChoice ? (
         <FadeIn>
@@ -1674,37 +1675,22 @@ export default function WorkoutScreen() {
         })()
       ) : isFlex && (!combinedDay || flexResting) ? null : (
       <>
-      {totalSets > 0 ? (
-        <View style={styles.progressBlock}>
-          <View style={styles.progressTopRow}>
-            <Text style={styles.exerciseCounter}>
-              Ejercicio {safeIndex + 1} de {log.length}
-            </Text>
-            <Text style={styles.progressText}>
-              {doneSets}/{totalSets} series
-            </Text>
-          </View>
-          <ProgressBar progress={progress} height={6} />
-          {log.length > 1 ? (
-            <View style={styles.exDotsRow}>
-              {log.map((ex, i) => {
-                const exDone = ex.sets.length > 0 && ex.sets.every((s) => s.completed);
-                const current = i === safeIndex;
-                return (
-                  <Pressable
-                    key={i}
-                    onPress={() => setViewIndex(i)}
-                    hitSlop={6}
-                    style={[
-                      styles.exDot,
-                      exDone && styles.exDotDone,
-                      current && styles.exDotCurrent,
-                    ]}
-                  />
-                );
-              })}
-            </View>
-          ) : null}
+      {/* El cuánto llevas lo dice el anillo de la cabecera; aquí solo queda el
+          salto entre ejercicios, que es navegación y no información. */}
+      {totalSets > 0 && log.length > 1 ? (
+        <View style={styles.exDotsRow}>
+          {log.map((ex, i) => {
+            const exDone = ex.sets.length > 0 && ex.sets.every((s) => s.completed);
+            const current = i === safeIndex;
+            return (
+              <Pressable
+                key={i}
+                onPress={() => setViewIndex(i)}
+                hitSlop={8}
+                style={[styles.exDot, exDone && styles.exDotDone, current && styles.exDotCurrent]}
+              />
+            );
+          })}
         </View>
       ) : null}
 
@@ -1949,20 +1935,28 @@ export default function WorkoutScreen() {
             </View>
             {exercise.sets.map((set, setIndex) => (
               <View key={setIndex} style={styles.setRow}>
-                <Pressable
-                  onPress={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
-                  style={[styles.checkButton, set.completed && styles.checkButtonDone]}
-                  hitSlop={6}
-                >
-                  <Ionicons
-                    name="checkmark"
-                    size={20}
-                    color={set.completed ? colors.onPrimary : colors.textFaint}
-                  />
-                </Pressable>
-                <Text style={[styles.setLabel, set.completed && styles.setLabelDone]}>
-                  Serie {setIndex + 1}
-                </Text>
+                {/* El nombre de la serie también marca: es hueco muerto al lado
+                    del círculo, y con las manos cansadas se falla menos cuanto
+                    más grande es lo que hay que tocar. */}
+                <View style={styles.setToggleWrap}>
+                  <PressableScale
+                    haptic
+                    onPress={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
+                    style={styles.setToggle}
+                    hitSlop={6}
+                  >
+                    <View style={[styles.checkButton, set.completed && styles.checkButtonDone]}>
+                      <Ionicons
+                        name="checkmark"
+                        size={20}
+                        color={set.completed ? colors.onPrimary : colors.textFaint}
+                      />
+                    </View>
+                    <Text style={[styles.setLabel, set.completed && styles.setLabelDone]}>
+                      Serie {setIndex + 1}
+                    </Text>
+                  </PressableScale>
+                </View>
                 <TextField
                   value={set.reps}
                   onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
@@ -2142,14 +2136,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   exitText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  topBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  cancelFlexBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: spacing.xs },
-  cancelFlexText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold },
   dayTabs: { marginBottom: spacing.md },
   dayTab: {
     paddingHorizontal: spacing.md,
@@ -2163,32 +2149,6 @@ const styles = StyleSheet.create({
   dayTabSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
   dayTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   dayTabTextSelected: { color: colors.onPrimary },
-  intensityBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  intensityBannerText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
-  cycleActionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-    marginTop: -spacing.xs,
-  },
-  resetCycleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    alignSelf: 'flex-start',
-  },
   dayPickerBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -2289,22 +2249,13 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginTop: spacing.xs,
   },
-  resetCycleText: {
-    ...typography.small,
-    color: colors.primary,
-    fontFamily: fonts.medium,
-    fontSize: 12,
-  },
-  progressWrap: {
+  // Tira de puntos: un ejercicio por punto (dorado = hecho, aro = actual).
+  exDotsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: spacing.md,
   },
-  progressBlock: { marginBottom: spacing.md, gap: spacing.xs },
-  progressTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  // Tira de puntos: un ejercicio por punto (dorado = hecho, aro = actual).
-  exDotsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
   exDot: {
     width: 8,
     height: 8,
@@ -2319,12 +2270,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderColor: colors.primaryBright,
     backgroundColor: colors.primaryMuted,
-  },
-  exerciseCounter: {
-    ...typography.label,
-    color: colors.primaryBright,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   navRow: {
     flexDirection: 'row',
@@ -2350,17 +2295,6 @@ const styles = StyleSheet.create({
   navBtnTextDisabled: { color: colors.textFaint },
   navNext: { flex: 1, backgroundColor: colors.primary, borderColor: colors.primary },
   navNextText: { color: colors.onPrimary },
-  progressTrack: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
-  progressText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   exerciseCard: { marginBottom: spacing.md },
   exerciseCardDone: { opacity: 0.55 },
   exerciseHeader: {
@@ -2538,6 +2472,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
+  },
+  // El flex vive fuera: PressableScale pone el estilo en su capa animada, no en
+  // el Pressable, así que sin envoltorio la fila no reparte el espacio.
+  setToggleWrap: { flex: 1 },
+  setToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 2,
   },
   setLabel: { ...typography.small, color: colors.text, flex: 1, fontFamily: fonts.semiBold },
   setLabelDone: { color: colors.textMuted },
