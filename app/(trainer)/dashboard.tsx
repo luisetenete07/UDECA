@@ -16,6 +16,7 @@ import { ClientPulse, pulsoDeAlumnos } from '../../components/ClientPulse';
 import { destacados, tendenciaDeAlumnos } from '../../lib/coachInsights';
 import { getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
+import { PanelOrderSheet, type BloqueOrdenable } from '../../components/PanelOrderSheet';
 import { CountUp } from '../../components/CountUp';
 import { PressableScale } from '../../components/PressableScale';
 import { Segmented } from '../../components/Segmented';
@@ -23,6 +24,7 @@ import { Sheet } from '../../components/Sheet';
 import { FadeIn } from '../../components/FadeIn';
 import { ProgressRing } from '../../components/ProgressRing';
 import { showToast } from '../../components/Toast';
+import { usePanelOrder } from '../../lib/usePanelOrder';
 import { useAuth } from '../../lib/auth-context';
 import {
   getClientsForTrainer,
@@ -95,6 +97,7 @@ export default function TrainerDashboard() {
   const [remindingPays, setRemindingPays] = useState(false);
   const [paysReminded, setPaysReminded] = useState(false);
   const [payListOpen, setPayListOpen] = useState(false);
+  const [ordenarOpen, setOrdenarOpen] = useState(false);
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [incomeScope, setIncomeScope] = useState<'month' | 'all'>('month');
   const [upcomingOpen, setUpcomingOpen] = useState(false);
@@ -534,6 +537,382 @@ export default function TrainerDashboard() {
   };
 
 
+  /**
+   * Los bloques que se pueden reordenar, en su orden de fábrica.
+   *
+   * Los avisos de arriba —lo que necesita atención, los primeros pasos, un
+   * error de carga— NO entran: son transitorios y urgentes, y dejar que alguien
+   * los mande al final del panel es dejar que se pierda un pago vencido por una
+   * preferencia que puso hace medio año.
+   */
+  const BLOQUES_PANEL: BloqueOrdenable[] = [
+    { id: 'grupo', icono: 'people-outline', titulo: 'Tu grupo esta semana' },
+    { id: 'tendencias', icono: 'pulse-outline', titulo: 'Cómo van' },
+    { id: 'hoy', icono: 'checkbox-outline', titulo: 'Hoy' },
+    { id: 'accesos', icono: 'flash-outline', titulo: 'Accesos rápidos' },
+    { id: 'cobros', icono: 'cash-outline', titulo: 'Cobros del mes' },
+    { id: 'actividad', icono: 'list-outline', titulo: 'Actividad reciente' },
+  ];
+  const { orden, mover, restaurar } = usePanelOrder(
+    'entrenador',
+    BLOQUES_PANEL.map((b) => b.id)
+  );
+
+  /**
+   * Cada bloque del panel, con nombre propio.
+   *
+   * Para pintarlos en el orden que elija el entrenador tienen que ser valores
+   * con identidad, no JSX suelto en mitad del render. Las condiciones de cada
+   * uno se quedan dentro: un bloque que hoy no toca sigue existiendo en el
+   * orden, simplemente no pinta nada.
+   */
+  const bloques: Record<string, React.ReactNode> = {
+    /* El pulso del grupo: cuántos alumnos han entrenado ESTA semana. Es el
+       número que un entrenador mira primero, y el que dice si hay que
+       escribirle a alguien hoy — por eso viene de fábrica el primero. */
+    grupo: (
+      clients.length > 0 ? (
+        <FadeIn delay={70}>
+        <Card style={styles.section}>
+          <View style={styles.pulseRow}>
+            <ProgressRing
+              progress={wk.activeClients / clients.length}
+              value={`${wk.activeClients}/${clients.length}`}
+              label="activos"
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sectionTitle}>Tu grupo esta semana</Text>
+              <Text style={styles.pulseBig}>
+                {wk.activeClients === clients.length
+                  ? 'Han entrenado todos'
+                  : `${clients.length - wk.activeClients} sin entrenar`}
+              </Text>
+              <Text style={styles.subtleHint}>
+                {wk.thisWeek} entreno{wk.thisWeek === 1 ? '' : 's'} en total
+                {wk.lastWeek > 0
+                  ? wk.thisWeek >= wk.lastWeek
+                    ? ` · ${wk.thisWeek - wk.lastWeek} más que la semana pasada`
+                    : ` · ${wk.lastWeek - wk.thisWeek} menos que la semana pasada`
+                  : ''}
+              </Text>
+            </View>
+          </View>
+
+          {/* Lo único accionable del bloque: a quién hay que escribirle. Antes
+              era una cifra suelta en un cuadro que no llevaba a ninguna parte. */}
+          {inactiveClients.length > 0 ? (
+            <Pressable
+              style={styles.pulseAction}
+              onPress={() => router.push('/(trainer)/clients')}
+            >
+              <Ionicons name="alert-circle-outline" size={16} color={colors.warning} />
+              <Text style={styles.pulseActionText}>
+                {inactiveClients.length} sin entrenar hace más de una semana
+              </Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
+
+          {/* Las caras, ordenadas por quién necesita algo primero. La pregunta
+              "quién ha entrenado y quién no" se contestaba entre una cifra, una
+              lista de actividad y la ficha de cada alumno: tres sitios para una
+              pregunta de tres segundos. */}
+          <View style={styles.pulseStrip}>
+            <ClientPulse
+              alumnos={pulso}
+              onPress={(uid) => router.push(`/(trainer)/clients/${uid}`)}
+            />
+          </View>
+        </Card>
+        </FadeIn>
+      ) : null
+    ),
+    /* Quién mejora y quién empeora. Es la pregunta que justifica el trabajo
+       del entrenador y la única de las suyas que no se podía contestar sin
+       entrar en cada ficha: con cinco alumnos son cinco viajes, con veinte no
+       se hace nunca. */
+    tendencias: (
+      tendencias.bajan.length > 0 || tendencias.suben.length > 0 ? (
+        <FadeIn delay={105}>
+          <Card style={styles.section}>
+            <View style={styles.titleRow}>
+              <Ionicons name="pulse-outline" size={16} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Cómo van</Text>
+            </View>
+            <Text style={styles.trendPeriod}>Estas dos semanas frente a las dos anteriores</Text>
+
+            {tendencias.bajan.map((a) => (
+              <PressableScale
+                key={a.uid}
+                style={styles.trendRow}
+                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
+              >
+                <Ionicons name="trending-down" size={17} color={colors.warning} />
+                <Text style={styles.trendName} numberOfLines={1}>
+                  {a.name}
+                </Text>
+                <Text style={[styles.trendDelta, { color: colors.warning }]}>
+                  {Math.round(a.cambio * 100)} %
+                </Text>
+                <Text style={styles.trendDetail}>
+                  {a.seriesAntes} a {a.seriesAhora} series
+                </Text>
+              </PressableScale>
+            ))}
+
+            {tendencias.suben.slice(0, 3).map((a) => (
+              <PressableScale
+                key={a.uid}
+                style={styles.trendRow}
+                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
+              >
+                <Ionicons name="trending-up" size={17} color={colors.success} />
+                <Text style={styles.trendName} numberOfLines={1}>
+                  {a.name}
+                </Text>
+                <Text style={[styles.trendDelta, { color: colors.success }]}>
+                  +{Math.round(a.cambio * 100)} %
+                </Text>
+                <Text style={styles.trendDetail}>
+                  {a.seriesAntes} a {a.seriesAhora} series
+                </Text>
+              </PressableScale>
+            ))}
+          </Card>
+        </FadeIn>
+      ) : null
+    ),
+    /* Las tareas de hoy, aquí y no solo en la agenda: una tarea que hay que ir
+       a buscar es una tarea que se olvida. Se marcan desde aquí mismo. */
+    hoy: (
+      tareasHoy.length > 0 ? (
+        <FadeIn delay={175}>
+          <Card style={styles.section}>
+            <View style={styles.titleRow}>
+              <Ionicons name="checkbox-outline" size={16} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Hoy</Text>
+            </View>
+            {tareasHoy.map((t) => (
+              <PressableScale
+                key={t.id}
+                haptic
+                style={styles.taskRow}
+                onPress={async () => {
+                  // Se tacha al momento y se guarda detrás: esperar a la red
+                  // para ver un tic es lo que hace que una app parezca lenta.
+                  setTasks((prev) =>
+                    prev.map((x) => (x.id === t.id ? { ...x, done: true } : x))
+                  );
+                  try {
+                    await updateCoachTask(t.id, { done: true, doneAt: Date.now() });
+                  } catch {
+                    setTasks((prev) =>
+                      prev.map((x) => (x.id === t.id ? { ...x, done: false } : x))
+                    );
+                    showToast('No se pudo marcar');
+                  }
+                }}
+              >
+                <View style={styles.taskCheck} />
+                <Text style={styles.taskTitle} numberOfLines={1}>
+                  {t.title}
+                </Text>
+                {t.flagged ? (
+                  <Ionicons name="flag" size={13} color={colors.primary} />
+                ) : null}
+              </PressableScale>
+            ))}
+          </Card>
+        </FadeIn>
+      ) : null
+    ),
+    /* Los accesos van, de fábrica, DESPUÉS de saber cómo va el grupo: son
+       herramientas, y una herramienta antes del diagnóstico se usa a ciegas.
+       Quien prefiera tenerlas a mano puede subirlas, que para eso se ordena. */
+    accesos: (
+      <FadeIn delay={140}>
+      <View style={styles.quickRow}>
+        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/agenda')}>
+          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Calendario y tareas</Text>
+        </Pressable>
+        <Pressable
+          style={styles.quickBtn}
+          onPress={() => router.push('/(trainer)/exercises/new')}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Nuevo ejercicio</Text>
+        </Pressable>
+        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/courses/new')}>
+          <Ionicons name="videocam-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickLabel}>Nuevo curso</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.quickBtn, paysReminded && { opacity: 0.5 }]}
+          onPress={handleRemindAllPayments}
+          disabled={remindingPays || paysReminded}
+        >
+          <View>
+            <Ionicons name="cash-outline" size={20} color={colors.primary} />
+            {duePayClients.length > 0 && !paysReminded ? (
+              <View style={styles.quickBadge}>
+                <Text style={styles.quickBadgeText}>{duePayClients.length}</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.quickLabel}>
+            {paysReminded ? 'Pagos avisados' : 'Recordar pagos'}
+          </Text>
+        </Pressable>
+      </View>
+      </FadeIn>
+    ),
+    /* Los cobros. Hay entrenadores que los miran a diario y otros que no los
+       abren en un mes: es el bloque que más pide poder moverse de sitio. */
+    cobros: (
+
+      showBilling ? (
+        <FadeIn delay={210}>
+        <View style={styles.section}>
+        <CollapsibleCard
+          id="cobros"
+          icon="cash-outline"
+          title="Cobros del mes"
+          hint={`${incomeThisMonth} € · ${pendingAmount} € pendiente`}
+        >
+          <View style={styles.revenueRow}>
+            <Pressable style={styles.revenueBox} onPress={() => setIncomeOpen(true)}>
+              <CountUp value={incomeThisMonth} suffix=" €" style={styles.revenueValue} />
+              <Text style={styles.revenueLabel}>Ingresado este mes</Text>
+              <Ionicons
+                name="create-outline"
+                size={13}
+                color={colors.textFaint}
+                style={styles.revenueBoxIcon}
+              />
+            </Pressable>
+            <Pressable style={styles.revenueBox} onPress={() => setPayListOpen(true)}>
+              <CountUp
+                value={pendingAmount}
+                suffix=" €"
+                style={[styles.revenueValue, { color: '#C9902B' }]}
+              />
+              <Text style={styles.revenueLabel}>Pendiente ({duePayClients.length})</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={13}
+                color={colors.textFaint}
+                style={styles.revenueBoxIcon}
+              />
+            </Pressable>
+            {projected30 > 0 ? (
+              <Pressable style={styles.revenueBox} onPress={() => setUpcomingOpen(true)}>
+                <CountUp
+                  value={projected30}
+                  suffix=" €"
+                  style={[styles.revenueValue, { color: colors.textMuted }]}
+                />
+                <Text style={styles.revenueLabel}>
+                  Previsto 30 días ({upcoming.length})
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={13}
+                  color={colors.textFaint}
+                  style={styles.revenueBoxIcon}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+          {nextPayment ? (
+            <Pressable
+              onPress={() => router.push(`/(trainer)/clients/${nextPayment.uid}`)}
+              style={styles.nextPayRow}
+              hitSlop={4}
+            >
+              <Avatar name={nextPayment.name} photoURL={nextPayment.photoURL} size={30} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nextPayLabel}>Próximo cobro</Text>
+                <Text style={styles.nextPayName} numberOfLines={1}>
+                  {nextPayment.name}
+                  {nextPayment.monthlyFeeEur ? ` · ${nextPayment.monthlyFeeEur} €` : ''}
+                </Text>
+              </View>
+              <Text style={styles.nextPayDate}>
+                {new Date(nextPayment.nextPaymentDate!).toLocaleDateString('es-ES', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </Text>
+            </Pressable>
+          ) : null}
+          <View style={styles.countsRow}>
+            {PAYMENT_STATUSES.filter((p) => payCounts[p]).map((p) => (
+              <View key={p} style={styles.countChip}>
+                <View
+                  style={[styles.dot, { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[p]] }]}
+                />
+                <Text style={styles.countText}>
+                  {payCounts[p]} {PAYMENT_STATUS_LABEL[p]}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {duePayClients.length > 0 ? (
+            <Pressable
+              onPress={() => setPayListOpen(true)}
+              style={styles.dueBanner}
+              hitSlop={6}
+            >
+              <Ionicons name="alert-circle" size={15} color={colors.danger} />
+              <Text style={styles.dueText}>
+                {duePayClients.length} pago{duePayClients.length === 1 ? '' : 's'} pendiente
+                {duePayClients.length === 1 ? '' : 's'}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.danger} />
+            </Pressable>
+          ) : null}
+        </CollapsibleCard>
+        </View>
+        </FadeIn>
+      ) : null
+    ),
+    /* La actividad reciente, al final: es para mirar, no para actuar. */
+    actividad: (
+      <FadeIn delay={280}>
+      <View style={styles.section}>
+      <CollapsibleCard id="actividad" icon="pulse-outline" title="Actividad reciente">
+        {logs.length === 0 ? (
+          <EmptyState icon="pulse-outline" title="Aún no hay actividad" subtitle="Cuando tus alumnos entrenen, sus sesiones aparecerán aquí." />
+        ) : (
+          logs.slice(0, 6).map((log) => {
+            const client = byId(log.clientId);
+            return (
+              <Pressable
+                key={log.id}
+                onPress={() =>
+                  router.push(`/(trainer)/clients/${log.clientId}/session?logId=${log.id}`)
+                }
+                style={styles.activityRow}
+              >
+                <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
+                  <Text style={styles.logDetail}>
+                    {log.dayName} · {new Date(log.date).toLocaleDateString('es-ES')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+              </Pressable>
+            );
+          })
+        )}
+      </CollapsibleCard>
+      </View>
+      </FadeIn>
+    ),
+  };
+
   return (
     <ScreenContainer>
       <TrialBanner profile={profile} />
@@ -544,9 +923,17 @@ export default function TrainerDashboard() {
         eyebrow="Panel del entrenador"
         title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
         actions={
-          <Pressable onPress={() => router.push('/(trainer)/profile')}>
-            <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
-          </Pressable>
+          <>
+            {/* Discreto a propósito: se toca una vez cada muchos meses, y un
+                botón de "ordenar" con peso compite cada día con lo que el panel
+                viene a contar. */}
+            <Pressable onPress={() => setOrdenarOpen(true)} hitSlop={8} style={styles.ordenarBtn}>
+              <Ionicons name="reorder-three-outline" size={20} color={colors.textMuted} />
+            </Pressable>
+            <Pressable onPress={() => router.push('/(trainer)/profile')}>
+              <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
+            </Pressable>
+          </>
         }
       />
 
@@ -703,339 +1090,22 @@ export default function TrainerDashboard() {
         </Card>
       ) : null}
 
-      {/* El pulso del grupo: cuántos alumnos han entrenado ESTA semana. Es el
-          número que un entrenador mira primero, y el que dice si hay que
-          escribirle a alguien hoy. */}
-      {clients.length > 0 ? (
-        <FadeIn delay={70}>
-        <Card style={styles.section}>
-          <View style={styles.pulseRow}>
-            <ProgressRing
-              progress={wk.activeClients / clients.length}
-              value={`${wk.activeClients}/${clients.length}`}
-              label="activos"
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.sectionTitle}>Tu grupo esta semana</Text>
-              <Text style={styles.pulseBig}>
-                {wk.activeClients === clients.length
-                  ? 'Han entrenado todos'
-                  : `${clients.length - wk.activeClients} sin entrenar`}
-              </Text>
-              <Text style={styles.subtleHint}>
-                {wk.thisWeek} entreno{wk.thisWeek === 1 ? '' : 's'} en total
-                {wk.lastWeek > 0
-                  ? wk.thisWeek >= wk.lastWeek
-                    ? ` · ${wk.thisWeek - wk.lastWeek} más que la semana pasada`
-                    : ` · ${wk.lastWeek - wk.thisWeek} menos que la semana pasada`
-                  : ''}
-              </Text>
-            </View>
-          </View>
+      {/* Los bloques, en el orden que haya elegido el entrenador. El panel es
+          de quien lo usa: quien mira los cobros a diario y quien no los abre en
+          un mes no tienen por qué recorrer lo mismo. */}
+      {orden.map((id) => (
+        <React.Fragment key={id}>{bloques[id]}</React.Fragment>
+      ))}
 
-          {/* Lo único accionable del bloque: a quién hay que escribirle. Antes
-              era una cifra suelta en un cuadro que no llevaba a ninguna parte. */}
-          {inactiveClients.length > 0 ? (
-            <Pressable
-              style={styles.pulseAction}
-              onPress={() => router.push('/(trainer)/clients')}
-            >
-              <Ionicons name="alert-circle-outline" size={16} color={colors.warning} />
-              <Text style={styles.pulseActionText}>
-                {inactiveClients.length} sin entrenar hace más de una semana
-              </Text>
-              <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
-            </Pressable>
-          ) : null}
-
-          {/* Las caras, ordenadas por quién necesita algo primero. La pregunta
-              "quién ha entrenado y quién no" se contestaba entre una cifra, una
-              lista de actividad y la ficha de cada alumno: tres sitios para una
-              pregunta de tres segundos. */}
-          <View style={styles.pulseStrip}>
-            <ClientPulse
-              alumnos={pulso}
-              onPress={(uid) => router.push(`/(trainer)/clients/${uid}`)}
-            />
-          </View>
-        </Card>
-        </FadeIn>
-      ) : null}
-
-      {/* Quién mejora y quién empeora. Es la pregunta que justifica el trabajo
-          del entrenador y la única de las suyas que no se podía contestar sin
-          entrar en cada ficha: con cinco alumnos son cinco viajes, con veinte
-          no se hace nunca. */}
-      {tendencias.bajan.length > 0 || tendencias.suben.length > 0 ? (
-        <FadeIn delay={105}>
-          <Card style={styles.section}>
-            <View style={styles.titleRow}>
-              <Ionicons name="pulse-outline" size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Cómo van</Text>
-            </View>
-            <Text style={styles.trendPeriod}>Estas dos semanas frente a las dos anteriores</Text>
-
-            {tendencias.bajan.map((a) => (
-              <PressableScale
-                key={a.uid}
-                style={styles.trendRow}
-                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
-              >
-                <Ionicons name="trending-down" size={17} color={colors.warning} />
-                <Text style={styles.trendName} numberOfLines={1}>
-                  {a.name}
-                </Text>
-                <Text style={[styles.trendDelta, { color: colors.warning }]}>
-                  {Math.round(a.cambio * 100)} %
-                </Text>
-                <Text style={styles.trendDetail}>
-                  {a.seriesAntes} a {a.seriesAhora} series
-                </Text>
-              </PressableScale>
-            ))}
-
-            {tendencias.suben.slice(0, 3).map((a) => (
-              <PressableScale
-                key={a.uid}
-                style={styles.trendRow}
-                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
-              >
-                <Ionicons name="trending-up" size={17} color={colors.success} />
-                <Text style={styles.trendName} numberOfLines={1}>
-                  {a.name}
-                </Text>
-                <Text style={[styles.trendDelta, { color: colors.success }]}>
-                  +{Math.round(a.cambio * 100)} %
-                </Text>
-                <Text style={styles.trendDetail}>
-                  {a.seriesAntes} a {a.seriesAhora} series
-                </Text>
-              </PressableScale>
-            ))}
-          </Card>
-        </FadeIn>
-      ) : null}
-
-      {/* Las tareas de hoy, aquí y no solo en la agenda: una tarea que hay que
-          ir a buscar es una tarea que se olvida. Se marcan desde aquí mismo. */}
-      {tareasHoy.length > 0 ? (
-        <FadeIn delay={175}>
-          <Card style={styles.section}>
-            <View style={styles.titleRow}>
-              <Ionicons name="checkbox-outline" size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Hoy</Text>
-            </View>
-            {tareasHoy.map((t) => (
-              <PressableScale
-                key={t.id}
-                haptic
-                style={styles.taskRow}
-                onPress={async () => {
-                  // Se tacha al momento y se guarda detrás: esperar a la red
-                  // para ver un tic es lo que hace que una app parezca lenta.
-                  setTasks((prev) =>
-                    prev.map((x) => (x.id === t.id ? { ...x, done: true } : x))
-                  );
-                  try {
-                    await updateCoachTask(t.id, { done: true, doneAt: Date.now() });
-                  } catch {
-                    setTasks((prev) =>
-                      prev.map((x) => (x.id === t.id ? { ...x, done: false } : x))
-                    );
-                    showToast('No se pudo marcar');
-                  }
-                }}
-              >
-                <View style={styles.taskCheck} />
-                <Text style={styles.taskTitle} numberOfLines={1}>
-                  {t.title}
-                </Text>
-                {t.flagged ? (
-                  <Ionicons name="flag" size={13} color={colors.primary} />
-                ) : null}
-              </PressableScale>
-            ))}
-          </Card>
-        </FadeIn>
-      ) : null}
-
-      {/* Los accesos van DESPUÉS de saber cómo va el grupo: son herramientas,
-          y una herramienta antes del diagnóstico se usa a ciegas. */}
-      <FadeIn delay={140}>
-      <View style={styles.quickRow}>
-        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/agenda')}>
-          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Calendario y tareas</Text>
-        </Pressable>
-        <Pressable
-          style={styles.quickBtn}
-          onPress={() => router.push('/(trainer)/exercises/new')}
-        >
-          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Nuevo ejercicio</Text>
-        </Pressable>
-        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/courses/new')}>
-          <Ionicons name="videocam-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Nuevo curso</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.quickBtn, paysReminded && { opacity: 0.5 }]}
-          onPress={handleRemindAllPayments}
-          disabled={remindingPays || paysReminded}
-        >
-          <View>
-            <Ionicons name="cash-outline" size={20} color={colors.primary} />
-            {duePayClients.length > 0 && !paysReminded ? (
-              <View style={styles.quickBadge}>
-                <Text style={styles.quickBadgeText}>{duePayClients.length}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={styles.quickLabel}>
-            {paysReminded ? 'Pagos avisados' : 'Recordar pagos'}
-          </Text>
-        </Pressable>
-      </View>
-      </FadeIn>
-
-
-      {showBilling ? (
-        <FadeIn delay={210}>
-        <View style={styles.section}>
-        <CollapsibleCard
-          id="cobros"
-          icon="cash-outline"
-          title="Cobros del mes"
-          hint={`${incomeThisMonth} € · ${pendingAmount} € pendiente`}
-        >
-          <View style={styles.revenueRow}>
-            <Pressable style={styles.revenueBox} onPress={() => setIncomeOpen(true)}>
-              <CountUp value={incomeThisMonth} suffix=" €" style={styles.revenueValue} />
-              <Text style={styles.revenueLabel}>Ingresado este mes</Text>
-              <Ionicons
-                name="create-outline"
-                size={13}
-                color={colors.textFaint}
-                style={styles.revenueBoxIcon}
-              />
-            </Pressable>
-            <Pressable style={styles.revenueBox} onPress={() => setPayListOpen(true)}>
-              <CountUp
-                value={pendingAmount}
-                suffix=" €"
-                style={[styles.revenueValue, { color: '#C9902B' }]}
-              />
-              <Text style={styles.revenueLabel}>Pendiente ({duePayClients.length})</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={13}
-                color={colors.textFaint}
-                style={styles.revenueBoxIcon}
-              />
-            </Pressable>
-            {projected30 > 0 ? (
-              <Pressable style={styles.revenueBox} onPress={() => setUpcomingOpen(true)}>
-                <CountUp
-                  value={projected30}
-                  suffix=" €"
-                  style={[styles.revenueValue, { color: colors.textMuted }]}
-                />
-                <Text style={styles.revenueLabel}>
-                  Previsto 30 días ({upcoming.length})
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={13}
-                  color={colors.textFaint}
-                  style={styles.revenueBoxIcon}
-                />
-              </Pressable>
-            ) : null}
-          </View>
-          {nextPayment ? (
-            <Pressable
-              onPress={() => router.push(`/(trainer)/clients/${nextPayment.uid}`)}
-              style={styles.nextPayRow}
-              hitSlop={4}
-            >
-              <Avatar name={nextPayment.name} photoURL={nextPayment.photoURL} size={30} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nextPayLabel}>Próximo cobro</Text>
-                <Text style={styles.nextPayName} numberOfLines={1}>
-                  {nextPayment.name}
-                  {nextPayment.monthlyFeeEur ? ` · ${nextPayment.monthlyFeeEur} €` : ''}
-                </Text>
-              </View>
-              <Text style={styles.nextPayDate}>
-                {new Date(nextPayment.nextPaymentDate!).toLocaleDateString('es-ES', {
-                  day: 'numeric',
-                  month: 'short',
-                })}
-              </Text>
-            </Pressable>
-          ) : null}
-          <View style={styles.countsRow}>
-            {PAYMENT_STATUSES.filter((p) => payCounts[p]).map((p) => (
-              <View key={p} style={styles.countChip}>
-                <View
-                  style={[styles.dot, { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[p]] }]}
-                />
-                <Text style={styles.countText}>
-                  {payCounts[p]} {PAYMENT_STATUS_LABEL[p]}
-                </Text>
-              </View>
-            ))}
-          </View>
-          {duePayClients.length > 0 ? (
-            <Pressable
-              onPress={() => setPayListOpen(true)}
-              style={styles.dueBanner}
-              hitSlop={6}
-            >
-              <Ionicons name="alert-circle" size={15} color={colors.danger} />
-              <Text style={styles.dueText}>
-                {duePayClients.length} pago{duePayClients.length === 1 ? '' : 's'} pendiente
-                {duePayClients.length === 1 ? '' : 's'}
-              </Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.danger} />
-            </Pressable>
-          ) : null}
-        </CollapsibleCard>
-        </View>
-        </FadeIn>
-      ) : null}
-
-      <FadeIn delay={280}>
-      <View style={styles.section}>
-      <CollapsibleCard id="actividad" icon="pulse-outline" title="Actividad reciente">
-        {logs.length === 0 ? (
-          <EmptyState icon="pulse-outline" title="Aún no hay actividad" subtitle="Cuando tus alumnos entrenen, sus sesiones aparecerán aquí." />
-        ) : (
-          logs.slice(0, 6).map((log) => {
-            const client = byId(log.clientId);
-            return (
-              <Pressable
-                key={log.id}
-                onPress={() =>
-                  router.push(`/(trainer)/clients/${log.clientId}/session?logId=${log.id}`)
-                }
-                style={styles.activityRow}
-              >
-                <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
-                  <Text style={styles.logDetail}>
-                    {log.dayName} · {new Date(log.date).toLocaleDateString('es-ES')}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-              </Pressable>
-            );
-          })
-        )}
-      </CollapsibleCard>
-      </View>
-      </FadeIn>
+      <PanelOrderSheet
+        visible={ordenarOpen}
+        onClose={() => setOrdenarOpen(false)}
+        bloques={orden
+          .map((id) => BLOQUES_PANEL.find((b) => b.id === id))
+          .filter((b): b is BloqueOrdenable => b !== undefined)}
+        onReorder={mover}
+        onRestaurar={restaurar}
+      />
 
       {/* Lista de alumnos con pago pendiente/vencido (desde la alerta roja). */}
       <Sheet
@@ -1213,6 +1283,7 @@ export default function TrainerDashboard() {
 }
 
 const styles = StyleSheet.create({
+  ordenarBtn: { padding: spacing.xs },
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   pulseStrip: { marginTop: spacing.md },
   taskRow: {
