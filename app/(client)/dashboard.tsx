@@ -654,9 +654,14 @@ export default function ClientDashboard() {
       <Card style={styles.section}>
         {targetSessions > 0 ? (
           <View style={styles.weekTop}>
+            {/* Pasada la meta, "2/1" se lee como un error, no como un logro:
+                el anillo ya está cerrado y lo que queda por decir es cuántas
+                llevas. */}
             <ProgressRing
               progress={weekProgress}
-              value={`${sessions}/${targetSessions}`}
+              value={
+                sessions > targetSessions ? String(sessions) : `${sessions}/${targetSessions}`
+              }
               label="semana"
             />
             <View style={{ flex: 1 }}>

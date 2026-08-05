@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   StyleSheet,
   Text,
   TextInput,
@@ -8,7 +10,9 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
-import { colors, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface TextFieldProps extends TextInputProps {
   label?: string;
@@ -45,14 +49,36 @@ export function TextField({
   ...rest
 }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
+  // El borde no salta a oro: entra. Es el mismo gesto que hace un botón al
+  // hundirse —confirmar que la app te ha oído— y aquí importa más, porque un
+  // campo de texto es donde más tiempo se pasa mirando sin que pase nada.
+  const foco = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const a = Animated.timing(foco, {
+      toValue: focused ? 1 : 0,
+      duration: 160,
+      easing: Easing.out(Easing.quad),
+      // El color del borde no lo puede animar el hilo nativo.
+      useNativeDriver: false,
+    });
+    a.start();
+    return () => a.stop();
+  }, [focused, foco]);
+
+  const borde = foco.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.border, colors.primary],
+  });
 
   return (
     <View style={[styles.container, containerStyle]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
-      <TextInput
+      <AnimatedTextInput
         placeholderTextColor={colors.textFaint}
         style={[
           styles.input,
+          { borderColor: borde },
           focused && styles.inputFocused,
           error ? styles.inputError : null,
           style,
@@ -91,11 +117,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 4,
     color: colors.text,
+    // Sin esto el texto que se escribe sale con la fuente del sistema, distinta
+    // de todo lo que lo rodea: se nota aunque no se sepa decir por qué.
+    fontFamily: fonts.body,
     fontSize: 15,
     width: '100%',
   },
   inputFocused: {
-    borderColor: colors.primary,
     backgroundColor: colors.surface,
   },
   inputError: {
