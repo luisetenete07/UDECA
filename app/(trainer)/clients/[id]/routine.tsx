@@ -6,6 +6,7 @@ import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
+import { Segmented } from '../../../../components/Segmented';
 import { TextField } from '../../../../components/TextField';
 import { DragList } from '../../../../components/DragList';
 import { moveItem } from '../../../../lib/useDragReorder';
@@ -778,32 +779,16 @@ export default function RoutineEditorScreen() {
 
       <Card accent style={styles.scheduleCard}>
         <Text style={styles.scheduleTitle}>Programación</Text>
-        <View style={styles.modeRow}>
-          <Pressable
-            onPress={() => setSchedule('weekly')}
-            style={[styles.modeBtn, schedule === 'weekly' && styles.modeBtnActive]}
-          >
-            <Text style={[styles.modeText, schedule === 'weekly' && styles.modeTextActive]}>
-              Días de la semana
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setSchedule('cycle')}
-            style={[styles.modeBtn, schedule === 'cycle' && styles.modeBtnActive]}
-          >
-            <Text style={[styles.modeText, schedule === 'cycle' && styles.modeTextActive]}>
-              Días sueltos
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setSchedule('flex')}
-            style={[styles.modeBtn, schedule === 'flex' && styles.modeBtnActive]}
-          >
-            <Text style={[styles.modeText, schedule === 'flex' && styles.modeTextActive]}>
-              {flexLabel(scheduleLabel)}
-            </Text>
-          </Pressable>
-        </View>
+        <Segmented
+          compacto
+          valor={schedule}
+          opciones={[
+            { valor: 'weekly' as RoutineSchedule, texto: 'Semana' },
+            { valor: 'cycle' as RoutineSchedule, texto: 'Días sueltos' },
+            { valor: 'flex' as RoutineSchedule, texto: flexLabel(scheduleLabel) },
+          ]}
+          onChange={setSchedule}
+        />
 
         {schedule === 'flex' ? (
           <>
@@ -1656,20 +1641,6 @@ const styles = StyleSheet.create({
   dayCard: { marginBottom: spacing.md },
   scheduleCard: { marginBottom: spacing.md },
   scheduleTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  modeRow: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: spacing.xs,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-  },
-  modeBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
-  modeBtnActive: { backgroundColor: colors.primary },
-  modeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  modeTextActive: { color: colors.onPrimary },
   scheduleHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
   dayTools: {
     marginTop: spacing.sm,

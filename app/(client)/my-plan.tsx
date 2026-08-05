@@ -8,6 +8,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { DragList } from '../../components/DragList';
 import { moveItem } from '../../lib/useDragReorder';
+import { Segmented } from '../../components/Segmented';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -294,25 +295,16 @@ export default function MyPlanScreen() {
       {/* Método de programación (igual que el coach). */}
       <Card accent style={styles.scheduleCard}>
         <Text style={styles.scheduleTitle}>Método</Text>
-        <View style={styles.modeRow}>
-          {(
-            [
-              { k: 'weekly', label: 'Días de la semana' },
-              { k: 'cycle', label: 'Días sueltos' },
-              { k: 'flex', label: flexLabel(scheduleLabel) },
-            ] as { k: RoutineSchedule; label: string }[]
-          ).map((m) => (
-            <Pressable
-              key={m.k}
-              onPress={() => setSchedule(m.k)}
-              style={[styles.modeBtn, schedule === m.k && styles.modeBtnActive]}
-            >
-              <Text style={[styles.modeText, schedule === m.k && styles.modeTextActive]}>
-                {m.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <Segmented
+          compacto
+          valor={schedule}
+          opciones={[
+            { valor: 'weekly' as RoutineSchedule, texto: 'Semana' },
+            { valor: 'cycle' as RoutineSchedule, texto: 'Días sueltos' },
+            { valor: 'flex' as RoutineSchedule, texto: flexLabel(scheduleLabel) },
+          ]}
+          onChange={setSchedule}
+        />
 
         {schedule === 'flex' ? (
           <>
@@ -842,20 +834,6 @@ const styles = StyleSheet.create({
   starterChipText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   scheduleCard: { marginBottom: spacing.md },
   scheduleTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  modeRow: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: spacing.xs,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-  },
-  modeBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
-  modeBtnActive: { backgroundColor: colors.primary },
-  modeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  modeTextActive: { color: colors.onPrimary },
   scheduleHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
   cycleResetBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md, alignSelf: 'flex-start' },
   cycleResetText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },

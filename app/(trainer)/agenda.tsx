@@ -29,6 +29,7 @@ import {
 } from '../../lib/firestore/coachTasks';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
+import { Segmented } from '../../components/Segmented';
 import { diaLargo, mesLargo } from '../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
@@ -436,32 +437,20 @@ export default function CoachCalendarScreen() {
         <ProgressBar progress={header.progress} height={8} />
       </View>
 
-      <View style={styles.segments}>
-        {SCOPES.map((s) => {
-          const count = pendingCount(s);
-          const isActive = scope === s;
-          return (
-            <Pressable
-              key={s}
-              onPress={() => {
-                animate();
-                setScope(s);
-                setShowDone(false);
-              }}
-              style={[styles.segment, isActive && styles.segmentActive]}
-            >
-              <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-                {TASK_SCOPE_LABEL[s]}
-              </Text>
-              {count > 0 ? (
-                <View style={[styles.badge, isActive && styles.badgeActive]}>
-                  <Text style={[styles.badgeText, isActive && styles.badgeTextActive]}>{count}</Text>
-                </View>
-              ) : null}
-            </Pressable>
-          );
-        })}
-      </View>
+      <Segmented
+        compacto
+        valor={scope}
+        opciones={SCOPES.map((s) => ({
+          valor: s,
+          texto: TASK_SCOPE_LABEL[s],
+          contador: pendingCount(s),
+        }))}
+        onChange={(s) => {
+          animate();
+          setScope(s);
+          setShowDone(false);
+        }}
+      />
 
       <View style={styles.addRow}>
         <Ionicons name="add" size={20} color={colors.primary} />
@@ -560,27 +549,17 @@ export default function CoachCalendarScreen() {
 
       {/* Conmutador (solo en móvil; en ancho se ven las dos columnas a la vez). */}
       {!isWide ? (
-        <View style={styles.topSeg}>
-          {(['calendar', 'tasks'] as const).map((v) => (
-            <Pressable
-              key={v}
-              onPress={() => {
-                animate();
-                setView(v);
-              }}
-              style={[styles.topSegBtn, view === v && styles.topSegBtnOn]}
-            >
-              <Ionicons
-                name={v === 'calendar' ? 'calendar-outline' : 'checkbox-outline'}
-                size={16}
-                color={view === v ? colors.onPrimary : colors.textMuted}
-              />
-              <Text style={[styles.topSegText, view === v && styles.topSegTextOn]}>
-                {v === 'calendar' ? 'Calendario' : 'Tareas'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <Segmented
+          valor={view}
+          opciones={[
+            { valor: 'calendar' as const, texto: 'Calendario', icono: 'calendar-outline' },
+            { valor: 'tasks' as const, texto: 'Tareas', icono: 'checkbox-outline' },
+          ]}
+          onChange={(v) => {
+            animate();
+            setView(v);
+          }}
+        />
       ) : null}
 
       {isWide ? (
@@ -866,26 +845,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: spacing.md,
   },
-  topSeg: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: 4,
-    marginBottom: spacing.lg,
-  },
-  topSegBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-  },
-  topSegBtnOn: { backgroundColor: colors.primary },
-  topSegText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  topSegTextOn: { color: colors.onPrimary },
   // Calendario
   monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg },
   monthNav: {
@@ -1010,38 +969,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   donePillText: { ...typography.small, color: colors.onPrimary, fontSize: 11, fontFamily: fonts.semiBold },
-  segments: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: 4,
-    marginBottom: spacing.md,
-  },
-  segment: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-  },
-  segmentActive: { backgroundColor: colors.primary },
-  segmentText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  segmentTextActive: { color: colors.onPrimary },
-  badge: {
-    minWidth: 17,
-    height: 17,
-    borderRadius: 9,
-    paddingHorizontal: 4,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeActive: { backgroundColor: 'rgba(0,0,0,0.18)' },
-  badgeText: { ...typography.small, color: colors.textMuted, fontSize: 10, fontFamily: fonts.semiBold },
-  badgeTextActive: { color: colors.onPrimary },
   addRow: {
     flexDirection: 'row',
     alignItems: 'center',
