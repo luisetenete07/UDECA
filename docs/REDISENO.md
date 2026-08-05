@@ -1,6 +1,7 @@
 # Rediseño: lo que queda
 
-Estado a cierre de la sesión del 4 de agosto de 2026. El rediseño ya pasó por la
+Estado a cierre de la sesión del 4 de agosto de 2026. Los puntos 1, 2, 3 y 5
+siguen pendientes; el 4 está hecho. El rediseño ya pasó por la
 tipografía, los bordes, la jerarquía de cada pantalla, la vitrina de cifras, las
 cabeceras y las tarjetas plegables (ver la fase 5 del README). Aquí está lo que
 NO se hizo, con lo que se sabe de cada cosa para no empezar de cero.
@@ -49,30 +50,35 @@ parecido que existe son los **anuncios del coach** (tablón con push a todos) y 
 recordatorio de un toque a un alumno inactivo, que son de una dirección y sin
 conversación. Hay que decidir si se hace antes de diseñar nada.
 
-## 4. Barrido de componentes: inputs, tabs, modales y calendarios
+## 4. Barrido de componentes — HECHO
 
-Tocados de refilón durante el rediseño, no uno a uno. Lo que se sabe:
+Cerrado. Lo que se hizo y lo que se aprendió por el camino:
 
-- **Inputs**: `TextField` ya lleva la letra correcta (antes escribía en la del
-  sistema) y el campo del código de invitación tiene tratamiento propio. Sin
-  revisar: `DateField`, `RirPicker`, `MacroCalculator`.
-- **Modales y hojas**: **17 ficheros se montan su propia hoja** con su
-  `backdrop`, su `borderTopRadius` y sus paddings copiados —seis componentes
-  (`QuickSheet`, `CycleSheet`, `CyclePlanSheet`, `WeekPlanSheet`, `TaskEditSheet`,
-  `ProgressMatrix`) y once pantallas—. Es el mismo caso que tenía la vitrina
-  antes de ser un componente: el patrón ya existe tres veces, así que toca
-  sacarlo a un sitio.
-- **Tabs**: hay al menos tres controles segmentados distintos (las pestañas de
-  Progreso, el conmutador de músculos, los días de la pantalla de entreno).
-  Ninguno comparte estilos con los otros.
-- **Calendarios**: la rejilla de la agenda ya cuadra (cifras tabulares). Sin
-  revisar: `PlanCalendar`, `ConsistencyMap`, `WeekStrip`.
+- **`components/Sheet.tsx`** — la hoja que sube desde abajo, que estaba escrita
+  once veces. Una de ellas (las acciones rápidas) **se cerraba al tocar su
+  propio contenido**: en React Native un toque que nadie recoge sube al padre,
+  así que una hoja metida dentro del `Pressable` que cierra se cierra sola. La
+  hoja lleva ahora una equis además del asa, porque en el ordenador no hay
+  gesto de deslizar y el asa no significa nada.
+- **`components/Dialog.tsx`** — el diálogo del centro, diez veces escrito. En la
+  mayoría **tocar fuera no cancelaba** (el velo era una `View`, que no recoge el
+  toque). La hoja OFRECE y va abajo, donde llega el pulgar; el diálogo
+  INTERRUMPE y va en el centro. No son el mismo componente con otro sitio.
+- **`components/Segmented.tsx`** — elegir entre dos o tres cosas, cinco veces
+  escrito y ninguno con las mismas medidas. Las pestañas de Progreso además
+  eran un carril desplazable para tres palabras que caben: un carril que se
+  arrastra insinúa que hay algo más a la derecha.
+- **Inputs** — `TextField` ya lleva Inter (antes escribía en la letra del
+  sistema) y el campo del código de invitación se parece al código.
+- **Calendarios** — la rejilla de la agenda y la tabla del plan cuadran con
+  cifras tabulares. El mapa de constancia y la tira de la semana no lo
+  necesitaban: se leen por forma y color, sin un número dentro.
+- **Cero estilos muertos** en toda la app, y ningún `styles.x` sin definir.
 
-Componentes que esta sesión NO abrió: `MacroCalculator`, `Onboarding`,
-`UpgradeCard`, `CheckInCard`, `WeekStrip`, `ProgressMatrix`, `BlockOverview`,
-`MuscleMap`, `LineChart`, `ConsistencyMap`, `ProgressRing`, `PlanCalendar`,
-`DateField`, `RirPicker`, `MemberCard`, `Avatar`, `Toast`, `EmptyState`,
-`ErrorState`, `DragList`, `Grid`.
+Lo que NO entró, a propósito: el visor de foto a pantalla completa, la
+calculadora de macros, la tabla de progreso completa y el muro de pago usan
+`Modal` pero son pantallas enteras, no hojas ni diálogos. Y el selector de la
+tabla de progreso ya estaba bien resuelto.
 
 ## 5. Pantalla de entreno: la estructura
 
