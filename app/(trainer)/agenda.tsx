@@ -18,6 +18,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { capitalizar } from '../../lib/texto';
 import { ListSkeleton } from '../../components/Skeleton';
 import { TaskEditSheet } from '../../components/TaskEditSheet';
 import { showToast } from '../../components/Toast';
@@ -29,7 +30,7 @@ import {
 } from '../../lib/firestore/coachTasks';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
-import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
+import { colors, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
   TASK_SCOPE_LABEL,
@@ -290,7 +291,9 @@ export default function CoachCalendarScreen() {
 
   const today = startOfDay(Date.now());
   const anchor = new Date(monthAnchor);
-  const monthLabel = anchor.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const monthLabel = capitalizar(
+    anchor.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  );
   const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1).getTime();
   const days = [...eventsByDay.keys()].filter((d) => d >= monthAnchor && d < monthEnd).sort((a, b) => a - b);
   const monthCount = days.reduce((n, d) => n + (eventsByDay.get(d)?.length ?? 0), 0);
@@ -386,11 +389,13 @@ export default function CoachCalendarScreen() {
       {/* Eventos del día seleccionado */}
       <View style={styles.selectedHead}>
         <Text style={styles.selectedDate}>
-          {new Date(selectedDay).toLocaleDateString('es-ES', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}
+          {capitalizar(
+            new Date(selectedDay).toLocaleDateString('es-ES', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+            })
+          )}
         </Text>
         {selectedDay === today ? <Text style={styles.todayTag}>HOY</Text> : null}
       </View>
@@ -646,7 +651,9 @@ function MoveTaskModal({
 
   if (!task) return null;
   const a = new Date(anchor);
-  const monthLabel = a.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const monthLabel = capitalizar(
+    a.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  );
   const daysInMonth = new Date(a.getFullYear(), a.getMonth() + 1, 0).getDate();
   const leadRaw = new Date(a.getFullYear(), a.getMonth(), 1).getDay(); // 0=domingo
   const lead = (leadRaw + 6) % 7; // 0 = lunes
@@ -904,7 +911,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   monthCenter: { alignItems: 'center' },
-  monthLabel: { ...typography.h3, color: colors.text, textTransform: 'capitalize' },
+  monthLabel: { ...typography.h3, color: colors.text },
   monthCount: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   todayBtn: {
     flexDirection: 'row',
@@ -942,7 +949,26 @@ const styles = StyleSheet.create({
   },
   cellToday: { borderColor: colors.border },
   cellSel: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  cellNum: { ...typography.small, color: colors.text, fontFamily: fonts.medium, fontSize: 13 },
+  /**
+   * Los números del mes, de ancho fijo.
+   *
+   * Una rejilla de calendario es EL caso de las cifras tabulares: treinta y un
+   * números repartidos en siete columnas que tienen que cuadrar. Con dígitos
+   * proporcionales el "11" ocupa bastante menos que el "28" y cada semana se
+   * centra de una manera, así que la rejilla se lee torcida sin que se sepa por
+   * qué.
+   *
+   * Y el día de hoy cambiaba además de grosor (media → negrita), que en una
+   * tipografía proporcional también cambia el ancho: la única celda que se mira
+   * seguro era la que peor cuadraba. Con ancho fijo el grosor ya no la mueve.
+   */
+  cellNum: {
+    ...typography.small,
+    ...tabularNums,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+  },
   cellNumToday: { color: colors.primaryBright, fontFamily: fonts.heading },
   cellNumSel: { color: colors.primaryBright },
   dots: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 3, marginTop: 2 },
@@ -954,11 +980,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  selectedDate: { ...typography.h3, color: colors.text, textTransform: 'capitalize', flexShrink: 1 },
+  selectedDate: { ...typography.h3, color: colors.text, flexShrink: 1 },
   noEvents: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
   dayGroup: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
   dayCol: { width: 40, alignItems: 'center', paddingTop: 2 },
-  dayNum: { ...typography.h2, color: colors.text, fontFamily: fonts.heading, fontSize: 22 },
+  dayNum: { ...typography.h2, ...tabularNums, color: colors.text, fontFamily: fonts.heading, fontSize: 22 },
   dayNumToday: { color: colors.primaryBright },
   dayWk: { ...typography.small, color: colors.textFaint, fontSize: 11, textTransform: 'uppercase' },
   dayWkToday: { color: colors.primary },
@@ -1172,7 +1198,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  moveMonthLabel: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, textTransform: 'capitalize' },
+  moveMonthLabel: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   moveGridHead: { flexDirection: 'row', marginBottom: 4 },
   moveHeadCell: { flex: 1, textAlign: 'center', ...typography.small, color: colors.textFaint, fontSize: 11 },
   moveGrid: { flexDirection: 'row', flexWrap: 'wrap' },

@@ -60,6 +60,7 @@ import {
 } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
+import { capitalizar } from '../../lib/texto';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   setMarks,
@@ -69,11 +70,6 @@ import {
 } from '../../lib/types';
 
 type Tab = 'workouts' | 'weight' | 'exercises';
-
-/** Pone en mayúscula la primera letra (para "julio 2026" → "Julio 2026"). */
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 interface ProgressData {
   weightLogs: WeightLog[];
@@ -576,7 +572,7 @@ export default function ProgressScreen() {
               <FadeIn key={m.key} delay={Math.min(mi * 60, 240)}>
               <Card style={styles.section}>
                 <Pressable style={styles.monthHeader} onPress={() => toggleMonth(m.key)}>
-                  <Text style={styles.monthTitle}>{capitalize(m.label)}</Text>
+                  <Text style={styles.monthTitle}>{capitalizar(m.label)}</Text>
                   <Text style={styles.monthCount}>
                     {m.sessions.length} {m.sessions.length === 1 ? 'sesión' : 'sesiones'}
                   </Text>

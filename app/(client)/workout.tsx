@@ -31,6 +31,7 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { TextField } from '../../components/TextField';
 import { Vitrina } from '../../components/Vitrina';
+import { capitalizar } from '../../lib/texto';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
@@ -1354,14 +1355,23 @@ export default function WorkoutScreen() {
             <Ionicons name="time-outline" size={18} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.pastDraftTitle}>Tienes un entreno sin terminar</Text>
-              <Text style={styles.pastDraftSub}>
-                {pastDraft.dayName ? `${pastDraft.dayName} · ` : ''}
-                {new Date(pastDraft.startedAt ?? pastDraft.savedAt).toLocaleDateString('es-ES', {
+              {/* La fecha solo lleva mayúscula si abre la línea. Con
+                  `textTransform: 'capitalize'` salía "Empuje A · Lunes, 4 Ago":
+                  esa regla sube TODAS las palabras, no la primera. */}
+              {(() => {
+                const fecha = new Date(
+                  pastDraft.startedAt ?? pastDraft.savedAt
+                ).toLocaleDateString('es-ES', {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'short',
-                })}
-              </Text>
+                });
+                return (
+                  <Text style={styles.pastDraftSub}>
+                    {pastDraft.dayName ? `${pastDraft.dayName} · ${fecha}` : capitalizar(fecha)}
+                  </Text>
+                );
+              })()}
             </View>
             <View style={styles.pastDraftActions}>
               <Pressable onPress={resumePastDraft} style={styles.pastDraftFill} hitSlop={6}>
@@ -2543,7 +2553,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   pastDraftTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  pastDraftSub: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 1, textTransform: 'capitalize' },
+  pastDraftSub: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 1 },
   pastDraftActions: { alignItems: 'flex-end', gap: 4 },
   pastDraftFill: {
     backgroundColor: colors.primary,

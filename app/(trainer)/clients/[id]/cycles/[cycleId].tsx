@@ -509,7 +509,10 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   logDay: { ...typography.body, color: colors.text, fontFamily: fonts.medium },
-  logMeta: { ...typography.small, color: colors.textFaint, marginTop: 1, textTransform: 'capitalize' },
+  // Sin `capitalize`: la línea empieza por una fecha numérica ("4 ago"), así que
+  // lo único que esa regla tocaba eran las palabras del final — "12 Entrenos ·
+  // Descarga".
+  logMeta: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
   confirmBackdrop: {
     flex: 1,
