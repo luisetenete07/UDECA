@@ -6,7 +6,7 @@ import { Avatar } from '../../../../components/Avatar';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
-import { LoadingScreen } from '../../../../components/LoadingScreen';
+import { DashboardSkeleton } from '../../../../components/Skeleton';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
 import { showToast } from '../../../../components/Toast';
@@ -303,12 +303,15 @@ export default function ClientDetailScreen() {
     }
   };
 
+  // La pantalla donde el entrenador pasa más tiempo no puede recibirle con una
+  // rueda girando: el esqueleto tiene la forma de lo que llega, así que nada
+  // salta de sitio y se percibe más rápido aunque tarde lo mismo.
   if (loading)
     return (
-      <>
+      <ScreenContainer>
         <Stack.Screen options={{ headerLeft: backToClients }} />
-        <LoadingScreen />
-      </>
+        <DashboardSkeleton />
+      </ScreenContainer>
     );
   if (loadError) {
     return (

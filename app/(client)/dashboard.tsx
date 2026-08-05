@@ -8,7 +8,7 @@ import { Avatar } from '../../components/Avatar';
 import { UpgradePopup } from '../../components/UpgradeCard';
 import { Card } from '../../components/Card';
 import { CheckInCard } from '../../components/CheckInCard';
-import { LoadingScreen } from '../../components/LoadingScreen';
+import { DashboardSkeleton } from '../../components/Skeleton';
 import { ProgressBar } from '../../components/ProgressBar';
 import { CountUp } from '../../components/CountUp';
 import { FadeIn } from '../../components/FadeIn';
@@ -191,7 +191,12 @@ export default function ClientDashboard() {
     }, [profile?.trainerId])
   );
 
-  if (loading) return <LoadingScreen />;
+  if (loading)
+    return (
+      <ScreenContainer>
+        <DashboardSkeleton />
+      </ScreenContainer>
+    );
 
   // Atleta individual: se autoentrena (sin coach). Cambia el tono de varias
   // tarjetas para que todo hable de "tú" en lugar de "tu entrenador".
