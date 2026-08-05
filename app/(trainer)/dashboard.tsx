@@ -1464,7 +1464,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   dueText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold, flex: 1 },
-  payBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  payBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
   paySheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.lg,

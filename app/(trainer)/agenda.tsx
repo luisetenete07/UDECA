@@ -1062,7 +1062,7 @@ const styles = StyleSheet.create({
   // Mover tarea a otro día
   moveBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,

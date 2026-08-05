@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   trackBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: colors.scrim,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,

@@ -2156,7 +2156,7 @@ const styles = StyleSheet.create({
   dayPickerBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.scrim,
   },
   dayPickerSheet: {
     backgroundColor: colors.surface,
@@ -2179,7 +2179,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: spacing.lg,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: colors.scrim,
   },
   exitCard: { paddingVertical: spacing.lg },
   flexPick: {

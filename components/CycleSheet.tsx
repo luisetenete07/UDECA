@@ -239,7 +239,7 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
   backdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   sheet: {
     backgroundColor: colors.surface,

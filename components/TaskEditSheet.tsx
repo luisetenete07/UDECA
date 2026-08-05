@@ -141,7 +141,7 @@ export function TaskEditSheet({ task, onClose, onChanged }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
   tap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   sheet: {
     backgroundColor: colors.surface,

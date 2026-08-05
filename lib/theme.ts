@@ -40,6 +40,12 @@ export const colors = {
   hairline: 'rgba(162, 150, 139, 0.35)',
   hairlineFaint: 'rgba(162, 150, 139, 0.18)',
   onPrimary: '#0A0A0A',
+  /**
+   * El velo detrás de cualquier cosa que se abre encima. Estaba escrito a mano
+   * en dieciséis sitios con cuatro opacidades distintas, así que abrir dos
+   * ventanas seguidas oscurecía la pantalla de forma distinta cada vez.
+   */
+  scrim: 'rgba(0, 0, 0, 0.7)',
   accent: '#FFFFFF',
   danger: '#C4433B',
   dangerMuted: 'rgba(196, 67, 59, 0.14)',
