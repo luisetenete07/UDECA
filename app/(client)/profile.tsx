@@ -205,9 +205,6 @@ export default function ClientProfileScreen() {
 
   if (loading) return <LoadingScreen />;
 
-  const memberSince = profile?.createdAt
-    ? new Date(profile.createdAt).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
-    : '';
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
   // Nombre: se puede cambiar como máximo una vez cada 90 días.
@@ -236,9 +233,8 @@ export default function ClientProfileScreen() {
             <Text style={styles.levelBadgeText}>{profile.level}</Text>
           </View>
         ) : null}
-        {memberSince ? (
-          <Text style={styles.memberSince}>Miembro desde {memberSince}</Text>
-        ) : null}
+        {/* "Miembro desde" ya lo dice el carné, justo debajo. Decirlo dos veces
+            seguidas no informa más: solo hace ruido. */}
       </View>
 
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
@@ -524,7 +520,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
     textTransform: 'uppercase',
   },
-  memberSince: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm },
   statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text },

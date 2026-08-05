@@ -768,7 +768,7 @@ export default function RoutineEditorScreen() {
             style={{ flex: 1 }}
           />
           <Button
-            title="Copiar alumno"
+            title="Copiar"
             variant="secondary"
             onPress={openCopyPicker}
             style={{ flex: 1 }}
@@ -822,10 +822,8 @@ export default function RoutineEditorScreen() {
         ) : schedule === 'cycle' ? (
           <>
             <Text style={styles.scheduleHint}>
-              Los {days.length} días rotan en ciclo constante (Día 1 → {days.length} → repite), sin
-              depender del día de la semana. La intensidad se ajusta en cada día, abajo. Marca un
-              día como “Opcional” (p. ej. el último) para que el alumno elija: descansar o reiniciar
-              en el Día 1.
+              Los {days.length} días rotan en bucle (1 → {days.length} → 1), sin atarse al
+              calendario. Marca uno como “Opcional” y el alumno elige: descansar o volver al Día 1.
             </Text>
 
             <Pressable
@@ -867,7 +865,7 @@ export default function RoutineEditorScreen() {
         if (schedule === 'cycle') {
           if (day.optionalRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso opcional');
           else if (day.isRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso');
-          else summaryParts.push(`Día ${dayIndex + 1}`, `Int. ${day.intensity ?? 5}/10`);
+          else summaryParts.push(`Día ${dayIndex + 1}`, `Intensidad ${day.intensity ?? 5}`);
         } else if (day.weekday !== undefined) {
           summaryParts.push(WEEKDAY_NAMES[day.weekday]);
           if (day.isRest) summaryParts.push('Descanso');
@@ -888,7 +886,9 @@ export default function RoutineEditorScreen() {
               <Text style={styles.dayTitle} numberOfLines={1}>
                 {day.name || `Día ${dayIndex + 1}`}
               </Text>
-              <Text style={styles.daySummary} numberOfLines={1}>
+              {/* Dos líneas: en una sola, "3 ejercicios · 14 series" se cortaba
+                  justo donde estaba la información que se venía a buscar. */}
+              <Text style={styles.daySummary} numberOfLines={2}>
                 {summaryParts.join(' · ')}
               </Text>
             </Pressable>

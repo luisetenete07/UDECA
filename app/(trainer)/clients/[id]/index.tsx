@@ -445,7 +445,15 @@ export default function ClientDetailScreen() {
                   active && tone === 'bad' && styles.payBad,
                 ]}
               >
-                <Text style={[styles.payChipText, active && styles.payChipTextActive]}>
+                <Text
+                  style={[
+                    styles.payChipText,
+                    active && styles.payChipTextActive,
+                    active && tone === 'good' && { color: colors.success },
+                    active && tone === 'warn' && { color: colors.warning },
+                    active && tone === 'bad' && { color: colors.danger },
+                  ]}
+                >
                   {PAYMENT_STATUS_LABEL[p]}
                 </Text>
               </Pressable>
@@ -495,10 +503,13 @@ export default function ClientDetailScreen() {
         </View>
 
         <Button
-          title="Registrar pago (renueva +1 mes)"
+          title="Registrar pago"
           onPress={handleRegisterPayment}
           style={{ marginTop: spacing.sm }}
         />
+        {/* Lo que hace el botón, debajo del botón: metido entre paréntesis en
+            el propio rótulo partía el texto en dos líneas y se leía peor. */}
+        <Text style={styles.payHint}>Suma un mes a la fecha de arriba.</Text>
         <View style={styles.payBtnRow}>
           <TextField
             value={extendDaysInput}
@@ -508,7 +519,7 @@ export default function ClientDetailScreen() {
             style={styles.daysField}
           />
           <Button
-            title="+ Añadir días"
+            title="Añadir días"
             variant="secondary"
             onPress={handleExtendDays}
             disabled={!(parseInt(extendDaysInput, 10) > 0)}
@@ -996,6 +1007,7 @@ const styles = StyleSheet.create({
   nextPayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nextPayText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   nextPayOverdue: { color: colors.danger },
+  payHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.xs, textAlign: 'center' },
   payBtnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   daysField: { width: 76, marginBottom: 0, textAlign: 'center' },
   clearDateBtn: {
@@ -1018,9 +1030,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   payChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  payGood: { backgroundColor: colors.success, borderColor: colors.success },
-  payWarn: { backgroundColor: '#C9902B', borderColor: '#C9902B' },
-  payBad: { backgroundColor: colors.danger, borderColor: colors.danger },
+  // Relleno apagado y borde de color, no un bloque de color liso: en una
+  // pantalla de negros reales un verde saturado se lleva la vista entera, y lo
+  // que importa aquí no es el estado del cobro sino el alumno.
+  payGood: { backgroundColor: colors.successMuted, borderColor: colors.successBorder },
+  payWarn: { backgroundColor: colors.warningMuted, borderColor: colors.warning },
+  payBad: { backgroundColor: colors.dangerMuted, borderColor: colors.danger },
   payChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
   payChipTextActive: { color: colors.white },
   miniLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },

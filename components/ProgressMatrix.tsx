@@ -443,7 +443,8 @@ function Trend({ current, prev }: { current: MatrixCell; prev: MatrixCell | null
 }
 
 const styles = StyleSheet.create({
-  rowRemove: { position: 'absolute', top: 4, right: 4, padding: 2 },
+  // Centrada como el asa: pegada arriba parecía colgar de la fila de encima.
+  rowRemove: { position: 'absolute', right: 4, top: '50%', marginTop: -9, padding: 2 },
   rowHandle: { position: 'absolute', left: 2, top: '50%', marginTop: -8 },
   // Deja sitio al asa para que no se solape con el nombre.
   nameTextEditable: { paddingLeft: spacing.sm },

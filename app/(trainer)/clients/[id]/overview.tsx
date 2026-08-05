@@ -136,7 +136,7 @@ export default function ClientOverviewScreen() {
 
   return (
     <ScreenContainer>
-      <Stack.Screen options={{ title: 'Progreso total' }} />
+      <Stack.Screen options={{ title: '' }} />
       <Text style={styles.title}>Progreso total</Text>
       <Text style={styles.subtitle}>
         La mejor serie de cada ejercicio, semana a semana. Elige qué ejercicios seguir: es la

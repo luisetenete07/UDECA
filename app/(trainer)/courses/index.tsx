@@ -76,7 +76,7 @@ export default function TrainerCoursesScreen() {
     >
       <ScreenHeader
         title="Cursos"
-        subtitle={`${courses.length} curso(s)`}
+        subtitle={courses.length === 1 ? '1 curso' : `${courses.length} cursos`}
         actions={
           <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/courses/new')} />
         }

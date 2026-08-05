@@ -3,6 +3,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../../../../components/Button';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
+import { MacroSum } from '../../../../components/MacroSum';
+import { ScreenHeader } from '../../../../components/ScreenHeader';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
 import { useAuth } from '../../../../lib/auth-context';
@@ -30,12 +32,16 @@ export default function NutritionEditorScreen() {
   const [carbs, setCarbs] = useState('200');
   const [fat, setFat] = useState('60');
   const [notes, setNotes] = useState('');
+  const [clientName, setClientName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!clientId) return;
     (async () => {
       const existing = await getActiveNutritionPlanForClient(clientId, profile?.uid);
+      getUserProfile(clientId)
+        .then((p) => setClientName(p?.name ?? ''))
+        .catch(() => {});
       if (existing) {
         setPlanId(existing.id);
         setName(existing.name);
@@ -108,6 +114,11 @@ export default function NutritionEditorScreen() {
 
   return (
     <ScreenContainer>
+      <ScreenHeader
+        title="Plan nutricional"
+        subtitle={clientName ? `Para ${clientName}` : undefined}
+      />
+
       <TextField label="Nombre del plan" value={name} onChangeText={setName} />
 
       <TextField
@@ -140,6 +151,13 @@ export default function NutritionEditorScreen() {
           containerStyle={styles.smallField}
         />
       </View>
+
+      <MacroSum
+        calorias={Number(calories) || 0}
+        proteina={Number(protein) || 0}
+        carbos={Number(carbs) || 0}
+        grasas={Number(fat) || 0}
+      />
 
       <TextField
         label="Notas (opcional)"
