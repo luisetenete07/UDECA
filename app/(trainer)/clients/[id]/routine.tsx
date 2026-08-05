@@ -6,6 +6,7 @@ import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
+import { Sheet } from '../../../../components/Sheet';
 import { TextField } from '../../../../components/TextField';
 import { DragList } from '../../../../components/DragList';
 import { moveItem } from '../../../../lib/useDragReorder';
@@ -1339,28 +1340,15 @@ export default function RoutineEditorScreen() {
         }}
       />
 
-      <Modal
+      <Sheet
         visible={pickerForDay !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setPickerForDay(null)}
+        onClose={() => {
+          setPickerForDay(null);
+          setCreatingNew(false);
+        }}
+        title={creatingNew ? 'Nuevo ejercicio' : 'Añadir ejercicio'}
+        maxHeight="80%"
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {creatingNew ? 'Nuevo ejercicio' : 'Añadir ejercicio'}
-              </Text>
-              <Pressable
-                onPress={() => {
-                  setPickerForDay(null);
-                  setCreatingNew(false);
-                }}
-                hitSlop={8}
-              >
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
 
             {creatingNew ? (
               <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
@@ -1583,29 +1571,15 @@ export default function RoutineEditorScreen() {
                 )}
               </>
             )}
-          </View>
-        </View>
-      </Modal>
+      </Sheet>
 
-      <Modal
+      <Sheet
         visible={movePicker !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setMovePicker(null)}
+        onClose={() => setMovePicker(null)}
+        title="Mover o copiar"
+        subtitle={movePicker?.ex.name}
+        maxHeight="80%"
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Mover o copiar</Text>
-                <Text style={styles.moveExName} numberOfLines={1}>
-                  {movePicker?.ex.name}
-                </Text>
-              </View>
-              <Pressable onPress={() => setMovePicker(null)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
             <ScrollView style={styles.modalList}>
               {days.map((d, i) => {
                 const isSource = d.id === movePicker?.dayId;
@@ -1637,10 +1611,8 @@ export default function RoutineEditorScreen() {
                   </View>
                 );
               })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        </ScrollView>
+      </Sheet>
 
       <Button title="+ Añadir día" variant="ghost" onPress={addDay} style={styles.addDayBtn} />
 
@@ -1688,14 +1660,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   dayIntensityControls: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  intensityLabel: {
-    ...typography.label,
-    color: colors.primaryBright,
-    textTransform: 'uppercase',
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  intensityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stepBtn: {
     width: 34,
     height: 34,
@@ -1763,14 +1727,11 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   moveDayBtn: { paddingHorizontal: 4 },
-  dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  dayNameInput: { flex: 1, marginBottom: 0 },
   removeDayBtn: { paddingHorizontal: spacing.sm },
   dayHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dayHeaderMain: { flex: 1, paddingVertical: spacing.xs },
   dayTitle: { ...typography.h3, color: colors.text },
   daySummary: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  removeDayText: { ...typography.small, color: colors.danger },
   weekdayRow: { marginTop: spacing.sm, marginBottom: spacing.sm },
   weekdayHeadRow: {
     flexDirection: 'row',
@@ -1883,7 +1844,6 @@ const styles = StyleSheet.create({
   loadChipTextActive: { color: colors.onPrimary },
   moveBtn: { padding: spacing.xs },
   deleteBtn: { padding: spacing.xs },
-  moveExName: { ...typography.small, color: colors.primaryBright, marginTop: 2 },
   moveDayRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1929,27 +1889,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  modalTitle: { ...typography.h2, color: colors.text },
   modalList: { maxHeight: 420 },
   pickerRow: {
     flexDirection: 'row',

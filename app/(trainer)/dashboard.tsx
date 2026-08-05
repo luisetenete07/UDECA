@@ -18,6 +18,7 @@ import { getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { CountUp } from '../../components/CountUp';
 import { PressableScale } from '../../components/PressableScale';
+import { Sheet } from '../../components/Sheet';
 import { FadeIn } from '../../components/FadeIn';
 import { ProgressRing } from '../../components/ProgressRing';
 import { showToast } from '../../components/Toast';
@@ -1036,214 +1037,181 @@ export default function TrainerDashboard() {
       </FadeIn>
 
       {/* Lista de alumnos con pago pendiente/vencido (desde la alerta roja). */}
-      <Modal
+      <Sheet
         visible={payListOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setPayListOpen(false)}
+        onClose={() => setPayListOpen(false)}
+        title={`Pagos pendientes (${duePayClients.length})`}
+        scroll
+        maxHeight="80%"
       >
-        <View style={styles.payBackdrop}>
-          <View style={styles.paySheet}>
-            <View style={styles.payHeader}>
-              <Text style={styles.sectionTitle}>Pagos pendientes ({duePayClients.length})</Text>
-              <Pressable onPress={() => setPayListOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
+        {duePayClients.length === 0 ? (
+          <Text style={styles.mutedText}>No hay pagos pendientes.</Text>
+        ) : (
+          duePayClients.map((c) => (
+            <View key={c.uid} style={styles.payRow}>
+              <Pressable
+                onPress={() => {
+                  setPayListOpen(false);
+                  router.push(`/(trainer)/clients/${c.uid}`);
+                }}
+                style={styles.payRowMain}
+              >
+                <Avatar name={c.name} photoURL={c.photoURL} size={38} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.logClient}>{c.name}</Text>
+                  <Text style={styles.payMeta}>
+                    {c.paymentReportedAt
+                      ? 'Dice que ya pagó · confirma'
+                      : c.paymentStatus
+                        ? PAYMENT_STATUS_LABEL[c.paymentStatus]
+                        : 'Pendiente'}
+                    {c.monthlyFeeEur ? ` · ${c.monthlyFeeEur} €` : ''}
+                    {c.nextPaymentDate
+                      ? ` · vence ${new Date(c.nextPaymentDate).toLocaleDateString('es-ES')}`
+                      : ''}
+                  </Text>
+                </View>
+              </Pressable>
+              <Pressable
+                onPress={() => handleConfirmPayment(c)}
+                disabled={confirmingPayId === c.uid}
+                style={styles.confirmPayBtn}
+                hitSlop={6}
+              >
+                <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                <Text style={styles.confirmPayText}>
+                  {confirmingPayId === c.uid ? '...' : 'Cobrado'}
+                </Text>
               </Pressable>
             </View>
-            {duePayClients.length === 0 ? (
-              <Text style={styles.mutedText}>No hay pagos pendientes.</Text>
-            ) : (
-              duePayClients.map((c) => (
-                <View key={c.uid} style={styles.payRow}>
-                  <Pressable
-                    onPress={() => {
-                      setPayListOpen(false);
-                      router.push(`/(trainer)/clients/${c.uid}`);
-                    }}
-                    style={styles.payRowMain}
-                  >
-                    <Avatar name={c.name} photoURL={c.photoURL} size={38} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.logClient}>{c.name}</Text>
-                      <Text style={styles.payMeta}>
-                        {c.paymentReportedAt
-                          ? 'Dice que ya pagó · confirma'
-                          : c.paymentStatus
-                            ? PAYMENT_STATUS_LABEL[c.paymentStatus]
-                            : 'Pendiente'}
-                        {c.monthlyFeeEur ? ` · ${c.monthlyFeeEur} €` : ''}
-                        {c.nextPaymentDate
-                          ? ` · vence ${new Date(c.nextPaymentDate).toLocaleDateString('es-ES')}`
-                          : ''}
-                      </Text>
-                    </View>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleConfirmPayment(c)}
-                    disabled={confirmingPayId === c.uid}
-                    style={styles.confirmPayBtn}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="checkmark-circle" size={15} color={colors.success} />
-                    <Text style={styles.confirmPayText}>
-                      {confirmingPayId === c.uid ? '...' : 'Cobrado'}
-                    </Text>
-                  </Pressable>
-                </View>
-              ))
-            )}
-            <Button
-              title="Avisar a todos"
-              onPress={() => {
-                setPayListOpen(false);
-                handleRemindAllPayments();
-              }}
-              style={{ marginTop: spacing.md }}
-            />
-          </View>
-        </View>
-      </Modal>
+          ))
+        )}
+        <Button
+          title="Avisar a todos"
+          onPress={() => {
+            setPayListOpen(false);
+            handleRemindAllPayments();
+          }}
+          style={{ marginTop: spacing.md }}
+        />
+      </Sheet>
 
       {/* Gestión de ingresos del mes: ver, corregir importe o eliminar un pago. */}
-      <Modal
+      <Sheet
         visible={incomeOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
+        onClose={() => {
           setIncomeOpen(false);
           setEditPayId(null);
         }}
+        title="Ingresos"
+        scroll
+        maxHeight="80%"
       >
-        <View style={styles.payBackdrop}>
-          <View style={styles.paySheet}>
-            <View style={styles.payHeader}>
-              <Text style={styles.sectionTitle}>Ingresos</Text>
-              <Pressable
-                onPress={() => {
-                  setIncomeOpen(false);
-                  setEditPayId(null);
-                }}
-                hitSlop={8}
+        {/* Conmutador: ingresos del mes o historial completo. */}
+        <View style={styles.scopeSeg}>
+          {(['month', 'all'] as const).map((sc) => (
+            <Pressable
+              key={sc}
+              onPress={() => {
+                setIncomeScope(sc);
+                setEditPayId(null);
+              }}
+              style={[styles.scopeBtn, incomeScope === sc && styles.scopeBtnOn]}
+            >
+              <Text
+                style={[styles.scopeText, incomeScope === sc && styles.scopeTextOn]}
               >
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
-            {/* Conmutador: ingresos del mes o historial completo. */}
-            <View style={styles.scopeSeg}>
-              {(['month', 'all'] as const).map((sc) => (
-                <Pressable
-                  key={sc}
-                  onPress={() => {
-                    setIncomeScope(sc);
-                    setEditPayId(null);
-                  }}
-                  style={[styles.scopeBtn, incomeScope === sc && styles.scopeBtnOn]}
-                >
-                  <Text
-                    style={[styles.scopeText, incomeScope === sc && styles.scopeTextOn]}
-                  >
-                    {sc === 'month' ? 'Este mes' : 'Histórico'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>
-                {incomeScope === 'month' ? 'Ingresado este mes' : 'Total ingresado hasta la fecha'}
+                {sc === 'month' ? 'Este mes' : 'Histórico'}
               </Text>
-              <Text style={styles.totalValue}>
-                {(incomeScope === 'month' ? incomeThisMonth : incomeAllTime).toLocaleString('es-ES')}{' '}
-                €
-              </Text>
-            </View>
-            <Text style={styles.subtleHint}>
-              Ajusta el importe o elimina un pago si hubo un error.
-            </Text>
-            {incomeScope === 'month' ? (
-              monthPayments.length === 0 ? (
-                <Text style={styles.mutedText}>Aún no hay pagos registrados este mes.</Text>
-              ) : (
-                <ScrollView style={{ maxHeight: 400 }}>
-                  {monthPayments.map((p) => renderPayRow(p, true))}
-                </ScrollView>
-              )
-            ) : incomeByClient.length === 0 ? (
-              <Text style={styles.mutedText}>Aún no hay pagos registrados.</Text>
-            ) : (
-              // Histórico agrupado por alumno (tipo Excel): cada alumno con su
-              // total y el desglose de sus pagos.
-              <ScrollView style={{ maxHeight: 420 }}>
-                {incomeByClient.map((g) => (
-                  <View key={g.cid} style={styles.clientGroup}>
-                    <View style={styles.clientGroupHead}>
-                      <Avatar name={g.name} photoURL={g.photoURL} size={34} />
-                      <Text style={styles.clientGroupName}>{g.name}</Text>
-                      <Text style={styles.clientGroupTotal}>
-                        {g.total.toLocaleString('es-ES')} €
-                      </Text>
-                    </View>
-                    {g.pays.map((p) => renderPayRow(p, false))}
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </View>
+            </Pressable>
+          ))}
         </View>
-      </Modal>
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>
+            {incomeScope === 'month' ? 'Ingresado este mes' : 'Total ingresado hasta la fecha'}
+          </Text>
+          <Text style={styles.totalValue}>
+            {(incomeScope === 'month' ? incomeThisMonth : incomeAllTime).toLocaleString('es-ES')}{' '}
+            €
+          </Text>
+        </View>
+        <Text style={styles.subtleHint}>
+          Ajusta el importe o elimina un pago si hubo un error.
+        </Text>
+        {incomeScope === 'month' ? (
+          monthPayments.length === 0 ? (
+            <Text style={styles.mutedText}>Aún no hay pagos registrados este mes.</Text>
+          ) : (
+            <ScrollView style={{ maxHeight: 400 }}>
+              {monthPayments.map((p) => renderPayRow(p, true))}
+            </ScrollView>
+          )
+        ) : incomeByClient.length === 0 ? (
+          <Text style={styles.mutedText}>Aún no hay pagos registrados.</Text>
+        ) : (
+          // Histórico agrupado por alumno (tipo Excel): cada alumno con su
+          // total y el desglose de sus pagos.
+          <ScrollView style={{ maxHeight: 420 }}>
+            {incomeByClient.map((g) => (
+              <View key={g.cid} style={styles.clientGroup}>
+                <View style={styles.clientGroupHead}>
+                  <Avatar name={g.name} photoURL={g.photoURL} size={34} />
+                  <Text style={styles.clientGroupName}>{g.name}</Text>
+                  <Text style={styles.clientGroupTotal}>
+                    {g.total.toLocaleString('es-ES')} €
+                  </Text>
+                </View>
+                {g.pays.map((p) => renderPayRow(p, false))}
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </Sheet>
 
       {/* Lista de renovaciones previstas en los próximos 30 días. */}
-      <Modal
+      <Sheet
         visible={upcomingOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setUpcomingOpen(false)}
+        onClose={() => setUpcomingOpen(false)}
+        title={`Previsto 30 días (${projected30} €)`}
+        scroll
+        maxHeight="80%"
       >
-        <View style={styles.payBackdrop}>
-          <View style={styles.paySheet}>
-            <View style={styles.payHeader}>
-              <Text style={styles.sectionTitle}>Previsto 30 días ({projected30} €)</Text>
-              <Pressable onPress={() => setUpcomingOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
-            {upcoming.length === 0 ? (
-              <Text style={styles.mutedText}>No hay renovaciones previstas en 30 días.</Text>
-            ) : (
-              <ScrollView style={{ maxHeight: 420 }}>
-                {upcoming
-                  .slice()
-                  .sort((a, b) => (a.nextPaymentDate ?? 0) - (b.nextPaymentDate ?? 0))
-                  .map((c) => (
-                    <Pressable
-                      key={c.uid}
-                      onPress={() => {
-                        setUpcomingOpen(false);
-                        router.push(`/(trainer)/clients/${c.uid}`);
-                      }}
-                      style={styles.payRow}
-                    >
-                      <Avatar name={c.name} photoURL={c.photoURL} size={38} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.logClient}>{c.name}</Text>
-                        <Text style={styles.logDetail}>
-                          Renueva{' '}
-                          {c.nextPaymentDate
-                            ? new Date(c.nextPaymentDate).toLocaleDateString('es-ES', {
-                                day: 'numeric',
-                                month: 'short',
-                              })
-                            : ''}
-                        </Text>
-                      </View>
-                      <Text style={styles.payAmount}>{c.monthlyFeeEur} €</Text>
-                      <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-                    </Pressable>
-                  ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+        {upcoming.length === 0 ? (
+          <Text style={styles.mutedText}>No hay renovaciones previstas en 30 días.</Text>
+        ) : (
+          <ScrollView style={{ maxHeight: 420 }}>
+            {upcoming
+              .slice()
+              .sort((a, b) => (a.nextPaymentDate ?? 0) - (b.nextPaymentDate ?? 0))
+              .map((c) => (
+                <Pressable
+                  key={c.uid}
+                  onPress={() => {
+                    setUpcomingOpen(false);
+                    router.push(`/(trainer)/clients/${c.uid}`);
+                  }}
+                  style={styles.payRow}
+                >
+                  <Avatar name={c.name} photoURL={c.photoURL} size={38} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.logClient}>{c.name}</Text>
+                    <Text style={styles.logDetail}>
+                      Renueva{' '}
+                      {c.nextPaymentDate
+                        ? new Date(c.nextPaymentDate).toLocaleDateString('es-ES', {
+                            day: 'numeric',
+                            month: 'short',
+                          })
+                        : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.payAmount}>{c.monthlyFeeEur} €</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                </Pressable>
+              ))}
+          </ScrollView>
+        )}
+      </Sheet>
 
     </ScreenContainer>
   );
@@ -1291,8 +1259,6 @@ const styles = StyleSheet.create({
   },
   pulseActionText: { ...typography.small, color: colors.warning, flex: 1 },
   pulseBig: { ...typography.h2, color: colors.text, marginTop: 2, marginBottom: 2 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   stepRow: {
     flexDirection: 'row',
@@ -1367,7 +1333,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   quickBadgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.semiBold },
-  quickBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
   section: { marginBottom: spacing.md },
   revenueRow: { flexDirection: 'row', gap: spacing.sm },
   revenueBox: {
@@ -1470,22 +1435,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   dueText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold, flex: 1 },
-  payBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
-  paySheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    maxHeight: '80%',
-  },
-  payHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
   payRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1508,7 +1457,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successMuted,
   },
   confirmPayText: { ...typography.small, color: colors.success, fontFamily: fonts.semiBold, fontSize: 12 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
   sectionTitle: { ...typography.h3, color: colors.text },
   subtleHint: { ...typography.small, color: colors.textFaint, marginTop: -spacing.xs, marginBottom: spacing.sm },
@@ -1520,7 +1468,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  reminderBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   requestRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1551,6 +1498,5 @@ const styles = StyleSheet.create({
   },
   logClient: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   logDetail: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  alertText: { ...typography.small, color: colors.warning, marginTop: 2 },
   mutedText: { ...typography.small, color: colors.textFaint },
 });

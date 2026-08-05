@@ -8,6 +8,7 @@ import {
   View,
   type DimensionValue,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '../lib/theme';
 
 /**
@@ -61,9 +62,23 @@ export function Sheet({
           accessibilityLabel="Cerrar"
         />
         <View style={[styles.sheet, { maxHeight }]}>
-          {/* El asa no se toca: es la señal de "esto sube y baja". Quitarla
-              deja la hoja pareciendo una pantalla que se ha quedado a medias. */}
-          <View style={styles.handle} />
+          {/* El asa es la señal de "esto sube y baja", y la equis es para el
+              ordenador: ahí no hay gesto de deslizar ni botón de atrás, así que
+              el asa no significa nada y tocar el velo hay que adivinarlo. La
+              app se usa también en escritorio, con lo que una salida visible no
+              es un adorno. Van en la misma fila para no pisar el contenido. */}
+          <View style={styles.grab}>
+            <View style={styles.handle} />
+            <Pressable
+              onPress={onClose}
+              style={styles.close}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar"
+            >
+              <Ionicons name="close" size={22} color={colors.textMuted} />
+            </Pressable>
+          </View>
           {title ? (
             <Text style={styles.title} numberOfLines={2}>
               {title}
@@ -95,14 +110,24 @@ const styles = StyleSheet.create({
     maxWidth: 640,
     alignSelf: 'center',
   },
+  grab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    // Alto del botón de cerrar, para que el asa quede centrada en la fila y no
+    // pegada al borde de arriba.
+    minHeight: 26,
+  },
   handle: {
     width: 40,
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginBottom: spacing.md,
   },
+  // Fuera del flujo: así el asa se centra respecto a la hoja, no respecto al
+  // hueco que deja la equis.
+  close: { position: 'absolute', right: 0, top: 0, padding: 2 },
   title: { ...typography.h2, color: colors.text },
   subtitle: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.xs },
 });

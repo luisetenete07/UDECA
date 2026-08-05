@@ -8,6 +8,7 @@ import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { ScreenHeader } from '../../../components/ScreenHeader';
+import { Sheet } from '../../../components/Sheet';
 import { TextField } from '../../../components/TextField';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
@@ -314,21 +315,12 @@ export default function TemplateExercisesScreen() {
         ))
       )}
 
-      <Modal
+      <Sheet
         visible={!!draft}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setDraft(null)}
+        onClose={() => setDraft(null)}
+        title={`${draft?.id ? 'Editar' : 'Nuevo'} ejercicio`}
+        scroll
       >
-        <View style={styles.sheetBackdrop}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{draft?.id ? 'Editar' : 'Nuevo'} ejercicio</Text>
-              <Pressable onPress={() => setDraft(null)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
               {draft ? (
                 <>
                   <TextField
@@ -456,11 +448,8 @@ export default function TemplateExercisesScreen() {
                     <View style={{ height: spacing.lg }} />
                   )}
                 </>
-              ) : null}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        ) : null}
+      </Sheet>
     </ScreenContainer>
   );
 }
@@ -501,20 +490,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   chipTextOn: { color: colors.onPrimary },
-  segment: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: spacing.xs,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: spacing.xs,
-  },
-  segBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.sm, alignItems: 'center' },
-  segBtnOn: { backgroundColor: colors.primary },
   segText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  segTextOn: { color: colors.onPrimary },
   measureList: { gap: spacing.xs, marginBottom: spacing.md },
   measureOption: {
     flexDirection: 'row',
@@ -558,21 +534,4 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
   },
-  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    maxHeight: '90%',
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  sheetTitle: { ...typography.h3, color: colors.text },
 });

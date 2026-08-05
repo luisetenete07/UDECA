@@ -28,6 +28,7 @@ import { PressableScale } from '../../components/PressableScale';
 import { ProgressBar } from '../../components/ProgressBar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { Sheet } from '../../components/Sheet';
 import { VideoPlayer } from '../../components/VideoPlayer';
 import { TextField } from '../../components/TextField';
 import { Vitrina } from '../../components/Vitrina';
@@ -1549,36 +1550,24 @@ export default function WorkoutScreen() {
       ) : null}
 
       {/* Fijar qué día del ciclo es HOY (plan desactualizado o día pospuesto). */}
-      <Modal
+      <Sheet
         visible={dayPickerOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setDayPickerOpen(false)}
+        onClose={() => setDayPickerOpen(false)}
+        title="¿Qué día del plan es hoy?"
+        subtitle="Si pospusiste un entreno o el plan va desfasado, elige el día que te toca hoy y toda la programación se recoloca desde ahí."
+        scroll
+        maxHeight="80%"
       >
-        <View style={styles.dayPickerBackdrop}>
-          <View style={styles.dayPickerSheet}>
-            <View style={styles.dayPickerHeader}>
-              <Text style={styles.dayPickerTitle}>¿Qué día del plan es hoy?</Text>
-              <Pressable onPress={() => setDayPickerOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
-            <Text style={styles.dayPickerHint}>
-              Si pospusiste un entreno o el plan va desfasado, elige el día que te toca hoy y toda
-              la programación se recoloca desde ahí.
-            </Text>
-            {routine.days.map((d, i) => (
-              <Button
-                key={d.id}
-                title={`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? ' (descanso)' : ''}`}
-                variant={todaySession.cycleIndex === i ? 'primary' : 'secondary'}
-                onPress={() => handleSetTodayIndex(i)}
-                style={{ marginTop: spacing.sm }}
-              />
-            ))}
-          </View>
-        </View>
-      </Modal>
+        {routine.days.map((d, i) => (
+          <Button
+            key={d.id}
+            title={`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? ' (descanso)' : ''}`}
+            variant={todaySession.cycleIndex === i ? 'primary' : 'secondary'}
+            onPress={() => handleSetTodayIndex(i)}
+            style={{ marginTop: spacing.sm }}
+          />
+        ))}
+      </Sheet>
 
       {day?.intensity ? (
         <View style={styles.intensityBanner}>
@@ -2284,28 +2273,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     alignSelf: 'flex-start',
   },
-  dayPickerBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  dayPickerSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    maxHeight: '80%',
-  },
-  dayPickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  dayPickerTitle: { ...typography.h3, color: colors.text },
-  dayPickerHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
   exitBackdrop: {
     flex: 1,
     justifyContent: 'center',
@@ -2390,12 +2357,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 12,
   },
-  progressWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
   progressBlock: { marginBottom: spacing.md, gap: spacing.xs },
   progressTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   // Tira de puntos: un ejercicio por punto (dorado = hecho, aro = actual).
@@ -2445,16 +2406,6 @@ const styles = StyleSheet.create({
   navBtnTextDisabled: { color: colors.textFaint },
   navNext: { flex: 1, backgroundColor: colors.primary, borderColor: colors.primary },
   navNextText: { color: colors.onPrimary },
-  progressTrack: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
   progressText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   exerciseCard: { marginBottom: spacing.md },
   exerciseCardDone: { opacity: 0.55 },
@@ -2498,20 +2449,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.textFaint,
     marginTop: 1,
-  },
-  nowChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  nowChipText: {
-    fontSize: 10,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 1.2,
-    color: colors.primaryBright,
   },
   prevRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm },
   prevText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
@@ -2754,12 +2691,6 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     textAlign: 'center',
     marginTop: spacing.md,
-  },
-  retrainLink: { alignSelf: 'center', paddingVertical: spacing.sm, marginTop: spacing.xs },
-  retrainText: {
-    ...typography.small,
-    color: colors.textMuted,
-    textDecorationLine: 'underline',
   },
   againLink: {
     flexDirection: 'row',
