@@ -15,7 +15,7 @@ import {
   claimEntryNow,
   entryCheckoutUrl,
 } from '../lib/subscription';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 
 /**
  * Alta de la cuenta: un euro, una vez.
@@ -218,7 +218,21 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.h1, color: colors.text, marginTop: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.md },
-  price: { ...typography.h1, color: colors.primaryBright, fontSize: 40 },
+  /**
+   * El precio del alta: 40 px con el interletrado de 28.
+   *
+   * `typography.h1` trae un -0,7 calculado para 28 px; puesto a 40 se queda
+   * suelto y el número pierde el bloque. Es, además, la cifra que decide si
+   * alguien entra o no. Con la regla del rediseño —cuanto más grande, más
+   * apretada— y en la display, como las demás cifras grandes.
+   */
+  price: {
+    ...typography.h1,
+    ...tabularNums,
+    color: colors.primaryBright,
+    fontSize: 40,
+    letterSpacing: -1.2,
+  },
   priceNote: { ...typography.small, color: colors.textMuted },
   text: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 22 },
   help: {

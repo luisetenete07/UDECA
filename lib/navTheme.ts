@@ -2,7 +2,7 @@ import React from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
 import { BRAND_HEIGHT, SidebarBrand } from '../components/SidebarBrand';
 import { BREAKPOINTS, CONTENT_MAX_WIDTH, SIDEBAR_WIDTH, usesSidebarNav } from './responsive';
-import { colors, fonts, radius, spacing } from './theme';
+import { colors, fonts, radius, spacing, typography } from './theme';
 
 /**
  * Estilo de navegación compartido (élite y consistente): barra de pestañas
@@ -124,11 +124,22 @@ export function useTabScreenOptions() {
 export const stackScreenOptions = {
   headerStyle: { backgroundColor: colors.background },
   headerTintColor: colors.primary,
+  /**
+   * El último titular con el interletrado de Cinzel.
+   *
+   * Es exactamente un `h3` —17 px en Inter negrita— pero abría las letras +0,2
+   * en vez de apretarlas -0,2, así que el título de la barra era el único texto
+   * de la app que seguía sonando a la tipografía anterior. Y no es un rincón:
+   * sale en TODAS las pantallas apiladas, encima de una cabecera que sí lleva
+   * el ajuste nuevo, con lo que el desajuste se veía en la misma pantalla dos
+   * veces. Los valores se copian de `typography.h3` para que no se separen otra
+   * vez (`headerTitleStyle` no admite `lineHeight`).
+   */
   headerTitleStyle: {
-    fontFamily: fonts.heading,
-    fontSize: 17,
+    fontFamily: typography.h3.fontFamily,
+    fontSize: typography.h3.fontSize,
+    letterSpacing: typography.h3.letterSpacing,
     color: colors.text,
-    letterSpacing: 0.2,
   },
   headerTitleAlign: 'center' as const,
   headerShadowVisible: false,
