@@ -18,6 +18,7 @@ import { getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { CountUp } from '../../components/CountUp';
 import { PressableScale } from '../../components/PressableScale';
+import { Segmented } from '../../components/Segmented';
 import { Sheet } from '../../components/Sheet';
 import { FadeIn } from '../../components/FadeIn';
 import { ProgressRing } from '../../components/ProgressRing';
@@ -1108,24 +1109,18 @@ export default function TrainerDashboard() {
         maxHeight="80%"
       >
         {/* Conmutador: ingresos del mes o historial completo. */}
-        <View style={styles.scopeSeg}>
-          {(['month', 'all'] as const).map((sc) => (
-            <Pressable
-              key={sc}
-              onPress={() => {
-                setIncomeScope(sc);
-                setEditPayId(null);
-              }}
-              style={[styles.scopeBtn, incomeScope === sc && styles.scopeBtnOn]}
-            >
-              <Text
-                style={[styles.scopeText, incomeScope === sc && styles.scopeTextOn]}
-              >
-                {sc === 'month' ? 'Este mes' : 'Histórico'}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <Segmented
+          value={incomeScope}
+          onChange={(sc) => {
+            setIncomeScope(sc);
+            setEditPayId(null);
+          }}
+          style={styles.scopeSeg}
+          options={[
+            { value: 'month' as const, label: 'Este mes' },
+            { value: 'all' as const, label: 'Histórico' },
+          ]}
+        />
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>
             {incomeScope === 'month' ? 'Ingresado este mes' : 'Total ingresado hasta la fecha'}
@@ -1371,18 +1366,7 @@ const styles = StyleSheet.create({
   amountEuro: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold },
   payAmount: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   payIconBtn: { padding: 4 },
-  scopeSeg: {
-    flexDirection: 'row',
-    gap: 4,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: 4,
-    marginBottom: spacing.sm,
-  },
-  scopeBtn: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.sm },
-  scopeBtnOn: { backgroundColor: colors.primary },
-  scopeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  scopeTextOn: { color: colors.onPrimary },
+  scopeSeg: { marginBottom: spacing.sm },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

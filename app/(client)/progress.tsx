@@ -23,6 +23,7 @@ import { LineChart } from '../../components/LineChart';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { Segmented } from '../../components/Segmented';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
 import { MuscleMap } from '../../components/MuscleMap';
@@ -470,20 +471,16 @@ export default function ProgressScreen() {
         }
       />
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsScroll}
-        contentContainerStyle={styles.tabs}
-      >
-        <TabButton label="Entrenos" active={tab === 'workouts'} onPress={() => setTab('workouts')} />
-        <TabButton label="Peso" active={tab === 'weight'} onPress={() => setTab('weight')} />
-        <TabButton
-          label="Ejercicios"
-          active={tab === 'exercises'}
-          onPress={() => setTab('exercises')}
-        />
-      </ScrollView>
+      <Segmented
+        value={tab}
+        onChange={setTab}
+        style={styles.tabs}
+        options={[
+          { value: 'workouts' as Tab, label: 'Entrenos' },
+          { value: 'weight' as Tab, label: 'Peso' },
+          { value: 'exercises' as Tab, label: 'Ejercicios' },
+        ]}
+      />
 
       {tab === 'workouts' ? (
         months.length === 0 ? (
@@ -885,34 +882,15 @@ export default function ProgressScreen() {
           <Card style={styles.section}>
             <View style={styles.muscleHeader}>
               <Text style={styles.sectionTitle}>Músculos trabajados</Text>
-              <View style={styles.muscleToggle}>
-                <Pressable
-                  onPress={() => setMuscleMode('session')}
-                  style={[styles.muscleTab, muscleMode === 'session' && styles.muscleTabOn]}
-                >
-                  <Text
-                    style={[
-                      styles.muscleTabText,
-                      muscleMode === 'session' && styles.muscleTabTextOn,
-                    ]}
-                  >
-                    Última sesión
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setMuscleMode('week')}
-                  style={[styles.muscleTab, muscleMode === 'week' && styles.muscleTabOn]}
-                >
-                  <Text
-                    style={[
-                      styles.muscleTabText,
-                      muscleMode === 'week' && styles.muscleTabTextOn,
-                    ]}
-                  >
-                    Semana
-                  </Text>
-                </Pressable>
-              </View>
+              <Segmented
+                value={muscleMode}
+                onChange={setMuscleMode}
+                style={styles.muscleToggle}
+                options={[
+                  { value: 'session' as const, label: 'Última sesión' },
+                  { value: 'week' as const, label: 'Semana' },
+                ]}
+              />
             </View>
             <MuscleMap intensity={muscleIntensity} hasData={muscleHasData} />
           </Card>
@@ -1059,22 +1037,6 @@ export default function ProgressScreen() {
   );
 }
 
-function TabButton({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={[styles.tabButton, active && styles.tabButtonActive]}>
-      <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 /** Fila del comparador 3 meses → hoy, con delta coloreado. */
 function CompareRow({
   label,
@@ -1213,22 +1175,7 @@ const styles = StyleSheet.create({
   fullTitle: { ...typography.h2, color: colors.text },
   fullSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
-  tabsScroll: { marginBottom: spacing.lg, flexGrow: 0 },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 2,
-  },
-  tabButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-  },
+  tabs: { marginBottom: spacing.lg },
   exPickerRow: { gap: spacing.sm, paddingBottom: spacing.sm },
   exChip: {
     paddingHorizontal: spacing.md,
@@ -1242,9 +1189,6 @@ const styles = StyleSheet.create({
   exChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   exChipTextActive: { color: colors.onPrimary },
   exHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  tabButtonActive: { backgroundColor: colors.primary },
-  tabButtonText: { ...typography.small, fontFamily: fonts.heading, color: colors.textMuted },
-  tabButtonTextActive: { color: colors.onPrimary },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
@@ -1268,18 +1212,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  muscleToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.sm,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  muscleTab: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.sm - 2 },
-  muscleTabOn: { backgroundColor: colors.primary },
-  muscleTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  muscleTabTextOn: { color: colors.onPrimary },
+  muscleToggle: { flexShrink: 1 },
   muscleRow: {
     flexDirection: 'row',
     alignItems: 'center',
