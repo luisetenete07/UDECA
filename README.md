@@ -18,6 +18,10 @@ Construida con **Expo (React Native + React Native Web)** y **Firebase**
   privado de Telegram (`acceso/`).
 - **Cobros**: qué se cobra, cuándo y por qué en iOS no se puede enseñar un
   precio dentro de la app; ver `docs/COBROS.md`.
+- **Diseño**: colores, tipografía, componentes y cómo se comprueba una
+  pantalla antes de darla por buena; ver `docs/DISENO.md`.
+- **Planificación por ciclos**: cómo se monta una temporada en macro, meso
+  y microciclos; ver `docs/CICLOS.md`.
 - **Despliegue automático**: cada push a la rama de desarrollo compila la
   web y la publica en GitHub Pages vía `.github/workflows/deploy.yml`.
   No hay despliegues manuales.
@@ -237,6 +241,7 @@ lib/
   auth-context.tsx         Contexto de autenticación y perfil de usuario
   types.ts                 Tipos de datos (Firestore)
   theme.ts                 Colores, tipografía y espaciados
+  fechas.ts                Fechas escritas en español (mayúscula solo la inicial)
   notifications.ts          Registro y envío de notificaciones push (Expo)
   report.ts                 Generación del HTML del informe PDF de cliente
   firestore/                Funciones de acceso a datos por colección
