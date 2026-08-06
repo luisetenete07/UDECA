@@ -93,6 +93,12 @@ Implementado hasta ahora:
   en el panel cuánto lleva el grupo, quién no ha empezado y quién se quedó a
   medias. Solo el alumno puede marcar: si pudiera hacerlo su entrenador, el
   dato dejaría de significar que lo ha visto.
+- **Tu tarjeta**: pantalla propia para el entrenador, el atleta y el alumno.
+  Un foco de luz sobre negro, UNA cifra cada vez —número de fundador,
+  alumnos, entrenos, racha, puesto en el grupo— y una placa con el nombre.
+  Se inclina en 3D al arrastrarla y se comparte como imagen. Solo aparece lo
+  que es verdad y significa algo: nada de "0 entrenamientos" ni de "Nº 2 de
+  2".
 - **Fotos de progreso**: frente/perfil/espalda, visibles solo para el
   alumno y su entrenador.
 - **Entreno inmersivo**: barra de progreso de sesión, ejercicio actual

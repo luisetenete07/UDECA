@@ -174,6 +174,8 @@ export default function ClientLayout() {
       {/* El perfil se abre tocando el avatar en Inicio; lo ocultamos de la
           barra para no saturarla con demasiadas pestañas. */}
       <Tabs.Screen name="profile" options={{ href: null }} />
+      {/* Igual que en el entrenador: la tarjeta se abre desde el perfil. */}
+      <Tabs.Screen name="card" options={{ href: null, title: 'Tu tarjeta' }} />
       {/* Editor de plan del atleta (se abre desde Inicio, no es una pestaña). */}
       <Tabs.Screen name="my-plan" options={{ href: null }} />
     </Tabs>

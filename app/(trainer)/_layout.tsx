@@ -76,6 +76,9 @@ export default function TrainerLayout() {
           ),
         }}
       />
+      {/* La tarjeta no es una pestaña: se abre desde el perfil y ocupa la
+          pantalla entera, que es lo que necesita algo que se enseña. */}
+      <Tabs.Screen name="card" options={{ href: null, title: 'Tu tarjeta' }} />
       <Tabs.Screen
         name="profile"
         options={{

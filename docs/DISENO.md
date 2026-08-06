@@ -87,6 +87,7 @@ Antes de montar una nueva, mirar si ya está:
 | `ClientPulse` | Quién ha entrenado y quién no, por forma y color |
 | `DashboardSkeleton` | La forma de lo que viene, mientras carga |
 | `TextField` | Campo de texto. El borde **entra** al enfocar |
+| `ProgressCard` | La tarjeta: foco, una cifra cada vez y giro con el dedo |
 | `PRBurst` / `Confetti` | La celebración de un récord |
 
 ---
@@ -103,6 +104,10 @@ Las animaciones no son adorno; cada una hace un trabajo:
   forma de lo que viene, así que al llegar los datos no se mueve nada de sitio.
 - **Optimista primero.** Marcar una tarea o guardar una semana se pinta al
   instante y se deshace con aviso si el servidor dice que no.
+- **Objetos, no pantallas.** La tarjeta se inclina en 3D al arrastrarla y el
+  foco de luz barre su cara. No sirve para nada y es el motivo: algo que
+  responde al tacto se siente objeto, y a un carné que quieres enseñar eso le
+  importa más que cualquier dato de más.
 - **Sin native driver donde no se puede.** Color de borde y `strokeDashoffset`
   se animan en JS (`useNativeDriver: false`); posición y escala, en nativo.
 
