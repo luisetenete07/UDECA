@@ -185,6 +185,14 @@ console.log('\nEsfuerzo (RIR) y programación de la semana');
 // El RIR se lo activa el ENTRENADOR a su alumno: si se lo pudiera activar (o
 // quitar) el propio alumno, el dato dejaría de significar lo que el entrenador
 // cree que significa.
+//
+// Primero se lo pone el entrenador, aquí y no en la semilla: borrar un campo
+// que NO existe es un no-op, y las reglas lo dejan pasar porque no cambia
+// nada. Sin esta línea, la comprobación de más abajo aprobaba sin probar
+// nada — y solo cuando al sorteo le tocaba el alumno que ya lo llevaba puesto.
+await comprobar('el entrenador se lo activa (preparación)', true, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { trackRir: true }, { merge: true })
+);
 await signInWithEmailAndPassword(auth, otroEmail, PW);
 // Se prueba QUITÁRSELO, que es el caso que hace daño: si el alumno pudiera
 // apagarlo, el entrenador seguiría creyendo que ese dato existe. (Ponerlo al
