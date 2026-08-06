@@ -42,6 +42,7 @@ import {
   deleteJoinRequest,
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
+import { confirmar } from '../../lib/confirmar';
 import { getCoursesForTrainer } from '../../lib/firestore/courses';
 import { getCourseProgressMany } from '../../lib/firestore/courseProgress';
 import {
@@ -423,6 +424,10 @@ export default function TrainerDashboard() {
 
   // Eliminar un pago registrado por error.
   const handleDeletePayment = async (id: string) => {
+    // Un pago registrado es dinero cobrado a un alumno. Que desapareciera
+    // porque el dedo rozó una papelera no es un fallo de diseño, es un fallo
+    // de contabilidad.
+    if (!(await confirmar('¿Eliminar este pago del historial de ingresos?'))) return;
     setSavingPay(true);
     try {
       await deletePayment(id);

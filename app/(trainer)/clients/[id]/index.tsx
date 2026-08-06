@@ -7,6 +7,7 @@ import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
 import { DashboardSkeleton } from '../../../../components/Skeleton';
+import { confirmar } from '../../../../lib/confirmar';
 import { getCoursesForTrainer } from '../../../../lib/firestore/courses';
 import { getCourseProgress } from '../../../../lib/firestore/courseProgress';
 import {
@@ -202,7 +203,9 @@ export default function ClientDetailScreen() {
   };
 
   const handleDeleteHabit = async (habitId: string) => {
-    setHabits((prev) => prev.filter((h) => h.id !== habitId));
+    const h = habits.find((x) => x.id === habitId);
+    if (!(await confirmar(`¿Quitar "${h?.name ?? 'este hábito'}" de sus hábitos?`))) return;
+    setHabits((prev) => prev.filter((x) => x.id !== habitId));
     await deleteHabit(habitId);
   };
 

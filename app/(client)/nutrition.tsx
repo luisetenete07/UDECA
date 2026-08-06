@@ -24,6 +24,7 @@ import { getMealBooksForTrainer } from '../../lib/firestore/mealBooks';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { pickProgressPhoto } from '../../lib/image';
 import { MacroCalculator } from '../../components/MacroCalculator';
+import { confirmar } from '../../lib/confirmar';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   PHOTO_POSES,
@@ -194,21 +195,9 @@ export default function NutritionScreen() {
     }
   };
 
-  const confirmDelete = (message: string): Promise<boolean> => {
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      return Promise.resolve(window.confirm(message));
-    }
-    return new Promise((resolve) => {
-      Alert.alert('Borrar', message, [
-        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-        { text: 'Borrar', style: 'destructive', onPress: () => resolve(true) },
-      ]);
-    });
-  };
 
   const handleDeletePhoto = async (id: string) => {
-    if (!(await confirmDelete('¿Borrar esta foto de progreso?'))) return;
+    if (!(await confirmar('¿Borrar esta foto de progreso?'))) return;
     setPhotos((prev) => prev.filter((p) => p.id !== id));
     try {
       await deleteProgressPhoto(id);

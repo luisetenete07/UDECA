@@ -45,6 +45,10 @@ export default function ExerciseEditorScreen() {
 
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  // Borrar un ejercicio se lleva por delante lo que ya está escrito con él:
+  // las rutinas que lo usan y su rastro en el historial. No puede pasar de un
+  // toque, y menos con un botón rojo a ancho completo pegado a "Guardar".
+  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [name, setName] = useState('');
   const [muscleGroup, setMuscleGroup] = useState<string>(MUSCLE_GROUPS[0]);
   const [description, setDescription] = useState('');
@@ -132,6 +136,7 @@ export default function ExerciseEditorScreen() {
 
   const handleDelete = async () => {
     if (isNew || !id) return;
+    setConfirmarBorrado(false);
     setSaving(true);
     try {
       await deleteExercise(id);
@@ -402,13 +407,45 @@ export default function ExerciseEditorScreen() {
       <Button title="Guardar" onPress={handleSave} loading={saving} style={{ marginTop: spacing.sm }} />
 
       {!isNew ? (
-        <Button
-          title="Eliminar ejercicio"
-          variant="danger"
-          onPress={handleDelete}
-          style={{ marginTop: spacing.md, marginBottom: spacing.xl }}
-        />
+        <Pressable
+          onPress={() => setConfirmarBorrado(true)}
+          style={styles.borrarEnlace}
+          hitSlop={8}
+        >
+          <Ionicons name="trash-outline" size={14} color={colors.textFaint} />
+          <Text style={styles.borrarEnlaceTexto}>Eliminar ejercicio</Text>
+        </Pressable>
       ) : null}
+
+      <Modal
+        visible={confirmarBorrado}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmarBorrado(false)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>¿Eliminar {name || 'este ejercicio'}?</Text>
+            <Text style={styles.confirmText}>
+              Desaparece de tu biblioteca y de las rutinas que lo usen. Los
+              entrenamientos ya registrados con él se quedan como están.
+            </Text>
+            <Button
+              title="Eliminar"
+              variant="danger"
+              onPress={handleDelete}
+              loading={saving}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setConfirmarBorrado(false)}
+              style={{ marginTop: spacing.xs }}
+            />
+          </View>
+        </View>
+      </Modal>
 
       {/* Renombrar subgrupo (arrastra a todos los ejercicios que lo usan) */}
       <Modal
@@ -453,6 +490,34 @@ export default function ExerciseEditorScreen() {
 }
 
 const styles = StyleSheet.create({
+  borrarEnlace: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'center',
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
+    paddingVertical: spacing.sm,
+  },
+  borrarEnlaceTexto: { ...typography.small, color: colors.textFaint },
+  confirmBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.scrim,
+    padding: spacing.lg,
+  },
+  confirmCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 420,
+  },
+  confirmTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
+  confirmText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
   label: {
     ...typography.label,
     color: colors.textMuted,

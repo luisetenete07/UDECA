@@ -29,6 +29,7 @@ import {
   updateMealBook,
 } from '../../../lib/firestore/mealBooks';
 import { pickMealPhoto } from '../../../lib/image';
+import { confirmar } from '../../../lib/confirmar';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { MealBook } from '../../../lib/types';
 
@@ -63,18 +64,6 @@ export default function MealBooksScreen() {
     }, [load])
   );
 
-  const confirmDelete = (message: string): Promise<boolean> => {
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      return Promise.resolve(window.confirm(message));
-    }
-    return new Promise((resolve) => {
-      Alert.alert('Borrar', message, [
-        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-        { text: 'Borrar', style: 'destructive', onPress: () => resolve(true) },
-      ]);
-    });
-  };
 
   // Renombrar una libreta. Se guarda al confirmar (no en cada tecla) para no
   // escribir en Firestore con cada letra.
@@ -161,7 +150,7 @@ export default function MealBooksScreen() {
   };
 
   const handleRemovePhoto = async (book: MealBook, photoId: string) => {
-    if (!(await confirmDelete('¿Quitar esta foto de la libreta?'))) return;
+    if (!(await confirmar('¿Quitar esta foto de la libreta?'))) return;
     const photos = book.photos.filter((p) => p.id !== photoId);
     setBooks((prev) => prev.map((b) => (b.id === book.id ? { ...b, photos } : b)));
     try {
@@ -172,7 +161,7 @@ export default function MealBooksScreen() {
   };
 
   const handleDeleteBook = async (book: MealBook) => {
-    if (!(await confirmDelete(`¿Borrar la libreta "${book.title}"? Tus alumnos dejarán de verla.`)))
+    if (!(await confirmar(`¿Borrar la libreta "${book.title}"? Tus alumnos dejarán de verla.`)))
       return;
     setBooks((prev) => prev.filter((b) => b.id !== book.id));
     try {

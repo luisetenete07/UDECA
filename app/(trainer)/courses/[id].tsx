@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -31,6 +31,9 @@ export default function CourseEditorScreen() {
 
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  // Un curso se lleva por delante sus secciones y todas sus lecciones: horas
+  // de vídeo grabado. No puede irse de un toque.
+  const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [published, setPublished] = useState(false);
@@ -161,6 +164,7 @@ export default function CourseEditorScreen() {
 
   const handleDelete = async () => {
     if (isNew || !id) return;
+    setConfirmarBorrado(false);
     setSaving(true);
     try {
       await deleteCourse(id);
@@ -305,13 +309,21 @@ export default function CourseEditorScreen() {
                   autoCapitalize="none"
                 />
               )}
+              {/* El rótulo dice QUÉ es el campo; lo que hace va debajo, en
+                  pequeño. En mayúsculas y a tres líneas, una etiqueta deja de
+                  ser una etiqueta y pasa a ser un párrafo gritado. */}
               <TextField
-                label="Candado: desbloquear a los X días del alumno en tu grupo (vacío = libre)"
+                label="Candado (días)"
                 value={lesson.unlockAfterDays ? String(lesson.unlockAfterDays) : ''}
                 onChangeText={(v) => updateLesson(section.id, lesson.id, 'unlockAfterDays', v)}
                 placeholder="Ej. 30"
                 keyboardType="numeric"
+                containerStyle={{ marginBottom: spacing.xs }}
               />
+              <Text style={styles.pista}>
+                Días que el alumno debe llevar en tu grupo para verla. Vacío:
+                disponible desde el primer día.
+              </Text>
             </View>
           ))}
 
@@ -331,18 +343,85 @@ export default function CourseEditorScreen() {
       <Button title="Guardar curso" onPress={handleSave} loading={saving} />
 
       {!isNew ? (
-        <Button
-          title="Eliminar curso"
-          variant="danger"
-          onPress={handleDelete}
-          style={{ marginTop: spacing.md, marginBottom: spacing.xl }}
-        />
+        <Pressable
+          onPress={() => setConfirmarBorrado(true)}
+          style={styles.borrarEnlace}
+          hitSlop={8}
+        >
+          <Ionicons name="trash-outline" size={14} color={colors.textFaint} />
+          <Text style={styles.borrarEnlaceTexto}>Eliminar curso</Text>
+        </Pressable>
       ) : null}
+
+      <Modal
+        visible={confirmarBorrado}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmarBorrado(false)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>¿Eliminar {title || 'este curso'}?</Text>
+            <Text style={styles.confirmText}>
+              Se borran sus {sections.length}{' '}
+              {sections.length === 1 ? 'sección' : 'secciones'} y todas sus
+              lecciones. Tus alumnos dejarán de verlo. No se puede deshacer.
+            </Text>
+            <Button
+              title="Eliminar"
+              variant="danger"
+              onPress={handleDelete}
+              loading={saving}
+              style={{ marginTop: spacing.md }}
+            />
+            <Button
+              title="Cancelar"
+              variant="ghost"
+              onPress={() => setConfirmarBorrado(false)}
+              style={{ marginTop: spacing.xs }}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  pista: {
+    ...typography.small,
+    color: colors.textFaint,
+    marginBottom: spacing.md,
+    lineHeight: 17,
+  },
+  borrarEnlace: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'center',
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
+    paddingVertical: spacing.sm,
+  },
+  borrarEnlaceTexto: { ...typography.small, color: colors.textFaint },
+  confirmBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.scrim,
+    padding: spacing.lg,
+  },
+  confirmCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+    width: '100%',
+    maxWidth: 420,
+  },
+  confirmTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
+  confirmText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
   textarea: { height: 78, textAlignVertical: 'top' },
   coverPicker: { marginBottom: spacing.md },
   coverImage: { width: '100%', maxWidth: 480, aspectRatio: 16 / 9, borderRadius: radius.md, alignSelf: 'flex-start' },

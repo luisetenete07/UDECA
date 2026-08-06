@@ -1,9 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
-  Alert,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -58,6 +56,7 @@ import {
 } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
+import { confirmar } from '../../lib/confirmar';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   setMarks,
@@ -233,21 +232,9 @@ export default function ProgressScreen() {
     }
   };
 
-  const confirmDelete = (message: string): Promise<boolean> => {
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      return Promise.resolve(window.confirm(message));
-    }
-    return new Promise((resolve) => {
-      Alert.alert('Borrar registro', message, [
-        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-        { text: 'Borrar', style: 'destructive', onPress: () => resolve(true) },
-      ]);
-    });
-  };
 
   const handleDeleteWeight = async (id: string) => {
-    if (!(await confirmDelete('¿Borrar este registro de peso?'))) return;
+    if (!(await confirmar('¿Borrar este registro de peso?'))) return;
     setWeightLogs((prev) => prev.filter((l) => l.id !== id));
     await deleteWeightLog(id);
     showToast('Registro borrado');
