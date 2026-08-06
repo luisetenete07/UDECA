@@ -38,10 +38,28 @@ export default function Root({ children }: PropsWithChildren) {
   );
 }
 
+/*
+ * Registro del service worker y aviso de versión nueva.
+ *
+ * Lo que fallaba: el navegador solo comprueba si hay una versión nueva al
+ * navegar o cada muchas horas. En una app instalada, que se abre y se cierra
+ * sin navegar nunca, esa comprobación podía no ocurrir en días — y el usuario
+ * se quedaba con la versión vieja sin saber por qué, aunque la nueva llevara
+ * publicada desde la mañana.
+ *
+ * Ahora se pregunta al cargar y cada vez que la app vuelve a primer plano, que
+ * es justo cuando alguien la abre esperando ver lo último. Y se mira si ya
+ * había una versión esperando de la sesión anterior, porque en ese caso
+ * "updatefound" no vuelve a dispararse y el aviso no salía nunca.
+ *
+ * Lo que NO se hace: recargar solo. Alguien puede estar a mitad de una serie
+ * con datos sin guardar, y quitarle la pantalla de debajo para darle una
+ * mejora es un mal negocio. El aviso está a un toque.
+ */
 const swRegistration = (base: string) => `
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('${base}/sw.js').then(function (reg) {
+    navigator.serviceWorker.register('${base}/sw.js', { updateViaCache: 'none' }).then(function (reg) {
       function showUpdateBanner() {
         if (document.getElementById('udeca-update-bar')) return;
         var bar = document.createElement('div');
@@ -65,6 +83,28 @@ if ('serviceWorker' in navigator) {
             showUpdateBanner();
           }
         });
+      });
+
+      // Una versión que quedó instalada en la sesión anterior: "updatefound"
+      // ya no volverá a saltar, así que el aviso hay que ponerlo aquí.
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+
+      // El service worker nuevo entra solo (hace skipWaiting), pero la
+      // pantalla sigue siendo la vieja hasta que se recargue. Ese cambio de
+      // mando es la señal más fiable de que hay algo nuevo que ver.
+      navigator.serviceWorker.addEventListener('controllerchange', showUpdateBanner);
+
+      // Preguntar de verdad: al cargar y cada vez que se vuelve a la app.
+      var ultima = 0;
+      function mirarSiHayNueva() {
+        var ahora = Date.now();
+        if (ahora - ultima < 60000) return; // sin machacar el servidor
+        ultima = ahora;
+        reg.update().catch(function () {});
+      }
+      mirarSiHayNueva();
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') mirarSiHayNueva();
       });
     }).catch(function () {});
   });
