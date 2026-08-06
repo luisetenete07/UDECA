@@ -2,14 +2,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
+import { PressableScale } from '../../../components/PressableScale';
+import { ProgressRing } from '../../../components/ProgressRing';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { VideoPlayer } from '../../../components/VideoPlayer';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
 import { getCourse } from '../../../lib/firestore/courses';
+import { getCourseProgress, setLessonsSeen } from '../../../lib/firestore/courseProgress';
+import { estadoDeCurso, tieneContenido } from '../../../lib/courseProgress';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { Course, Lesson } from '../../../lib/types';
 
@@ -21,6 +26,7 @@ export default function ClientCourseDetailScreen() {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  const [vistas, setVistas] = useState<string[]>([]);
 
   // Antigüedad del alumno (días desde que se creó su cuenta): abre candados.
   const memberDays = profile ? Math.floor((Date.now() - profile.createdAt) / DAY_MS) : 0;
@@ -38,8 +44,34 @@ export default function ClientCourseDetailScreen() {
       // índice de secciones y el alumno elige dónde entrar.
       setLoading(false);
     })();
+    if (profile) {
+      getCourseProgress(profile.uid)
+        .then((m) => setVistas(m[id] ?? []))
+        .catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, profile?.uid]);
+
+  /**
+   * Marcar o desmarcar una lección.
+   *
+   * Se pinta al momento y se guarda detrás: nadie debería esperar a la red
+   * para ver un check. Si el guardado falla se deshace y se avisa, que es la
+   * única forma honesta de hacerlo — dejar el check puesto sería mentirle al
+   * alumno y, de paso, a su entrenador.
+   */
+  const alternarVista = (lessonId: string) => {
+    if (!profile || !id) return;
+    const antes = vistas;
+    const ahora = antes.includes(lessonId)
+      ? antes.filter((x) => x !== lessonId)
+      : [...antes, lessonId];
+    setVistas(ahora);
+    setLessonsSeen(profile.uid, id, ahora).catch(() => {
+      setVistas(antes);
+      showToast('No se pudo guardar. Inténtalo de nuevo.');
+    });
+  };
 
   const activeLesson = useMemo<Lesson | null>(() => {
     if (!course) return null;
@@ -54,6 +86,8 @@ export default function ClientCourseDetailScreen() {
   if (!course) return <EmptyState title="Curso no encontrado" />;
 
   const totalLessons = course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
+  const estado = estadoDeCurso(course, vistas, memberDays);
+  const vista = (lessonId: string) => vistas.includes(lessonId);
 
   return (
     <ScreenContainer maxWidth={860}>
@@ -82,6 +116,36 @@ export default function ClientCourseDetailScreen() {
           {activeLesson.description ? (
             <Text style={styles.lessonDesc}>{activeLesson.description}</Text>
           ) : null}
+
+          {/* Terminar una lección y empezar la siguiente son dos gestos que
+              siempre van juntos: aquí es uno. Si ya estaba vista, el botón
+              deja de empujar y solo permite desmarcarla. */}
+          {tieneContenido(activeLesson) ? (
+            vista(activeLesson.id) ? (
+              <Button
+                title="Quitar de vistas"
+                variant="secondary"
+                onPress={() => alternarVista(activeLesson.id)}
+                style={{ marginTop: spacing.md }}
+              />
+            ) : (
+              <Button
+                title={estado.siguiente && estado.siguiente.id !== activeLesson.id
+                  ? 'Vista · ir a la siguiente'
+                  : 'Marcar como vista'}
+                onPress={() => {
+                  alternarVista(activeLesson.id);
+                  const resto = estadoDeCurso(
+                    course,
+                    [...vistas, activeLesson.id],
+                    memberDays
+                  ).siguiente;
+                  if (resto) setActiveLessonId(resto.id);
+                }}
+                style={{ marginTop: spacing.md }}
+              />
+            )
+          ) : null}
         </>
       ) : course.coverURL ? (
         <Image source={{ uri: course.coverURL }} style={styles.courseCover} resizeMode="cover" />
@@ -103,10 +167,32 @@ export default function ClientCourseDetailScreen() {
         <Text style={styles.privateText}>Contenido privado · solo para miembros</Text>
       </View>
 
-      <Text style={styles.courseTitle}>{course.title}</Text>
-      <Text style={styles.courseMeta}>
-        {course.sections.length} secciones · {totalLessons} lecciones
-      </Text>
+      <View style={styles.courseHead}>
+        {estado.total > 0 ? (
+          <ProgressRing
+            size={62}
+            thickness={5}
+            progress={estado.ratio}
+            value={`${estado.hechas}/${estado.total}`}
+            label="vistas"
+          />
+        ) : null}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.courseTitle}>{course.title}</Text>
+          <Text style={styles.courseMeta}>
+            {/* El total es el del anillo —lo que se puede ver hoy—, no todas
+                las lecciones creadas: dos cifras distintas a dos dedos una de
+                otra hacen dudar de las dos. Lo que falta por subir se dice
+                aparte, que es una noticia buena y no un descuadre. */}
+            {estado.terminado
+              ? 'Curso completado'
+              : `${course.sections.length} ${course.sections.length === 1 ? 'sección' : 'secciones'} · ${estado.total} ${estado.total === 1 ? 'lección' : 'lecciones'}`}
+            {totalLessons > estado.total
+              ? ` · ${totalLessons - estado.total} en camino`
+              : ''}
+          </Text>
+        </View>
+      </View>
 
       {totalLessons === 0 ? (
         <EmptyState title="Este curso aún no tiene lecciones" />
@@ -135,7 +221,8 @@ export default function ClientCourseDetailScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionName}>{section.title}</Text>
                   <Text style={styles.sectionMeta}>
-                    {section.lessons.length} lección{section.lessons.length === 1 ? '' : 'es'}
+                    {section.lessons.length}{' '}
+                    {section.lessons.length === 1 ? 'lección' : 'lecciones'}
                   </Text>
                 </View>
                 <Ionicons
@@ -205,6 +292,23 @@ export default function ClientCourseDetailScreen() {
                     {!locked && !hasContent ? <Text style={styles.soon}>Pronto</Text> : null}
                     {!locked && isPdf && hasContent ? (
                       <Text style={styles.pdfTag}>PDF</Text>
+                    ) : null}
+                    {/* El check cierra la fila, no la abre: delante del play
+                        competiría con el gesto de ver, que es a lo que se
+                        viene. */}
+                    {hasContent && !locked ? (
+                      <PressableScale
+                        haptic
+                        hitSlop={10}
+                        onPress={() => alternarVista(lesson.id)}
+                        style={[styles.check, vista(lesson.id) && styles.checkOn]}
+                      >
+                        <Ionicons
+                          name="checkmark"
+                          size={16}
+                          color={vista(lesson.id) ? colors.onPrimary : colors.textFaint}
+                        />
+                      </PressableScale>
                     ) : null}
                   </Card>
                 </Pressable>
@@ -291,8 +395,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   privateText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
+  courseHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
   courseTitle: { ...typography.h3, color: colors.text },
-  courseMeta: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md },
+  courseMeta: { ...typography.small, color: colors.textMuted },
+  check: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   section: { marginBottom: spacing.sm },
   courseCover: {
     width: '100%',

@@ -88,7 +88,11 @@ Implementado hasta ahora:
   entrenamiento configurable.
 - **Cursos en vídeo**: cursos → secciones → lecciones, privados y solo
   visibles para alumnos del entrenador cuando están publicados;
-  reproductor sin descarga.
+  reproductor sin descarga. El alumno marca cada lección como vista (o la
+  marca y salta a la siguiente de un toque) y ve su avance; el entrenador ve
+  en el panel cuánto lleva el grupo, quién no ha empezado y quién se quedó a
+  medias. Solo el alumno puede marcar: si pudiera hacerlo su entrenador, el
+  dato dejaría de significar que lo ha visto.
 - **Fotos de progreso**: frente/perfil/espalda, visibles solo para el
   alumno y su entrenador.
 - **Entreno inmersivo**: barra de progreso de sesión, ejercicio actual
@@ -269,6 +273,7 @@ firestore.rules            Reglas de seguridad de Firestore
 | `habits`              | Hábitos diarios asignados por el entrenador a cada alumno         |
 | `habitLogs`           | Registro diario de hábitos cumplidos (creado por el alumno)       |
 | `challenges`          | Retos del grupo (uno activo por entrenador; ranking en Social)    |
+| `courseProgress`      | Lecciones vistas por cada alumno (doc id = su uid; solo él escribe) |
 
 ## 9. Añadir el logo real (icono, splash y favicon)
 

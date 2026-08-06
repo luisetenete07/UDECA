@@ -214,6 +214,43 @@ await comprobar('pero no puede colar otra cosa de paso', false, () =>
     { merge: true }
   )
 );
+// Cursos: quién puede decir que ha visto una lección.
+//
+// El caso que importa es el del ENTRENADOR. Si pudiera marcar lecciones como
+// vistas en nombre de su alumno, el porcentaje del panel dejaría de significar
+// "lo ha visto" y pasaría a significar "alguien dijo que lo vio" — y él
+// seguiría decidiendo sobre ese dato igualmente, que es lo que lo hace
+// peligroso.
+await comprobar('el entrenador NO marca lecciones por su alumno', false, () =>
+  setDoc(
+    doc(db, 'courseProgress', alumno.id),
+    { uid: alumno.id, lessons: { c1: ['l1'] }, updatedAt: Date.now() },
+    { merge: true }
+  )
+);
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+await comprobar('cada uno marca las suyas', true, () =>
+  setDoc(
+    doc(db, 'courseProgress', otro.user.uid),
+    { uid: otro.user.uid, lessons: { c1: ['l1', 'l2'] }, updatedAt: Date.now() },
+    { merge: true }
+  )
+);
+await comprobar('pero no las de otro alumno', false, () =>
+  setDoc(
+    doc(db, 'courseProgress', alumno.id),
+    { uid: alumno.id, lessons: { c1: ['l1'] }, updatedAt: Date.now() },
+    { merge: true }
+  )
+);
+await comprobar('ni cotillea por dónde va otro alumno', false, () =>
+  getDoc(doc(db, 'courseProgress', alumno.id))
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador SÍ ve por dónde va su alumno', true, () =>
+  getDoc(doc(db, 'courseProgress', otro.user.uid))
+);
+
 await comprobar('programa la semana de SU alumno', true, () =>
   addDoc(collection(db, 'trainingCycles'), {
     trainerId: coach.user.uid,

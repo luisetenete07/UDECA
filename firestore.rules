@@ -254,6 +254,26 @@ service cloud.firestore {
              == request.auth.uid;
     }
 
+    // Lecciones de curso vistas por cada alumno. Doc id = uid del alumno.
+    //
+    // Lo LEEN los dos: el alumno para ver por dónde va y su entrenador para
+    // saber si alguien ha abierto siquiera el curso que acaba de grabar.
+    //
+    // Lo ESCRIBE solo el alumno, y aquí está lo importante: el entrenador NO
+    // puede marcarle lecciones como vistas. Si pudiera, el dato dejaría de
+    // significar "lo ha visto" y pasaría a significar "alguien dijo que lo
+    // vio" — y el entrenador seguiría decidiendo sobre él igualmente, que es
+    // lo que lo hace peligroso.
+    match /courseProgress/{clientId} {
+      allow read: if request.auth != null
+        && (
+          clientId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(clientId)).data.trainerId
+               == request.auth.uid
+        );
+      allow write: if request.auth != null && clientId == request.auth.uid;
+    }
+
     // Pagos registrados por el entrenador (historial de ingresos).
     match /payments/{paymentId} {
       allow read: if request.auth != null

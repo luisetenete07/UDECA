@@ -7,6 +7,13 @@ import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
 import { DashboardSkeleton } from '../../../../components/Skeleton';
+import { getCoursesForTrainer } from '../../../../lib/firestore/courses';
+import { getCourseProgress } from '../../../../lib/firestore/courseProgress';
+import {
+  diasDeAlta,
+  estadoDeCurso,
+  type LessonsSeen,
+} from '../../../../lib/courseProgress';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { TextField } from '../../../../components/TextField';
 import { showToast } from '../../../../components/Toast';
@@ -50,7 +57,7 @@ import {
   updateClientStatus,
 } from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
-import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
+import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
 import {
   CHECKIN_FIELDS,
   CLIENT_STATUSES,
@@ -106,6 +113,8 @@ export default function ClientDetailScreen() {
   const [newHabit, setNewHabit] = useState('');
   const [addingHabit, setAddingHabit] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [courses, setCourses] = useState<import('../../../../lib/types').Course[]>([]);
+  const [courseSeen, setCourseSeen] = useState<LessonsSeen>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sharingCard, setSharingCard] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -156,6 +165,15 @@ export default function ClientDetailScreen() {
         setCheckIns(checkInData);
         setHabits(habitData);
         setHabitLogs(habitLogData);
+        // Los cursos van detrás y sin bloquear: la ficha se abre para mirar
+        // entrenos y cobros, no para saber por qué lección va.
+        Promise.all([getCoursesForTrainer(uid), getCourseProgress(id)])
+          .then(([cs, seen]) => {
+            if (cancelled) return;
+            setCourses(cs);
+            setCourseSeen(seen);
+          })
+          .catch(() => {});
         } catch (e) {
           if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
         } finally {
@@ -561,6 +579,43 @@ export default function ClientDetailScreen() {
         </Card>
       ) : null}
 
+      {/* Por dónde va en cada curso. Solo los publicados: los borradores no ha
+          podido verlos y saldrían siempre a cero, como si el alumno fallara. */}
+      {(() => {
+        const publicados = courses.filter((c) => c.published);
+        if (publicados.length === 0) return null;
+        const dias = diasDeAlta(client.createdAt);
+        const estados = publicados
+          .map((c) => estadoDeCurso(c, courseSeen[c.id], dias))
+          .filter((e) => e.total > 0);
+        if (estados.length === 0) return null;
+        return (
+          <Card style={styles.section}>
+            <View style={styles.titleRow}>
+              <Ionicons name="school-outline" size={16} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Cursos</Text>
+            </View>
+            {estados.map((e) => (
+              <View key={e.courseId} style={styles.cursoFila}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cursoNombre} numberOfLines={1}>
+                    {e.titulo}
+                  </Text>
+                  <View style={styles.cursoBarra}>
+                    <View
+                      style={[styles.cursoBarraFill, { width: `${e.ratio * 100}%` }]}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.cursoPct}>
+                  {e.terminado ? 'Hecho' : `${e.hechas}/${e.total}`}
+                </Text>
+              </View>
+            ))}
+          </Card>
+        );
+      })()}
+
       <Card style={styles.section}>
         <View style={styles.titleRow}>
           <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
@@ -585,7 +640,8 @@ export default function ClientDetailScreen() {
           <>
             <Text style={styles.routineName}>{activeRoutine.name}</Text>
             <Text style={styles.routineMeta}>
-              {activeRoutine.days.length} día(s) de entrenamiento
+              {activeRoutine.days.length}{' '}
+              {activeRoutine.days.length === 1 ? 'día' : 'días'} de entrenamiento
             </Text>
           </>
         ) : (
@@ -1007,6 +1063,27 @@ const styles = StyleSheet.create({
   nextPayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nextPayText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   nextPayOverdue: { color: colors.danger },
+  cursoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  cursoNombre: { ...typography.small, color: colors.text, fontFamily: fonts.medium },
+  cursoBarra: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceAlt,
+    overflow: 'hidden',
+    marginTop: 6,
+  },
+  cursoBarraFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
+  cursoPct: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontFamily: fonts.semiBold,
+    ...tabularNums,
+  },
   payHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.xs, textAlign: 'center' },
   payBtnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   daysField: { width: 76, marginBottom: 0, textAlign: 'center' },

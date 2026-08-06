@@ -8,6 +8,8 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { useAuth } from '../../../lib/auth-context';
 import { getPublishedCourses } from '../../../lib/firestore/courses';
+import { getCourseProgress } from '../../../lib/firestore/courseProgress';
+import { diasDeAlta, estadoDeCurso, type LessonsSeen } from '../../../lib/courseProgress';
 import { colors, radius, spacing, typography } from '../../../lib/theme';
 import type { Course } from '../../../lib/types';
 
@@ -19,6 +21,7 @@ export default function ClientCoursesScreen() {
   const { profile } = useAuth();
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [vistas, setVistas] = useState<LessonsSeen>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -30,6 +33,7 @@ export default function ClientCoursesScreen() {
     const data = await getPublishedCourses(profile.trainerId);
     data.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.createdAt - b.createdAt);
     setCourses(data);
+    setVistas(await getCourseProgress(profile.uid));
     setLoading(false);
     setRefreshing(false);
   }, [profile]);
@@ -39,6 +43,9 @@ export default function ClientCoursesScreen() {
       load();
     }, [load])
   );
+
+  // Los días de alta abren los candados por antigüedad de cada lección.
+  const dias = diasDeAlta(profile?.createdAt);
 
   if (loading) return <LoadingScreen />;
 
@@ -61,7 +68,9 @@ export default function ClientCoursesScreen() {
           subtitle="Cuando tu entrenador publique cursos, aparecerán aquí."
         />
       ) : (
-        courses.map((course) => (
+        courses.map((course) => {
+          const estado = estadoDeCurso(course, vistas[course.id], dias);
+          return (
           <Pressable key={course.id} onPress={() => router.push(`/(client)/courses/${course.id}`)}>
             <Card style={styles.card}>
               {course.coverURL ? (
@@ -78,14 +87,37 @@ export default function ClientCoursesScreen() {
                     {course.description}
                   </Text>
                 ) : null}
-                <Text style={styles.courseMeta}>
-                  {course.sections.length} secciones · {lessonCount(course)} lecciones
-                </Text>
+                {/* El avance manda sobre el recuento: cuántas secciones tiene
+                    un curso importa antes de empezarlo y nunca más. */}
+                {estado.total > 0 && estado.empezado ? (
+                  <>
+                    <View style={styles.barra}>
+                      <View style={[styles.barraFill, { width: `${estado.ratio * 100}%` }]} />
+                    </View>
+                    <Text style={styles.courseMeta}>
+                      {estado.terminado
+                        ? 'Completado'
+                        : `${estado.hechas} de ${estado.total} lecciones`}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.courseMeta}>
+                    {course.sections.length}{' '}
+                    {course.sections.length === 1 ? 'sección' : 'secciones'} ·{' '}
+                    {lessonCount(course)}{' '}
+                    {lessonCount(course) === 1 ? 'lección' : 'lecciones'}
+                  </Text>
+                )}
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+              {estado.terminado ? (
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              ) : (
+                <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+              )}
             </Card>
           </Pressable>
-        ))
+          );
+        })
       )}
     </ScreenContainer>
   );
@@ -107,4 +139,12 @@ const styles = StyleSheet.create({
   courseTitle: { ...typography.h3, color: colors.text },
   courseDesc: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   courseMeta: { ...typography.small, color: colors.textFaint, marginTop: 4 },
+  barra: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceAlt,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  barraFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
 });

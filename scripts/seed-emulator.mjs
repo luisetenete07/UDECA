@@ -162,6 +162,60 @@ await limpiar('exercises', 'trainerId', coach);
 await limpiar('routines', 'trainerId', coach);
 await limpiar('payments', 'trainerId', coach);
 await limpiar('trainingCycles', 'trainerId', coach);
+await limpiar('courses', 'trainerId', coach);
+
+// Un curso publicado, para poder ver el avance de verdad. Sin cursos, la
+// tarjeta de "Cursos" del panel no aparece —y entonces no se puede revisar.
+await como('coach@demo.test');
+const leccion = (n, extra = {}) => ({
+  id: `lec${n}`,
+  title: `Lección ${n}`,
+  kind: 'video',
+  videoUrl: `https://example.invalid/lec${n}.mp4`,
+  durationLabel: `${6 + n} min`,
+  ...extra,
+});
+const cursoRef = await addDoc(collection(db, 'courses'), {
+  trainerId: coach,
+  title: 'Planche desde cero',
+  description: 'De la base al tuck advanced, paso a paso.',
+  published: true,
+  order: 0,
+  sections: [
+    { id: 'sec1', title: 'Fundamentos', lessons: [leccion(1), leccion(2), leccion(3)] },
+    {
+      id: 'sec2',
+      title: 'Progresiones',
+      lessons: [
+        leccion(4),
+        leccion(5),
+        // Una anunciada y sin subir: no cuenta para el total.
+        { id: 'lec6', title: 'Lección 6', kind: 'video', videoUrl: '' },
+      ],
+    },
+  ],
+  createdAt: now - 40 * DAY,
+  updatedAt: now - 40 * DAY,
+});
+
+// Cada alumno va por un sitio: uno casi lo termina, otro lo empezó y lo dejó,
+// y el tercero no lo ha abierto. Es lo que el panel tiene que saber distinguir.
+await como('alumno@demo.test');
+await setDoc(doc(db, 'courseProgress', cli), {
+  uid: cli,
+  lessons: { [cursoRef.id]: ['lec1', 'lec2', 'lec3', 'lec4'] },
+  updatedAt: now,
+});
+await como('alumno2@demo.test');
+await setDoc(doc(db, 'courseProgress', cli2), {
+  uid: cli2,
+  lessons: { [cursoRef.id]: ['lec1'] },
+  updatedAt: now,
+});
+// Se vuelve al entrenador: lo que viene después es suyo y, si no, se queda a
+// medias con un "permisos insuficientes" que no dice de qué.
+await como('coach@demo.test');
+
 
 const EJ = [
   ['Dominadas', 'Tirón', 'reps'], ['Fondos en paralelas', 'Empuje', 'reps'],

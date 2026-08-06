@@ -732,7 +732,8 @@ export default function RoutineEditorScreen() {
                 <Pressable style={{ flex: 1 }} onPress={() => applyTemplate(t)}>
                   <Text style={styles.pickerRowText}>{t.name}</Text>
                   <Text style={styles.mutedText}>
-                    {t.days.length} día(s) · toca para aplicar
+                    {t.days.length} {t.days.length === 1 ? 'día' : 'días'} · toca para
+                    aplicar
                   </Text>
                 </Pressable>
                 <Pressable onPress={() => removeTemplate(t.id)} hitSlop={8}>

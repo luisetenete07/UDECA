@@ -42,6 +42,13 @@ import {
   deleteJoinRequest,
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
+import { getCoursesForTrainer } from '../../lib/firestore/courses';
+import { getCourseProgressMany } from '../../lib/firestore/courseProgress';
+import {
+  resumenDeGrupo,
+  resumenPorAlumno,
+  type LessonsSeen,
+} from '../../lib/courseProgress';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
@@ -101,6 +108,11 @@ export default function TrainerDashboard() {
   const [savingPay, setSavingPay] = useState(false);
   const [confirmingPayId, setConfirmingPayId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Los cursos van por su cuenta y DESPUÉS: el panel tiene que pintarse en un
+  // parpadeo, y esto es una consulta más una lectura por alumno. Si tardan,
+  // que tarde la tarjeta de cursos, no el panel entero.
+  const [courses, setCourses] = useState<import('../../lib/types').Course[]>([]);
+  const [courseSeen, setCourseSeen] = useState<Record<string, LessonsSeen>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -150,6 +162,37 @@ export default function TrainerDashboard() {
         cancelled = true;
       };
     }, [profile])
+  );
+
+  // El avance en cursos, en su propio viaje y detrás del panel: son una
+  // consulta de cursos más una lectura por alumno, y ninguna de las dos puede
+  // retrasar lo que el entrenador viene a ver.
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile) return;
+      let cancelado = false;
+      (async () => {
+        try {
+          const cs = await getCoursesForTrainer(profile.uid);
+          if (cancelado) return;
+          setCourses(cs);
+          // Sin cursos publicados no hay nada que mirar y nos ahorramos una
+          // lectura por alumno cada vez que se abre el panel.
+          if (!cs.some((c) => c.published)) return;
+          const ids = clients.map((c) => c.uid);
+          if (ids.length === 0) return;
+          const seen = await getCourseProgressMany(ids);
+          if (!cancelado) setCourseSeen(seen);
+        } catch {
+          // Que falle el avance de cursos no puede tumbar el panel.
+        }
+      })();
+      return () => {
+        cancelado = true;
+      };
+      // Se rehace cuando cambia la lista de alumnos, no en cada repintado.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profile, clients.map((c) => c.uid).join(',')])
   );
 
   // Alta/baja de alumnos en vivo: al aceptar a uno nuevo aparece aquí al
@@ -206,6 +249,11 @@ export default function TrainerDashboard() {
     .sort((a, b) => Number(b.flagged ?? false) - Number(a.flagged ?? false))
     .slice(0, 4);
   const tendencias = destacados(tendenciaDeAlumnos(clients, logs));
+  // Avance en cursos del grupo. Solo cuentan los publicados: un borrador no lo
+  // ha podido ver nadie y contarlo dejaría a todo el mundo en rojo.
+  const cursosPublicados = courses.filter((c) => c.published);
+  const avanceAlumnos = resumenPorAlumno(cursosPublicados, clients, courseSeen);
+  const avanceGrupo = resumenDeGrupo(cursosPublicados, avanceAlumnos);
   const byId = (id: string) => clients.find((c) => c.uid === id);
   // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
   const todayStart = new Date();
@@ -814,6 +862,66 @@ export default function TrainerDashboard() {
         </FadeIn>
       ) : null}
 
+      {/* Cursos: la única pregunta del panel que no se podía contestar. Un
+          entrenador publica un curso y no tenía forma de saber si alguien lo
+          había abierto — y sin eso, grabar el siguiente es una apuesta.
+
+          La tarjeta solo aparece si hay algo publicado: a quien no da cursos
+          no se le enseña un hueco vacío recordándoselo. */}
+      {avanceGrupo.leccionesPublicadas > 0 && avanceGrupo.alumnos > 0 ? (
+        <FadeIn delay={170}>
+          <Card style={styles.section}>
+            <View style={styles.titleRow}>
+              <Ionicons name="school-outline" size={16} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Cursos</Text>
+            </View>
+
+            <View style={styles.cursoTop}>
+              <ProgressRing
+                size={72}
+                thickness={6}
+                progress={avanceGrupo.media}
+                value={`${Math.round(avanceGrupo.media * 100)}%`}
+                label="grupo"
+                celebrate={false}
+              />
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={styles.cursoBig}>
+                  {avanceGrupo.sinEmpezar === 0
+                    ? 'Todos han empezado'
+                    : `${avanceGrupo.sinEmpezar} sin empezar`}
+                </Text>
+                <Text style={styles.cursoMeta}>
+                  {avanceGrupo.terminado > 0
+                    ? `${avanceGrupo.terminado} ${avanceGrupo.terminado === 1 ? 'lo ha terminado' : 'lo han terminado'} · `
+                    : ''}
+                  {avanceGrupo.leccionesPublicadas}{' '}
+                  {avanceGrupo.leccionesPublicadas === 1 ? 'lección' : 'lecciones'} publicadas
+                </Text>
+              </View>
+            </View>
+
+            {/* Quien empezó y se quedó a medias: es a quien un mensaje rescata.
+                Quien no ha empezado ya sale contado arriba. */}
+            {avanceGrupo.rezagados.map((a) => (
+              <PressableScale
+                key={a.uid}
+                style={styles.cursoFila}
+                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
+              >
+                <Text style={styles.cursoNombre} numberOfLines={1}>
+                  {a.name}
+                </Text>
+                <View style={styles.cursoBarra}>
+                  <View style={[styles.cursoBarraFill, { width: `${a.ratio * 100}%` }]} />
+                </View>
+                <Text style={styles.cursoPct}>{Math.round(a.ratio * 100)} %</Text>
+              </PressableScale>
+            ))}
+          </Card>
+        </FadeIn>
+      ) : null}
+
       {/* Las tareas de hoy, aquí y no solo en la agenda: una tarea que hay que
           ir a buscar es una tarea que se olvida. Se marcan desde aquí mismo. */}
       {tareasHoy.length > 0 ? (
@@ -1259,6 +1367,32 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  cursoTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  cursoBig: { ...typography.h3, color: colors.text },
+  cursoMeta: { ...typography.small, color: colors.textMuted },
+  cursoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  cursoNombre: { ...typography.small, color: colors.text, fontFamily: fonts.medium, width: 96 },
+  cursoBarra: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceAlt,
+    overflow: 'hidden',
+  },
+  cursoBarraFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
+  cursoPct: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontFamily: fonts.semiBold,
+    ...tabularNums,
+    width: 42,
+    textAlign: 'right',
   },
   taskCheck: {
     width: 19,
