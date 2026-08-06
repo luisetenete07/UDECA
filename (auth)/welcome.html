@@ -30,7 +30,7 @@ img { -webkit-user-drag: none; }
 </style><style id="expo-reset">#root,body,html{height:100%}body{overflow:hidden}#root{display:flex}</style><script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function (reg) {
       function showUpdateBanner() {
         if (document.getElementById('udeca-update-bar')) return;
         var bar = document.createElement('div');
@@ -54,6 +54,28 @@ if ('serviceWorker' in navigator) {
             showUpdateBanner();
           }
         });
+      });
+
+      // Una versión que quedó instalada en la sesión anterior: "updatefound"
+      // ya no volverá a saltar, así que el aviso hay que ponerlo aquí.
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+
+      // El service worker nuevo entra solo (hace skipWaiting), pero la
+      // pantalla sigue siendo la vieja hasta que se recargue. Ese cambio de
+      // mando es la señal más fiable de que hay algo nuevo que ver.
+      navigator.serviceWorker.addEventListener('controllerchange', showUpdateBanner);
+
+      // Preguntar de verdad: al cargar y cada vez que se vuelve a la app.
+      var ultima = 0;
+      function mirarSiHayNueva() {
+        var ahora = Date.now();
+        if (ahora - ultima < 60000) return; // sin machacar el servidor
+        ultima = ahora;
+        reg.update().catch(function () {});
+      }
+      mirarSiHayNueva();
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') mirarSiHayNueva();
       });
     }).catch(function () {});
   });
@@ -662,5 +684,5 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 @font-face{font-family:"Inter_400Regular";src:url("/assets/node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.51b6ad87261f18b6433ec52871ddfabc.ttf");font-display:auto}
 @font-face{font-family:"Inter_500Medium";src:url("/assets/node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.137ab18bace28dd0bd83eb3b8ed2bc54.ttf");font-display:auto}
 @font-face{font-family:"Inter_600SemiBold";src:url("/assets/node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.a5f35888d2da465de352e0dcfaf33324.ttf");font-display:auto}
-@font-face{font-family:"Inter_700Bold";src:url("/assets/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf");font-display:auto}</style><link rel="preload" href="/assets/node_modules/@expo-google-fonts/sora/600SemiBold/Sora_600SemiBold.8569cb014b6e06cfd0e5b26805e96ca0.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/sora/700Bold/Sora_700Bold.d4691f264e2c1ed09de4766e489a99b2.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.51b6ad87261f18b6433ec52871ddfabc.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.137ab18bace28dd0bd83eb3b8ed2bc54.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.a5f35888d2da465de352e0dcfaf33324.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf" as="font" crossorigin="" /><link rel="icon" href="/favicon.ico"/><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx" style="flex:1;background-color:rgba(0,0,0,1.00)"><div class="css-g5y9jx r-13awgt0"><div style="position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;visibility:hidden"></div><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx r-13awgt0 r-1p0dtai r-1d2f490 r-u8s1d r-zchlnj r-ipm5af" style="background-color:rgba(242,242,242,1.00);display:flex"><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx r-13awgt0" style="background-color:rgba(0,0,0,1.00)"><!--$--><div class="css-g5y9jx r-1awozwy r-kemksi r-13awgt0 r-f4gmv6 r-1777fci"><div class="css-g5y9jx r-1mlwlqe r-1udh08x r-417010 r-y47klf r-1s5nyi r-1kesqaa" style="transform:scale(0.9)"><div class="css-g5y9jx r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-ehq7j7"></div></div></div><!--/$--></div></div></div></div><div class="css-g5y9jx r-1awozwy r-kemksi r-1p0dtai r-1777fci r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-c97pre r-633pao" style="opacity:1"><div class="css-g5y9jx r-1llaxt6 r-34ffwy" style="opacity:0;transform:scale(0.82)"><div class="css-g5y9jx r-1mlwlqe r-1udh08x r-417010 r-nsiyw1 r-1wztat5 r-1n20pny"><div class="css-g5y9jx r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-ehq7j7"></div></div></div></div></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-e785202762e081fe48969f96924c6a50.js" defer></script>
+@font-face{font-family:"Inter_700Bold";src:url("/assets/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf");font-display:auto}</style><link rel="preload" href="/assets/node_modules/@expo-google-fonts/sora/600SemiBold/Sora_600SemiBold.8569cb014b6e06cfd0e5b26805e96ca0.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/sora/700Bold/Sora_700Bold.d4691f264e2c1ed09de4766e489a99b2.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.51b6ad87261f18b6433ec52871ddfabc.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.137ab18bace28dd0bd83eb3b8ed2bc54.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.a5f35888d2da465de352e0dcfaf33324.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf" as="font" crossorigin="" /><link rel="icon" href="/favicon.ico"/><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx" style="flex:1;background-color:rgba(0,0,0,1.00)"><div class="css-g5y9jx r-13awgt0"><div style="position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;visibility:hidden"></div><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx r-13awgt0 r-1p0dtai r-1d2f490 r-u8s1d r-zchlnj r-ipm5af" style="background-color:rgba(242,242,242,1.00);display:flex"><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx r-13awgt0" style="background-color:rgba(0,0,0,1.00)"><!--$--><div class="css-g5y9jx r-1awozwy r-kemksi r-13awgt0 r-f4gmv6 r-1777fci"><div class="css-g5y9jx r-1mlwlqe r-1udh08x r-417010 r-y47klf r-1s5nyi r-1kesqaa" style="transform:scale(0.9)"><div class="css-g5y9jx r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-ehq7j7"></div></div></div><!--/$--></div></div></div></div><div class="css-g5y9jx r-1awozwy r-kemksi r-1p0dtai r-1777fci r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-c97pre r-633pao" style="opacity:1"><div class="css-g5y9jx r-1llaxt6 r-34ffwy" style="opacity:0;transform:scale(0.82)"><div class="css-g5y9jx r-1mlwlqe r-1udh08x r-417010 r-nsiyw1 r-1wztat5 r-1n20pny"><div class="css-g5y9jx r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-ehq7j7"></div></div></div></div></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-d12d431c0d598b6407961714d7537ac8.js" defer></script>
 </body></html>

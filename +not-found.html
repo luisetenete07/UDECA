@@ -30,7 +30,7 @@ img { -webkit-user-drag: none; }
 </style><style id="expo-reset">#root,body,html{height:100%}body{overflow:hidden}#root{display:flex}</style><script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function (reg) {
       function showUpdateBanner() {
         if (document.getElementById('udeca-update-bar')) return;
         var bar = document.createElement('div');
@@ -54,6 +54,28 @@ if ('serviceWorker' in navigator) {
             showUpdateBanner();
           }
         });
+      });
+
+      // Una versión que quedó instalada en la sesión anterior: "updatefound"
+      // ya no volverá a saltar, así que el aviso hay que ponerlo aquí.
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+
+      // El service worker nuevo entra solo (hace skipWaiting), pero la
+      // pantalla sigue siendo la vieja hasta que se recargue. Ese cambio de
+      // mando es la señal más fiable de que hay algo nuevo que ver.
+      navigator.serviceWorker.addEventListener('controllerchange', showUpdateBanner);
+
+      // Preguntar de verdad: al cargar y cada vez que se vuelve a la app.
+      var ultima = 0;
+      function mirarSiHayNueva() {
+        var ahora = Date.now();
+        if (ahora - ultima < 60000) return; // sin machacar el servidor
+        ultima = ahora;
+        reg.update().catch(function () {});
+      }
+      mirarSiHayNueva();
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') mirarSiHayNueva();
       });
     }).catch(function () {});
   });
@@ -657,5 +679,5 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 @keyframes r-1pzkwqh{0%{transform:translateY(100%);}100%{transform:translateY(0%);}}
 @keyframes r-imtty0{0%{opacity:0;}100%{opacity:1;}}
 @keyframes r-q67da2{0%{transform:translateX(-100%);}100%{transform:translateX(400%);}}
-@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><link rel="icon" href="/favicon.ico"/><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"></div></div><script src="/_expo/static/js/web/entry-e785202762e081fe48969f96924c6a50.js" defer></script>
+@keyframes r-t2lo5v{0%{opacity:1;}100%{opacity:0;}}</style><link rel="icon" href="/favicon.ico"/><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"></div></div><script src="/_expo/static/js/web/entry-d12d431c0d598b6407961714d7537ac8.js" defer></script>
 </body></html>
