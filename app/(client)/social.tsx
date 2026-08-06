@@ -3,6 +3,7 @@ import { Redirect, useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
+import { Podium } from '../../components/Podium';
 import { Card } from '../../components/Card';
 import { showToast } from '../../components/Toast';
 import { EmptyState } from '../../components/EmptyState';
@@ -18,10 +19,16 @@ import {
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { monthKeyOf, startOfWeek } from '../../lib/stats';
 import { isOnline } from '../../lib/presence';
-import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import type { Challenge, SocialStats } from '../../lib/types';
 
-const MEDALS = ['#D4AF37', '#B8B8B8', '#B87333']; // oro, plata, bronce
+/**
+ * El puesto se distingue por INTENSIDAD, no por color. Oro, plata y bronce
+ * eran los únicos tres colores saturados de toda la app y abarataban la
+ * pantalla entera; aquí el primero brilla, el segundo se apaga y el tercero
+ * casi se apaga del todo, que es la misma información sin romper la paleta.
+ */
+const PUESTOS = [colors.primaryBright, colors.textMuted, colors.textFaint];
 
 export default function SocialScreen() {
   const { profile } = useAuth();
@@ -153,21 +160,30 @@ export default function SocialScreen() {
       <Text style={styles.title}>Comunidad UDECA</Text>
       <Text style={styles.subtitle}>El ranking de constancia de tu coaching</Text>
 
+      {/* Tres cifras en una fila, con rótulos de una palabra. "Mejor racha
+          (mes)" se partía en tres líneas y hacía la tarjeta el doble de alta
+          para decir lo mismo. */}
       <View style={styles.summaryRow}>
         <Card style={styles.summaryCard}>
-          <Ionicons name="people" size={18} color={colors.primary} />
+          <Ionicons name="people" size={16} color={colors.primary} />
           <Text style={styles.summaryValue}>{members.length}</Text>
-          <Text style={styles.summaryLabel}>Miembros</Text>
+          <Text style={styles.summaryLabel} numberOfLines={1}>
+            Miembros
+          </Text>
         </Card>
         <Card style={styles.summaryCard}>
-          <Ionicons name="flame" size={18} color={colors.primary} />
+          <Ionicons name="flame" size={16} color={colors.primary} />
           <Text style={styles.summaryValue}>{topStreak}</Text>
-          <Text style={styles.summaryLabel}>Mejor racha (mes)</Text>
+          <Text style={styles.summaryLabel} numberOfLines={1}>
+            Racha
+          </Text>
         </Card>
         <Card style={styles.summaryCard}>
-          <Ionicons name="checkmark-done" size={18} color={colors.primary} />
+          <Ionicons name="checkmark-done" size={16} color={colors.primary} />
           <Text style={styles.summaryValue}>{totalSessions}</Text>
-          <Text style={styles.summaryLabel}>Entrenos (semana)</Text>
+          <Text style={styles.summaryLabel} numberOfLines={1}>
+            Semana
+          </Text>
         </Card>
       </View>
 
@@ -183,7 +199,7 @@ export default function SocialScreen() {
             const m = podium[i];
             return (
               <View key={i} style={styles.podiumRow}>
-                <Text style={[styles.podiumPos, { color: MEDALS[i] }]}>{i + 1}º</Text>
+                <Text style={[styles.podiumPos, { color: PUESTOS[i] }]}>{i + 1}º</Text>
                 <Text
                   style={[styles.podiumName, !m && styles.podiumVacio]}
                   numberOfLines={1}
@@ -275,6 +291,20 @@ export default function SocialScreen() {
 
       <Text style={styles.sectionTitle}>Ranking de racha · este mes</Text>
 
+      {/* Los tres primeros, por tamaño. Una clasificación se lee entera en el
+          primer segundo o no se lee, y en una lista de tarjetas iguales el
+          primero hay que buscarlo. */}
+      <Podium
+        yo={profile.uid}
+        puestos={members.slice(0, 3).map((m) => ({
+          uid: m.uid,
+          name: m.name,
+          photoURL: m.photoURL,
+          valor: m.streakThisMonth ?? m.currentStreak ?? 0,
+          unidad: 'días',
+        }))}
+      />
+
       {members.length === 0 ? (
         <EmptyState
           icon="trophy-outline"
@@ -284,24 +314,30 @@ export default function SocialScreen() {
       ) : (
         members.map((member, index) => {
           const isMe = member.uid === profile.uid;
-          const medalColor = index < 3 ? MEDALS[index] : undefined;
+          // Los tres primeros ya están en el podio, arriba. Repetirlos aquí
+          // era contar lo mismo dos veces seguidas... salvo que uno de ellos
+          // seas tú: tu fila sale siempre, porque es la que se viene a ver.
+          if (index < 3 && !isMe) return null;
           return (
             <Card key={member.uid} style={[styles.row, isMe && styles.rowMe]}>
               <View style={styles.rankWrap}>
-                {medalColor ? (
-                  <Ionicons name="medal" size={22} color={medalColor} />
-                ) : (
-                  <Text style={styles.rankNumber}>{index + 1}</Text>
-                )}
+                <Text style={[styles.rankNumber, isMe && styles.rankNumberMe]}>
+                  {index + 1}
+                </Text>
               </View>
               <Avatar name={member.name} photoURL={member.photoURL} size={44} />
               <View style={{ flex: 1 }}>
                 <View style={styles.nameRow}>
-                  <Text style={styles.name}>
+                  <Text style={[styles.name, { flexShrink: 1 }]} numberOfLines={1}>
                     {member.name}
-                    {isMe ? <Text style={styles.youTag}>  · Tú</Text> : null}
                   </Text>
-                  {isOnline(member.lastSeen) ? <View style={styles.onlineDot} /> : null}
+                  {isMe ? <Text style={styles.youTag}>TÚ</Text> : null}
+                  {/* El punto de "en línea" no se pinta en tu propia fila: que
+                      estás conectado ya lo sabes, y ahí le robaba el sitio a tu
+                      nombre hasta cortarlo. */}
+                  {!isMe && isOnline(member.lastSeen) ? (
+                    <View style={styles.onlineDot} />
+                  ) : null}
                 </View>
                 <Text style={styles.meta}>
                   {member.workoutsThisMonth ?? 0} entrenos este mes · {member.sessionsThisWeek} esta
@@ -326,7 +362,7 @@ export default function SocialScreen() {
 }
 
 const styles = StyleSheet.create({
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
   prBoardRow: {
     flexDirection: 'row',
@@ -367,7 +403,13 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   summaryCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
   summaryValue: { ...typography.h2, color: colors.text, marginTop: spacing.xs },
-  summaryLabel: { ...typography.small, color: colors.textMuted, textAlign: 'center', marginTop: 2 },
+  summaryLabel: {
+    ...typography.small,
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 2,
+  },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   row: {
     flexDirection: 'row',
@@ -377,9 +419,25 @@ const styles = StyleSheet.create({
   },
   rowMe: { borderColor: colors.primary },
   rankWrap: { width: 26, alignItems: 'center' },
-  rankNumber: { ...typography.h3, color: colors.textFaint },
-  name: { ...typography.h3, color: colors.text },
-  youTag: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  rankNumber: { ...typography.body, color: colors.textFaint, fontFamily: fonts.semiBold, ...tabularNums },
+  // Cuerpo, no titular: el peso visual de la pantalla lo lleva el podio, y a
+  // tamaño de titular un apellido normal ya no cabía en la fila.
+  name: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  youTag: {
+    fontSize: 10,
+    flexShrink: 0,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 0.8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.hairlineFaint,
+    backgroundColor: colors.primaryMuted,
+    overflow: 'hidden',
+  },
+  rankNumberMe: { color: colors.primaryBright },
   meta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   streakWrap: { alignItems: 'center' },
   streakBadge: {
