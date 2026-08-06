@@ -518,6 +518,17 @@ export interface RoutineDay {
   optionalRest?: boolean;
   /** Intensidad 1-10 de este entrenamiento (Método REIN TENA), la fija el coach. */
   intensity?: number;
+  /**
+   * Intensidad en PORCENTAJE para el modo Sensaciones, la fija el coach.
+   *
+   * Va aparte del 1-10 a propósito. En un ciclo, la intensidad es la del día
+   * que toca y se lee en la escala del Método REIN TENA. En Sensaciones no hay
+   * "día que toca": hay varias rutinas y el alumno elige según cómo se
+   * encuentre, así que lo que necesita saber antes de elegir es cuánto le va a
+   * pedir cada una. Un porcentaje se compara de un vistazo ("hoy no estoy para
+   * el 90 %") de una forma que un 9/10 no consigue.
+   */
+  intensityPct?: number;
   /** El coach activa el temporizador de intervalos (EMOM) para este día. */
   showIntervalTimer?: boolean;
   /**

@@ -31,8 +31,11 @@ export function SessionHeader({
   titulo: string;
   /** Día en curso, si lo hay. */
   dia?: string | null;
-  /** 1..10; se pinta como marca, no como frase. */
-  intensidad?: number | null;
+  /**
+   * Ya escrita ("7/10", "85 %"): la cabecera no tiene por qué saber en qué
+   * escala mide cada modo, solo dónde ponerla.
+   */
+  intensidad?: string | null;
   hechas: number;
   totales: number;
   onSalir: () => void;

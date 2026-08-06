@@ -99,6 +99,11 @@ Implementado hasta ahora:
   Se inclina en 3D al arrastrarla y se comparte como imagen. Solo aparece lo
   que es verdad y significa algo: nada de "0 entrenamientos" ni de "Nº 2 de
   2".
+- **Intensidad por rutina en Sensaciones**: en el modo a elección, el
+  entrenador pone el porcentaje de cada rutina (50 %, 70 %, 90 %...) y el
+  alumno lo ve ANTES de elegir, con una palabra al lado (suave, medio, fuerte,
+  máximo). Es el dato sobre el que se decide "cómo me siento hoy". Encadenando
+  varias rutinas manda la más dura: promediarlas mentiría a la baja.
 - **Fotos de progreso**: frente/perfil/espalda, visibles solo para el
   alumno y su entrenador.
 - **Entreno inmersivo**: barra de progreso de sesión, ejercicio actual

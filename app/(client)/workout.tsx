@@ -34,6 +34,7 @@ import { getExerciseLibrary } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { applyWeekPlan } from '../../lib/weekPlan';
+import { esfuerzoDePct, pctCombinado, textoIntensidad } from '../../lib/intensidad';
 import { RirPicker } from '../../components/RirPicker';
 import { mayusculaInicial } from '../../lib/fechas';
 import { PressableScale } from '../../components/PressableScale';
@@ -560,6 +561,9 @@ export default function WorkoutScreen() {
       id: `flex-${Date.now()}`,
       name: chosen.map((d) => d.name || 'Rutina').join(' + '),
       exercises: chosen.flatMap((d) => d.exercises),
+      // Encadenando rutinas manda la más dura: un día suave ANTES de uno fuerte
+      // no hace la sesión medio fuerte, la hace fuerte y con más fatiga.
+      intensityPct: pctCombinado(chosen),
     };
     setCombinedDay(combined);
     setLog(buildLog(combined));
@@ -1310,7 +1314,7 @@ export default function WorkoutScreen() {
       <SessionHeader
         titulo={routine.name}
         dia={day && !showCompleted ? day.name : null}
-        intensidad={showCompleted ? null : day?.intensity}
+        intensidad={showCompleted ? null : textoIntensidad(day, routine.schedule)}
         hechas={doneSets}
         totales={showCompleted ? 0 : totalSets}
         acciones={accionesSesion}
@@ -1461,10 +1465,20 @@ export default function WorkoutScreen() {
                   <View style={[styles.flexCheck, on && styles.flexCheckOn]}>
                     {on ? <Text style={styles.flexCheckNum}>{pos + 1}</Text> : null}
                   </View>
-                  <Text style={[styles.flexPickText, on && styles.flexPickTextOn]}>
-                    {d.name || 'Rutina'}
-                    {d.exercises.length ? ` · ${d.exercises.length} ejercicios` : ''}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.flexPickText, on && styles.flexPickTextOn]}>
+                      {d.name || 'Rutina'}
+                      {d.exercises.length ? ` · ${d.exercises.length} ejercicios` : ''}
+                    </Text>
+                    {/* Lo que va a pedir esa rutina, ANTES de elegirla: es
+                        justo el dato sobre el que se decide "cómo me siento
+                        hoy", y hasta ahora no estaba en ninguna parte. */}
+                    {d.intensityPct ? (
+                      <Text style={styles.flexPickPct}>
+                        {esfuerzoDePct(d.intensityPct)} · {d.intensityPct} %
+                      </Text>
+                    ) : null}
+                  </View>
                 </Pressable>
               );
             })}
@@ -2207,6 +2221,7 @@ const styles = StyleSheet.create({
   flexCheckOn: { borderColor: colors.primary, backgroundColor: colors.primary },
   flexCheckNum: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.heading, fontSize: 12 },
   flexPickText: { ...typography.body, color: colors.textMuted, flex: 1 },
+  flexPickPct: { ...typography.small, color: colors.primary, fontSize: 11, marginTop: 2 },
   flexPickTextOn: { color: colors.text, fontFamily: fonts.semiBold },
   flexHistory: {
     marginTop: spacing.md,

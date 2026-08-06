@@ -6,6 +6,11 @@ import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
+import {
+  ajustaPct,
+  esfuerzoDePct,
+  proporcionIntensidad,
+} from '../../../../lib/intensidad';
 import { Segmented } from '../../../../components/Segmented';
 import { TextField } from '../../../../components/TextField';
 import { DragList } from '../../../../components/DragList';
@@ -422,6 +427,13 @@ export default function RoutineEditorScreen() {
     );
   };
 
+  // Ajusta el porcentaje de intensidad de una rutina de Sensaciones.
+  const updateDayPct = (dayId: string, delta: number) => {
+    setDays((prev) =>
+      prev.map((d) => (d.id === dayId ? { ...d, intensityPct: ajustaPct(d.intensityPct, delta) } : d))
+    );
+  };
+
   const toggleIntervalTimer = (dayId: string) => {
     setDays((prev) =>
       prev.map((d) => (d.id === dayId ? { ...d, showIntervalTimer: !d.showIntervalTimer } : d))
@@ -799,6 +811,7 @@ export default function RoutineEditorScreen() {
             </Text>
             <TextField
               label="Nombre de esta programación (lo ve el alumno)"
+              containerStyle={{ marginTop: spacing.md }}
               placeholder="Ej. Sensaciones"
               value={scheduleLabel}
               onChangeText={setScheduleLabel}
@@ -852,6 +865,13 @@ export default function RoutineEditorScreen() {
           if (day.optionalRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso opcional');
           else if (day.isRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso');
           else summaryParts.push(`Día ${dayIndex + 1}`, `Intensidad ${day.intensity ?? 5}`);
+        } else if (schedule === 'flex') {
+          if (day.isRest) summaryParts.push('Descanso');
+          else if (day.intensityPct) {
+            summaryParts.push(`${day.intensityPct} %`);
+            const palabra = esfuerzoDePct(day.intensityPct);
+            if (palabra) summaryParts.push(palabra);
+          }
         } else if (day.weekday !== undefined) {
           summaryParts.push(WEEKDAY_NAMES[day.weekday]);
           if (day.isRest) summaryParts.push('Descanso');
@@ -986,7 +1006,44 @@ export default function RoutineEditorScreen() {
               </View>
             ) : null}
             </>
-          ) : schedule === 'flex' ? null : (
+          ) : schedule === 'flex' ? (
+            // En Sensaciones el alumno elige entre varias rutinas: lo que
+            // necesita saber antes de elegir es cuánto le va a pedir cada una.
+            !day.isRest ? (
+              <View style={styles.dayIntensityRow}>
+                <Text style={styles.dayIntensityLabel}>
+                  Intensidad · {day.intensityPct ? `${day.intensityPct} %` : 'sin poner'}
+                  {esfuerzoDePct(day.intensityPct)
+                    ? ` · ${esfuerzoDePct(day.intensityPct)}`
+                    : ''}
+                </Text>
+                <View style={styles.dayIntensityControls}>
+                  <Pressable
+                    onPress={() => updateDayPct(day.id, -1)}
+                    style={styles.stepBtn}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="remove" size={16} color={colors.text} />
+                  </Pressable>
+                  <View style={styles.intensityTrack}>
+                    <View
+                      style={[
+                        styles.intensityFill,
+                        { width: `${proporcionIntensidad(day, 'flex') != null ? proporcionIntensidad(day, 'flex')! * 100 : 0}%` },
+                      ]}
+                    />
+                  </View>
+                  <Pressable
+                    onPress={() => updateDayPct(day.id, 1)}
+                    style={styles.stepBtn}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="add" size={16} color={colors.text} />
+                  </Pressable>
+                </View>
+              </View>
+            ) : null
+          ) : (
           <View style={styles.weekdayRow}>
             <View style={styles.weekdayHeadRow}>
               <Text style={styles.weekdayLabel}>Día de la semana</Text>

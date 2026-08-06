@@ -241,6 +241,19 @@ await addDoc(collection(db, 'routines'), {
   ],
 });
 
+// Una rutina de SENSACIONES para Ana: varias opciones y el alumno elige según
+// cómo se encuentre. Cada una con su porcentaje de intensidad, que es el dato
+// sobre el que se decide.
+await addDoc(collection(db, 'routines'), {
+  clientId: cli2, trainerId: coach, name: 'A sensaciones', active: true,
+  createdAt: now - 20 * DAY, schedule: 'flex', scheduleLabel: 'Sensaciones',
+  days: [
+    { id: 's1', name: 'Día suave', intensityPct: 50, exercises: ids.slice(0, 2).map((e, i) => ({ id: 'g' + i, exerciseId: e.id, name: e.name, sets: 3, reps: '10', restSeconds: 90 })) },
+    { id: 's2', name: 'Día medio', intensityPct: 70, exercises: ids.slice(0, 3).map((e, i) => ({ id: 'h' + i, exerciseId: e.id, name: e.name, sets: 4, reps: '8', restSeconds: 120 })) },
+    { id: 's3', name: 'Día fuerte', intensityPct: 90, exercises: ids.slice(2, 5).map((e, i) => ({ id: 'i' + i, exerciseId: e.id, name: e.name, sets: 5, reps: '5', restSeconds: 180 })) },
+  ],
+});
+
 /**
  * Plan de entrenamiento del alumno: un macrociclo con dos bloques de cuatro
  * semanas (la última de cada uno, de descarga) y sus ocho microciclos.

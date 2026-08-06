@@ -8,6 +8,7 @@ import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { DragList } from '../../components/DragList';
 import { moveItem } from '../../lib/useDragReorder';
+import { ajustaPct } from '../../lib/intensidad';
 import { Segmented } from '../../components/Segmented';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
@@ -361,7 +362,11 @@ export default function MyPlanScreen() {
         const summary = day.isRest
           ? 'Descanso'
           : `${day.exercises.length} ej.${total ? ` · ${total} series` : ''}${
-              schedule === 'cycle' ? ` · Int. ${day.intensity ?? 5}/10` : ''
+              schedule === 'cycle'
+                ? ` · Int. ${day.intensity ?? 5}/10`
+                : schedule === 'flex' && day.intensityPct
+                  ? ` · ${day.intensityPct} %`
+                  : ''
             }`;
         return (
           <Card style={[styles.dayCard, arrastrando && styles.dayCardDragging]}>
@@ -427,6 +432,33 @@ export default function MyPlanScreen() {
                       <Pressable
                         onPress={() =>
                           patchDay(di, { intensity: Math.min(10, (day.intensity ?? 5) + 1) })
+                        }
+                        style={styles.stepBtn}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="add" size={15} color={colors.text} />
+                      </Pressable>
+                    </View>
+                  ) : schedule === 'flex' && !day.isRest ? (
+                    // En Sensaciones eliges rutina cada día: saber cuánto te va
+                    // a pedir cada una es lo que hace que la elección signifique
+                    // algo.
+                    <View style={styles.intensityRow}>
+                      <Text style={styles.intensityLabel}>
+                        {day.intensityPct ? `${day.intensityPct} %` : 'Sin intensidad'}
+                      </Text>
+                      <Pressable
+                        onPress={() =>
+                          patchDay(di, { intensityPct: ajustaPct(day.intensityPct, -1) })
+                        }
+                        style={styles.stepBtn}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="remove" size={15} color={colors.text} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() =>
+                          patchDay(di, { intensityPct: ajustaPct(day.intensityPct, 1) })
                         }
                         style={styles.stepBtn}
                         hitSlop={6}
