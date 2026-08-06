@@ -637,13 +637,6 @@ export default function ProgressScreen() {
                             <Ionicons name="share-outline" size={16} color={colors.primary} />
                           </Pressable>
                         ) : null}
-                        <Pressable
-                          onPress={() => requestDeleteWorkout(s.id)}
-                          hitSlop={8}
-                          style={styles.sessionDelete}
-                        >
-                          <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
-                        </Pressable>
                       </View>
                       {open ? (
                         <View style={styles.sessionDetail}>
@@ -697,6 +690,21 @@ export default function ProgressScreen() {
                               </View>
                             );
                           })}
+
+                          {/* Borrar vive DENTRO de la sesión abierta, no en la
+                              fila. Una papelera en cada línea de una lista es
+                              un accidente esperando su turno: así solo se
+                              puede borrar lo que se está mirando. */}
+                          <Pressable
+                            onPress={() => requestDeleteWorkout(s.id)}
+                            hitSlop={8}
+                            style={styles.borrarSesion}
+                          >
+                            <Ionicons name="trash-outline" size={14} color={colors.textFaint} />
+                            <Text style={styles.borrarSesionTexto}>
+                              Eliminar este entrenamiento
+                            </Text>
+                          </Pressable>
                         </View>
                       ) : null}
                     </View>
@@ -1299,7 +1307,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   sessionShare: { padding: spacing.xs },
-  sessionDelete: { padding: spacing.xs },
+  borrarSesion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  borrarSesionTexto: { ...typography.small, color: colors.textFaint },
   confirmBackdrop: {
     flex: 1,
     justifyContent: 'center',

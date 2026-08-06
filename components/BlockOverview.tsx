@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { BlockAlert, BlockView } from '../lib/blockView';
@@ -23,7 +24,13 @@ const FILA = 34;
 const CABECERA = 24;
 // Anchos ajustados para que cuatro semanas quepan enteras en un móvil estrecho
 // con la tarjeta y sus márgenes. A partir de cinco, la tabla se desplaza.
-const ANCHO_SEMANA = 56;
+/*
+ * 48 y no 56: en un móvil de 390 el ancho útil de la tarjeta da para cuatro
+ * columnas justas, y un mesociclo típico son cuatro semanas. Con 56 la cuarta
+ * se quedaba cortada por la mitad, que no se lee como "hay más a la derecha"
+ * sino como que algo está roto.
+ */
+const ANCHO_SEMANA = 48;
 const ANCHO_GRUPO = 76;
 const ANCHO_TOTAL = 34;
 
@@ -143,10 +150,10 @@ export function BlockOverview({
         </View>
 
         {/* Semanas: lo único que se desplaza. */}
+        <View style={{ flex: 1 }}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ flex: 1 }}
           contentContainerStyle={{ minWidth: '100%' }}
         >
           <View>
@@ -191,6 +198,19 @@ export function BlockOverview({
             </View>
           </View>
         </ScrollView>
+        {/* Un desvanecido en el canto derecho cuando hay más semanas de las
+            que caben: es la única forma honesta de decir "sigue" sin escribir
+            "desliza" en una tabla que ya va apretada. */}
+        {weeks.length > 4 ? (
+          <LinearGradient
+            colors={['rgba(13,13,13,0)', colors.surface]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.masALaDerecha}
+            pointerEvents="none"
+          />
+        ) : null}
+        </View>
 
         {/* Columna fija de totales: la que se mira al final. */}
         <View>
@@ -317,6 +337,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  masALaDerecha: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 22 },
   totalCol: { width: ANCHO_TOTAL, alignItems: 'flex-end' },
   colHead: {
     fontSize: 11,
