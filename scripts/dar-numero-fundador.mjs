@@ -1,0 +1,84 @@
+/*
+ * Asigna un número de fundador a una cuenta, a mano.
+ *
+ * Por qué hace falta: el número lo reparte el servidor al procesar el alta de
+ * 1 €, y solo si la campaña estaba abierta en ese momento. Las cuentas
+ * anteriores a la campaña —la del propio fundador, entre ellas— no lo reciben
+ * nunca, porque ese código solo corre durante un pago. Y las reglas de
+ * Firestore prohíben escribirlo desde la app a propósito: un distintivo que
+ * cualquiera pudiera ponerse no valdría nada.
+ *
+ * Así que la única vía honesta es esta: el SDK de administrador, desde fuera de
+ * la app, lanzado a mano por quien tiene las llaves.
+ *
+ * Se ejecuta desde Actions → "Número de fundador" → Run workflow. No hace falta
+ * descargar nada ni manejar la clave privada en el ordenador.
+ *
+ *   CORREO=luis@ejemplo.com NUMERO=1 node scripts/dar-numero-fundador.mjs
+ */
+const correo = (process.env.CORREO || '').trim();
+const numero = parseInt(process.env.NUMERO || '', 10);
+const siguiente = process.env.SIGUIENTE ? parseInt(process.env.SIGUIENTE, 10) : null;
+
+if (!correo) {
+  console.error('Falta CORREO: el correo de la cuenta a la que dar el número.');
+  process.exit(1);
+}
+if (!Number.isInteger(numero) || numero < 1) {
+  console.error('Falta NUMERO: un entero mayor que cero.');
+  process.exit(1);
+}
+
+// El SDK se carga DESPUÉS de validar: si no, un correo vacío moría con un
+// "ERR_MODULE_NOT_FOUND" de firebase-admin en vez de decir qué falta.
+const { default: admin } = await import('firebase-admin');
+admin.initializeApp();
+const db = admin.firestore();
+
+const usuario = await admin.auth().getUserByEmail(correo);
+const ref = db.collection('users').doc(usuario.uid);
+const perfil = await ref.get();
+
+if (!perfil.exists) {
+  console.error(`La cuenta ${correo} existe en Auth pero no tiene perfil todavía.`);
+  process.exit(1);
+}
+
+const yaTiene = perfil.data().founderNumber;
+if (yaTiene) {
+  // No se pisa un número ya repartido: es correlativo y es su valor. Si de
+  // verdad hay que cambiarlo, se quita antes a mano y se sabe lo que se hace.
+  console.error(`Esa cuenta ya es fundadora (#${String(yaTiene).padStart(4, '0')}). No se toca.`);
+  process.exit(1);
+}
+
+// Que nadie más tenga ya ese número: dos "fundador nº 1" no es un fallo
+// cosmético, es la campaña entera perdiendo el sentido.
+const repes = await db.collection('users').where('founderNumber', '==', numero).limit(1).get();
+if (!repes.empty) {
+  console.error(`El número ${numero} ya lo tiene otra cuenta. Elige otro.`);
+  process.exit(1);
+}
+
+await ref.set(
+  { founderNumber: numero, founderSince: Date.now() },
+  { merge: true }
+);
+console.log(`Hecho: ${correo} es el fundador #${String(numero).padStart(4, '0')}.`);
+
+// El contador de la campaña, para que la siguiente alta no repita número.
+if (siguiente !== null) {
+  if (!Number.isInteger(siguiente) || siguiente < 1) {
+    console.error('SIGUIENTE tiene que ser un entero mayor que cero.');
+    process.exit(1);
+  }
+  await db
+    .collection('config')
+    .doc('fundadores')
+    .set({ siguiente, updatedAt: Date.now() }, { merge: true });
+  console.log(`El próximo fundador será el #${String(siguiente).padStart(4, '0')}.`);
+} else {
+  console.log('Contador sin tocar. Pasa SIGUIENTE si quieres moverlo.');
+}
+
+process.exit(0);

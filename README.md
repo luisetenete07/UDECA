@@ -243,6 +243,23 @@ registra ella misma.
    Queda vinculado automáticamente a su entrenador y aparece en la lista de
    clientes de este.
 
+## 6 bis. Números de fundador
+
+El número lo reparte el servidor al procesar el alta de 1 €, y solo si la
+campaña está abierta (`config/fundadores.abierta === true`). Las cuentas
+anteriores a la campaña no lo reciben nunca: ese código solo corre durante un
+pago. Y las reglas de Firestore prohíben escribirlo desde la app a propósito —
+un distintivo que cualquiera pudiera ponerse no valdría nada.
+
+Para darlo a mano (la cuenta del fundador, un caso especial): Actions →
+**Número de fundador** → Run workflow, con el correo, el número y en qué
+número quieres dejar el contador para la siguiente alta. No hace falta
+descargar nada ni manejar la clave privada: GitHub ya la tiene como secreto.
+
+El script se niega a pisar un número ya repartido y a repetir uno que otra
+cuenta tenga: dos "fundador nº 1" no es un fallo cosmético, es la campaña
+entera perdiendo el sentido.
+
 ## 7. Estructura del proyecto
 
 ```

@@ -1,0 +1,77 @@
+# Da un número de fundador a una cuenta, a mano.
+#
+# El número lo reparte el servidor al procesar el alta de 1 €, y solo si la
+# campaña estaba abierta en ese momento. Las cuentas anteriores a la campaña
+# —la del propio fundador, entre ellas— no lo reciben nunca. Y las reglas de
+# Firestore prohíben escribirlo desde la app a propósito, así que esta es la
+# única vía.
+#
+# Se lanza desde Actions → "Número de fundador" → Run workflow. No hace falta
+# tener el proyecto descargado ni manejar la clave privada en el ordenador:
+# GitHub ya la tiene guardada como secreto y nunca se imprime.
+#
+# Solo puede lanzarlo quien tenga permiso de escritura en el repositorio.
+name: Número de fundador
+
+on:
+  workflow_dispatch:
+    inputs:
+      correo:
+        description: 'Correo de la cuenta que recibe el número'
+        required: true
+      numero:
+        description: 'Número a asignar (p. ej. 1)'
+        required: true
+        default: '1'
+      siguiente:
+        description: 'Deja el contador aquí para la próxima alta (vacío = no tocarlo)'
+        required: false
+        default: '2'
+
+concurrency:
+  group: founder-number
+  cancel-in-progress: false
+
+jobs:
+  asignar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Comprobar que existe la credencial
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT."
+            exit 1
+          fi
+
+      - name: Instalar firebase-admin
+        run: npm i --no-save firebase-admin
+
+      # La credencial se escribe fuera del repo y con permisos 600.
+      - name: Preparar credencial
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          chmod 600 "$RUNNER_TEMP/sa.json"
+
+      - name: Asignar el número
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          CORREO: ${{ inputs.correo }}
+          NUMERO: ${{ inputs.numero }}
+          SIGUIENTE: ${{ inputs.siguiente }}
+        run: node scripts/dar-numero-fundador.mjs
+
+      - name: Borrar credencial
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
