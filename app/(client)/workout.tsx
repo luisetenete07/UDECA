@@ -1169,11 +1169,26 @@ export default function WorkoutScreen() {
           <Text style={styles.exitText}>Volver a inicio</Text>
         </Pressable>
         <ScreenHeader title="Mi entrenamiento" />
-        <EmptyState
-          icon="barbell-outline"
-          title="Sin rutina asignada"
-          subtitle="Tu entrenador todavía no te ha asignado una rutina. Vuelve a comprobarlo pronto."
-        />
+        {/* Un ATLETA es su propio entrenador: no tiene ninguno. Decirle que
+            espere a que "su entrenador" le asigne una rutina es mandarle a
+            esperar a alguien que no existe, y esconderle lo único que puede
+            hacer — crear su plan—, que además está a un toque. El inicio ya
+            distinguía los dos casos; esta pantalla no. */}
+        {profile?.role === 'athlete' ? (
+          <EmptyState
+            icon="construct-outline"
+            title="Todavía no tienes plan"
+            subtitle="Eres tu propio entrenador: monta tus días y tus ejercicios, y empieza hoy mismo."
+            actionLabel="Crear mi plan"
+            onAction={() => router.push('/(client)/my-plan')}
+          />
+        ) : (
+          <EmptyState
+            icon="barbell-outline"
+            title="Sin rutina asignada"
+            subtitle="Tu entrenador todavía no te ha asignado una rutina. Vuelve a comprobarlo pronto."
+          />
+        )}
       </ScreenContainer>
     );
   }

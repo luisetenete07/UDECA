@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   Alert,
   Modal,
@@ -80,6 +80,7 @@ interface ProgressData {
 
 export default function ProgressScreen() {
   const { profile, refreshProfile } = useAuth();
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('workouts');
   const [muscleMode, setMuscleMode] = useState<'session' | 'week'>('week');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
@@ -491,10 +492,16 @@ export default function ProgressScreen() {
       {tab === 'workouts' ? (
         months.length === 0 ? (
           <Card style={styles.section}>
+            {/* La salida está a un toque y no se ofrecía: quien llega aquí sin
+                entrenos no viene a leer que algún día habrá datos, viene a ver
+                su progreso. Lo que hay que darle es la manera de empezar a
+                tenerlo. */}
             <EmptyState
               icon="barbell-outline"
               title="Aún no hay entrenamientos"
               subtitle="Cuando termines una sesión se guardará aquí, en tu registro mensual."
+              actionLabel="Empezar a entrenar"
+              onAction={() => router.push('/(client)/workout')}
             />
           </Card>
         ) : (
@@ -923,6 +930,8 @@ export default function ProgressScreen() {
                   icon="stats-chart-outline"
                   title="Aún no hay datos por ejercicio"
                   subtitle="Cuando completes entrenamientos verás aquí cómo mejoras en cada ejercicio."
+                  actionLabel="Empezar a entrenar"
+                  onAction={() => router.push('/(client)/workout')}
                 />
               </Card>
             ) : null
