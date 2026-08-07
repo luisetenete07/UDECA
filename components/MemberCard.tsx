@@ -47,13 +47,25 @@ export function MemberCard() {
   const tipo = tipoDeCuenta(profile);
   const esFundador = typeof profile.founderNumber === 'number' && profile.founderNumber > 0;
   const desde = desdeCuando(profile.createdAt);
+  /**
+   * El oficio del NÚMERO, no el de ahora.
+   *
+   * Entrenador y atleta tienen series independientes, así que el número solo
+   * dice algo junto a su rol. Y manda el que se guardó al repartirlo: si un
+   * atleta se hace entrenador después, sigue siendo el atleta fundador nº 3, no
+   * el entrenador nº 3 —que es otra persona—. Las cuentas de antes de que
+   * existiera ese campo caen en su rol actual, que para ellas es el mismo.
+   */
+  const tipoDelNumero = profile.founderRole
+    ? tipoDeCuenta({ ...profile, role: profile.founderRole })
+    : tipo;
 
   const compartir = async () => {
     setCompartiendo(true);
     try {
       const r = await shareMemberImage({
         name: profile.name,
-        roleLabel: tipo.etiqueta,
+        roleLabel: esFundador ? tipoDelNumero.etiqueta : tipo.etiqueta,
         founderNumber: esFundador ? profile.founderNumber : undefined,
         since: desde,
         tagline: tipo.frase,
@@ -100,7 +112,7 @@ export function MemberCard() {
           pregunta quien ve la captura. */}
       {esFundador ? (
         <View style={styles.numeroBloque}>
-          <Text style={styles.numeroEtiqueta}>{tipo.etiqueta} fundador</Text>
+          <Text style={styles.numeroEtiqueta}>{tipoDelNumero.etiqueta} fundador</Text>
           <Text style={styles.numeroGrande}>
             #{String(profile.founderNumber).padStart(4, '0')}
           </Text>

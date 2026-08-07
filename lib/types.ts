@@ -145,6 +145,16 @@ export interface UserProfile {
    * las reglas impiden que nadie se lo ponga a mano.
    */
   founderNumber?: number;
+  /**
+   * El oficio con el que se ganó ese número, congelado.
+   *
+   * Entrenador y atleta tienen series independientes, así que el número solo
+   * significa algo junto a su rol. Y se guarda aparte de `role` a propósito: si
+   * mañana un atleta se hace entrenador, sigue siendo el ATLETA fundador nº 3
+   * —ese puesto lo ocupó él— y su carné no puede empezar a pisarle el sitio a
+   * quien de verdad es el entrenador nº 3.
+   */
+  founderRole?: 'trainer' | 'athlete';
   /** Cuándo se le asignó ese número. */
   founderSince?: number;
   /** Onboarding completado (una vez por cuenta, sincronizado entre dispositivos). */

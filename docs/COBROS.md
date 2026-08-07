@@ -222,10 +222,24 @@ fundador** correlativo: el 7 es el séptimo, y lo sigue siendo aunque los seis
 anteriores se borren la cuenta. Se ve en su perfil y se puede compartir como
 imagen.
 
+**Entrenador y atleta tienen series INDEPENDIENTES.** Hay un entrenador
+fundador nº 1 y un atleta fundador nº 1, y son dos personas distintas. Son dos
+comunidades que no compiten entre sí, y antes salían del mismo bote: el
+entrenador nº 3 y el atleta nº 4 quedaban correlativos entre sí sin que eso
+significara nada. El alumno no tiene serie porque no paga alta — entra invitado
+por su entrenador.
+
 El número lo reparte el servidor (`payments-webhook/api/_alta.js`) dentro de una
-**transacción** sobre `config/fundadores`, para que dos altas simultáneas no se
-lleven el mismo. Las reglas impiden escribir `founderNumber` desde la app: un
-distintivo que cualquiera pudiera ponerse no valdría nada.
+**transacción** sobre `config/fundadores`, para que dos altas simultáneas del
+mismo rol no se lleven el mismo. Las reglas impiden escribir `founderNumber` y
+`founderRole` desde la app: un distintivo que cualquiera pudiera ponerse no
+valdría nada.
+
+Junto al número se guarda el **oficio con el que se ganó** (`founderRole`). Si
+mañana un atleta se hace entrenador, sigue siendo el atleta fundador nº 3: ese
+puesto lo ocupó él y no se puede ocupar dos veces. Sin ese campo, su carné
+empezaría a decir "entrenador fundador nº 3" pisándole el sitio a quien de
+verdad lo es.
 
 **La campaña arranca CERRADA.** Se abre y se cierra desde la consola de Firebase,
 sin desplegar nada: empieza cuando lo decide quien lleva el marketing. Y cerrada
@@ -235,8 +249,23 @@ número 1 solo se da una vez. En `config/fundadores`:
 | Campo | Para qué |
 | --- | --- |
 | `abierta` | `true` la abre. Sin este campo (o en `false`) no se reparte nada. |
-| `limite` | Último número que se reparte, por ejemplo 100. Opcional. |
-| `siguiente` | El próximo número. Lo lleva el servidor; no hace falta tocarlo. |
+| `limite` | Último número de CADA serie, por ejemplo 100. Opcional. |
+| `siguienteEntrenador` | El próximo número de entrenador. Lo lleva el servidor. |
+| `siguienteAtleta` | El próximo número de atleta. Lo lleva el servidor. |
+| `siguiente` | El contador ÚNICO de antes de separar las series. Ya no se usa para repartir; se conserva por lo que se explica justo debajo. |
+
+**Por qué se conserva `siguiente`:** un número repartido no se puede quitar. Si
+la campaña llegó a repartir con el contador único, empezar ahora las dos series
+en 1 volvería a dar números que ya tienen dueño —habría dos "entrenador nº 3"—,
+así que una serie que todavía no existe arranca donde se quedó aquel. Si no se
+repartió nada, ese valor es 1 y las dos series empiezan por el principio, que es
+el caso normal.
+
+La regla de qué número toca vive aparte, en `payments-webhook/api/_fundadores.js`,
+sin `firebase-admin` de por medio, y se comprueba con
+`node scripts/check-founder-numbers.mjs`. Merece esa comprobación más que casi
+nada del repositorio: si falla, dos personas se quedan con el mismo número para
+siempre y no hay despliegue que lo arregle.
 
 Si el reparto falla por lo que sea, la cuenta se activa igual: el alta es lo que
 la persona ha pagado, y el número es un extra.

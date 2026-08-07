@@ -1,3 +1,4 @@
+import { siguienteNumeroDeFundador } from './_fundadores.js';
 import admin from 'firebase-admin';
 
 /**
@@ -20,28 +21,36 @@ export const TRIAL_DAYS = 14;
 /**
  * Reparte el número de fundador, si la campaña sigue abierta.
  *
- * El número es correlativo y no se reutiliza: el 7 es el séptimo que pagó su
- * alta y lo seguirá siendo aunque los seis de antes se borren la cuenta. Por
- * eso el contador se guarda aparte (`config/fundadores`) y se incrementa en una
- * TRANSACCIÓN: dos altas simultáneas no pueden llevarse el mismo número.
+ * El número es correlativo dentro de su serie y no se reutiliza: el entrenador
+ * nº 7 es el séptimo entrenador que pagó su alta y lo seguirá siendo aunque los
+ * seis de antes se borren la cuenta. Por eso los contadores viven aparte
+ * (`config/fundadores`) y se incrementan en una TRANSACCIÓN: dos altas
+ * simultáneas del mismo rol no pueden llevarse el mismo número.
  *
  * La campaña arranca CERRADA y se abre poniendo `abierta: true` en ese documento
- * desde la consola de Firebase; se puede fijar un tope con `limite`. Empieza y
- * termina cuando lo decide quien lleva el marketing, no cuando se despliega
- * código — y cerrada por defecto porque repartir números antes de tiempo no
- * tiene vuelta atrás: el número 1 solo se da una vez.
+ * desde la consola de Firebase; se puede fijar un tope con `limite`, que se
+ * aplica a cada serie por separado. Empieza y termina cuando lo decide quien
+ * lleva el marketing, no cuando se despliega código — y cerrada por defecto
+ * porque repartir números antes de tiempo no tiene vuelta atrás: el número 1
+ * solo se da una vez.
  */
-async function repartirNumeroDeFundador(db, uid) {
+async function repartirNumeroDeFundador(db, uid, rol) {
   const ref = db.collection('config').doc('fundadores');
   try {
     return await db.runTransaction(async (t) => {
       const snap = await t.get(ref);
-      const datos = snap.exists ? snap.data() : {};
-      if (datos.abierta !== true) return null;
-      const siguiente = typeof datos.siguiente === 'number' ? datos.siguiente : 1;
-      if (typeof datos.limite === 'number' && siguiente > datos.limite) return null;
-      t.set(ref, { siguiente: siguiente + 1, ultimoUid: uid, updatedAt: Date.now() }, { merge: true });
-      return siguiente;
+      const elegido = siguienteNumeroDeFundador(snap.exists ? snap.data() : {}, rol);
+      if (!elegido) return null;
+      t.set(
+        ref,
+        {
+          [elegido.campo]: elegido.numero + 1,
+          ultimoUid: uid,
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      );
+      return elegido.numero;
     });
   } catch {
     // Que falle el contador no puede impedir que la cuenta se active: el alta
@@ -116,9 +125,14 @@ export async function aplicarAlta(db, uid, { huella = null, customerId = null } 
 
   // Fundador: solo la primera vez, y solo si la campaña sigue abierta.
   if (!perfil.founderNumber) {
-    const numero = await repartirNumeroDeFundador(db, uid);
+    const numero = await repartirNumeroDeFundador(db, uid, perfil.role);
     if (numero !== null) {
       datos.founderNumber = numero;
+      // El oficio queda CONGELADO junto al número. Si mañana un atleta se hace
+      // entrenador, sigue siendo el atleta fundador nº 3: ese puesto lo ocupó
+      // él y no se puede ocupar dos veces. Sin este campo, su carné empezaría a
+      // decir "entrenador fundador nº 3" pisando a quien de verdad lo es.
+      datos.founderRole = perfil.role;
       datos.founderSince = Date.now();
     }
   }

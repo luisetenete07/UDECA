@@ -118,7 +118,7 @@ service cloud.firestore {
               'clientSlots', 'entryPaidAt', 'payerFingerprint', 'sharedCardWith',
               // El número de fundador es correlativo y lo reparte el servidor.
               // Si cada uno se lo pusiera, mañana habría diez "fundador nº 1".
-              'founderNumber', 'founderSince',
+              'founderNumber', 'founderSince', 'founderRole',
               // Si a un alumno se le pregunta el esfuerzo (RIR) lo decide su
               // ENTRENADOR, más abajo. Si pudiera quitárselo él, el entrenador
               // seguiría creyendo que ese dato existe y se le quedaría la
