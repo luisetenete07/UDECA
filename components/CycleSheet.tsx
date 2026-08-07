@@ -6,6 +6,7 @@ import { DateField, startOfToday } from './DateField';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { createCycle, updateCycle } from '../lib/firestore/cycles';
+import { Segmented } from './Segmented';
 import { Sheet } from './Sheet';
 import { fechaLegible } from '../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
@@ -120,19 +121,11 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
   return (
     <Sheet visible={visible} onClose={onClose} titulo={editing ? 'Editar ciclo' : 'Nuevo ciclo'}>
       <Text style={styles.label}>Nivel</Text>
-      <View style={styles.chipRow}>
-        {LEVELS.map((l) => (
-          <Pressable
-            key={l}
-            onPress={() => pickLevel(l)}
-            style={[styles.chip, level === l && styles.chipActive]}
-          >
-            <Text style={[styles.chipText, level === l && styles.chipTextActive]}>
-              {CYCLE_LEVEL_LABEL[l]}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <Segmented
+        opciones={LEVELS.map((l) => ({ valor: l, texto: CYCLE_LEVEL_LABEL[l] }))}
+        valor={level}
+        onChange={pickLevel}
+      />
 
       <TextField
         label="Nombre"
@@ -238,19 +231,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     marginTop: spacing.xs,
   },
-  chipRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  chip: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-  },
-  chipActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  chipTextActive: { color: colors.primaryBright },
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   stepBtn: {
     width: 40,

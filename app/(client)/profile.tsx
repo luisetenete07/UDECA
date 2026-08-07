@@ -28,6 +28,7 @@ import {
   computeAchievements,
   type Achievement,
 } from '../../lib/stats';
+import { Chip, ChipRow } from '../../components/Chip';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import { EXPERIENCE_LEVELS, type ExperienceLevel } from '../../lib/types';
 
@@ -330,17 +331,11 @@ export default function ClientProfileScreen() {
         />
 
         <Text style={styles.fieldLabel}>Nivel de experiencia</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
+        <ChipRow scroll>
           {EXPERIENCE_LEVELS.map((lvl) => (
-            <Pressable
-              key={lvl}
-              onPress={() => setLevel(lvl)}
-              style={[styles.chip, level === lvl && styles.chipSelected]}
-            >
-              <Text style={[styles.chipText, level === lvl && styles.chipTextSelected]}>{lvl}</Text>
-            </Pressable>
+            <Chip key={lvl} texto={lvl} activo={level === lvl} onPress={() => setLevel(lvl)} />
           ))}
-        </ScrollView>
+        </ChipRow>
 
         {saved ? <Text style={styles.savedText}>Cambios guardados</Text> : null}
         <Button title="Guardar cambios" onPress={handleSave} loading={saving} />
@@ -543,19 +538,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
   },
-  chips: { marginBottom: spacing.md },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  chipTextSelected: { color: colors.onPrimary },
   savedText: { ...typography.small, color: colors.primary, marginBottom: spacing.sm },
   inputLocked: { opacity: 0.55 },
   nameHintRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.md },

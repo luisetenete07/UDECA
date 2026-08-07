@@ -43,6 +43,7 @@ import {
 import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { showToast } from '../../../components/Toast';
+import { Chip, ChipRow } from '../../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   CATEGORY_PALETTE,
@@ -673,10 +674,10 @@ export default function ExercisesScreen() {
           </View>
         </>
       ) : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}>
-          <FilterChip
-            label="Todos"
-            selected={muscleFilter === null}
+        <ChipRow scroll>
+          <Chip
+            texto="Todos"
+            activo={muscleFilter === null}
             onPress={() => {
               setMuscleFilter(null);
               setSubFilter(null);
@@ -684,10 +685,10 @@ export default function ExercisesScreen() {
             }}
           />
           {filterCategories.map((group) => (
-            <FilterChip
+            <Chip
               key={group}
-              label={group}
-              selected={muscleFilter === group}
+              texto={group}
+              activo={muscleFilter === group}
               onPress={() => {
                 setMuscleFilter(group);
                 setSubFilter(null);
@@ -695,48 +696,47 @@ export default function ExercisesScreen() {
               }}
             />
           ))}
-        </ScrollView>
+        </ChipRow>
       )}
 
       {muscleFilter && subOptions.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filters}>
+        <ChipRow scroll>
           {subEdit ? null : (
-            <FilterChip
-              label="Toda la categoría"
-              selected={subFilter === null}
+            <Chip
+              texto="Toda la categoría"
+              activo={subFilter === null}
               onPress={() => setSubFilter(null)}
             />
           )}
           {subOptions.map((sg) =>
             subEdit ? (
               // En modo edición el chip abre el renombrado en vez de filtrar.
-              <Pressable
+              <Chip
                 key={sg}
+                texto={sg}
+                icono="pencil"
+                suave
                 onPress={() => {
                   setRenameSub({ group: muscleFilter, from: sg });
                   setRenameText(sg);
                 }}
-                style={[styles.chip, styles.chipEdit]}
-              >
-                <Ionicons name="pencil" size={13} color={colors.primary} />
-                <Text style={[styles.chipText, { color: colors.primary }]}>{sg}</Text>
-              </Pressable>
-            ) : (
-              <FilterChip
-                key={sg}
-                label={sg}
-                selected={subFilter === sg}
-                onPress={() => setSubFilter(sg)}
               />
+            ) : (
+              <Chip
+                key={sg}
+                texto={sg}
+                activo={subFilter === sg}
+                onPress={() => setSubFilter(sg)}
+                />
             )
           )}
-          <Pressable onPress={() => setSubEdit((v) => !v)} style={[styles.chip, styles.chipEdit]}>
-            <Ionicons name={subEdit ? 'checkmark' : 'pencil'} size={13} color={colors.primary} />
-            <Text style={[styles.chipText, { color: colors.primary }]}>
-              {subEdit ? 'Listo' : 'Renombrar'}
-            </Text>
-          </Pressable>
-        </ScrollView>
+          <Chip
+            texto={subEdit ? 'Listo' : 'Renombrar'}
+            icono={subEdit ? 'checkmark' : 'pencil'}
+            suave
+            onPress={() => setSubEdit((v) => !v)}
+          />
+        </ChipRow>
       ) : null}
 
       {filtered.length === 0 ? (
@@ -1024,22 +1024,6 @@ function normalizeHex(input: string): string | null {
   return null;
 }
 
-function FilterChip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={[styles.chip, selected && styles.chipSelected]}>
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
@@ -1124,7 +1108,6 @@ const styles = StyleSheet.create({
   paletteDot: { width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: 'transparent' },
   paletteDotOn: { borderColor: colors.text },
   customRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  chipEdit: { flexDirection: 'row', alignItems: 'center', gap: 5, borderColor: colors.primary },
   subgroupHead: {
     ...typography.label,
     color: colors.textMuted,
@@ -1239,19 +1222,6 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted },
-  filters: { marginVertical: spacing.md },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
-  chipTextSelected: { color: colors.onPrimary },
   // La separación entre tarjetas la pone la rejilla, no la tarjeta.
   exerciseCard: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   exerciseName: { ...typography.h3, color: colors.text },

@@ -5,6 +5,7 @@ import { Button } from './Button';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { deleteCoachTask, updateCoachTask } from '../lib/firestore/coachTasks';
+import { Segmented } from './Segmented';
 import { Sheet } from './Sheet';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import { TASK_SCOPE_LABEL, type CoachTask, type TaskScope } from '../lib/types';
@@ -83,19 +84,11 @@ export function TaskEditSheet({ task, onClose, onChanged }: Props) {
       {!isGoal ? (
         <>
           <Text style={styles.label}>¿Para cuándo?</Text>
-          <View style={styles.chipRow}>
-            {MOVE_SCOPES.map((s) => (
-              <Pressable
-                key={s}
-                onPress={() => setScope(s)}
-                style={[styles.chip, scope === s && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, scope === s && styles.chipTextActive]}>
-                  {TASK_SCOPE_LABEL[s]}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          <Segmented
+            opciones={MOVE_SCOPES.map((s) => ({ valor: s, texto: TASK_SCOPE_LABEL[s] }))}
+            valor={scope}
+            onChange={setScope}
+          />
 
           <Pressable style={styles.flagRow} onPress={() => setFlagged((f) => !f)}>
             <Ionicons
@@ -133,19 +126,6 @@ export function TaskEditSheet({ task, onClose, onChanged }: Props) {
 
 const styles = StyleSheet.create({
   label: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase', marginBottom: spacing.xs },
-  chipRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  chip: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-  },
-  chipActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  chipTextActive: { color: colors.primaryBright },
   flagRow: {
     flexDirection: 'row',
     alignItems: 'center',

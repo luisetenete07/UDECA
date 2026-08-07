@@ -9,6 +9,7 @@ import { applyWeekToClients } from '../lib/firestore/planTemplates';
 import { getClientsForTrainer } from '../lib/firestore/users';
 import { suggestProgression } from '../lib/planTemplates';
 import { exerciseNames, semanaAnterior, weekPlanDraft } from '../lib/weekPlan';
+import { Chip, ChipRow } from './Chip';
 import { Sheet } from './Sheet';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { Routine, TrainingCycle, WeekPlanEntry } from '../lib/types';
@@ -235,31 +236,24 @@ export function WeekPlanSheet({
           {otros.length > 0 ? (
             <View style={styles.tambien}>
               <Text style={styles.label}>Aplicar también a</Text>
-              <View style={styles.chips}>
+              <ChipRow>
                 {otros.map((o) => {
                   const puesto = tambien.includes(o.uid);
                   return (
-                    <Pressable
+                    <Chip
                       key={o.uid}
+                      texto={o.name}
+                      icono={puesto ? 'checkmark-circle' : 'ellipse-outline'}
+                      activo={puesto}
                       onPress={() =>
                         setTambien((prev) =>
                           puesto ? prev.filter((x) => x !== o.uid) : [...prev, o.uid]
                         )
                       }
-                      style={[styles.chip, puesto && styles.chipOn]}
-                    >
-                      <Ionicons
-                        name={puesto ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={14}
-                        color={puesto ? colors.primaryBright : colors.textFaint}
-                      />
-                      <Text style={[styles.chipText, puesto && styles.chipTextOn]}>
-                        {o.name}
-                      </Text>
-                    </Pressable>
+                    />
                   );
                 })}
-              </View>
+              </ChipRow>
               <Text style={styles.nota}>
                 Se les copia en la misma semana. A quien no la tenga en su plan, se le salta.
               </Text>
@@ -345,21 +339,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: spacing.xs,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  chipOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  chipText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
-  chipTextOn: { color: colors.primaryBright, fontFamily: fonts.semiBold },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   resetBtn: { alignSelf: 'center', marginTop: spacing.md, padding: spacing.sm },
   resetText: { ...typography.small, color: colors.danger },

@@ -20,6 +20,7 @@ import {
 import { getExercisesForTrainer } from '../../../lib/firestore/exercises';
 import { MUSCLE_LABEL, musclesForExercise, type MuscleId } from '../../../lib/muscles';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
+import { Chip } from '../../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   EXERCISE_MEASURES,
@@ -345,17 +346,12 @@ export default function TemplateExercisesScreen() {
                   <Text style={styles.label}>Categoría</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
                     {MUSCLE_GROUPS.map((g) => (
-                      <Pressable
+                      <Chip
                         key={g}
+                        texto={g}
+                        activo={draft.muscleGroup === g}
                         onPress={() => setDraft({ ...draft, muscleGroup: g })}
-                        style={[styles.chip, draft.muscleGroup === g && styles.chipOn]}
-                      >
-                        <Text
-                          style={[styles.chipText, draft.muscleGroup === g && styles.chipTextOn]}
-                        >
-                          {g}
-                        </Text>
-                      </Pressable>
+                      />
                     ))}
                   </ScrollView>
 
@@ -496,18 +492,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   chips: { marginBottom: spacing.md },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
-  },
-  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  chipTextOn: { color: colors.onPrimary },
   segment: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceAlt,
