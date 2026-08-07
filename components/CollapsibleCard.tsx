@@ -107,6 +107,9 @@ const styles = StyleSheet.create({
   titulo: { ...typography.h3, color: colors.text },
   hint: {
     ...typography.small,
+    // Un punto menos que el cuerpo: la pista acompaña al título, no compite
+    // con él, y a igual tamaño no cabían los dos en un móvil estrecho.
+    fontSize: 12,
     color: colors.textFaint,
     flex: 1,
     textAlign: 'right',

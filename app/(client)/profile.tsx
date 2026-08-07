@@ -7,6 +7,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { CountUp } from '../../components/CountUp';
+import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
@@ -261,11 +262,16 @@ export default function ClientProfileScreen() {
         </View>
       </View>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Logros</Text>
-        <Text style={styles.sectionSub}>
-          {unlockedCount} de {achievements.length} desbloqueados
-        </Text>
+      {/* Trece logros en una parrilla ocupaban casi una pantalla entera, y once
+          de ellos son los mismos para todo el mundo desde el primer día. Lo
+          que de verdad se viene a mirar —cuántos llevas— se lee plegado. */}
+      <CollapsibleCard
+        id="alumno-logros"
+        icon="ribbon-outline"
+        title="Logros"
+        hint={`${unlockedCount} de ${achievements.length}`}
+        defaultOpen={false}
+      >
         <View style={styles.badgeGrid}>
           {achievements.map((a) => (
             <View key={a.id} style={styles.badge}>
@@ -285,7 +291,7 @@ export default function ClientProfileScreen() {
             </View>
           ))}
         </View>
-      </Card>
+      </CollapsibleCard>
 
       {/* Tarjeta de cambio de nombre: solo visible si NO se ha consumido el
           límite de una vez cada 90 días. Al gastarlo, desaparece hasta que
@@ -316,8 +322,13 @@ export default function ClientProfileScreen() {
         </Card>
       ) : null}
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Sobre mí</Text>
+      <CollapsibleCard
+        id="alumno-sobre-mi"
+        icon="person-outline"
+        title="Sobre mí"
+        hint={profile?.level ?? undefined}
+        defaultOpen={false}
+      >
         <TextField
           label="Objetivo principal"
           value={goal}
@@ -356,7 +367,7 @@ export default function ClientProfileScreen() {
 
         {saved ? <Text style={styles.savedText}>Cambios guardados</Text> : null}
         <Button title="Guardar cambios" onPress={handleSave} loading={saving} />
-      </Card>
+      </CollapsibleCard>
 
       <Card style={styles.section}>
         <View style={styles.reminderTopRow}>

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
@@ -400,16 +401,26 @@ export default function TrainerProfileScreen() {
         </Pressable>
         <Text style={styles.name}>{profile?.name}</Text>
         <Text style={styles.email}>{profile?.email}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>Entrenador</Text>
-        </View>
+        {/* El distintivo de "Entrenador" salía aquí y otra vez dentro de la
+            tarjeta, dos centímetros más abajo. Decirlo dos veces seguidas no
+            informa el doble. */}
       </View>
 
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
       <MemberCard />
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Código de invitación</Text>
+      {/* De aquí abajo, todo son ajustes: cosas que se tocan una vez y no se
+          vuelven a mirar. Plegadas, el perfil pasa de tres pantallas y media a
+          una; y el dato que importa de cada una —el código, si los cobros
+          están activos, hasta cuándo va la suscripción— se lee sin abrirlas.
+          Se abre solo lo que pide acción. */}
+      <CollapsibleCard
+        id="coach-invitacion"
+        icon="key-outline"
+        title="Código de invitación"
+        hint={profile?.inviteCode ?? undefined}
+        defaultOpen={false}
+      >
         <Text style={styles.helperText}>
           Comparte este código con tus clientes para que se registren y queden vinculados a ti
           automáticamente.
@@ -464,18 +475,17 @@ export default function TrainerProfileScreen() {
             />
           </>
         )}
-      </Card>
+      </CollapsibleCard>
 
-      <Card accent style={styles.section}>
-        <View style={styles.connectHead}>
-          <Text style={styles.sectionTitle}>Cobra a tus alumnos</Text>
-          {chargesEnabled ? (
-            <View style={styles.connectOn}>
-              <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-              <Text style={styles.connectOnText}>Activo</Text>
-            </View>
-          ) : null}
-        </View>
+      {/* Sin cobros conectados hay trabajo pendiente, así que se abre sola.
+          Conectada, no hay nada que hacer y se queda recogida. */}
+      <CollapsibleCard
+        id="coach-cobros"
+        icon="card-outline"
+        title="Cobra a tus alumnos"
+        hint={chargesEnabled ? 'Activo' : 'Sin conectar'}
+        defaultOpen={!chargesEnabled}
+      >
         {chargesEnabled ? (
           <Text style={styles.helperText}>
             Tus cobros están activos. Cuando un alumno pague su cuota desde la app, el dinero irá
@@ -520,10 +530,15 @@ export default function TrainerProfileScreen() {
             style={{ marginTop: spacing.xs }}
           />
         ) : null}
-      </Card>
+      </CollapsibleCard>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Otro método de cobro</Text>
+      <CollapsibleCard
+        id="coach-otro-cobro"
+        icon="link-outline"
+        title="Otro método de cobro"
+        hint={payLink ? 'Puesto' : 'Sin poner'}
+        defaultOpen={false}
+      >
         <Text style={styles.helperText}>
           ¿Prefieres Bizum, PayPal.me, Revolut u otro enlace? Pégalo aquí y tus alumnos verán un
           botón "Pagar ahora" en su aviso de cobro.
@@ -545,18 +560,21 @@ export default function TrainerProfileScreen() {
           loading={savingPayLink}
           disabled={payLink.trim() === (profile?.paymentLink ?? '')}
         />
-      </Card>
+      </CollapsibleCard>
 
-      <Card style={styles.section}>
-        <View style={styles.groupHeadRow}>
-          <Text style={styles.sectionTitle}>Clasificación del grupo</Text>
-          {onlineCount > 0 ? (
-            <View style={styles.onlinePill}>
-              <View style={styles.onlineDot} />
-              <Text style={styles.onlinePillText}>{onlineCount} en línea</Text>
-            </View>
-          ) : null}
-        </View>
+      <CollapsibleCard
+        id="coach-clasificacion"
+        icon="trophy-outline"
+        title="Clasificación"
+        hint={
+          onlineCount > 0
+            ? `${onlineCount} en línea`
+            : leaderboard.length > 0
+              ? `${leaderboard.length} ${leaderboard.length === 1 ? 'alumno' : 'alumnos'}`
+              : undefined
+        }
+        defaultOpen={false}
+      >
         {leaderboard.length === 0 ? (
           <Text style={styles.mutedSmall}>
             Aparecerá cuando tus alumnos empiecen a entrenar con la app.
@@ -593,7 +611,7 @@ export default function TrainerProfileScreen() {
             Mantén la lista limpia: elimina perfiles antiguos o de prueba con la papelera.
           </Text>
         ) : null}
-      </Card>
+      </CollapsibleCard>
 
       <Modal
         visible={!!deleteTarget}
@@ -626,15 +644,13 @@ export default function TrainerProfileScreen() {
         </View>
       </Modal>
 
-      <Card style={styles.section}>
-        <View style={styles.subHeader}>
-          <Text style={styles.sectionTitle}>Suscripción</Text>
-          <View style={[styles.subBadge, !sub.active && styles.subBadgeOff]}>
-            <Text style={styles.subBadgeText}>
-              {admin ? 'ADMIN' : sub.legacy ? 'FUNDADOR' : 'PRO'}
-            </Text>
-          </View>
-        </View>
+      <CollapsibleCard
+        id="coach-suscripcion"
+        icon="shield-checkmark-outline"
+        title="Suscripción"
+        hint={admin ? 'Admin' : sub.legacy ? 'Fundador' : sub.active ? 'Activa' : 'Caducada'}
+        defaultOpen={false}
+      >
         <Text style={styles.helperText}>
           {admin
             ? 'Cuenta administradora de UDECA: acceso completo sin caducidad.'
@@ -645,7 +661,7 @@ export default function TrainerProfileScreen() {
                   profile?.subscriptionUntil ? fmtDate(profile.subscriptionUntil) : '—'
                 }.`}
         </Text>
-      </Card>
+      </CollapsibleCard>
 
       {admin ? (
         <Card accent style={styles.section}>
