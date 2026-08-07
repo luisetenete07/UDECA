@@ -20,7 +20,6 @@ import {
   CARD_SCRIPT,
   type CardData,
   type CardKind,
-  type MemberCardData,
   type RecordCardData,
   type ReportCardData,
   type SessionCardData,
@@ -28,7 +27,7 @@ import {
 import { canRenderCardNatively, renderCardBase64 } from '../components/CardRendererHost';
 import { UDECA_LOGO_DATA_URI } from './udecaLogo';
 
-export type { MemberCardData, RecordCardData, ReportCardData, SessionCardData };
+export type { RecordCardData, ReportCardData, SessionCardData };
 
 export type ShareResult = 'shared' | 'downloaded' | null;
 
@@ -145,10 +144,6 @@ export function shareRecordImage(data: RecordCardData): Promise<ShareResult> {
 }
 
 /** Carné de miembro (con número de fundador si lo tiene). */
-export function shareMemberImage(data: MemberCardData): Promise<ShareResult> {
-  return shareCard('member', data, 'carne-udeca.png', 'Mi carné UDECA');
-}
-
 export function shareReportImage(data: ReportCardData): Promise<ShareResult> {
   return shareCard('report', data, 'informe-udeca.png', 'Informe UDECA');
 }

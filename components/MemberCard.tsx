@@ -1,12 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { PressableScale } from './PressableScale';
 import { ProgressCard, type DatoTarjeta } from './ProgressCard';
-import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
-import { shareMemberImage } from '../lib/brandCards';
 import {
   numeroFundador,
   tarjetaDeAtleta,
@@ -35,7 +31,6 @@ import { colors, spacing, typography } from '../lib/theme';
 export function MemberCard() {
   const { profile } = useAuth();
   const [datos, setDatos] = useState<DatoTarjeta[]>([]);
-  const [compartiendo, setCompartiendo] = useState(false);
 
   const esEntrenador = profile?.role === 'trainer';
   const esFundador = typeof profile?.founderNumber === 'number' && profile.founderNumber > 0;
@@ -128,28 +123,6 @@ export function MemberCard() {
 
   if (!profile) return null;
 
-  const compartir = async () => {
-    setCompartiendo(true);
-    try {
-      const r = await shareMemberImage({
-        name: profile.name,
-        roleLabel: rol,
-        founderNumber: esFundador ? profile.founderNumber : undefined,
-        since: textoDesde(profile.createdAt)?.toLowerCase(),
-        tagline: esEntrenador
-          ? 'Dirige, mide y cobra'
-          : profile.role === 'athlete'
-            ? 'Entrena por su cuenta'
-            : 'Entrena con su entrenador',
-      });
-      if (r === 'downloaded') showToast('Tarjeta descargada');
-    } catch {
-      showToast('No se pudo crear la tarjeta');
-    } finally {
-      setCompartiendo(false);
-    }
-  };
-
   return (
     <View style={styles.bloque}>
       <ProgressCard
@@ -159,40 +132,18 @@ export function MemberCard() {
         desde={textoDesde(profile.createdAt)}
         fundador={esFundador ? numeroFundador(profile.founderNumber!) : undefined}
       />
-      <View style={styles.pie}>
-        <Text style={styles.ayuda}>Arrástrala para girarla</Text>
-        <PressableScale
-          onPress={compartir}
-          disabled={compartiendo}
-          style={styles.compartir}
-          hitSlop={8}
-        >
-          <Ionicons
-            name="share-outline"
-            size={15}
-            color={compartiendo ? colors.textFaint : colors.primary}
-          />
-          <Text style={styles.compartirTexto}>Compartir</Text>
-        </PressableScale>
-      </View>
+      <Text style={styles.ayuda}>Arrástrala para girarla</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   bloque: { marginBottom: spacing.lg },
-  pie: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  ayuda: {
+    ...typography.small,
+    color: colors.textFaint,
+    fontSize: 11,
     marginTop: spacing.sm,
-    // Debajo de la tarjeta y con su mismo ancho: alineado a la columna entera,
-    // en un monitor el "Compartir" acababa a medio metro de la tarjeta.
-    width: '100%',
-    maxWidth: 360,
-    alignSelf: 'center',
+    textAlign: 'center',
   },
-  ayuda: { ...typography.small, color: colors.textFaint, fontSize: 11 },
-  compartir: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 },
-  compartirTexto: { ...typography.small, color: colors.primary, fontSize: 12 },
 });

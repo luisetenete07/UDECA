@@ -13,7 +13,7 @@
  * poder incrustarlo tal cual, sin escapes, en el HTML del WebView.
  */
 
-export type CardKind = 'session' | 'record' | 'report' | 'member';
+export type CardKind = 'session' | 'record' | 'report';
 
 export interface SessionCardData {
   routineName: string;
@@ -53,19 +53,8 @@ export interface ReportCardData {
  * Es la tarjeta que se enseña, no la que se consulta: por eso lleva pocos
  * datos y grandes. El número de fundador, cuando lo hay, es el protagonista.
  */
-export interface MemberCardData {
-  name: string;
-  /** Etiqueta del tipo de cuenta: ENTRENADOR, ATLETA o ALUMNO. */
-  roleLabel: string;
-  /** Número de fundador. Sin él, es la tarjeta normal de su tipo de cuenta. */
-  founderNumber?: number;
-  /** "julio de 2026". */
-  since?: string;
-  /** Frase corta bajo el rol (lo que hace esa cuenta). */
-  tagline?: string;
-}
 
-export type CardData = SessionCardData | RecordCardData | ReportCardData | MemberCardData;
+export type CardData = SessionCardData | RecordCardData | ReportCardData;
 
 /**
  * Código de dibujo. Define `udecaDrawCard(canvas, kind, data, logoUri)` y
@@ -343,99 +332,6 @@ function drawReport(ctx, data) {
  * Carné de miembro. El fundador tiene su propio tratamiento: sello con el
  * número dentro, y el marco doble en oro.
  */
-function drawMember(ctx, data, logo) {
-  var fundador = typeof data.founderNumber === 'number' && data.founderNumber > 0;
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, W, H);
-  var glow = ctx.createRadialGradient(W / 2, 700, 0, W / 2, 700, 900);
-  glow.addColorStop(0, fundador ? 'rgba(201, 189, 176, 0.22)' : 'rgba(162, 150, 139, 0.14)');
-  glow.addColorStop(1, 'rgba(162, 150, 139, 0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-
-  // Marco: doble hilo para el fundador, sencillo para el resto.
-  ctx.strokeStyle = fundador ? 'rgba(201, 189, 176, 0.75)' : 'rgba(162, 150, 139, 0.45)';
-  ctx.lineWidth = 5;
-  roundRect(ctx, 40, 40, W - 80, H - 80, 44);
-  ctx.stroke();
-  if (fundador) {
-    ctx.strokeStyle = 'rgba(162, 150, 139, 0.35)';
-    ctx.lineWidth = 2;
-    roundRect(ctx, 62, 62, W - 124, H - 124, 32);
-    ctx.stroke();
-  }
-
-  ctx.textAlign = 'center';
-  if (logo) ctx.drawImage(logo, W / 2 - 52, 96, 104, 104);
-  ctx.fillStyle = GOLD_SOFT;
-  ctx.font = '600 54px ' + DISPLAY;
-  ctx.fillText('U D E C A', W / 2, 252);
-  ctx.fillStyle = MUTED;
-  ctx.font = '600 23px sans-serif';
-  ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 292);
-
-  if (fundador) {
-    // Sello: dos anillas y el número dentro. Es el elemento que la gente
-    // fotografía, así que manda sobre todo lo demás.
-    ctx.strokeStyle = GOLD;
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.arc(W / 2, 520, 128, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(162, 150, 139, 0.3)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(W / 2, 520, 146, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '600 34px sans-serif';
-    ctx.fillText('Nº', W / 2, 468);
-    ctx.fillStyle = TEXT;
-    ctx.font = '900 116px sans-serif';
-    ctx.fillText(String(data.founderNumber), W / 2, 578);
-
-    ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '900 62px sans-serif';
-    ctx.fillText('MIEMBRO FUNDADOR', W / 2, 748);
-    ctx.fillStyle = MUTED;
-    ctx.font = '600 30px sans-serif';
-    ctx.fillText('Estuvo aquí desde el principio', W / 2, 800);
-  } else {
-    ctx.fillStyle = GOLD;
-    ctx.fillRect(W / 2 - 44, 336, 88, 3);
-    ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '900 68px sans-serif';
-    ctx.fillText(data.roleLabel.toUpperCase(), W / 2, 660);
-    if (data.tagline) {
-      ctx.fillStyle = MUTED;
-      ctx.font = '600 34px sans-serif';
-      ctx.fillText(fit(ctx, data.tagline, W - 220), W / 2, 724);
-    }
-  }
-
-  // Nombre: lo grande de la parte baja. Las dos variantes reparten el hueco de
-  // forma distinta —el fundador gasta arriba con el sello— pero las dos acaban
-  // a la misma distancia del pie, o la tarjeta se ve descolgada.
-  var yNombre = fundador ? 960 : 930;
-  ctx.fillStyle = TEXT;
-  ctx.font = '600 66px ' + DISPLAY;
-  ctx.fillText(fit(ctx, data.name, W - 220), W / 2, yNombre);
-  // El rol solo se repite bajo el nombre en la tarjeta de fundador: en la otra
-  // ya está escrito en grande justo encima.
-  var ySiguiente = yNombre + 56;
-  if (fundador) {
-    ctx.fillStyle = GOLD_SOFT;
-    ctx.font = '700 30px sans-serif';
-    ctx.fillText(data.roleLabel.toUpperCase(), W / 2, ySiguiente);
-    ySiguiente += 52;
-  }
-  if (data.since) {
-    ctx.fillStyle = MUTED;
-    ctx.font = '600 28px sans-serif';
-    ctx.fillText('Miembro desde ' + data.since, W / 2, ySiguiente);
-  }
-}
-
 function udecaDrawCard(canvas, kind, data, logoUri) {
   canvas.width = W;
   canvas.height = H;
@@ -444,8 +340,6 @@ function udecaDrawCard(canvas, kind, data, logoUri) {
   return loadLogo(logoUri).then(function (logo) {
     if (kind === 'record') {
       drawRecord(ctx, data, logo);
-    } else if (kind === 'member') {
-      drawMember(ctx, data, logo);
     } else {
       drawFrame(ctx, logo);
       if (kind === 'session') drawSession(ctx, data);

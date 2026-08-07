@@ -31,11 +31,34 @@ if (!Number.isInteger(numero) || numero < 1) {
 
 // El SDK se carga DESPUÉS de validar: si no, un correo vacío moría con un
 // "ERR_MODULE_NOT_FOUND" de firebase-admin en vez de decir qué falta.
-const { default: admin } = await import('firebase-admin');
-admin.initializeApp();
-const db = admin.firestore();
+//
+// Se usan los SUBMÓDULOS (firebase-admin/app, /auth, /firestore) y no el
+// import por defecto. En las versiones nuevas del paquete ese objeto ya no
+// trae `firestore()` ni `auth()`, y el script moría con "admin.firestore is
+// not a function". Es la misma trampa que ya estaba documentada en
+// seed-test-accounts.mjs; esta forma funciona en todas las versiones recientes.
+let initializeApp, applicationDefault, getAuth, getFirestore;
+try {
+  ({ initializeApp, applicationDefault } = await import('firebase-admin/app'));
+  ({ getAuth } = await import('firebase-admin/auth'));
+  ({ getFirestore } = await import('firebase-admin/firestore'));
+} catch {
+  console.error('Falta el paquete firebase-admin. Instálalo con: npm i --no-save firebase-admin');
+  process.exit(1);
+}
 
-const usuario = await admin.auth().getUserByEmail(correo);
+initializeApp({ credential: applicationDefault() });
+const db = getFirestore();
+
+// Un correo que no existe salía como una traza de error del SDK, ilegible
+// desde la pestaña de Actions. Lo que hace falta saber es una línea.
+let usuario;
+try {
+  usuario = await getAuth().getUserByEmail(correo);
+} catch {
+  console.error(`No hay ninguna cuenta con el correo ${correo}. Revisa que esté bien escrito.`);
+  process.exit(1);
+}
 const ref = db.collection('users').doc(usuario.uid);
 const perfil = await ref.get();
 

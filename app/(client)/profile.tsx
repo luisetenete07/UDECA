@@ -6,7 +6,6 @@ import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { CountUp } from '../../components/CountUp';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
 import { RateApp } from '../../components/RateApp';
@@ -26,9 +25,7 @@ import {
   scheduleWorkoutReminder,
 } from '../../lib/notifications';
 import {
-  activeWeeks,
   computeAchievements,
-  currentStreak,
   type Achievement,
 } from '../../lib/stats';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
@@ -81,9 +78,6 @@ export default function ClientProfileScreen() {
     }
   };
 
-  const [totalWorkouts, setTotalWorkouts] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [weeks, setWeeks] = useState(0);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -93,9 +87,6 @@ export default function ClientProfileScreen() {
       getWorkoutLogsForClient(profile.uid),
       getWeightLogsForClient(profile.uid),
     ]);
-    setTotalWorkouts(workoutLogs.length);
-    setStreak(currentStreak(workoutLogs));
-    setWeeks(activeWeeks(workoutLogs));
     setAchievements(computeAchievements(workoutLogs, weightLogs));
     setLoading(false);
   }, [profile]);
@@ -241,26 +232,11 @@ export default function ClientProfileScreen() {
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
       <MemberCard />
 
-      {/* Las cifras de una vida de entrenamiento, al tamaño que merecen.
-          Estaban en tres cuadraditos iguales, con el mismo peso que un botón
-          cualquiera: son lo que alguien enseña cuando le preguntan cuánto
-          lleva, y lo que da ganas de hacer una captura. */}
-      <View style={styles.vitrina}>
-        <View style={styles.vitrinaItem}>
-          <CountUp value={totalWorkouts} style={styles.vitrinaCifra} />
-          <Text style={styles.vitrinaEtiqueta}>Entrenos</Text>
-        </View>
-        <View style={styles.vitrinaSep} />
-        <View style={styles.vitrinaItem}>
-          <CountUp value={streak} style={styles.vitrinaCifra} />
-          <Text style={styles.vitrinaEtiqueta}>Días de racha</Text>
-        </View>
-        <View style={styles.vitrinaSep} />
-        <View style={styles.vitrinaItem}>
-          <CountUp value={weeks} style={styles.vitrinaCifra} />
-          <Text style={styles.vitrinaEtiqueta}>Semanas</Text>
-        </View>
-      </View>
+      {/* Aquí había tres cifras enormes —entrenos, racha, semanas— justo
+          debajo de la tarjeta... que rota exactamente esas mismas tres. Las
+          mismas cifras dos veces y a diez píxeles: la de arriba grande y
+          animada, la de abajo repitiéndola. Se queda la tarjeta, que además
+          las cuenta solas y no ocupa el doble. */}
 
       {/* Trece logros en una parrilla ocupaban casi una pantalla entera, y once
           de ellos son los mismos para todo el mundo desde el primer día. Lo
