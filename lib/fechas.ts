@@ -51,6 +51,16 @@ export function diaMes(ts: number | Date): string {
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 }
 
+/**
+ * "5 ago 2026". Como `fechaCorta` pero sin el cero delante: para una fecha que
+ * se lee, no para una columna de fechas que se comparan. En un selector queda
+ * mejor "5 ago 2026" que "05 ago 2026".
+ */
+export function fechaLegible(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 /*
  * Comparar días, no instantes.
  *

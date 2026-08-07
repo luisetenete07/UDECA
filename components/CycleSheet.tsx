@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
-import { DateField, fmtDate as fmt, startOfToday } from './DateField';
+import { DateField, startOfToday } from './DateField';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { createCycle, updateCycle } from '../lib/firestore/cycles';
+import { Sheet } from './Sheet';
+import { fechaLegible } from '../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import {
   CYCLE_DEFAULT_WEEKS,
@@ -116,154 +118,119 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={styles.backdropTap} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>{editing ? 'Editar ciclo' : 'Nuevo ciclo'}</Text>
-
-            <Text style={styles.label}>Nivel</Text>
-            <View style={styles.chipRow}>
-              {LEVELS.map((l) => (
-                <Pressable
-                  key={l}
-                  onPress={() => pickLevel(l)}
-                  style={[styles.chip, level === l && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, level === l && styles.chipTextActive]}>
-                    {CYCLE_LEVEL_LABEL[l]}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <TextField
-              label="Nombre"
-              placeholder="Ej. Hipertrofia"
-              value={name}
-              onChangeText={setName}
-            />
-
-            <Text style={styles.label}>Empieza</Text>
-            <DateField value={startDate} onChange={setStartDate} />
-
-            <View style={styles.rowBetween}>
-              <Text style={styles.label}>Sin fecha de fin (abierto)</Text>
-              <Switch
-                value={open}
-                onValueChange={setOpen}
-                trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
-                thumbColor={colors.white}
-              />
-            </View>
-
-            {!open ? (
-              <>
-                <Text style={styles.label}>Duración</Text>
-                <View style={styles.dateRow}>
-                  <Pressable
-                    onPress={() => setWeeks((w) => Math.max(1, w - 1))}
-                    style={styles.stepBtn}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="remove" size={18} color={colors.primary} />
-                  </Pressable>
-                  <Text style={styles.dateText}>
-                    {weeks} semana{weeks === 1 ? '' : 's'}
-                  </Text>
-                  <Pressable
-                    onPress={() => setWeeks((w) => Math.min(52, w + 1))}
-                    style={styles.stepBtn}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="add" size={18} color={colors.primary} />
-                  </Pressable>
-                  <Text style={styles.endHint}>hasta {endDate ? fmt(endDate) : '—'}</Text>
-                </View>
-              </>
-            ) : null}
-
-            {level === 'micro' ? (
-              <View style={styles.rowBetween}>
-                <Text style={styles.label}>Semana de descarga (deload)</Text>
-                <Switch
-                  value={isDeload}
-                  onValueChange={setIsDeload}
-                  trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
-                  thumbColor={colors.white}
-                />
-              </View>
-            ) : null}
-
-            <View style={styles.divider} />
-            <Text style={styles.optHint}>Opcional</Text>
-
-            <TextField
-              label="Meta de sesiones"
-              placeholder="Ej. 16"
-              keyboardType="numeric"
-              value={target}
-              onChangeText={setTarget}
-            />
-            <TextField
-              label="Objetivo del ciclo"
-              placeholder="Ej. Dominadas lastradas +25 kg × 5"
-              value={goal}
-              onChangeText={setGoal}
-            />
-            <TextField
-              label="Notas del coach"
-              placeholder="Notas privadas…"
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-              style={{ minHeight: 72, textAlignVertical: 'top' }}
-            />
-
-            <View style={styles.actions}>
-              <Button title="Cancelar" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-              <Button
-                title={editing ? 'Guardar' : 'Crear ciclo'}
-                onPress={handleSave}
-                loading={saving}
-                style={{ flex: 1 }}
-              />
-            </View>
-          </ScrollView>
-        </View>
+    <Sheet visible={visible} onClose={onClose} titulo={editing ? 'Editar ciclo' : 'Nuevo ciclo'}>
+      <Text style={styles.label}>Nivel</Text>
+      <View style={styles.chipRow}>
+        {LEVELS.map((l) => (
+          <Pressable
+            key={l}
+            onPress={() => pickLevel(l)}
+            style={[styles.chip, level === l && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, level === l && styles.chipTextActive]}>
+              {CYCLE_LEVEL_LABEL[l]}
+            </Text>
+          </Pressable>
+        ))}
       </View>
-    </Modal>
+
+      <TextField
+        label="Nombre"
+        placeholder="Ej. Hipertrofia"
+        value={name}
+        onChangeText={setName}
+      />
+
+      <Text style={styles.label}>Empieza</Text>
+      <DateField value={startDate} onChange={setStartDate} />
+
+      <View style={styles.rowBetween}>
+        <Text style={styles.label}>Sin fecha de fin (abierto)</Text>
+        <Switch
+          value={open}
+          onValueChange={setOpen}
+          trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
+          thumbColor={colors.white}
+        />
+      </View>
+
+      {!open ? (
+        <>
+          <Text style={styles.label}>Duración</Text>
+          <View style={styles.dateRow}>
+            <Pressable
+              onPress={() => setWeeks((w) => Math.max(1, w - 1))}
+              style={styles.stepBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="remove" size={18} color={colors.primary} />
+            </Pressable>
+            <Text style={styles.dateText}>
+              {weeks} semana{weeks === 1 ? '' : 's'}
+            </Text>
+            <Pressable
+              onPress={() => setWeeks((w) => Math.min(52, w + 1))}
+              style={styles.stepBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="add" size={18} color={colors.primary} />
+            </Pressable>
+            <Text style={styles.endHint}>hasta {endDate ? fechaLegible(endDate) : '—'}</Text>
+          </View>
+        </>
+      ) : null}
+
+      {level === 'micro' ? (
+        <View style={styles.rowBetween}>
+          <Text style={styles.label}>Semana de descarga (deload)</Text>
+          <Switch
+            value={isDeload}
+            onValueChange={setIsDeload}
+            trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
+            thumbColor={colors.white}
+          />
+        </View>
+      ) : null}
+
+      <View style={styles.divider} />
+      <Text style={styles.optHint}>Opcional</Text>
+
+      <TextField
+        label="Meta de sesiones"
+        placeholder="Ej. 16"
+        keyboardType="numeric"
+        value={target}
+        onChangeText={setTarget}
+      />
+      <TextField
+        label="Objetivo del ciclo"
+        placeholder="Ej. Dominadas lastradas +25 kg × 5"
+        value={goal}
+        onChangeText={setGoal}
+      />
+      <TextField
+        label="Notas del coach"
+        placeholder="Notas privadas…"
+        value={notes}
+        onChangeText={setNotes}
+        multiline
+        style={{ minHeight: 72, textAlignVertical: 'top' }}
+      />
+
+      <View style={styles.actions}>
+        <Button title="Cancelar" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
+        <Button
+          title={editing ? 'Guardar' : 'Crear ciclo'}
+          onPress={handleSave}
+          loading={saving}
+          style={{ flex: 1 }}
+        />
+      </View>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
-  backdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.sm,
-    maxHeight: '90%',
-    width: '100%',
-    maxWidth: 640,
-    alignSelf: 'center',
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginBottom: spacing.md,
-  },
-  title: { ...typography.h2, color: colors.text, marginBottom: spacing.md },
   label: {
     ...typography.label,
     color: colors.textMuted,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { DateField, startOfToday } from './DateField';
@@ -17,6 +17,7 @@ import {
   type PlanDraft,
 } from '../lib/cyclePlan';
 import { diaMes } from '../lib/fechas';
+import { Sheet } from './Sheet';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 const MAX_BLOQUES = 8;
@@ -125,237 +126,202 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={styles.backdropTap} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>Nuevo plan</Text>
-            <Text style={styles.sub}>
-              Elige una estructura, ajústala y la app crea el macrociclo con sus bloques y sus
-              semanas.
-            </Text>
-
-            {misPlantillas.length > 0 ? (
-              <>
-                <Text style={styles.label}>Tus plantillas</Text>
-                {misPlantillas.map((t) => (
-                  <Pressable
-                    key={t.id}
-                    onPress={() => setPlantillaPropia(plantillaPropia?.id === t.id ? null : t)}
-                    style={[styles.tpl, plantillaPropia?.id === t.id && styles.tplActive]}
-                  >
-                    <Ionicons
-                      name={plantillaPropia?.id === t.id ? 'radio-button-on' : 'radio-button-off'}
-                      size={18}
-                      color={plantillaPropia?.id === t.id ? colors.primaryBright : colors.textFaint}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.tplName,
-                          plantillaPropia?.id === t.id && styles.tplNameActive,
-                        ]}
-                      >
-                        {t.name}
-                      </Text>
-                      <Text style={styles.tplHint}>
-                        {templateWeeks(t)} semanas · {t.blocks.length} bloque
-                        {t.blocks.length === 1 ? '' : 's'}
-                        {templateSessions(t) > 0 ? ` · ${templateSessions(t)} entrenos` : ''}
-                        {t.blocks.some((b) => b.weeks.some((w) => w.weekPlan?.length))
-                          ? ' · con los números'
-                          : ''}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
-                <View style={styles.divider} />
-              </>
-            ) : null}
-
-            <Text style={styles.label}>
-              {misPlantillas.length > 0 ? 'O empezar de cero' : 'Estructura'}
-            </Text>
-            {PLAN_TEMPLATES.map((t) => (
-              <Pressable
-                key={t.id}
-                onPress={() => usarPlantilla(t.id)}
-                style={[styles.tpl, plantilla === t.id && styles.tplActive]}
-              >
-                <Ionicons
-                  name={plantilla === t.id ? 'radio-button-on' : 'radio-button-off'}
-                  size={18}
-                  color={plantilla === t.id ? colors.primaryBright : colors.textFaint}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.tplName, plantilla === t.id && styles.tplNameActive]}>
-                    {t.label}
-                  </Text>
-                  <Text style={styles.tplHint}>{t.hint}</Text>
-                </View>
-              </Pressable>
-            ))}
-
-            <TextField
-              label="Nombre del plan"
-              placeholder="Ej. Temporada de otoño"
-              value={name}
-              onChangeText={setName}
-            />
-
-            <Text style={styles.label}>Empieza</Text>
-            <DateField value={startDate} onChange={setStartDate} />
-            <Text style={styles.hint}>
-              Las semanas van de lunes a domingo, así que el plan arranca el lunes{' '}
-              {diaMes(inicio)}.
-            </Text>
-
-            <Text style={styles.label}>Entrenos por semana</Text>
-            <View style={styles.stepperRow}>
-              <Pressable
-                onPress={() => setSessionsPerWeek((n) => Math.max(1, n - 1))}
-                style={styles.stepBtn}
-                hitSlop={6}
-              >
-                <Ionicons name="remove" size={18} color={colors.primary} />
-              </Pressable>
-              <Text style={styles.stepValue}>{sessionsPerWeek}</Text>
-              <Pressable
-                onPress={() => setSessionsPerWeek((n) => Math.min(7, n + 1))}
-                style={styles.stepBtn}
-                hitSlop={6}
-              >
-                <Ionicons name="add" size={18} color={colors.primary} />
-              </Pressable>
-              <Text style={styles.hintInline}>
-                Es la meta de cada semana; en las de descarga se resta una.
-              </Text>
-            </View>
-
-            <View style={styles.divider} />
-            <Text style={styles.label}>Bloques</Text>
-
-            {blocks.map((b, i) => (
-              <View key={i} style={styles.block}>
-                <View style={styles.blockHead}>
-                  <Text style={styles.blockIndex}>{i + 1}</Text>
-                  <TextField
-                    value={b.name}
-                    onChangeText={(v) => editarBloque(i, { name: v })}
-                    placeholder="Nombre del bloque"
-                    containerStyle={{ flex: 1, marginBottom: 0 }}
-                  />
-                  {blocks.length > 1 ? (
-                    <Pressable onPress={() => quitarBloque(i)} hitSlop={8} style={styles.trash}>
-                      <Ionicons name="trash-outline" size={17} color={colors.textFaint} />
-                    </Pressable>
-                  ) : null}
-                </View>
-
-                <View style={styles.stepperRow}>
-                  <Pressable
-                    onPress={() => editarBloque(i, { weeks: Math.max(1, b.weeks - 1) })}
-                    style={styles.stepBtn}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="remove" size={18} color={colors.primary} />
-                  </Pressable>
-                  <Text style={styles.stepValue}>{b.weeks}</Text>
-                  <Pressable
-                    onPress={() => editarBloque(i, { weeks: Math.min(16, b.weeks + 1) })}
-                    style={styles.stepBtn}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="add" size={18} color={colors.primary} />
-                  </Pressable>
-                  <Text style={styles.hintInline}>semana{b.weeks === 1 ? '' : 's'}</Text>
-                </View>
-
-                <View style={styles.rowBetween}>
-                  <Text style={styles.switchLabel}>Última semana de descarga</Text>
-                  <Switch
-                    value={b.deloadLast}
-                    onValueChange={(v) => editarBloque(i, { deloadLast: v })}
-                    trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
-                    thumbColor={colors.white}
-                  />
-                </View>
-              </View>
-            ))}
-
-            {blocks.length < MAX_BLOQUES ? (
-              <Pressable onPress={anadirBloque} style={styles.addBlock}>
-                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                <Text style={styles.addBlockText}>Añadir bloque</Text>
-              </Pressable>
-            ) : null}
-
-            <View style={styles.divider} />
-            <TextField
-              label="Objetivo del plan (opcional)"
-              placeholder="Ej. Muscle-up estricto por 3"
-              value={goal}
-              onChangeText={setGoal}
-            />
-
-            <View style={styles.resumen}>
-              <Text style={styles.resumenBig}>
-                {plantillaPropia ? templateWeeks(plantillaPropia) : semanas} semanas ·{' '}
-                {plantillaPropia ? plantillaPropia.blocks.length : blocks.length} bloque
-                {(plantillaPropia ? plantillaPropia.blocks.length : blocks.length) === 1 ? '' : 's'}
-              </Text>
-              <Text style={styles.resumenText}>
-                {plantillaPropia
-                  ? `${plantillaPropia.name} · desde el ${diaMes(inicio)}`
-                  : `Del ${diaMes(inicio)} al ${diaMes(fin)} · ${entrenos} entrenos previstos`}
-              </Text>
-            </View>
-
-            <View style={styles.actions}>
-              <Button title="Cancelar" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-              <Button
-                title={plantillaPropia ? 'Aplicar plantilla' : 'Crear plan'}
-                onPress={guardar}
-                loading={saving}
-                style={{ flex: 1 }}
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      titulo="Nuevo plan"
+      descripcion="Elige una estructura, ajústala y la app crea el macrociclo con sus bloques y sus semanas."
+    >
+      {misPlantillas.length > 0 ? (
+        <>
+          <Text style={styles.label}>Tus plantillas</Text>
+          {misPlantillas.map((t) => (
+            <Pressable
+              key={t.id}
+              onPress={() => setPlantillaPropia(plantillaPropia?.id === t.id ? null : t)}
+              style={[styles.tpl, plantillaPropia?.id === t.id && styles.tplActive]}
+            >
+              <Ionicons
+                name={plantillaPropia?.id === t.id ? 'radio-button-on' : 'radio-button-off'}
+                size={18}
+                color={plantillaPropia?.id === t.id ? colors.primaryBright : colors.textFaint}
               />
-            </View>
-          </ScrollView>
-        </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.tplName,
+                    plantillaPropia?.id === t.id && styles.tplNameActive,
+                  ]}
+                >
+                  {t.name}
+                </Text>
+                <Text style={styles.tplHint}>
+                  {templateWeeks(t)} semanas · {t.blocks.length} bloque
+                  {t.blocks.length === 1 ? '' : 's'}
+                  {templateSessions(t) > 0 ? ` · ${templateSessions(t)} entrenos` : ''}
+                  {t.blocks.some((b) => b.weeks.some((w) => w.weekPlan?.length))
+                    ? ' · con los números'
+                    : ''}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+          <View style={styles.divider} />
+        </>
+      ) : null}
+
+      <Text style={styles.label}>
+        {misPlantillas.length > 0 ? 'O empezar de cero' : 'Estructura'}
+      </Text>
+      {PLAN_TEMPLATES.map((t) => (
+        <Pressable
+          key={t.id}
+          onPress={() => usarPlantilla(t.id)}
+          style={[styles.tpl, plantilla === t.id && styles.tplActive]}
+        >
+          <Ionicons
+            name={plantilla === t.id ? 'radio-button-on' : 'radio-button-off'}
+            size={18}
+            color={plantilla === t.id ? colors.primaryBright : colors.textFaint}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.tplName, plantilla === t.id && styles.tplNameActive]}>
+              {t.label}
+            </Text>
+            <Text style={styles.tplHint}>{t.hint}</Text>
+          </View>
+        </Pressable>
+      ))}
+
+      <TextField
+        label="Nombre del plan"
+        placeholder="Ej. Temporada de otoño"
+        value={name}
+        onChangeText={setName}
+      />
+
+      <Text style={styles.label}>Empieza</Text>
+      <DateField value={startDate} onChange={setStartDate} />
+      <Text style={styles.hint}>
+        Las semanas van de lunes a domingo, así que el plan arranca el lunes{' '}
+        {diaMes(inicio)}.
+      </Text>
+
+      <Text style={styles.label}>Entrenos por semana</Text>
+      <View style={styles.stepperRow}>
+        <Pressable
+          onPress={() => setSessionsPerWeek((n) => Math.max(1, n - 1))}
+          style={styles.stepBtn}
+          hitSlop={6}
+        >
+          <Ionicons name="remove" size={18} color={colors.primary} />
+        </Pressable>
+        <Text style={styles.stepValue}>{sessionsPerWeek}</Text>
+        <Pressable
+          onPress={() => setSessionsPerWeek((n) => Math.min(7, n + 1))}
+          style={styles.stepBtn}
+          hitSlop={6}
+        >
+          <Ionicons name="add" size={18} color={colors.primary} />
+        </Pressable>
+        <Text style={styles.hintInline}>
+          Es la meta de cada semana; en las de descarga se resta una.
+        </Text>
       </View>
-    </Modal>
+
+      <View style={styles.divider} />
+      <Text style={styles.label}>Bloques</Text>
+
+      {blocks.map((b, i) => (
+        <View key={i} style={styles.block}>
+          <View style={styles.blockHead}>
+            <Text style={styles.blockIndex}>{i + 1}</Text>
+            <TextField
+              value={b.name}
+              onChangeText={(v) => editarBloque(i, { name: v })}
+              placeholder="Nombre del bloque"
+              containerStyle={{ flex: 1, marginBottom: 0 }}
+            />
+            {blocks.length > 1 ? (
+              <Pressable onPress={() => quitarBloque(i)} hitSlop={8} style={styles.trash}>
+                <Ionicons name="trash-outline" size={17} color={colors.textFaint} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <View style={styles.stepperRow}>
+            <Pressable
+              onPress={() => editarBloque(i, { weeks: Math.max(1, b.weeks - 1) })}
+              style={styles.stepBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="remove" size={18} color={colors.primary} />
+            </Pressable>
+            <Text style={styles.stepValue}>{b.weeks}</Text>
+            <Pressable
+              onPress={() => editarBloque(i, { weeks: Math.min(16, b.weeks + 1) })}
+              style={styles.stepBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="add" size={18} color={colors.primary} />
+            </Pressable>
+            <Text style={styles.hintInline}>semana{b.weeks === 1 ? '' : 's'}</Text>
+          </View>
+
+          <View style={styles.rowBetween}>
+            <Text style={styles.switchLabel}>Última semana de descarga</Text>
+            <Switch
+              value={b.deloadLast}
+              onValueChange={(v) => editarBloque(i, { deloadLast: v })}
+              trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
+              thumbColor={colors.white}
+            />
+          </View>
+        </View>
+      ))}
+
+      {blocks.length < MAX_BLOQUES ? (
+        <Pressable onPress={anadirBloque} style={styles.addBlock}>
+          <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+          <Text style={styles.addBlockText}>Añadir bloque</Text>
+        </Pressable>
+      ) : null}
+
+      <View style={styles.divider} />
+      <TextField
+        label="Objetivo del plan (opcional)"
+        placeholder="Ej. Muscle-up estricto por 3"
+        value={goal}
+        onChangeText={setGoal}
+      />
+
+      <View style={styles.resumen}>
+        <Text style={styles.resumenBig}>
+          {plantillaPropia ? templateWeeks(plantillaPropia) : semanas} semanas ·{' '}
+          {plantillaPropia ? plantillaPropia.blocks.length : blocks.length} bloque
+          {(plantillaPropia ? plantillaPropia.blocks.length : blocks.length) === 1 ? '' : 's'}
+        </Text>
+        <Text style={styles.resumenText}>
+          {plantillaPropia
+            ? `${plantillaPropia.name} · desde el ${diaMes(inicio)}`
+            : `Del ${diaMes(inicio)} al ${diaMes(fin)} · ${entrenos} entrenos previstos`}
+        </Text>
+      </View>
+
+      <View style={styles.actions}>
+        <Button title="Cancelar" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
+        <Button
+          title={plantillaPropia ? 'Aplicar plantilla' : 'Crear plan'}
+          onPress={guardar}
+          loading={saving}
+          style={{ flex: 1 }}
+        />
+      </View>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
-  backdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.sm,
-    maxHeight: '92%',
-    width: '100%',
-    maxWidth: 640,
-    alignSelf: 'center',
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginBottom: spacing.md,
-  },
-  title: { ...typography.h2, color: colors.text },
-  sub: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
   label: {
     ...typography.label,
     color: colors.textMuted,

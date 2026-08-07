@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { TextField } from './TextField';
@@ -9,6 +9,7 @@ import { applyWeekToClients } from '../lib/firestore/planTemplates';
 import { getClientsForTrainer } from '../lib/firestore/users';
 import { suggestProgression } from '../lib/planTemplates';
 import { exerciseNames, semanaAnterior, weekPlanDraft } from '../lib/weekPlan';
+import { Sheet } from './Sheet';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { Routine, TrainingCycle, WeekPlanEntry } from '../lib/types';
 
@@ -153,173 +154,141 @@ export function WeekPlanSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={styles.backdropTap} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>{micro.name}</Text>
-            <Text style={styles.sub}>
-              {micro.isDeload
-                ? 'Semana de descarga. Baja series o sube el RIR; lo que no toques se queda como en la rutina.'
-                : 'Los números de esta semana. Lo que no toques se queda como en la rutina.'}
-            </Text>
-
-            {entries.length === 0 ? (
-              <Text style={styles.vacio}>
-                Este alumno no tiene rutina activa, así que todavía no hay ejercicios que
-                programar. Créale una y vuelve.
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      titulo={micro.name}
+      descripcion={
+        micro.isDeload
+          ? 'Semana de descarga. Baja series o sube el RIR; lo que no toques se queda como en la rutina.'
+          : 'Los números de esta semana. Lo que no toques se queda como en la rutina.'
+      }
+    >
+      {entries.length === 0 ? (
+        <Text style={styles.vacio}>
+          Este alumno no tiene rutina activa, así que todavía no hay ejercicios que
+          programar. Créale una y vuelve.
+        </Text>
+      ) : (
+        <>
+          <View style={styles.toolRow}>
+            <Pressable onPress={traerAnterior} style={[styles.copyBtn, { flex: 1 }]}>
+              <Ionicons name="copy-outline" size={15} color={colors.primary} />
+              <Text style={styles.copyText} numberOfLines={1}>
+                {previa ? `Traer de ${previa.name}` : 'Traer de la rutina'}
               </Text>
-            ) : (
-              <>
-                <View style={styles.toolRow}>
-                  <Pressable onPress={traerAnterior} style={[styles.copyBtn, { flex: 1 }]}>
-                    <Ionicons name="copy-outline" size={15} color={colors.primary} />
-                    <Text style={styles.copyText} numberOfLines={1}>
-                      {previa ? `Traer de ${previa.name}` : 'Traer de la rutina'}
-                    </Text>
-                  </Pressable>
-                  <Pressable onPress={sugerir} style={[styles.copyBtn, { flex: 1 }]}>
-                    <Ionicons name="trending-up" size={15} color={colors.primary} />
-                    <Text style={styles.copyText}>Sugerir +1 rep</Text>
-                  </Pressable>
-                </View>
+            </Pressable>
+            <Pressable onPress={sugerir} style={[styles.copyBtn, { flex: 1 }]}>
+              <Ionicons name="trending-up" size={15} color={colors.primary} />
+              <Text style={styles.copyText}>Sugerir +1 rep</Text>
+            </Pressable>
+          </View>
 
-                <View style={styles.headRow}>
-                  <Text style={[styles.colLabel, { flex: 1 }]}>Ejercicio</Text>
-                  <Text style={[styles.colLabel, styles.colNum]}>Series</Text>
-                  <Text style={[styles.colLabel, styles.colReps]}>Reps</Text>
-                  <Text style={[styles.colLabel, styles.colNum]}>RIR</Text>
-                </View>
+          <View style={styles.headRow}>
+            <Text style={[styles.colLabel, { flex: 1 }]}>Ejercicio</Text>
+            <Text style={[styles.colLabel, styles.colNum]}>Series</Text>
+            <Text style={[styles.colLabel, styles.colReps]}>Reps</Text>
+            <Text style={[styles.colLabel, styles.colNum]}>RIR</Text>
+          </View>
 
-                {entries.map((e) => (
-                  <View key={e.exerciseId} style={styles.row}>
-                    <Text style={styles.exName} numberOfLines={2}>
-                      {nombres.get(e.exerciseId) ?? 'Ejercicio'}
-                    </Text>
-                    <TextField
-                      value={e.sets != null ? String(e.sets) : ''}
-                      onChangeText={(v) =>
-                        editar(e.exerciseId, { sets: v.trim() ? Number(v) || undefined : undefined })
-                      }
-                      keyboardType="numeric"
-                      placeholder="—"
-                      containerStyle={styles.colNum}
-                      style={styles.cellInput}
-                    />
-                    <TextField
-                      value={e.reps ?? ''}
-                      onChangeText={(v) => editar(e.exerciseId, { reps: v || undefined })}
-                      placeholder="8"
-                      containerStyle={styles.colReps}
-                      style={styles.cellInput}
-                    />
-                    <TextField
-                      value={e.rir != null ? String(e.rir) : ''}
-                      onChangeText={(v) =>
-                        editar(e.exerciseId, {
-                          rir: v.trim() ? Math.max(0, Number(v) || 0) : undefined,
-                        })
-                      }
-                      keyboardType="numeric"
-                      placeholder="—"
-                      containerStyle={styles.colNum}
-                      style={styles.cellInput}
-                    />
-                  </View>
-                ))}
-
-                <Text style={styles.nota}>
-                  Tu alumno verá estos números en su entreno de esta semana.
-                </Text>
-
-                {otros.length > 0 ? (
-                  <View style={styles.tambien}>
-                    <Text style={styles.label}>Aplicar también a</Text>
-                    <View style={styles.chips}>
-                      {otros.map((o) => {
-                        const puesto = tambien.includes(o.uid);
-                        return (
-                          <Pressable
-                            key={o.uid}
-                            onPress={() =>
-                              setTambien((prev) =>
-                                puesto ? prev.filter((x) => x !== o.uid) : [...prev, o.uid]
-                              )
-                            }
-                            style={[styles.chip, puesto && styles.chipOn]}
-                          >
-                            <Ionicons
-                              name={puesto ? 'checkmark-circle' : 'ellipse-outline'}
-                              size={14}
-                              color={puesto ? colors.primaryBright : colors.textFaint}
-                            />
-                            <Text style={[styles.chipText, puesto && styles.chipTextOn]}>
-                              {o.name}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                    <Text style={styles.nota}>
-                      Se les copia en la misma semana. A quien no la tenga en su plan, se le salta.
-                    </Text>
-                  </View>
-                ) : null}
-              </>
-            )}
-
-            <View style={styles.actions}>
-              <Button title="Cancelar" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
-              <Button
-                title="Guardar semana"
-                onPress={guardar}
-                loading={saving}
-                disabled={entries.length === 0}
-                style={{ flex: 1 }}
+          {entries.map((e) => (
+            <View key={e.exerciseId} style={styles.row}>
+              <Text style={styles.exName} numberOfLines={2}>
+                {nombres.get(e.exerciseId) ?? 'Ejercicio'}
+              </Text>
+              <TextField
+                value={e.sets != null ? String(e.sets) : ''}
+                onChangeText={(v) =>
+                  editar(e.exerciseId, { sets: v.trim() ? Number(v) || undefined : undefined })
+                }
+                keyboardType="numeric"
+                placeholder="—"
+                containerStyle={styles.colNum}
+                style={styles.cellInput}
+              />
+              <TextField
+                value={e.reps ?? ''}
+                onChangeText={(v) => editar(e.exerciseId, { reps: v || undefined })}
+                placeholder="8"
+                containerStyle={styles.colReps}
+                style={styles.cellInput}
+              />
+              <TextField
+                value={e.rir != null ? String(e.rir) : ''}
+                onChangeText={(v) =>
+                  editar(e.exerciseId, {
+                    rir: v.trim() ? Math.max(0, Number(v) || 0) : undefined,
+                  })
+                }
+                keyboardType="numeric"
+                placeholder="—"
+                containerStyle={styles.colNum}
+                style={styles.cellInput}
               />
             </View>
+          ))}
 
-            {yaProgramada ? (
-              <Pressable onPress={limpiar} style={styles.resetBtn} hitSlop={6}>
-                <Text style={styles.resetText}>Quitar la programación de esta semana</Text>
-              </Pressable>
-            ) : null}
-          </ScrollView>
-        </View>
+          <Text style={styles.nota}>
+            Tu alumno verá estos números en su entreno de esta semana.
+          </Text>
+
+          {otros.length > 0 ? (
+            <View style={styles.tambien}>
+              <Text style={styles.label}>Aplicar también a</Text>
+              <View style={styles.chips}>
+                {otros.map((o) => {
+                  const puesto = tambien.includes(o.uid);
+                  return (
+                    <Pressable
+                      key={o.uid}
+                      onPress={() =>
+                        setTambien((prev) =>
+                          puesto ? prev.filter((x) => x !== o.uid) : [...prev, o.uid]
+                        )
+                      }
+                      style={[styles.chip, puesto && styles.chipOn]}
+                    >
+                      <Ionicons
+                        name={puesto ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={14}
+                        color={puesto ? colors.primaryBright : colors.textFaint}
+                      />
+                      <Text style={[styles.chipText, puesto && styles.chipTextOn]}>
+                        {o.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={styles.nota}>
+                Se les copia en la misma semana. A quien no la tenga en su plan, se le salta.
+              </Text>
+            </View>
+          ) : null}
+        </>
+      )}
+
+      <View style={styles.actions}>
+        <Button title="Cancelar" variant="ghost" onPress={onClose} style={{ flex: 1 }} />
+        <Button
+          title="Guardar semana"
+          onPress={guardar}
+          loading={saving}
+          disabled={entries.length === 0}
+          style={{ flex: 1 }}
+        />
       </View>
-    </Modal>
+
+      {yaProgramada ? (
+        <Pressable onPress={limpiar} style={styles.resetBtn} hitSlop={6}>
+          <Text style={styles.resetText}>Quitar la programación de esta semana</Text>
+        </Pressable>
+      ) : null}
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
-  backdropTap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.sm,
-    maxHeight: '92%',
-    width: '100%',
-    maxWidth: 640,
-    alignSelf: 'center',
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginBottom: spacing.md,
-  },
-  title: { ...typography.h2, color: colors.text },
-  sub: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
   vacio: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
   copyBtn: {
     flexDirection: 'row',

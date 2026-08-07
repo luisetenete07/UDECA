@@ -1,22 +1,14 @@
 import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { fechaLegible, inicioDelDia } from '../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Hoy a las 00:00. Lo usan los paneles que arrancan en la fecha de hoy. */
 export function startOfToday(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-export function fmtDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return inicioDelDia(Date.now());
 }
 
 const two = (n: number) => String(n).padStart(2, '0');
@@ -92,7 +84,7 @@ export function DateField({
         <Pressable onPress={() => shift(-1)} style={styles.stepBtn} hitSlop={6}>
           <Ionicons name="chevron-back" size={18} color={colors.primary} />
         </Pressable>
-        <Text style={styles.dateText}>{fmtDate(value)}</Text>
+        <Text style={styles.dateText}>{fechaLegible(value)}</Text>
         <Pressable onPress={() => shift(1)} style={styles.stepBtn} hitSlop={6}>
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />
         </Pressable>

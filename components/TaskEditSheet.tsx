@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { deleteCoachTask, updateCoachTask } from '../lib/firestore/coachTasks';
+import { Sheet } from './Sheet';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import { TASK_SCOPE_LABEL, type CoachTask, type TaskScope } from '../lib/types';
 
@@ -70,95 +71,67 @@ export function TaskEditSheet({ task, onClose, onChanged }: Props) {
   };
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={styles.tap} onPress={onClose} />
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>{isGoal ? 'Editar objetivo' : 'Editar tarea'}</Text>
+    <Sheet onClose={onClose} titulo={isGoal ? 'Editar objetivo' : 'Editar tarea'}>
+      <TextField
+        label={isGoal ? 'Objetivo' : 'Tarea'}
+        value={title}
+        onChangeText={setTitle}
+        placeholder={isGoal ? 'Ej. Llegar a 20 alumnos' : 'Ej. Grabar reel de técnica'}
+        multiline
+      />
 
-            <TextField
-              label={isGoal ? 'Objetivo' : 'Tarea'}
-              value={title}
-              onChangeText={setTitle}
-              placeholder={isGoal ? 'Ej. Llegar a 20 alumnos' : 'Ej. Grabar reel de técnica'}
-              multiline
+      {!isGoal ? (
+        <>
+          <Text style={styles.label}>¿Para cuándo?</Text>
+          <View style={styles.chipRow}>
+            {MOVE_SCOPES.map((s) => (
+              <Pressable
+                key={s}
+                onPress={() => setScope(s)}
+                style={[styles.chip, scope === s && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, scope === s && styles.chipTextActive]}>
+                  {TASK_SCOPE_LABEL[s]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Pressable style={styles.flagRow} onPress={() => setFlagged((f) => !f)}>
+            <Ionicons
+              name={flagged ? 'flag' : 'flag-outline'}
+              size={20}
+              color={flagged ? colors.primary : colors.textMuted}
             />
-
-            {!isGoal ? (
-              <>
-                <Text style={styles.label}>¿Para cuándo?</Text>
-                <View style={styles.chipRow}>
-                  {MOVE_SCOPES.map((s) => (
-                    <Pressable
-                      key={s}
-                      onPress={() => setScope(s)}
-                      style={[styles.chip, scope === s && styles.chipActive]}
-                    >
-                      <Text style={[styles.chipText, scope === s && styles.chipTextActive]}>
-                        {TASK_SCOPE_LABEL[s]}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                <Pressable style={styles.flagRow} onPress={() => setFlagged((f) => !f)}>
-                  <Ionicons
-                    name={flagged ? 'flag' : 'flag-outline'}
-                    size={20}
-                    color={flagged ? colors.primary : colors.textMuted}
-                  />
-                  <Text style={styles.flagText}>Destacar (prioridad)</Text>
-                  <View style={[styles.toggle, flagged && styles.toggleOn]}>
-                    <View style={[styles.knob, flagged && styles.knobOn]} />
-                  </View>
-                </Pressable>
-              </>
-            ) : null}
-
-            <TextField
-              label="Notas"
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Detalles, pasos, enlaces…"
-              multiline
-              style={{ minHeight: 84, textAlignVertical: 'top' }}
-            />
-
-            <View style={styles.actions}>
-              <Button title="Guardar" onPress={save} loading={saving} style={{ flex: 1 }} />
+            <Text style={styles.flagText}>Destacar (prioridad)</Text>
+            <View style={[styles.toggle, flagged && styles.toggleOn]}>
+              <View style={[styles.knob, flagged && styles.knobOn]} />
             </View>
-            <Pressable style={styles.deleteBtn} onPress={remove} hitSlop={6}>
-              <Ionicons name="trash-outline" size={16} color={colors.danger} />
-              <Text style={styles.deleteText}>Eliminar</Text>
-            </Pressable>
-          </ScrollView>
-        </View>
+          </Pressable>
+        </>
+      ) : null}
+
+      <TextField
+        label="Notas"
+        value={notes}
+        onChangeText={setNotes}
+        placeholder="Detalles, pasos, enlaces…"
+        multiline
+        style={{ minHeight: 84, textAlignVertical: 'top' }}
+      />
+
+      <View style={styles.actions}>
+        <Button title="Guardar" onPress={save} loading={saving} style={{ flex: 1 }} />
       </View>
-    </Modal>
+      <Pressable style={styles.deleteBtn} onPress={remove} hitSlop={6}>
+        <Ionicons name="trash-outline" size={16} color={colors.danger} />
+        <Text style={styles.deleteText}>Eliminar</Text>
+      </Pressable>
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
-  tap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    paddingTop: spacing.sm,
-    maxHeight: '88%',
-    width: '100%',
-    maxWidth: 640,
-    alignSelf: 'center',
-  },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.md },
-  title: { ...typography.h2, color: colors.text, marginBottom: spacing.md },
   label: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase', marginBottom: spacing.xs },
   chipRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   chip: {
