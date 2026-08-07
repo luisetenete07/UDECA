@@ -47,6 +47,15 @@ const CADENCIA_MS = 3800;
 const TOPE = 14;
 /** La de una tarjeta bancaria. */
 const PROPORCION = 1.586;
+/**
+ * Un carné tiene un tamaño, no un porcentaje.
+ *
+ * Sin tope, en un monitor se estiraba hasta 520 px de ancho y dejaba de ser
+ * una tarjeta para ser un cartel: lo que la hace creíble es justo que se
+ * parezca a algo que cabe en una cartera. En el móvil el tope no llega a
+ * aplicarse y ocupa el ancho de la columna, que es como se ve en unrespiro.
+ */
+const ANCHO_MAX = 360;
 
 export function ProgressCard({
   datos,
@@ -317,6 +326,8 @@ const styles = StyleSheet.create({
     // no es un párrafo; aquí no hay nada que seleccionar.
     userSelect: 'none',
     width: '100%',
+    maxWidth: ANCHO_MAX,
+    alignSelf: 'center',
     aspectRatio: PROPORCION,
     borderRadius: 20,
     backgroundColor: '#0B0B0B',

@@ -186,6 +186,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: spacing.sm,
+    // Debajo de la tarjeta y con su mismo ancho: alineado a la columna entera,
+    // en un monitor el "Compartir" acababa a medio metro de la tarjeta.
+    width: '100%',
+    maxWidth: 360,
+    alignSelf: 'center',
   },
   ayuda: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   compartir: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 },
