@@ -129,6 +129,33 @@ comprueba(
 );
 comprueba('sin fecha, no hay texto', textoDesde(undefined) === undefined);
 
+console.log('\nCon el número ya impreso en la tarjeta');
+const sinFund = tarjetaDeEntrenador(
+  { founderNumber: 7, createdAt: AHORA - 8 * MES, alumnos: 4, entrenosDirigidos: 300 },
+  AHORA,
+  { conFundador: false }
+);
+comprueba(
+  'el número sale de la rotación: ya está impreso, no compite',
+  !sinFund.some((x) => x.valor.startsWith('#')),
+  etiquetas(sinFund)
+);
+comprueba('pero el resto de cifras siguen', sinFund.length === 3, etiquetas(sinFund));
+const atletaSinFund = tarjetaDeAtleta(
+  { founderNumber: 43, createdAt: AHORA - 5 * MES, entrenos: 40, racha: 5 },
+  AHORA,
+  { conFundador: false }
+);
+comprueba(
+  'igual en el atleta',
+  !atletaSinFund.some((x) => x.valor.startsWith('#')),
+  etiquetas(atletaSinFund)
+);
+comprueba(
+  'y por defecto sigue saliendo, como antes',
+  tarjetaDeEntrenador({ founderNumber: 7, alumnos: 1, entrenosDirigidos: 0 }, AHORA)[0].valor === '#0007'
+);
+
 console.log('\nNunca se queda vacía');
 comprueba(
   'entrenador sin nada, una cifra',

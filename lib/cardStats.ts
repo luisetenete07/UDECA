@@ -37,9 +37,24 @@ export interface DatosEntrenador {
   entrenosDirigidos: number;
 }
 
-export function tarjetaDeEntrenador(d: DatosEntrenador, ahora = Date.now()): DatoTarjeta[] {
+/**
+ * `conFundador: false` deja el número fuera de la rotación.
+ *
+ * Se usa cuando el número ya está impreso en la tarjeta de forma permanente:
+ * ahí no es una cifra más que compite por su turno, es la identidad, y
+ * enseñarlo dos veces en la misma tarjeta lo abarata.
+ */
+export interface OpcionesTarjeta {
+  conFundador?: boolean;
+}
+
+export function tarjetaDeEntrenador(
+  d: DatosEntrenador,
+  ahora = Date.now(),
+  { conFundador = true }: OpcionesTarjeta = {}
+): DatoTarjeta[] {
   const out: DatoTarjeta[] = [];
-  if (d.founderNumber && d.founderNumber > 0) {
+  if (conFundador && d.founderNumber && d.founderNumber > 0) {
     out.push({ etiqueta: 'Miembro fundador', valor: numeroFundador(d.founderNumber) });
   }
   if (d.alumnos > 0) {
@@ -76,9 +91,13 @@ export interface DatosAtleta {
   deCuantos?: number;
 }
 
-export function tarjetaDeAtleta(d: DatosAtleta, ahora = Date.now()): DatoTarjeta[] {
+export function tarjetaDeAtleta(
+  d: DatosAtleta,
+  ahora = Date.now(),
+  { conFundador = true }: OpcionesTarjeta = {}
+): DatoTarjeta[] {
   const out: DatoTarjeta[] = [];
-  if (d.founderNumber && d.founderNumber > 0) {
+  if (conFundador && d.founderNumber && d.founderNumber > 0) {
     out.push({ etiqueta: 'Miembro fundador', valor: numeroFundador(d.founderNumber) });
   }
   if (d.entrenos > 0) {

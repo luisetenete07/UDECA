@@ -87,7 +87,7 @@ Antes de montar una nueva, mirar si ya está:
 | `ClientPulse` | Quién ha entrenado y quién no, por forma y color |
 | `DashboardSkeleton` | La forma de lo que viene, mientras carga |
 | `TextField` | Campo de texto. El borde **entra** al enfocar |
-| `ProgressCard` | La tarjeta: foco, una cifra cada vez y giro con el dedo |
+| `ProgressCard` | El carné: foco, identidad dentro y una cifra cada vez |
 | `PRBurst` / `Confetti` | La celebración de un récord |
 
 ---
@@ -108,6 +108,11 @@ Las animaciones no son adorno; cada una hace un trabajo:
   foco de luz barre su cara. No sirve para nada y es el motivo: algo que
   responde al tacto se siente objeto, y a un carné que quieres enseñar eso le
   importa más que cualquier dato de más.
+- **Un gesto no puede robarle el suyo a otro.** Lo que vive dentro de una
+  pantalla que se desplaza solo se queda los arrastres de su eje: la tarjeta
+  gira en horizontal y deja el vertical para el scroll. Y si hay texto por
+  medio, `userSelect: 'none'` — arrastrar sobre texto inicia una selección y el
+  navegador se lleva el gesto sin avisar.
 - **Sin native driver donde no se puede.** Color de borde y `strokeDashoffset`
   se animan en JS (`useNativeDriver: false`); posición y escala, en nativo.
 

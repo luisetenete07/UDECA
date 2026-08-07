@@ -1,14 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  PanResponder,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Animated, Easing, PanResponder, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, {
   Defs,
@@ -20,25 +11,28 @@ import Svg, {
   Rect,
   Stop,
 } from 'react-native-svg';
-import * as Haptics from 'expo-haptics';
-import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
+import { colors, fonts, spacing, tabularNums, typography } from '../lib/theme';
 
 /**
- * La tarjeta: una cifra tuya, puesta donde se mire.
+ * La tarjeta: un carné con una sola cifra grande, y esa cifra va cambiando.
  *
- * Un carné con seis datos del mismo tamaño no se enseña a nadie. Este solo
- * tiene UNO cada vez, enorme, y va cambiando: el número de fundador, los
- * entrenos, la racha, el puesto. Cada cifra tiene su turno para ser la
- * protagonista, que es la única forma de que alguna lo sea.
+ * Todo lo que la identifica vive DENTRO: la marca arriba, el nombre abajo y el
+ * número de fundador impreso a su lado. Es un carné, y un carné no reparte su
+ * identidad entre la tarjeta y lo que hay debajo de ella.
  *
- * Se puede inclinar con el dedo. No sirve para nada y es justo el motivo: un
- * objeto que responde al tacto se siente objeto, no pantalla, y a un carné que
- * quieres enseñar eso le importa más que cualquier dato de más. El foco de luz
- * barre la cara al girarla, como haría con una tarjeta de verdad.
+ * Lo que rota es solo lo que cambia con el tiempo —alumnos, entrenos, racha,
+ * puesto— porque un carné con seis datos del mismo tamaño no se enseña a
+ * nadie. Cada cifra tiene su turno para ser la protagonista, que es la única
+ * forma de que alguna lo sea.
  *
- * La cifra vive DEBAJO de la tarjeta y no dentro: dentro competiría con el
- * foco y con la marca, y acabaría siendo un dato más en una caja. Fuera, sola
- * y en oro sobre negro, no compite con nada.
+ * Proporción de tarjeta de verdad (1,586, la de una tarjeta bancaria). No es
+ * un capricho: es la forma que el ojo ya reconoce como "carné", y cualquier
+ * otra la deja a medio camino entre una tarjeta y un cartel.
+ *
+ * Se puede inclinar con el dedo y el foco barre la cara al girarla. No sirve
+ * para nada y es justo el motivo: un objeto que responde al tacto se siente
+ * objeto, no pantalla, y a algo que quieres enseñar eso le importa más que
+ * cualquier dato de más.
  */
 
 export interface DatoTarjeta {
@@ -50,24 +44,26 @@ export interface DatoTarjeta {
 
 const CADENCIA_MS = 3800;
 /** Cuánto se inclina como mucho, en grados. Más que esto ya es un juguete. */
-const TOPE = 16;
+const TOPE = 14;
+/** La de una tarjeta bancaria. */
+const PROPORCION = 1.586;
 
 export function ProgressCard({
   datos,
   nombre,
   rol,
   desde,
-  verificado = false,
+  fundador,
 }: {
   /** Las cifras que se van turnando. Con una sola, no rota. */
   datos: DatoTarjeta[];
   nombre: string;
   /** "Entrenador", "Atleta", "Alumno". */
   rol: string;
-  /** "mayo de 2026". */
+  /** "Mayo de 2026". */
   desde?: string;
-  /** Marca de fundador: el visto bueno junto al nombre. */
-  verificado?: boolean;
+  /** "#0001", ya escrito. Se imprime fijo; no entra en la rotación. */
+  fundador?: string;
 }) {
   const [i, setI] = useState(0);
   const [caja, setCaja] = useState({ w: 0, h: 0 });
@@ -111,11 +107,24 @@ export function ProgressCard({
   };
 
   const pan = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_e, g) =>
-          Math.abs(g.dx) > 3 || Math.abs(g.dy) > 3,
+    () => {
+      /** ¿El dedo va claramente en horizontal? Entonces es un giro. */
+      const horizontal = (_e: unknown, g: { dx: number; dy: number }) =>
+        Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 6;
+
+      return PanResponder.create({
+        // Solo se queda el gesto cuando el dedo va claramente en horizontal.
+        // La tarjeta vive dentro de una pantalla que se desplaza: si atrapara
+        // cualquier arrastre, girarla sería fácil y bajar por el perfil,
+        // imposible. Mandando el eje dominante, cada gesto va a quien le toca.
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: horizontal,
+        // Y en CAPTURA, que es lo que de verdad hace falta: el centro de la
+        // tarjeta es pulsable (pasa de cifra), así que al arrastrar desde ahí
+        // el hijo se quedaba el gesto y la tarjeta no giraba — justo desde la
+        // zona más grande y más fácil de agarrar. Capturando, el padre se lo
+        // quita en cuanto el dedo va claramente en horizontal.
+        onMoveShouldSetPanResponderCapture: horizontal,
         onPanResponderGrant: () => {
           tocando.current = true;
         },
@@ -127,16 +136,17 @@ export function ProgressCard({
         },
         onPanResponderRelease: volver,
         onPanResponderTerminate: volver,
-      }),
+      });
+    },
     // Los Animated.Value no cambian de identidad; el responder se crea una vez.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
-  const grados = (v: Animated.Value, signo = 1) =>
+  const grados = (v: Animated.Value) =>
     v.interpolate({
       inputRange: [-1, 1],
-      outputRange: [`${-TOPE * signo}deg`, `${TOPE * signo}deg`],
+      outputRange: [`${-TOPE}deg`, `${TOPE}deg`],
     });
 
   /** La luz barre la cara al girarla, como en una tarjeta de verdad. */
@@ -153,121 +163,118 @@ export function ProgressCard({
       { rotateY: grados(giroY) },
     ],
   };
-  // La placa se mueve algo más que la tarjeta: es lo que da la sensación de
-  // que hay hueco entre las dos y no son un dibujo plano.
-  const placa = {
-    transform: [
-      { perspective: 900 },
-      { rotateX: grados(giroX, 1.25) },
-      { rotateY: grados(giroY, 1.25) },
-    ],
-  };
 
   return (
-    <View style={styles.todo} {...pan.panHandlers}>
-      <Animated.View
-        style={[styles.tarjeta, escena]}
-        onLayout={(e) =>
-          setCaja({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
-        }
-      >
-        {/* El foco se dibuja en píxeles y no en porcentajes: en SVG un radio en
-            porcentaje se calcula sobre la diagonal, así que el mismo número
-            daba un halo distinto en cada tamaño de pantalla. */}
-        {caja.w > 0 ? (
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              { opacity: focoOpacidad, transform: [{ translateX: focoX }] },
-            ]}
-            pointerEvents="none"
-          >
-            <Svg width={caja.w} height={caja.h}>
-              <Defs>
-                {/* El haz: sale estrecho del canto de arriba y se abre al
-                    bajar. Un degradado radial daba una cúpula, que se lee
-                    como un reflejo; un cono se lee como un foco apuntando a
-                    la tarjeta, que es lo que la convierte en un escenario. */}
-                <LinearGradient id="haz" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={colors.primaryBright} stopOpacity="0.55" />
-                  <Stop offset="0.45" stopColor={colors.primaryBright} stopOpacity="0.22" />
-                  <Stop offset="1" stopColor={colors.primary} stopOpacity="0" />
-                </LinearGradient>
-                {/* Los cantos del haz se difuminan a los lados. Sin esto, el
-                    polígono se ve como un triángulo dibujado y no como luz:
-                    la luz no tiene bordes rectos. */}
-                <LinearGradient id="cantos" x1="0" y1="0" x2="1" y2="0">
-                  <Stop offset="0" stopColor="#000" />
-                  <Stop offset="0.22" stopColor="#888" />
-                  <Stop offset="0.5" stopColor="#fff" />
-                  <Stop offset="0.78" stopColor="#888" />
-                  <Stop offset="1" stopColor="#000" />
-                </LinearGradient>
-                <Mask id="suave">
-                  <Rect x="0" y="0" width={caja.w} height={caja.h} fill="url(#cantos)" />
-                </Mask>
-                {/* Y el núcleo, donde la luz nace. */}
-                <RadialGradient
-                  id="nucleo"
-                  gradientUnits="userSpaceOnUse"
-                  cx={caja.w / 2}
-                  cy={0}
-                  rx={caja.w * 0.42}
-                  ry={caja.h * 0.58}
-                >
-                  <Stop offset="0" stopColor={colors.primaryBright} stopOpacity="0.8" />
-                  <Stop offset="0.45" stopColor={colors.primaryBright} stopOpacity="0.26" />
-                  <Stop offset="1" stopColor={colors.primaryBright} stopOpacity="0" />
-                </RadialGradient>
-              </Defs>
-              <Polygon
-                points={[
-                  `${caja.w * 0.42},0`,
-                  `${caja.w * 0.58},0`,
-                  `${caja.w * 1.06},${caja.h}`,
-                  `${-caja.w * 0.06},${caja.h}`,
-                ].join(' ')}
-                fill="url(#haz)"
-                mask="url(#suave)"
-              />
-              <Ellipse
+    <Animated.View
+      style={[styles.tarjeta, escena]}
+      onLayout={(e) =>
+        setCaja({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })
+      }
+      {...pan.panHandlers}
+    >
+      {/* El foco se dibuja en píxeles y no en porcentajes: en SVG un radio en
+          porcentaje se calcula sobre la diagonal, así que el mismo número daba
+          un halo distinto en cada tamaño de pantalla. */}
+      {caja.w > 0 ? (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: focoOpacidad, transform: [{ translateX: focoX }] },
+          ]}
+          pointerEvents="none"
+        >
+          <Svg width={caja.w} height={caja.h}>
+            <Defs>
+              {/* El haz: sale estrecho del canto de arriba y se abre al bajar.
+                  Un degradado radial daba una cúpula, que se lee como un
+                  reflejo; un cono se lee como un foco apuntando a la tarjeta,
+                  que es lo que la convierte en un escenario. */}
+              <LinearGradient id="haz" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={colors.primaryBright} stopOpacity="0.55" />
+                <Stop offset="0.45" stopColor={colors.primaryBright} stopOpacity="0.22" />
+                <Stop offset="1" stopColor={colors.primary} stopOpacity="0" />
+              </LinearGradient>
+              {/* Los cantos del haz se difuminan a los lados. Sin esto, el
+                  polígono se ve como un triángulo dibujado y no como luz: la
+                  luz no tiene bordes rectos. */}
+              <LinearGradient id="cantos" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#000" />
+                <Stop offset="0.22" stopColor="#888" />
+                <Stop offset="0.5" stopColor="#fff" />
+                <Stop offset="0.78" stopColor="#888" />
+                <Stop offset="1" stopColor="#000" />
+              </LinearGradient>
+              <Mask id="suave">
+                <Rect x="0" y="0" width={caja.w} height={caja.h} fill="url(#cantos)" />
+              </Mask>
+              {/* Y el núcleo, donde la luz nace. */}
+              <RadialGradient
+                id="nucleo"
+                gradientUnits="userSpaceOnUse"
                 cx={caja.w / 2}
                 cy={0}
                 rx={caja.w * 0.42}
                 ry={caja.h * 0.58}
-                fill="url(#nucleo)"
-              />
-            </Svg>
-          </Animated.View>
-        ) : null}
+              >
+                <Stop offset="0" stopColor={colors.primaryBright} stopOpacity="0.8" />
+                <Stop offset="0.45" stopColor={colors.primaryBright} stopOpacity="0.26" />
+                <Stop offset="1" stopColor={colors.primaryBright} stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Polygon
+              points={[
+                `${caja.w * 0.42},0`,
+                `${caja.w * 0.58},0`,
+                `${caja.w * 1.06},${caja.h}`,
+                `${-caja.w * 0.06},${caja.h}`,
+              ].join(' ')}
+              fill="url(#haz)"
+              mask="url(#suave)"
+            />
+            <Ellipse
+              cx={caja.w / 2}
+              cy={0}
+              rx={caja.w * 0.42}
+              ry={caja.h * 0.58}
+              fill="url(#nucleo)"
+            />
+          </Svg>
+        </Animated.View>
+      ) : null}
 
+      <View style={styles.arriba}>
         <Text style={styles.marca}>UDECA</Text>
-      </Animated.View>
+        <Text style={styles.rol}>{rol.toUpperCase()}</Text>
+      </View>
 
-      {/* La cifra, sola y fuera de la caja. Se toca para pasar a la siguiente:
-          quien la está enseñando no quiere esperar tres segundos. */}
-      <Pressable
-        onPress={() => {
-          if (datos.length < 2) return;
-          if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
-          setI((n) => n + 1);
-        }}
-        style={styles.datoZona}
-      >
+      {/* La cifra del turno.
+          Aquí había un Pressable para saltar a la siguiente cifra, y hubo que
+          quitarlo: en React Native Web el hijo se queda el gesto desde que se
+          toca, así que arrastrando desde el centro —la zona más grande y más
+          fácil de agarrar— la tarjeta no giraba. Y para recuperar ese gesto
+          había que atraparlo desde el principio, lo que dejaba el perfil sin
+          poder desplazarse.
+          Entre poder saltar una cifra que ya cambia sola cada cuatro segundos
+          y poder bajar por tu propio perfil, no hay discusión. */}
+      <View style={styles.centro}>
         <Animated.View
           style={{
             opacity: entrada,
             transform: [
-              { translateY: entrada.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
+              { translateY: entrada.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
             ],
           }}
         >
-          <Text style={styles.etiqueta}>{dato.etiqueta}</Text>
+          <Text style={styles.etiqueta} numberOfLines={1}>
+            {dato.etiqueta}
+          </Text>
           <Text style={styles.valor} numberOfLines={1} adjustsFontSizeToFit>
             {dato.valor}
           </Text>
         </Animated.View>
 
+        {/* Debajo de la cifra y en horizontal. Pegados al canto derecho se
+            leían como una raya suelta en mitad del foco, no como "hay más". */}
         {datos.length > 1 ? (
           <View style={styles.puntos}>
             {datos.map((d, n) => (
@@ -278,82 +285,103 @@ export function ProgressCard({
             ))}
           </View>
         ) : null}
-      </Pressable>
+      </View>
 
-      <Animated.View style={[styles.placa, placa]}>
-        <Text style={styles.placaNombre} numberOfLines={1}>
-          {nombre.toUpperCase()}
-        </Text>
-        {verificado ? (
-          <Ionicons name="checkmark-circle" size={14} color={colors.primaryBright} />
+      <View style={styles.abajo}>
+        <View style={styles.identidad}>
+          <Text style={styles.nombre} numberOfLines={1}>
+            {nombre.toUpperCase()}
+          </Text>
+          {desde ? (
+            <Text style={styles.desde} numberOfLines={1}>
+              {desde}
+            </Text>
+          ) : null}
+        </View>
+        {fundador ? (
+          <View style={styles.fundador}>
+            <Ionicons name="shield-checkmark" size={11} color={colors.primaryBright} />
+            <Text style={styles.fundadorNumero}>{fundador}</Text>
+          </View>
         ) : null}
-        <View style={{ flex: 1 }} />
-        <Text style={styles.placaDesde} numberOfLines={1}>
-          {desde ? `Desde ${desde}` : rol}
-        </Text>
-      </Animated.View>
-    </View>
+      </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  todo: { alignItems: 'stretch' },
   tarjeta: {
+    // Sin esto, arrastrar por encima de la cifra iniciaba una SELECCIÓN de
+    // texto y el navegador se quedaba el gesto: la tarjeta giraba desde los
+    // bordes y no desde el centro, que es justo por donde se agarra. Un carné
+    // no es un párrafo; aquí no hay nada que seleccionar.
+    userSelect: 'none',
     width: '100%',
-    aspectRatio: 1.42,
-    borderRadius: 22,
+    aspectRatio: PROPORCION,
+    borderRadius: 20,
     backgroundColor: '#0B0B0B',
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
     padding: spacing.lg,
+    justifyContent: 'space-between',
   },
+  arriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   marca: {
     fontSize: 15,
     fontFamily: fonts.display,
     letterSpacing: 2.4,
     color: colors.text,
   },
-  datoZona: { marginTop: spacing.xl, minHeight: 96 },
-  etiqueta: { ...typography.body, color: colors.textMuted },
+  rol: {
+    fontSize: 9,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 1.4,
+    color: colors.textMuted,
+  },
+  centro: { flex: 1, justifyContent: 'center' },
+  etiqueta: { ...typography.small, color: colors.textMuted },
   valor: {
-    fontSize: 46,
-    lineHeight: 56,
+    fontSize: 40,
+    lineHeight: 48,
     fontFamily: fonts.display,
-    letterSpacing: -1.4,
+    letterSpacing: -1.2,
     color: colors.primaryBright,
     ...tabularNums,
   },
-  puntos: { flexDirection: 'row', gap: 6, marginTop: spacing.md },
+  abajo: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.sm },
+  identidad: { flexShrink: 1 },
+  nombre: {
+    ...typography.small,
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 1.1,
+  },
+  desde: { fontSize: 10, color: colors.textFaint, fontFamily: fonts.medium, marginTop: 1 },
+  fundador: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.hairlineFaint,
+    backgroundColor: colors.primaryMuted,
+    flexShrink: 0,
+  },
+  fundadorNumero: {
+    fontSize: 12,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    ...tabularNums,
+  },
+  puntos: { flexDirection: 'row', gap: 5, marginTop: spacing.sm },
   punto: {
     width: 5,
     height: 5,
     borderRadius: 3,
     backgroundColor: colors.borderStrong,
   },
-  puntoOn: { backgroundColor: colors.primary, width: 16 },
-  placa: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: '#0B0B0B',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  placaNombre: {
-    ...typography.small,
-    color: colors.text,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 1.1,
-    flexShrink: 1,
-  },
-  placaDesde: {
-    fontSize: 10,
-    color: colors.textFaint,
-    fontFamily: fonts.medium,
-  },
+  puntoOn: { backgroundColor: colors.primary, width: 14 },
 });
