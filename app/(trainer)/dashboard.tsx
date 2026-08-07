@@ -634,19 +634,40 @@ export default function TrainerDashboard() {
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
             </Pressable>
           ) : null}
-          {requests.length > 0 ? (
-            <View style={styles.attentionRow}>
-              <View style={[styles.attentionIcon, { backgroundColor: colors.primaryMuted }]}>
-                <Ionicons name="person-add-outline" size={17} color={colors.primary} />
-              </View>
+          {/* Las solicitudes van AQUÍ, con sus botones. Antes esta fila solo
+              decía cuántas había y remataba con "acéptalas más abajo": lo más
+              urgente de la pantalla mandaba a buscar el sitio donde resolverlo,
+              y la tarjeta de abajo repetía la misma cifra. Aceptar a alguien es
+              un toque; no puede costar además un scroll. */}
+          {requests.map((req) => (
+            <View key={req.id} style={styles.requestRow}>
+              <Avatar name={req.name} photoURL={req.photoURL} size={44} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.attentionTitle}>
-                  {requests.length} solicitud{requests.length === 1 ? '' : 'es'} de alumno
+                <Text style={styles.logClient}>{req.name}</Text>
+                <Text style={styles.reqEmail} numberOfLines={1}>
+                  {req.email}
                 </Text>
-                <Text style={styles.attentionSub}>Acéptalas más abajo para sumarlos al grupo.</Text>
+              </View>
+              <View style={styles.reqActions}>
+                <Pressable
+                  onPress={() => handleRejectRequest(req)}
+                  disabled={processingReq === req.id}
+                  style={styles.reqReject}
+                  hitSlop={6}
+                >
+                  <Ionicons name="close" size={20} color={colors.danger} />
+                </Pressable>
+                <Pressable
+                  onPress={() => handleApproveRequest(req)}
+                  disabled={processingReq === req.id}
+                  style={styles.reqApprove}
+                  hitSlop={6}
+                >
+                  <Ionicons name="checkmark" size={20} color={colors.onPrimary} />
+                </Pressable>
               </View>
             </View>
-          ) : null}
+          ))}
         </Card>
         </FadeIn>
       ) : null}
@@ -710,47 +731,6 @@ export default function TrainerDashboard() {
         <Card style={[styles.section, { borderColor: colors.danger }]}>
           <Text style={[styles.sectionTitle, { color: colors.danger }]}>Error al cargar datos</Text>
           <Text style={styles.mutedText}>{loadError}</Text>
-        </Card>
-      ) : null}
-
-      {requests.length > 0 ? (
-        <Card accent style={styles.section}>
-          <View style={styles.titleRow}>
-            <Ionicons name="person-add-outline" size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>
-              Solicitudes de alumnos ({requests.length})
-            </Text>
-          </View>
-          <Text style={styles.subtleHint}>Revisa y acepta a quién quieras en tu grupo.</Text>
-          {requests.map((req) => (
-            <View key={req.id} style={styles.requestRow}>
-              <Avatar name={req.name} photoURL={req.photoURL} size={44} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.logClient}>{req.name}</Text>
-                <Text style={styles.reqEmail} numberOfLines={1}>
-                  {req.email}
-                </Text>
-              </View>
-              <View style={styles.reqActions}>
-                <Pressable
-                  onPress={() => handleRejectRequest(req)}
-                  disabled={processingReq === req.id}
-                  style={styles.reqReject}
-                  hitSlop={6}
-                >
-                  <Ionicons name="close" size={20} color={colors.danger} />
-                </Pressable>
-                <Pressable
-                  onPress={() => handleApproveRequest(req)}
-                  disabled={processingReq === req.id}
-                  style={styles.reqApprove}
-                  hitSlop={6}
-                >
-                  <Ionicons name="checkmark" size={20} color={colors.onPrimary} />
-                </Pressable>
-              </View>
-            </View>
-          ))}
         </Card>
       ) : null}
 
@@ -1470,7 +1450,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   attentionTitle: { ...typography.h3, color: colors.text },
-  attentionSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   goodNews: {
     flexDirection: 'row',
     alignItems: 'center',
