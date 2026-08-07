@@ -6,7 +6,7 @@ import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
 import { showToast } from '../../components/Toast';
 import { EmptyState } from '../../components/EmptyState';
-import { LoadingScreen } from '../../components/LoadingScreen';
+import { ListSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { Vitrina } from '../../components/Vitrina';
@@ -94,7 +94,14 @@ export default function SocialScreen() {
   // El atleta individual no forma parte de ningún grupo: fuera de aquí.
   if (profile?.role === 'athlete') return <Redirect href="/(client)/dashboard" />;
 
-  if (loading) return <LoadingScreen />;
+  // El ranking ya tiene forma antes de llegar: una fila por compañero.
+  if (loading)
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="Comunidad UDECA" subtitle="Cargando el ranking..." />
+        <ListSkeleton rows={6} />
+      </ScreenContainer>
+    );
 
   if (!profile?.trainerId) {
     return (

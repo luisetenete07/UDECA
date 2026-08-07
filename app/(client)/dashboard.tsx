@@ -8,7 +8,7 @@ import { Avatar } from '../../components/Avatar';
 import { UpgradePopup } from '../../components/UpgradeCard';
 import { Card } from '../../components/Card';
 import { CheckInCard } from '../../components/CheckInCard';
-import { LoadingScreen } from '../../components/LoadingScreen';
+import { ClientHomeSkeleton } from '../../components/Skeleton';
 import { ProgressBar } from '../../components/ProgressBar';
 import { CountUp } from '../../components/CountUp';
 import { FadeIn } from '../../components/FadeIn';
@@ -190,7 +190,14 @@ export default function ClientDashboard() {
     }, [profile?.trainerId])
   );
 
-  if (loading) return <LoadingScreen />;
+  // La forma del inicio latiendo, en vez de una rueda: se percibe más rápido
+  // aunque tarde exactamente lo mismo, y al llegar los datos nada salta de sitio.
+  if (loading)
+    return (
+      <ScreenContainer>
+        <ClientHomeSkeleton />
+      </ScreenContainer>
+    );
 
   // Atleta individual: se autoentrena (sin coach). Cambia el tono de varias
   // tarjetas para que todo hable de "tú" en lugar de "tu entrenador".

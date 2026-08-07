@@ -4,7 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
-import { LoadingScreen } from '../../../components/LoadingScreen';
+import { ListSkeleton } from '../../../components/Skeleton';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { useAuth } from '../../../lib/auth-context';
@@ -41,7 +41,13 @@ export default function ClientCoursesScreen() {
     }, [load])
   );
 
-  if (loading) return <LoadingScreen />;
+  if (loading)
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="Academia" subtitle="Cargando cursos..." />
+        <ListSkeleton rows={4} />
+      </ScreenContainer>
+    );
 
   return (
     <ScreenContainer

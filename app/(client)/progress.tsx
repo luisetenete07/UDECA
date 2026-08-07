@@ -20,7 +20,7 @@ import { Dialog } from '../../components/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { LineChart } from '../../components/LineChart';
-import { LoadingScreen } from '../../components/LoadingScreen';
+import { ListSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { Segmented } from '../../components/Segmented';
@@ -426,7 +426,13 @@ export default function ProgressScreen() {
     return enCurso.find((c) => c.level === 'meso') ?? enCurso.find((c) => c.level === 'macro') ?? null;
   }, [cycles]);
 
-  if (loading) return <LoadingScreen />;
+  if (loading)
+    return (
+      <ScreenContainer>
+        <ScreenHeader title="Mi progreso" subtitle="Cargando tus entrenos..." />
+        <ListSkeleton rows={5} />
+      </ScreenContainer>
+    );
 
   const toggleSession = (id: string) =>
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
