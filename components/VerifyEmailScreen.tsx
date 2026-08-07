@@ -1,10 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text } from 'react-native';
 import { Button } from './Button';
-import { Card } from './Card';
-import { Logo } from './Logo';
-import { ScreenContainer } from './ScreenContainer';
+import { GateScreen, GateText } from './GateScreen';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
 import { colors, fonts, spacing, typography } from '../lib/theme';
@@ -54,70 +51,37 @@ export function VerifyEmailScreen() {
   };
 
   return (
-    <ScreenContainer contentStyle={styles.content} maxWidth={560}>
-      <View style={styles.header}>
-        <Logo compact />
-      </View>
+    <GateScreen
+      icono="mail-unread-outline"
+      titulo="Verifica tu correo"
+      texto="Te hemos enviado un enlace de verificación a:"
+      salida="Usar otra cuenta"
+      onSalir={signOut}
+    >
+      <Text style={styles.email}>{profile?.email}</Text>
+      <GateText>
+        Ábrelo para activar tu cuenta y entrar. Si no lo ves, revisa la carpeta de spam o
+        promociones.
+      </GateText>
 
-      <Card accent style={styles.card}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="mail-unread-outline" size={30} color={colors.primary} />
-        </View>
-        <Text style={styles.title}>Verifica tu correo</Text>
-        <Text style={styles.subtitle}>
-          Te hemos enviado un enlace de verificación a:
-        </Text>
-        <Text style={styles.email}>{profile?.email}</Text>
-        <Text style={styles.subtitle}>
-          Ábrelo para activar tu cuenta y entrar. Si no lo ves, revisa la
-          carpeta de spam o promociones.
-        </Text>
-
-        <Button
-          title="Ya lo he verificado"
-          onPress={handleCheck}
-          loading={checking}
-          style={{ marginTop: spacing.lg }}
-        />
-        <Button
-          title="Reenviar correo"
-          variant="secondary"
-          onPress={handleResend}
-          loading={resending}
-          style={{ marginTop: spacing.sm }}
-        />
-      </Card>
-
-      <Pressable onPress={signOut} style={styles.signOut} hitSlop={8}>
-        <Text style={styles.signOutText}>Usar otra cuenta</Text>
-      </Pressable>
-    </ScreenContainer>
+      <Button
+        title="Ya lo he verificado"
+        onPress={handleCheck}
+        loading={checking}
+        style={{ marginTop: spacing.lg }}
+      />
+      <Button
+        title="Reenviar correo"
+        variant="secondary"
+        onPress={handleResend}
+        loading={resending}
+        style={{ marginTop: spacing.sm }}
+      />
+    </GateScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: spacing.lg },
-  card: { padding: spacing.lg, alignItems: 'center' },
-  iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  title: { ...typography.h2, color: colors.text, textAlign: 'center' },
-  subtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    lineHeight: 21,
-  },
   email: {
     ...typography.body,
     color: colors.primaryBright,
@@ -125,6 +89,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xs,
   },
-  signOut: { alignSelf: 'center', marginTop: spacing.xl, padding: spacing.sm },
-  signOutText: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
 });

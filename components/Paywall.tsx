@@ -1,9 +1,8 @@
 import React from 'react';
-import { AppState, Image, Linking, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
-import { Card } from './Card';
+import { GateScreen, GateText } from './GateScreen';
 import { useAuth } from '../lib/auth-context';
 import { track, trackOnce } from '../lib/analytics';
 import {
@@ -124,158 +123,135 @@ export function Paywall() {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.container}>
-        <Image source={require('../assets/icon.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>
-          {!CAN_SELL_IN_APP
-            ? 'Tu cuenta no está activa'
-            : isAthlete
-              ? 'Has terminado la prueba'
-              : 'Activa UDECA Pro'}
-        </Text>
-        <Text style={styles.subtitle}>
-          {!CAN_SELL_IN_APP
-            ? 'Tus datos, tus rutinas y todo tu progreso siguen intactos. En cuanto tu cuenta vuelva a estar activa, la app lo reconoce sola.'
-            : isAthlete
-              ? `Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.`
-              : plazas === 0
-                ? 'Esta cuenta no incluye alumnos: el alta de su tarjeta ya se usó en otra cuenta de entrenador. Con la suscripción anual tienes alumnos ilimitados. Tus datos están a salvo y te esperan.'
-                : `Tu grupo ha superado los ${plazas} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`}
-        </Text>
+  const titulo = !CAN_SELL_IN_APP
+    ? 'Tu cuenta no está activa'
+    : isAthlete
+      ? 'Has terminado la prueba'
+      : 'Activa UDECA Pro';
 
-        {/* La insignia, apagada pero con su número intacto. Sin oro: encendida
-            se la ha ganado quien está dentro. */}
-        {fundador ? (
-          <View style={styles.fundadorRow}>
+  const explicacion = !CAN_SELL_IN_APP
+    ? 'Tus datos, tus rutinas y todo tu progreso siguen intactos. En cuanto tu cuenta vuelva a estar activa, la app lo reconoce sola.'
+    : isAthlete
+      ? 'Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.'
+      : plazas === 0
+        ? 'Esta cuenta no incluye alumnos: el alta de su tarjeta ya se usó en otra cuenta de entrenador. Con la suscripción anual tienes alumnos ilimitados. Tus datos están a salvo y te esperan.'
+        : `Tu grupo ha superado los ${plazas} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`;
+
+  return (
+    <GateScreen
+      icono={isAthlete ? 'flame-outline' : 'trending-up-outline'}
+      titulo={titulo}
+      texto={explicacion}
+      nota={
+        CAN_SELL_IN_APP
+          ? 'Al terminar el pago y volver a la app, tu cuenta se activa sola en unos segundos. Si tardara, pulsa "Ya he pagado · Actualizar".'
+          : `¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`
+      }
+      onSalir={signOut}
+    >
+      {/* La insignia, apagada pero con su número intacto. Sin oro: encendida
+          se la ha ganado quien está dentro. */}
+      {fundador ? (
+        <View style={styles.fundadorCaja}>
+          <View style={styles.fundadorFila}>
             <Ionicons name="shield-outline" size={17} color={colors.textMuted} />
             <Text style={styles.fundadorNumero}>{numeroFundador(fundador)}</Text>
-            <Text style={styles.fundadorTexto}>
-              Tu número de fundador es tuyo para siempre. Vuelve y la insignia se
-              enciende otra vez, con el mismo número.
-            </Text>
+            <Text style={styles.fundadorEtiqueta}>FUNDADOR</Text>
           </View>
-        ) : null}
-
-        {/* En iOS no se vende nada aquí dentro (ver CAN_SELL_IN_APP): ni precio,
-            ni plan, ni botón que lleve a pagar fuera. Solo el estado de la
-            cuenta y la forma de refrescarlo. */}
-        {CAN_SELL_IN_APP ? (
-          <Card accent style={styles.planCard}>
-            <Text style={styles.planName}>
-              {isAthlete ? 'UDECA ATLETA · MENSUAL' : 'UDECA PRO · ANUAL'}
-            </Text>
-            <View style={styles.priceRow}>
-              <Text style={styles.price}>
-                {isAthlete ? ATHLETE_MONTHLY_EUR : COACH_MONTHLY_EQUIV_EUR} €
-              </Text>
-              <Text style={styles.priceUnit}>/ mes</Text>
-            </View>
-            <Text style={styles.priceHint}>
-              {isAthlete
-                ? 'Cuota mensual, sin permanencia.'
-                : `${ANNUAL_PRICE_EUR} € facturados una vez al año.`}
-            </Text>
-            {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
-              <View key={b} style={styles.benefitRow}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                <Text style={styles.benefitText}>{b}</Text>
-              </View>
-            ))}
-            <Button
-              title={
-                checkoutUrl
-                  ? isAthlete
-                    ? 'Seguir entrenando'
-                    : 'Suscribirme ahora'
-                  : 'Contactar para activar'
-              }
-              onPress={handlePay}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title={checking ? 'Comprobando...' : 'Ya he pagado · Actualizar'}
-              variant="secondary"
-              onPress={handleCheck}
-              loading={checking}
-              style={{ marginTop: spacing.sm }}
-            />
-          </Card>
-        ) : (
-          <Card style={styles.planCard}>
-            {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
-              <View key={b} style={styles.benefitRow}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                <Text style={styles.benefitText}>{b}</Text>
-              </View>
-            ))}
-            <Button
-              title={checking ? 'Comprobando...' : 'Ya está activa · Actualizar'}
-              onPress={handleCheck}
-              loading={checking}
-              style={{ marginTop: spacing.md }}
-            />
-          </Card>
-        )}
-
-        {CAN_SELL_IN_APP && !isAthlete && plazas > 0 ? (
-          <Text style={styles.footNote}>
-            ¿Prefieres seguir gratis? Puedes volver a {plazas} alumnos o menos y
-            recuperas el acceso al instante, sin perder nada.
+          <Text style={styles.fundadorTexto}>
+            Ese número es tuyo para siempre. Vuelve y la insignia se enciende otra vez, con el mismo
+            número.
           </Text>
-        ) : null}
+        </View>
+      ) : null}
 
-        <Text style={styles.footNote}>
-          {CAN_SELL_IN_APP
-            ? 'Al terminar el pago y volver a la app, tu cuenta se activa sola en unos segundos. Si tardara, pulsa "Ya he pagado · Actualizar".'
-            : `¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`}
-        </Text>
-        <Button title="Cerrar sesión" variant="ghost" onPress={signOut} />
-      </View>
-    </SafeAreaView>
+      {/* En iOS no se vende nada aquí dentro (ver CAN_SELL_IN_APP): ni precio,
+          ni plan, ni botón que lleve a pagar fuera. Solo el estado de la
+          cuenta y la forma de refrescarlo. */}
+      {CAN_SELL_IN_APP ? (
+        <View style={styles.plan}>
+          <Text style={styles.planName}>
+            {isAthlete ? 'UDECA ATLETA · MENSUAL' : 'UDECA PRO · ANUAL'}
+          </Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>
+              {isAthlete ? ATHLETE_MONTHLY_EUR : COACH_MONTHLY_EQUIV_EUR} €
+            </Text>
+            <Text style={styles.priceUnit}>/ mes</Text>
+          </View>
+          <Text style={styles.priceHint}>
+            {isAthlete
+              ? 'Cuota mensual, sin permanencia.'
+              : `${ANNUAL_PRICE_EUR} € facturados una vez al año.`}
+          </Text>
+        </View>
+      ) : null}
+
+      {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
+        <View key={b} style={styles.benefitRow}>
+          <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+          <Text style={styles.benefitText}>{b}</Text>
+        </View>
+      ))}
+
+      {CAN_SELL_IN_APP ? (
+        <Button
+          title={
+            checkoutUrl ? (isAthlete ? 'Seguir entrenando' : 'Suscribirme ahora') : 'Contactar para activar'
+          }
+          onPress={handlePay}
+          style={{ marginTop: spacing.md }}
+        />
+      ) : null}
+      <Button
+        title={
+          checking
+            ? 'Comprobando...'
+            : CAN_SELL_IN_APP
+              ? 'Ya he pagado · Actualizar'
+              : 'Ya está activa · Actualizar'
+        }
+        variant={CAN_SELL_IN_APP ? 'secondary' : 'primary'}
+        onPress={handleCheck}
+        loading={checking}
+        style={{ marginTop: spacing.sm }}
+      />
+
+      {CAN_SELL_IN_APP && !isAthlete && plazas > 0 ? (
+        <GateText>
+          ¿Prefieres seguir gratis? Puedes volver a {plazas} alumnos o menos y recuperas el acceso
+          al instante, sin perder nada.
+        </GateText>
+      ) : null}
+    </GateScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  container: {
-    flex: 1,
-    padding: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: { width: 72, height: 72, borderRadius: 18, marginBottom: spacing.md, ...shadows.glowGold },
-  title: { ...typography.h1, color: colors.text, textAlign: 'center' },
-  subtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-    lineHeight: 21,
-  },
-  fundadorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  fundadorCaja: {
     alignSelf: 'stretch',
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
+    marginTop: spacing.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
+  fundadorFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   fundadorNumero: {
-    fontSize: 19,
+    fontSize: 20,
     color: colors.text,
     fontFamily: fonts.semiBold,
     ...tabularNums,
   },
-  fundadorTexto: { ...typography.small, color: colors.textFaint, flex: 1, lineHeight: 16 },
-  planCard: { alignSelf: 'stretch', marginBottom: spacing.md },
+  fundadorEtiqueta: {
+    ...typography.label,
+    color: colors.textFaint,
+    letterSpacing: 1.5,
+    fontSize: 10,
+  },
+  fundadorTexto: { ...typography.small, color: colors.textFaint, lineHeight: 17, marginTop: 2 },
+  plan: { alignSelf: 'stretch', alignItems: 'center', marginTop: spacing.lg },
   planName: {
     ...typography.label,
     color: colors.primaryBright,
@@ -296,20 +272,14 @@ const styles = StyleSheet.create({
     ...typography.small,
     color: colors.textFaint,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: 5,
+    alignSelf: 'stretch',
   },
   benefitText: { ...typography.small, color: colors.text, flex: 1 },
-  footNote: {
-    ...typography.small,
-    color: colors.textFaint,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-    paddingHorizontal: spacing.md,
-  },
 });

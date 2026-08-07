@@ -1,9 +1,7 @@
 import React from 'react';
 import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
-import { Card } from './Card';
+import { GateScreen, GateText } from './GateScreen';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
 import { track, trackOnce } from '../lib/analytics';
@@ -15,7 +13,7 @@ import {
   claimEntryNow,
   entryCheckoutUrl,
 } from '../lib/subscription';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, spacing, typography } from '../lib/theme';
 
 /**
  * Alta de la cuenta: un euro, una vez.
@@ -124,107 +122,61 @@ export function EntryWall() {
   }, [comprobar]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.container}>
-        <Card style={styles.card}>
-          <View style={styles.icon}>
-            <Ionicons name="key-outline" size={26} color={colors.primary} />
+    <GateScreen
+      icono="key-outline"
+      titulo={puedeCobrarAqui ? 'Activa tu cuenta' : 'Tu cuenta está sin activar'}
+      nota={`¿Algún problema? Escríbenos a ${CONTACT_EMAIL}`}
+      onSalir={signOut}
+    >
+      {puedeCobrarAqui ? (
+        <>
+          <View style={styles.precioFila}>
+            <Text style={styles.precio}>{ENTRY_PRICE_EUR} €</Text>
+            <Text style={styles.precioNota}>pago único</Text>
           </View>
-
-          <Text style={styles.eyebrow}>Último paso</Text>
-          <Text style={styles.title}>
-            {puedeCobrarAqui ? 'Activa tu cuenta' : 'Tu cuenta está sin activar'}
-          </Text>
-
-          {puedeCobrarAqui ? (
-            <>
-              <View style={styles.priceRow}>
-                <Text style={styles.price}>{ENTRY_PRICE_EUR} €</Text>
-                <Text style={styles.priceNote}>pago único</Text>
-              </View>
-              <Text style={styles.text}>
-                {esAtleta
-                  ? 'Con el alta empiezan tus 14 días con todo abierto. Después decides si sigues.'
-                  : `El alta incluye ${FREE_CLIENT_LIMIT} alumnos con su propia cuenta. Si tu grupo crece, entonces hablamos de la cuota anual.`}
-              </Text>
-              <Button
-                title={url ? `Activar por ${ENTRY_PRICE_EUR} €` : 'Contactar para activar'}
-                onPress={pagar}
-                style={{ marginTop: spacing.lg }}
-              />
-              <Button
-                title="Ya he pagado"
-                variant="secondary"
-                onPress={() => comprobar(false)}
-                loading={comprobando}
-                style={{ marginTop: spacing.sm }}
-              />
-            </>
-          ) : (
-            <>
-              <Text style={styles.text}>
-                Esta cuenta todavía no está activa. Puedes activarla desde tu cuenta de
-                UDECA y volver aquí: al entrar de nuevo, la app la reconoce sola.
-              </Text>
-              <Button
-                title="Ya está activa"
-                onPress={() => comprobar(false)}
-                loading={comprobando}
-                style={{ marginTop: spacing.lg }}
-              />
-            </>
-          )}
-
-          <Text style={styles.help}>
-            ¿Algún problema? Escríbenos a {CONTACT_EMAIL}
-          </Text>
-        </Card>
-
-        <Button title="Cerrar sesión" variant="ghost" onPress={signOut} />
-      </View>
-    </SafeAreaView>
+          <GateText>
+            {esAtleta
+              ? 'Con el alta empiezan tus 14 días con todo abierto. Después decides si sigues.'
+              : `El alta incluye ${FREE_CLIENT_LIMIT} alumnos con su propia cuenta. Si tu grupo crece, entonces hablamos de la cuota anual.`}
+          </GateText>
+          <Button
+            title={url ? `Activar por ${ENTRY_PRICE_EUR} €` : 'Contactar para activar'}
+            onPress={pagar}
+            style={{ marginTop: spacing.lg }}
+          />
+          <Button
+            title="Ya he pagado"
+            variant="secondary"
+            onPress={() => comprobar(false)}
+            loading={comprobando}
+            style={{ marginTop: spacing.sm }}
+          />
+        </>
+      ) : (
+        <>
+          <GateText>
+            Esta cuenta todavía no está activa. Puedes activarla desde tu cuenta de UDECA y volver
+            aquí: al entrar de nuevo, la app la reconoce sola.
+          </GateText>
+          <Button
+            title="Ya está activa"
+            onPress={() => comprobar(false)}
+            loading={comprobando}
+            style={{ marginTop: spacing.lg }}
+          />
+        </>
+      )}
+    </GateScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-    gap: spacing.md,
-    maxWidth: 520,
-    width: '100%',
-    alignSelf: 'center',
+  precioFila: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.xs,
+    marginTop: spacing.md,
   },
-  card: { padding: spacing.xl },
-  icon: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  eyebrow: {
-    ...typography.small,
-    color: colors.primary,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-    fontFamily: fonts.semiBold,
-  },
-  title: { ...typography.h1, color: colors.text, marginTop: 2 },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.md },
-  price: { ...typography.h1, color: colors.primaryBright, fontSize: 40 },
-  priceNote: { ...typography.small, color: colors.textMuted },
-  text: { ...typography.body, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 22 },
-  help: {
-    ...typography.small,
-    color: colors.textFaint,
-    marginTop: spacing.lg,
-    textAlign: 'center',
-  },
+  precio: { ...typography.h1, color: colors.primaryBright, fontSize: 40, fontFamily: fonts.heading },
+  precioNota: { ...typography.small, color: colors.textMuted },
 });

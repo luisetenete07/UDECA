@@ -1,15 +1,14 @@
 import React from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
-import { Card } from './Card';
+import { GateScreen } from './GateScreen';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
 import { createCoachCheckoutUrl } from '../lib/connect';
 import { getUserProfile, reportClientPayment } from '../lib/firestore/users';
 import { notifyUser } from '../lib/notifications';
-import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
+import { colors, spacing, typography } from '../lib/theme';
 
 /**
  * Bloqueo del alumno por impago.
@@ -92,108 +91,57 @@ export function ClientLockScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.container}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="lock-closed-outline" size={30} color={colors.primary} />
-        </View>
-        <Text style={styles.title}>Tu acceso está en pausa</Text>
-        <Text style={styles.subtitle}>
-          {trainerName
-            ? `Tienes pendiente la cuota con ${trainerName}. En cuanto se resuelva, sigues justo donde lo dejaste.`
-            : 'Tienes la cuota pendiente. En cuanto se resuelva, sigues justo donde lo dejaste.'}
+    <GateScreen
+      icono="lock-closed-outline"
+      titulo="Tu acceso está en pausa"
+      texto={
+        trainerName
+          ? `Tienes pendiente la cuota con ${trainerName}. En cuanto se resuelva, sigues justo donde lo dejaste.`
+          : 'Tienes la cuota pendiente. En cuanto se resuelva, sigues justo donde lo dejaste.'
+      }
+      nota="Si has pagado por otra vía, avisa a tu entrenador y recuperas el acceso mientras lo confirma."
+      onSalir={signOut}
+    >
+      <Text style={styles.cuotaEtiqueta}>CUOTA PENDIENTE</Text>
+      <Text style={styles.cuota}>{cuota}</Text>
+      <View style={styles.aviso}>
+        <Ionicons name="shield-checkmark-outline" size={15} color={colors.success} />
+        <Text style={styles.avisoTexto}>
+          No pierdes nada: tu plan, tu historial y tus marcas siguen guardados.
         </Text>
-
-        <Card accent style={styles.card}>
-          <Text style={styles.amountLabel}>CUOTA PENDIENTE</Text>
-          <Text style={styles.amount}>{cuota}</Text>
-          <View style={styles.note}>
-            <Ionicons name="shield-checkmark-outline" size={15} color={colors.success} />
-            <Text style={styles.noteText}>
-              No pierdes nada: tu plan, tu historial y tus marcas siguen guardados.
-            </Text>
-          </View>
-          <Button
-            title={paying ? 'Abriendo...' : 'Pagar ahora'}
-            onPress={pagar}
-            loading={paying}
-            style={{ marginTop: spacing.md }}
-          />
-          <Button
-            title={reporting ? 'Avisando...' : 'Ya he pagado'}
-            variant="secondary"
-            onPress={yaHePagado}
-            loading={reporting}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Text style={styles.hint}>
-            Si has pagado por otra vía, avisa a tu entrenador y recuperas el acceso mientras
-            lo confirma.
-          </Text>
-        </Card>
-
-        <Button title="Cerrar sesión" variant="ghost" onPress={signOut} />
       </View>
-    </SafeAreaView>
+      <Button
+        title={paying ? 'Abriendo...' : 'Pagar ahora'}
+        onPress={pagar}
+        loading={paying}
+        style={{ marginTop: spacing.md }}
+      />
+      <Button
+        title={reporting ? 'Avisando...' : 'Ya he pagado'}
+        variant="secondary"
+        onPress={yaHePagado}
+        loading={reporting}
+        style={{ marginTop: spacing.sm }}
+      />
+    </GateScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  container: {
-    flex: 1,
-    padding: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconWrap: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-    ...shadows.glowGold,
-  },
-  title: { ...typography.h1, color: colors.text, textAlign: 'center' },
-  subtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    maxWidth: 420,
-  },
-  card: { width: '100%', maxWidth: 420, marginTop: spacing.lg, alignItems: 'stretch' },
-  amountLabel: {
+  cuotaEtiqueta: {
     ...typography.label,
     color: colors.textMuted,
     textTransform: 'uppercase',
     textAlign: 'center',
+    marginTop: spacing.md,
   },
-  amount: {
-    ...typography.h1,
-    color: colors.primaryBright,
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  note: {
+  cuota: { ...typography.h1, color: colors.primaryBright, textAlign: 'center', marginTop: 2 },
+  aviso: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     marginTop: spacing.md,
-    padding: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.successMuted,
+    alignSelf: 'stretch',
   },
-  noteText: { ...typography.small, color: colors.text, flex: 1 },
-  hint: {
-    ...typography.small,
-    color: colors.textFaint,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    fontFamily: fonts.body,
-  },
+  avisoTexto: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 17 },
 });
