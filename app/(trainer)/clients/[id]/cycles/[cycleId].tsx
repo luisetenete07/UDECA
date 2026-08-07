@@ -26,6 +26,7 @@ import { computeCycleStats } from '../../../../../lib/cycleStats';
 import { descendantIds } from '../../../../../lib/cyclePlan';
 import { buildBlockView } from '../../../../../lib/blockView';
 import { mayusculaInicial } from '../../../../../lib/fechas';
+import { diaMes } from '../../../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
@@ -33,10 +34,6 @@ import {
   type TrainingCycle,
   type WorkoutLog,
 } from '../../../../../lib/types';
-
-function fmt(ts: number): string {
-  return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-}
 
 export default function CycleDashboardScreen() {
   const { id, cycleId } = useLocalSearchParams<{ id: string; cycleId: string }>();
@@ -152,8 +149,8 @@ export default function CycleDashboardScreen() {
       </View>
       <Text style={styles.name}>{cycle.name}</Text>
       <Text style={styles.dates}>
-        {cycle.startDate ? fmt(cycle.startDate) : 'Sin inicio'}
-        {cycle.endDate ? ` – ${fmt(cycle.endDate)}` : cycle.startDate ? ' · abierto' : ''}
+        {cycle.startDate ? diaMes(cycle.startDate) : 'Sin inicio'}
+        {cycle.endDate ? ` – ${diaMes(cycle.endDate)}` : cycle.startDate ? ' · abierto' : ''}
         {stats.durationDays ? ` · ${Math.round(stats.durationDays / 7)} sem` : ''}
         {stats.daysElapsed != null && stats.status === 'active'
           ? ` · lleva ${stats.daysElapsed} días`
@@ -256,8 +253,8 @@ export default function CycleDashboardScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.logDay}>{h.name}</Text>
                   <Text style={styles.logMeta}>
-                    {h.startDate ? fmt(h.startDate) : '—'}
-                    {h.endDate ? ` – ${fmt(h.endDate)}` : ''} · {hs.sessionsDone}
+                    {h.startDate ? diaMes(h.startDate) : '—'}
+                    {h.endDate ? ` – ${diaMes(h.endDate)}` : ''} · {hs.sessionsDone}
                     {h.targetSessions ? `/${h.targetSessions}` : ''} entrenos
                     {h.isDeload ? ' · descarga' : ''}
                   </Text>

@@ -58,6 +58,7 @@ import {
   updateClientStatus,
 } from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
+import { fechaCorta } from '../../../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
 import {
   CHECKIN_FIELDS,
@@ -81,9 +82,6 @@ import {
 
 /** Suma `n` meses a un timestamp (Date gestiona el desbordamiento de mes). */
 const DAY_MS = 24 * 60 * 60 * 1000;
-const fmtDate = (ts: number) =>
-  new Date(ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-
 export default function ClientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -278,7 +276,7 @@ export default function ClientDetailScreen() {
     setClient({ ...client, nextPaymentDate });
     setExtendDaysInput('');
     await updateClientBilling(id, { nextPaymentDate });
-    showToast(`+${days} días · próximo pago ${fmtDate(nextPaymentDate)}`);
+    showToast(`+${days} días · próximo pago ${fechaCorta(nextPaymentDate)}`);
   };
 
   const handleClearNextPayment = async () => {
@@ -443,7 +441,7 @@ export default function ClientDetailScreen() {
           <View style={styles.reportedBanner}>
             <Ionicons name="notifications" size={16} color={colors.primaryBright} />
             <Text style={styles.reportedText}>
-              {client.name.split(' ')[0]} declaró que ya ha pagado ({fmtDate(client.paymentReportedAt)}).
+              {client.name.split(' ')[0]} declaró que ya ha pagado ({fechaCorta(client.paymentReportedAt)}).
               Confírmalo con "Registrar pago".
             </Text>
           </View>
@@ -516,7 +514,7 @@ export default function ClientDetailScreen() {
             ]}
           >
             {client.nextPaymentDate
-              ? `${fmtDate(client.nextPaymentDate)}${
+              ? `${fechaCorta(client.nextPaymentDate)}${
                   client.nextPaymentDate < Date.now() ? ' · vencido' : ''
                 }`
               : 'Sin fecha establecida'}

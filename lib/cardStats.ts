@@ -1,5 +1,6 @@
 import type { DatoTarjeta } from '../components/ProgressCard';
 import { mayusculaInicial } from './fechas';
+import { numeroFundador } from './fundador';
 
 /**
  * Qué cifras salen en la tarjeta, y en qué orden.
@@ -17,10 +18,9 @@ import { mayusculaInicial } from './fechas';
 
 const MES_MS = 30.4 * 24 * 60 * 60 * 1000;
 
-/** "#0007". Cuatro cifras siempre: un "#7" no parece un número de serie. */
-export function numeroFundador(n: number): string {
-  return `#${String(n).padStart(4, '0')}`;
-}
+// El número escrito vive en lib/fundador.ts, junto a la regla de cuándo se
+// enseña. Aquí se reexporta para no tener dos formas de escribir lo mismo.
+export { numeroFundador } from './fundador';
 
 /** "mayo de 2026", con la inicial en mayúscula solo si va sola. */
 export function desdeCuando(ts?: number): string | undefined {

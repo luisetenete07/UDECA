@@ -7,7 +7,7 @@ import { EntryWall } from '../../components/EntryWall';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { useTabScreenOptions } from '../../lib/navTheme';
-import { needsEntryPayment, trainerHasAccess } from '../../lib/subscription';
+import { hasPlatformAccess, needsEntryPayment } from '../../lib/subscription';
 
 export default function TrainerLayout() {
   const { loading, firebaseUser, profile, emailVerified } = useAuth();
@@ -26,7 +26,9 @@ export default function TrainerLayout() {
   // SaaS: el coach entra gratis mientras su grupo no pase del límite; el muro
   // solo aparece cuando lo supera o cuando caduca una suscripción con más
   // alumnos de los que incluye su alta. Sus datos quedan intactos.
-  if (!trainerHasAccess(profile)) return <Paywall />;
+  // Es la misma puerta que enciende o apaga la insignia de fundador, a
+  // propósito: una sola regla, un solo sitio (lib/planBase.ts).
+  if (!hasPlatformAccess(profile)) return <Paywall />;
 
   return (
     <Tabs

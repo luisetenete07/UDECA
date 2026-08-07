@@ -23,6 +23,7 @@ import { QuickSheet } from '../../../components/QuickSheet';
 import { getActiveRoutineForClient } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
+import { inicioDeLaSemana, inicioDelDia } from '../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
   CLIENT_STATUS_LABEL,
@@ -46,11 +47,6 @@ const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Medianoche local del timestamp (para contar por días de calendario). */
-function startOfDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
 
 /**
  * Última actividad como texto + tono: hoy/ayer verde, <7d ámbar, resto rojo.
@@ -59,20 +55,11 @@ function startOfDay(ts: number): number {
  */
 function activityInfo(last?: number): { label: string; color: string } {
   if (!last) return { label: 'Sin entrenos', color: colors.textFaint };
-  const days = Math.round((startOfDay(Date.now()) - startOfDay(last)) / DAY_MS);
+  const days = Math.round((inicioDelDia(Date.now()) - inicioDelDia(last)) / DAY_MS);
   if (days <= 0) return { label: 'Hoy', color: colors.success };
   if (days === 1) return { label: 'Ayer', color: colors.success };
   if (days < 7) return { label: `Hace ${days} días`, color: '#C9902B' };
   return { label: `${days} días parado`, color: colors.danger };
-}
-
-/** Medianoche local del lunes de la semana que contiene ts (lunes=inicio). */
-function mondayStart(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  const wd = d.getDay() === 0 ? 6 : d.getDay() - 1;
-  d.setDate(d.getDate() - wd);
-  return d.getTime();
 }
 
 /**
@@ -83,7 +70,7 @@ function mondayStart(ts: number): number {
  */
 function skippedThisWeek(routine: Routine | null | undefined, trainedDays: Set<number>): number {
   if (!routine || (routine.schedule ?? 'weekly') !== 'weekly') return 0;
-  const monday = mondayStart(Date.now());
+  const monday = inicioDeLaSemana(Date.now());
   const todayWd = todayWeekday();
   let skipped = 0;
   for (const day of routine.days) {
@@ -142,11 +129,11 @@ export default function ClientsScreen() {
       // Entrenamientos saltados esta semana: requiere la rutina activa de cada
       // alumno + los días que entrenó esta semana. Se calcula en segundo plano
       // para no frenar el pintado de la lista.
-      const monday = mondayStart(Date.now());
+      const monday = inicioDeLaSemana(Date.now());
       const trainedByClient: Record<string, Set<number>> = {};
       for (const log of logs as WorkoutLog[]) {
         if (log.date < monday) continue;
-        (trainedByClient[log.clientId] ??= new Set()).add(startOfDay(log.date));
+        (trainedByClient[log.clientId] ??= new Set()).add(inicioDelDia(log.date));
       }
       Promise.all(
         data.map((c) =>

@@ -25,6 +25,7 @@ import { updateUserProfile } from '../../lib/firestore/users';
 import { pickProgressPhoto } from '../../lib/image';
 import { MacroCalculator } from '../../components/MacroCalculator';
 import { confirmar } from '../../lib/confirmar';
+import { esHoy } from '../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   PHOTO_POSES,
@@ -34,16 +35,6 @@ import {
   type PhotoPose,
   type ProgressPhoto,
 } from '../../lib/types';
-
-function isToday(timestamp: number) {
-  const d = new Date(timestamp);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
-}
 
 export default function NutritionScreen() {
   const { profile, refreshProfile } = useAuth();
@@ -85,7 +76,7 @@ export default function NutritionScreen() {
     }, [load])
   );
 
-  const todayMeals = useMemo(() => meals.filter((m) => isToday(m.date)), [meals]);
+  const todayMeals = useMemo(() => meals.filter((m) => esHoy(m.date)), [meals]);
   const totals = todayMeals.reduce(
     (acc, m) => ({
       calories: acc.calories + m.calories,

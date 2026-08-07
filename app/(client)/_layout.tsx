@@ -13,7 +13,7 @@ import { EntryWall } from '../../components/EntryWall';
 import { ClientLockScreen } from '../../components/ClientLockScreen';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
-import { clientIsLocked, needsEntryPayment, subscriptionState } from '../../lib/subscription';
+import { clientIsLocked, hasPlatformAccess, needsEntryPayment } from '../../lib/subscription';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { useTabScreenOptions } from '../../lib/navTheme';
@@ -77,8 +77,9 @@ export default function ClientLayout() {
   // Alta de 1 € del atleta: con ella arrancan sus 14 días. El alumno de un
   // coach no paga nada, así que `needsEntryPayment` ya lo descarta.
   if (needsEntryPayment(profile)) return <EntryWall />;
-  // Atleta con la suscripción caducada: muro de pago (10 €/mes).
-  if (isAthlete && !subscriptionState(profile).active) return <Paywall />;
+  // Atleta con la suscripción caducada: muro de pago (10 €/mes). Al alumno de
+  // un coach la misma puerta le deja pasar siempre: no paga plataforma.
+  if (!hasPlatformAccess(profile)) return <Paywall />;
   // Alumno con la cuota vencida más allá del margen: acceso en pausa hasta que
   // pague o su entrenador confirme el cobro. `clientIsLocked` ya descarta a
   // quien no tiene entrenador o no tiene cuota, así que no hay riesgo de

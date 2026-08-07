@@ -71,7 +71,13 @@ export function ProgressCard({
   rol: string;
   /** "Mayo de 2026". */
   desde?: string;
-  /** "#0001", ya escrito. Se imprime fijo; no entra en la rotación. */
+  /**
+   * "#0001", ya escrito. Se imprime fijo; no entra en la rotación.
+   *
+   * Aquí solo llega encendido: quien no tiene la cuenta al día no ve el
+   * perfil, ve el muro de pago (ver components/Paywall.tsx, que es donde se le
+   * recuerda que el número sigue siendo suyo).
+   */
   fundador?: string;
 }) {
   const [i, setI] = useState(0);

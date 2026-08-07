@@ -1,5 +1,12 @@
 import { Platform } from 'react-native';
 import type { UserProfile } from './types';
+import {
+  clientSlotsOf,
+  DAY_MS,
+  FREE_CLIENT_LIMIT,
+  isAdmin,
+  subscriptionState,
+} from './planBase';
 
 /**
  * Modelo SaaS de UDECA: los COACHES pagan la plataforma; sus alumnos entran
@@ -55,22 +62,18 @@ export const COACH_MONTHLY_EQUIV_EUR = Math.round(ANNUAL_PRICE_EUR / 12);
  * decide) y firestore.rules (que lo impone para las versiones antiguas de la
  * app). Si lo cambias, cámbialo en los tres.
  */
-export const FREE_CLIENT_LIMIT = 5;
-
-/** Plazas de alumno de esta cuenta: las del alta salvo que el servidor las baje. */
-export function clientSlotsOf(profile: { clientSlots?: number } | null): number {
-  const n = profile?.clientSlots;
-  return typeof n === 'number' && n >= 0 ? n : FREE_CLIENT_LIMIT;
-}
 /** Atleta individual: cuota mensual (suelta, no anual). */
 export const ATHLETE_MONTHLY_EUR = 10;
-export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Correos con poderes de administración de UDECA (gestión de suscripciones).
- * Los admins tienen acceso completo de por vida (nunca pagan ni caducan).
+ * Estas cuatro viven en lib/planBase.ts y se reexportan aquí.
+ *
+ * El motivo: este fichero lee `Platform.OS` al cargarse, así que todo lo que
+ * lo importe arrastra React Native entera y no se puede probar en Node pelado.
+ * Sacarlas permite comprobar quién tiene acceso sin montar media app; dejarlas
+ * reexportadas evita tocar los treinta sitios que ya las importaban de aquí.
  */
-export const ADMIN_EMAILS = ['luisetenete07@gmail.com', 'luistenaf@gmail.com'];
+export { ADMIN_EMAILS, clientSlotsOf, DAY_MS, FREE_CLIENT_LIMIT } from './planBase';
 
 /**
  * Enlace de pago (Stripe Payment Link). Se crea en el panel de Stripe sin
@@ -232,9 +235,7 @@ export const CAN_SELL_IN_APP = Platform.OS !== 'ios';
 /** Correo de contacto para activar/renovar manualmente. */
 export const CONTACT_EMAIL = 'luistenaf@gmail.com';
 
-export function isAdmin(profile: UserProfile | null): boolean {
-  return !!profile?.email && ADMIN_EMAILS.includes(profile.email.toLowerCase());
-}
+export { isAdmin } from './planBase';
 
 /**
  * Días de prueba al crear una cuenta de ATLETA. Se entra sin tarjeta: primero
@@ -315,56 +316,16 @@ export function trialUntil(from: number = Date.now()): number {
   return from + TRIAL_DAYS * DAY_MS;
 }
 
-export interface SubscriptionState {
-  /** true si el coach puede usar la plataforma. */
-  active: boolean;
-  /** Días restantes (redondeo hacia arriba), o null si es cuenta fundadora. */
-  daysLeft: number | null;
-  /** true si la cuenta es anterior a la monetización (sin fecha). */
-  legacy: boolean;
-  /** true mientras se está dentro de la prueba gratuita (aún sin pagar). */
-  trial: boolean;
-}
-
 /**
- * ¿Puede el entrenador usar la plataforma?
- *
- * Con suscripción activa, siempre. Sin ella, mientras su grupo no pase del
- * límite gratuito. Se mira `clientCount` del propio perfil (lo mantiene su app
- * al cargar la lista) para no tener que contar alumnos en cada arranque.
+ * La puerta de acceso vive en `planBase.ts` y se reexporta desde aquí para no
+ * mover ni un import. Está allí porque este fichero lee `Platform.OS` al
+ * cargarse, y eso deja las comprobaciones de Node fuera justo de la parte que
+ * decide quién entra y quién ve el muro de pago.
  */
-export function trainerHasAccess(profile: UserProfile | null): boolean {
-  if (!profile || profile.role !== 'trainer') return true;
-  if (subscriptionState(profile).active) return true;
-  return (profile.clientCount ?? 0) <= clientSlotsOf(profile);
-}
-
-/** true si el entrenador ya no puede sumar alumnos sin suscribirse. */
-export function trainerAtFreeLimit(profile: UserProfile | null): boolean {
-  if (!profile || profile.role !== 'trainer') return false;
-  if (subscriptionState(profile).active) return false;
-  return (profile.clientCount ?? 0) >= clientSlotsOf(profile);
-}
-
-export function subscriptionState(profile: UserProfile | null): SubscriptionState {
-  // Pagan plataforma: entrenadores (anual) y atletas individuales (mensual).
-  // Los alumnos vinculados a un coach entran gratis.
-  if (!profile || (profile.role !== 'trainer' && profile.role !== 'athlete')) {
-    return { active: true, daysLeft: null, legacy: true, trial: false };
-  }
-  if (isAdmin(profile)) return { active: true, daysLeft: null, legacy: false, trial: false };
-  if (profile.subscriptionUntil === undefined) {
-    return { active: true, daysLeft: null, legacy: true, trial: false };
-  }
-  const msLeft = profile.subscriptionUntil - Date.now();
-  // Sigue siendo prueba mientras el acceso no se haya extendido más allá de la
-  // fecha que se fijó al registrarse (al pagar, subscriptionUntil la supera).
-  const trial =
-    profile.trialEndsAt !== undefined && profile.subscriptionUntil <= profile.trialEndsAt;
-  return {
-    active: msLeft > 0,
-    daysLeft: Math.max(0, Math.ceil(msLeft / DAY_MS)),
-    legacy: false,
-    trial,
-  };
-}
+export {
+  hasPlatformAccess,
+  subscriptionState,
+  trainerAtFreeLimit,
+  trainerHasAccess,
+  type SubscriptionState,
+} from './planBase';

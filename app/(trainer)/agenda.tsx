@@ -31,6 +31,7 @@ import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { Segmented } from '../../components/Segmented';
 import { diaLargo, mesLargo } from '../../lib/fechas';
+import { inicioDelDia } from '../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
@@ -55,11 +56,6 @@ const PLACEHOLDER: Record<TaskScope, string> = {
 
 function animate() {
   LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
-}
-function startOfDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
 }
 
 type EventType = 'payment' | 'cycle-start' | 'cycle-end' | 'task';
@@ -108,7 +104,7 @@ export default function CoachCalendarScreen() {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   });
-  const [selectedDay, setSelectedDay] = useState<number>(() => startOfDay(Date.now()));
+  const [selectedDay, setSelectedDay] = useState<number>(() => inicioDelDia(Date.now()));
   const { width } = useWindowDimensions();
   const isWide = width >= 820;
 
@@ -227,7 +223,7 @@ export default function CoachCalendarScreen() {
   // Mueve una tarea a otro día del calendario (fija su fecha a las 00:00).
   const moveTask = (task: CoachTask, dayTs: number) => {
     haptic();
-    const dueDate = startOfDay(dayTs);
+    const dueDate = inicioDelDia(dayTs);
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, dueDate } : t)));
     updateCoachTask(task.id, { dueDate }).catch(() => {});
     setMovingTask(null);
@@ -242,7 +238,7 @@ export default function CoachCalendarScreen() {
     for (const c of clients) {
       if (c.nextPaymentDate) {
         add({
-          day: startOfDay(c.nextPaymentDate),
+          day: inicioDelDia(c.nextPaymentDate),
           type: 'payment',
           title: `Cobro · ${c.name}`,
           subtitle: c.monthlyFeeEur ? `${c.monthlyFeeEur} €` : 'Renovación',
@@ -254,7 +250,7 @@ export default function CoachCalendarScreen() {
       const who = clients.find((c) => c.uid === cy.clientId)?.name ?? 'alumno';
       if (cy.startDate)
         add({
-          day: startOfDay(cy.startDate),
+          day: inicioDelDia(cy.startDate),
           type: 'cycle-start',
           title: `Empieza ${cy.name}`,
           subtitle: `${CYCLE_LEVEL_LABEL[cy.level]} · ${who}`,
@@ -262,7 +258,7 @@ export default function CoachCalendarScreen() {
         });
       if (cy.endDate)
         add({
-          day: startOfDay(cy.endDate),
+          day: inicioDelDia(cy.endDate),
           type: 'cycle-end',
           title: `Termina ${cy.name}`,
           subtitle: `${CYCLE_LEVEL_LABEL[cy.level]} · ${who}`,
@@ -271,7 +267,7 @@ export default function CoachCalendarScreen() {
     }
     for (const t of dayTasks) {
       add({
-        day: startOfDay(t.dueDate ?? Date.now()),
+        day: inicioDelDia(t.dueDate ?? Date.now()),
         type: 'task',
         title: t.title,
         subtitle: 'Tarea · toca para mover de día',
@@ -290,7 +286,7 @@ export default function CoachCalendarScreen() {
     );
   }
 
-  const today = startOfDay(Date.now());
+  const today = inicioDelDia(Date.now());
   const anchor = new Date(monthAnchor);
   const monthLabel = mesLargo(anchor);
   const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1).getTime();
@@ -311,7 +307,7 @@ export default function CoachCalendarScreen() {
   const goToday = () => {
     const now = new Date();
     setMonthAnchor(new Date(now.getFullYear(), now.getMonth(), 1).getTime());
-    setSelectedDay(startOfDay(Date.now()));
+    setSelectedDay(inicioDelDia(Date.now()));
   };
 
   const allDone = scope !== 'goal' && header.total > 0 && active.length === 0;
@@ -624,8 +620,8 @@ function MoveTaskModal({
   const daysInMonth = new Date(a.getFullYear(), a.getMonth() + 1, 0).getDate();
   const leadRaw = new Date(a.getFullYear(), a.getMonth(), 1).getDay(); // 0=domingo
   const lead = (leadRaw + 6) % 7; // 0 = lunes
-  const today = startOfDay(Date.now());
-  const current = task.dueDate ? startOfDay(task.dueDate) : today;
+  const today = inicioDelDia(Date.now());
+  const current = task.dueDate ? inicioDelDia(task.dueDate) : today;
   const cells: (number | null)[] = [];
   for (let i = 0; i < lead; i++) cells.push(null);
   for (let day = 1; day <= daysInMonth; day++) {

@@ -33,6 +33,8 @@ import { getClientsForTrainer, getUserProfile } from '../../../../lib/firestore/
 import { notifyUser } from '../../../../lib/notifications';
 import { flexLabel } from '../../../../lib/schedule';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
+import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
+import { nuevoId } from '../../../../lib/ids';
 import { fonts, colors, radius, spacing, typography } from '../../../../lib/theme';
 import {
   CLUSTER_DEFAULT,
@@ -64,37 +66,6 @@ const LOAD_OPTIONS: { key: ExerciseLoad; label: string }[] = [
   { key: 'weighted', label: 'Lastrado' },
   { key: 'assisted', label: 'Goma' },
 ];
-
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-/**
- * Convierte el texto del descanso a segundos. Se escribe en MINUTOS
- * (admite decimales: "1.5" o "1,5" = 1 min 30 s). También acepta "mm:ss"
- * por si el coach lo escribe así.
- */
-function parseClock(value: string): number {
-  const t = value.trim().replace(',', '.');
-  if (!t) return 0;
-  if (t.includes(':')) {
-    const [m, sec] = t.split(':');
-    const mm = parseInt(m, 10) || 0;
-    const ss = parseInt(sec, 10) || 0;
-    return mm * 60 + ss;
-  }
-  const mins = parseFloat(t);
-  if (Number.isNaN(mins) || mins < 0) return 0;
-  return Math.round(mins * 60);
-}
-
-/** Formatea segundos como min:seg para el campo ("3:30" · vacío si no hay). */
-function formatClock(seconds?: number): string {
-  if (!seconds) return '';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
 
 export default function RoutineEditorScreen() {
   const { id: clientId } = useLocalSearchParams<{ id: string }>();
@@ -178,7 +149,7 @@ export default function RoutineEditorScreen() {
         if (existing.scheduleLabel) setScheduleLabel(flexLabel(existing.scheduleLabel));
         if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
       } else {
-        setDays([{ id: uid(), name: 'Día 1', exercises: [] }]);
+        setDays([{ id: nuevoId(), name: 'Día 1', exercises: [] }]);
       }
       setLoading(false);
     })();
@@ -214,7 +185,7 @@ export default function RoutineEditorScreen() {
   };
 
   const addDay = () => {
-    const id = uid();
+    const id = nuevoId();
     setDays((prev) => [...prev, { id, name: `Día ${prev.length + 1}`, exercises: [] }]);
     setExpandedDays((prev) => ({ ...prev, [id]: true })); // el día nuevo se abre
   };
@@ -227,7 +198,7 @@ export default function RoutineEditorScreen() {
 
   // Duplica un día (con ids nuevos) justo debajo, para no rehacerlo.
   const duplicateDay = (dayId: string) => {
-    const newId = uid();
+    const newId = nuevoId();
     setDays((prev) => {
       const idx = prev.findIndex((d) => d.id === dayId);
       if (idx < 0) return prev;
@@ -236,7 +207,7 @@ export default function RoutineEditorScreen() {
         ...src,
         id: newId,
         name: `${src.name} (copia)`,
-        exercises: src.exercises.map((e) => ({ ...e, id: uid() })),
+        exercises: src.exercises.map((e) => ({ ...e, id: nuevoId() })),
       };
       const next = [...prev];
       next.splice(idx + 1, 0, clone);
@@ -321,7 +292,7 @@ export default function RoutineEditorScreen() {
 
   const addExerciseToDay = (dayId: string, exercise: Exercise) => {
     const routineExercise: RoutineExercise = {
-      id: uid(),
+      id: nuevoId(),
       exerciseId: exercise.id,
       name: exercise.name,
       sets: 3,
@@ -559,7 +530,7 @@ export default function RoutineEditorScreen() {
         }
         // Añadir al final del día de destino (id nuevo, sin superserie heredada).
         if (d.id === targetDayId) {
-          exercises = [...exercises, { ...ex, id: uid(), supersetWithPrevious: false }];
+          exercises = [...exercises, { ...ex, id: nuevoId(), supersetWithPrevious: false }];
         }
         return exercises === d.exercises ? d : { ...d, exercises };
       })
@@ -598,8 +569,8 @@ export default function RoutineEditorScreen() {
         setDays(
           source.days.map((d) => ({
             ...d,
-            id: uid(),
-            exercises: d.exercises.map((e) => ({ ...e, id: uid() })),
+            id: nuevoId(),
+            exercises: d.exercises.map((e) => ({ ...e, id: nuevoId() })),
           }))
         );
       }
@@ -625,8 +596,8 @@ export default function RoutineEditorScreen() {
     setDays(
       t.days.map((d) => ({
         ...d,
-        id: uid(),
-        exercises: d.exercises.map((e) => ({ ...e, id: uid() })),
+        id: nuevoId(),
+        exercises: d.exercises.map((e) => ({ ...e, id: nuevoId() })),
       }))
     );
     setTemplatesOpen(false);
@@ -1263,10 +1234,10 @@ export default function RoutineEditorScreen() {
                 <TextField
                   label="Descanso (min:seg)"
                   keyboardType="numbers-and-punctuation"
-                  value={restText[ex.id] ?? formatClock(ex.restSeconds)}
+                  value={restText[ex.id] ?? minutosSegundos(ex.restSeconds)}
                   onChangeText={(v) => {
                     setRestText((prev) => ({ ...prev, [ex.id]: v }));
-                    updateRestSeconds(day.id, ex.id, parseClock(v));
+                    updateRestSeconds(day.id, ex.id, segundosDeTexto(v));
                   }}
                   placeholder="3:30"
                   containerStyle={styles.smallInput}

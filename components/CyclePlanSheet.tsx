@@ -16,13 +16,10 @@ import {
   type PlanBlock,
   type PlanDraft,
 } from '../lib/cyclePlan';
+import { diaMes } from '../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 const MAX_BLOQUES = 8;
-
-function fmtCorta(ts: number): string {
-  return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-}
 
 interface Props {
   visible: boolean;
@@ -212,7 +209,7 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
             <DateField value={startDate} onChange={setStartDate} />
             <Text style={styles.hint}>
               Las semanas van de lunes a domingo, así que el plan arranca el lunes{' '}
-              {fmtCorta(inicio)}.
+              {diaMes(inicio)}.
             </Text>
 
             <Text style={styles.label}>Entrenos por semana</Text>
@@ -311,8 +308,8 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
               </Text>
               <Text style={styles.resumenText}>
                 {plantillaPropia
-                  ? `${plantillaPropia.name} · desde el ${fmtCorta(inicio)}`
-                  : `Del ${fmtCorta(inicio)} al ${fmtCorta(fin)} · ${entrenos} entrenos previstos`}
+                  ? `${plantillaPropia.name} · desde el ${diaMes(inicio)}`
+                  : `Del ${diaMes(inicio)} al ${diaMes(fin)} · ${entrenos} entrenos previstos`}
               </Text>
             </View>
 

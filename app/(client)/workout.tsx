@@ -67,6 +67,8 @@ import {
   type LastPerformance,
   type PersonalRecord,
 } from '../../lib/stats';
+import { minutosSegundos } from '../../lib/duracion';
+import { esMismoDia, inicioDelDia } from '../../lib/fechas';
 import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
   clusterBlocks,
@@ -116,31 +118,6 @@ const draftHasProgress = (d: WorkoutDraft) =>
         (st) => st.completed || (st.reps ?? '').trim() !== '' || (st.weight ?? '').trim() !== ''
       )
   );
-
-/** Descanso en formato min:seg para las etiquetas: 90 → "1:30", 210 → "3:30". */
-function formatRest(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
-/** ¿El timestamp cae en el mismo día natural que la referencia (hoy)? */
-function isSameDay(ts: number, ref = Date.now()): boolean {
-  const a = new Date(ts);
-  const b = new Date(ref);
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-/** Timestamp a medianoche local (para agrupar por día natural). */
-function startOfDayLocal(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
 
 function buildLog(day: RoutineDay): LoggedExercise[] {
   return day.exercises.map((ex) => {
@@ -246,8 +223,8 @@ export default function WorkoutScreen() {
   // Sensaciones: "hoy descanso" se recuerda entre sesiones (persistido en
   // flexRestDays), así al cerrar y reabrir la app el día sigue como descanso.
   const [flexResting, setFlexResting] = useState<boolean>(() => {
-    const today = startOfDayLocal(Date.now());
-    return (profile?.flexRestDays ?? []).some((d) => startOfDayLocal(d) === today);
+    const today = inicioDelDia(Date.now());
+    return (profile?.flexRestDays ?? []).some((d) => inicioDelDia(d) === today);
   });
   const startedAt = useRef<number | null>(null);
   // Log "en blanco" del día tal y como lo genera la plantilla. Sirve para saber
@@ -324,7 +301,7 @@ export default function WorkoutScreen() {
               ? data.days.find((d) => d.id === sync.activeSession!.dayId)
               : undefined;
           const doneToday = logs.find(
-            (l) => l.routineId === data.id && isSameDay(l.date)
+            (l) => l.routineId === data.id && esMismoDia(l.date)
           );
           const doneTodayDay = doneToday
             ? data.days.find((d) => d.name === doneToday.dayName)
@@ -367,7 +344,7 @@ export default function WorkoutScreen() {
     let cancelled = false;
     (async () => {
       const uid = profile.uid;
-      const today = startOfDayLocal(Date.now());
+      const today = inicioDelDia(Date.now());
       // 1) Carry-over: entreno de un día anterior sin finalizar (guardado aparte).
       let pending: WorkoutDraft | null = null;
       try {
@@ -380,7 +357,7 @@ export default function WorkoutScreen() {
         !pending ||
         !draftHasProgress(pending) ||
         Date.now() - pending.savedAt >= DRAFT_TTL_MS ||
-        startOfDayLocal(pending.startedAt ?? pending.savedAt) >= today
+        inicioDelDia(pending.startedAt ?? pending.savedAt) >= today
       ) {
         if (pending) AsyncStorage.removeItem(pendingKey(uid)).catch(() => {});
         pending = null;
@@ -399,7 +376,7 @@ export default function WorkoutScreen() {
 
       let restoredHere = false;
       if (draft && draftHasProgress(draft) && Date.now() - draft.savedAt < DRAFT_TTL_MS) {
-        const draftDay = startOfDayLocal(draft.startedAt ?? draft.savedAt);
+        const draftDay = inicioDelDia(draft.startedAt ?? draft.savedAt);
         if (draftDay === today && draft.routineId === routine.id && draft.dayId === selectedDayId) {
           // Mismo día: se retoma sin preguntar.
           if (cancelled) return;
@@ -519,7 +496,7 @@ export default function WorkoutScreen() {
     setLog(d.log);
     startedAt.current = d.startedAt;
     setRestored(true);
-    setResumeDate(startOfDayLocal(d.startedAt ?? d.savedAt));
+    setResumeDate(inicioDelDia(d.startedAt ?? d.savedAt));
     setPastDraft(null);
     setSummary(null);
     const realDay = routine.days.find((x) => x.id === d.dayId);
@@ -626,14 +603,14 @@ export default function WorkoutScreen() {
   // Historial de los últimos 7 días (para decidir qué toca hoy en Sensaciones).
   const last7FlexDays = (() => {
     const out: { ts: number; label: string; what: string }[] = [];
-    const rest = new Set((profile?.flexRestDays ?? []).map((t) => startOfDayLocal(t)));
+    const rest = new Set((profile?.flexRestDays ?? []).map((t) => inicioDelDia(t)));
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setHours(0, 0, 0, 0);
       d.setDate(d.getDate() - i);
       const ts = d.getTime();
       const logsThatDay = history.filter(
-        (l) => routine && l.routineId === routine.id && startOfDayLocal(l.date) === ts
+        (l) => routine && l.routineId === routine.id && inicioDelDia(l.date) === ts
       );
       // Un día pasado sin nada registrado ES un descanso, lo haya marcado el
       // alumno o no: si no entrenó, descansó. Antes salía un guion, que no
@@ -963,7 +940,7 @@ export default function WorkoutScreen() {
   // terminado" con estadísticas y compartir, sin dejar entrenar de nuevo hasta
   // el día siguiente.
   const completedTodayLog = routine
-    ? history.find((l) => l.routineId === routine.id && isSameDay(l.date))
+    ? history.find((l) => l.routineId === routine.id && esMismoDia(l.date))
     : undefined;
   const inProgress = doneSets > 0 || restored;
   // En Sensaciones, "flexAgain" permite ignorar la tarjeta de completado para
@@ -1437,7 +1414,7 @@ export default function WorkoutScreen() {
               onPress={() => {
                 setFlexResting(false);
                 // Deshace el descanso persistido para que no reaparezca al volver.
-                if (profile) removeFlexRestDay(profile.uid, startOfDayLocal(Date.now())).catch(() => {});
+                if (profile) removeFlexRestDay(profile.uid, inicioDelDia(Date.now())).catch(() => {});
               }}
               style={{ marginTop: spacing.sm }}
             />
@@ -1851,7 +1828,7 @@ export default function WorkoutScreen() {
                 {planned.restSeconds ? (
                   <View style={styles.metaChip}>
                     <Text style={styles.metaChipText}>
-                      Descanso {formatRest(planned.restSeconds)}
+                      Descanso {minutosSegundos(planned.restSeconds, false)}
                     </Text>
                   </View>
                 ) : null}

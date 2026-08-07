@@ -34,3 +34,64 @@ export function diaLargo(ts: number | Date, conAno = false): string {
     })
   );
 }
+
+/** "05 ago 2026". La que se usa para fechas sueltas dentro de una ficha. */
+export function fechaCorta(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/**
+ * "5 ago". Sin año, para lo que pasa cerca: el principio y el final de un
+ * bloque, un día del calendario, el rango de una semana. Estaba escrita igual
+ * en cuatro sitios con tres nombres distintos (`fmt`, `fmtCorta`, `fmtCorta`).
+ */
+export function diaMes(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+
+/*
+ * Comparar días, no instantes.
+ *
+ * Estas cuatro estaban copiadas por media app —`startOfDay` en la agenda y en
+ * la lista de alumnos, `startOfDayLocal` en el entreno, `isToday` en nutrición,
+ * `isSameDay` otra vez en el entreno— y todas hacen exactamente lo mismo. No
+ * es solo repetición: el día es una cosa del CALENDARIO del usuario, y cada
+ * copia era una oportunidad más de comparar milisegundos por error y hacer que
+ * un entreno de las once de la noche cuente como el del día siguiente.
+ *
+ * Todas trabajan en hora local a propósito: el día del usuario es el suyo, no
+ * el de UTC.
+ */
+
+/** Las 00:00 de ese día, en hora local. */
+export function inicioDelDia(ts: number | Date): number {
+  const d = typeof ts === 'number' ? new Date(ts) : new Date(ts.getTime());
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/** ¿Caen los dos en el mismo día del calendario? */
+export function esMismoDia(a: number | Date, b: number | Date = Date.now()): boolean {
+  return inicioDelDia(a) === inicioDelDia(b);
+}
+
+/** ¿Es hoy? */
+export function esHoy(ts: number | Date): boolean {
+  return esMismoDia(ts, Date.now());
+}
+
+/**
+ * El lunes de esa semana, a las 00:00.
+ *
+ * La semana empieza en lunes, que es como se cuenta aquí. `getDay()` devuelve
+ * 0 para el domingo, así que el domingo hay que retroceder seis días y no uno:
+ * es el fallo clásico de esta función y el motivo de que solo haya una.
+ */
+export function inicioDeLaSemana(ts: number | Date): number {
+  const d = new Date(inicioDelDia(ts));
+  const dia = d.getDay();
+  d.setDate(d.getDate() - (dia === 0 ? 6 : dia - 1));
+  return d.getTime();
+}

@@ -17,7 +17,8 @@ import {
   verifySubscriptionNow,
 } from '../lib/subscription';
 import { showToast } from './Toast';
-import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
+import { estadoInsignia, numeroFundador } from '../lib/fundador';
+import { colors, fonts, radius, shadows, spacing, tabularNums, typography } from '../lib/theme';
 
 const BENEFITS = [
   'Alumnos ilimitados con tu código de coach',
@@ -46,6 +47,11 @@ export function Paywall() {
   // servidor detectó que ese euro ya se pagó con la misma tarjeta en otra
   // cuenta de entrenador. El texto tiene que decir la verdad en los dos casos.
   const plazas = clientSlotsOf(profile);
+  // Si llegó pronto, tiene un número de fundador. Este es el único sitio donde
+  // se ve apagado —el perfil ya no se abre— y también el único momento en que
+  // decírselo sirve de algo: "vuelve y recuperas tu #0028" pesa mucho más que
+  // cualquier lista de ventajas, y es verdad, que es lo que lo hace funcionar.
+  const fundador = estadoInsignia(profile).numero;
   // Cuánta gente llega al muro de pago frente a cuánta lo cruza.
   React.useEffect(() => {
     void trackOnce('paywall_view');
@@ -138,6 +144,19 @@ export function Paywall() {
                 ? 'Esta cuenta no incluye alumnos: el alta de su tarjeta ya se usó en otra cuenta de entrenador. Con la suscripción anual tienes alumnos ilimitados. Tus datos están a salvo y te esperan.'
                 : `Tu grupo ha superado los ${plazas} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`}
         </Text>
+
+        {/* La insignia, apagada pero con su número intacto. Sin oro: encendida
+            se la ha ganado quien está dentro. */}
+        {fundador ? (
+          <View style={styles.fundadorRow}>
+            <Ionicons name="shield-outline" size={17} color={colors.textMuted} />
+            <Text style={styles.fundadorNumero}>{numeroFundador(fundador)}</Text>
+            <Text style={styles.fundadorTexto}>
+              Tu número de fundador es tuyo para siempre. Vuelve y la insignia se
+              enciende otra vez, con el mismo número.
+            </Text>
+          </View>
+        ) : null}
 
         {/* En iOS no se vende nada aquí dentro (ver CAN_SELL_IN_APP): ni precio,
             ni plan, ni botón que lleve a pagar fuera. Solo el estado de la
@@ -236,6 +255,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     lineHeight: 21,
   },
+  fundadorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    alignSelf: 'stretch',
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  fundadorNumero: {
+    fontSize: 19,
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    ...tabularNums,
+  },
+  fundadorTexto: { ...typography.small, color: colors.textFaint, flex: 1, lineHeight: 16 },
   planCard: { alignSelf: 'stretch', marginBottom: spacing.md },
   planName: {
     ...typography.label,

@@ -4,11 +4,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ProgressCard, type DatoTarjeta } from './ProgressCard';
 import { useAuth } from '../lib/auth-context';
 import {
-  numeroFundador,
   tarjetaDeAtleta,
   tarjetaDeEntrenador,
   textoDesde,
 } from '../lib/cardStats';
+import { estadoInsignia, numeroFundador } from '../lib/fundador';
 import { getSocialLeaderboard } from '../lib/firestore/social';
 import { getClientsForTrainer } from '../lib/firestore/users';
 import { getWorkoutLogsForClient, getWorkoutLogsForTrainer } from '../lib/firestore/workoutLogs';
@@ -33,8 +33,9 @@ export function MemberCard() {
   const [datos, setDatos] = useState<DatoTarjeta[]>([]);
 
   const esEntrenador = profile?.role === 'trainer';
-  const esFundador = typeof profile?.founderNumber === 'number' && profile.founderNumber > 0;
   const rol = esEntrenador ? 'Entrenador' : profile?.role === 'athlete' ? 'Atleta' : 'Alumno';
+  // El número es suyo para siempre; encenderlo depende de estar al día.
+  const insignia = estadoInsignia(profile);
 
   useFocusEffect(
     useCallback(() => {
@@ -130,9 +131,23 @@ export function MemberCard() {
         nombre={profile.name}
         rol={rol}
         desde={textoDesde(profile.createdAt)}
-        fundador={esFundador ? numeroFundador(profile.founderNumber!) : undefined}
+        fundador={insignia.numero ? numeroFundador(insignia.numero) : undefined}
       />
-      <Text style={styles.ayuda}>Arrástrala para girarla</Text>
+      {/* Aquí solo cabe el aviso, nunca la insignia apagada: si la cuenta
+          pierde el acceso, esta pantalla ya no se ve —se ve el muro de pago—,
+          y es allí donde se le recuerda que el número sigue siendo suyo.
+
+          El aviso sale solo cuando de verdad queda poco: un mensaje que
+          aparece siempre deja de leerse a la tercera vez. */}
+      {insignia.diasParaApagarse !== null ? (
+        <Text style={styles.aviso}>
+          {insignia.diasParaApagarse === 0
+            ? `Hoy pierdes la insignia de fundador. El ${numeroFundador(insignia.numero!)} sigue siendo tuyo: vuelve y se enciende otra vez.`
+            : `Tu insignia de fundador se apaga en ${insignia.diasParaApagarse} ${insignia.diasParaApagarse === 1 ? 'día' : 'días'}. El número no lo pierdes: al renovar vuelve a encenderse.`}
+        </Text>
+      ) : (
+        <Text style={styles.ayuda}>Arrástrala para girarla</Text>
+      )}
     </View>
   );
 }
@@ -145,5 +160,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: spacing.sm,
     textAlign: 'center',
+  },
+  aviso: {
+    ...typography.small,
+    color: colors.warning,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    alignSelf: 'center',
+    maxWidth: 360,
   },
 });

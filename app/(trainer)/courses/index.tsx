@@ -13,12 +13,9 @@ import { moveItem } from '../../../lib/useDragReorder';
 import { ListSkeleton } from '../../../components/Skeleton';
 import { useAuth } from '../../../lib/auth-context';
 import { getCoursesForTrainer, updateCourse } from '../../../lib/firestore/courses';
+import { leccionesContables } from '../../../lib/courseProgress';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { Course } from '../../../lib/types';
-
-function lessonCount(course: Course): number {
-  return course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
-}
 
 export default function TrainerCoursesScreen() {
   const { profile } = useAuth();
@@ -107,7 +104,7 @@ export default function TrainerCoursesScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.courseTitle}>{course.title}</Text>
                   <Text style={styles.courseMeta}>
-                    {course.sections.length} secciones · {lessonCount(course)} lecciones
+                    {course.sections.length} secciones · {leccionesContables(course).length} lecciones
                   </Text>
                 </View>
                 <View style={[styles.badge, course.published ? styles.badgeOn : styles.badgeOff]}>

@@ -3,14 +3,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from './ProgressBar';
 import { planCalendar, planSummary, type CalendarWeek } from '../lib/cyclePlan';
+import { diaMes } from '../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { TrainingCycle, WorkoutLog } from '../lib/types';
 
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
-function fmtCorta(ts: number): string {
-  return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-}
 
 /**
  * El calendario del plan: una fila por semana, agrupadas por bloque, con los
@@ -84,7 +81,7 @@ export function PlanCalendar({
             <View style={[styles.band, w.isDeload && styles.bandDeload, w.isPast && styles.bandPast]} />
             <View style={styles.weekLabelBox}>
               <Text style={[styles.weekNum, w.isCurrent && styles.weekNumNow]}>S{w.index}</Text>
-              <Text style={styles.weekDates}>{fmtCorta(w.start)}</Text>
+              <Text style={styles.weekDates}>{diaMes(w.start)}</Text>
             </View>
 
             <View style={styles.daysRow}>

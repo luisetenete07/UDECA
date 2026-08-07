@@ -9,13 +9,14 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { useAuth } from '../../../lib/auth-context';
 import { getPublishedCourses } from '../../../lib/firestore/courses';
 import { getCourseProgress } from '../../../lib/firestore/courseProgress';
-import { diasDeAlta, estadoDeCurso, type LessonsSeen } from '../../../lib/courseProgress';
+import {
+  diasDeAlta,
+  estadoDeCurso,
+  leccionesContables,
+  type LessonsSeen,
+} from '../../../lib/courseProgress';
 import { colors, radius, spacing, typography } from '../../../lib/theme';
 import type { Course } from '../../../lib/types';
-
-function lessonCount(course: Course): number {
-  return course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
-}
 
 export default function ClientCoursesScreen() {
   const { profile } = useAuth();
@@ -104,8 +105,8 @@ export default function ClientCoursesScreen() {
                   <Text style={styles.courseMeta}>
                     {course.sections.length}{' '}
                     {course.sections.length === 1 ? 'sección' : 'secciones'} ·{' '}
-                    {lessonCount(course)}{' '}
-                    {lessonCount(course) === 1 ? 'lección' : 'lecciones'}
+                    {leccionesContables(course).length}{' '}
+                    {leccionesContables(course).length === 1 ? 'lección' : 'lecciones'}
                   </Text>
                 )}
               </View>

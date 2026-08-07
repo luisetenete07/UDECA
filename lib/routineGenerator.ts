@@ -6,6 +6,7 @@ import {
   type RoutineExercise,
   type RoutineSchedule,
 } from './types';
+import { nuevoId } from './ids';
 
 /**
  * Copiloto UDECA: genera un BORRADOR de rutina a partir de la biblioteca del
@@ -16,7 +17,6 @@ import {
  * El coach siempre revisa y ajusta: es un punto de partida, no un dogma.
  */
 
-const uid = () => Math.random().toString(36).slice(2, 10);
 
 interface LevelParams {
   sets: number;
@@ -64,7 +64,7 @@ const LEVEL_PARAMS: Record<ExperienceLevel, LevelParams> = {
 
 function toRoutineExercise(e: Exercise, p: LevelParams): RoutineExercise {
   return {
-    id: uid(),
+    id: nuevoId(),
     exerciseId: e.id,
     name: e.name,
     sets: p.sets,
@@ -118,7 +118,7 @@ export function generateRoutineDraft(opts: {
       ...pick(pierna, p.perDay.pierna, dayOffset),
     ];
     return {
-      id: uid(),
+      id: nuevoId(),
       name,
       intensity: p.intensity,
       exercises: exercises.map((e) => toRoutineExercise(e, p)),
@@ -129,12 +129,12 @@ export function generateRoutineDraft(opts: {
     // Método REIN TENA: entreno / descanso alternos y Día 7 opcional.
     return [
       buildTrainingDay('Día 1 · Empuje y tirón', 0),
-      { id: uid(), name: 'Descanso', isRest: true, exercises: [] },
+      { id: nuevoId(), name: 'Descanso', isRest: true, exercises: [] },
       buildTrainingDay('Día 3 · Empuje y tirón', 1),
-      { id: uid(), name: 'Descanso', isRest: true, exercises: [] },
+      { id: nuevoId(), name: 'Descanso', isRest: true, exercises: [] },
       buildTrainingDay('Día 5 · Empuje y tirón', 2),
-      { id: uid(), name: 'Descanso', isRest: true, exercises: [] },
-      { id: uid(), name: 'Descanso opcional', isRest: true, optionalRest: true, exercises: [] },
+      { id: nuevoId(), name: 'Descanso', isRest: true, exercises: [] },
+      { id: nuevoId(), name: 'Descanso opcional', isRest: true, optionalRest: true, exercises: [] },
     ];
   }
 

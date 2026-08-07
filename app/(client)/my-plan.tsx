@@ -20,6 +20,8 @@ import {
   updateRoutine,
 } from '../../lib/firestore/routines';
 import { flexLabel } from '../../lib/schedule';
+import { minutosSegundos, segundosDeTexto } from '../../lib/duracion';
+import { nuevoId } from '../../lib/ids';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
   CLUSTER_DEFAULT,
@@ -41,7 +43,6 @@ import {
   type RoutineSchedule,
 } from '../../lib/types';
 
-const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const slug = (s: string) =>
   'self-' +
   (s || 'ej')
@@ -58,30 +59,11 @@ const LOAD_OPTIONS: { key: ExerciseLoad; label: string }[] = [
   { key: 'assisted', label: 'Goma' },
 ];
 
-/** Texto del descanso (MINUTOS con decimales, o mm:ss) → segundos. */
-function parseClock(value: string): number {
-  const t = value.trim().replace(',', '.');
-  if (!t) return 0;
-  if (t.includes(':')) {
-    const [m, sec] = t.split(':');
-    return (parseInt(m, 10) || 0) * 60 + (parseInt(sec, 10) || 0);
-  }
-  const mins = parseFloat(t);
-  if (Number.isNaN(mins) || mins < 0) return 0;
-  return Math.round(mins * 60);
-}
-function formatClock(seconds?: number): string {
-  if (!seconds) return '';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
-
 function newExercise(name = '', measure: ExerciseMeasure = 'reps', reps = '10'): RoutineExercise {
-  return { id: uid(), exerciseId: slug(name), name, sets: 4, reps, measure, load: 'none' };
+  return { id: nuevoId(), exerciseId: slug(name), name, sets: 4, reps, measure, load: 'none' };
 }
 function newDay(n: number): RoutineDay {
-  return { id: uid(), name: `Día ${n}`, exercises: [newExercise()] };
+  return { id: nuevoId(), name: `Día ${n}`, exercises: [newExercise()] };
 }
 
 /** Plantillas de arranque para no empezar desde una hoja en blanco. */
@@ -102,9 +84,9 @@ const STARTERS: Starter[] = [
     label: 'Cuerpo completo · 3 días',
     schedule: 'weekly',
     build: () => [
-      { id: uid(), name: 'Día A', weekday: 0, exercises: [ex('Dominadas', 4, '6-10'), ex('Fondos en paralelas', 4, '8-12'), ex('Sentadilla', 4, '12'), ex('Plancha abdominal', 3, '40', 'seconds')] },
-      { id: uid(), name: 'Día B', weekday: 2, exercises: [ex('Flexiones', 4, '12-15'), ex('Remo australiano', 4, '10-12'), ex('Zancadas', 3, '12'), ex('Hollow hold', 3, '30', 'seconds')] },
-      { id: uid(), name: 'Día C', weekday: 4, exercises: [ex('Dominadas supinas', 4, '6-10'), ex('Fondos en banco', 4, '12'), ex('Puente de glúteo', 3, '15'), ex('L-sit', 3, '20', 'seconds')] },
+      { id: nuevoId(), name: 'Día A', weekday: 0, exercises: [ex('Dominadas', 4, '6-10'), ex('Fondos en paralelas', 4, '8-12'), ex('Sentadilla', 4, '12'), ex('Plancha abdominal', 3, '40', 'seconds')] },
+      { id: nuevoId(), name: 'Día B', weekday: 2, exercises: [ex('Flexiones', 4, '12-15'), ex('Remo australiano', 4, '10-12'), ex('Zancadas', 3, '12'), ex('Hollow hold', 3, '30', 'seconds')] },
+      { id: nuevoId(), name: 'Día C', weekday: 4, exercises: [ex('Dominadas supinas', 4, '6-10'), ex('Fondos en banco', 4, '12'), ex('Puente de glúteo', 3, '15'), ex('L-sit', 3, '20', 'seconds')] },
     ],
   },
   {
@@ -112,9 +94,9 @@ const STARTERS: Starter[] = [
     label: 'Empuje / Tirón / Pierna',
     schedule: 'weekly',
     build: () => [
-      { id: uid(), name: 'Empuje', weekday: 0, exercises: [ex('Flexiones', 4, '12-15'), ex('Fondos en paralelas', 4, '8-12'), ex('Pike push-up', 3, '8-10'), ex('Plancha abdominal', 3, '40', 'seconds')] },
-      { id: uid(), name: 'Tirón', weekday: 2, exercises: [ex('Dominadas', 4, '6-10'), ex('Remo australiano', 4, '10-12'), ex('Curl con goma', 3, '12'), ex('Hollow hold', 3, '30', 'seconds')] },
-      { id: uid(), name: 'Pierna', weekday: 4, exercises: [ex('Sentadilla', 4, '15'), ex('Zancadas', 3, '12'), ex('Puente de glúteo', 4, '15'), ex('Gemelos de pie', 4, '20')] },
+      { id: nuevoId(), name: 'Empuje', weekday: 0, exercises: [ex('Flexiones', 4, '12-15'), ex('Fondos en paralelas', 4, '8-12'), ex('Pike push-up', 3, '8-10'), ex('Plancha abdominal', 3, '40', 'seconds')] },
+      { id: nuevoId(), name: 'Tirón', weekday: 2, exercises: [ex('Dominadas', 4, '6-10'), ex('Remo australiano', 4, '10-12'), ex('Curl con goma', 3, '12'), ex('Hollow hold', 3, '30', 'seconds')] },
+      { id: nuevoId(), name: 'Pierna', weekday: 4, exercises: [ex('Sentadilla', 4, '15'), ex('Zancadas', 3, '12'), ex('Puente de glúteo', 4, '15'), ex('Gemelos de pie', 4, '20')] },
     ],
   },
   {
@@ -123,9 +105,9 @@ const STARTERS: Starter[] = [
     schedule: 'flex',
     scheduleLabel: 'Sensaciones',
     build: () => [
-      { id: uid(), name: 'Fuerza (día fuerte)', exercises: [ex('Dominadas lastradas', 5, '3-5'), ex('Fondos lastrados', 5, '3-5'), ex('Sentadilla búlgara', 4, '8')] },
-      { id: uid(), name: 'Volumen (día medio)', exercises: [ex('Dominadas', 4, '8-10'), ex('Flexiones', 4, '15'), ex('Zancadas', 3, '12')] },
-      { id: uid(), name: 'Suave (poca energía)', exercises: [ex('Remo australiano', 3, '12'), ex('Flexiones rodillas', 3, '12'), ex('Plancha abdominal', 3, '30', 'seconds')] },
+      { id: nuevoId(), name: 'Fuerza (día fuerte)', exercises: [ex('Dominadas lastradas', 5, '3-5'), ex('Fondos lastrados', 5, '3-5'), ex('Sentadilla búlgara', 4, '8')] },
+      { id: nuevoId(), name: 'Volumen (día medio)', exercises: [ex('Dominadas', 4, '8-10'), ex('Flexiones', 4, '15'), ex('Zancadas', 3, '12')] },
+      { id: nuevoId(), name: 'Suave (poca energía)', exercises: [ex('Remo australiano', 3, '12'), ex('Flexiones rodillas', 3, '12'), ex('Plancha abdominal', 3, '30', 'seconds')] },
     ],
   },
 ];
@@ -198,9 +180,9 @@ export default function MyPlanScreen() {
       const src = prev[di];
       const clone: RoutineDay = {
         ...src,
-        id: uid(),
+        id: nuevoId(),
         name: `${src.name} (copia)`,
-        exercises: src.exercises.map((e) => ({ ...e, id: uid() })),
+        exercises: src.exercises.map((e) => ({ ...e, id: nuevoId() })),
       };
       const next = [...prev];
       next.splice(di + 1, 0, clone);
@@ -676,10 +658,10 @@ export default function MyPlanScreen() {
                           <View style={styles.field}>
                             <Text style={styles.fieldLabel}>Descanso</Text>
                             <TextInput
-                              value={restText[exx.id] ?? formatClock(exx.restSeconds)}
+                              value={restText[exx.id] ?? minutosSegundos(exx.restSeconds)}
                               onChangeText={(v) => {
                                 setRestText((p) => ({ ...p, [exx.id]: v }));
-                                patchEx(di, ei, { restSeconds: parseClock(v) });
+                                patchEx(di, ei, { restSeconds: segundosDeTexto(v) });
                               }}
                               placeholder="1:30"
                               placeholderTextColor={colors.textFaint}

@@ -16,12 +16,9 @@ import {
 } from '../../../lib/firestore/courses';
 import { pickCoverPhoto } from '../../../lib/image';
 import { showToast } from '../../../components/Toast';
+import { nuevoId } from '../../../lib/ids';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { CourseSection, Lesson } from '../../../lib/types';
-
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
 
 export default function CourseEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -59,7 +56,7 @@ export default function CourseEditorScreen() {
   const addSection = () => {
     setSections((prev) => [
       ...prev,
-      { id: uid(), title: `Sección ${prev.length + 1}`, lessons: [] },
+      { id: nuevoId(), title: `Sección ${prev.length + 1}`, lessons: [] },
     ]);
   };
 
@@ -72,7 +69,7 @@ export default function CourseEditorScreen() {
   };
 
   const addLesson = (sectionId: string) => {
-    const lesson: Lesson = { id: uid(), title: '', videoUrl: '' };
+    const lesson: Lesson = { id: nuevoId(), title: '', videoUrl: '' };
     setSections((prev) =>
       prev.map((s) => (s.id === sectionId ? { ...s, lessons: [...s.lessons, lesson] } : s))
     );

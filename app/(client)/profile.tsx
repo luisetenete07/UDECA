@@ -218,15 +218,16 @@ export default function ClientProfileScreen() {
             />
           </View>
         </Pressable>
-        <Text style={styles.name}>{profile?.name}</Text>
+        {/* El nombre no se repite aquí: va impreso dentro de la tarjeta, justo
+            debajo. Estaba escrito dos veces en la misma pantalla, con la
+            segunda a un dedo de la primera. "Miembro desde" lo mismo. Queda el
+            correo —en qué cuenta estoy— y el nivel, que la tarjeta no dice. */}
         <Text style={styles.email}>{profile?.email}</Text>
         {profile?.level ? (
           <View style={styles.levelBadge}>
             <Text style={styles.levelBadgeText}>{profile.level}</Text>
           </View>
         ) : null}
-        {/* "Miembro desde" ya lo dice el carné, justo debajo. Decirlo dos veces
-            seguidas no informa más: solo hace ruido. */}
       </View>
 
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
@@ -491,7 +492,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: colors.background,
   },
-  name: { ...typography.h1, color: colors.text, textAlign: 'center' },
   email: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   levelBadge: {
     marginTop: spacing.sm,

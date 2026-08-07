@@ -15,6 +15,7 @@ import { getCyclesForClient } from '../../../../lib/firestore/cycles';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { computeCycleStats } from '../../../../lib/cycleStats';
 import { buildCycleTree } from '../../../../lib/cyclePlan';
+import { diaMes } from '../../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
@@ -28,10 +29,6 @@ const STATUS_TONE: Record<string, string> = {
   completed: colors.textFaint,
   open: colors.primary,
 };
-
-function fmtCorta(ts: number): string {
-  return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-}
 
 export default function PlanningScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -103,8 +100,8 @@ export default function PlanningScreen() {
                 {cycle.name}
               </Text>
               <Text style={styles.planDates}>
-                {cycle.startDate ? fmtCorta(cycle.startDate) : 'Sin inicio'}
-                {cycle.endDate ? ` – ${fmtCorta(cycle.endDate)}` : ''} · {children.length} bloque
+                {cycle.startDate ? diaMes(cycle.startDate) : 'Sin inicio'}
+                {cycle.endDate ? ` – ${diaMes(cycle.endDate)}` : ''} · {children.length} bloque
                 {children.length === 1 ? '' : 's'}
               </Text>
             </View>

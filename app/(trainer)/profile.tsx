@@ -41,11 +41,9 @@ import {
   type FunnelStep,
 } from '../../lib/firestore/analytics';
 import { isOnline } from '../../lib/presence';
+import { fechaCorta } from '../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
-
-const fmtDate = (ts: number) =>
-  new Date(ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 
 export default function TrainerProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
@@ -239,7 +237,7 @@ export default function TrainerProfileScreen() {
             : c
         )
       );
-      showToast(`${coach.name.split(' ')[0]}: activo hasta ${fmtDate(until)}`);
+      showToast(`${coach.name.split(' ')[0]}: activo hasta ${fechaCorta(until)}`);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo actualizar');
     } finally {
@@ -399,11 +397,12 @@ export default function TrainerProfileScreen() {
             />
           </View>
         </Pressable>
-        <Text style={styles.name}>{profile?.name}</Text>
+        {/* Ni el nombre ni el distintivo de "Entrenador" salen aquí: los dos
+            van impresos dentro de la tarjeta, dos centímetros más abajo. El
+            nombre estaba escrito dos veces en la misma pantalla y a la misma
+            altura de un dedo. Queda el correo, que es lo único que esto
+            responde de verdad: en qué cuenta estoy. */}
         <Text style={styles.email}>{profile?.email}</Text>
-        {/* El distintivo de "Entrenador" salía aquí y otra vez dentro de la
-            tarjeta, dos centímetros más abajo. Decirlo dos veces seguidas no
-            informa el doble. */}
       </View>
 
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
@@ -658,7 +657,7 @@ export default function TrainerProfileScreen() {
               ? 'Cuenta fundadora: acceso completo a UDECA Pro.'
               : // En iOS, el estado sin precio (ver CAN_SELL_IN_APP).
                 `Plan${CAN_SELL_IN_APP ? ` (${COACH_MONTHLY_EQUIV_EUR} €/mes, ${ANNUAL_PRICE_EUR} € al año)` : ''} · activo hasta ${
-                  profile?.subscriptionUntil ? fmtDate(profile.subscriptionUntil) : '—'
+                  profile?.subscriptionUntil ? fechaCorta(profile.subscriptionUntil) : '—'
                 }.`}
         </Text>
       </CollapsibleCard>
@@ -776,7 +775,7 @@ export default function TrainerProfileScreen() {
                   {g.where ? ` · ${g.where}` : ''}
                 </Text>
                 <Text style={styles.errMeta}>
-                  Última vez: {fmtDate(g.lastAt)} · versión {g.sample.appVersion ?? '—'}
+                  Última vez: {fechaCorta(g.lastAt)} · versión {g.sample.appVersion ?? '—'}
                 </Text>
               </View>
             ))
@@ -810,9 +809,9 @@ export default function TrainerProfileScreen() {
                 : s.legacy
                   ? 'Fundador'
                   : s.active
-                    ? `Activo · hasta ${c.subscriptionUntil ? fmtDate(c.subscriptionUntil) : '—'}`
+                    ? `Activo · hasta ${c.subscriptionUntil ? fechaCorta(c.subscriptionUntil) : '—'}`
                     : c.subscriptionUntil
-                      ? `CADUCADO · desde ${fmtDate(c.subscriptionUntil)}`
+                      ? `CADUCADO · desde ${fechaCorta(c.subscriptionUntil)}`
                       : 'SIN ACTIVAR';
               return (
                 <View key={c.uid} style={styles.coachCard}>
@@ -937,7 +936,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: colors.background,
   },
-  name: { ...typography.h1, color: colors.text, textAlign: 'center' },
   email: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   roleBadge: {
     marginTop: spacing.sm,
