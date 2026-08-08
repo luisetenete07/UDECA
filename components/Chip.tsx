@@ -22,6 +22,7 @@ export function Chip({
   activo = false,
   onPress,
   icono,
+  punto,
   /** Tono discreto para acciones que no son "elegir" (renombrar, editar). */
   suave = false,
 }: {
@@ -29,6 +30,8 @@ export function Chip({
   activo?: boolean;
   onPress?: () => void;
   icono?: React.ComponentProps<typeof Ionicons>['name'];
+  /** Punto de color a la izquierda: el estado de pago, el tono de un aviso. */
+  punto?: string;
   suave?: boolean;
 }) {
   const colorIcono = suave ? colors.primary : activo ? colors.onPrimary : colors.textMuted;
@@ -39,6 +42,7 @@ export function Chip({
       accessibilityRole="button"
       accessibilityState={{ selected: activo }}
     >
+      {punto ? <View style={[styles.punto, { backgroundColor: punto }]} /> : null}
       {icono ? <Ionicons name={icono} size={13} color={colorIcono} /> : null}
       <Text style={[styles.texto, activo && styles.textoActivo, suave && styles.textoSuave]}>
         {texto}
@@ -85,6 +89,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  punto: { width: 8, height: 8, borderRadius: 4 },
   activo: { backgroundColor: colors.primary, borderColor: colors.primary },
   suave: { backgroundColor: colors.primaryMuted, borderColor: colors.hairline },
   texto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },

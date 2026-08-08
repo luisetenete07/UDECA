@@ -389,22 +389,16 @@ export default function ClientProfileScreen() {
             </View>
 
             <Text style={styles.presetLabel}>Atajos</Text>
-            <View style={styles.timeRow}>
-              {REMINDER_PRESETS.map((p) => {
-                const active = reminderHour === p.h && reminderMinute === p.m;
-                return (
-                  <Pressable
-                    key={`${p.h}:${p.m}`}
-                    onPress={() => setPreset(p.h, p.m)}
-                    style={[styles.timeChip, active && styles.timeChipActive]}
-                  >
-                    <Text style={[styles.timeText, active && styles.timeTextActive]}>
-                      {two(p.h)}:{two(p.m)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <ChipRow>
+              {REMINDER_PRESETS.map((p) => (
+                <Chip
+                  key={`${p.h}:${p.m}`}
+                  texto={`${two(p.h)}:${two(p.m)}`}
+                  activo={reminderHour === p.h && reminderMinute === p.m}
+                  onPress={() => setPreset(p.h, p.m)}
+                />
+              ))}
+            </ChipRow>
           </>
         ) : null}
       </Card>
@@ -598,17 +592,5 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: spacing.sm,
   },
-  timeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  timeChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  timeChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  timeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  timeTextActive: { color: colors.onPrimary },
   signOut: { marginTop: spacing.sm, marginBottom: spacing.xl },
 });

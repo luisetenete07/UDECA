@@ -57,6 +57,7 @@ import {
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
 import { confirmar } from '../../lib/confirmar';
+import { Segmented } from '../../components/Segmented';
 import { Chip, ChipRow } from '../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
@@ -449,20 +450,18 @@ export default function ProgressScreen() {
     >
       <Text style={styles.title}>Mi progreso</Text>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsScroll}
-        contentContainerStyle={styles.tabs}
-      >
-        <TabButton label="Entrenos" active={tab === 'workouts'} onPress={() => setTab('workouts')} />
-        <TabButton label="Peso" active={tab === 'weight'} onPress={() => setTab('weight')} />
-        <TabButton
-          label="Ejercicios"
-          active={tab === 'exercises'}
-          onPress={() => setTab('exercises')}
-        />
-      </ScrollView>
+      {/* Tres vistas de lo mismo: esto es exactamente lo que hace Segmented en
+          el resto de la app, con su pastilla deslizándose de una a otra. Antes
+          eran tres botones a mano que se encendían y apagaban. */}
+      <Segmented
+        opciones={[
+          { valor: 'workouts' as const, texto: 'Entrenos', icono: 'barbell-outline' },
+          { valor: 'weight' as const, texto: 'Peso', icono: 'scale-outline' },
+          { valor: 'exercises' as const, texto: 'Ejercicios', icono: 'trending-up-outline' },
+        ]}
+        valor={tab}
+        onChange={setTab}
+      />
 
       {tab === 'workouts' ? (
         months.length === 0 ? (
@@ -899,26 +898,16 @@ export default function ProgressScreen() {
             ) : null
           ) : (
           <>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.exPickerRow}
-            >
-              {exercisesInLogs.map((ex) => {
-                const active = selExerciseId === ex.exerciseId;
-                return (
-                  <Pressable
-                    key={ex.exerciseId}
-                    onPress={() => setSelectedExerciseId(ex.exerciseId)}
-                    style={[styles.exChip, active && styles.exChipActive]}
-                  >
-                    <Text style={[styles.exChipText, active && styles.exChipTextActive]}>
-                      {ex.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <ChipRow scroll>
+              {exercisesInLogs.map((ex) => (
+                <Chip
+                  key={ex.exerciseId}
+                  texto={ex.name}
+                  activo={selExerciseId === ex.exerciseId}
+                  onPress={() => setSelectedExerciseId(ex.exerciseId)}
+                />
+              ))}
+            </ChipRow>
 
             {selExerciseId ? (
               <ExerciseHistory
@@ -1021,22 +1010,6 @@ export default function ProgressScreen() {
   );
 }
 
-function TabButton({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={[styles.tabButton, active && styles.tabButtonActive]}>
-      <Text style={[styles.tabButtonText, active && styles.tabButtonTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 /** Fila del comparador 3 meses → hoy, con delta coloreado. */
 function CompareRow({
   label,
@@ -1105,34 +1078,6 @@ const styles = StyleSheet.create({
   fullSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
-  tabsScroll: { marginBottom: spacing.lg, flexGrow: 0 },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    padding: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 2,
-  },
-  tabButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-  },
-  exPickerRow: { gap: spacing.sm, paddingBottom: spacing.sm },
-  exChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  exChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  exChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  exChipTextActive: { color: colors.onPrimary },
   exHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   recordPill: {
     flexDirection: 'row',
@@ -1147,9 +1092,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   recordText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, fontSize: 11 },
-  tabButtonActive: { backgroundColor: colors.primary },
-  tabButtonText: { ...typography.small, fontFamily: fonts.heading, color: colors.textMuted },
-  tabButtonTextActive: { color: colors.onPrimary },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   row: { flexDirection: 'row', gap: spacing.sm },

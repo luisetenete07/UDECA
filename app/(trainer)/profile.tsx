@@ -41,6 +41,7 @@ import {
   type FunnelStep,
 } from '../../lib/firestore/analytics';
 import { isOnline } from '../../lib/presence';
+import { Chip, ChipRow } from '../../components/Chip';
 import { fechaCorta } from '../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
@@ -685,21 +686,16 @@ export default function TrainerProfileScreen() {
             <Text style={styles.helperText}>Cargando métricas...</Text>
           ) : (
             <>
-              <View style={styles.rangeRow}>
+              <ChipRow>
                 {[7, 30, 60].map((d) => (
-                  <Pressable
+                  <Chip
                     key={d}
+                    texto={`${d} días`}
+                    activo={funnelDays === d}
                     onPress={() => openFunnel(d)}
-                    style={[styles.rangeChip, funnelDays === d && styles.rangeChipOn]}
-                  >
-                    <Text
-                      style={[styles.rangeText, funnelDays === d && styles.rangeTextOn]}
-                    >
-                      {d} días
-                    </Text>
-                  </Pressable>
+                  />
                 ))}
-              </View>
+              </ChipRow>
               {funnel.map((step, i) => (
                 <View key={step.key} style={styles.funnelRow}>
                   <View style={styles.funnelHead}>
@@ -1029,18 +1025,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   coachCard: { borderTopWidth: 1, borderTopColor: colors.border },
-  rangeRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
-  rangeChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  rangeChipOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  rangeText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
-  rangeTextOn: { color: colors.primary, fontFamily: fonts.semiBold },
   funnelRow: { marginTop: spacing.md },
   funnelHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   funnelLabel: { ...typography.small, color: colors.text },

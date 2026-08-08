@@ -9,6 +9,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { DragList } from '../../components/DragList';
 import { moveItem } from '../../lib/useDragReorder';
 import { ajustaPct } from '../../lib/intensidad';
+import { DiasSemana } from '../../components/DiasSemana';
 import { Opciones } from '../../components/Opciones';
 import { Segmented } from '../../components/Segmented';
 import { TextField } from '../../components/TextField';
@@ -449,24 +450,10 @@ export default function MyPlanScreen() {
                 </View>
 
                 {schedule === 'weekly' ? (
-                  <View style={styles.weekdayChips}>
-                    {WEEKDAY_LABELS.map((label, i) => (
-                      <Pressable
-                        key={label}
-                        onPress={() =>
-                          patchDay(di, { weekday: day.weekday === i ? undefined : i })
-                        }
-                        style={[styles.weekdayChip, day.weekday === i && styles.weekdayChipOn]}
-                        hitSlop={4}
-                      >
-                        <Text
-                          style={[styles.weekdayChipText, day.weekday === i && styles.weekdayChipTextOn]}
-                        >
-                          {label}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
+                  <DiasSemana
+                    valor={day.weekday}
+                    onChange={(weekday) => patchDay(di, { weekday })}
+                  />
                 ) : null}
 
                 {!day.isRest ? (
@@ -847,20 +834,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surfaceAlt,
   },
-  weekdayChips: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.sm },
-  weekdayChip: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  weekdayChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  weekdayChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  weekdayChipTextOn: { color: colors.onPrimary },
   exBlock: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm, marginTop: spacing.xs, gap: spacing.xs },
   exBlockLinked: { borderLeftWidth: 2, borderLeftColor: colors.hairline, paddingLeft: spacing.sm },
   supersetTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },

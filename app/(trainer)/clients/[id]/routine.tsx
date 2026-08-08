@@ -11,6 +11,8 @@ import {
   esfuerzoDePct,
   proporcionIntensidad,
 } from '../../../../lib/intensidad';
+import { Chip, ChipRow } from '../../../../components/Chip';
+import { DiasSemana } from '../../../../components/DiasSemana';
 import { Opciones } from '../../../../components/Opciones';
 import { Segmented } from '../../../../components/Segmented';
 import { TextField } from '../../../../components/TextField';
@@ -243,12 +245,8 @@ export default function RoutineEditorScreen() {
   };
 
   // Asigna o quita el día de la semana (tocar el mismo chip lo desasigna).
-  const updateDayWeekday = (dayId: string, weekday: number) => {
-    setDays((prev) =>
-      prev.map((d) =>
-        d.id === dayId ? { ...d, weekday: d.weekday === weekday ? undefined : weekday } : d
-      )
-    );
+  const updateDayWeekday = (dayId: string, weekday: number | undefined) => {
+    setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, weekday } : d)));
   };
 
   /**
@@ -1030,25 +1028,10 @@ export default function RoutineEditorScreen() {
                 </Text>
               </Pressable>
             </View>
-            <View style={styles.weekdayChips}>
-              {WEEKDAY_LABELS.map((label, i) => (
-                <Pressable
-                  key={label}
-                  onPress={() => updateDayWeekday(day.id, i)}
-                  style={[styles.weekdayChip, day.weekday === i && styles.weekdayChipSelected]}
-                  hitSlop={4}
-                >
-                  <Text
-                    style={[
-                      styles.weekdayChipText,
-                      day.weekday === i && styles.weekdayChipTextSelected,
-                    ]}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+            <DiasSemana
+              valor={day.weekday}
+              onChange={(weekday) => updateDayWeekday(day.id, weekday)}
+            />
             {day.isRest ? (
               <Text style={styles.optionalHint}>
                 Día de descanso: en el día de la semana elegido, el alumno verá “Descanso”, no
@@ -1454,59 +1437,35 @@ export default function RoutineEditorScreen() {
                     {/* Filtro por categoría. Con una biblioteca grande, buscar
                         por nombre obliga a saber ya lo que quieres; por
                         categoría se puede ir a "Tirón" y ver qué hay. */}
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.filterRow}
-                      keyboardShouldPersistTaps="handled"
-                    >
-                      {['Todos', ...categoriasBiblioteca].map((cat) => {
-                        const activo = filtroCategoria === cat;
-                        return (
-                          <Pressable
-                            key={cat}
-                            onPress={() => {
-                              setFiltroCategoria(cat);
-                              setFiltroSubgrupo(null);
-                            }}
-                            style={[styles.filterChip, activo && styles.filterChipActive]}
-                          >
-                            <Text
-                              style={[styles.filterChipText, activo && styles.filterChipTextActive]}
-                            >
-                              {cat}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
+                    <ChipRow scroll>
+                      {['Todos', ...categoriasBiblioteca].map((cat) => (
+                        <Chip
+                          key={cat}
+                          texto={cat}
+                          activo={filtroCategoria === cat}
+                          onPress={() => {
+                            setFiltroCategoria(cat);
+                            setFiltroSubgrupo(null);
+                          }}
+                        />
+                      ))}
+                    </ChipRow>
 
                     {/* Subgrupos: solo dentro de una categoría concreta y solo
                         si esa categoría los tiene. */}
                     {subgruposVisibles.length > 0 ? (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.filterRow}
-                        keyboardShouldPersistTaps="handled"
-                      >
-                        {subgruposVisibles.map((sg) => {
-                          const activo = filtroSubgrupo === sg;
-                          return (
-                            <Pressable
-                              key={sg}
-                              onPress={() => setFiltroSubgrupo(activo ? null : sg)}
-                              style={[styles.subChip, activo && styles.subChipActive]}
-                            >
-                              <Text
-                                style={[styles.subChipText, activo && styles.filterChipTextActive]}
-                              >
-                                {sg}
-                              </Text>
-                            </Pressable>
-                          );
-                        })}
-                      </ScrollView>
+                      <ChipRow scroll>
+                        {subgruposVisibles.map((sg) => (
+                          <Chip
+                            key={sg}
+                            texto={sg}
+                            activo={filtroSubgrupo === sg}
+                            onPress={() =>
+                              setFiltroSubgrupo(filtroSubgrupo === sg ? null : sg)
+                            }
+                          />
+                        ))}
+                      </ChipRow>
                     ) : null}
 
                   <ScrollView style={styles.modalList} keyboardShouldPersistTaps="handled">
@@ -1733,20 +1692,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: spacing.xs,
   },
-  weekdayChips: { flexDirection: 'row', gap: spacing.xs },
-  weekdayChip: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  weekdayChipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  weekdayChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  weekdayChipTextSelected: { color: colors.onPrimary },
   exerciseRow: {
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
@@ -1795,27 +1740,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   createNewText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, flex: 1 },
-  filterRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.xs },
-  filterChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  filterChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  filterChipTextActive: { color: colors.onPrimary },
-  subChip: {
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.hairlineFaint,
-  },
-  subChipActive: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
-  subChipText: { ...typography.small, color: colors.textFaint, fontSize: 12 },
   moveBtn: { padding: spacing.xs },
   deleteBtn: { padding: spacing.xs },
   moveExName: { ...typography.small, color: colors.primaryBright, marginTop: 2 },

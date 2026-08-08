@@ -20,6 +20,7 @@ import {
 import { getExercisesForTrainer } from '../../../lib/firestore/exercises';
 import { MUSCLE_LABEL, musclesForExercise, type MuscleId } from '../../../lib/muscles';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
+import { ListaRadio } from '../../../components/ListaRadio';
 import { Chip } from '../../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
@@ -358,24 +359,14 @@ export default function TemplateExercisesScreen() {
                   <Text style={styles.label}>Se mide en</Text>
                   {/* En lista: con cinco medidas, en fila las etiquetas se
                       recortan y "Reps por lado" pasa a ser ilegible. */}
-                  <View style={styles.measureList}>
-                    {EXERCISE_MEASURES.map((m) => (
-                      <Pressable
-                        key={m}
-                        onPress={() => setDraft({ ...draft, measure: m })}
-                        style={[styles.measureOption, draft.measure === m && styles.measureOptionOn]}
-                      >
-                        <Ionicons
-                          name={draft.measure === m ? 'radio-button-on' : 'radio-button-off'}
-                          size={18}
-                          color={draft.measure === m ? colors.primary : colors.textFaint}
-                        />
-                        <Text style={[styles.segText, draft.measure === m && styles.measureTextOn]}>
-                          {MEASURE_LABEL[m]}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
+                  <ListaRadio
+                    opciones={EXERCISE_MEASURES.map((m) => ({
+                      valor: m,
+                      texto: MEASURE_LABEL[m],
+                    }))}
+                    valor={draft.measure}
+                    onChange={(measure) => setDraft({ ...draft, measure })}
+                  />
 
                   <TextField
                     label="Subgrupo (opcional)"
@@ -506,20 +497,6 @@ const styles = StyleSheet.create({
   segBtnOn: { backgroundColor: colors.primary },
   segText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   segTextOn: { color: colors.onPrimary },
-  measureList: { gap: spacing.xs, marginBottom: spacing.md },
-  measureOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  measureOptionOn: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
-  measureTextOn: { color: colors.text, fontFamily: fonts.semiBold },
   musclesHead: {
     flexDirection: 'row',
     alignItems: 'center',

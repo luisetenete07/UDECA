@@ -224,9 +224,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
   },
-  goalChipOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  // El mismo relleno que el resto de la app: elegido se ve elegido.
+  goalChipOn: { borderColor: colors.primary, backgroundColor: colors.primary },
   goalText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  goalTextOn: { color: colors.primaryBright },
+  goalTextOn: { color: colors.onPrimary },
   resultCard: {
     marginTop: spacing.lg,
     padding: spacing.md,

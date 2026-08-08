@@ -7,6 +7,7 @@ import { FadeIn } from './FadeIn';
 import { MacroCalculator } from './MacroCalculator';
 import { TextField } from './TextField';
 import type { Goal, MacroResult } from '../lib/nutritionCalc';
+import { Chip, ChipRow } from './Chip';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
 
 /** Sugerencias rápidas de objetivo (calistenia) para el paso del onboarding. */
@@ -208,13 +209,13 @@ export function Onboarding({
               onChangeText={setMainGoal}
               placeholder="Ej. Conseguir mi primera dominada"
             />
-            <View style={styles.goalChips}>
+            {/* Sugerencias: rellenan el campo de arriba. Se marcan cuando el
+                texto coincide, que es lo que responde a "¿ya he elegido?". */}
+            <ChipRow>
               {GOAL_SUGGESTIONS.map((g) => (
-                <Pressable key={g} onPress={() => setMainGoal(g)} style={styles.goalChip}>
-                  <Text style={styles.goalChipText}>{g}</Text>
-                </Pressable>
+                <Chip key={g} texto={g} activo={mainGoal === g} onPress={() => setMainGoal(g)} />
               ))}
-            </View>
+            </ChipRow>
             <Button
               title="Siguiente"
               onPress={() => setStep((s) => s + 1)}
@@ -302,16 +303,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     maxWidth: 340,
   },
-  goalChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  goalChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  goalChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   dots: { flexDirection: 'row', gap: 8, marginVertical: spacing.lg },
   dot: {
     width: 8,

@@ -23,6 +23,7 @@ import { QuickSheet } from '../../../components/QuickSheet';
 import { getActiveRoutineForClient } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
+import { Chip, ChipRow } from '../../../components/Chip';
 import { inicioDeLaSemana, inicioDelDia } from '../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
@@ -297,48 +298,28 @@ export default function ClientsScreen() {
       ) : null}
 
       {clients.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterRow}
-          contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.sm }}
-        >
-          <Pressable
+        <ChipRow scroll>
+          <Chip
+            texto={sortMode === 'activity' ? 'Menos activos primero' : 'A-Z'}
+            icono="swap-vertical"
+            activo={sortMode === 'activity'}
             onPress={() => setSortMode((m) => (m === 'name' ? 'activity' : 'name'))}
-            style={[styles.filterChip, sortMode === 'activity' && styles.filterChipActive]}
-          >
-            <Ionicons
-              name="swap-vertical"
-              size={13}
-              color={sortMode === 'activity' ? colors.onPrimary : colors.textMuted}
-            />
-            <Text
-              style={[styles.filterText, sortMode === 'activity' && styles.filterTextActive]}
-            >
-              {sortMode === 'activity' ? 'Menos activos primero' : 'A-Z'}
-            </Text>
-          </Pressable>
-          <Pressable
+          />
+          <Chip
+            texto={`Todos (${clients.length})`}
+            activo={payFilter === 'all'}
             onPress={() => setPayFilter('all')}
-            style={[styles.filterChip, payFilter === 'all' && styles.filterChipActive]}
-          >
-            <Text style={[styles.filterText, payFilter === 'all' && styles.filterTextActive]}>
-              Todos ({clients.length})
-            </Text>
-          </Pressable>
+          />
           {PAYMENT_STATUSES.map((p) => (
-            <Pressable
+            <Chip
               key={p}
+              texto={`${PAYMENT_STATUS_LABEL[p]} (${payCounts[p]})`}
+              punto={PAY_TONE_COLOR[PAYMENT_STATUS_TONE[p]]}
+              activo={payFilter === p}
               onPress={() => setPayFilter((cur) => (cur === p ? 'all' : p))}
-              style={[styles.filterChip, payFilter === p && styles.filterChipActive]}
-            >
-              <View style={[styles.dot, { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[p]] }]} />
-              <Text style={[styles.filterText, payFilter === p && styles.filterTextActive]}>
-                {PAYMENT_STATUS_LABEL[p]} ({payCounts[p]})
-              </Text>
-            </Pressable>
+            />
           ))}
-        </ScrollView>
+        </ChipRow>
       ) : null}
 
       {clients.length === 0 ? (
@@ -504,21 +485,6 @@ const styles = StyleSheet.create({
   navEntryTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   navEntrySub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   search: { marginBottom: spacing.sm },
-  filterRow: { marginBottom: spacing.sm },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  filterText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  filterTextActive: { color: colors.onPrimary },
   dot: { width: 8, height: 8, borderRadius: 4 },
   payBadgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 4 },
   payBadgeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.medium, fontSize: 11 },
