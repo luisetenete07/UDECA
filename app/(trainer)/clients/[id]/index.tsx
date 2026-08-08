@@ -58,6 +58,7 @@ import {
   updateClientStatus,
 } from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
+import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { Segmented } from '../../../../components/Segmented';
 import { fechaCorta } from '../../../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
@@ -612,11 +613,13 @@ export default function ClientDetailScreen() {
         );
       })()}
 
-      <Card style={styles.section}>
-        <View style={styles.titleRow}>
-          <Ionicons name="lock-closed-outline" size={16} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Notas privadas</Text>
-        </View>
+      <CollapsibleCard
+        id="alumno-notas"
+        icon="lock-closed-outline"
+        title="Notas privadas"
+        hint={coachNote.trim() ? coachNote.trim().slice(0, 40) : 'Sin notas'}
+        defaultOpen={false}
+      >
         <Text style={styles.mutedText}>Solo tú las ves (lesiones, preferencias, objetivos…).</Text>
         <TextField
           value={coachNote}
@@ -628,7 +631,7 @@ export default function ClientDetailScreen() {
           style={{ height: 96, textAlignVertical: 'top', marginTop: spacing.sm, marginBottom: 0 }}
         />
         {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
-      </Card>
+      </CollapsibleCard>
 
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Rutina asignada</Text>
@@ -680,10 +683,15 @@ export default function ClientDetailScreen() {
         </Pressable>
       </Card>
 
-      <Card style={styles.section}>
+      <CollapsibleCard
+        id="alumno-rir"
+        icon="speedometer-outline"
+        title="Pedirle el esfuerzo (RIR)"
+        hint={client?.trackRir === true ? 'Sí' : 'No'}
+        defaultOpen={false}
+      >
         <View style={styles.rirRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>Pedirle el esfuerzo (RIR)</Text>
             <Text style={styles.mutedText}>
               Al terminar cada ejercicio le preguntamos cuántas repeticiones le quedaban. Actívalo
               solo si entiende lo que es: quien empieza lo rellena al azar, y un dato inventado es
@@ -706,11 +714,22 @@ export default function ClientDetailScreen() {
             thumbColor={colors.white}
           />
         </View>
-      </Card>
+      </CollapsibleCard>
 
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Plan nutricional</Text>
+      <CollapsibleCard
+        id="alumno-nutricion"
+        icon="nutrition-outline"
+        title="Plan nutricional"
+        hint={
+          nutritionPlan
+            ? `${nutritionPlan.dailyCalories} kcal`
+            : client.nutritionTargets
+              ? `${client.nutritionTargets.dailyCalories} kcal`
+              : 'Sin plan'
+        }
+        defaultOpen={false}
+      >
         {nutritionPlan ? (
           <>
             <Text style={styles.routineName}>{nutritionPlan.name}</Text>
@@ -740,15 +759,25 @@ export default function ClientDetailScreen() {
           onPress={() => router.push(`/(trainer)/clients/${id}/nutrition`)}
           style={{ marginTop: spacing.md }}
         />
-      </Card>
+      </CollapsibleCard>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Evolución del peso</Text>
+      <CollapsibleCard
+        id="alumno-peso"
+        icon="trending-down-outline"
+        title="Evolución del peso"
+        hint={weightLogs.length > 0 ? `${weightLogs[0].weightKg} kg` : 'Sin registros'}
+        defaultOpen={false}
+      >
         <WeightChart logs={weightLogs} />
-      </Card>
+      </CollapsibleCard>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Fotos de progreso</Text>
+      <CollapsibleCard
+        id="alumno-fotos"
+        icon="camera-outline"
+        title="Fotos de progreso"
+        hint={photos.length > 0 ? `${photos.length}` : 'Ninguna'}
+        defaultOpen={false}
+      >
         {photos.length === 0 ? (
           <Text style={styles.mutedText}>El cliente todavía no ha subido fotos.</Text>
         ) : (
@@ -763,10 +792,15 @@ export default function ClientDetailScreen() {
             ))}
           </ScrollView>
         )}
-      </Card>
+      </CollapsibleCard>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Hábitos diarios</Text>
+      <CollapsibleCard
+        id="alumno-habitos"
+        icon="checkmark-done-outline"
+        title="Hábitos diarios"
+        hint={habits.length > 0 ? `${habits.length}` : 'Ninguno'}
+        defaultOpen={false}
+      >
         <Text style={styles.mutedText}>
           Asigna hábitos que el alumno marcará cada día desde su inicio.
         </Text>
@@ -799,10 +833,15 @@ export default function ClientDetailScreen() {
             disabled={!newHabit.trim()}
           />
         </View>
-      </Card>
+      </CollapsibleCard>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Actividad (12 semanas)</Text>
+      <CollapsibleCard
+        id="alumno-actividad"
+        icon="pulse-outline"
+        title="Actividad (12 semanas)"
+        hint={`${workoutLogs.length}`}
+        defaultOpen={false}
+      >
         <Text style={styles.mutedText}>Cada punto dorado es un día entrenado.</Text>
         <View style={{ marginTop: spacing.sm }}>
           <ConsistencyMap days={trainingDays(workoutLogs)} />
@@ -889,10 +928,15 @@ export default function ClientDetailScreen() {
             </>
           );
         })()}
-      </Card>
+      </CollapsibleCard>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Check-ins semanales</Text>
+      <CollapsibleCard
+        id="alumno-checkins"
+        icon="clipboard-outline"
+        title="Check-ins semanales"
+        hint={checkIns.length > 0 ? `${checkIns.length}` : 'Ninguno'}
+        defaultOpen={false}
+      >
         {checkIns.length === 0 ? (
           <Text style={styles.mutedText}>Todavía no ha enviado ningún check-in.</Text>
         ) : (
@@ -917,10 +961,15 @@ export default function ClientDetailScreen() {
             </View>
           ))
         )}
-      </Card>
+      </CollapsibleCard>
 
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Historial de entrenamientos</Text>
+      <CollapsibleCard
+        id="alumno-historial"
+        icon="time-outline"
+        title="Historial de entrenamientos"
+        hint={workoutLogs.length > 0 ? `${workoutLogs.length}` : 'Vacío'}
+        defaultOpen={false}
+      >
         {workoutLogs.length === 0 ? (
           <Text style={styles.mutedText}>Todavía no ha registrado entrenamientos.</Text>
         ) : (
@@ -942,7 +991,7 @@ export default function ClientDetailScreen() {
             </Pressable>
           ))
         )}
-      </Card>
+      </CollapsibleCard>
 
       <Button
         title="Compartir resumen (imagen)"
@@ -952,8 +1001,12 @@ export default function ClientDetailScreen() {
         style={{ marginBottom: spacing.md }}
       />
 
-      <Card style={[styles.section, styles.dangerZone]}>
-        <Text style={styles.sectionTitle}>Gestión del alumno</Text>
+      <CollapsibleCard
+        id="alumno-gestion"
+        icon="person-remove-outline"
+        title="Gestión del alumno"
+        defaultOpen={false}
+      >
         <Text style={styles.mutedText}>
           Sácalo de tu grupo para que deje de aparecer en tus clientes. No se
           borra su cuenta ni su historial; podrá vincularse a otro entrenador
@@ -979,8 +1032,7 @@ export default function ClientDetailScreen() {
             style={{ marginTop: spacing.sm }}
           />
         ) : null}
-      </Card>
-
+      </CollapsibleCard>
     </ScreenContainer>
   );
 }
@@ -1102,7 +1154,6 @@ const styles = StyleSheet.create({
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
-  dangerZone: { borderColor: colors.danger, borderWidth: 1, marginBottom: spacing.xl },
   confirmText: {
     ...typography.small,
     color: colors.danger,
