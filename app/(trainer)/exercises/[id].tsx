@@ -19,7 +19,7 @@ import { showToast } from '../../../components/Toast';
 import { ListaRadio } from '../../../components/ListaRadio';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { Dialogo } from '../../../components/Dialogo';
-import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
+import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
   EXERCISE_MEASURES,
   isDualMeasure,
@@ -449,12 +449,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   borrarEnlaceTexto: { ...typography.small, color: colors.textFaint },
-  label: {
-    ...typography.label,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-  },
+  label: fieldLabel,
   catHeader: {
     flexDirection: 'row',
     alignItems: 'center',

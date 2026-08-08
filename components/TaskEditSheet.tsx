@@ -7,7 +7,7 @@ import { showToast } from './Toast';
 import { deleteCoachTask, updateCoachTask } from '../lib/firestore/coachTasks';
 import { Segmented } from './Segmented';
 import { Sheet } from './Sheet';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fieldLabel, fonts, radius, spacing, typography } from '../lib/theme';
 import { TASK_SCOPE_LABEL, type CoachTask, type TaskScope } from '../lib/types';
 
 const MOVE_SCOPES: TaskScope[] = ['day', 'week', 'month'];
@@ -125,7 +125,7 @@ export function TaskEditSheet({ task, onClose, onChanged }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase', marginBottom: spacing.xs },
+  label: fieldLabel,
   flagRow: {
     flexDirection: 'row',
     alignItems: 'center',

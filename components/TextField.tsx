@@ -10,7 +10,7 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fieldLabel, fonts, radius, spacing, typography } from '../lib/theme';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
@@ -102,12 +102,7 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.md,
   },
-  label: {
-    ...typography.label,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-  },
+  label: fieldLabel,
   input: {
     minHeight: 52,
     backgroundColor: colors.surfaceAlt,

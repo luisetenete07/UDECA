@@ -19,7 +19,7 @@ import {
   getRememberedAccounts,
   type RememberedAccount,
 } from '../../lib/rememberedAccounts';
-import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
+import { colors, fieldLabel, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -208,12 +208,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  pickTitle: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-  },
+  pickTitle: fieldLabel,
   accRow: {
     flexDirection: 'row',
     alignItems: 'center',

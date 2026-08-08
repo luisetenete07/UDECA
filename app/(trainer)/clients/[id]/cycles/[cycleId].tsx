@@ -28,7 +28,7 @@ import { buildBlockView } from '../../../../../lib/blockView';
 import { mayusculaInicial } from '../../../../../lib/fechas';
 import { diaMes } from '../../../../../lib/fechas';
 import { Dialogo } from '../../../../../components/Dialogo';
-import { colors, fonts, radius, spacing, typography } from '../../../../../lib/theme';
+import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
   type Routine,
@@ -461,12 +461,7 @@ const styles = StyleSheet.create({
   dates: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   tilesRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   section: { marginTop: spacing.md },
-  sectionLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-  },
+  sectionLabel: fieldLabel,
   goalText: { ...typography.body, color: colors.text },
   notesText: { ...typography.body, color: colors.textMuted, lineHeight: 21 },
   mutedText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },

@@ -54,6 +54,7 @@ import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
 import { weekComparison } from '../../lib/stats';
+import { Sheet } from '../../components/Sheet';
 import { fonts, colors, radius, spacing, typography, tabularNums } from '../../lib/theme';
 import {
   PAYMENT_STATUSES,
@@ -1129,20 +1130,11 @@ export default function TrainerDashboard() {
       </FadeIn>
 
       {/* Lista de alumnos con pago pendiente/vencido (desde la alerta roja). */}
-      <Modal
+      <Sheet
         visible={payListOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setPayListOpen(false)}
+        onClose={() => setPayListOpen(false)}
+        titulo={`Pagos pendientes (${duePayClients.length})`}
       >
-        <View style={styles.payBackdrop}>
-          <View style={styles.paySheet}>
-            <View style={styles.payHeader}>
-              <Text style={styles.sectionTitle}>Pagos pendientes ({duePayClients.length})</Text>
-              <Pressable onPress={() => setPayListOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
             {duePayClients.length === 0 ? (
               <Text style={styles.mutedText}>No hay pagos pendientes.</Text>
             ) : (
@@ -1193,34 +1185,17 @@ export default function TrainerDashboard() {
               }}
               style={{ marginTop: spacing.md }}
             />
-          </View>
-        </View>
-      </Modal>
+      </Sheet>
 
       {/* Gestión de ingresos del mes: ver, corregir importe o eliminar un pago. */}
-      <Modal
+      <Sheet
         visible={incomeOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
+        onClose={() => {
           setIncomeOpen(false);
           setEditPayId(null);
         }}
+        titulo="Ingresos"
       >
-        <View style={styles.payBackdrop}>
-          <View style={styles.paySheet}>
-            <View style={styles.payHeader}>
-              <Text style={styles.sectionTitle}>Ingresos</Text>
-              <Pressable
-                onPress={() => {
-                  setIncomeOpen(false);
-                  setEditPayId(null);
-                }}
-                hitSlop={8}
-              >
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
             {/* Conmutador: ingresos del mes o historial completo. */}
             <View style={styles.scopeSeg}>
               {(['month', 'all'] as const).map((sc) => (
@@ -1280,25 +1255,14 @@ export default function TrainerDashboard() {
                 ))}
               </ScrollView>
             )}
-          </View>
-        </View>
-      </Modal>
+      </Sheet>
 
       {/* Lista de renovaciones previstas en los próximos 30 días. */}
-      <Modal
+      <Sheet
         visible={upcomingOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setUpcomingOpen(false)}
+        onClose={() => setUpcomingOpen(false)}
+        titulo={`Previsto 30 días (${projected30} €)`}
       >
-        <View style={styles.payBackdrop}>
-          <View style={styles.paySheet}>
-            <View style={styles.payHeader}>
-              <Text style={styles.sectionTitle}>Previsto 30 días ({projected30} €)</Text>
-              <Pressable onPress={() => setUpcomingOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
             {upcoming.length === 0 ? (
               <Text style={styles.mutedText}>No hay renovaciones previstas en 30 días.</Text>
             ) : (
@@ -1334,9 +1298,7 @@ export default function TrainerDashboard() {
                   ))}
               </ScrollView>
             )}
-          </View>
-        </View>
-      </Modal>
+      </Sheet>
 
     </ScreenContainer>
   );
@@ -1577,22 +1539,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   dueText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold, flex: 1 },
-  payBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
-  paySheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    maxHeight: '80%',
-  },
-  payHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
   payRow: {
     flexDirection: 'row',
     alignItems: 'center',

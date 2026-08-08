@@ -11,7 +11,7 @@ import { suggestProgression } from '../lib/planTemplates';
 import { exerciseNames, semanaAnterior, weekPlanDraft } from '../lib/weekPlan';
 import { Chip, ChipRow } from './Chip';
 import { Sheet } from './Sheet';
-import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
+import { colors, fieldLabel, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { Routine, TrainingCycle, WeekPlanEntry } from '../lib/types';
 
 /**
@@ -333,12 +333,7 @@ const styles = StyleSheet.create({
   nota: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm },
   toolRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   tambien: { marginTop: spacing.md },
-  label: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
-  },
+  label: fieldLabel,
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   resetBtn: { alignSelf: 'center', marginTop: spacing.md, padding: spacing.sm },
   resetText: { ...typography.small, color: colors.danger },

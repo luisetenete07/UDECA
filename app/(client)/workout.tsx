@@ -67,6 +67,7 @@ import {
   type LastPerformance,
   type PersonalRecord,
 } from '../../lib/stats';
+import { Sheet } from '../../components/Sheet';
 import { Chip, ChipRow } from '../../components/Chip';
 import { minutosSegundos } from '../../lib/duracion';
 import { esMismoDia, inicioDelDia } from '../../lib/fechas';
@@ -1489,36 +1490,22 @@ export default function WorkoutScreen() {
       ) : null}
 
       {/* Fijar qué día del ciclo es HOY (plan desactualizado o día pospuesto). */}
-      <Modal
+      <Sheet
         visible={dayPickerOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setDayPickerOpen(false)}
+        onClose={() => setDayPickerOpen(false)}
+        titulo="¿Qué día del plan es hoy?"
+        descripcion="Si pospusiste un entreno o el plan va desfasado, elige el día que te toca hoy y toda la programación se recoloca desde ahí."
       >
-        <View style={styles.dayPickerBackdrop}>
-          <View style={styles.dayPickerSheet}>
-            <View style={styles.dayPickerHeader}>
-              <Text style={styles.dayPickerTitle}>¿Qué día del plan es hoy?</Text>
-              <Pressable onPress={() => setDayPickerOpen(false)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
-            <Text style={styles.dayPickerHint}>
-              Si pospusiste un entreno o el plan va desfasado, elige el día que te toca hoy y toda
-              la programación se recoloca desde ahí.
-            </Text>
-            {routine.days.map((d, i) => (
-              <Button
-                key={d.id}
-                title={`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? ' (descanso)' : ''}`}
-                variant={todaySession.cycleIndex === i ? 'primary' : 'secondary'}
-                onPress={() => handleSetTodayIndex(i)}
-                style={{ marginTop: spacing.sm }}
-              />
-            ))}
-          </View>
-        </View>
-      </Modal>
+        {routine.days.map((d, i) => (
+          <Button
+            key={d.id}
+            title={`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? ' (descanso)' : ''}`}
+            variant={todaySession.cycleIndex === i ? 'primary' : 'secondary'}
+            onPress={() => handleSetTodayIndex(i)}
+            style={{ marginTop: spacing.sm }}
+          />
+        ))}
+      </Sheet>
 
       {showOptionalChoice ? (
         <FadeIn>
@@ -2129,28 +2116,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   exitText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  dayPickerBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: colors.scrim,
-  },
-  dayPickerSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderTopWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    maxHeight: '80%',
-  },
-  dayPickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  dayPickerTitle: { ...typography.h3, color: colors.text },
-  dayPickerHint: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
   exitBackdrop: {
     flex: 1,
     justifyContent: 'center',

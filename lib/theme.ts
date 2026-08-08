@@ -153,6 +153,21 @@ export const typography = {
 };
 
 /**
+ * El rótulo que va encima de un campo: "CUOTA MENSUAL", "SE MIDE EN", "NIVEL".
+ *
+ * Estaba escrito a mano doce veces —siempre `label` + `textMuted` + mayúsculas—
+ * y el hueco de debajo se había ido separando: en nueve sitios `xs` y en tres
+ * `sm`. Son cuatro píxeles, pero al desplazar una pantalla con varios campos se
+ * nota como una rejilla que baila.
+ */
+export const fieldLabel = {
+  ...typography.label,
+  color: colors.textMuted,
+  textTransform: 'uppercase' as const,
+  marginBottom: spacing.xs,
+};
+
+/**
  * Filo de luz superior de las superficies. Imita luz cenital sobre un material
  * real: es lo que separa una tarjeta "premium" de un rectángulo gris.
  */

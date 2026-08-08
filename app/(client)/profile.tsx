@@ -29,7 +29,7 @@ import {
   type Achievement,
 } from '../../lib/stats';
 import { Chip, ChipRow } from '../../components/Chip';
-import { colors, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
+import { colors, fieldLabel, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import { EXPERIENCE_LEVELS, type ExperienceLevel } from '../../lib/types';
 
 const REMINDER_PRESETS = [
@@ -504,12 +504,7 @@ const styles = StyleSheet.create({
   badgeTitleOff: { color: colors.textFaint },
   badgeDesc: { ...typography.small, color: colors.textFaint, textAlign: 'center', fontSize: 11 },
   textarea: { height: 78, textAlignVertical: 'top' },
-  fieldLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-  },
+  fieldLabel: fieldLabel,
   savedText: { ...typography.small, color: colors.primary, marginBottom: spacing.sm },
   nameHintRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.md },
   nameHint: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 17 },

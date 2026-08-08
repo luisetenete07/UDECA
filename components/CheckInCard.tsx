@@ -7,7 +7,7 @@ import { TextField } from './TextField';
 import { createCheckIn } from '../lib/firestore/checkins';
 import { notifyUser } from '../lib/notifications';
 import { showToast } from './Toast';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fieldLabel, fonts, radius, spacing, typography } from '../lib/theme';
 import { CHECKIN_FIELDS, type UserProfile } from '../lib/types';
 
 type Ratings = { energy: number; sleep: number; adherence: number; soreness: number };
@@ -134,12 +134,7 @@ const styles = StyleSheet.create({
   title: { ...typography.h3, color: colors.text },
   subtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   fieldRow: { marginBottom: spacing.sm },
-  fieldLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
-  },
+  fieldLabel: fieldLabel,
   dots: { flexDirection: 'row', gap: spacing.xs },
   dot: {
     flex: 1,

@@ -22,7 +22,7 @@ import { MUSCLE_LABEL, musclesForExercise, type MuscleId } from '../../../lib/mu
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { ListaRadio } from '../../../components/ListaRadio';
 import { Chip } from '../../../components/Chip';
-import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
+import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
   EXERCISE_MEASURES,
   MEASURE_LABEL,
@@ -476,12 +476,7 @@ const styles = StyleSheet.create({
   itemCard: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   itemName: { ...typography.h3, color: colors.text },
   itemMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  label: {
-    ...typography.label,
-    color: colors.textMuted,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-  },
+  label: fieldLabel,
   chips: { marginBottom: spacing.md },
   musclesHead: {
     flexDirection: 'row',
