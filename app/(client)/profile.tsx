@@ -444,26 +444,6 @@ export default function ClientProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  vitrina: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  vitrinaItem: { flex: 1, alignItems: 'center', gap: 2 },
-  vitrinaSep: { width: 1, height: 34, backgroundColor: colors.border },
-  vitrinaCifra: {
-    ...typography.hero,
-    color: colors.text,
-    ...tabularNums,
-  },
-  vitrinaEtiqueta: {
-    fontSize: 11,
-    color: colors.textFaint,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
   borrarCuenta: { alignSelf: 'center', paddingVertical: spacing.lg },
   borrarCuentaTexto: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
   hero: { alignItems: 'center', marginBottom: spacing.lg },
@@ -496,10 +476,8 @@ const styles = StyleSheet.create({
     color: colors.primary,
     textTransform: 'uppercase',
   },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text },
-  sectionSub: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md },
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   badge: {
     width: '30%',
@@ -533,7 +511,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   savedText: { ...typography.small, color: colors.primary, marginBottom: spacing.sm },
-  inputLocked: { opacity: 0.55 },
   nameHintRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.md },
   nameHint: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 17 },
   reminderTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

@@ -2308,20 +2308,6 @@ const styles = StyleSheet.create({
   },
   exerciseName: { ...typography.h3, color: colors.text, flex: 1 },
   exerciseNameCurrent: { color: colors.primaryBright },
-  nowChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  nowChipText: {
-    fontSize: 10,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 1.2,
-    color: colors.primaryBright,
-  },
   prevRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm },
   prevText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
   supersetRow: {
@@ -2550,12 +2536,6 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     textAlign: 'center',
     marginTop: spacing.md,
-  },
-  retrainLink: { alignSelf: 'center', paddingVertical: spacing.sm, marginTop: spacing.xs },
-  retrainText: {
-    ...typography.small,
-    color: colors.textMuted,
-    textDecorationLine: 'underline',
   },
   againLink: {
     flexDirection: 'row',

@@ -906,13 +906,6 @@ const styles = StyleSheet.create({
   },
   selectedDate: { ...typography.h3, color: colors.text, flexShrink: 1 },
   noEvents: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
-  dayGroup: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  dayCol: { width: 40, alignItems: 'center', paddingTop: 2 },
-  dayNum: { ...typography.h2, color: colors.text, fontFamily: fonts.heading, fontSize: 22 },
-  dayNumToday: { color: colors.primaryBright },
-  dayWk: { ...typography.small, color: colors.textFaint, fontSize: 11, textTransform: 'uppercase' },
-  dayWkToday: { color: colors.primary },
-  dayEvents: { flex: 1, gap: spacing.sm },
   todayTag: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 10, letterSpacing: 1 },
   event: {
     flexDirection: 'row',
@@ -925,7 +918,6 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
     overflow: 'hidden',
   },
-  eventPast: { opacity: 0.55 },
   eventBar: { width: 4, alignSelf: 'stretch' },
   eventIcon: {
     width: 34,

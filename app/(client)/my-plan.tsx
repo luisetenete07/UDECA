@@ -776,7 +776,6 @@ export default function MyPlanScreen() {
 const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text },
   subtitle: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
-  dim: { opacity: 0.3 },
   starterCard: { marginBottom: spacing.md },
   starterTitle: { ...typography.h3, color: colors.text },
   starterHint: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.sm },

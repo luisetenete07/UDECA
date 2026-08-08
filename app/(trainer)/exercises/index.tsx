@@ -938,14 +938,6 @@ function normalizeHex(input: string): string | null {
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  headerText: { flex: 1, minWidth: 130 },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -989,7 +981,6 @@ const styles = StyleSheet.create({
   },
   catLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   catEdit: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  catWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
   catColorHint: {
     ...typography.small,
     color: colors.textMuted,
@@ -1045,19 +1036,6 @@ const styles = StyleSheet.create({
   catRowDragging: { borderColor: colors.hairline },
   dragHandle: { padding: spacing.xs },
   catRowText: { ...typography.body, color: colors.text, flex: 1 },
-  catChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  catChipText: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  catX: { marginLeft: -2, marginRight: -4 },
   addCatRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   addCatInput: {
     flex: 1,
@@ -1099,8 +1077,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlignVertical: 'top',
   },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted },
   // La separación entre tarjetas la pone la rejilla, no la tarjeta.
   exerciseCard: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   exerciseName: { ...typography.h3, color: colors.text },

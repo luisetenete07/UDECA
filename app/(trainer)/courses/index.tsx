@@ -127,9 +127,6 @@ export default function TrainerCoursesScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.body, color: colors.textMuted },
   cardDragging: { borderColor: colors.hairline },
   dragHandle: { padding: spacing.xs },
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },

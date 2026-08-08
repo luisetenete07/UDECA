@@ -58,6 +58,7 @@ import {
   updateClientStatus,
 } from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
+import { Segmented } from '../../../../components/Segmented';
 import { fechaCorta } from '../../../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
 import {
@@ -417,19 +418,13 @@ export default function ClientDetailScreen() {
 
       {client.bio ? <Text style={styles.bio}>{client.bio}</Text> : null}
 
-      <View style={styles.statusRow}>
-        {CLIENT_STATUSES.map((s) => (
-          <Pressable
-            key={s}
-            onPress={() => handleSetStatus(s)}
-            style={[styles.statusChip, currentStatus === s && styles.statusChipActive]}
-          >
-            <Text style={[styles.statusText, currentStatus === s && styles.statusTextActive]}>
-              {CLIENT_STATUS_LABEL[s]}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      {/* Activo / En pausa / Inactivo: tres opciones excluyentes, o sea el
+          mismo control que en el resto de la app. */}
+      <Segmented
+        opciones={CLIENT_STATUSES.map((s) => ({ valor: s, texto: CLIENT_STATUS_LABEL[s] }))}
+        valor={currentStatus}
+        onChange={handleSetStatus}
+      />
 
       <Card style={styles.section}>
         <View style={styles.titleRow}>
@@ -1025,19 +1020,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: spacing.md,
   },
-  statusRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  statusChip: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-  },
-  statusChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  statusText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  statusTextActive: { color: colors.onPrimary },
   reportedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1166,47 +1148,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     marginTop: spacing.sm,
   },
-  testAddRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  testValueField: { width: 72, marginBottom: 0, textAlign: 'center' },
-  testUnitBtn: {
-    paddingHorizontal: spacing.sm,
-    height: 44,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 52,
-  },
-  testUnitText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
-  testRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginTop: spacing.sm,
-  },
-  testValue: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
-  templateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
-  templateChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  templateChipSent: { borderColor: colors.success, backgroundColor: colors.primaryMuted },
-  templateChipText: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, fontSize: 12 },
-  templateChipTextSent: { color: colors.success },
   habitAddRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',

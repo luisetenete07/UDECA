@@ -1410,10 +1410,6 @@ const styles = StyleSheet.create({
   },
   pulseActionText: { ...typography.small, color: colors.warning, flex: 1 },
   pulseBig: { ...typography.h2, color: colors.text, marginTop: 2, marginBottom: 2 },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
-  greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
-  greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   stepRow: {
     flexDirection: 'row',
@@ -1487,7 +1483,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   quickBadgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.semiBold },
-  quickBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
   section: { marginBottom: spacing.md },
   revenueRow: { flexDirection: 'row', gap: spacing.sm },
   revenueBox: {
@@ -1620,7 +1615,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successMuted,
   },
   confirmPayText: { ...typography.small, color: colors.success, fontFamily: fonts.semiBold, fontSize: 12 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
   sectionTitle: { ...typography.h3, color: colors.text },
   subtleHint: { ...typography.small, color: colors.textFaint, marginTop: -spacing.xs, marginBottom: spacing.sm },
@@ -1632,7 +1626,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  reminderBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   requestRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1663,6 +1656,5 @@ const styles = StyleSheet.create({
   },
   logClient: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   logDetail: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  alertText: { ...typography.small, color: colors.warning, marginTop: 2 },
   mutedText: { ...typography.small, color: colors.textFaint },
 });

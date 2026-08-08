@@ -1596,14 +1596,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   dayIntensityControls: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  intensityLabel: {
-    ...typography.label,
-    color: colors.primaryBright,
-    textTransform: 'uppercase',
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-  },
-  intensityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   stepBtn: {
     width: 34,
     height: 34,
@@ -1672,13 +1664,11 @@ const styles = StyleSheet.create({
   },
   moveDayBtn: { paddingHorizontal: 4 },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  dayNameInput: { flex: 1, marginBottom: 0 },
   removeDayBtn: { paddingHorizontal: spacing.sm },
   dayHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dayHeaderMain: { flex: 1, paddingVertical: spacing.xs },
   dayTitle: { ...typography.h3, color: colors.text },
   daySummary: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  removeDayText: { ...typography.small, color: colors.danger },
   weekdayRow: { marginTop: spacing.sm, marginBottom: spacing.sm },
   weekdayHeadRow: {
     flexDirection: 'row',
