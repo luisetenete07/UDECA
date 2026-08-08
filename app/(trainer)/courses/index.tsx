@@ -101,16 +101,29 @@ export default function TrainerCoursesScreen() {
                     <Ionicons name="play-circle" size={26} color={colors.primary} />
                   </View>
                 )}
+                {/* El distintivo iba a la derecha del título y le robaba el
+                    ancho: "Planche desde cero" se partía en dos líneas y el
+                    recuento en otras dos. Abajo, junto al recuento, cabe todo
+                    en una tarjeta de dos líneas. */}
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.courseTitle}>{course.title}</Text>
-                  <Text style={styles.courseMeta}>
-                    {course.sections.length} secciones · {leccionesContables(course).length} lecciones
+                  <Text style={styles.courseTitle} numberOfLines={1}>
+                    {course.title}
                   </Text>
-                </View>
-                <View style={[styles.badge, course.published ? styles.badgeOn : styles.badgeOff]}>
-                  <Text style={[styles.badgeText, course.published && styles.badgeTextOn]}>
-                    {course.published ? 'Publicado' : 'Borrador'}
-                  </Text>
+                  <View style={styles.metaFila}>
+                    {/* Solo las lecciones. Con el distintivo al lado no cabían
+                        las dos cifras y "2 secciones · 5 l…" se cortaba; las
+                        secciones se ven al abrir el curso, que es cuando
+                        importan. Es además lo mismo que ve el alumno. */}
+                    <Text style={styles.courseMeta} numberOfLines={1}>
+                      {leccionesContables(course).length}{' '}
+                      {leccionesContables(course).length === 1 ? 'lección' : 'lecciones'}
+                    </Text>
+                    <View style={[styles.badge, course.published ? styles.badgeOn : styles.badgeOff]}>
+                      <Text style={[styles.badgeText, course.published && styles.badgeTextOn]}>
+                        {course.published ? 'Publicado' : 'Borrador'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
                 {/* Asa para reordenar: mantener pulsado aquí y mover. Va
                     aparte porque tocar la tarjeta abre el curso. */}
@@ -140,7 +153,14 @@ const styles = StyleSheet.create({
   },
   cover: { width: 68, height: 44, borderRadius: radius.sm },
   courseTitle: { ...typography.h3, color: colors.text },
-  courseMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  courseMeta: { ...typography.small, color: colors.textMuted, flexShrink: 1 },
+  metaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginTop: 4,
+  },
   badge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,

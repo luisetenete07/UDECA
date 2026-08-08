@@ -126,6 +126,9 @@ export default function MyPlanScreen() {
     d.setHours(0, 0, 0, 0);
     return d.getTime();
   });
+  // Qué días están desplegados. Todos cerrados al entrar, igual que en el
+  // editor del coach: son el mismo editor con el mismo gesto, y abrir el
+  // primero llenaba la pantalla de campos antes de saber qué se venía a tocar.
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [restText, setRestText] = useState<Record<string, string>>({});
   // Ejercicio cuyo selector de categoría está abierto. Los demás la enseñan
@@ -338,7 +341,7 @@ export default function MyPlanScreen() {
         handleOnly
         onReorder={(from, to) => setDays((prev) => moveItem(prev, from, to))}
         renderItem={(day, di, arrastrando, asa) => {
-        const isOpen = expanded[day.id] ?? di === 0;
+        const isOpen = expanded[day.id] ?? false;
         const total = day.exercises.reduce((a, e) => a + (e.sets || 0), 0);
         const summary = day.isRest
           ? 'Descanso'

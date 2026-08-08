@@ -15,7 +15,7 @@ import {
   leccionesContables,
   type LessonsSeen,
 } from '../../../lib/courseProgress';
-import { colors, radius, spacing, typography } from '../../../lib/theme';
+import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { Course } from '../../../lib/types';
 
 export default function ClientCoursesScreen() {
@@ -100,6 +100,15 @@ export default function ClientCoursesScreen() {
                         ? 'Completado'
                         : `${estado.hechas} de ${estado.total} lecciones`}
                     </Text>
+                    {/* Qué toca ahora. `estadoDeCurso` ya lo sabía y esta
+                        pantalla no lo usaba: para retomar un curso había que
+                        entrar y buscar entre las secciones cuál era la primera
+                        sin marcar. Dicho aquí, el curso se retoma sin pensar. */}
+                    {estado.siguiente ? (
+                      <Text style={styles.siguiente} numberOfLines={1}>
+                        Sigues por: {estado.siguiente.title}
+                      </Text>
+                    ) : null}
                   </>
                 ) : (
                   <Text style={styles.courseMeta}>
@@ -139,6 +148,13 @@ const styles = StyleSheet.create({
   },
   courseTitle: { ...typography.h3, color: colors.text },
   courseDesc: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  siguiente: {
+    ...typography.small,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+    fontSize: 12,
+    marginTop: 3,
+  },
   courseMeta: { ...typography.small, color: colors.textFaint, marginTop: 4 },
   barra: {
     height: 4,
