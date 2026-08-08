@@ -337,6 +337,16 @@ export function hasSecondMark(m?: ExerciseMeasure): boolean {
  */
 export type ExerciseLoad = 'none' | 'weighted' | 'assisted';
 
+/** Cómo se llama cada carga en pantalla. Estaba escrita en los dos editores
+ *  de rutina; vive aquí, junto al tipo, para que no puedan discrepar. */
+export const LOAD_LABEL: Record<ExerciseLoad, string> = {
+  none: 'Normal',
+  weighted: 'Lastrado',
+  assisted: 'Goma',
+};
+
+export const LOAD_TYPES: ExerciseLoad[] = ['none', 'weighted', 'assisted'];
+
 /** Deriva la carga admitiendo datos antiguos (band = asistido con goma). */
 export function resolveLoad(x: { load?: ExerciseLoad; band?: boolean }): ExerciseLoad {
   if (x.load) return x.load;

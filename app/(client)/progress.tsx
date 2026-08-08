@@ -57,6 +57,7 @@ import {
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
 import { confirmar } from '../../lib/confirmar';
+import { Chip, ChipRow } from '../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
 import {
   setMarks,
@@ -722,22 +723,16 @@ export default function ProgressScreen() {
                 para seguirla o dejar de seguirla.
               </Text>
               {gruposDisponibles.length > 0 ? (
-                <View style={styles.groupPicker}>
-                  {gruposDisponibles.map((g) => {
-                    const on = gruposMostrados.includes(g);
-                    return (
-                      <Pressable
-                        key={g}
-                        onPress={() => alternarGrupo(g)}
-                        style={[styles.groupChip, on && styles.groupChipOn]}
-                      >
-                        <Text style={[styles.groupChipText, on && styles.groupChipTextOn]}>
-                          {g}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                <ChipRow>
+                  {gruposDisponibles.map((g) => (
+                    <Chip
+                      key={g}
+                      texto={g}
+                      activo={gruposMostrados.includes(g)}
+                      onPress={() => alternarGrupo(g)}
+                    />
+                  ))}
+                </ChipRow>
               ) : null}
               {gruposMostrados.length === 0 ? (
                 <Text style={styles.photoHint}>
@@ -1095,23 +1090,6 @@ const styles = StyleSheet.create({
   },
   navTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   navHint: { ...typography.small, color: colors.textMuted, marginTop: 1 },
-  groupPicker: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  groupChip: {
-    paddingVertical: 6,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  groupChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  groupChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  groupChipTextOn: { color: colors.onPrimary },
   fullSheet: { flex: 1, backgroundColor: colors.background },
   fullHeader: {
     flexDirection: 'row',

@@ -9,6 +9,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { DragList } from '../../components/DragList';
 import { moveItem } from '../../lib/useDragReorder';
 import { ajustaPct } from '../../lib/intensidad';
+import { Opciones } from '../../components/Opciones';
 import { Segmented } from '../../components/Segmented';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
@@ -27,20 +28,22 @@ import {
   CLUSTER_DEFAULT,
   clusterBlocks,
   EXERCISE_MEASURES,
+  type ExerciseLoad,
+  type ExerciseMeasure,
   GRIP_LABEL,
   GRIP_TYPES,
   isDualMeasure,
   isHoldMeasure,
+  LOAD_LABEL,
+  LOAD_TYPES,
   MEASURE_SHORT,
   MUSCLE_GROUPS,
   resolveLoad,
-  WEEKDAY_LABELS,
-  type ExerciseLoad,
-  type ExerciseMeasure,
   type Routine,
   type RoutineDay,
   type RoutineExercise,
   type RoutineSchedule,
+  WEEKDAY_LABELS,
 } from '../../lib/types';
 
 const slug = (s: string) =>
@@ -53,12 +56,6 @@ const slug = (s: string) =>
     .replace(/(^-|-$)/g, '');
 
 /** Variantes de carga (calistenia): normal / lastrado / con goma. */
-const LOAD_OPTIONS: { key: ExerciseLoad; label: string }[] = [
-  { key: 'none', label: 'Normal' },
-  { key: 'weighted', label: 'Lastrado' },
-  { key: 'assisted', label: 'Goma' },
-];
-
 function newExercise(name = '', measure: ExerciseMeasure = 'reps', reps = '10'): RoutineExercise {
   return { id: nuevoId(), exerciseId: slug(name), name, sets: 4, reps, measure, load: 'none' };
 }
@@ -524,75 +521,35 @@ export default function MyPlanScreen() {
                         ) : (
                           <>
                             <Text style={styles.fieldLabel}>Categoría</Text>
-                            <View style={styles.groupWrap}>
-                              {MUSCLE_GROUPS.map((g) => {
-                                const active = exx.muscleGroup === g;
-                                return (
-                                  <Pressable
-                                    key={g}
-                                    onPress={() => {
-                                      patchEx(di, ei, { muscleGroup: active ? undefined : g });
-                                      setCategoriaAbierta(active ? exx.id : null);
-                                    }}
-                                    style={[styles.groupChip, active && styles.loadChipActive]}
-                                    hitSlop={2}
-                                  >
-                                    <Text
-                                      style={[
-                                        styles.loadChipText,
-                                        active && styles.loadChipTextActive,
-                                      ]}
-                                    >
-                                      {g}
-                                    </Text>
-                                  </Pressable>
-                                );
-                              })}
-                            </View>
+                            <Opciones
+                              opciones={MUSCLE_GROUPS.map((g) => ({ valor: g, texto: g }))}
+                              valor={exx.muscleGroup}
+                              desmarcable
+                              envuelve
+                              onChange={(g) => {
+                                patchEx(di, ei, { muscleGroup: g });
+                                setCategoriaAbierta(g ? null : exx.id);
+                              }}
+                            />
                           </>
                         )}
 
-                        <View style={styles.loadRow}>
-                          {LOAD_OPTIONS.map((opt) => {
-                            const active = resolveLoad(exx) === opt.key;
-                            return (
-                              <Pressable
-                                key={opt.key}
-                                onPress={() =>
-                                  patchEx(di, ei, { load: opt.key, band: opt.key === 'assisted' })
-                                }
-                                style={[styles.loadChip, active && styles.loadChipActive]}
-                                hitSlop={2}
-                              >
-                                <Text style={[styles.loadChipText, active && styles.loadChipTextActive]}>
-                                  {opt.label}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
+                        <Opciones
+                          opciones={LOAD_TYPES.map((l) => ({ valor: l, texto: LOAD_LABEL[l] }))}
+                          valor={resolveLoad(exx)}
+                          onChange={(v) =>
+                            patchEx(di, ei, { load: v, band: v === 'assisted' })
+                          }
+                        />
 
                         {/* Agarre de ESTE ejercicio en ESTE día. Volver a
                             tocarlo lo deja sin especificar. */}
-                        <View style={styles.loadRow}>
-                          {GRIP_TYPES.map((g) => {
-                            const active = exx.grip === g;
-                            return (
-                              <Pressable
-                                key={g}
-                                onPress={() =>
-                                  patchEx(di, ei, { grip: active ? undefined : g })
-                                }
-                                style={[styles.loadChip, active && styles.loadChipActive]}
-                                hitSlop={2}
-                              >
-                                <Text style={[styles.loadChipText, active && styles.loadChipTextActive]}>
-                                  {GRIP_LABEL[g]}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
-                        </View>
+                        <Opciones
+                          opciones={GRIP_TYPES.map((g) => ({ valor: g, texto: GRIP_LABEL[g] }))}
+                          valor={exx.grip}
+                          desmarcable
+                          onChange={(grip) => patchEx(di, ei, { grip })}
+                        />
 
                         <View style={styles.exFields}>
                           <View style={styles.field}>
@@ -920,10 +877,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 8,
   },
-  loadRow: { flexDirection: 'row', gap: spacing.xs },
-  // Las categorías son muchas: se envuelven en varias líneas en vez de
-  // repartirse a la fuerza en una sola, donde los nombres se parten.
-  groupWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   catTag: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -937,26 +890,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   catTagText: { ...typography.small, color: colors.primary, fontSize: 12, fontFamily: fonts.semiBold },
-  groupChip: {
-    paddingVertical: 7,
-    paddingHorizontal: spacing.sm + 2,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  loadChip: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-  },
-  loadChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  loadChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  loadChipTextActive: { color: colors.onPrimary },
   exFields: { flexDirection: 'row', gap: spacing.sm },
   field: { flex: 1, gap: 2 },
   fieldLabel: { ...typography.small, color: colors.textFaint, fontSize: 11 },

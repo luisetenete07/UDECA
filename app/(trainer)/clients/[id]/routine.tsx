@@ -11,6 +11,7 @@ import {
   esfuerzoDePct,
   proporcionIntensidad,
 } from '../../../../lib/intensidad';
+import { Opciones } from '../../../../components/Opciones';
 import { Segmented } from '../../../../components/Segmented';
 import { TextField } from '../../../../components/TextField';
 import { DragList } from '../../../../components/DragList';
@@ -39,34 +40,30 @@ import { fonts, colors, radius, spacing, typography } from '../../../../lib/them
 import {
   CLUSTER_DEFAULT,
   clusterBlocks,
-  GRIP_LABEL,
-  GRIP_TYPES,
-  isDualMeasure,
-  isHoldMeasure,
-  MUSCLE_GROUPS,
-  resolveLoad,
-  WEEKDAY_LABELS,
-  WEEKDAY_NAMES,
   type ClusterConfig,
   type Exercise,
   type ExerciseLoad,
   type ExerciseMeasure,
+  GRIP_LABEL,
+  GRIP_TYPES,
   type GripType,
+  isDualMeasure,
+  isHoldMeasure,
+  LOAD_LABEL,
+  LOAD_TYPES,
+  MUSCLE_GROUPS,
   type MuscleGroup,
+  resolveLoad,
   type RoutineDay,
   type RoutineExercise,
   type RoutineSchedule,
   type RoutineTemplate,
   type UserProfile,
+  WEEKDAY_LABELS,
+  WEEKDAY_NAMES,
 } from '../../../../lib/types';
 
 /** Variantes de carga elegibles al montar la rutina (por ejercicio del plan). */
-const LOAD_OPTIONS: { key: ExerciseLoad; label: string }[] = [
-  { key: 'none', label: 'Normal' },
-  { key: 'weighted', label: 'Lastrado' },
-  { key: 'assisted', label: 'Goma' },
-];
-
 export default function RoutineEditorScreen() {
   const { id: clientId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -1140,42 +1137,19 @@ export default function RoutineEditorScreen() {
               </View>
 
               <Text style={styles.loadLabel}>Carga</Text>
-              <View style={styles.loadRow}>
-                {LOAD_OPTIONS.map((opt) => {
-                  const active = resolveLoad(ex) === opt.key;
-                  return (
-                    <Pressable
-                      key={opt.key}
-                      onPress={() => setExerciseLoad(day.id, ex.id, opt.key)}
-                      style={[styles.loadChip, active && styles.loadChipActive]}
-                      hitSlop={4}
-                    >
-                      <Text style={[styles.loadChipText, active && styles.loadChipTextActive]}>
-                        {opt.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <Opciones
+                opciones={LOAD_TYPES.map((l) => ({ valor: l, texto: LOAD_LABEL[l] }))}
+                valor={resolveLoad(ex)}
+                onChange={(v) => v && setExerciseLoad(day.id, ex.id, v)}
+              />
 
               <Text style={styles.loadLabel}>Agarre (opcional)</Text>
-              <View style={styles.loadRow}>
-                {GRIP_TYPES.map((g) => {
-                  const active = ex.grip === g;
-                  return (
-                    <Pressable
-                      key={g}
-                      onPress={() => setExerciseGrip(day.id, ex.id, g)}
-                      style={[styles.loadChip, active && styles.loadChipActive]}
-                      hitSlop={4}
-                    >
-                      <Text style={[styles.loadChipText, active && styles.loadChipTextActive]}>
-                        {GRIP_LABEL[g]}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <Opciones
+                opciones={GRIP_TYPES.map((g) => ({ valor: g, texto: GRIP_LABEL[g] }))}
+                valor={ex.grip}
+                desmarcable
+                onChange={(g) => g && setExerciseGrip(day.id, ex.id, g)}
+              />
 
               <View style={styles.exerciseFields}>
                 <TextField
@@ -1385,72 +1359,46 @@ export default function RoutineEditorScreen() {
                   onChangeText={setNewName}
                 />
                 <Text style={styles.loadLabel}>Categoría</Text>
-                <View style={styles.groupWrap}>
-                  {categoriasBiblioteca.map((g) => (
-                    <Pressable
-                      key={g}
-                      onPress={() => {
-                        setNewGroup(g);
-                        setNewSubgroup('');
-                      }}
-                      style={[styles.loadChip, newGroup === g && styles.loadChipActive]}
-                    >
-                      <Text style={[styles.loadChipText, newGroup === g && styles.loadChipTextActive]}>
-                        {g}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                <Opciones
+                  opciones={categoriasBiblioteca.map((g) => ({ valor: g, texto: g }))}
+                  valor={newGroup}
+                  envuelve
+                  onChange={(g) => {
+                    setNewGroup(g ?? '');
+                    setNewSubgroup('');
+                  }}
+                />
                 {/* Subgrupo: solo si esa categoría ya tiene alguno definido. */}
                 {(profile?.categorySubgroups?.[newGroup] ?? []).length > 0 ? (
                   <>
                     <Text style={styles.loadLabel}>Subgrupo (opcional)</Text>
-                    <View style={styles.groupWrap}>
-                      {(profile?.categorySubgroups?.[newGroup] ?? []).map((sg) => {
-                        const activo = newSubgroup === sg;
-                        return (
-                          <Pressable
-                            key={sg}
-                            onPress={() => setNewSubgroup(activo ? '' : sg)}
-                            style={[styles.loadChip, activo && styles.loadChipActive]}
-                          >
-                            <Text style={[styles.loadChipText, activo && styles.loadChipTextActive]}>
-                              {sg}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
+                    <Opciones
+                      opciones={(profile?.categorySubgroups?.[newGroup] ?? []).map((sg) => ({
+                        valor: sg,
+                        texto: sg,
+                      }))}
+                      valor={newSubgroup}
+                      desmarcable
+                      envuelve
+                      onChange={(sg) => setNewSubgroup(sg ?? '')}
+                    />
                   </>
                 ) : null}
                 <Text style={styles.loadLabel}>Medida</Text>
-                <View style={styles.loadRow}>
-                  {(['reps', 'seconds'] as ExerciseMeasure[]).map((m) => (
-                    <Pressable
-                      key={m}
-                      onPress={() => setNewMeasure(m)}
-                      style={[styles.loadChip, newMeasure === m && styles.loadChipActive]}
-                    >
-                      <Text style={[styles.loadChipText, newMeasure === m && styles.loadChipTextActive]}>
-                        {m === 'reps' ? 'Repeticiones' : 'Segundos'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                <Opciones
+                  opciones={[
+                    { valor: 'reps' as ExerciseMeasure, texto: 'Repeticiones' },
+                    { valor: 'seconds' as ExerciseMeasure, texto: 'Segundos' },
+                  ]}
+                  valor={newMeasure}
+                  onChange={(m) => m && setNewMeasure(m)}
+                />
                 <Text style={styles.loadLabel}>Carga</Text>
-                <View style={styles.loadRow}>
-                  {LOAD_OPTIONS.map((opt) => (
-                    <Pressable
-                      key={opt.key}
-                      onPress={() => setNewLoad(opt.key)}
-                      style={[styles.loadChip, newLoad === opt.key && styles.loadChipActive]}
-                    >
-                      <Text style={[styles.loadChipText, newLoad === opt.key && styles.loadChipTextActive]}>
-                        {opt.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                <Opciones
+                  opciones={LOAD_TYPES.map((l) => ({ valor: l, texto: LOAD_LABEL[l] }))}
+                  valor={newLoad}
+                  onChange={(v) => v && setNewLoad(v)}
+                />
                 <TextField
                   label="Vídeo de técnica (opcional)"
                   placeholder="Pega el enlace de YouTube"
@@ -1830,11 +1778,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     fontSize: 11,
   },
-  loadRow: { flexDirection: 'row', gap: spacing.xs },
   // Marcadores de carga en color (sin emojis): azul = lastre, dorado = goma.
   markWeighted: { color: '#5B9BD5', fontFamily: fonts.semiBold, fontSize: 13 },
   markAssisted: { color: colors.primary, fontFamily: fonts.semiBold, fontSize: 13 },
-  groupWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   createNewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1870,18 +1816,6 @@ const styles = StyleSheet.create({
   },
   subChipActive: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
   subChipText: { ...typography.small, color: colors.textFaint, fontSize: 12 },
-  loadChip: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-  },
-  loadChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  loadChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  loadChipTextActive: { color: colors.onPrimary },
   moveBtn: { padding: spacing.xs },
   deleteBtn: { padding: spacing.xs },
   moveExName: { ...typography.small, color: colors.primaryBright, marginTop: 2 },
