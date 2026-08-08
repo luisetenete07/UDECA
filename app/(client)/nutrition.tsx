@@ -25,6 +25,7 @@ import { updateUserProfile } from '../../lib/firestore/users';
 import { pickProgressPhoto } from '../../lib/image';
 import { MacroCalculator } from '../../components/MacroCalculator';
 import { confirmar } from '../../lib/confirmar';
+import { Sheet } from '../../components/Sheet';
 import { esHoy } from '../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
@@ -44,6 +45,7 @@ export default function NutritionScreen() {
   const [books, setBooks] = useState<MealBook[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [formOpen, setFormOpen] = useState(false);
   const [mealName, setMealName] = useState('');
   const [calories, setCalories] = useState('');
   const [protein, setProtein] = useState('');
@@ -155,6 +157,9 @@ export default function NutritionScreen() {
       setProtein('');
       setCarbs('');
       setFat('');
+      // Guardada: el panel se cierra solo. Quien registra una comida quiere
+      // ver el anillo bajar, no volver a mirar un formulario vacío.
+      setFormOpen(false);
       await load();
     } finally {
       setSaving(false);
@@ -248,8 +253,15 @@ export default function NutritionScreen() {
             ) : null}
           </Card>
 
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Registrar comida</Text>
+          {/* El formulario vivía siempre abierto: cinco campos vacíos ocupando
+              media pantalla cada vez que entrabas, y las comidas del día
+              —lo que se viene a mirar— empujadas por debajo. Ahora se pide
+              cuando se va a usar. */}
+          <Sheet
+            visible={formOpen}
+            onClose={() => setFormOpen(false)}
+            titulo="Registrar comida"
+          >
             <TextField placeholder="Ej. Desayuno" value={mealName} onChangeText={setMealName} />
             <View style={styles.row}>
               <TextField
@@ -285,7 +297,7 @@ export default function NutritionScreen() {
             </View>
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <Button title="Añadir comida" onPress={handleAddMeal} loading={saving} />
-          </Card>
+          </Sheet>
 
           <Card style={styles.section}>
             <View style={styles.hoyHeader}>
@@ -311,6 +323,12 @@ export default function NutritionScreen() {
                 </View>
               ))
             )}
+            <Button
+              title="+ Añadir comida"
+              variant="secondary"
+              onPress={() => setFormOpen(true)}
+              style={{ marginTop: spacing.md }}
+            />
           </Card>
         </>
       )}

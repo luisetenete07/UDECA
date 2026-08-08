@@ -305,6 +305,25 @@ export default function CoachCalendarScreen() {
     gridCells.push(new Date(anchor.getFullYear(), anchor.getMonth(), d).getTime());
   while (gridCells.length % 7 !== 0) gridCells.push(null);
   const selectedEvents = eventsByDay.get(selectedDay) ?? [];
+
+  /**
+   * Lo siguiente que pasa, a partir del día elegido.
+   *
+   * Un día sin nada era un callejón: "Sin eventos este día" y a buscar puntos
+   * por el calendario a ver dónde hay algo. La mayoría de los días de un
+   * entrenador están vacíos, así que ese callejón es el caso NORMAL, no el
+   * raro. Ahora el día vacío responde a la pregunta que se venía a hacer: qué
+   * es lo próximo y cuándo.
+   */
+  const proximo = (() => {
+    if (selectedEvents.length > 0) return null;
+    const dias = [...eventsByDay.keys()].filter((d) => d > selectedDay).sort((a, b) => a - b);
+    const dia = dias[0];
+    if (dia === undefined) return null;
+    const eventos = eventsByDay.get(dia) ?? [];
+    if (eventos.length === 0) return null;
+    return { dia, evento: eventos[0], cuantos: eventos.length };
+  })();
   const goToday = () => {
     const now = new Date();
     setMonthAnchor(new Date(now.getFullYear(), now.getMonth(), 1).getTime());
@@ -388,7 +407,35 @@ export default function CoachCalendarScreen() {
         {selectedDay === today ? <Text style={styles.todayTag}>HOY</Text> : null}
       </View>
       {selectedEvents.length === 0 ? (
-        <Text style={styles.noEvents}>Sin eventos este día.</Text>
+        proximo ? (
+          <Pressable
+            style={styles.proximo}
+            onPress={() => {
+              const d = new Date(proximo.dia);
+              setMonthAnchor(new Date(d.getFullYear(), d.getMonth(), 1).getTime());
+              setSelectedDay(proximo.dia);
+            }}
+          >
+            <View style={[styles.eventIcon, { borderColor: TONE[proximo.evento.type] }]}>
+              <Ionicons
+                name={TYPE_ICON[proximo.evento.type]}
+                size={15}
+                color={TONE[proximo.evento.type]}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.proximoEtiqueta}>Nada este día · lo siguiente</Text>
+              <Text style={styles.proximoTexto} numberOfLines={1}>
+                {proximo.evento.title}
+                {proximo.cuantos > 1 ? ` y ${proximo.cuantos - 1} más` : ''}
+              </Text>
+              <Text style={styles.proximoCuando}>{diaLargo(proximo.dia)}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+          </Pressable>
+        ) : (
+          <Text style={styles.noEvents}>Sin eventos este día.</Text>
+        )
       ) : (
         selectedEvents.map((e, i) => (
           <Pressable key={i} onPress={e.onPress} style={styles.event}>
@@ -900,6 +947,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   selectedDate: { ...typography.h3, color: colors.text, flexShrink: 1 },
+  proximo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  proximoEtiqueta: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  proximoTexto: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  proximoCuando: { ...typography.small, color: colors.textMuted, fontSize: 12 },
   noEvents: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
   todayTag: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 10, letterSpacing: 1 },
   event: {

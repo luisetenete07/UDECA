@@ -44,6 +44,7 @@ import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { showToast } from '../../../components/Toast';
 import { Dialogo } from '../../../components/Dialogo';
+import { QuickSheet } from '../../../components/QuickSheet';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
@@ -76,6 +77,7 @@ export default function ExercisesScreen() {
   const [pasteText, setPasteText] = useState('');
   // Gestión de categorías del entrenador (Tren superior, Empuje…).
   const [editCats, setEditCats] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [newCat, setNewCat] = useState('');
   // Color de categoría: un único diálogo por categoría (paleta + personalizado),
   // en vez de una parrilla de muestras repetida en cada fila.
@@ -544,76 +546,99 @@ export default function ExercisesScreen() {
         title="Biblioteca"
         subtitle={`${exercises.length} ${exercises.length === 1 ? 'ejercicio' : 'ejercicios'}`}
         actions={
-          <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
+          <View style={styles.accionesCab}>
+            <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
+            <Pressable onPress={() => setMenuOpen(true)} hitSlop={10} style={styles.masBtn}>
+              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
+            </Pressable>
+          </View>
         }
       />
 
-      {/* El pack se toca una vez y no se vuelve a mirar: en la cabecera le
-          robaba el sitio al título hasta partirlo por la mitad. Aquí sigue a un
-          toque, pero deja mandar a lo que se usa todos los días. */}
-      {isAdmin(profile) && packItems.length > 0 ? (
-        <Pressable
-          onPress={() => setConfirmPack(true)}
-          disabled={importing}
-          style={[styles.pill, styles.pillDanger, importing && styles.pillBusy]}
-          hitSlop={4}
-        >
-          <Ionicons name="sync-outline" size={14} color={colors.danger} />
-          <Text style={[styles.pillText, { color: colors.danger }]}>
-            Actualizar a pack UDECA
-          </Text>
-        </Pressable>
-      ) : missingPack.length > 0 ? (
-        <Pressable
-          onPress={handleImportPack}
-          disabled={importing}
-          style={[styles.pill, importing && styles.pillBusy]}
-          hitSlop={4}
-        >
-          <Ionicons name="cube-outline" size={14} color={colors.primary} />
-          <Text style={styles.pillText}>
-            Añadir el pack UDECA ({missingPack.length} ejercicios)
-          </Text>
-        </Pressable>
-      ) : null}
-
-      {isAdmin(profile) ? (
-        <Pressable
-          onPress={() => router.push('/(trainer)/exercises/template')}
-          style={styles.adminBanner}
-        >
-          <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.adminBannerTitle}>Plantilla UDECA (CEO)</Text>
-            <Text style={styles.adminBannerText}>
-              Edita el pack oficial y los músculos de cada ejercicio.
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </Pressable>
-      ) : null}
+      {/* Todo lo que se toca una vez cada muchos meses —el pack, importar,
+          exportar, renombrar categorías, la plantilla del CEO— vive aquí
+          detrás. Antes ocupaba cinco filas por encima de los ejercicios, que
+          es lo que sí se mira todos los días. */}
+      <QuickSheet
+        visible={menuOpen}
+        titulo="Biblioteca"
+        subtitulo={`${exercises.length} ${exercises.length === 1 ? 'ejercicio' : 'ejercicios'}`}
+        onClose={() => setMenuOpen(false)}
+        acciones={[
+          ...(missingPack.length > 0
+            ? [
+                {
+                  icono: 'cube-outline' as const,
+                  texto: `Añadir el pack UDECA (${missingPack.length} ejercicios)`,
+                  onPress: () => {
+                    setMenuOpen(false);
+                    handleImportPack();
+                  },
+                },
+              ]
+            : []),
+          {
+            icono: 'pricetags-outline' as const,
+            texto: editCats ? 'Terminar de editar categorías' : 'Editar categorías',
+            onPress: () => {
+              setMenuOpen(false);
+              setEditCats((v) => !v);
+            },
+          },
+          {
+            icono: 'download-outline' as const,
+            texto: 'Exportar mi biblioteca',
+            onPress: () => {
+              setMenuOpen(false);
+              handleExport();
+            },
+          },
+          {
+            icono: 'cloud-upload-outline' as const,
+            texto: 'Importar una biblioteca',
+            onPress: () => {
+              setMenuOpen(false);
+              handleImportTemplate();
+            },
+          },
+          ...(isAdmin(profile)
+            ? [
+                {
+                  icono: 'shield-checkmark' as const,
+                  texto: 'Plantilla UDECA (CEO)',
+                  onPress: () => {
+                    setMenuOpen(false);
+                    router.push('/(trainer)/exercises/template');
+                  },
+                },
+                ...(packItems.length > 0
+                  ? [
+                      {
+                        icono: 'sync-outline' as const,
+                        texto: 'Actualizar a pack UDECA',
+                        peligro: true,
+                        onPress: () => {
+                          setMenuOpen(false);
+                          setConfirmPack(true);
+                        },
+                      },
+                    ]
+                  : []),
+              ]
+            : []),
+        ]}
+      />
 
       <TextField placeholder="Buscar ejercicio..." value={search} onChangeText={setSearch} />
 
-      <View style={styles.catHeader}>
-        <Text style={styles.catLabel}>Categorías</Text>
-        {/* Plantillas entre entrenadores: uso muy puntual, así que viven aquí
-            en discreto, a la izquierda de la acción de editar categorías. */}
-        <View style={styles.catActions}>
-          <Pressable onPress={handleExport} style={styles.toolBtn} hitSlop={8}>
-            <Ionicons name="download-outline" size={13} color={colors.textMuted} />
-            <Text style={styles.toolText}>Exportar</Text>
-          </Pressable>
-          <Pressable onPress={handleImportTemplate} style={styles.toolBtn} hitSlop={8}>
-            <Ionicons name="cloud-upload-outline" size={13} color={colors.textMuted} />
-            <Text style={styles.toolText}>Importar</Text>
-          </Pressable>
-          <View style={styles.catActionsSep} />
-          <Pressable onPress={() => setEditCats((v) => !v)} hitSlop={8}>
-            <Text style={styles.catEdit}>{editCats ? 'Listo' : 'Editar categorías'}</Text>
+      {editCats ? (
+        <View style={styles.catHeader}>
+          <Text style={styles.catLabel}>Categorías</Text>
+          <Pressable onPress={() => setEditCats(false)} hitSlop={8}>
+            <Text style={styles.catEdit}>Listo</Text>
           </Pressable>
         </View>
-      </View>
+      ) : null}
 
       {editCats ? (
         <>
@@ -938,40 +963,8 @@ function normalizeHex(input: string): string | null {
 }
 
 const styles = StyleSheet.create({
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 5,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    marginBottom: spacing.md,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-  },
-  pillDanger: { backgroundColor: colors.surfaceAlt, borderColor: colors.danger },
-  pillBusy: { opacity: 0.5 },
-  pillText: {
-    ...typography.small,
-    color: colors.primary,
-    fontFamily: fonts.semiBold,
-    fontSize: 12,
-  },
-  adminBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-    marginBottom: spacing.md,
-  },
-  adminBannerTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  adminBannerText: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  accionesCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  masBtn: { padding: spacing.xs },
   catHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1060,10 +1053,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   addCatText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  catActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  catActionsSep: { width: 1, height: 12, backgroundColor: colors.border },
-  toolBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  toolText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
   pasteInput: {
     marginTop: spacing.md,
     minHeight: 140,
