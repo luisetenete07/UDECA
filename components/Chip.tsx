@@ -23,6 +23,10 @@ export function Chip({
   onPress,
   icono,
   punto,
+  accion,
+  onAccion,
+  colorAccion,
+  compacto = false,
   /** Tono discreto para acciones que no son "elegir" (renombrar, editar). */
   suave = false,
 }: {
@@ -32,13 +36,23 @@ export function Chip({
   icono?: React.ComponentProps<typeof Ionicons>['name'];
   /** Punto de color a la izquierda: el estado de pago, el tono de un aviso. */
   punto?: string;
+  /**
+   * Icono pulsable a la derecha, DENTRO de la pastilla: la equis que la
+   * borra, el lápiz que la renombra. Va dentro y no al lado porque la acción
+   * es sobre ESTA pastilla, y una equis suelta al lado no dice de cuál es.
+   */
+  accion?: React.ComponentProps<typeof Ionicons>['name'];
+  onAccion?: () => void;
+  colorAccion?: string;
+  /** Menos alta, para filas apretadas dentro de una ficha. */
+  compacto?: boolean;
   suave?: boolean;
 }) {
   const colorIcono = suave ? colors.primary : activo ? colors.onPrimary : colors.textMuted;
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.chip, activo && styles.activo, suave && styles.suave]}
+      style={[styles.chip, compacto && styles.compacto, activo && styles.activo, suave && styles.suave]}
       accessibilityRole="button"
       accessibilityState={{ selected: activo }}
     >
@@ -47,6 +61,11 @@ export function Chip({
       <Text style={[styles.texto, activo && styles.textoActivo, suave && styles.textoSuave]}>
         {texto}
       </Text>
+      {accion ? (
+        <Pressable onPress={onAccion} hitSlop={8} style={styles.accion}>
+          <Ionicons name={accion} size={15} color={colorAccion ?? colorIcono} />
+        </Pressable>
+      ) : null}
     </Pressable>
   );
 }
@@ -89,7 +108,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  compacto: { paddingHorizontal: spacing.sm, paddingVertical: 5 },
   punto: { width: 8, height: 8, borderRadius: 4 },
+  accion: { marginLeft: -1, marginRight: -3 },
   activo: { backgroundColor: colors.primary, borderColor: colors.primary },
   suave: { backgroundColor: colors.primaryMuted, borderColor: colors.hairline },
   texto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },

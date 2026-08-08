@@ -899,39 +899,20 @@ export default function RoutineEditorScreen() {
                 <Text style={styles.cyclePillText}>Día {dayIndex + 1} del ciclo</Text>
               </View>
               <View style={styles.restToggles}>
-                <Pressable
+                <Chip
+                  texto="Descanso"
+                  icono={day.isRest ? 'bed' : 'bed-outline'}
+                  activo={day.isRest && !day.optionalRest}
+                  compacto
                   onPress={() => toggleRestDay(day.id)}
-                  style={[styles.restToggle, day.isRest && !day.optionalRest && styles.restToggleOn]}
-                  hitSlop={4}
-                >
-                  <Ionicons
-                    name={day.isRest ? 'bed' : 'bed-outline'}
-                    size={14}
-                    color={day.isRest && !day.optionalRest ? colors.onPrimary : colors.textMuted}
-                  />
-                  <Text
-                    style={[
-                      styles.restToggleText,
-                      day.isRest && !day.optionalRest && styles.restToggleTextOn,
-                    ]}
-                  >
-                    Descanso
-                  </Text>
-                </Pressable>
-                <Pressable
+                />
+                <Chip
+                  texto="Opcional"
+                  icono={day.optionalRest ? 'shuffle' : 'shuffle-outline'}
+                  activo={!!day.optionalRest}
+                  compacto
                   onPress={() => toggleOptionalRest(day.id)}
-                  style={[styles.restToggle, day.optionalRest && styles.restToggleOn]}
-                  hitSlop={4}
-                >
-                  <Ionicons
-                    name={day.optionalRest ? 'shuffle' : 'shuffle-outline'}
-                    size={14}
-                    color={day.optionalRest ? colors.onPrimary : colors.textMuted}
-                  />
-                  <Text style={[styles.restToggleText, day.optionalRest && styles.restToggleTextOn]}>
-                    Opcional
-                  </Text>
-                </Pressable>
+                />
               </View>
             </View>
             {day.optionalRest ? (
@@ -1013,20 +994,13 @@ export default function RoutineEditorScreen() {
           <View style={styles.weekdayRow}>
             <View style={styles.weekdayHeadRow}>
               <Text style={styles.weekdayLabel}>Día de la semana</Text>
-              <Pressable
+              <Chip
+                texto="Descanso"
+                icono={day.isRest ? 'bed' : 'bed-outline'}
+                activo={day.isRest}
+                compacto
                 onPress={() => toggleRestDay(day.id)}
-                style={[styles.restToggle, day.isRest && styles.restToggleOn]}
-                hitSlop={4}
-              >
-                <Ionicons
-                  name={day.isRest ? 'bed' : 'bed-outline'}
-                  size={14}
-                  color={day.isRest ? colors.onPrimary : colors.textMuted}
-                />
-                <Text style={[styles.restToggleText, day.isRest && styles.restToggleTextOn]}>
-                  Descanso
-                </Text>
-              </Pressable>
+              />
             </View>
             <DiasSemana
               valor={day.weekday}
@@ -1640,21 +1614,7 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
   },
   cyclePillText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, fontSize: 11 },
-  restToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
   restToggles: { flexDirection: 'row', gap: spacing.xs },
-  restToggleOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  restToggleText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  restToggleTextOn: { color: colors.onPrimary },
   optionalHint: {
     ...typography.small,
     color: colors.primaryBright,

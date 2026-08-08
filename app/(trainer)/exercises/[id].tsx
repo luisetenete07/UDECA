@@ -17,6 +17,7 @@ import {
 } from '../../../lib/firestore/exercises';
 import { showToast } from '../../../components/Toast';
 import { ListaRadio } from '../../../components/ListaRadio';
+import { Chip, ChipRow } from '../../../components/Chip';
 import { Dialogo } from '../../../components/Dialogo';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
@@ -264,24 +265,19 @@ export default function ExerciseEditorScreen() {
           <Text style={styles.catEdit}>{editCats ? 'Listo' : 'Editar categorías'}</Text>
         </Pressable>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
+      <ChipRow scroll>
         {categories.map((group) => (
-          <Pressable
+          <Chip
             key={group}
+            texto={group}
+            activo={muscleGroup === group && !editCats}
             onPress={() => !editCats && setMuscleGroup(group)}
-            style={[styles.chip, muscleGroup === group && !editCats && styles.chipSelected]}
-          >
-            <Text style={[styles.chipText, muscleGroup === group && !editCats && styles.chipTextSelected]}>
-              {group}
-            </Text>
-            {editCats ? (
-              <Pressable onPress={() => removeCategory(group)} hitSlop={8} style={styles.chipX}>
-                <Ionicons name="close-circle" size={16} color={colors.danger} />
-              </Pressable>
-            ) : null}
-          </Pressable>
+            accion={editCats ? 'close-circle' : undefined}
+            colorAccion={colors.danger}
+            onAccion={() => removeCategory(group)}
+          />
         ))}
-      </ScrollView>
+      </ChipRow>
       {editCats ? (
         <View style={styles.addCatRow}>
           <TextInput
@@ -301,40 +297,23 @@ export default function ExerciseEditorScreen() {
       ) : null}
 
       <Text style={styles.label}>Subgrupo</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
-        <Pressable
-          onPress={() => setSubgroup('')}
-          style={[styles.chip, subgroup === '' && styles.chipSelected]}
-        >
-          <Text style={[styles.chipText, subgroup === '' && styles.chipTextSelected]}>
-            Sin subgrupo
-          </Text>
-        </Pressable>
+      <ChipRow scroll>
+        <Chip texto="Sin subgrupo" activo={subgroup === ''} onPress={() => setSubgroup('')} />
         {subgroups.map((sg) => (
-          <Pressable
+          <Chip
             key={sg}
+            texto={sg}
+            activo={subgroup === sg}
             onPress={() => setSubgroup(sg)}
-            style={[styles.chip, subgroup === sg && styles.chipSelected]}
-          >
-            <Text style={[styles.chipText, subgroup === sg && styles.chipTextSelected]}>{sg}</Text>
-            {/* Lápiz para renombrarlo sin salir del editor. */}
-            <Pressable
-              onPress={() => {
-                setRenameSub(sg);
-                setRenameText(sg);
-              }}
-              hitSlop={8}
-              style={styles.chipPencil}
-            >
-              <Ionicons
-                name="pencil"
-                size={12}
-                color={subgroup === sg ? colors.onPrimary : colors.textMuted}
-              />
-            </Pressable>
-          </Pressable>
+            /* Lápiz para renombrarlo sin salir del editor. */
+            accion="pencil"
+            onAccion={() => {
+              setRenameSub(sg);
+              setRenameText(sg);
+            }}
+          />
         ))}
-      </ScrollView>
+      </ChipRow>
       <View style={styles.addCatRow}>
         <TextInput
           value={newSub}
@@ -476,20 +455,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
   },
-  chips: { marginBottom: spacing.md },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
-  },
-  chipX: { marginLeft: -2, marginRight: -4 },
   catHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -521,9 +486,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   addCatText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, },
-  chipTextSelected: { color: colors.onPrimary },
   textarea: { height: 100, textAlignVertical: 'top' },
   measureHint: {
     ...typography.small,
@@ -532,7 +494,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     lineHeight: 18,
   },
-  chipPencil: { marginLeft: -1, marginRight: -3, opacity: 0.8 },
   modalBackdrop: {
     flex: 1,
     justifyContent: 'center',

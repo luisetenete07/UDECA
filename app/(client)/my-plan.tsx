@@ -9,6 +9,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { DragList } from '../../components/DragList';
 import { moveItem } from '../../lib/useDragReorder';
 import { ajustaPct } from '../../lib/intensidad';
+import { Chip } from '../../components/Chip';
 import { DiasSemana } from '../../components/DiasSemana';
 import { Opciones } from '../../components/Opciones';
 import { Segmented } from '../../components/Segmented';
@@ -383,20 +384,13 @@ export default function MyPlanScreen() {
 
                 {/* Descanso + (semanal) día de la semana */}
                 <View style={styles.dayOptsRow}>
-                  <Pressable
+                  <Chip
+                    texto="Descanso"
+                    icono={day.isRest ? 'bed' : 'bed-outline'}
+                    activo={day.isRest}
+                    compacto
                     onPress={() => patchDay(di, { isRest: !day.isRest })}
-                    style={[styles.restToggle, day.isRest && styles.restToggleOn]}
-                    hitSlop={4}
-                  >
-                    <Ionicons
-                      name={day.isRest ? 'bed' : 'bed-outline'}
-                      size={14}
-                      color={day.isRest ? colors.onPrimary : colors.textMuted}
-                    />
-                    <Text style={[styles.restToggleText, day.isRest && styles.restToggleTextOn]}>
-                      Descanso
-                    </Text>
-                  </Pressable>
+                  />
                   {schedule === 'cycle' && !day.isRest ? (
                     <View style={styles.intensityRow}>
                       <Text style={styles.intensityLabel}>Int. {day.intensity ?? 5}/10</Text>
@@ -807,20 +801,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
   },
-  restToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  restToggleOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  restToggleText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  restToggleTextOn: { color: colors.onPrimary },
   intensityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   intensityLabel: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   stepBtn: {

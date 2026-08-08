@@ -67,6 +67,7 @@ import {
   type LastPerformance,
   type PersonalRecord,
 } from '../../lib/stats';
+import { Chip, ChipRow } from '../../components/Chip';
 import { minutosSegundos } from '../../lib/duracion';
 import { esMismoDia, inicioDelDia } from '../../lib/fechas';
 import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
@@ -1366,36 +1367,33 @@ export default function WorkoutScreen() {
       </Modal>
 
       {isFlex ? null : (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dayTabs}>
+        <ChipRow scroll>
           {routine.days.map((d, i) => {
             const isCycle = routine.schedule === 'cycle';
             const isToday = isCycle
               ? todaySession.cycleIndex === i
               : d.weekday === todayWeekday();
             return (
-              <Pressable
+              <Chip
                 key={d.id}
+                texto={
+                  (isCycle
+                    ? `Día ${i + 1}`
+                    : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`) +
+                  (d.optionalRest ? ' · descanso opcional' : d.isRest ? ' · descanso' : '') +
+                  (isToday ? '  ·  HOY' : '')
+                }
+                activo={selectedDayId === d.id}
                 onPress={() => {
                   setSelectedDayId(d.id);
                   // Tocar un día resuelve el descanso opcional: se entrena ese día.
                   setOptionalResolved(true);
                   setRestingToday(false);
                 }}
-                style={[styles.dayTab, selectedDayId === d.id && styles.dayTabSelected]}
-              >
-                <Text
-                  style={[styles.dayTabText, selectedDayId === d.id && styles.dayTabTextSelected]}
-                >
-                  {isCycle
-                    ? `Día ${i + 1}`
-                    : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`}
-                  {d.optionalRest ? ' · descanso opcional' : d.isRest ? ' · descanso' : ''}
-                  {isToday ? '  ·  HOY' : ''}
-                </Text>
-              </Pressable>
+              />
             );
           })}
-        </ScrollView>
+        </ChipRow>
       )}
 
       {!showCompleted && isFlex && flexResting ? (
@@ -2131,19 +2129,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   exitText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  dayTabs: { marginBottom: spacing.md },
-  dayTab: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: spacing.sm,
-  },
-  dayTabSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dayTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  dayTabTextSelected: { color: colors.onPrimary },
   dayPickerBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
