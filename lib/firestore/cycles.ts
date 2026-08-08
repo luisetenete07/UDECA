@@ -71,13 +71,6 @@ export async function updateCycle(
   await updateDoc(doc(db, 'trainingCycles', id), stripUndefined({ ...data, updatedAt: Date.now() }));
 }
 
-/**
- * Borra el contenedor del ciclo. Los entrenos (workoutLogs) NO se tocan: la
- * pertenencia se calcula por fechas, así que el historial queda intacto.
- */
-export async function deleteCycle(id: string): Promise<void> {
-  await deleteDoc(doc(db, 'trainingCycles', id));
-}
 
 /** Borra un ciclo y todo lo que cuelga de él (un plan entero). */
 export async function deleteCycles(ids: string[]): Promise<void> {

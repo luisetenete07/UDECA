@@ -73,28 +73,6 @@ export async function notifyUser(uid: string, title: string, body: string): Prom
   await sendPushNotification(profile?.pushToken, title, body);
 }
 
-/** Programa un recordatorio local (no requiere token ni conexión). */
-export async function scheduleLocalReminder(
-  title: string,
-  body: string,
-  secondsFromNow: number
-): Promise<void> {
-  if (Platform.OS === 'web') return;
-  try {
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted') return;
-    await Notifications.scheduleNotificationAsync({
-      content: { title, body },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds: secondsFromNow,
-        repeats: false,
-      },
-    });
-  } catch {
-    // No crítico: si falla, el usuario simplemente no recibe el recordatorio local.
-  }
-}
 
 const REST_END_ID = 'rest-timer-end';
 

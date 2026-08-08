@@ -25,9 +25,6 @@ export async function getRecentErrorLogs(): Promise<ErrorLogEntry[]> {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ErrorLogEntry);
 }
 
-export async function deleteErrorLog(id: string): Promise<void> {
-  await deleteDoc(doc(db, 'errorLogs', id));
-}
 
 /**
  * Agrupa por mensaje para leer de un vistazo qué falla MÁS, en vez de una lista

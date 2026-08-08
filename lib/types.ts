@@ -324,10 +324,6 @@ export function isDualMeasure(m?: ExerciseMeasure): boolean {
   return m === 'repsDual' || m === 'secondsDual';
 }
 
-/** ¿La serie lleva una segunda casilla, sea aguante (combo) o el otro lado? */
-export function hasSecondMark(m?: ExerciseMeasure): boolean {
-  return m === 'combo' || isDualMeasure(m);
-}
 
 /**
  * Carga del ejercicio (calistenia):

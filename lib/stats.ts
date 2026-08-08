@@ -692,32 +692,6 @@ export function weeklySetsForGroups(
   return result;
 }
 
-export function weeklySetsByGroup(
-  logs: WorkoutLog[],
-  muscleByExercise: Record<string, string>,
-  weeks = 8
-): WeeklySetsByGroup[] {
-  const currentWeek = startOfWeek(Date.now());
-  const result: WeeklySetsByGroup[] = Array.from({ length: weeks }, (_, i) => ({
-    weekStart: addDays(currentWeek, -7 * (weeks - 1 - i)),
-    pushSets: 0,
-    pullSets: 0,
-  }));
-  const index = new Map(result.map((r, i) => [r.weekStart, i]));
-  for (const log of logs) {
-    const i = index.get(startOfWeek(log.date));
-    if (i === undefined) continue;
-    const bucket = result[i];
-    for (const ex of log.exercises) {
-      const group = muscleByExercise[ex.exerciseId];
-      if (group !== 'Empuje' && group !== 'Tirón') continue;
-      const done = ex.sets.filter((s) => s.completed).length;
-      if (group === 'Empuje') bucket.pushSets += done;
-      else bucket.pullSets += done;
-    }
-  }
-  return result;
-}
 
 /**
  * Mapa muscular: series completadas por grupo muscular en los últimos `days`

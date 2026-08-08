@@ -38,10 +38,6 @@ export async function getActiveRoutineForClient(
   return routines.find((r) => r.active) ?? null;
 }
 
-export async function getRoutine(id: string): Promise<Routine | null> {
-  const snap = await getDoc(doc(db, 'routines', id));
-  return snap.exists() ? ({ id: snap.id, ...snap.data() } as Routine) : null;
-}
 
 export async function createRoutine(
   data: Omit<Routine, 'id' | 'createdAt' | 'updatedAt'>
@@ -55,9 +51,6 @@ export async function updateRoutine(id: string, data: Partial<Routine>) {
   await updateDoc(doc(db, 'routines', id), stripUndefined({ ...data, updatedAt: Date.now() }));
 }
 
-export async function deleteRoutine(id: string) {
-  await deleteDoc(doc(db, 'routines', id));
-}
 
 /** Marca esta rutina como activa y desactiva las demás rutinas del cliente. */
 export async function setActiveRoutine(

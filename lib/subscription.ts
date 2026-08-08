@@ -49,19 +49,7 @@ export const ANNUAL_PRICE_EUR = 180;
  * gente pida la devolución y se vaya.
  */
 export const COACH_MONTHLY_EQUIV_EUR = Math.round(ANNUAL_PRICE_EUR / 12);
-/**
- * Alumnos incluidos en el alta de 1 €. Suficiente para llevar un grupo
- * pequeño de verdad; insuficiente para vivir de ello sin pasar por caja.
- *
- * Es un TOPE POR DEFECTO, no una ley: el servidor puede rebajarlo por cuenta
- * (`clientSlots`) cuando detecta que ese euro ya se pagó con la misma tarjeta
- * en otra cuenta de entrenador. Cinco plazas por euro, una vez.
- *
- * OJO: este número está replicado en dos sitios más que no pueden importar
- * este fichero — payments-webhook/api/join.js (el servidor, que es quien
- * decide) y firestore.rules (que lo impone para las versiones antiguas de la
- * app). Si lo cambias, cámbialo en los tres.
- */
+
 /** Atleta individual: cuota mensual (suelta, no anual). */
 export const ATHLETE_MONTHLY_EUR = 10;
 
@@ -74,12 +62,6 @@ export const ATHLETE_MONTHLY_EUR = 10;
  * reexportadas evita tocar los treinta sitios que ya las importaban de aquí.
  */
 export { ADMIN_EMAILS, clientSlotsOf, DAY_MS, FREE_CLIENT_LIMIT } from './planBase';
-
-/**
- * Enlace de pago (Stripe Payment Link). Se crea en el panel de Stripe sin
- * programar nada y se pega aquí; hasta entonces el muro muestra el contacto.
- */
-export const PAYMENT_LINK_URL = '';
 
 /**
  * Payment Links de Stripe para las suscripciones de plataforma. Se crean en el
@@ -307,9 +289,6 @@ export function clientDaysUntilLock(
   if (now >= limite) return 0;
   return Math.ceil((limite - now) / DAY_MS);
 }
-
-/** Etiqueta del plan del entrenador para las pantallas de venta. */
-export const COACH_PLAN_LABEL = `Hasta ${FREE_CLIENT_LIMIT} alumnos incluidos · ${COACH_MONTHLY_EQUIV_EUR} €/mes para más`;
 
 /** Fecha de fin de la prueba para una cuenta de atleta que se crea ahora. */
 export function trialUntil(from: number = Date.now()): number {

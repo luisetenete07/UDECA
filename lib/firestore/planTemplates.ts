@@ -56,9 +56,6 @@ export async function savePlanAsTemplate(
   return ref.id;
 }
 
-export async function deletePlanTemplate(id: string): Promise<void> {
-  await deleteDoc(doc(db, 'planTemplates', id));
-}
 
 /** Monta la plantilla en un alumno a partir de una fecha. Devuelve el macro. */
 export async function applyPlanTemplate(

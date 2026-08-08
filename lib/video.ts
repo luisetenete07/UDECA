@@ -74,11 +74,3 @@ export function youTubeEmbedUrl(id: string): string {
   return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
 }
 
-/** Devuelve la URL de reproductor embebido (Vimeo o YouTube), o null. */
-export function toEmbedUrl(url: string): string | null {
-  const v = parseVimeoUrl(url);
-  if (v) return vimeoEmbedUrl(v);
-  const y = parseYouTubeId(url);
-  if (y) return youTubeEmbedUrl(y);
-  return null;
-}

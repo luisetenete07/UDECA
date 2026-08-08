@@ -95,9 +95,6 @@ function mapClients(snap: QuerySnapshot<DocumentData>): UserProfile[] {
   );
 }
 
-export async function updateClientGoal(clientId: string, goal: string) {
-  await setDoc(doc(db, 'users', clientId), { goal }, { merge: true });
-}
 
 /** Admin UDECA: lista de todos los coaches (para gestionar suscripciones). */
 export async function getAllCoaches(): Promise<UserProfile[]> {
