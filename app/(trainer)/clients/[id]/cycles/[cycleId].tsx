@@ -27,6 +27,7 @@ import { descendantIds } from '../../../../../lib/cyclePlan';
 import { buildBlockView } from '../../../../../lib/blockView';
 import { mayusculaInicial } from '../../../../../lib/fechas';
 import { diaMes } from '../../../../../lib/fechas';
+import { Dialogo } from '../../../../../components/Dialogo';
 import { colors, fonts, radius, spacing, typography } from '../../../../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
@@ -389,61 +390,39 @@ export default function CycleDashboardScreen() {
         />
       ) : null}
 
-      <Modal visible={tplOpen} transparent animationType="fade" onRequestClose={() => setTplOpen(false)}>
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>Nombre de la plantilla</Text>
-            <Text style={styles.confirmText}>
-              Con este nombre te saldrá al crear el plan de otro alumno.
-            </Text>
-            <TextField
-              value={tplName}
-              onChangeText={setTplName}
-              placeholder="Ej. Mi bloque de fuerza"
-              containerStyle={{ marginTop: spacing.md, marginBottom: 0 }}
-            />
-            <View style={styles.actions}>
-              <Button
-                title="Cancelar"
-                variant="ghost"
-                onPress={() => setTplOpen(false)}
-                style={{ flex: 1 }}
-              />
-              <Button
-                title="Guardar"
-                onPress={guardarPlantilla}
-                loading={tplSaving}
-                style={{ flex: 1 }}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <Dialogo
+        visible={tplOpen}
+        onClose={() => setTplOpen(false)}
+        titulo="Nombre de la plantilla"
+        texto="Con este nombre te saldrá al crear el plan de otro alumno."
+      >
+        <TextField
+          value={tplName}
+          onChangeText={setTplName}
+          placeholder="Ej. Mi bloque de fuerza"
+          containerStyle={{ marginTop: spacing.md, marginBottom: 0 }}
+        />
+        <Button
+          title="Guardar"
+          onPress={guardarPlantilla}
+          loading={tplSaving}
+          style={{ marginTop: spacing.md }}
+        />
+      </Dialogo>
 
-      <Modal visible={confirmDelete} transparent animationType="fade" onRequestClose={() => setConfirmDelete(false)}>
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>
-              {cuelgan.length > 0 ? '¿Eliminar el plan entero?' : '¿Eliminar este ciclo?'}
-            </Text>
-            <Text style={styles.confirmText}>
-              {cuelgan.length > 0
-                ? `Se borran también los ${cuelgan.length} ciclos que cuelgan de él (bloques y semanas). `
-                : 'Se borra solo el ciclo. '}
-              Los entrenos del alumno y su historial no se tocan.
-            </Text>
-            <View style={styles.actions}>
-              <Button
-                title="Cancelar"
-                variant="ghost"
-                onPress={() => setConfirmDelete(false)}
-                style={{ flex: 1 }}
-              />
-              <Button title="Eliminar" variant="danger" onPress={handleDelete} style={{ flex: 1 }} />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <Dialogo
+        visible={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        icono="trash-outline"
+        titulo={cuelgan.length > 0 ? '¿Eliminar el plan entero?' : '¿Eliminar este ciclo?'}
+        texto={`${
+          cuelgan.length > 0
+            ? `Se borran también los ${cuelgan.length} ciclos que cuelgan de él (bloques y semanas). `
+            : 'Se borra solo el ciclo. '
+        }Los entrenos del alumno y su historial no se tocan.`}
+        accion="Eliminar"
+        onAccion={handleDelete}
+      />
     </ScreenContainer>
   );
 }
@@ -502,22 +481,4 @@ const styles = StyleSheet.create({
   logDay: { ...typography.body, color: colors.text, fontFamily: fonts.medium },
   logMeta: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
-  confirmBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.scrim,
-    padding: spacing.lg,
-  },
-  confirmCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    width: '100%',
-    maxWidth: 420,
-  },
-  confirmTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  confirmText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
 });

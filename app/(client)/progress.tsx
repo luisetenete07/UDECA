@@ -57,6 +57,7 @@ import {
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
 import { confirmar } from '../../lib/confirmar';
+import { Dialogo } from '../../components/Dialogo';
 import { Segmented } from '../../components/Segmented';
 import { Chip, ChipRow } from '../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
@@ -922,48 +923,32 @@ export default function ProgressScreen() {
       ) : null}
 
       {/* Borrar entrenamiento: hay que escribir CONFIRMAR (evita borrados por error) */}
-      <Modal
+      <Dialogo
         visible={!!deleteId}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDeleteId(null)}
+        onClose={() => setDeleteId(null)}
+        icono="trash-outline"
+        titulo="Borrar entrenamiento"
+        texto={
+          <Text style={styles.confirmText}>
+            Esta acción no se puede deshacer. Para confirmar, escribe{' '}
+            <Text style={styles.confirmWordHint}>CONFIRMAR</Text> abajo.
+          </Text>
+        }
+        accion="Borrar entrenamiento"
+        onAccion={doDeleteWorkout}
+        cargando={deleting}
+        desactivado={confirmWord.trim().toUpperCase() !== 'CONFIRMAR'}
       >
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <View style={styles.confirmIcon}>
-              <Ionicons name="trash-outline" size={24} color={colors.danger} />
-            </View>
-            <Text style={styles.confirmTitle}>Borrar entrenamiento</Text>
-            <Text style={styles.confirmText}>
-              Esta acción no se puede deshacer. Para confirmar, escribe{' '}
-              <Text style={styles.confirmWordHint}>CONFIRMAR</Text> abajo.
-            </Text>
-            <TextInput
-              value={confirmWord}
-              onChangeText={setConfirmWord}
-              placeholder="CONFIRMAR"
-              placeholderTextColor={colors.textFaint}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              style={styles.confirmInput}
-            />
-            <Button
-              title="Borrar entrenamiento"
-              variant="danger"
-              onPress={doDeleteWorkout}
-              loading={deleting}
-              disabled={confirmWord.trim().toUpperCase() !== 'CONFIRMAR'}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setDeleteId(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        <TextInput
+          value={confirmWord}
+          onChangeText={setConfirmWord}
+          placeholder="CONFIRMAR"
+          placeholderTextColor={colors.textFaint}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          style={styles.confirmInput}
+        />
+      </Dialogo>
 
       {/* Progreso completo: la tabla se CONSULTA aquí dentro. El PDF queda
           como exportación opcional, no como única forma de verlo. */}
@@ -1223,33 +1208,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   borrarSesionTexto: { ...typography.small, color: colors.textFaint },
-  confirmBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.scrim,
-    padding: spacing.lg,
-  },
-  confirmCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
-  },
-  confirmIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.dangerMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  confirmTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
   confirmText: {
     ...typography.small,
     color: colors.textMuted,

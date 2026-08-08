@@ -17,6 +17,7 @@ import {
 } from '../../../lib/firestore/exercises';
 import { showToast } from '../../../components/Toast';
 import { ListaRadio } from '../../../components/ListaRadio';
+import { Dialogo } from '../../../components/Dialogo';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   EXERCISE_MEASURES,
@@ -405,35 +406,16 @@ export default function ExerciseEditorScreen() {
         </Pressable>
       ) : null}
 
-      <Modal
+      <Dialogo
         visible={confirmarBorrado}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmarBorrado(false)}
-      >
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>¿Eliminar {name || 'este ejercicio'}?</Text>
-            <Text style={styles.confirmText}>
-              Desaparece de tu biblioteca y de las rutinas que lo usen. Los
-              entrenamientos ya registrados con él se quedan como están.
-            </Text>
-            <Button
-              title="Eliminar"
-              variant="danger"
-              onPress={handleDelete}
-              loading={saving}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setConfirmarBorrado(false)}
-              style={{ marginTop: spacing.xs }}
-            />
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setConfirmarBorrado(false)}
+        icono="trash-outline"
+        titulo={`¿Eliminar ${name || 'este ejercicio'}?`}
+        texto="Desaparece de tu biblioteca y de las rutinas que lo usen. Los entrenamientos ya registrados con él se quedan como están."
+        accion="Eliminar"
+        onAccion={handleDelete}
+        cargando={saving}
+      />
 
       {/* Renombrar subgrupo (arrastra a todos los ejercicios que lo usan) */}
       <Modal
@@ -488,24 +470,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   borrarEnlaceTexto: { ...typography.small, color: colors.textFaint },
-  confirmBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.scrim,
-    padding: spacing.lg,
-  },
-  confirmCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    width: '100%',
-    maxWidth: 420,
-  },
-  confirmTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  confirmText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
   label: {
     ...typography.label,
     color: colors.textMuted,

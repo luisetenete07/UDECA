@@ -43,6 +43,7 @@ import {
 import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { showToast } from '../../../components/Toast';
+import { Dialogo } from '../../../components/Dialogo';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
@@ -800,55 +801,28 @@ export default function ExercisesScreen() {
       )}
 
       {/* Confirmación previa de "Actualizar a pack UDECA" (destructivo) */}
-      <Modal
+      <Dialogo
         visible={confirmPack}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmPack(false)}
-      >
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <View style={styles.confirmIcon}>
-              <Ionicons name="warning-outline" size={26} color={colors.danger} />
-            </View>
-            <Text style={styles.confirmTitle}>¿Actualizar a pack UDECA?</Text>
-            <Text style={styles.confirmText}>
-              Tu biblioteca quedará EXACTAMENTE igual que el pack UDECA actual
-              ({packItems.length} ejercicios): se sustituyen los datos de los que ya tienes,
-              se añaden los que falten y se BORRAN tus {exercises.length}{' '}
-              {exercises.length === 1 ? 'ejercicio' : 'ejercicios'} que no
-              estén en el pack. También se reemplazan tus categorías. No se puede deshacer.
-            </Text>
-            <Button
-              title="Sí, sustituirlo todo"
-              variant="danger"
-              onPress={handleUpdatePackFull}
-              loading={importing}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setConfirmPack(false)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setConfirmPack(false)}
+        icono="warning-outline"
+        titulo="¿Actualizar a pack UDECA?"
+        texto={`Tu biblioteca quedará EXACTAMENTE igual que el pack UDECA actual (${packItems.length} ejercicios): se sustituyen los datos de los que ya tienes, se añaden los que falten y se BORRAN tus ${exercises.length} ${
+          exercises.length === 1 ? 'ejercicio' : 'ejercicios'
+        } que no estén en el pack. También se reemplazan tus categorías. No se puede deshacer.`}
+        accion="Sí, sustituirlo todo"
+        onAccion={handleUpdatePackFull}
+        cargando={importing}
+      />
 
       {/* Color de una categoría: paleta + color personalizado */}
-      <Modal
+      <Dialogo
         visible={!!colorTarget}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setColorTarget(null)}
+        onClose={() => setColorTarget(null)}
+        titulo={colorTarget ?? ''}
+        texto="Elige un color o escribe el tuyo."
+        cancelar="Cerrar"
       >
-        <View style={styles.confirmBackdrop}>
-          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
-            <Text style={styles.confirmTitle}>{colorTarget}</Text>
-            <Text style={[styles.confirmText, { marginBottom: spacing.md }]}>
-              Elige un color o escribe el tuyo.
-            </Text>
+        <View style={{ height: spacing.md }} />
             <View style={styles.paletteGrid}>
               {CATEGORY_PALETTE.map((c) => (
                 <Pressable
@@ -887,125 +861,64 @@ export default function ExercisesScreen() {
                 <Text style={styles.addCatText}>Usar</Text>
               </Pressable>
             </View>
-            <Button
-              title="Cerrar"
-              variant="ghost"
-              onPress={() => setColorTarget(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+      </Dialogo>
 
       {/* Renombrar un subgrupo (arrastra a sus ejercicios) */}
-      <Modal
+      <Dialogo
         visible={!!renameSub}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenameSub(null)}
+        onClose={() => setRenameSub(null)}
+        titulo="Renombrar subgrupo"
+        texto={`Se actualizarán también los ejercicios que ya están en «${renameSub?.from ?? ''}».`}
       >
-        <View style={styles.confirmBackdrop}>
-          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
-            <Text style={styles.confirmTitle}>Renombrar subgrupo</Text>
-            <Text style={[styles.confirmText, { marginBottom: spacing.md }]}>
-              Se actualizarán también los ejercicios que ya están en «{renameSub?.from}».
-            </Text>
-            <TextInput
-              value={renameText}
-              onChangeText={setRenameText}
-              placeholder="Nuevo nombre"
-              placeholderTextColor={colors.textFaint}
-              style={styles.addCatInput}
-              onSubmitEditing={applyRenameSub}
-              returnKeyType="done"
-              autoFocus
-            />
-            <Button
-              title="Guardar"
-              onPress={applyRenameSub}
-              loading={renaming}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setRenameSub(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        <TextInput
+          value={renameText}
+          onChangeText={setRenameText}
+          placeholder="Nuevo nombre"
+          placeholderTextColor={colors.textFaint}
+          style={[styles.addCatInput, { marginTop: spacing.md }]}
+          onSubmitEditing={applyRenameSub}
+          returnKeyType="done"
+          autoFocus
+        />
+        <Button
+          title="Guardar"
+          onPress={applyRenameSub}
+          loading={renaming}
+          style={{ marginTop: spacing.md }}
+        />
+      </Dialogo>
 
       {/* Importar por pegado de texto (móvil) */}
-      <Modal
+      <Dialogo
         visible={pasteOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setPasteOpen(false)}
+        onClose={() => setPasteOpen(false)}
+        titulo="Pegar plantilla"
+        texto="Pega aquí el texto de la plantilla que te ha compartido otro entrenador."
       >
-        <View style={styles.confirmBackdrop}>
-          <View style={[styles.confirmCard, { alignItems: 'stretch' }]}>
-            <Text style={styles.confirmTitle}>Pegar plantilla</Text>
-            <Text style={[styles.confirmText, { textAlign: 'left' }]}>
-              Pega aquí el texto de la plantilla que te ha compartido otro entrenador.
-            </Text>
-            <TextInput
-              value={pasteText}
-              onChangeText={setPasteText}
-              placeholder="Pega el contenido JSON…"
-              placeholderTextColor={colors.textFaint}
-              multiline
-              style={styles.pasteInput}
-            />
-            <Button
-              title="Continuar"
-              onPress={handlePasteImport}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setPasteOpen(false)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        <TextInput
+          value={pasteText}
+          onChangeText={setPasteText}
+          placeholder="Pega el contenido JSON…"
+          placeholderTextColor={colors.textFaint}
+          multiline
+          style={styles.pasteInput}
+        />
+        <Button title="Continuar" onPress={handlePasteImport} style={{ marginTop: spacing.md }} />
+      </Dialogo>
 
       {/* Aviso de confirmación al importar (sustituye TODA la biblioteca) */}
-      <Modal
+      <Dialogo
         visible={!!pendingImport}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPendingImport(null)}
-      >
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <View style={styles.confirmIcon}>
-              <Ionicons name="warning-outline" size={26} color={colors.danger} />
-            </View>
-            <Text style={styles.confirmTitle}>¿Sustituir tu plantilla actual?</Text>
-            <Text style={styles.confirmText}>
-              Esto borrará tus {exercises.length}{' '}
-              {exercises.length === 1 ? 'ejercicio' : 'ejercicios'} y los reemplazará por los{' '}
-              {pendingImport?.length ?? 0} de la plantilla importada. No se puede deshacer.
-            </Text>
-            <Button
-              title={`Sustituir por ${pendingImport?.length ?? 0} ejercicios`}
-              variant="danger"
-              onPress={confirmReplace}
-              loading={replacing}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setPendingImport(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setPendingImport(null)}
+        icono="warning-outline"
+        titulo="¿Sustituir tu plantilla actual?"
+        texto={`Esto borrará tus ${exercises.length} ${
+          exercises.length === 1 ? 'ejercicio' : 'ejercicios'
+        } y los reemplazará por los ${pendingImport?.length ?? 0} de la plantilla importada. No se puede deshacer.`}
+        accion={`Sustituir por ${pendingImport?.length ?? 0} ejercicios`}
+        onAccion={confirmReplace}
+        cargando={replacing}
+      />
     </ScreenContainer>
   );
 }
@@ -1173,40 +1086,6 @@ const styles = StyleSheet.create({
   catActionsSep: { width: 1, height: 12, backgroundColor: colors.border },
   toolBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   toolText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
-  confirmBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.scrim,
-    padding: spacing.lg,
-  },
-  confirmCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
-  },
-  confirmIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.dangerMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  confirmTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
-  confirmText: {
-    ...typography.small,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginTop: spacing.xs,
-  },
   pasteInput: {
     marginTop: spacing.md,
     minHeight: 140,

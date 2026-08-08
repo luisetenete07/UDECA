@@ -17,6 +17,7 @@ import {
 import { pickCoverPhoto } from '../../../lib/image';
 import { showToast } from '../../../components/Toast';
 import { nuevoId } from '../../../lib/ids';
+import { Dialogo } from '../../../components/Dialogo';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { CourseSection, Lesson } from '../../../lib/types';
 
@@ -350,36 +351,18 @@ export default function CourseEditorScreen() {
         </Pressable>
       ) : null}
 
-      <Modal
+      <Dialogo
         visible={confirmarBorrado}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setConfirmarBorrado(false)}
-      >
-        <View style={styles.confirmBackdrop}>
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>¿Eliminar {title || 'este curso'}?</Text>
-            <Text style={styles.confirmText}>
-              Se borran sus {sections.length}{' '}
-              {sections.length === 1 ? 'sección' : 'secciones'} y todas sus
-              lecciones. Tus alumnos dejarán de verlo. No se puede deshacer.
-            </Text>
-            <Button
-              title="Eliminar"
-              variant="danger"
-              onPress={handleDelete}
-              loading={saving}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setConfirmarBorrado(false)}
-              style={{ marginTop: spacing.xs }}
-            />
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setConfirmarBorrado(false)}
+        icono="trash-outline"
+        titulo={`¿Eliminar ${title || 'este curso'}?`}
+        texto={`Se borran sus ${sections.length} ${
+          sections.length === 1 ? 'sección' : 'secciones'
+        } y todas sus lecciones. Tus alumnos dejarán de verlo. No se puede deshacer.`}
+        accion="Eliminar"
+        onAccion={handleDelete}
+        cargando={saving}
+      />
     </ScreenContainer>
   );
 }
@@ -401,24 +384,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   borrarEnlaceTexto: { ...typography.small, color: colors.textFaint },
-  confirmBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.scrim,
-    padding: spacing.lg,
-  },
-  confirmCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    width: '100%',
-    maxWidth: 420,
-  },
-  confirmTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  confirmText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
   textarea: { height: 78, textAlignVertical: 'top' },
   coverPicker: { marginBottom: spacing.md },
   coverImage: { width: '100%', maxWidth: 480, aspectRatio: 16 / 9, borderRadius: radius.md, alignSelf: 'flex-start' },
