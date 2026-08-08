@@ -10,7 +10,6 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useAuth } from '../../lib/auth-context';
-import { getActiveChallenge } from '../../lib/firestore/challenges';
 import {
   compareLeaderboard,
   subscribeSocialLeaderboard,
@@ -20,7 +19,7 @@ import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { monthKeyOf, startOfWeek } from '../../lib/stats';
 import { isOnline } from '../../lib/presence';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
-import type { Challenge, SocialStats } from '../../lib/types';
+import type { SocialStats } from '../../lib/types';
 
 /**
  * El puesto se distingue por INTENSIDAD, no por color. Oro, plata y bronce
@@ -33,7 +32,6 @@ const PUESTOS = [colors.primaryBright, colors.textMuted, colors.textFaint];
 export default function SocialScreen() {
   const { profile } = useAuth();
   const [members, setMembers] = useState<SocialStats[]>([]);
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -61,7 +59,6 @@ export default function SocialScreen() {
     const myLogs = await getWorkoutLogsForClient(profile.uid);
     mineRef.current = await syncMySocialStats(profile, myLogs);
     setMembers((prev) => withMine(prev));
-    setChallenge(await getActiveChallenge(profile.trainerId));
     setRefreshing(false);
   }, [profile, withMine]);
 
@@ -215,42 +212,6 @@ export default function SocialScreen() {
             );
           })}
         </View>
-      ) : null}
-
-      {challenge ? (
-        <Card accent style={styles.challengeCard}>
-          <View style={styles.challengeHeader}>
-            <Ionicons name="trophy" size={18} color={colors.primary} />
-            <Text style={styles.challengeTitle}>{challenge.title}</Text>
-          </View>
-          <Text style={styles.challengeMeta}>
-            Reto del grupo · hasta el{' '}
-            {new Date(challenge.endDate).toLocaleDateString('es-ES', {
-              day: '2-digit',
-              month: 'long',
-            })}
-          </Text>
-          {[...members]
-            .filter((m) => (m.challengeSessions ?? 0) > 0)
-            .sort((a, b) => (b.challengeSessions ?? 0) - (a.challengeSessions ?? 0))
-            .slice(0, 5)
-            .map((m, i) => (
-              <View key={m.uid} style={styles.challengeRow}>
-                <Text style={styles.challengeRank}>{i + 1}</Text>
-                <Avatar name={m.name} photoURL={m.photoURL} size={28} />
-                <Text style={styles.challengeName}>
-                  {m.name}
-                  {m.uid === profile.uid ? ' · Tú' : ''}
-                </Text>
-                <Text style={styles.challengeCount}>{m.challengeSessions} sesiones</Text>
-              </View>
-            ))}
-          {members.every((m) => !(m.challengeSessions ?? 0)) ? (
-            <Text style={styles.challengeMeta}>
-              Nadie ha puntuado todavía. Cada sesión registrada cuenta: sé el primero.
-            </Text>
-          ) : null}
-        </Card>
       ) : null}
 
       {(() => {
@@ -451,20 +412,4 @@ const styles = StyleSheet.create({
   },
   streakValue: { ...typography.body, color: colors.primary, fontFamily: fonts.heading },
   streakLabel: { ...typography.small, color: colors.textFaint, marginTop: 2, fontSize: 11 },
-  challengeCard: { marginBottom: spacing.lg },
-  challengeHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  challengeTitle: { ...typography.h3, color: colors.primaryBright, flex: 1 },
-  challengeMeta: { ...typography.small, color: colors.textMuted, marginTop: spacing.xs },
-  challengeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginTop: spacing.sm,
-  },
-  challengeRank: { ...typography.h3, color: colors.textFaint, width: 18 },
-  challengeName: { ...typography.body, color: colors.text, flex: 1 },
-  challengeCount: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
 });

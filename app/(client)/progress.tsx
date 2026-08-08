@@ -37,7 +37,6 @@ import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
-import { getLevelTestsForClient } from '../../lib/firestore/levelTests';
 import {
   isComboExercise,
   isIsometricExercise,
@@ -100,7 +99,6 @@ export default function ProgressScreen() {
   const [musclesByExercise, setMusclesByExercise] = useState<
     Record<string, import('../../lib/muscles').Weights>
   >({});
-  const [levelTests, setLevelTests] = useState<import('../../lib/types').LevelTest[]>([]);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -146,14 +144,12 @@ export default function ProgressScreen() {
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [weightData, workoutData, testData] = await Promise.all([
+    const [weightData, workoutData] = await Promise.all([
       getWeightLogsForClient(profile.uid),
       getWorkoutLogsForClient(profile.uid),
-      getLevelTestsForClient(profile.uid).catch(() => []),
     ]);
     setWeightLogs(weightData);
     setWorkoutLogs(workoutData);
-    setLevelTests(testData);
     // Ejercicios del plan activo: solo se usan si esta cuenta puede elegir qué
     // sigue en su tabla (el atleta), pero se cargan siempre porque el plan ya
     // se consulta aquí y no cuesta nada.
@@ -895,32 +891,14 @@ export default function ProgressScreen() {
             </View>
             <MuscleMap intensity={muscleIntensity} hasData={muscleHasData} />
           </Card>
-          {levelTests.length > 0 ? (
-            <Card accent style={styles.section}>
-              <View style={styles.exHeader}>
-                <Text style={styles.sectionTitle}>Tus marcas verificadas</Text>
-              </View>
-              <Text style={styles.photoHint}>Tests de nivel confirmados por tu entrenador.</Text>
-              {levelTests.slice(0, 8).map((t) => (
-                <View key={t.id} style={styles.logRow}>
-                  <Text style={styles.logValue}>{t.name}</Text>
-                  <Text style={styles.testMark}>
-                    {t.value} {t.unit === 'reps' ? 'reps' : 's'}
-                  </Text>
-                </View>
-              ))}
-            </Card>
-          ) : null}
           {exercisesInLogs.length === 0 ? (
-            levelTests.length === 0 ? (
-              <Card style={styles.section}>
-                <EmptyState
-                  icon="stats-chart-outline"
-                  title="Aún no hay datos por ejercicio"
-                  subtitle="Cuando completes entrenamientos verás aquí cómo mejoras en cada ejercicio."
-                />
-              </Card>
-            ) : null
+            <Card style={styles.section}>
+              <EmptyState
+                icon="stats-chart-outline"
+                title="Aún no hay datos por ejercicio"
+                subtitle="Cuando completes entrenamientos verás aquí cómo mejoras en cada ejercicio."
+              />
+            </Card>
           ) : (
           <>
             <ChipRow scroll>
@@ -1087,7 +1065,6 @@ const styles = StyleSheet.create({
   fullSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
-  exHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
@@ -1100,7 +1077,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
-  testMark: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
   logDate: { ...typography.small, color: colors.textMuted },
   // ----- Mapa muscular -----
   muscleHeader: {

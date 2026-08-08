@@ -20,7 +20,6 @@ const MIAS: { coleccion: string; campo: string }[] = [
   { coleccion: 'workoutLogs', campo: 'clientId' },
   { coleccion: 'weightLogs', campo: 'clientId' },
   { coleccion: 'progressPhotos', campo: 'clientId' },
-  { coleccion: 'levelTests', campo: 'clientId' },
   { coleccion: 'joinRequests', campo: 'clientId' },
 ];
 

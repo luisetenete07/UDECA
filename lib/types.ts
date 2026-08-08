@@ -608,23 +608,6 @@ export interface RoutineTemplate {
 }
 
 /**
- * Test de nivel: marca máxima verificada por el coach en un hito de
- * calistenia (máx. dominadas, aguante de planche...). Historial objetivo del
- * nivel real del alumno, separado del día a día de las rutinas.
- */
-export interface LevelTest {
-  id: string;
-  trainerId: string;
-  clientId: string;
-  /** Nombre del test (p. ej. "Dominadas máximas", "Planche hold"). */
-  name: string;
-  value: number;
-  unit: 'reps' | 'seconds';
-  date: number;
-  createdAt: number;
-}
-
-/**
  * Ciclos de entrenamiento (planificación). Los tres niveles son OPCIONALES e
  * independientes: el coach decide si usa alguno, y cuáles, para cada alumno.
  * Un ciclo es solo un contenedor con fechas; las estadísticas se derivan de
@@ -901,8 +884,6 @@ export interface SocialStats {
    * semanales. Si no es la semana en curso, `sessionsThisWeek` se muestra a 0.
    */
   weekKey?: string;
-  /** Sesiones dentro del periodo del reto activo (para el ranking del reto). */
-  challengeSessions?: number;
   /** Último récord personal (para el tablón de récords del grupo). */
   lastPR?: { exerciseName: string; label: string; date: number };
   /** Última vez con la app abierta (presencia "en línea" para el coach). */
@@ -970,18 +951,6 @@ export interface HabitLog {
   habitId: string;
   /** Día al que corresponde (timestamp a medianoche). */
   day: number;
-  createdAt: number;
-}
-
-/** Reto del grupo: cuenta sesiones de entrenamiento dentro del periodo. */
-export interface Challenge {
-  id: string;
-  trainerId: string;
-  title: string;
-  description?: string;
-  startDate: number;
-  endDate: number;
-  active: boolean;
   createdAt: number;
 }
 

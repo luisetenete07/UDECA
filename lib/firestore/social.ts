@@ -11,7 +11,6 @@ import {
   type QuerySnapshot,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getActiveChallenge } from './challenges';
 import {
   bestStreakInMonth,
   currentStreak,
@@ -36,19 +35,6 @@ export async function syncMySocialStats(
 ): Promise<SocialStats | null> {
   if (!profile.trainerId) return null;
 
-  // Sesiones dentro del periodo del reto activo del grupo (si lo hay).
-  let challengeSessions: number | undefined;
-  try {
-    const challenge = await getActiveChallenge(profile.trainerId);
-    if (challenge) {
-      challengeSessions = workoutLogs.filter(
-        (l) => l.date >= challenge.startDate && l.date <= challenge.endDate
-      ).length;
-    }
-  } catch {
-    // El ranking del reto es secundario: no bloquea la sincronización.
-  }
-
   // Métricas mensuales (se reinician cada mes) + mejor racha del mes anterior
   // para el podio del cambio de mes. Todo se recalcula desde los propios logs.
   const now = Date.now();
@@ -68,7 +54,6 @@ export async function syncMySocialStats(
     lastMonthStreak: bestStreakInMonth(workoutLogs, lastMonthRef),
     monthKey: monthKeyOf(now),
     weekKey: weekKeyOf(now),
-    challengeSessions: challengeSessions ?? 0,
     // Nuevo récord de esta sesión; si no lo hay, merge conserva el anterior.
     lastPR,
     updatedAt: now,
@@ -142,7 +127,6 @@ function mapLeaderboard(snap: QuerySnapshot<DocumentData>): SocialStats[] {
         streakThisMonth: fresh ? s.streakThisMonth ?? 0 : 0,
         workoutsThisMonth: fresh ? s.workoutsThisMonth ?? 0 : 0,
         lastMonthStreak: s.lastMonthStreak ?? 0,
-        challengeSessions: s.challengeSessions ?? 0,
       } as SocialStats;
     })
     .sort(compareLeaderboard);
