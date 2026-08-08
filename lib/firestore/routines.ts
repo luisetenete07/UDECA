@@ -38,6 +38,34 @@ export async function getActiveRoutineForClient(
   return routines.find((r) => r.active) ?? null;
 }
 
+/**
+ * La rutina activa de TODOS los alumnos del entrenador, en una sola consulta.
+ *
+ * La lista de alumnos necesitaba la rutina de cada uno para calcular cuántos
+ * entrenos se ha saltado esta semana, y lo hacía pidiéndolas de una en una: con
+ * cuarenta alumnos, cuarenta consultas cada vez que se abre la pestaña. En el
+ * emulador no se nota y en un móvil con dos rayas de cobertura es la diferencia
+ * entre una lista que aparece y una que se queda pensando.
+ *
+ * Devuelve un mapa por uid de alumno. Si alguien tiene varias activas —no
+ * debería, pero los datos viejos existen— se queda la más reciente, igual que
+ * hacía `getActiveRoutineForClient`.
+ */
+export async function getActiveRoutinesForTrainer(
+  trainerId: string
+): Promise<Record<string, Routine>> {
+  const snap = await getDocs(
+    query(collectionRef(), where('trainerId', '==', trainerId), where('active', '==', true))
+  );
+  const porAlumno: Record<string, Routine> = {};
+  for (const d of snap.docs) {
+    const r = { id: d.id, ...d.data() } as Routine;
+    const previa = porAlumno[r.clientId];
+    if (!previa || r.updatedAt > previa.updatedAt) porAlumno[r.clientId] = r;
+  }
+  return porAlumno;
+}
+
 
 export async function createRoutine(
   data: Omit<Routine, 'id' | 'createdAt' | 'updatedAt'>

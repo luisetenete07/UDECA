@@ -20,7 +20,7 @@ import { syncClientCountOnServer } from '../../../lib/join';
 import { getClientsForTrainer, subscribeClientsForTrainer } from '../../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
 import { QuickSheet } from '../../../components/QuickSheet';
-import { getActiveRoutineForClient } from '../../../lib/firestore/routines';
+import { getActiveRoutinesForTrainer } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { Chip, ChipRow } from '../../../components/Chip';
@@ -136,17 +136,13 @@ export default function ClientsScreen() {
         if (log.date < monday) continue;
         (trainedByClient[log.clientId] ??= new Set()).add(inicioDelDia(log.date));
       }
-      Promise.all(
-        data.map((c) =>
-          getActiveRoutineForClient(c.uid, profile.uid).catch(() => null)
-        )
-      )
-        .then((routines) => {
+      getActiveRoutinesForTrainer(profile.uid)
+        .then((rutinas) => {
           const skip: Record<string, number> = {};
-          data.forEach((c, i) => {
-            const n = skippedThisWeek(routines[i], trainedByClient[c.uid] ?? new Set());
+          for (const c of data) {
+            const n = skippedThisWeek(rutinas[c.uid] ?? null, trainedByClient[c.uid] ?? new Set());
             if (n > 0) skip[c.uid] = n;
-          });
+          }
           setSkipped(skip);
           setCached(`${cacheKey}-skip`, skip);
         })
