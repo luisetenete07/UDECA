@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { getUserProfile } from './firestore/users';
+import { diasPendientes, horasDeAviso, textoDeAviso, TOPE_AVISOS } from './olvido';
+import type { Routine } from './types';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -208,5 +210,81 @@ export async function cancelCheckinReminder(): Promise<void> {
     await Notifications.cancelScheduledNotificationAsync(CHECKIN_REMINDER_ID);
   } catch {
     // Si no existía, no pasa nada.
+  }
+}
+
+const OLVIDO_PREFIJO = 'entreno-olvidado-';
+
+/**
+ * Programa los avisos de "se te ha olvidado subir el entreno".
+ *
+ * Se borran los anteriores y se vuelven a poner enteros: es idempotente, así
+ * que se puede llamar cada vez que el alumno abre la app sin acumular nada.
+ *
+ * Devuelve cuántos quedaron puestos (0 en web, sin permiso o sin días que
+ * avisar), que es lo que permite comprobarlo desde fuera.
+ */
+export async function programarAvisosOlvido(
+  routine: Routine | null,
+  yaEntrenoHoy: boolean,
+  desdeHora: number,
+  anchorOverride?: number,
+  ahora = Date.now()
+): Promise<number> {
+  if (Platform.OS === 'web') return 0;
+  try {
+    const existing = await Notifications.getPermissionsAsync();
+    let granted = existing.status === 'granted';
+    if (!granted) {
+      const req = await Notifications.requestPermissionsAsync();
+      granted = req.status === 'granted';
+    }
+    if (!granted) return 0;
+
+    await cancelarAvisosOlvido();
+
+    const pendientes = diasPendientes(routine, yaEntrenoHoy, ahora);
+    let puestos = 0;
+    for (const { dia, nombre } of pendientes) {
+      // El primer aviso del día va a la hora que el alumno eligió para su
+      // recordatorio; antes de eso todavía no se le ha olvidado nada.
+      for (const cuando of horasDeAviso(dia, desdeHora, ahora)) {
+        if (puestos >= TOPE_AVISOS) return puestos;
+        const { titulo, cuerpo } = textoDeAviso(puestos, nombre);
+        await Notifications.scheduleNotificationAsync({
+          identifier: `${OLVIDO_PREFIJO}${cuando}`,
+          content: { title: titulo, body: cuerpo },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: new Date(cuando),
+          },
+        });
+        puestos++;
+      }
+    }
+    return puestos;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Quita todos los avisos de olvido pendientes.
+ *
+ * Se llama al registrar un entreno: el aviso de las 20:00 no puede saltar si a
+ * las 19:40 ya se ha subido la sesión. Se recorren los programados y se borran
+ * los que llevan nuestro prefijo, para no tocar los demás recordatorios.
+ */
+export async function cancelarAvisosOlvido(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    const puestos = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      puestos
+        .filter((n) => n.identifier.startsWith(OLVIDO_PREFIJO))
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+    );
+  } catch {
+    // Si no había ninguno, no pasa nada.
   }
 }

@@ -19,6 +19,7 @@ import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { pickAvatar } from '../../lib/image';
 import {
+  cancelarAvisosOlvido,
   cancelCheckinReminder,
   cancelWorkoutReminder,
   scheduleCheckinReminder,
@@ -63,6 +64,23 @@ export default function ClientProfileScreen() {
   const [reminderHour, setReminderHour] = useState(profile?.reminderHour ?? 18);
   const [reminderMinute, setReminderMinute] = useState(profile?.reminderMinute ?? 0);
   const [checkinOn, setCheckinOn] = useState(Boolean(profile?.checkinReminderEnabled));
+
+  const [missedOn, setMissedOn] = useState(Boolean(profile?.missedWorkoutRemindersEnabled));
+
+  /**
+   * Insistir cada hora es mucho ruido, así que se pide expresamente y se puede
+   * apagar de un toque. Al apagarlo se quitan los que ya estaban puestos: si
+   * no, el alumno seguiría recibiendo avisos que acaba de desactivar y
+   * pensaría —con razón— que el interruptor no hace nada.
+   */
+  const toggleMissedReminders = async () => {
+    if (!profile) return;
+    const next = !missedOn;
+    setMissedOn(next);
+    if (!next) await cancelarAvisosOlvido();
+    await updateUserProfile(profile.uid, { missedWorkoutRemindersEnabled: next });
+    await refreshProfile();
+  };
 
   const toggleCheckinReminder = async () => {
     if (!profile) return;
@@ -401,6 +419,30 @@ export default function ClientProfileScreen() {
             </ChipRow>
           </>
         ) : null}
+      </Card>
+
+      {/* Va justo debajo del recordatorio diario porque depende de él: el
+          primer aviso sale a esa misma hora. */}
+      <Card style={styles.section}>
+        <View style={styles.reminderTopRow}>
+          <View style={styles.reminderHeader}>
+            <Ionicons name="alarm-outline" size={18} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Insistir si se me olvida</Text>
+          </View>
+          <Pressable
+            onPress={toggleMissedReminders}
+            style={[styles.switch, missedOn && styles.switchOn]}
+            hitSlop={6}
+          >
+            <View style={[styles.switchKnob, missedOn && styles.switchKnobOn]} />
+          </Pressable>
+        </View>
+        <Text style={styles.reminderHint}>
+          Los días que te toca entrenar y no has registrado la sesión, te aviso
+          cada hora desde las {two(reminderHour)}:{two(reminderMinute)} hasta las
+          22:00. En cuanto la registres, paran.
+          {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
+        </Text>
       </Card>
 
       <Card style={styles.section}>

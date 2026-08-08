@@ -1,5 +1,5 @@
 import { dayDiff } from './stats';
-import { todayWeekday, type Routine, type RoutineDay } from './types';
+import { weekdayOf, type Routine, type RoutineDay } from './types';
 
 /** Nombres heredados del modo "Sensaciones" que ya no queremos mostrar. */
 const LEGACY_FLEX_LABELS = ['rein tena', 'reintena', 'rein-tena', 'método rein tena', 'metodo rein tena'];
@@ -49,6 +49,24 @@ export function resolveTodaySession(
   routine: Routine | null,
   anchorOverride?: number
 ): TodaySession {
+  return resolveSessionFor(routine, Date.now(), anchorOverride);
+}
+
+/**
+ * La misma resolución, pero para CUALQUIER día.
+ *
+ * Hace falta para mirar hacia delante: los avisos de "se te ha olvidado subir
+ * el entreno" se programan con días de antelación, porque el móvil solo puede
+ * programarlos mientras la app está abierta, y justo los días que hacen falta
+ * son aquellos en los que el alumno no la abre.
+ *
+ * `resolveTodaySession` es esta misma con `Date.now()`.
+ */
+export function resolveSessionFor(
+  routine: Routine | null,
+  when: number,
+  anchorOverride?: number
+): TodaySession {
   if (!routine || routine.days.length === 0) {
     return { day: null, isRest: false, optionalRest: false };
   }
@@ -63,7 +81,7 @@ export function resolveTodaySession(
     // El ancla más reciente manda: si el alumno reinició su ciclo (override) o
     // el coach lo reprogramó (cycleStartDate), gana la fecha más nueva.
     const anchor = Math.max(routine.cycleStartDate, anchorOverride ?? 0);
-    const idx = cycleDayIndex(anchor, routine.days.length);
+    const idx = cycleDayIndex(anchor, routine.days.length, when);
     const day = routine.days[idx] ?? null;
     return {
       day: day && !day.isRest ? day : null,
@@ -75,7 +93,7 @@ export function resolveTodaySession(
   }
 
   // Modo semanal (por defecto).
-  const todays = routine.days.find((d) => d.weekday === todayWeekday());
+  const todays = routine.days.find((d) => d.weekday === weekdayOf(when));
   const usesWeekdays = routine.days.some((d) => d.weekday !== undefined);
   // Día de la semana marcado como descanso por el coach: el alumno descansa,
   // no registra nada y su racha no se ve afectada.

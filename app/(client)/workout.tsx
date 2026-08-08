@@ -53,7 +53,7 @@ import {
   setCycleAnchorRemote,
 } from '../../lib/firestore/sync';
 import { tabScreenOptions } from '../../lib/navTheme';
-import { notifyUser } from '../../lib/notifications';
+import { cancelarAvisosOlvido, notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
 import { shareRecordImage, shareSessionImage } from '../../lib/brandCards';
 import { startRest, stopRest, useActiveRest } from '../../lib/restTimerStore';
@@ -1064,6 +1064,11 @@ export default function WorkoutScreen() {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
+      // Sesión registrada: fuera los avisos de "se te ha olvidado subirlo".
+      // Va aquí y no solo en el guardado en línea porque un entreno encolado
+      // sin conexión también está hecho: el aviso de las 20:00 no puede saltar
+      // si a las 19:40 el alumno ya lo ha dado por terminado.
+      cancelarAvisosOlvido().catch(() => {});
       stopRest();
       if (profile) {
         AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});

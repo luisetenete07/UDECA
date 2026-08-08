@@ -95,6 +95,12 @@ export interface UserProfile {
   /** Minuto del recordatorio (0-59). */
   reminderMinute?: number;
   reminderEnabled?: boolean;
+  /**
+   * Avisos de "se te ha olvidado subir el entreno": uno por hora, desde la
+   * hora del recordatorio y hasta las 22:00, solo los días que toca entrenar.
+   * Apagado por omisión: son muchos avisos y hay que pedirlos.
+   */
+  missedWorkoutRemindersEnabled?: boolean;
   /** Recordatorio semanal del check-in (domingos). */
   checkinReminderEnabled?: boolean;
   /** Estado del alumno gestionado por el entrenador. */
@@ -565,9 +571,14 @@ export const WEEKDAY_NAMES = [
 ] as const;
 
 /** Índice de día de la semana con lunes=0 (JS usa domingo=0). */
-export function todayWeekday(): number {
-  const d = new Date().getDay();
+export function weekdayOf(when: number | Date): number {
+  const d = (typeof when === 'number' ? new Date(when) : when).getDay();
   return d === 0 ? 6 : d - 1;
+}
+
+/** El de hoy. */
+export function todayWeekday(): number {
+  return weekdayOf(Date.now());
 }
 
 export interface Routine {

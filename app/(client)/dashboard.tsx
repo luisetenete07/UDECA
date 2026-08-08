@@ -42,6 +42,8 @@ import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
 import { planCalendar, planSummary } from '../../lib/cyclePlan';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
+import { esHoy } from '../../lib/fechas';
+import { cancelarAvisosOlvido, programarAvisosOlvido } from '../../lib/notifications';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
@@ -142,6 +144,29 @@ export default function ClientDashboard() {
       } satisfies ClientDashData);
       setLoading(false);
       setRefreshing(false);
+
+      /*
+       * Reprograma los avisos de "se te ha olvidado subir el entreno".
+       *
+       * Va aquí y no en una pantalla de ajustes porque un aviso local solo se
+       * puede programar con la app abierta, y el día que hace falta avisar es
+       * justo aquel en que el alumno NO la abre. Cada vez que entra se dejan
+       * puestos los de los próximos días de entreno; al registrar una sesión se
+       * cancelan los de ese día.
+       *
+       * Es idempotente: borra los anteriores y los vuelve a poner enteros.
+       */
+      if (profile.missedWorkoutRemindersEnabled) {
+        const entrenoHoy = workoutData.some((l) => esHoy(l.date));
+        programarAvisosOlvido(
+          routineData,
+          entrenoHoy,
+          profile.reminderHour ?? 18,
+          anchor ?? undefined
+        ).catch(() => {});
+      } else {
+        cancelarAvisosOlvido().catch(() => {});
+      }
     },
     [profile, cacheKey]
   );
