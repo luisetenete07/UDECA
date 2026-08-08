@@ -397,43 +397,29 @@ export default function ExerciseEditorScreen() {
       />
 
       {/* Renombrar subgrupo (arrastra a todos los ejercicios que lo usan) */}
-      <Modal
+      <Dialogo
         visible={!!renameSub}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenameSub(null)}
+        onClose={() => setRenameSub(null)}
+        titulo="Renombrar subgrupo"
+        texto={`Se actualizarán también los ejercicios que ya están en «${renameSub ?? ''}».`}
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Renombrar subgrupo</Text>
-            <Text style={styles.modalText}>
-              Se actualizarán también los ejercicios que ya están en «{renameSub}».
-            </Text>
-            <TextInput
-              value={renameText}
-              onChangeText={setRenameText}
-              placeholder="Nuevo nombre"
-              placeholderTextColor={colors.textFaint}
-              style={styles.addCatInput}
-              onSubmitEditing={applyRenameSub}
-              returnKeyType="done"
-              autoFocus
-            />
-            <Button
-              title="Guardar"
-              onPress={applyRenameSub}
-              loading={renaming}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setRenameSub(null)}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        </View>
-      </Modal>
+        <TextInput
+          value={renameText}
+          onChangeText={setRenameText}
+          placeholder="Nuevo nombre"
+          placeholderTextColor={colors.textFaint}
+          style={[styles.addCatInput, { marginTop: spacing.md }]}
+          onSubmitEditing={applyRenameSub}
+          returnKeyType="done"
+          autoFocus
+        />
+        <Button
+          title="Guardar"
+          onPress={applyRenameSub}
+          loading={renaming}
+          style={{ marginTop: spacing.md }}
+        />
+      </Dialogo>
     </ScreenContainer>
   );
 }
@@ -487,29 +473,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
-    lineHeight: 18,
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.scrim,
-    padding: spacing.lg,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modalTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  modalText: {
-    ...typography.small,
-    color: colors.textMuted,
-    marginBottom: spacing.md,
     lineHeight: 18,
   },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },

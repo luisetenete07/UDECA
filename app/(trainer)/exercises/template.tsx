@@ -20,6 +20,7 @@ import {
 import { getExercisesForTrainer } from '../../../lib/firestore/exercises';
 import { MUSCLE_LABEL, musclesForExercise, type MuscleId } from '../../../lib/muscles';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
+import { Sheet } from '../../../components/Sheet';
 import { ListaRadio } from '../../../components/ListaRadio';
 import { Chip } from '../../../components/Chip';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../lib/theme';
@@ -320,21 +321,11 @@ export default function TemplateExercisesScreen() {
         ))
       )}
 
-      <Modal
+      <Sheet
         visible={!!draft}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setDraft(null)}
+        onClose={() => setDraft(null)}
+        titulo={`${draft?.id ? 'Editar' : 'Nuevo'} ejercicio`}
       >
-        <View style={styles.sheetBackdrop}>
-          <View style={styles.sheet}>
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{draft?.id ? 'Editar' : 'Nuevo'} ejercicio</Text>
-              <Pressable onPress={() => setDraft(null)} hitSlop={8}>
-                <Ionicons name="close" size={22} color={colors.textMuted} />
-              </Pressable>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
               {draft ? (
                 <>
                   <TextField
@@ -448,10 +439,7 @@ export default function TemplateExercisesScreen() {
                   )}
                 </>
               ) : null}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      </Sheet>
     </ScreenContainer>
   );
 }
@@ -507,21 +495,4 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
   },
-  sheetBackdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-    maxHeight: '90%',
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  sheetTitle: { ...typography.h3, color: colors.text },
 });

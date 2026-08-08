@@ -11,6 +11,7 @@ import {
 } from '../lib/firestore/progressTrackers';
 import { startOfWeek, weeklyExerciseMatrix, type MatrixCell } from '../lib/stats';
 import { moveItem, useDragReorder } from '../lib/useDragReorder';
+import { Dialogo } from './Dialogo';
 import { fonts, colors, radius, spacing, typography } from '../lib/theme';
 import type { WorkoutLog } from '../lib/types';
 
@@ -363,16 +364,13 @@ export function ProgressMatrix({
         </View>
       ) : null}
 
-      <Modal
+      <Dialogo
         visible={pickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPickerOpen(false)}
+        onClose={() => setPickerOpen(false)}
+        titulo="Añadir al seguimiento"
+        texto="Ejercicios del plan activo."
+        cancelar="Cerrar"
       >
-        <Pressable style={styles.backdrop} onPress={() => setPickerOpen(false)}>
-          <Pressable style={styles.picker} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.pickerTitle}>Añadir al seguimiento</Text>
-            <Text style={styles.pickerHint}>Ejercicios del plan activo.</Text>
             <ScrollView style={{ maxHeight: 320 }}>
               {planExercises.filter((e) => !seleccionActual().includes(e.id)).length === 0 ? (
                 <Text style={styles.pickerEmpty}>Ya están todos los del plan.</Text>
@@ -391,9 +389,7 @@ export function ProgressMatrix({
                   ))
               )}
             </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      </Dialogo>
 
       {matrix.rows.length > 0 ? (
         <View style={styles.legend}>
@@ -463,13 +459,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   trackBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  backdrop: {
-    flex: 1,
-    backgroundColor: colors.scrim,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
   picker: {
     width: '100%',
     maxWidth: 420,
@@ -479,8 +468,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.lg,
   },
-  pickerTitle: { ...typography.h3, color: colors.text },
-  pickerHint: { ...typography.small, color: colors.textMuted, marginBottom: spacing.sm },
   pickerEmpty: { ...typography.small, color: colors.textFaint, paddingVertical: spacing.md },
   pickerRow: {
     flexDirection: 'row',

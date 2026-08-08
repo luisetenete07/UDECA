@@ -31,6 +31,7 @@ import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { Segmented } from '../../components/Segmented';
 import { diaLargo, mesLargo } from '../../lib/fechas';
+import { Dialogo } from '../../components/Dialogo';
 import { inicioDelDia } from '../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
@@ -631,13 +632,12 @@ function MoveTaskModal({
     setAnchor(new Date(a.getFullYear(), a.getMonth() + delta, 1).getTime());
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.moveBackdrop} onPress={onClose}>
-        <Pressable style={styles.moveSheet} onPress={() => {}}>
-          <Text style={styles.moveTitle} numberOfLines={2}>
-            Mover “{task.title}”
-          </Text>
-          <Text style={styles.moveHint}>Elige el nuevo día para esta tarea.</Text>
+    <Dialogo
+      visible
+      onClose={onClose}
+      titulo={`Mover “${task.title}”`}
+      texto="Elige el nuevo día para esta tarea."
+    >
 
           <View style={styles.moveMonthRow}>
             <Pressable onPress={() => shift(-1)} style={styles.moveNav} hitSlop={8}>
@@ -690,13 +690,8 @@ function MoveTaskModal({
             >
               <Text style={styles.moveQuickText}>Mañana</Text>
             </Pressable>
-            <Pressable style={[styles.moveQuick, styles.moveCancel]} onPress={onClose} hitSlop={6}>
-              <Text style={styles.moveCancelText}>Cancelar</Text>
-            </Pressable>
           </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    </Dialogo>
   );
 }
 
@@ -1048,24 +1043,6 @@ const styles = StyleSheet.create({
   emptyTitle: { ...typography.h3, color: colors.text, textAlign: 'center' },
   emptySub: { ...typography.small, color: colors.textMuted, textAlign: 'center', maxWidth: 320, lineHeight: 19 },
   // Mover tarea a otro día
-  moveBackdrop: {
-    flex: 1,
-    backgroundColor: colors.scrim,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  moveSheet: {
-    width: '100%',
-    maxWidth: 380,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: spacing.lg,
-  },
-  moveTitle: { ...typography.h3, color: colors.text },
-  moveHint: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
   moveMonthRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1111,6 +1088,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   moveQuickText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  moveCancel: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-  moveCancelText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
 });
