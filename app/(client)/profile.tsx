@@ -8,11 +8,13 @@ import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
+import { PausaPlanSheet } from '../../components/PausaPlanSheet';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
+import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
@@ -25,6 +27,8 @@ import {
   scheduleCheckinReminder,
   scheduleWorkoutReminder,
 } from '../../lib/notifications';
+import { diaLargo } from '../../lib/fechas';
+import { pausaActiva, type PausaPlan } from '../../lib/pausa';
 import {
   computeAchievements,
   type Achievement,
@@ -66,6 +70,35 @@ export default function ClientProfileScreen() {
   const [checkinOn, setCheckinOn] = useState(Boolean(profile?.checkinReminderEnabled));
 
   const [missedOn, setMissedOn] = useState(Boolean(profile?.missedWorkoutRemindersEnabled));
+
+  const [pausaAbierta, setPausaAbierta] = useState(false);
+  const [guardandoPausa, setGuardandoPausa] = useState(false);
+  const enPausa = pausaActiva(profile?.planPauses);
+
+  /**
+   * El alumno se pausa el plan él mismo.
+   *
+   * No hace falta pedir permiso al entrenador: el que sabe que está malo o que
+   * se va de viaje es él, y la alternativa —callarse y fallar días— es peor
+   * para los dos. El coach lo ve en la ficha, y al terminarse la pausa quedan
+   * los días guardados por si quiere hablarlo.
+   */
+  const guardarPausa = async (pausas: PausaPlan[]) => {
+    if (!profile) return;
+    setGuardandoPausa(true);
+    try {
+      await updateUserProfile(profile.uid, { planPauses: pausas });
+      await refreshProfile();
+      // Los avisos de olvido hablan de días que ahora pueden estar en pausa.
+      // Se vuelven a poner enteros al abrir el panel, ya sin esos días.
+      await cancelarAvisosOlvido();
+      setPausaAbierta(false);
+    } catch {
+      showToast('No se ha podido guardar la pausa');
+    } finally {
+      setGuardandoPausa(false);
+    }
+  };
 
   /**
    * Insistir cada hora es mucho ruido, así que se pide expresamente y se puede
@@ -359,6 +392,38 @@ export default function ClientProfileScreen() {
         <Button title="Guardar cambios" onPress={handleSave} loading={saving} />
       </CollapsibleCard>
 
+      {/* Pausar el plan: unos días sin entrenar que no rompen la racha ni
+          descolocan el ciclo. Va antes de los recordatorios porque cuando hace
+          falta, hace falta ya. */}
+      <Card style={styles.section}>
+        <View style={styles.reminderTopRow}>
+          <View style={styles.reminderHeader}>
+            <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Pausar el plan</Text>
+          </View>
+          <Pressable onPress={() => setPausaAbierta(true)} hitSlop={6}>
+            <Text style={styles.pausaAccion}>{enPausa ? 'Ver' : 'Elegir días'}</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.reminderHint}>
+          {enPausa
+            ? `En pausa hasta el ${diaLargo(enPausa.hasta)}${
+                enPausa.porQuien === 'coach' ? ', puesta por tu entrenador' : ''
+              }. Estos días no rompen tu racha y el plan te espera donde lo dejaste.`
+            : 'Si te lesionas, te vas de viaje o tienes una semana imposible: marca los días y el plan se congela. Al volver sigue justo donde lo dejaste.'}
+        </Text>
+      </Card>
+
+      <PausaPlanSheet
+        visible={pausaAbierta}
+        onClose={() => setPausaAbierta(false)}
+        pausas={profile?.planPauses}
+        activa={enPausa}
+        porQuien="alumno"
+        guardando={guardandoPausa}
+        onGuardar={guardarPausa}
+      />
+
       <Card style={styles.section}>
         <View style={styles.reminderTopRow}>
           <View style={styles.reminderHeader}>
@@ -553,6 +618,7 @@ const styles = StyleSheet.create({
   reminderTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reminderHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   reminderHint: { ...typography.small, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.md },
+  pausaAccion: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   switch: {
     width: 48,
     height: 28,

@@ -42,6 +42,8 @@ import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
 import { planCalendar, planSummary } from '../../lib/cyclePlan';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
+import { anclaConPausas, diasDePausa, diasQueQuedan, pausaActiva } from '../../lib/pausa';
+import { diaLargo } from '../../lib/fechas';
 import { esHoy } from '../../lib/fechas';
 import { cancelarAvisosOlvido, programarAvisosOlvido } from '../../lib/notifications';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
@@ -162,7 +164,8 @@ export default function ClientDashboard() {
           routineData,
           entrenoHoy,
           profile.reminderHour ?? 18,
-          anchor ?? undefined
+          anchor ? anclaConPausas(anchor, profile.planPauses) : undefined,
+          profile.planPauses
         ).catch(() => {});
       } else {
         cancelarAvisosOlvido().catch(() => {});
@@ -228,13 +231,28 @@ export default function ClientDashboard() {
   const isAthlete = profile?.role === 'athlete';
   const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
   const sessions = weekSessions(workoutLogs);
+  /*
+   * Pausa del plan (lesión, viaje, una semana imposible). Toca tres cosas:
+   *
+   *  - La racha: los días de pausa entran como descanso, así que ni cuentan ni
+   *    rompen. Es la misma puerta que ya usaba el modo Sensaciones.
+   *  - El ciclo: el ancla se desplaza tantos días como se lleve en pausa, que
+   *    es la forma de decirle "esos días no han pasado". Al volver se retoma el
+   *    día que se dejó.
+   *  - Lo que se propone hoy: durante la pausa, nada.
+   */
+  const enPausa = pausaActiva(profile?.planPauses);
+  const anclaPausada = anclaConPausas(cycleAnchor ?? 0, profile?.planPauses);
   const streak = currentStreak(workoutLogs, {
     routine,
-    cycleAnchor,
-    restDays: profile?.flexRestDays,
+    cycleAnchor: cycleAnchor ? anclaPausada : null,
+    restDays: [...(profile?.flexRestDays ?? []), ...diasDePausa(profile?.planPauses)],
   });
   // Qué toca hoy según el modo (semanal o Método REIN TENA por ciclo).
-  const todaySession = resolveTodaySession(routine, cycleAnchor ?? undefined);
+  const sesionDelPlan = resolveTodaySession(routine, cycleAnchor ? anclaPausada : undefined);
+  const todaySession = enPausa
+    ? { day: null, isRest: false, optionalRest: false }
+    : sesionDelPlan;
   const todaysDay = todaySession.day;
   const restDay = todaySession.isRest;
   const optionalRest = todaySession.optionalRest;
@@ -493,6 +511,37 @@ export default function ClientDashboard() {
             )}
           </View>
         </View>
+      ) : null}
+
+      {/* La pausa va por delante de todo lo demás, incluso de la acción del
+          día. Un alumno de baja que abre la app necesita ver en el primer
+          vistazo que la app lo sabe: si no, cada tarjeta de "hoy tocaba" se lee
+          como un reproche, que es justo lo que la pausa venía a evitar. */}
+      {enPausa ? (
+        <FadeIn>
+          <Card accent style={styles.section}>
+            <View style={styles.pausaFila}>
+              <Ionicons name="pause-circle" size={22} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pausaTitulo}>Plan en pausa</Text>
+                <Text style={styles.pausaTexto}>
+                  {diasQueQuedan(enPausa) === 1
+                    ? 'Último día. Mañana vuelves al plan.'
+                    : `Quedan ${diasQueQuedan(enPausa)} días. Vuelves el ${diaLargo(
+                        enPausa.hasta + 24 * 60 * 60 * 1000
+                      )}.`}
+                </Text>
+                {enPausa.motivo ? (
+                  <Text style={styles.pausaMotivo}>{enPausa.motivo}</Text>
+                ) : null}
+              </View>
+            </View>
+            <Text style={styles.pausaPie}>
+              Tu racha está a salvo y no te voy a dar la lata. Si un día te
+              apetece entrenar, adelante: cuenta igual.
+            </Text>
+          </Card>
+        </FadeIn>
       ) : null}
 
       {/* La acción del día va PRIMERO: es a lo que se entra. Todo lo
@@ -978,6 +1027,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   sectionLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
+  pausaFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pausaTitulo: { ...typography.h3, color: colors.text },
+  pausaTexto: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  pausaMotivo: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    marginTop: 2,
+  },
+  pausaPie: { ...typography.small, color: colors.textFaint, lineHeight: 18, marginTop: spacing.sm },
   section: { marginBottom: spacing.md },
   // ----- Hero "Hoy toca" -----
   todayCard: {

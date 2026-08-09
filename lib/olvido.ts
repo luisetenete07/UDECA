@@ -1,4 +1,5 @@
 import { inicioDelDia } from './fechas';
+import { cubre, type PausaPlan } from './pausa';
 import { resolveSessionFor } from './schedule';
 import type { Routine } from './types';
 
@@ -80,13 +81,18 @@ export interface DiaPendiente {
  * Se salta HOY si ya hay un entreno registrado hoy: no se le recuerda a nadie
  * algo que acaba de hacer. Los días futuros van siempre, porque nadie ha
  * entrenado todavía un día que no ha llegado.
+ *
+ * Los días de pausa se saltan enteros. Es la mitad de la promesa de una pausa:
+ * si el alumno está lesionado o de viaje y aun así le llega un aviso cada hora
+ * de un entreno que no puede hacer, la pausa no sirve de nada.
  */
 export function diasPendientes(
   routine: Routine | null,
   yaEntrenoHoy: boolean,
   ahora = Date.now(),
   dias = DIAS_VISTA,
-  anchorOverride?: number
+  anchorOverride?: number,
+  pausas?: PausaPlan[]
 ): DiaPendiente[] {
   if (!routine) return [];
   const salida: DiaPendiente[] = [];
@@ -94,6 +100,7 @@ export function diasPendientes(
   for (let i = 0; i < dias; i++) {
     const dia = inicioDelDia(hoy + i * 24 * 60 * 60 * 1000 + 60 * 60 * 1000);
     if (i === 0 && yaEntrenoHoy) continue;
+    if ((pausas ?? []).some((p) => cubre(p, dia))) continue;
     const sesion = resolveSessionFor(routine, dia + 12 * 60 * 60 * 1000, anchorOverride);
     // Sin día programado no hay nada que se le pueda olvidar: ni descanso, ni
     // "a sensaciones" (ahí elige él si entrena y qué), ni un hueco del ciclo.

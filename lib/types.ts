@@ -1,4 +1,5 @@
 import type { MuscleId } from './muscles';
+import type { PausaPlan } from './pausa';
 
 // 'athlete' = usuario individual que se autoentrena (es su propio coach:
 // crea sus rutinas, sigue su progreso y nutrición). De pago mensual.
@@ -192,6 +193,12 @@ export interface UserProfile {
    */
   flexRestDays?: number[];
   /**
+   * Pausas del plan: días en los que la programación no exige nada (lesión,
+   * viaje, una semana imposible). Ver lib/pausa.ts. Las pasadas se guardan
+   * porque son las que mantienen congelado el ciclo; se podan a los 180 días.
+   */
+  planPauses?: PausaPlan[];
+  /**
    * Categorías cuyas series semanales quiere ver el alumno en su progreso. Sin
    * valor se muestran las que más trabaja. Antes eran siempre Empuje y Tirón,
    * que a quien entrena sobre todo Core le dejaba dos gráficas planas.
@@ -211,9 +218,15 @@ export interface ActiveSession {
 export const CLIENT_STATUSES = ['active', 'paused', 'inactive'] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
+/*
+ * "En espera" y no "En pausa": desde que existen las pausas del plan (unos días
+ * sin entrenar, ver lib/pausa.ts) había dos cosas distintas con el mismo nombre
+ * en la misma ficha. Esto es el estado del ALUMNO —sigue apuntado pero ahora
+ * mismo no se le entrena—, no unos días sueltos de su programación.
+ */
 export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
   active: 'Activo',
-  paused: 'En pausa',
+  paused: 'En espera',
   inactive: 'Inactivo',
 };
 

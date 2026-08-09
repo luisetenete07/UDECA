@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
+import type { PausaPlan } from '../pausa';
 import type { UserProfile } from '../types';
 
 /** trainerCodes/{code} -> { trainerId } — colección pública de solo lectura
@@ -180,6 +181,17 @@ export async function updateClientBilling(
  */
 export async function setClientTrackRir(clientId: string, trackRir: boolean) {
   await setDoc(doc(db, 'users', clientId), { trackRir }, { merge: true });
+}
+
+/**
+ * Guarda las pausas del plan de un alumno.
+ *
+ * La escriben las dos partes: el entrenador desde la ficha del alumno y el
+ * propio alumno desde su perfil (ver `components/PausaPlanSheet`). Por eso está
+ * aquí y no en un módulo de entrenador: es el mismo campo y la misma decisión.
+ */
+export async function setClientPlanPauses(clientId: string, planPauses: PausaPlan[]) {
+  await setDoc(doc(db, 'users', clientId), { planPauses }, { merge: true });
 }
 
 /** Quita la fecha de próximo pago de un cliente. */

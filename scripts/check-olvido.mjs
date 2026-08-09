@@ -153,6 +153,44 @@ console.log('\nEl ciclo de días sueltos también rota');
   );
 }
 
+console.log('\nCon el plan en pausa no se avisa de nada');
+{
+  // La mitad de la promesa de una pausa: si el alumno está lesionado y aun así
+  // le llega un aviso cada hora de un entreno que no puede hacer, la pausa no
+  // sirve. Se comprueba que los días de pausa desaparecen y que los de después
+  // vuelven solos, sin tener que quitar la pausa a mano.
+  const todosLosDias = {
+    id: 'r',
+    days: [0, 1, 2, 3, 4, 5, 6].map((w) => ({
+      id: `d${w}`,
+      name: `Día ${w}`,
+      weekday: w,
+      exercises: [],
+    })),
+    schedule: 'weekly',
+  };
+  const ahora = aLas(MIERCOLES, 10);
+  const hoy = new Date(MIERCOLES).setHours(0, 0, 0, 0);
+  const DIA = 24 * 60 * 60 * 1000;
+  const sinPausa = diasPendientes(todosLosDias, false, ahora, 4);
+  const pausa = [
+    { desde: hoy, hasta: hoy + DIA, porQuien: 'alumno', creadaEn: hoy },
+  ];
+  const conPausa = diasPendientes(todosLosDias, false, ahora, 4, undefined, pausa);
+  comprueba('sin pausa se avisa de los cuatro días', sinPausa.length === 4);
+  comprueba('con dos días de pausa quedan dos', conPausa.length === 2, String(conPausa.length));
+  comprueba(
+    'y los que quedan son los de después de la pausa',
+    conPausa.every((d) => d.dia >= hoy + 2 * DIA)
+  );
+  comprueba(
+    'una pausa ya terminada no quita nada',
+    diasPendientes(todosLosDias, false, ahora, 4, undefined, [
+      { desde: hoy - 5 * DIA, hasta: hoy - 3 * DIA, porQuien: 'coach', creadaEn: hoy },
+    ]).length === 4
+  );
+}
+
 console.log('\nLos textos no se repiten seguidos');
 {
   const cuatro = [0, 1, 2, 3].map((i) => textoDeAviso(i, 'Empuje').titulo);

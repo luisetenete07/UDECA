@@ -52,6 +52,7 @@ import {
   getUserProfile,
   removeClientFromTrainer,
   registerClientPayment,
+  setClientPlanPauses,
   setClientTrackRir,
   updateClientBilling,
   updateClientPaymentStatus,
@@ -59,6 +60,8 @@ import {
 } from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
 import { CollapsibleCard } from '../../../../components/CollapsibleCard';
+import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
+import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
 import { fechaCorta } from '../../../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
@@ -126,6 +129,8 @@ export default function ClientDetailScreen() {
   const [paymentReminderSent, setPaymentReminderSent] = useState(false);
   const [coachNote, setCoachNote] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
+  const [pausaAbierta, setPausaAbierta] = useState(false);
+  const [guardandoPausa, setGuardandoPausa] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -186,6 +191,31 @@ export default function ClientDetailScreen() {
       };
     }, [id, profile])
   );
+
+  /**
+   * El entrenador pausa (o reanuda) el plan de su alumno.
+   *
+   * Es lo que hasta ahora se hacía por WhatsApp —"esta semana descansa, ya
+   * retomamos"— y que la app no sabía, así que le seguía pidiendo entrenos y le
+   * rompía la racha. Escribe el mismo campo que el alumno desde su perfil: los
+   * dos pueden ponerla y los dos pueden quitarla.
+   */
+  const guardarPausa = async (pausas: PausaPlan[]) => {
+    if (!id) return;
+    setGuardandoPausa(true);
+    try {
+      await setClientPlanPauses(id, pausas);
+      setClient((c) => (c ? { ...c, planPauses: pausas } : c));
+      setPausaAbierta(false);
+      showToast(pausaActiva(pausas) ? 'Plan en pausa' : 'Plan reanudado');
+    } catch {
+      // La ficha se refresca DESPUÉS de escribir, así que si falla no se queda
+      // enseñando una pausa que no existe; solo hay que decirlo.
+      showToast('No se ha podido guardar la pausa');
+    } finally {
+      setGuardandoPausa(false);
+    }
+  };
 
   const handleAddHabit = async () => {
     if (!id || !client) return;
@@ -352,6 +382,7 @@ export default function ClientDetailScreen() {
 
   const activeRoutine = routines.find((r) => r.active);
   const currentStatus: ClientStatus = client.status ?? 'active';
+  const pausaDelCliente = pausaActiva(client.planPauses);
 
   const weekly = weeklyVolume(workoutLogs, muscleByExercise);
   const isoTotals = weekly.reduce(
@@ -652,7 +683,37 @@ export default function ClientDetailScreen() {
           onPress={() => router.push(`/(trainer)/clients/${id}/routine`)}
           style={{ marginTop: spacing.md }}
         />
+
+        {/* Cambio de urgencia: unos días sin entrenar sin tocar la rutina.
+            Va dentro de esta tarjeta porque es lo que se hace cuando la rutina
+            asignada no encaja con la semana que tiene el alumno delante. */}
+        <Pressable style={styles.pausaFila} onPress={() => setPausaAbierta(true)}>
+          <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.navTitle}>
+              {pausaDelCliente ? 'Plan en pausa' : 'Pausar el plan unos días'}
+            </Text>
+            <Text style={styles.navHint}>
+              {pausaDelCliente
+                ? `${textoRango(pausaDelCliente)}${
+                    pausaDelCliente.motivo ? ` · ${pausaDelCliente.motivo}` : ''
+                  }${pausaDelCliente.porQuien === 'alumno' ? ' · la puso el alumno' : ''}`
+                : 'Lesión, viaje o una semana imposible: no se le pide nada, no pierde la racha y el plan le espera donde lo dejó.'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </Pressable>
       </Card>
+
+      <PausaPlanSheet
+        visible={pausaAbierta}
+        onClose={() => setPausaAbierta(false)}
+        pausas={client?.planPauses}
+        activa={pausaDelCliente}
+        porQuien="coach"
+        guardando={guardandoPausa}
+        onGuardar={guardarPausa}
+      />
 
       {/* Dos destinos que solo eran título, párrafo y botón. Una tarjeta
           entera para "pulsa aquí" ocupa lo mismo que una con datos y no dice
@@ -1047,6 +1108,15 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   navRowLast: { borderBottomWidth: 0, paddingBottom: 0 },
+  pausaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   navTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   navHint: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   rirRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

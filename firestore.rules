@@ -142,8 +142,12 @@ service cloud.firestore {
             // `trackRir`: si a ese alumno se le pregunta el esfuerzo al
             // terminar cada ejercicio. Lo decide el entrenador, que es quien
             // sabe si su alumno entiende lo que es un RIR.
+            // `planPauses`: los días en los que no se le pide entrenar
+            // (lesión, viaje). Lo escriben las dos partes —el entrenador desde
+            // la ficha y el alumno desde su perfil— porque cualquiera de los
+            // dos puede ser el primero en enterarse.
             request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir'])
+              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)

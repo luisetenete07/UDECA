@@ -4,7 +4,8 @@ import { Platform } from 'react-native';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { getUserProfile } from './firestore/users';
-import { diasPendientes, horasDeAviso, textoDeAviso, TOPE_AVISOS } from './olvido';
+import { DIAS_VISTA, diasPendientes, horasDeAviso, textoDeAviso, TOPE_AVISOS } from './olvido';
+import type { PausaPlan } from './pausa';
 import type { Routine } from './types';
 
 Notifications.setNotificationHandler({
@@ -229,6 +230,7 @@ export async function programarAvisosOlvido(
   yaEntrenoHoy: boolean,
   desdeHora: number,
   anchorOverride?: number,
+  pausas?: PausaPlan[],
   ahora = Date.now()
 ): Promise<number> {
   if (Platform.OS === 'web') return 0;
@@ -243,7 +245,16 @@ export async function programarAvisosOlvido(
 
     await cancelarAvisosOlvido();
 
-    const pendientes = diasPendientes(routine, yaEntrenoHoy, ahora);
+    // El ancla y las pausas van hasta el final: sin ellas los avisos hablarían
+    // de un día de ciclo que no es el que el alumno se va a encontrar.
+    const pendientes = diasPendientes(
+      routine,
+      yaEntrenoHoy,
+      ahora,
+      DIAS_VISTA,
+      anchorOverride,
+      pausas
+    );
     let puestos = 0;
     for (const { dia, nombre } of pendientes) {
       // El primer aviso del día va a la hora que el alumno eligió para su

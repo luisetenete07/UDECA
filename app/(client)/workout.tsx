@@ -36,7 +36,8 @@ import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { applyWeekPlan } from '../../lib/weekPlan';
 import { esfuerzoDePct, pctCombinado, textoIntensidad } from '../../lib/intensidad';
 import { RirPicker } from '../../components/RirPicker';
-import { mayusculaInicial } from '../../lib/fechas';
+import { diaLargo, mayusculaInicial } from '../../lib/fechas';
+import { anclaConPausas, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
 import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
@@ -294,7 +295,10 @@ export default function WorkoutScreen() {
         if (data && data.days.length > 0) {
           // Preselecciona el día que toca hoy. Prioridad: sesión en curso en
           // otro dispositivo → día ya entrenado hoy → día que toca → primero.
-          const session = resolveTodaySession(data, anchor ?? undefined);
+          const session = resolveTodaySession(
+            data,
+            anchor ? anclaConPausas(anchor, profile.planPauses) : undefined
+          );
           const remoteFresh =
             sync.activeSession &&
             sync.activeSession.routineId === data.id &&
@@ -521,7 +525,17 @@ export default function WorkoutScreen() {
 
   const isFlex = routine?.schedule === 'flex';
   const day = combinedDay ?? routine?.days.find((d) => d.id === selectedDayId) ?? null;
-  const todaySession = resolveTodaySession(routine, cycleAnchor ?? undefined);
+  /*
+   * Con el plan en pausa el ciclo está congelado, así que el día que se propone
+   * es el que se dejó, no el que tocaría si los días de pausa hubieran contado.
+   * La pantalla no se bloquea: una pausa quita obligaciones, no permisos, y si
+   * un día de baja apetece entrenar, ese entreno cuenta como cualquier otro.
+   */
+  const enPausa = pausaActiva(profile?.planPauses);
+  const todaySession = resolveTodaySession(
+    routine,
+    cycleAnchor ? anclaConPausas(cycleAnchor, profile?.planPauses) : undefined
+  );
 
   // Sensaciones: alterna una rutina en la selección (guarda el orden de elección).
   const toggleFlexRoutine = (id: string) => {
@@ -1308,6 +1322,18 @@ export default function WorkoutScreen() {
           else router.push('/(client)/dashboard');
         }}
       />
+
+      {/* Plan en pausa. Se avisa, pero no se cierra la pantalla: si hoy apetece
+          entrenar, este entreno cuenta igual que cualquier otro. */}
+      {enPausa && !showCompleted ? (
+        <View style={styles.pausaAviso}>
+          <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
+          <Text style={styles.pausaAvisoTexto}>
+            Tu plan está en pausa hasta el {diaLargo(enPausa.hasta)}. Hoy no se
+            espera nada, pero si entrenas cuenta igual.
+          </Text>
+        </View>
+      ) : null}
 
       {/* Entreno de un día anterior sin finalizar: rellenarlo o dejarlo para luego. */}
       {pastDraft && !pastDismissed && !restored ? (
@@ -2290,6 +2316,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   restoredText: { ...typography.small, color: colors.primaryBright, flex: 1 },
+  pausaAviso: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  pausaAvisoTexto: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 18 },
   pastDraftCard: {
     flexDirection: 'row',
     alignItems: 'center',
