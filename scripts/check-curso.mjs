@@ -138,13 +138,16 @@ console.log('\nEl peso del curso (un documento son 1 MB y las fotos van dentro)'
   comprueba('y no avisa de nada', cabeElCurso(chico).aviso === undefined);
   comprueba('sin miniaturas, cero', cuantasMiniaturas(secciones()) === 0);
 
-  const conFotos = conMiniCambiada(
-    conLeccionCambiada(secciones(), 's1', 'l1', { thumbURL: 'data:1' }),
-    's1', 'l1', 'm1', { thumbURL: 'data:2' }
-  );
-  comprueba('se cuentan las de lecciones y minis', cuantasMiniaturas(conFotos) === 2);
+  const conFotos = conLeccionCambiada(secciones(), 's1', 'l1', { thumbURL: 'data:1' });
+  comprueba('se cuenta la de la lección', cuantasMiniaturas(conFotos) === 1);
   conFotos[0].coverURL = 'data:3';
-  comprueba('y la portada de la sección', cuantasMiniaturas(conFotos) === 3);
+  comprueba('y la portada de la sección', cuantasMiniaturas(conFotos) === 2);
+  // Las mini clases usan la miniatura de su plataforma, así que no pesan: es
+  // lo que evita que tres minis por lección se coman el documento.
+  comprueba(
+    'las mini clases no suman imágenes',
+    cuantasMiniaturas(conMiniCambiada(conFotos, 's1', 'l1', 'm1', { durationLabel: '3 min' })) === 2
+  );
 
   // Un curso pasado de peso: el aviso tiene que decir qué hacer, no solo que
   // ha fallado.

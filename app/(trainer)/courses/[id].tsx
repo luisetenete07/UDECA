@@ -293,18 +293,6 @@ export default function CourseEditorScreen() {
                   onMiniReordenar={(de, a) =>
                     setSections((prev) => minisReordenadas(prev, section.id, lesson.id, de, a))
                   }
-                  onMiniMiniatura={(miniId) =>
-                    elegirImagen((url) =>
-                      setSections((prev) =>
-                        conMiniCambiada(prev, section.id, lesson.id, miniId, { thumbURL: url })
-                      )
-                    )
-                  }
-                  onMiniQuitarMiniatura={(miniId) =>
-                    setSections((prev) =>
-                      conMiniCambiada(prev, section.id, lesson.id, miniId, { thumbURL: undefined })
-                    )
-                  }
                 />
               )}
             />

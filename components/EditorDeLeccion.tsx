@@ -23,18 +23,26 @@ import type { ContenidoDeCurso, Lesson, MiniClase } from '../lib/types';
  * sección de "mini clases" vacía sugiere que falta rellenarla.
  */
 
-/** Los campos comunes: tipo, enlace, duración y miniatura. */
+/**
+ * Los campos comunes: tipo, enlace y duración. Y la miniatura SOLO en las
+ * lecciones: una mini clase usa la de la plataforma del enlace, porque las
+ * fotos subidas viven dentro del documento del curso y se lo comen (ver
+ * lib/video.ts).
+ */
 function CamposDeContenido({
   contenido,
   onCambiar,
+  thumbURL,
   onMiniatura,
   onQuitarMiniatura,
   compacto,
 }: {
   contenido: ContenidoDeCurso;
   onCambiar: (campos: Partial<ContenidoDeCurso>) => void;
-  onMiniatura: () => void;
-  onQuitarMiniatura: () => void;
+  /** Sin estas tres, no se ofrece subir nada: es una mini clase. */
+  thumbURL?: string;
+  onMiniatura?: () => void;
+  onQuitarMiniatura?: () => void;
   compacto?: boolean;
 }) {
   const esPdf = (contenido.kind ?? 'video') === 'pdf';
@@ -61,11 +69,15 @@ function CamposDeContenido({
         containerStyle={{ marginTop: spacing.sm }}
       />
 
-      {/* La duración y la miniatura, juntas: es lo que se ve encima de la
-          imagen, así que se rellenan mirándolo. */}
+      {/* La duración y la miniatura, juntas: la duración se pinta encima de la
+          imagen, así que se rellena mirándola. */}
       <View style={styles.filaMiniatura}>
-        <Pressable onPress={onMiniatura} hitSlop={4}>
-          <MiniaturaCurso contenido={contenido} tamano={compacto ? 'mini' : 'fila'} />
+        <Pressable onPress={onMiniatura} disabled={!onMiniatura} hitSlop={4}>
+          <MiniaturaCurso
+            contenido={contenido}
+            thumbURL={thumbURL}
+            tamano={compacto ? 'mini' : 'fila'}
+          />
         </Pressable>
         <View style={{ flex: 1 }}>
           <TextField
@@ -74,11 +86,20 @@ function CamposDeContenido({
             placeholder="Duración (ej. 12 min)"
             containerStyle={{ marginBottom: spacing.xs }}
           />
-          <Pressable onPress={contenido.thumbURL ? onQuitarMiniatura : onMiniatura} hitSlop={6}>
-            <Text style={styles.enlaceMiniatura}>
-              {contenido.thumbURL ? 'Quitar miniatura' : 'Subir miniatura'}
+          {onMiniatura ? (
+            <Pressable
+              onPress={thumbURL ? onQuitarMiniatura : onMiniatura}
+              hitSlop={6}
+            >
+              <Text style={styles.enlaceMiniatura}>
+                {thumbURL ? 'Quitar miniatura' : 'Subir miniatura'}
+              </Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.pistaMiniatura}>
+              La miniatura la pone la plataforma del vídeo.
             </Text>
-          </Pressable>
+          )}
         </View>
       </View>
     </>
@@ -96,8 +117,6 @@ export function EditorDeLeccion({
   onMiniNueva,
   onMiniQuitar,
   onMiniReordenar,
-  onMiniMiniatura,
-  onMiniQuitarMiniatura,
   handleProps,
 }: {
   leccion: Lesson;
@@ -110,8 +129,6 @@ export function EditorDeLeccion({
   onMiniNueva: () => void;
   onMiniQuitar: (miniId: string) => void;
   onMiniReordenar: (de: number, a: number) => void;
-  onMiniMiniatura: (miniId: string) => void;
-  onMiniQuitarMiniatura: (miniId: string) => void;
   handleProps?: object;
 }) {
   const minis = leccion.minis ?? [];
@@ -138,6 +155,7 @@ export function EditorDeLeccion({
       <CamposDeContenido
         contenido={leccion}
         onCambiar={onCambiar}
+        thumbURL={leccion.thumbURL}
         onMiniatura={onMiniatura}
         onQuitarMiniatura={onQuitarMiniatura}
       />
@@ -204,8 +222,6 @@ export function EditorDeLeccion({
                 <CamposDeContenido
                   contenido={mini}
                   onCambiar={(campos) => onMiniCambiar(mini.id, campos)}
-                  onMiniatura={() => onMiniMiniatura(mini.id)}
-                  onQuitarMiniatura={() => onMiniQuitarMiniatura(mini.id)}
                   compacto
                 />
               </View>
@@ -250,6 +266,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   enlaceMiniatura: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  pistaMiniatura: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   filaMinis: {
     flexDirection: 'row',
     alignItems: 'center',

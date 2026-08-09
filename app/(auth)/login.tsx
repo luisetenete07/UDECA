@@ -5,12 +5,14 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
+import { BotonGoogle, Separador } from '../../components/BotonGoogle';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { useGoogleSignIn } from '../../lib/googleAuth';
 import { track } from '../../lib/analytics';
 import { auth } from '../../lib/firebase';
 import { friendlyAuthError } from '../../lib/firebase-errors';
@@ -26,6 +28,23 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const google = useGoogleSignIn();
+
+  /**
+   * Entrar con Google. Si la cuenta ya tenía perfil, el enrutado la lleva a su
+   * sitio sola; si no, cae en la pantalla que pregunta el rol (ver
+   * app/(auth)/completar.tsx). Aquí no hay que decidir nada de eso.
+   */
+  const entrarConGoogle = async () => {
+    setError(null);
+    try {
+      await google.entrar();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'No se ha podido entrar con Google. Inténtalo otra vez.'
+      );
+    }
+  };
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<RememberedAccount[]>([]);
@@ -176,6 +195,22 @@ export default function LoginScreen() {
           <Pressable onPress={handleForgotPassword} hitSlop={6}>
             <Text style={styles.forgot}>¿Has olvidado tu contraseña?</Text>
           </Pressable>
+
+          {/* Google, debajo del correo y no encima: quien ya tiene cuenta
+              aquí viene a por su contraseña, y mover el campo de siempre a
+              media pantalla más abajo por una alternativa es cambiarle el
+              sitio a la mayoría por la minoría. */}
+          {google.disponible ? (
+            <>
+              <Separador />
+              <BotonGoogle
+                texto="Continuar con Google"
+                cargando={google.entrando}
+                onPress={entrarConGoogle}
+              />
+            </>
+          ) : null}
+
         </Card>
       )}
 

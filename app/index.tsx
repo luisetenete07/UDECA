@@ -31,6 +31,13 @@ export default function Index() {
     return <LoadingScreen label="Cargando..." />;
   }
 
+  // Entró con Google y todavía no tiene perfil: Google da una identidad, no
+  // un rol, y sin rol no hay app a la que mandarle. Sin esto se quedaría en un
+  // bucle —con la sesión abierta y viendo la pantalla de entrar—.
+  if (firebaseUser && !profile) {
+    return <Redirect href="/(auth)/completar" />;
+  }
+
   if (!firebaseUser || !profile) {
     if (introSeen === null) return <LoadingScreen label="Cargando..." />;
     // Primera vez en este dispositivo: antes de pedir nada, contamos qué es

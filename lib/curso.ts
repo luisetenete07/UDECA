@@ -156,15 +156,14 @@ export function pesoDelCurso(curso: Pick<Course, 'sections'> & Partial<Course>):
   return new TextEncoder().encode(JSON.stringify(curso)).length;
 }
 
+/**
+ * Cuántas imágenes subidas lleva el curso: la portada de cada sección y la de
+ * cada lección. Las mini clases no llevan (usan la de su plataforma), que es
+ * justo lo que mantiene el documento en su sitio.
+ */
 export function cuantasMiniaturas(secciones: CourseSection[]): number {
   return secciones.reduce(
-    (n, s) =>
-      n +
-      (s.coverURL ? 1 : 0) +
-      s.lessons.reduce(
-        (m, l) => m + (l.thumbURL ? 1 : 0) + (l.minis ?? []).filter((x) => x.thumbURL).length,
-        0
-      ),
+    (n, s) => n + (s.coverURL ? 1 : 0) + s.lessons.filter((l) => l.thumbURL).length,
     0
   );
 }

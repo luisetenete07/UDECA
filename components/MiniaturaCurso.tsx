@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, typography } from '../lib/theme';
+import { miniaturaDelEnlace, parseVimeoUrl, urlDeOEmbedVimeo } from '../lib/video';
 import type { ContenidoDeCurso } from '../lib/types';
 
 /**
@@ -13,18 +14,70 @@ import type { ContenidoDeCurso } from '../lib/types';
  * vistazo. Puesta en una línea aparte se lee después de haber decidido, que es
  * cuando ya no sirve.
  *
- * Sin miniatura no se deja un hueco gris: se pinta el icono de lo que hay
- * dentro (vídeo o documento), que al menos dice qué es.
+ * DE DÓNDE SALE LA IMAGEN, EN ESTE ORDEN
+ *
+ *  1. La que subió el entrenador, si es una lección. Solo las lecciones pueden
+ *     llevar una propia (ver lib/types.ts).
+ *  2. La de la plataforma del enlace: la de YouTube se deduce de la dirección
+ *     y la de Vimeo hay que preguntársela.
+ *  3. Nada: se pinta el icono de lo que hay dentro, que al menos dice qué es.
  */
+
+/**
+ * Miniaturas de Vimeo ya preguntadas.
+ *
+ * Una lista de curso repinta la misma miniatura cada vez que se desplaza, y
+ * sin esto sería una petición a Vimeo por repintado. El mapa vive fuera del
+ * componente a propósito: es de la app, no de una pantalla.
+ */
+const vimeoCache = new Map<string, string | null>();
+
+function useMiniaturaDeVimeo(url: string | undefined): string | null {
+  const ref = url ? parseVimeoUrl(url) : null;
+  const clave = ref ? `${ref.id}:${ref.hash ?? ''}` : null;
+  const [imagen, setImagen] = useState<string | null>(() =>
+    clave ? (vimeoCache.get(clave) ?? null) : null
+  );
+
+  useEffect(() => {
+    if (!ref || !clave) return;
+    if (vimeoCache.has(clave)) {
+      setImagen(vimeoCache.get(clave) ?? null);
+      return;
+    }
+    let vivo = true;
+    fetch(urlDeOEmbedVimeo(ref))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const encontrada = typeof j?.thumbnail_url === 'string' ? j.thumbnail_url : null;
+        // Se guarda también el "no hay": un vídeo privado o borrado contestaría
+        // que no en cada repintado, y preguntarlo mil veces no lo arregla.
+        vimeoCache.set(clave, encontrada);
+        if (vivo) setImagen(encontrada);
+      })
+      .catch(() => {
+        vimeoCache.set(clave, null);
+      });
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clave]);
+
+  return imagen;
+}
 
 export function MiniaturaCurso({
   contenido,
+  thumbURL,
   tamano = 'fila',
   bloqueada,
   vista,
   style,
 }: {
   contenido: ContenidoDeCurso;
+  /** La subida por el entrenador. Solo la tienen las lecciones. */
+  thumbURL?: string;
   /** `fila` para listas; `ancha` para la portada de una lección abierta. */
   tamano?: 'fila' | 'ancha' | 'mini';
   bloqueada?: boolean;
@@ -32,13 +85,15 @@ export function MiniaturaCurso({
   style?: StyleProp<ViewStyle>;
 }) {
   const esPdf = contenido.kind === 'pdf' || (!contenido.videoUrl && !!contenido.pdfUrl);
+  const deVimeo = useMiniaturaDeVimeo(esPdf ? undefined : contenido.videoUrl);
+  const imagen = thumbURL ?? miniaturaDelEnlace(contenido.videoUrl) ?? deVimeo;
   const medida =
     tamano === 'ancha' ? styles.ancha : tamano === 'mini' ? styles.mini : styles.fila;
 
   return (
     <View style={[styles.base, medida, style]}>
-      {contenido.thumbURL ? (
-        <Image source={{ uri: contenido.thumbURL }} style={styles.imagen} resizeMode="cover" />
+      {imagen ? (
+        <Image source={{ uri: imagen }} style={styles.imagen} resizeMode="cover" />
       ) : (
         <View style={styles.vacia}>
           <Ionicons

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CAN_SELL_IN_APP, subscriptionCheckoutUrl, subscriptionState } from '../lib/subscription';
+import { CAN_LINK_TO_PAYMENT, subscriptionCheckoutUrl, subscriptionState } from '../lib/subscription';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { UserProfile } from '../lib/types';
 
@@ -15,9 +15,9 @@ export function TrialBanner({ profile }: { profile: UserProfile | null }) {
   if (!sub.trial || !sub.active) return null;
 
   const days = sub.daysLeft ?? 0;
-  // En iOS no puede haber un botón que lleve a pagar fuera (ver CAN_SELL_IN_APP):
+  // El botón depende de si se puede enlazar a pagar (ver CAN_LINK_TO_PAYMENT):
   // el aviso se queda en informar de los días que quedan.
-  const url = CAN_SELL_IN_APP ? subscriptionCheckoutUrl(profile) : null;
+  const url = CAN_LINK_TO_PAYMENT ? subscriptionCheckoutUrl(profile) : null;
   // El último día se avisa con más énfasis (es cuando se decide).
   const urgent = days <= 2;
 

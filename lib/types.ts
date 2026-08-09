@@ -1013,13 +1013,22 @@ export interface ContenidoDeCurso {
    * duración a veces sí y a veces no es peor que una escrita a mano siempre.
    */
   durationLabel?: string;
-  /** Miniatura propia. Sin ella se pinta un marcador con el icono del tipo. */
-  thumbURL?: string;
 }
 
+/**
+ * Una mini clase NO lleva miniatura propia: se usa la de la plataforma donde
+ * está el vídeo (ver lib/video.ts).
+ *
+ * Un curso entero vive en UN documento de Firestore y cada miniatura subida va
+ * dentro, en base64. Con tres mini clases por lección, las fotos se comían el
+ * documento antes que el contenido. La lección sí la lleva, porque es la que
+ * se enseña en la lista y la que merece una portada elegida.
+ */
 export interface MiniClase extends ContenidoDeCurso {}
 
 export interface Lesson extends ContenidoDeCurso {
+  /** Portada de la lección. Sin ella se usa la de la plataforma del vídeo. */
+  thumbURL?: string;
   description?: string;
   /**
    * Candado por antigüedad: días que el alumno debe llevar en el grupo para

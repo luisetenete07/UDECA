@@ -279,6 +279,7 @@ export default function ClientCourseDetailScreen() {
                     <View key={lesson.id}>
                       <FilaDeContenido
                         contenido={lesson}
+                        thumbURL={lesson.thumbURL}
                         numero={`${index + 1}`}
                         bloqueada={locked}
                         diasQueFaltan={daysLeft}
@@ -348,6 +349,7 @@ export default function ClientCourseDetailScreen() {
  */
 function FilaDeContenido({
   contenido,
+  thumbURL,
   numero,
   bloqueada,
   diasQueFaltan,
@@ -360,6 +362,8 @@ function FilaDeContenido({
   onMarcar,
 }: {
   contenido: ContenidoDeCurso;
+  /** Solo en lecciones: la portada que subió el entrenador. */
+  thumbURL?: string;
   numero: string;
   bloqueada: boolean;
   diasQueFaltan: number;
@@ -384,6 +388,7 @@ function FilaDeContenido({
       >
         <MiniaturaCurso
           contenido={contenido}
+          thumbURL={thumbURL}
           tamano={sangrada ? 'mini' : 'fila'}
           bloqueada={bloqueada}
           vista={vista}

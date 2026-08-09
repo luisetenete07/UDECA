@@ -3,12 +3,14 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BotonGoogle, Separador } from '../../components/BotonGoogle';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { useGoogleSignIn } from '../../lib/googleAuth';
 import { track, trackOnce } from '../../lib/analytics';
 import { friendlyAuthError } from '../../lib/firebase-errors';
 import {
@@ -26,6 +28,23 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const google = useGoogleSignIn();
+
+  /**
+   * Entrar con Google. Si la cuenta ya tenía perfil, el enrutado la lleva a su
+   * sitio sola; si no, cae en la pantalla que pregunta el rol (ver
+   * app/(auth)/completar.tsx). Aquí no hay que decidir nada de eso.
+   */
+  const entrarConGoogle = async () => {
+    setError(null);
+    try {
+      await google.entrar();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'No se ha podido entrar con Google. Inténtalo otra vez.'
+      );
+    }
+  };
   const [loading, setLoading] = useState(false);
   // Encadenan el foco al pulsar "siguiente" en el teclado.
   const emailRef = useRef<TextInput>(null);
@@ -191,6 +210,21 @@ export default function RegisterScreen() {
           loading={loading}
           style={styles.submit}
         />
+
+        {/* Google, debajo del correo y no encima: quien ya tiene cuenta
+            aquí viene a por su contraseña, y mover el campo de siempre a
+            media pantalla más abajo por una alternativa es cambiarle el
+            sitio a la mayoría por la minoría. */}
+        {google.disponible ? (
+          <>
+            <Separador />
+            <BotonGoogle
+              texto="Registrarme con Google"
+              cargando={google.entrando}
+              onPress={entrarConGoogle}
+            />
+          </>
+        ) : null}
       </Card>
 
       <View style={styles.footer}>

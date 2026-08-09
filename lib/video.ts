@@ -74,3 +74,49 @@ export function youTubeEmbedUrl(id: string): string {
   return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
 }
 
+
+/*
+ * LA MINIATURA LA PONE LA PLATAFORMA
+ *
+ * Las mini clases no llevan miniatura propia: se usa la del sitio donde está
+ * el vídeo. No es solo por ahorrar trabajo —que también—, es que un curso
+ * entero vive en UN documento de Firestore y cada miniatura subida va dentro,
+ * en base64. Con tres mini clases por lección, las fotos se comían el
+ * documento antes que el contenido.
+ *
+ * Las lecciones sí la llevan, porque son las que se enseñan en la lista y las
+ * que merecen una portada elegida. Las mini clases van dentro de una lección
+ * que ya tiene cara.
+ */
+
+/** La miniatura pública de un vídeo de YouTube. Se deduce del id, sin pedir nada. */
+export function miniaturaDeYouTube(id: string): string {
+  // `hqdefault` y no `maxresdefault`: esta existe para TODOS los vídeos, y la
+  // otra falta en los subidos en baja resolución y deja el hueco en gris.
+  return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+}
+
+/**
+ * La dirección donde Vimeo cuenta los datos de un vídeo, su miniatura incluida.
+ *
+ * Vimeo no deja deducir la miniatura de la URL como YouTube: hay que
+ * preguntársela. Para los vídeos ocultos el hash va en la dirección, o
+ * contesta que no existe.
+ */
+export function urlDeOEmbedVimeo(ref: VimeoRef): string {
+  const video = ref.hash ? `https://vimeo.com/${ref.id}/${ref.hash}` : `https://vimeo.com/${ref.id}`;
+  return `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(video)}`;
+}
+
+/**
+ * La miniatura que se puede saber SIN pedir nada por la red.
+ *
+ * YouTube sí, porque va en la propia dirección. Vimeo no (hay que preguntarle,
+ * ver `urlDeOEmbedVimeo`) y un .mp4 suelto tampoco: un archivo de vídeo no
+ * trae portada, y sacarla habría que descargarlo entero.
+ */
+export function miniaturaDelEnlace(url: string | undefined): string | null {
+  if (!url) return null;
+  const yt = parseYouTubeId(url);
+  return yt ? miniaturaDeYouTube(yt) : null;
+}

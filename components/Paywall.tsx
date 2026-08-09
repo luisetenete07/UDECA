@@ -6,7 +6,7 @@ import { GateScreen, GateText } from './GateScreen';
 import { useAuth } from '../lib/auth-context';
 import { track, trackOnce } from '../lib/analytics';
 import {
-  CAN_SELL_IN_APP,
+  CAN_LINK_TO_PAYMENT,
   CONTACT_EMAIL,
   clientSlotsOf,
   subscriptionCheckoutUrl,
@@ -120,13 +120,13 @@ export function Paywall() {
     }
   };
 
-  const titulo = !CAN_SELL_IN_APP
+  const titulo = !CAN_LINK_TO_PAYMENT
     ? 'Tu cuenta no está activa'
     : isAthlete
       ? 'Has terminado la prueba'
       : 'Activa UDECA Pro';
 
-  const explicacion = !CAN_SELL_IN_APP
+  const explicacion = !CAN_LINK_TO_PAYMENT
     ? 'Tus datos, tus rutinas y todo tu progreso siguen intactos. En cuanto tu cuenta vuelva a estar activa, la app lo reconoce sola.'
     : isAthlete
       ? 'Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.'
@@ -140,7 +140,7 @@ export function Paywall() {
       titulo={titulo}
       texto={explicacion}
       nota={
-        CAN_SELL_IN_APP
+        CAN_LINK_TO_PAYMENT
           ? 'Se abre la web para activarla. Al volver, tu cuenta se enciende sola en unos segundos; si tardara, pulsa "Ya he pagado · Actualizar".'
           : `¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`
       }
@@ -169,7 +169,7 @@ export function Paywall() {
         </View>
       ))}
 
-      {CAN_SELL_IN_APP ? (
+      {CAN_LINK_TO_PAYMENT ? (
         <Button
           // Sin precio y diciendo a dónde lleva: el importe se ve en la web,
           // que es donde está al día (ver lib/subscription.ts).
@@ -182,17 +182,17 @@ export function Paywall() {
         title={
           checking
             ? 'Comprobando...'
-            : CAN_SELL_IN_APP
+            : CAN_LINK_TO_PAYMENT
               ? 'Ya he pagado · Actualizar'
               : 'Ya está activa · Actualizar'
         }
-        variant={CAN_SELL_IN_APP ? 'secondary' : 'primary'}
+        variant={CAN_LINK_TO_PAYMENT ? 'secondary' : 'primary'}
         onPress={handleCheck}
         loading={checking}
         style={{ marginTop: spacing.sm }}
       />
 
-      {CAN_SELL_IN_APP && !isAthlete && plazas > 0 ? (
+      {CAN_LINK_TO_PAYMENT && !isAthlete && plazas > 0 ? (
         <GateText>
           ¿Prefieres no activarlo? Puedes volver a {plazas} alumnos o menos y
           recuperas el acceso al instante, sin perder nada.

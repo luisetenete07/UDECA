@@ -7,7 +7,7 @@ import { useAuth } from '../lib/auth-context';
 import { updateUserProfile } from '../lib/firestore/users';
 import { track } from '../lib/analytics';
 import {
-  CAN_SELL_IN_APP,
+  CAN_LINK_TO_PAYMENT,
   clientSlotsOf,
   isAdmin,
   subscriptionCheckoutUrl,
@@ -26,7 +26,7 @@ import { colors, fonts, radius, spacing, typography } from '../lib/theme';
  * es la forma más rápida de parecer una máquina tragaperras.
  */
 export function canUpgrade(profile: UserProfile | null): boolean {
-  if (!profile || !CAN_SELL_IN_APP) return false;
+  if (!profile || !CAN_LINK_TO_PAYMENT) return false;
   if (profile.role !== 'trainer' && profile.role !== 'athlete') return false;
   if (isAdmin(profile)) return false;
   const estado = subscriptionState(profile);
@@ -52,7 +52,7 @@ interface Props {
  * única forma de suscribirse era esperar a que caducara la prueba y toparse con
  * el muro, que es hacerle esperar para cobrarle.
  *
- * No aparece en iPhone (ver CAN_SELL_IN_APP): allí no se puede enseñar un
+ * Solo aparece donde se puede enlazar a pagar (ver CAN_LINK_TO_PAYMENT): sin
  * precio ni enlazar a pagar fuera.
  */
 export function UpgradeCard({ variante = 'completa', onClose }: Props) {

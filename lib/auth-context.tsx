@@ -37,6 +37,19 @@ interface AuthContextValue {
     inviteCode: string
   ) => Promise<void>;
   registerAthlete: (name: string, email: string, password: string) => Promise<void>;
+  /**
+   * Crea el perfil de quien ya ha entrado con Google pero todavía no tiene uno.
+   *
+   * Google da una identidad, no un ROL: no sabe si quien entra es alumno,
+   * atleta o entrenador, y eso decide la app entera. Así que entrar con Google
+   * la primera vez deja la sesión iniciada y sin perfil, y esta pantalla lo
+   * completa (ver app/(auth)/completar.tsx).
+   */
+  completarPerfilDeGoogle: (
+    role: UserRole,
+    name: string,
+    inviteCode?: string
+  ) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   /**
@@ -125,6 +138,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  /**
+   * Termina de crear la cuenta de quien entró con Google.
+   *
+   * Reutiliza a propósito las mismas piezas que el registro con correo —el
+   * código de invitación, la solicitud al entrenador, la prueba del atleta—
+   * porque son las mismas reglas: entrar por Google no puede saltarse el
+   * permiso del entrenador ni regalar una prueba que no toca.
+   */
+  const completarPerfilDeGoogle = async (
+    role: UserRole,
+    name: string,
+    inviteCode?: string
+  ) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error('No hay ninguna sesión abierta.');
+    const limpio = name.trim() || user.displayName || 'Sin nombre';
+    const email = user.email ?? '';
+    // Firestore no admite `undefined`, y una cuenta de Google puede venir sin
+    // foto. Va como campo que existe o que no existe, nunca como campo vacío.
+    const foto = user.photoURL ? { photoURL: user.photoURL } : {};
+
+    if (role === 'client') {
+      const invite = await getInviteCodeInfo((inviteCode ?? '').trim().toUpperCase());
+      if (!invite) {
+        throw new Error('El código de entrenador no es válido. Revísalo con tu entrenador.');
+      }
+      if (invite.full) {
+        throw new Error(
+          'Tu entrenador ha alcanzado el límite de alumnos de su plan. Pídele que active su suscripción para poder entrar.'
+        );
+      }
+      const nuevo: UserProfile = {
+        uid: user.uid,
+        role: 'client',
+        name: limpio,
+        email,
+        createdAt: Date.now(),
+        ...foto,
+      };
+      await setDoc(doc(db, 'users', user.uid), nuevo);
+      await sendJoinRequest(invite.trainerId, nuevo);
+      setProfile(nuevo);
+      return;
+    }
+
+    if (role === 'trainer') {
+      const codigo = generateInviteCode();
+      const nuevo: UserProfile = {
+        uid: user.uid,
+        role: 'trainer',
+        name: limpio,
+        email,
+        createdAt: Date.now(),
+        inviteCode: codigo,
+        ...foto,
+        subscriptionUntil: 0,
+      };
+      await setDoc(doc(db, 'users', user.uid), nuevo);
+      await registerTrainerInviteCode(codigo, user.uid);
+      setProfile(nuevo);
+      return;
+    }
+
+    const nuevo: UserProfile = {
+      uid: user.uid,
+      role: 'athlete',
+      name: limpio,
+      email,
+      createdAt: Date.now(),
+      trainerId: user.uid,
+      ...foto,
+      subscriptionUntil: trialUntil(),
+      trialEndsAt: trialUntil(),
+    };
+    await setDoc(doc(db, 'users', user.uid), nuevo);
+    setProfile(nuevo);
   };
 
   const registerTrainer = async (name: string, email: string, password: string) => {
@@ -281,6 +372,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       registerTrainer,
       registerClient,
       registerAthlete,
+      completarPerfilDeGoogle,
       signOut,
       deleteAccount,
       reauthenticate,

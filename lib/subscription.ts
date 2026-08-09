@@ -219,22 +219,31 @@ export function subscriptionCheckoutUrl(profile: UserProfile | null): string | n
 /**
  * ¿Se puede enlazar a pagar DESDE la app?
  *
- * En iPhone y iPad, no: la 3.1.1 prohíbe también el enlace, no solo el precio.
- * Allí la app dice que la cuenta no está activa y ofrece escribir por correo,
- * igual que hacen Netflix o Spotify. Fuera de iOS el botón abre la página de
- * pago, que es donde el precio se ve —y donde siempre está al día—.
+ * Sí, en todas las plataformas, iPhone incluido: es la decisión del CEO y está
+ * tomada a sabiendas.
+ *
+ * QUÉ RIESGO SE ESTÁ ACEPTANDO
+ *
+ * La norma 3.1.1 de la App Store obliga a que el contenido digital que se
+ * consume dentro de la app se compre con las compras integradas de Apple, y
+ * hasta 2024 prohibía incluso enlazar fuera. Desde las sentencias de EE. UU. y
+ * el DMA europeo el enlace externo ya se permite en varios sitios, pero las
+ * condiciones cambian por país y por versión de las normas, así que este botón
+ * puede ser motivo de rechazo en una revisión. El precio, que era la otra
+ * mitad del problema, ya no aparece en ninguna pantalla.
+ *
+ * Si Apple lo rechaza, hay dos salidas y ninguna obliga a rehacer nada de
+ * esto: poner `Platform.OS !== 'ios'` en esta constante (la app vuelve a decir
+ * solo que la cuenta no está activa), o montar las compras integradas de
+ * verdad, que es otro proyecto (StoreKit + acuerdos de pago en App Store
+ * Connect). La decisión está en UNA línea, aquí, a propósito.
  *
  * Esto NO afecta a lo que un alumno le paga a su entrenador: eso es un servicio
  * real entre dos personas, no contenido digital, y Apple lo deja fuera de las
  * compras integradas expresamente.
- *
- * La solución definitiva en iOS son las compras integradas, que son otro
- * proyecto (StoreKit + acuerdos de pago en App Store Connect).
  */
-export const CAN_LINK_TO_PAYMENT = Platform.OS !== 'ios';
+export const CAN_LINK_TO_PAYMENT = true;
 
-/** @deprecated Nombre viejo de `CAN_LINK_TO_PAYMENT`, cuando además regía los precios. */
-export const CAN_SELL_IN_APP = CAN_LINK_TO_PAYMENT;
 
 /** Correo de contacto para activar/renovar manualmente. */
 export const CONTACT_EMAIL = 'luistenaf@gmail.com';

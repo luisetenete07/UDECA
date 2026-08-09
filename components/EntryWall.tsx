@@ -6,7 +6,7 @@ import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
 import { track, trackOnce } from '../lib/analytics';
 import {
-  CAN_SELL_IN_APP,
+  CAN_LINK_TO_PAYMENT,
   TRIAL_DAYS,
   CONTACT_EMAIL,
   FREE_CLIENT_LIMIT,
@@ -37,7 +37,7 @@ export function EntryWall() {
   const esAtleta = profile?.role === 'athlete';
   const url = entryCheckoutUrl(profile);
   // iOS: ni precio ni enlace de pago (ver comentario de arriba).
-  const puedeCobrarAqui = CAN_SELL_IN_APP;
+  const puedeCobrarAqui = CAN_LINK_TO_PAYMENT;
 
   /**
    * Al pagar. Si aún no hay enlace de Stripe configurado, en vez de dejar al
