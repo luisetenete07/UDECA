@@ -22,10 +22,13 @@ export function ListaRadio<T extends string>({
   opciones,
   valor,
   onChange,
+  deshabilitado,
 }: {
   opciones: { valor: T; texto: string }[];
   valor?: T;
   onChange: (v: T) => void;
+  /** Mientras se guarda: se ve igual pero no admite otro toque encima. */
+  deshabilitado?: boolean;
 }) {
   return (
     <View style={styles.lista}>
@@ -35,9 +38,10 @@ export function ListaRadio<T extends string>({
           <Pressable
             key={o.valor}
             onPress={() => onChange(o.valor)}
+            disabled={deshabilitado}
             style={[styles.opcion, activo && styles.activa]}
             accessibilityRole="radio"
-            accessibilityState={{ selected: activo }}
+            accessibilityState={{ selected: activo, disabled: !!deshabilitado }}
           >
             <Ionicons
               name={activo ? 'radio-button-on' : 'radio-button-off'}

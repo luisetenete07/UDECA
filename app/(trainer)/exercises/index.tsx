@@ -40,6 +40,7 @@ import {
   parseExerciseTemplate,
   type ExportedExercise,
 } from '../../../lib/exerciseTemplateIO';
+import { grupoRenombrado, medidaDelGrupo } from '../../../lib/medidaDeGrupo';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
 import { showToast } from '../../../components/Toast';
@@ -49,6 +50,7 @@ import { Chip, ChipRow } from '../../../components/Chip';
 import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
 import {
   CATEGORY_PALETTE,
+  MEASURE_SHORT,
   MUSCLE_GROUPS,
   type Exercise,
   type TemplateExercise,
@@ -186,6 +188,8 @@ export default function ExercisesScreen() {
       const next = list.includes(from) ? list.map((s) => (s === from ? to : s)) : [...list, to];
       await updateUserProfile(profile.uid, {
         categorySubgroups: { ...(profile.categorySubgroups ?? {}), [group]: next },
+        // La medida del grupo viaja con el nombre (ver lib/medidaDeGrupo.ts).
+        subgroupMeasures: grupoRenombrado(profile.subgroupMeasures, group, from, to),
       });
       await refreshProfile();
       const updated = exercises.map((e) =>
@@ -791,7 +795,20 @@ export default function ExercisesScreen() {
             {/* Solo se rotula si hay más de un bloque: con uno solo, la
                 cabecera sobra y añade ruido. */}
             {grouped.length > 1 ? (
-              <Text style={styles.subgroupHead}>{sg || 'Sin subgrupo'}</Text>
+              <View style={styles.subgroupHeadRow}>
+                <Text style={styles.subgroupHead}>{sg || 'Sin subgrupo'}</Text>
+                {/* La medida del grupo solo se puede nombrar con la categoría
+                    delante: "Aguantes" existe en varias y cada una decide la
+                    suya. Sin filtro de categoría no se sabe de cuál es este
+                    bloque, así que no se dice nada. */}
+                {muscleFilter && medidaDelGrupo(profile?.subgroupMeasures, muscleFilter, sg) ? (
+                  <Text style={styles.subgroupMedida}>
+                    {MEASURE_SHORT[
+                      medidaDelGrupo(profile?.subgroupMeasures, muscleFilter, sg)!
+                    ].toLowerCase()}
+                  </Text>
+                ) : null}
+              </View>
             ) : null}
             <Grid>
             {list.map((exercise, index) => (
@@ -1005,11 +1022,22 @@ const styles = StyleSheet.create({
   paletteDot: { width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: 'transparent' },
   paletteDotOn: { borderColor: colors.text },
   customRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  subgroupHeadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   subgroupHead: {
     ...typography.label,
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 1,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  subgroupMedida: {
+    ...typography.small,
+    color: colors.primaryBright,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
   },

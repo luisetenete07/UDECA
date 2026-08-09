@@ -314,10 +314,24 @@ service cloud.firestore {
         && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
       allow create: if request.auth != null
         && request.resource.data.clientId == request.auth.uid;
-      // El alumno puede borrar un entrenamiento pasado suyo; no se editan.
+      // El alumno puede borrar un entrenamiento pasado suyo.
       allow delete: if request.auth != null
         && resource.data.clientId == request.auth.uid;
-      allow update: if false;
+      // Y puede corregirlo: "Terminar entreno" se pulsa sin querer, o faltando
+      // la última serie por apuntar, y borrar la sesión entera para rehacerla
+      // es un castigo desproporcionado para un dedo.
+      //
+      // Solo el suyo, y solo lo que se hizo. Lo que identifica la sesión —de
+      // quién es, de qué entrenador, qué día fue— queda fuera: si `date` se
+      // pudiera cambiar, una sesión podría viajar a otro día y aparecer una
+      // racha que nadie entrenó.
+      allow update: if request.auth != null
+        && resource.data.clientId == request.auth.uid
+        && request.resource.data.clientId == resource.data.clientId
+        && request.resource.data.trainerId == resource.data.trainerId
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['exercises', 'durationMin', 'feedback']);
     }
 
     // Registros de peso de cada cliente.

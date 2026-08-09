@@ -39,6 +39,7 @@ import { flexLabel } from '../../../../lib/schedule';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
 import { nuevoId } from '../../../../lib/ids';
+import { medidaDelGrupo } from '../../../../lib/medidaDeGrupo';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../../lib/theme';
 import {
   CLUSTER_DEFAULT,
@@ -54,6 +55,7 @@ import {
   isHoldMeasure,
   LOAD_LABEL,
   LOAD_TYPES,
+  MEASURE_SHORT,
   MUSCLE_GROUPS,
   type MuscleGroup,
   resolveLoad,
@@ -100,6 +102,8 @@ export default function RoutineEditorScreen() {
   const [newGroup, setNewGroup] = useState<string>('Empuje');
   const [newSubgroup, setNewSubgroup] = useState('');
   const [newMeasure, setNewMeasure] = useState<ExerciseMeasure>('reps');
+  // La medida que impone el grupo elegido, si ese grupo ya la tiene decidida.
+  const medidaDelNuevoGrupo = medidaDelGrupo(profile?.subgroupMeasures, newGroup, newSubgroup);
   const [newLoad, setNewLoad] = useState<ExerciseLoad>('none');
   const [newVideo, setNewVideo] = useState('');
   const [savingNew, setSavingNew] = useState(false);
@@ -322,7 +326,9 @@ export default function RoutineEditorScreen() {
         name: newName.trim(),
         muscleGroup: newGroup,
         subgroup: newSubgroup.trim() || undefined,
-        measure: newMeasure,
+        // Si el grupo ya decidió cómo se mide, manda él: es justo para lo que
+        // está, para no tener que acordarse ejercicio a ejercicio.
+        measure: medidaDelNuevoGrupo ?? newMeasure,
         load: newLoad,
         videoUrl: newVideo.trim() || undefined,
       };
@@ -1328,15 +1334,27 @@ export default function RoutineEditorScreen() {
                     />
                   </>
                 ) : null}
-                <Text style={styles.loadLabel}>Medida</Text>
-                <Opciones
-                  opciones={[
-                    { valor: 'reps' as ExerciseMeasure, texto: 'Repeticiones' },
-                    { valor: 'seconds' as ExerciseMeasure, texto: 'Segundos' },
-                  ]}
-                  valor={newMeasure}
-                  onChange={(m) => m && setNewMeasure(m)}
-                />
+                {/* Con el grupo decidido no se pregunta: se dice cuál es y se
+                    sigue. Preguntar aquí solo sirve para que alguien conteste
+                    distinto de lo que su propio grupo ya dice. */}
+                {medidaDelNuevoGrupo ? (
+                  <Text style={styles.medidaHeredada}>
+                    Medida: {MEASURE_SHORT[medidaDelNuevoGrupo].toLowerCase()} · lo decide el
+                    grupo «{newSubgroup}»
+                  </Text>
+                ) : (
+                  <>
+                    <Text style={styles.loadLabel}>Medida</Text>
+                    <Opciones
+                      opciones={[
+                        { valor: 'reps' as ExerciseMeasure, texto: 'Repeticiones' },
+                        { valor: 'seconds' as ExerciseMeasure, texto: 'Segundos' },
+                      ]}
+                      valor={newMeasure}
+                      onChange={(m) => m && setNewMeasure(m)}
+                    />
+                  </>
+                )}
                 <Text style={styles.loadLabel}>Carga</Text>
                 <Opciones
                   opciones={LOAD_TYPES.map((l) => ({ valor: l, texto: LOAD_LABEL[l] }))}
@@ -1630,6 +1648,12 @@ const styles = StyleSheet.create({
   // dentro, así que el contenedor seguía midiendo lo que ocupase su etiqueta y
   // "Descanso (min:seg)" empujaba la fila fuera de la pantalla.
   smallInput: { flex: 1, marginBottom: 0 },
+  medidaHeredada: {
+    ...typography.small,
+    color: colors.primaryBright,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   loadLabel: {
     ...typography.label,
     color: colors.textMuted,

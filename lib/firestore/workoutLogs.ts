@@ -8,6 +8,7 @@ import {
   limit,
   orderBy,
   query,
+  updateDoc,
   where,
   type QueryConstraint,
   type QuerySnapshot,
@@ -79,6 +80,26 @@ export async function createWorkoutLog(
 ): Promise<string> {
   const ref = await addDoc(collectionRef(), stripUndefined({ ...data, createdAt: Date.now() }));
   return ref.id;
+}
+
+/**
+ * Corrige un entrenamiento ya guardado.
+ *
+ * Existe porque "Terminar entreno" es un botón grande al final de una lista de
+ * series y se pulsa sin querer, o se pulsa a propósito habiéndose dejado la
+ * última serie sin apuntar. Hasta ahora la única salida era borrar la sesión y
+ * rehacerla entera —perdiendo la hora, la duración y el resto de las series—,
+ * que es un castigo desproporcionado para un dedo.
+ *
+ * Lo que identifica la sesión (de quién es, de qué entrenador, cuándo fue) no
+ * se toca: corregir es arreglar lo que se hizo, no mover el entreno a otro día
+ * ni a otra persona. Las reglas de Firestore imponen lo mismo.
+ */
+export async function updateWorkoutLog(
+  id: string,
+  data: Pick<WorkoutLog, 'exercises'> & Partial<Pick<WorkoutLog, 'durationMin' | 'feedback'>>
+): Promise<void> {
+  await updateDoc(doc(db, 'workoutLogs', id), stripUndefined(data));
 }
 
 /** Borra un entrenamiento pasado (solo el propio alumno puede hacerlo). */

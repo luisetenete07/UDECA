@@ -41,7 +41,11 @@ import { anclaConPausas, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
 import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
-import { createWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import {
+  createWorkoutLog,
+  getWorkoutLogsForClient,
+  updateWorkoutLog,
+} from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
@@ -199,6 +203,8 @@ export default function WorkoutScreen() {
   const [pastDismissed, setPastDismissed] = useState(false);
   // Si estamos rellenando un entreno de otro día, se registra con SU fecha.
   const [resumeDate, setResumeDate] = useState<number | null>(null);
+  // Id de la sesión que se está corrigiendo, si se reabrió una ya guardada.
+  const [corrigiendo, setCorrigiendo] = useState<string | null>(null);
   // Evita que el efecto de recuperación pise una recuperación manual.
   const resumeGuard = useRef(false);
   // Descanso activo: cuando corre, el crono flota abajo; añadimos hueco al
@@ -961,7 +967,67 @@ export default function WorkoutScreen() {
   const inProgress = doneSets > 0 || restored;
   // En Sensaciones, "flexAgain" permite ignorar la tarjeta de completado para
   // encadenar un segundo entreno el mismo día.
-  const showCompleted = !!completedTodayLog && !inProgress && !(isFlex && flexAgain);
+  const showCompleted = !!completedTodayLog && !inProgress && !corrigiendo && !(isFlex && flexAgain);
+
+  /**
+   * Vuelve a abrir el entreno ya guardado para corregirlo.
+   *
+   * "Terminar entreno" es un botón grande al final de una lista de series: se
+   * pulsa sin querer, y se pulsa faltando la última serie por apuntar. Hasta
+   * ahora la única salida era borrar la sesión y rehacerla entera —perdiendo la
+   * hora, la duración y todo lo demás—, así que en la práctica el alumno se
+   * quedaba con el dato mal. Esto lo reabre tal cual estaba: al guardar se
+   * ACTUALIZA la misma sesión, no se crea otra.
+   */
+  const corregirEntreno = () => {
+    if (!completedTodayLog) return;
+    // Se monta un día a partir de la propia sesión guardada, y no se confía en
+    // el día seleccionado: en Sensaciones el entreno pudo ser una combinación
+    // que ya no existe como día de la rutina, y sin día `handleSave` se rinde
+    // en la primera línea y el botón de guardar no haría nada.
+    setCombinedDay({
+      id: `corregir-${completedTodayLog.id}`,
+      name: completedTodayLog.dayName || 'Entreno',
+      exercises: completedTodayLog.exercises.map((ex, i) => ({
+        id: `${completedTodayLog.id}-${i}`,
+        exerciseId: ex.exerciseId,
+        name: ex.name,
+        sets: ex.sets.length,
+        reps: '',
+        measure: ex.measure,
+        load: ex.load,
+      })),
+    });
+    setCorrigiendo(completedTodayLog.id);
+    setLog(completedTodayLog.exercises);
+    // La referencia pasa a ser lo ya guardado: así no se escribe un borrador
+    // por el simple hecho de abrir la corrección, solo si se cambia algo.
+    pristineRef.current = JSON.stringify(completedTodayLog.exercises);
+    setViewIndex(0);
+    setSummary(null);
+    // La duración ya está calculada y guardada: corregir series no significa
+    // que la sesión haya durado desde ahora hasta que se pulse guardar.
+    startedAt.current = null;
+    showToast('Corrigiendo el entreno. Al guardar se actualiza el mismo.');
+  };
+
+  /** Sale de la corrección sin escribir nada: la sesión se queda como estaba. */
+  const cancelarCorreccion = () => {
+    if (!routine) return;
+    setCorrigiendo(null);
+    setCombinedDay(null);
+    const diaReal = routine.days.find((d) => d.id === selectedDayId);
+    const limpio = diaReal ? buildLog(diaReal) : [];
+    setLog(limpio);
+    pristineRef.current = JSON.stringify(limpio);
+    setViewIndex(0);
+    if (profile) {
+      AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+      clearActiveSession(profile.uid);
+    }
+    remoteDraftRef.current = null;
+    if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
+  };
 
   // Lo que se toca una vez al mes vive detrás del punto de la cabecera, no
   // ocupando dos filas encima de la primera serie.
@@ -984,13 +1050,24 @@ export default function WorkoutScreen() {
           },
         ] satisfies AccionRapida[])
       : []),
-    ...(isFlex && combinedDay
+    ...(isFlex && combinedDay && !corrigiendo
       ? ([
           {
             icono: 'close-circle-outline' as const,
             texto: 'Cancelar este entreno',
             onPress: cancelFlexSession,
             peligro: true,
+          },
+        ] satisfies AccionRapida[])
+      : []),
+    // Salir de la corrección sin tocar nada. Quien entra por error a arreglar
+    // algo tiene que poder salir por donde entró, con su sesión intacta.
+    ...(corrigiendo
+      ? ([
+          {
+            icono: 'arrow-undo-outline' as const,
+            texto: 'Dejar el entreno como estaba',
+            onPress: cancelarCorreccion,
           },
         ] satisfies AccionRapida[])
       : []),
@@ -1023,11 +1100,16 @@ export default function WorkoutScreen() {
           : 'reps';
         return { ...ex, measure };
       });
-      const prs = detectNewPRs(history, finalLog);
+      // Corrigiendo, la sesión que se edita NO cuenta como historial contra el
+      // que compararse: si contara, cada marca se compararía consigo misma y no
+      // habría récord posible ni aunque el alumno acabe de apuntar su mejor
+      // serie, que es justo lo que se estaba corrigiendo.
+      const historyBase = corrigiendo ? history.filter((l) => l.id !== corrigiendo) : history;
+      const prs = detectNewPRs(historyBase, finalLog);
       const totals = sessionTotals(finalLog);
       // Logros que estaban desbloqueados antes de esta sesión (base entrenos).
       const beforeUnlocked = new Set(
-        computeAchievements(history, []).filter((a) => a.unlocked).map((a) => a.id)
+        computeAchievements(historyBase, []).filter((a) => a.unlocked).map((a) => a.id)
       );
 
       const payload = {
@@ -1041,6 +1123,44 @@ export default function WorkoutScreen() {
         exercises: finalLog,
         ...(durationMin > 0 ? { durationMin } : {}),
       };
+
+      /*
+       * Corrigiendo se ACTUALIZA la sesión, no se crea otra. Es la diferencia
+       * entre arreglar un dedo y acabar con dos entrenos el mismo día.
+       *
+       * Y sin la red de la cola de offline: encolar una corrección crearía un
+       * duplicado al subirse (la cola solo sabe crear), así que si no hay
+       * conexión es mejor decirlo y que el alumno lo intente luego, con su
+       * sesión original intacta.
+       */
+      if (corrigiendo) {
+        await updateWorkoutLog(corrigiendo, {
+          exercises: finalLog,
+          // La duración no se recalcula: la sesión duró lo que duró, y el rato
+          // que se tarde en corregirla no es tiempo entrenando.
+          ...(completedTodayLog?.durationMin ? { durationMin: completedTodayLog.durationMin } : {}),
+        });
+        const freshLogs = await getWorkoutLogsForClient(profile.uid);
+        setHistory(freshLogs);
+        setCorrigiendo(null);
+        setCombinedDay(null);
+        // Se vuelve a dejar el día como está: si el log siguiera lleno de
+        // series marcadas, la pantalla creería que hay un entreno en curso y
+        // no volvería a enseñar la tarjeta de terminado.
+        const diaReal = routine.days.find((d) => d.id === selectedDayId);
+        const limpio = diaReal ? buildLog(diaReal) : [];
+        setLog(limpio);
+        pristineRef.current = JSON.stringify(limpio);
+        // El borrador que se haya ido escribiendo mientras se corregía ya no
+        // vale: si se quedara, mañana se ofrecería como "entreno sin terminar".
+        AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+        clearActiveSession(profile.uid);
+        remoteDraftRef.current = null;
+        if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
+        setViewIndex(0);
+        showToast('Entreno corregido');
+        return;
+      }
 
       let freshLogs: WorkoutLog[];
       let savedOffline = false;
@@ -1292,6 +1412,21 @@ export default function WorkoutScreen() {
           onPress={() => router.push('/(client)/dashboard')}
           style={{ marginTop: spacing.sm }}
         />
+        {/* Aquí es donde se cae en la cuenta: la pantalla que sale justo
+            después de pulsar "Terminar". Si el resumen dice menos series de
+            las que se hicieron, la salida tiene que estar a la vista, no al
+            día siguiente. */}
+        <Pressable
+          onPress={() => {
+            setSummary(null);
+            corregirEntreno();
+          }}
+          style={styles.againLink}
+          hitSlop={8}
+        >
+          <Ionicons name="create-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.againLinkText}>Me faltan series · corregirlo</Text>
+        </Pressable>
       </ScreenContainer>
     );
   }
@@ -1648,6 +1783,13 @@ export default function WorkoutScreen() {
                 <Text style={styles.completedNote}>
                   Guardado en tu progreso · pestaña Entrenos. Vuelve mañana para tu próxima sesión.
                 </Text>
+                {/* Si se le fue el dedo o se dejó una serie sin apuntar, aquí
+                    se arregla. Discreto y debajo: es la salida de un error, no
+                    algo que haya que ofrecer al que ha terminado bien. */}
+                <Pressable onPress={corregirEntreno} style={styles.againLink} hitSlop={8}>
+                  <Ionicons name="create-outline" size={14} color={colors.textMuted} />
+                  <Text style={styles.againLinkText}>Corregir este entreno</Text>
+                </Pressable>
                 <Button
                   title="Compartir sesión"
                   onPress={() => handleShareCompleted(completedTodayLog)}
@@ -2107,11 +2249,16 @@ export default function WorkoutScreen() {
         {isLastExercise ? (
           <Button
             title={
-              doneSets === 0
-                ? 'Terminar (sin apuntar)'
-                : doneSets < totalSets
-                  ? `Terminar (${doneSets}/${totalSets})`
-                  : 'Terminar sesión'
+              // Corrigiendo, el botón dice lo que hace: guardar los cambios en
+              // la sesión que ya existe. "Terminar sesión" ahí daría a entender
+              // que se está registrando otro entreno.
+              corrigiendo
+                ? 'Guardar corrección'
+                : doneSets === 0
+                  ? 'Terminar (sin apuntar)'
+                  : doneSets < totalSets
+                    ? `Terminar (${doneSets}/${totalSets})`
+                    : 'Terminar sesión'
             }
             onPress={handleSave}
             loading={saving}

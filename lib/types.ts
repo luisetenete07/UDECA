@@ -33,6 +33,15 @@ export interface UserProfile {
    */
   categorySubgroups?: Record<string, string[]>;
   /**
+   * Cómo se mide cada grupo (categoría + subgrupo → reps, segundos, combo…).
+   *
+   * Se decide una vez por grupo y vale para todos sus ejercicios, incluidos
+   * los que se añadan después: "el grupo Aguantes va en segundos" es una
+   * decisión del entrenador sobre su biblioteca, no un campo que repetir en
+   * cada ficha. Ver lib/medidaDeGrupo.ts.
+   */
+  subgroupMeasures?: Record<string, ExerciseMeasure>;
+  /**
    * Cuántos alumnos tiene el entrenador. Lo mantiene su propia app al cargar
    * la lista de clientes. Existe para saber si sigue dentro del plan gratuito
    * sin tener que contar la colección en cada arranque.

@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
-import { updateUserProfile } from '../../../lib/firestore/users';
+import { quitarMedidaDeGrupo, updateUserProfile } from '../../../lib/firestore/users';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
@@ -20,6 +20,13 @@ import { ListaRadio } from '../../../components/ListaRadio';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { Dialogo } from '../../../components/Dialogo';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../lib/theme';
+import {
+  claveGrupo,
+  conMedidaDeGrupo,
+  ejerciciosADesactualizar,
+  grupoRenombrado,
+  medidaDelGrupo,
+} from '../../../lib/medidaDeGrupo';
 import {
   EXERCISE_MEASURES,
   isDualMeasure,
@@ -110,25 +117,22 @@ export default function ExerciseEditorScreen() {
     setError(null);
     setSaving(true);
     try {
+      // Si el grupo tiene medida, es la suya y no la que hubiera en pantalla:
+      // así un ejercicio que se acaba de mover a "Aguantes" entra ya en
+      // segundos, sin que nadie tenga que acordarse de cambiarlo.
+      const medidaFinal = medidaGrupo ?? measure;
+      const campos = {
+        name: name.trim(),
+        muscleGroup,
+        description: description.trim() || undefined,
+        videoUrl: videoUrl.trim() || undefined,
+        measure: medidaFinal,
+        subgroup: subgroup || undefined,
+      };
       if (isNew) {
-        await createExercise({
-          trainerId: profile.uid,
-          name: name.trim(),
-          muscleGroup,
-          description: description.trim() || undefined,
-          videoUrl: videoUrl.trim() || undefined,
-          measure,
-          subgroup: subgroup || undefined,
-        });
+        await createExercise({ trainerId: profile.uid, ...campos });
       } else if (id) {
-        await updateExercise(id, {
-          name: name.trim(),
-          muscleGroup,
-          description: description.trim() || undefined,
-          videoUrl: videoUrl.trim() || undefined,
-          measure,
-          subgroup: subgroup || undefined,
-        });
+        await updateExercise(id, campos);
       }
       showToast('Ejercicio guardado');
       router.back();
@@ -172,6 +176,96 @@ export default function ExerciseEditorScreen() {
 
   // Subgrupos definidos por el coach para la categoría seleccionada.
   const subgroups = profile?.categorySubgroups?.[muscleGroup] ?? [];
+
+  /*
+   * La medida decidida para el grupo al que pertenece este ejercicio.
+   *
+   * Cuando existe, este editor deja de preguntar por la medida del ejercicio:
+   * la decide el grupo, y cambiarla aquí la cambia para todos. Es lo que evita
+   * tener que acordarse en cada ficha nueva de que "Aguantes va en segundos"
+   * —olvidarlo una vez saca un isométrico pidiendo repeticiones en mitad del
+   * entreno, donde ya no hay forma de arreglarlo—.
+   */
+  const medidaGrupo = medidaDelGrupo(profile?.subgroupMeasures, muscleGroup, subgroup);
+  const [aplicandoGrupo, setAplicandoGrupo] = useState(false);
+  const [cuantosEnGrupo, setCuantosEnGrupo] = useState(0);
+  const cuantosEnGrupoTexto =
+    cuantosEnGrupo === 1 ? 'el ejercicio' : `los ${cuantosEnGrupo} ejercicios`;
+
+  // Cuántos ejercicios hay ya en este grupo, para poder decir a cuántos afecta
+  // un cambio antes de hacerlo.
+  useEffect(() => {
+    if (!profile || !subgroup) {
+      setCuantosEnGrupo(0);
+      return;
+    }
+    getExercisesForTrainer(profile.uid)
+      .then((list) =>
+        setCuantosEnGrupo(
+          list.filter((e) => e.muscleGroup === muscleGroup && (e.subgroup ?? '') === subgroup).length
+        )
+      )
+      .catch(() => setCuantosEnGrupo(0));
+  }, [profile, muscleGroup, subgroup]);
+
+  // Al entrar en un grupo que ya tiene medida, el ejercicio la adopta: es lo
+  // que hace que no haya que ponerla a mano al crear cada uno.
+  useEffect(() => {
+    if (medidaGrupo) setMeasure(medidaGrupo);
+  }, [medidaGrupo]);
+
+  /**
+   * Cambia la medida de TODO el grupo y la escribe en cada uno de sus
+   * ejercicios.
+   *
+   * Se escribe en los ejercicios además de en el grupo porque el alumno no lee
+   * el perfil de su entrenador: lee los ejercicios. El grupo es quien decide y
+   * quien lo recuerda para los que vengan; la copia en cada ejercicio es lo que
+   * hace que el resto de la app siga leyendo un único campo.
+   */
+  const aplicarMedidaAlGrupo = async (nueva: ExerciseMeasure) => {
+    if (!profile || !subgroup) return;
+    setMeasure(nueva);
+    setAplicandoGrupo(true);
+    try {
+      const library = await getExercisesForTrainer(profile.uid);
+      const pendientes = ejerciciosADesactualizar(library, muscleGroup, subgroup, nueva);
+      await Promise.all(pendientes.map((e) => updateExercise(e.id, { measure: nueva })));
+      await updateUserProfile(profile.uid, {
+        subgroupMeasures: conMedidaDeGrupo(
+          profile.subgroupMeasures,
+          muscleGroup,
+          subgroup,
+          nueva
+        ),
+      });
+      await refreshProfile();
+      showToast(
+        pendientes.length > 0
+          ? `${MEASURE_LABEL[nueva]} en todo «${subgroup}» (${pendientes.length} actualizados)`
+          : `«${subgroup}» se mide en ${MEASURE_LABEL[nueva].toLowerCase()}`
+      );
+    } catch {
+      showToast('No se pudo aplicar la medida al grupo');
+    } finally {
+      setAplicandoGrupo(false);
+    }
+  };
+
+  /** Suelta la medida del grupo: vuelve a decidirse ejercicio a ejercicio. */
+  const soltarMedidaDelGrupo = async () => {
+    if (!profile || !subgroup) return;
+    setAplicandoGrupo(true);
+    try {
+      await quitarMedidaDeGrupo(profile.uid, claveGrupo(muscleGroup, subgroup));
+      await refreshProfile();
+      showToast(`«${subgroup}» ya no impone medida`);
+    } catch {
+      showToast('No se pudo soltar la medida del grupo');
+    } finally {
+      setAplicandoGrupo(false);
+    }
+  };
 
   /** Crea un subgrupo dentro de la categoría actual y lo deja seleccionado. */
   const addSubgroup = async () => {
@@ -225,6 +319,15 @@ export default function ExerciseEditorScreen() {
           ...(profile.categorySubgroups ?? {}),
           [muscleGroup]: subgroups.map((x) => (x === renameSub ? to : x)),
         },
+        // La medida viaja con el nombre. Si se quedara atrás, hoy no se notaría
+        // —los ejercicios ya la tienen escrita— y el fallo saldría semanas
+        // después, al añadir uno nuevo y verlo pedir repeticiones.
+        subgroupMeasures: grupoRenombrado(
+          profile.subgroupMeasures,
+          muscleGroup,
+          renameSub,
+          to
+        ),
       });
       await refreshProfile();
       // Si el ejercicio abierto estaba en ese subgrupo, sigue en él.
@@ -330,14 +433,34 @@ export default function ExerciseEditorScreen() {
         </Pressable>
       </View>
 
-      <Text style={styles.label}>Se mide en</Text>
+      <View style={styles.catHeader}>
+        <Text style={[styles.label, { flexShrink: 1 }]}>
+          {subgroup ? `Se mide en · grupo «${subgroup}»` : 'Se mide en'}
+        </Text>
+        {medidaGrupo ? (
+          <Pressable onPress={soltarMedidaDelGrupo} hitSlop={6}>
+            <Text style={styles.catEdit}>Por ejercicio</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {/* Con un subgrupo elegido, la medida es del GRUPO: se decide una vez y
+          vale para todo lo que haya dentro y para lo que se meta después. Sin
+          subgrupo no hay grupo que decida, así que es de este ejercicio. */}
+      <Text style={styles.measureHint}>
+        {subgroup
+          ? medidaGrupo
+            ? `Lo que elijas aquí vale para ${cuantosEnGrupoTexto} de este grupo y para los que añadas después. No hay que ponerlo uno a uno.`
+            : `Elige una y se aplicará a ${cuantosEnGrupoTexto} de «${subgroup}» y a todos los que metas ahí a partir de ahora.`
+          : 'Solo para este ejercicio. Si lo metes en un grupo, la medida la decide el grupo.'}
+      </Text>
       {/* Lista vertical y no una fila de botones: con cinco opciones, cada
           etiqueta necesita leerse entera ("Aguante por lado" no se distingue
           de "Aguante" recortado a dos palabras). */}
       <ListaRadio
         opciones={EXERCISE_MEASURES.map((m) => ({ valor: m, texto: MEASURE_LABEL[m] }))}
         valor={measure}
-        onChange={setMeasure}
+        onChange={subgroup ? aplicarMedidaAlGrupo : setMeasure}
+        deshabilitado={aplicandoGrupo}
       />
       {measure === 'combo' ? (
         <Text style={styles.measureHint}>
