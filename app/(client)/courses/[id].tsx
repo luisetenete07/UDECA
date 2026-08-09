@@ -7,6 +7,7 @@ import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { PressableScale } from '../../../components/PressableScale';
+import { MiniaturaCurso } from '../../../components/MiniaturaCurso';
 import { ProgressRing } from '../../../components/ProgressRing';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { VideoPlayer } from '../../../components/VideoPlayer';
@@ -14,9 +15,9 @@ import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
 import { getCourse } from '../../../lib/firestore/courses';
 import { getCourseProgress, setLessonsSeen } from '../../../lib/firestore/courseProgress';
-import { estadoDeCurso, tieneContenido } from '../../../lib/courseProgress';
+import { contenidosDeLeccion, estadoDeCurso, tieneContenido } from '../../../lib/courseProgress';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
-import type { Course, Lesson } from '../../../lib/types';
+import type { ContenidoDeCurso, Course, Lesson } from '../../../lib/types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -73,11 +74,34 @@ export default function ClientCourseDetailScreen() {
     });
   };
 
-  const activeLesson = useMemo<Lesson | null>(() => {
-    if (!course) return null;
+  /**
+   * Lo que se está viendo, que puede ser una lección o una mini clase suya.
+   *
+   * Se busca en los dos niveles porque para el alumno son lo mismo: un vídeo
+   * que se abre. La diferencia —que una esté dentro de otra— es cosa de cómo
+   * el entrenador lo ha organizado, no de cómo se ve.
+   */
+  const activeLesson = useMemo<ContenidoDeCurso | null>(() => {
+    if (!course || !activeLessonId) return null;
     for (const section of course.sections) {
-      const found = section.lessons.find((l) => l.id === activeLessonId);
-      if (found) return found;
+      for (const l of section.lessons) {
+        if (l.id === activeLessonId) return l;
+        const mini = (l.minis ?? []).find((m) => m.id === activeLessonId);
+        if (mini) return mini;
+      }
+    }
+    return null;
+  }, [course, activeLessonId]);
+
+  /** La lección a la que pertenece lo que se ve (para su candado y su texto). */
+  const leccionDeLoActivo = useMemo<Lesson | null>(() => {
+    if (!course || !activeLessonId) return null;
+    for (const section of course.sections) {
+      for (const l of section.lessons) {
+        if (l.id === activeLessonId || (l.minis ?? []).some((m) => m.id === activeLessonId)) {
+          return l;
+        }
+      }
     }
     return null;
   }, [course, activeLessonId]);
@@ -113,8 +137,10 @@ export default function ClientCourseDetailScreen() {
               <Text style={styles.metaText}>{activeLesson.durationLabel}</Text>
             </View>
           ) : null}
-          {activeLesson.description ? (
-            <Text style={styles.lessonDesc}>{activeLesson.description}</Text>
+          {/* La descripción es de la LECCIÓN: una mini clase no tiene texto
+              propio, y enseñar el de su lección da el contexto de dónde está. */}
+          {leccionDeLoActivo?.description ? (
+            <Text style={styles.lessonDesc}>{leccionDeLoActivo.description}</Text>
           ) : null}
 
           {/* Terminar una lección y empezar la siguiente son dos gestos que
@@ -186,7 +212,7 @@ export default function ClientCourseDetailScreen() {
                 aparte, que es una noticia buena y no un descuadre. */}
             {estado.terminado
               ? 'Curso completado'
-              : `${course.sections.length} ${course.sections.length === 1 ? 'sección' : 'secciones'} · ${estado.total} ${estado.total === 1 ? 'lección' : 'lecciones'}`}
+              : `${course.sections.length} ${course.sections.length === 1 ? 'sección' : 'secciones'} · ${estado.total} ${estado.total === 1 ? 'vídeo' : 'vídeos'}`}
             {totalLessons > estado.total
               ? ` · ${totalLessons - estado.total} en camino`
               : ''}
@@ -221,8 +247,16 @@ export default function ClientCourseDetailScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionName}>{section.title}</Text>
                   <Text style={styles.sectionMeta}>
-                    {section.lessons.length}{' '}
-                    {section.lessons.length === 1 ? 'lección' : 'lecciones'}
+                    {(() => {
+                      // Se cuenta lo que se puede VER: una lección que solo
+                      // agrupa mini clases no es un vídeo más, y contarla haría
+                      // que los números de la sección no cuadraran con las filas.
+                      const n = section.lessons.reduce(
+                        (t, l) => t + contenidosDeLeccion(l).length,
+                        0
+                      );
+                      return `${n} ${n === 1 ? 'vídeo' : 'vídeos'}`;
+                    })()}
                   </Text>
                 </View>
                 <Ionicons
@@ -232,93 +266,170 @@ export default function ClientCourseDetailScreen() {
                 />
               </Card>
             </Pressable>
-            {open ? section.lessons.map((lesson, index) => {
-              const isActive = lesson.id === activeLessonId;
-              const locked = isLocked(lesson);
-              const daysLeft = locked ? lesson.unlockAfterDays! - memberDays : 0;
-              const isPdf = lesson.kind === 'pdf' || (!lesson.videoUrl && !!lesson.pdfUrl);
-              const hasContent = isPdf ? !!lesson.pdfUrl : !!lesson.videoUrl;
-              return (
-                <Pressable
-                  key={lesson.id}
-                  onPress={() => {
-                    if (locked) {
-                      showToast(
-                        `Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`
-                      );
-                      return;
-                    }
-                    setActiveLessonId(lesson.id);
-                  }}
-                >
-                  <Card
-                    style={[
-                      styles.lessonRow,
-                      isActive && styles.lessonRowActive,
-                      locked && styles.lessonRowLocked,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        locked
-                          ? 'lock-closed'
-                          : isPdf
-                            ? 'document-text-outline'
-                            : isActive
-                              ? 'pause-circle'
-                              : 'play-circle-outline'
-                      }
-                      size={22}
-                      color={locked ? colors.textFaint : isActive ? colors.primary : colors.textMuted}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.lessonName,
-                          isActive && { color: colors.primary },
-                          locked && { color: colors.textFaint },
-                        ]}
-                      >
-                        {index + 1}. {lesson.title || 'Lección sin título'}
-                      </Text>
-                      {locked ? (
-                        <Text style={styles.lessonMeta}>
-                          Se desbloquea en {daysLeft} día{daysLeft === 1 ? '' : 's'}
-                        </Text>
-                      ) : lesson.durationLabel ? (
-                        <Text style={styles.lessonMeta}>{lesson.durationLabel}</Text>
-                      ) : null}
-                    </View>
-                    {!locked && !hasContent ? <Text style={styles.soon}>Pronto</Text> : null}
-                    {!locked && isPdf && hasContent ? (
-                      <Text style={styles.pdfTag}>PDF</Text>
-                    ) : null}
-                    {/* El check cierra la fila, no la abre: delante del play
-                        competiría con el gesto de ver, que es a lo que se
-                        viene. */}
-                    {hasContent && !locked ? (
-                      <PressableScale
-                        haptic
-                        hitSlop={10}
-                        onPress={() => alternarVista(lesson.id)}
-                        style={[styles.check, vista(lesson.id) && styles.checkOn]}
-                      >
-                        <Ionicons
-                          name="checkmark"
-                          size={16}
-                          color={vista(lesson.id) ? colors.onPrimary : colors.textFaint}
+            {open
+              ? section.lessons.map((lesson, index) => {
+                  const locked = isLocked(lesson);
+                  const daysLeft = locked ? lesson.unlockAfterDays! - memberDays : 0;
+                  const minis = lesson.minis ?? [];
+                  // Una lección puede ser solo un contenedor: sin vídeo propio
+                  // y con mini clases dentro. Entonces la fila no se abre, se
+                  // usa para agrupar.
+                  const abrible = tieneContenido(lesson);
+                  return (
+                    <View key={lesson.id}>
+                      <FilaDeContenido
+                        contenido={lesson}
+                        numero={`${index + 1}`}
+                        bloqueada={locked}
+                        diasQueFaltan={daysLeft}
+                        activa={lesson.id === activeLessonId}
+                        vista={vista(lesson.id)}
+                        abrible={abrible}
+                        sub={
+                          minis.length > 0
+                            ? `${minis.length} ${minis.length === 1 ? 'mini clase' : 'mini clases'}`
+                            : undefined
+                        }
+                        onAbrir={() => {
+                          if (locked) {
+                            showToast(`Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`);
+                            return;
+                          }
+                          if (abrible) setActiveLessonId(lesson.id);
+                        }}
+                        onMarcar={() => alternarVista(lesson.id)}
+                      />
+
+                      {/* Las mini clases van sangradas y con la miniatura más
+                          pequeña: se ve de un vistazo que son de la lección de
+                          arriba y no lecciones sueltas. */}
+                      {minis.map((mini, j) => (
+                        <FilaDeContenido
+                          key={mini.id}
+                          contenido={mini}
+                          numero={`${index + 1}.${j + 1}`}
+                          bloqueada={locked}
+                          diasQueFaltan={daysLeft}
+                          activa={mini.id === activeLessonId}
+                          vista={vista(mini.id)}
+                          abrible={tieneContenido(mini)}
+                          sangrada
+                          onAbrir={() => {
+                            if (locked) {
+                              showToast(
+                                `Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`
+                              );
+                              return;
+                            }
+                            if (tieneContenido(mini)) setActiveLessonId(mini.id);
+                          }}
+                          onMarcar={() => alternarVista(mini.id)}
                         />
-                      </PressableScale>
-                    ) : null}
-                  </Card>
-                </Pressable>
-              );
-            }) : null}
+                      ))}
+                    </View>
+                  );
+                })
+              : null}
           </View>
           );
         })
       )}
     </ScreenContainer>
+  );
+}
+
+/**
+ * Una fila de la lista del curso: lección o mini clase.
+ *
+ * Es la misma fila para las dos a propósito. Para el alumno son lo mismo —un
+ * vídeo que se abre— y la única diferencia que necesita ver es la sangría, que
+ * le dice de quién cuelga. Dos filas distintas para lo mismo darían dos sitios
+ * donde arreglar el mismo detalle.
+ */
+function FilaDeContenido({
+  contenido,
+  numero,
+  bloqueada,
+  diasQueFaltan,
+  activa,
+  vista,
+  abrible,
+  sangrada,
+  sub,
+  onAbrir,
+  onMarcar,
+}: {
+  contenido: ContenidoDeCurso;
+  numero: string;
+  bloqueada: boolean;
+  diasQueFaltan: number;
+  activa: boolean;
+  vista: boolean;
+  abrible: boolean;
+  sangrada?: boolean;
+  sub?: string;
+  onAbrir: () => void;
+  onMarcar: () => void;
+}) {
+  const esPdf = contenido.kind === 'pdf' || (!contenido.videoUrl && !!contenido.pdfUrl);
+  return (
+    <Pressable onPress={onAbrir}>
+      <Card
+        style={[
+          styles.lessonRow,
+          sangrada && styles.lessonRowMini,
+          activa && styles.lessonRowActive,
+          bloqueada && styles.lessonRowLocked,
+        ]}
+      >
+        <MiniaturaCurso
+          contenido={contenido}
+          tamano={sangrada ? 'mini' : 'fila'}
+          bloqueada={bloqueada}
+          vista={vista}
+        />
+        <View style={{ flex: 1 }}>
+          <Text
+            style={[
+              styles.lessonName,
+              sangrada && styles.lessonNameMini,
+              activa && { color: colors.primary },
+              bloqueada && { color: colors.textFaint },
+            ]}
+            numberOfLines={2}
+          >
+            {numero}. {contenido.title || 'Sin título'}
+          </Text>
+          {bloqueada ? (
+            <Text style={styles.lessonMeta}>
+              Se desbloquea en {diasQueFaltan} día{diasQueFaltan === 1 ? '' : 's'}
+            </Text>
+          ) : !abrible ? (
+            <Text style={styles.lessonMeta}>{sub ?? 'Pronto'}</Text>
+          ) : sub ? (
+            <Text style={styles.lessonMeta}>{sub}</Text>
+          ) : esPdf ? (
+            <Text style={styles.lessonMeta}>E-book</Text>
+          ) : null}
+        </View>
+        {/* El check cierra la fila, no la abre: delante del vídeo competiría
+            con el gesto de ver, que es a lo que se viene. */}
+        {abrible && !bloqueada ? (
+          <PressableScale
+            haptic
+            hitSlop={10}
+            onPress={onMarcar}
+            style={[styles.check, vista && styles.checkOn]}
+          >
+            <Ionicons
+              name="checkmark"
+              size={16}
+              color={vista ? colors.onPrimary : colors.textFaint}
+            />
+          </PressableScale>
+        ) : null}
+      </Card>
+    </Pressable>
   );
 }
 
@@ -369,12 +480,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-  },
-  pdfTag: {
-    ...typography.small,
-    color: colors.primary,
-    fontFamily: fonts.semiBold,
-    fontSize: 11,
   },
   pdfBlock: { marginTop: spacing.md },
   pdfHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
@@ -439,9 +544,12 @@ const styles = StyleSheet.create({
   sectionName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   sectionMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   lessonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  // Sangrada y algo más apagada: se ve que cuelga de la lección de arriba sin
+  // necesidad de una línea ni de un título de grupo.
+  lessonRowMini: { marginLeft: spacing.lg, backgroundColor: colors.surfaceAlt },
   lessonRowActive: { borderColor: colors.primary },
   lessonRowLocked: { opacity: 0.6 },
   lessonName: { ...typography.body, color: colors.text, fontFamily: fonts.medium },
+  lessonNameMini: { ...typography.small, color: colors.textMuted },
   lessonMeta: { ...typography.small, color: colors.textFaint, marginTop: 2 },
-  soon: { ...typography.small, color: colors.textFaint },
 });

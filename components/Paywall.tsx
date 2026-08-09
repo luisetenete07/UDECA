@@ -6,9 +6,6 @@ import { GateScreen, GateText } from './GateScreen';
 import { useAuth } from '../lib/auth-context';
 import { track, trackOnce } from '../lib/analytics';
 import {
-  ANNUAL_PRICE_EUR,
-  ATHLETE_MONTHLY_EUR,
-  COACH_MONTHLY_EQUIV_EUR,
   CAN_SELL_IN_APP,
   CONTACT_EMAIL,
   clientSlotsOf,
@@ -116,7 +113,7 @@ export function Paywall() {
       // Stripe activa la cuenta sola tras pagar (webhook + client_reference_id).
       Linking.openURL(checkoutUrl).catch(() => {});
     } else {
-      const plan = isAthlete ? 'Atleta (10 €/mes)' : 'Pro anual';
+      const plan = isAthlete ? 'Atleta' : 'Pro';
       Linking.openURL(
         `mailto:${CONTACT_EMAIL}?subject=Suscripción UDECA ${plan}&body=Hola, quiero activar mi suscripción de UDECA (${plan}). Mi correo es: ${profile?.email ?? ''}`
       ).catch(() => {});
@@ -144,7 +141,7 @@ export function Paywall() {
       texto={explicacion}
       nota={
         CAN_SELL_IN_APP
-          ? 'Al terminar el pago y volver a la app, tu cuenta se activa sola en unos segundos. Si tardara, pulsa "Ya he pagado · Actualizar".'
+          ? 'Se abre la web para activarla. Al volver, tu cuenta se enciende sola en unos segundos; si tardara, pulsa "Ya he pagado · Actualizar".'
           : `¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`
       }
       onSalir={signOut}
@@ -165,28 +162,6 @@ export function Paywall() {
         </View>
       ) : null}
 
-      {/* En iOS no se vende nada aquí dentro (ver CAN_SELL_IN_APP): ni precio,
-          ni plan, ni botón que lleve a pagar fuera. Solo el estado de la
-          cuenta y la forma de refrescarlo. */}
-      {CAN_SELL_IN_APP ? (
-        <View style={styles.plan}>
-          <Text style={styles.planName}>
-            {isAthlete ? 'UDECA ATLETA · MENSUAL' : 'UDECA PRO · ANUAL'}
-          </Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>
-              {isAthlete ? ATHLETE_MONTHLY_EUR : COACH_MONTHLY_EQUIV_EUR} €
-            </Text>
-            <Text style={styles.priceUnit}>/ mes</Text>
-          </View>
-          <Text style={styles.priceHint}>
-            {isAthlete
-              ? 'Cuota mensual, sin permanencia.'
-              : `${ANNUAL_PRICE_EUR} € facturados una vez al año.`}
-          </Text>
-        </View>
-      ) : null}
-
       {(isAthlete ? ATHLETE_BENEFITS : BENEFITS).map((b) => (
         <View key={b} style={styles.benefitRow}>
           <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
@@ -196,9 +171,9 @@ export function Paywall() {
 
       {CAN_SELL_IN_APP ? (
         <Button
-          title={
-            checkoutUrl ? (isAthlete ? 'Seguir entrenando' : 'Suscribirme ahora') : 'Contactar para activar'
-          }
+          // Sin precio y diciendo a dónde lleva: el importe se ve en la web,
+          // que es donde está al día (ver lib/subscription.ts).
+          title={checkoutUrl ? 'Continuar en la web' : 'Contactar para activar'}
           onPress={handlePay}
           style={{ marginTop: spacing.md }}
         />
@@ -219,8 +194,8 @@ export function Paywall() {
 
       {CAN_SELL_IN_APP && !isAthlete && plazas > 0 ? (
         <GateText>
-          ¿Prefieres seguir gratis? Puedes volver a {plazas} alumnos o menos y recuperas el acceso
-          al instante, sin perder nada.
+          ¿Prefieres no activarlo? Puedes volver a {plazas} alumnos o menos y
+          recuperas el acceso al instante, sin perder nada.
         </GateText>
       ) : null}
     </GateScreen>
@@ -251,29 +226,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   fundadorTexto: { ...typography.small, color: colors.textFaint, lineHeight: 17, marginTop: 2 },
-  plan: { alignSelf: 'stretch', alignItems: 'center', marginTop: spacing.lg },
-  planName: {
-    ...typography.label,
-    color: colors.primaryBright,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    textAlign: 'center',
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: spacing.xs,
-  },
-  price: { fontSize: 44, lineHeight: 48, color: colors.text, fontFamily: fonts.heading },
-  priceUnit: { ...typography.body, color: colors.textMuted },
-  priceHint: {
-    ...typography.small,
-    color: colors.textFaint,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
   benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',

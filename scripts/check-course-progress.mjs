@@ -148,5 +148,101 @@ comprueba(
   sinCursos.leccionesPublicadas === 0 && sinCursos.media === 0 && sinCursos.terminado === 0
 );
 
+console.log('\nMini clases dentro de una lección');
+{
+  // Una lección puede ser solo un contenedor: sin vídeo propio y con tres mini
+  // clases dentro. Lo que cuenta entonces son las tres, no cuatro ni una.
+  const curso = {
+    id: 'c',
+    title: 'Con minis',
+    sections: [
+      {
+        id: 's',
+        title: 'Bloque',
+        lessons: [
+          { id: 'l1', title: 'Con vídeo y dos minis', videoUrl: 'v', minis: [
+            { id: 'm1', title: 'Mini 1', videoUrl: 'v' },
+            { id: 'm2', title: 'Mini 2', videoUrl: 'v' },
+          ]},
+          { id: 'l2', title: 'Solo contenedor', minis: [
+            { id: 'm3', title: 'Mini 3', videoUrl: 'v' },
+          ]},
+          { id: 'l3', title: 'Anunciada, sin subir' },
+        ],
+      },
+    ],
+  };
+  const contables = leccionesContables(curso).map((c) => c.id);
+  comprueba('la lección con vídeo cuenta', contables.includes('l1'));
+  comprueba('sus dos minis también', contables.includes('m1') && contables.includes('m2'));
+  comprueba('la mini del contenedor cuenta', contables.includes('m3'));
+  comprueba(
+    'el contenedor SIN vídeo no cuenta: no hay nada que ver en él',
+    !contables.includes('l2')
+  );
+  comprueba('ni la lección anunciada y vacía', !contables.includes('l3'));
+  comprueba('son cuatro', contables.length === 4, contables.join());
+
+  const e = estadoDeCurso(curso, ['l1', 'm1']);
+  comprueba('dos de cuatro', e.hechas === 2 && e.total === 4, `${e.hechas}/${e.total}`);
+  comprueba('lo siguiente es la mini 2', e.siguiente?.id === 'm2', String(e.siguiente?.id));
+  comprueba('no está terminado', !e.terminado);
+  comprueba(
+    'viéndolo todo, terminado',
+    estadoDeCurso(curso, ['l1', 'm1', 'm2', 'm3']).terminado
+  );
+  comprueba(
+    'una mini sin vídeo no suma aunque esté marcada',
+    estadoDeCurso(
+      { ...curso, sections: [{ ...curso.sections[0], lessons: [
+        { id: 'x', title: 'x', videoUrl: 'v', minis: [{ id: 'vacia', title: 'Pronto' }] },
+      ]}]},
+      ['x', 'vacia']
+    ).total === 1
+  );
+}
+
+console.log('\nEl candado de la lección alcanza a sus mini clases');
+{
+  // Si la lección no se ve todavía, sus mini clases tampoco: si no, el candado
+  // no serviría de nada y el alumno vería por dentro lo que no puede ver por
+  // fuera.
+  const curso = {
+    id: 'c',
+    title: 'Con candado',
+    sections: [
+      {
+        id: 's',
+        title: 'Bloque',
+        lessons: [
+          { id: 'libre', title: 'Desde el día uno', videoUrl: 'v' },
+          { id: 'tarde', title: 'A los 30 días', videoUrl: 'v', unlockAfterDays: 30, minis: [
+            { id: 'mtarde', title: 'Mini de dentro', videoUrl: 'v' },
+          ]},
+        ],
+      },
+    ],
+  };
+  const nuevo = estadoDeCurso(curso, [], 3);
+  comprueba('recién llegado: lo siguiente es la libre', nuevo.siguiente?.id === 'libre');
+  const conLaLibreVista = estadoDeCurso(curso, ['libre'], 3);
+  comprueba(
+    'y con esa vista no le proponemos nada más',
+    conLaLibreVista.siguiente === null,
+    String(conLaLibreVista.siguiente?.id)
+  );
+  comprueba(
+    'la mini bloqueada NO se cuela como siguiente',
+    conLaLibreVista.siguiente?.id !== 'mtarde'
+  );
+  comprueba(
+    'pero sigue contando para el total: llegará sola',
+    conLaLibreVista.total === 3,
+    String(conLaLibreVista.total)
+  );
+  const veterano = estadoDeCurso(curso, ['libre'], 40);
+  comprueba('a los 40 días ya toca la lección con candado', veterano.siguiente?.id === 'tarde');
+}
+
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);

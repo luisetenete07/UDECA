@@ -1,4 +1,4 @@
-import type { Course, Lesson } from './types';
+import type { ContenidoDeCurso, Course, Lesson } from './types';
 
 /**
  * Cuánto lleva visto cada alumno de cada curso.
@@ -19,10 +19,26 @@ export type LessonsSeen = Record<string, string[]>;
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
-/** ¿Esta lección tiene algo que ver? Las que están "Pronto" no cuentan. */
-export function tieneContenido(l: Lesson): boolean {
+/** ¿Esto tiene algo que ver? Lo que está "Pronto" no cuenta. */
+export function tieneContenido(l: ContenidoDeCurso): boolean {
   const esPdf = l.kind === 'pdf' || (!l.videoUrl && !!l.pdfUrl);
   return esPdf ? !!l.pdfUrl : !!l.videoUrl;
+}
+
+/**
+ * Todo lo que se puede ver de una lección: ella misma si tiene vídeo, y sus
+ * mini clases.
+ *
+ * Una lección puede ser solo un contenedor —sin vídeo propio, con tres mini
+ * clases dentro—, y entonces lo que cuenta son las tres. Si contara la lección
+ * vacía, el curso tendría un elemento que nadie puede ver nunca y se quedaría
+ * en un 90 % eterno que parece culpa del alumno.
+ */
+export function contenidosDeLeccion(l: Lesson): ContenidoDeCurso[] {
+  return [
+    ...(tieneContenido(l) ? [l] : []),
+    ...(l.minis ?? []).filter(tieneContenido),
+  ];
 }
 
 /**
@@ -33,13 +49,25 @@ export function tieneContenido(l: Lesson): boolean {
  * alumno. Las bloqueadas por antigüedad SÍ cuentan: son parte del curso y
  * llegarán solas.
  */
-export function leccionesContables(course: Course): Lesson[] {
-  return course.sections.flatMap((s) => s.lessons.filter(tieneContenido));
+export function leccionesContables(course: Course): ContenidoDeCurso[] {
+  return course.sections.flatMap((s) => s.lessons.flatMap(contenidosDeLeccion));
 }
 
 /** ¿Está bloqueada por antigüedad para alguien con estos días de alta? */
 export function bloqueada(l: Lesson, diasDeAlta: number): boolean {
   return !!l.unlockAfterDays && diasDeAlta < l.unlockAfterDays;
+}
+
+/**
+ * El candado de una lección alcanza a sus mini clases.
+ *
+ * Es lo único que puede significar: si la lección no se ve todavía, sus mini
+ * clases tampoco, o el candado no serviría para nada. Por eso las mini clases
+ * no tienen candado propio —sería una segunda forma de decir lo mismo, y de
+ * contradecirse.
+ */
+export function contenidosDesbloqueados(l: Lesson, diasDeAlta: number): ContenidoDeCurso[] {
+  return bloqueada(l, diasDeAlta) ? [] : contenidosDeLeccion(l);
 }
 
 export interface EstadoCurso {
@@ -52,7 +80,7 @@ export interface EstadoCurso {
   terminado: boolean;
   empezado: boolean;
   /** Lo siguiente que puede ver hoy, si queda algo desbloqueado. */
-  siguiente: Lesson | null;
+  siguiente: ContenidoDeCurso | null;
 }
 
 export function estadoDeCurso(
@@ -67,8 +95,12 @@ export function estadoDeCurso(
   // 120 % —o terminado sin estarlo.
   const hechas = contables.filter((l) => set.has(l.id)).length;
   const total = contables.length;
+  // Lo siguiente que puede ver HOY: se recorren las lecciones en orden y de
+  // cada una lo que su candado deja pasar.
   const siguiente =
-    contables.find((l) => !set.has(l.id) && !bloqueada(l, diasDeAlta)) ?? null;
+    course.sections
+      .flatMap((s) => s.lessons.flatMap((l) => contenidosDesbloqueados(l, diasDeAlta)))
+      .find((c) => !set.has(c.id)) ?? null;
 
   return {
     courseId: course.id,

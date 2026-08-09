@@ -192,18 +192,37 @@ export function subscriptionCheckoutUrl(profile: UserProfile | null): string | n
   );
 }
 
+/*
+ * LA APP NO DICE PRECIOS. NUNCA. EN NINGUNA PLATAFORMA.
+ *
+ * Ni cifras, ni "gratis", ni "desde X". El precio vive en la web y en la página
+ * de pago, y la app se limita a decir en qué estado está la cuenta y a abrir
+ * esa página cuando hace falta.
+ *
+ * Se hace así por tres razones que apuntan al mismo sitio:
+ *
+ *  1. Un precio escrito en la app es un precio que hay que publicar otra vez
+ *     cada vez que cambie, y que se queda viejo en la versión que el usuario
+ *     no ha actualizado. Una oferta de hace tres meses enseñada como vigente es
+ *     peor que no enseñar ninguna.
+ *  2. La norma 3.1.1 de la App Store prohíbe enseñar precios de contenido
+ *     digital y enlaces a pagar fuera. Teniendo dos textos —uno con precio y
+ *     otro sin— la única duda era cuál se colaba en la build de iOS.
+ *  3. "Gratis" tampoco: el alumno de un entrenador no paga a UDECA, pero sí le
+ *     paga a su entrenador. Poner "gratis" en su tarjeta al registrarse le dice
+ *     algo que no es verdad para él.
+ *
+ * Lo que sí se dice es lo que le pasa a su cuenta ("te quedan 3 días", "esta
+ * cuenta no está activa") y, donde se puede, un botón que lleva a la web.
+ */
+
 /**
- * ¿Se puede vender la plataforma DENTRO de la app?
+ * ¿Se puede enlazar a pagar DESDE la app?
  *
- * En iPhone y iPad, no. La norma 3.1.1 de la App Store obliga a que todo lo
- * digital que se use dentro se compre con las compras integradas de Apple, y
- * prohíbe además enseñar precios o enlaces que lleven a pagar por fuera: una
- * pantalla con "180 €/año" y un botón a Stripe es rechazo seguro, y ni siquiera
- * es discutible. Lo que sí está permitido —y es lo que hacen Netflix, Spotify o
- * Notion— es que la cuenta se gestione fuera y la app se limite a decir que no
- * está activa, sin precio, sin enlace y sin explicar dónde pagar.
- *
- * Fuera de iOS (Android, web, APK) se cobra con normalidad por la web.
+ * En iPhone y iPad, no: la 3.1.1 prohíbe también el enlace, no solo el precio.
+ * Allí la app dice que la cuenta no está activa y ofrece escribir por correo,
+ * igual que hacen Netflix o Spotify. Fuera de iOS el botón abre la página de
+ * pago, que es donde el precio se ve —y donde siempre está al día—.
  *
  * Esto NO afecta a lo que un alumno le paga a su entrenador: eso es un servicio
  * real entre dos personas, no contenido digital, y Apple lo deja fuera de las
@@ -212,7 +231,10 @@ export function subscriptionCheckoutUrl(profile: UserProfile | null): string | n
  * La solución definitiva en iOS son las compras integradas, que son otro
  * proyecto (StoreKit + acuerdos de pago en App Store Connect).
  */
-export const CAN_SELL_IN_APP = Platform.OS !== 'ios';
+export const CAN_LINK_TO_PAYMENT = Platform.OS !== 'ios';
+
+/** @deprecated Nombre viejo de `CAN_LINK_TO_PAYMENT`, cuando además regía los precios. */
+export const CAN_SELL_IN_APP = CAN_LINK_TO_PAYMENT;
 
 /** Correo de contacto para activar/renovar manualmente. */
 export const CONTACT_EMAIL = 'luistenaf@gmail.com';

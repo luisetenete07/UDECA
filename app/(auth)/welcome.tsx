@@ -183,9 +183,11 @@ export default function WelcomeScreen() {
 
       <View style={styles.footer}>
         <Button title={isLast ? 'Empezar' : 'Siguiente'} onPress={next} />
+        {/* Sin precios (ver lib/subscription.ts): lo que aquí importa es que
+            hay una forma de entrar para cada uno, no lo que cuesta. */}
         <Text style={styles.trialNote}>
-          Con tu entrenador, siempre gratis. Por tu cuenta, {TRIAL_DAYS} días de prueba
-          por 1 €. Y si entrenas a otros, el alta incluye {FREE_CLIENT_LIMIT} alumnos.
+          Con tu entrenador o por tu cuenta, con {TRIAL_DAYS} días abiertos para
+          probarlo. Y si entrenas a otros, empiezas con {FREE_CLIENT_LIMIT} alumnos.
         </Text>
         <Pressable onPress={() => go('/(auth)/login')} hitSlop={8} style={styles.loginLink}>
           <Text style={styles.loginText}>Ya tengo cuenta</Text>

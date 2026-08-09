@@ -1,9 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
+import { DragList } from '../../../components/DragList';
+import { EditorDeLeccion } from '../../../components/EditorDeLeccion';
+import {
+  cabeElCurso,
+  conLeccionCambiada,
+  conMiniCambiada,
+  conMiniNueva,
+  leccionesReordenadas,
+  minisReordenadas,
+  seccionesReordenadas,
+  sinMini,
+} from '../../../lib/curso';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
@@ -84,58 +96,32 @@ export default function CourseEditorScreen() {
     );
   };
 
-  const setLessonKind = (sectionId: string, lessonId: string, kind: 'video' | 'pdf') => {
-    setSections((prev) =>
-      prev.map((s) =>
-        s.id === sectionId
-          ? { ...s, lessons: s.lessons.map((l) => (l.id === lessonId ? { ...l, kind } : l)) }
-          : s
-      )
-    );
-  };
-
-  const handlePickCover = async (target: 'course' | string) => {
+  /**
+   * Elegir una miniatura. Sirve para la portada del curso, la de una sección,
+   * la de una lección y la de una mini clase: es la misma acción con cuatro
+   * destinos, y tenerla una sola vez evita que cada una comprima distinto.
+   */
+  const elegirImagen = async (aplicar: (url: string) => void) => {
     try {
       const url = await pickCoverPhoto();
-      if (!url) return;
-      if (target === 'course') setCoverURL(url);
-      else
-        setSections((prev) =>
-          prev.map((s) => (s.id === target ? { ...s, coverURL: url } : s))
-        );
+      if (url) aplicar(url);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo cargar la imagen');
     }
-  };
-
-  const updateLesson = (
-    sectionId: string,
-    lessonId: string,
-    field: 'title' | 'videoUrl' | 'durationLabel' | 'unlockAfterDays' | 'pdfUrl',
-    value: string
-  ) => {
-    setSections((prev) =>
-      prev.map((s) =>
-        s.id === sectionId
-          ? {
-              ...s,
-              lessons: s.lessons.map((l) =>
-                l.id === lessonId
-                  ? field === 'unlockAfterDays'
-                    ? { ...l, unlockAfterDays: parseInt(value, 10) || undefined }
-                    : { ...l, [field]: value }
-                  : l
-              ),
-            }
-          : s
-      )
-    );
   };
 
   const handleSave = async () => {
     if (!profile) return;
     if (!title.trim()) {
       setError('El título del curso es obligatorio.');
+      return;
+    }
+    // Un curso entero vive en UN documento de Firestore y las miniaturas van
+    // dentro. Si no cabe, Firestore contesta con un error que no dice nada y
+    // el entrenador pierde el trabajo de la sesión sin saber por qué.
+    const sitio = cabeElCurso({ sections });
+    if (!sitio.cabe) {
+      setError(sitio.aviso ?? 'El curso no cabe.');
       return;
     }
     setError(null);
@@ -192,7 +178,7 @@ export default function CourseEditorScreen() {
         style={styles.textarea}
       />
 
-      <Pressable onPress={() => handlePickCover('course')} style={styles.coverPicker}>
+      <Pressable onPress={() => elegirImagen(setCoverURL)} style={styles.coverPicker}>
         {coverURL ? (
           <Image source={{ uri: coverURL }} style={styles.coverImage} resizeMode="cover" />
         ) : (
@@ -219,120 +205,119 @@ export default function CourseEditorScreen() {
 
       <Text style={styles.sectionsHeader}>Contenido</Text>
 
-      {sections.map((section) => (
-        <Card key={section.id} style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <TextField
-              value={section.title}
-              onChangeText={(v) => updateSectionTitle(section.id, v)}
-              placeholder="Nombre de la sección"
-              style={styles.sectionNameInput}
-            />
-            <Pressable onPress={() => removeSection(section.id)} style={styles.iconBtn}>
-              <Ionicons name="trash-outline" size={18} color={colors.danger} />
-            </Pressable>
-          </View>
-
-          <Pressable onPress={() => handlePickCover(section.id)} style={styles.sectionCoverBtn}>
-            {section.coverURL ? (
-              <Image
-                source={{ uri: section.coverURL }}
-                style={styles.sectionCoverImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <>
-                <Ionicons name="image-outline" size={15} color={colors.primary} />
-                <Text style={styles.sectionCoverText}>Portada de la sección</Text>
-              </>
-            )}
-          </Pressable>
-
-          {section.lessons.map((lesson, i) => (
-            <View key={lesson.id} style={styles.lessonBlock}>
-              <View style={styles.lessonHeader}>
-                <Text style={styles.lessonNumber}>Lección {i + 1}</Text>
-                <Pressable onPress={() => removeLesson(section.id, lesson.id)}>
-                  <Ionicons name="close" size={16} color={colors.danger} />
-                </Pressable>
+      <DragList
+        items={sections}
+        keyOf={(s) => s.id}
+        onReorder={(de, a) => setSections((prev) => seccionesReordenadas(prev, de, a))}
+        handleOnly
+        gap={spacing.md}
+        renderItem={(section, _i, _arrastrando, asaSeccion) => (
+          <Card key={section.id} style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.asaSeccion} {...asaSeccion}>
+                <Ionicons name="reorder-two-outline" size={22} color={colors.textFaint} />
               </View>
               <TextField
-                value={lesson.title}
-                onChangeText={(v) => updateLesson(section.id, lesson.id, 'title', v)}
-                placeholder="Título de la lección"
+                value={section.title}
+                onChangeText={(v) => updateSectionTitle(section.id, v)}
+                placeholder="Nombre de la sección"
+                style={styles.sectionNameInput}
               />
+              <Pressable onPress={() => removeSection(section.id)} style={styles.iconBtn}>
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
+              </Pressable>
+            </View>
 
-              {/* Tipo de contenido: vídeo o e-book/PDF. */}
-              <View style={styles.kindRow}>
-                {(['video', 'pdf'] as const).map((k) => {
-                  const on = (lesson.kind ?? 'video') === k;
-                  return (
-                    <Pressable
-                      key={k}
-                      onPress={() => setLessonKind(section.id, lesson.id, k)}
-                      style={[styles.kindChip, on && styles.kindChipOn]}
-                    >
-                      <Ionicons
-                        name={k === 'video' ? 'videocam-outline' : 'document-text-outline'}
-                        size={15}
-                        color={on ? colors.onPrimary : colors.textMuted}
-                      />
-                      <Text style={[styles.kindText, on && styles.kindTextOn]}>
-                        {k === 'video' ? 'Vídeo' : 'E-book / PDF'}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {(lesson.kind ?? 'video') === 'video' ? (
-                <>
-                  <TextField
-                    value={lesson.videoUrl ?? ''}
-                    onChangeText={(v) => updateLesson(section.id, lesson.id, 'videoUrl', v)}
-                    placeholder="Enlace de Vimeo (ej. vimeo.com/123456789/abc123) o URL .mp4"
-                    autoCapitalize="none"
-                  />
-                  <TextField
-                    value={lesson.durationLabel ?? ''}
-                    onChangeText={(v) => updateLesson(section.id, lesson.id, 'durationLabel', v)}
-                    placeholder="Duración (ej. 12 min)"
-                  />
-                </>
+            <Pressable
+              onPress={() =>
+                elegirImagen((url) =>
+                  setSections((prev) =>
+                    prev.map((x) => (x.id === section.id ? { ...x, coverURL: url } : x))
+                  )
+                )
+              }
+              style={styles.sectionCoverBtn}
+            >
+              {section.coverURL ? (
+                <Image
+                  source={{ uri: section.coverURL }}
+                  style={styles.sectionCoverImage}
+                  resizeMode="cover"
+                />
               ) : (
-                <TextField
-                  value={lesson.pdfUrl ?? ''}
-                  onChangeText={(v) => updateLesson(section.id, lesson.id, 'pdfUrl', v)}
-                  placeholder="E-book/PDF: enlace de Drive, Dropbox o URL .pdf"
-                  autoCapitalize="none"
+                <>
+                  <Ionicons name="image-outline" size={15} color={colors.primary} />
+                  <Text style={styles.sectionCoverText}>Portada de la sección</Text>
+                </>
+              )}
+            </Pressable>
+
+            {/* Las lecciones se arrastran por el asa y no por toda la fila:
+                dentro hay campos de texto, y colocar el cursor en uno no puede
+                mover la lección de sitio. */}
+            <DragList
+              items={section.lessons}
+              keyOf={(l) => l.id}
+              onReorder={(de, a) => setSections((prev) => leccionesReordenadas(prev, section.id, de, a))}
+              handleOnly
+              gap={spacing.md}
+              style={{ marginTop: spacing.sm }}
+              renderItem={(lesson, i, _arrastrando, asa) => (
+                <EditorDeLeccion
+                  leccion={lesson}
+                  numero={i + 1}
+                  handleProps={asa}
+                  onCambiar={(campos) =>
+                    setSections((prev) => conLeccionCambiada(prev, section.id, lesson.id, campos))
+                  }
+                  onQuitar={() => removeLesson(section.id, lesson.id)}
+                  onMiniatura={() =>
+                    elegirImagen((url) =>
+                      setSections((prev) =>
+                        conLeccionCambiada(prev, section.id, lesson.id, { thumbURL: url })
+                      )
+                    )
+                  }
+                  onQuitarMiniatura={() =>
+                    setSections((prev) =>
+                      conLeccionCambiada(prev, section.id, lesson.id, { thumbURL: undefined })
+                    )
+                  }
+                  onMiniNueva={() => setSections((prev) => conMiniNueva(prev, section.id, lesson.id))}
+                  onMiniQuitar={(miniId) =>
+                    setSections((prev) => sinMini(prev, section.id, lesson.id, miniId))
+                  }
+                  onMiniCambiar={(miniId, campos) =>
+                    setSections((prev) => conMiniCambiada(prev, section.id, lesson.id, miniId, campos))
+                  }
+                  onMiniReordenar={(de, a) =>
+                    setSections((prev) => minisReordenadas(prev, section.id, lesson.id, de, a))
+                  }
+                  onMiniMiniatura={(miniId) =>
+                    elegirImagen((url) =>
+                      setSections((prev) =>
+                        conMiniCambiada(prev, section.id, lesson.id, miniId, { thumbURL: url })
+                      )
+                    )
+                  }
+                  onMiniQuitarMiniatura={(miniId) =>
+                    setSections((prev) =>
+                      conMiniCambiada(prev, section.id, lesson.id, miniId, { thumbURL: undefined })
+                    )
+                  }
                 />
               )}
-              {/* El rótulo dice QUÉ es el campo; lo que hace va debajo, en
-                  pequeño. En mayúsculas y a tres líneas, una etiqueta deja de
-                  ser una etiqueta y pasa a ser un párrafo gritado. */}
-              <TextField
-                label="Candado (días)"
-                value={lesson.unlockAfterDays ? String(lesson.unlockAfterDays) : ''}
-                onChangeText={(v) => updateLesson(section.id, lesson.id, 'unlockAfterDays', v)}
-                placeholder="Ej. 30"
-                keyboardType="numeric"
-                containerStyle={{ marginBottom: spacing.xs }}
-              />
-              <Text style={styles.pista}>
-                Días que el alumno debe llevar en tu grupo para verla. Vacío:
-                disponible desde el primer día.
-              </Text>
-            </View>
-          ))}
+            />
 
-          <Button
-            title="+ Añadir lección"
-            variant="secondary"
-            onPress={() => addLesson(section.id)}
-            style={{ marginTop: spacing.sm }}
-          />
-        </Card>
-      ))}
+            <Button
+              title="+ Añadir lección"
+              variant="secondary"
+              onPress={() => addLesson(section.id)}
+              style={{ marginTop: spacing.sm }}
+            />
+          </Card>
+        )}
+      />
 
       <Button title="+ Añadir sección" variant="ghost" onPress={addSection} style={styles.addSection} />
 
@@ -368,12 +353,6 @@ export default function CourseEditorScreen() {
 }
 
 const styles = StyleSheet.create({
-  pista: {
-    ...typography.small,
-    color: colors.textFaint,
-    marginBottom: spacing.md,
-    lineHeight: 17,
-  },
   borrarEnlace: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -414,39 +393,11 @@ const styles = StyleSheet.create({
   publishTitle: { ...typography.h3, color: colors.text },
   publishHint: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   sectionsHeader: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  asaSeccion: { paddingRight: spacing.xs, paddingVertical: 2 },
   sectionCard: { marginBottom: spacing.md },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionNameInput: { flex: 1, marginBottom: 0 },
   iconBtn: { padding: spacing.xs },
-  lessonBlock: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  lessonHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  lessonNumber: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
-  kindRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  kindChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  kindChipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  kindText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  kindTextOn: { color: colors.onPrimary },
   addSection: { marginBottom: spacing.lg },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
 });

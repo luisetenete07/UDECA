@@ -7,10 +7,7 @@ import { useAuth } from '../lib/auth-context';
 import { updateUserProfile } from '../lib/firestore/users';
 import { track } from '../lib/analytics';
 import {
-  ANNUAL_PRICE_EUR,
-  ATHLETE_MONTHLY_EUR,
   CAN_SELL_IN_APP,
-  COACH_MONTHLY_EQUIV_EUR,
   clientSlotsOf,
   isAdmin,
   subscriptionCheckoutUrl,
@@ -67,14 +64,15 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
   const url = subscriptionCheckoutUrl(profile);
   const diasRestantes = estado.trial ? estado.daysLeft : null;
 
-  // Los dos planes se enseñan al MES, que es como se piensa el gasto. Lo que
-  // cambia es cómo se cobra, y eso se dice justo debajo en los dos casos.
-  const precio = esAtleta ? `${ATHLETE_MONTHLY_EUR} €` : `${COACH_MONTHLY_EQUIV_EUR} €`;
-  const unidad = '/ mes';
-  /** La letra pequeña que nunca puede faltar: cómo se cobra de verdad. */
+  /*
+   * Aquí no se dice ningún precio (ver lib/subscription.ts). Lo que sustituye
+   * a la cifra no es un hueco: es lo que el entrenador de verdad necesita
+   * saber para decidir —cuántas plazas tiene, cuántas le quedan y qué pasa
+   * cuando se acaben—. Eso ya estaba escrito; lo único que se va es el número.
+   */
   const facturacion = esAtleta
     ? 'Sin permanencia. Se cancela cuando quieras.'
-    : `${ANNUAL_PRICE_EUR} € facturados una vez al año.`;
+    : 'Se cobra una vez al año.';
 
   /**
    * Las plazas del entrenador, con nombre y apellidos.
@@ -114,9 +112,9 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
    */
   const textoCoach = lleno
     ? plazas === 0
-      ? `El alta de tu tarjeta ya se usó en otra cuenta de entrenador, así que esta entra sin plazas. Con el plan tienes alumnos ilimitados: ${precio}${unidad}, ${ANNUAL_PRICE_EUR} € facturados una vez al año.`
-      : `Para aceptar al alumno ${plazas + 1} hace falta el plan: ${precio}${unidad}, ${ANNUAL_PRICE_EUR} € facturados una vez al año. Los ${plazas} que ya tienes siguen contigo pagues o no.`
-    : `Ya llevas ${usados} de ${plazas}, y son tuyos para siempre. Del alumno ${plazas + 1} en adelante hace falta el plan: ${precio}${unidad}, ${ANNUAL_PRICE_EUR} € facturados una vez al año, y el grupo deja de tener tope.`;
+      ? 'El alta de tu tarjeta ya se usó en otra cuenta de entrenador, así que esta entra sin plazas. Con el plan tienes alumnos ilimitados.'
+      : `Para aceptar al alumno ${plazas + 1} hace falta el plan. Los ${plazas} que ya tienes siguen contigo pagues o no.`
+    : `Ya llevas ${usados} de ${plazas}, y son tuyos para siempre. Del alumno ${plazas + 1} en adelante hace falta el plan, y el grupo deja de tener tope.`;
 
   const abrir = () => {
     void track('checkout_start');
@@ -137,8 +135,8 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
             <Text style={styles.breveTexto}>
               {esAtleta
                 ? diasRestantes !== null
-                  ? `Te quedan ${diasRestantes} días de prueba. Si ya lo tienes claro, pasa al plan completo por ${precio}${unidad} y olvídate del contador.`
-                  : `Pasa al plan completo por ${precio}${unidad} cuando quieras.`
+                  ? `Te quedan ${diasRestantes} días de prueba. Si ya lo tienes claro, pasa al plan completo y olvídate del contador.`
+                  : 'Pasa al plan completo cuando quieras.'
                 : textoCoach}
             </Text>
           </View>
@@ -193,8 +191,8 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
             ))}
           </View>
           <Text style={styles.plazasPie}>
-            Con todo abierto, sin recortes. Cuando terminen, seguir cuesta{' '}
-            {ATHLETE_MONTHLY_EUR} €/mes y lo que has registrado te espera intacto.
+            Con todo abierto, sin recortes. Cuando terminen, lo que has
+            registrado te espera intacto.
           </Text>
         </View>
       ) : null}
@@ -238,10 +236,6 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         </View>
       ) : null}
 
-      <View style={styles.precioFila}>
-        <Text style={styles.precio}>{precio}</Text>
-        <Text style={styles.precioUnidad}>{unidad}</Text>
-      </View>
       <Text style={styles.pie}>{facturacion}</Text>
 
       {ventajas.map((v) => (
@@ -434,9 +428,6 @@ const styles = StyleSheet.create({
   },
   plazaOcupada: { backgroundColor: colors.primary },
   plazasPie: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 17 },
-  precioFila: { flexDirection: 'row', alignItems: 'baseline', gap: 5, marginTop: spacing.md },
-  precio: { fontSize: 38, lineHeight: 42, color: colors.text, fontFamily: fonts.heading },
-  precioUnidad: { ...typography.body, color: colors.textMuted },
   pie: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
   ventaja: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 4 },
   ventajaTexto: { ...typography.small, color: colors.text, flex: 1 },

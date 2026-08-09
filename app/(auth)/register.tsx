@@ -12,9 +12,6 @@ import { useAuth } from '../../lib/auth-context';
 import { track, trackOnce } from '../../lib/analytics';
 import { friendlyAuthError } from '../../lib/firebase-errors';
 import {
-  ANNUAL_PRICE_EUR,
-  CAN_SELL_IN_APP,
-  COACH_MONTHLY_EQUIV_EUR,
   FREE_CLIENT_LIMIT,
   TRIAL_DAYS,
 } from '../../lib/subscription';
@@ -126,8 +123,8 @@ export default function RegisterScreen() {
                 <Text style={[styles.roleCardTitle, on && styles.roleCardTitleOn]} numberOfLines={1}>
                   {rc.title}
                 </Text>
-                <Text style={[styles.rolePrice, rc.free && styles.rolePriceFree]} numberOfLines={1}>
-                  {rc.price}
+                <Text style={styles.roleTag} numberOfLines={1}>
+                  {rc.tag}
                 </Text>
               </Pressable>
             );
@@ -206,43 +203,42 @@ export default function RegisterScreen() {
   );
 }
 
+/*
+ * Las tres cuentas, sin un solo precio (ver lib/subscription.ts).
+ *
+ * En la tarjeta va lo que ES cada una, no lo que cuesta: quien se está
+ * registrando todavía está eligiendo qué tipo de usuario es, y el precio no le
+ * ayuda a decidir eso. Lo que cuesta lo verá al activar la cuenta, en la web,
+ * donde siempre está al día.
+ */
 const ROLE_CARDS: {
   value: UserRole;
   title: string;
-  price: string;
+  /** Tres palabras que dicen qué es, no cuánto vale. */
+  tag: string;
   desc: string;
-  free?: boolean;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   {
     value: 'client',
     title: 'Alumno',
-    price: 'Gratis',
-    free: true,
+    tag: 'Con entrenador',
     icon: 'person-outline',
-    desc: 'Entrenas con tu entrenador, que te manda el plan. Necesitas su código para entrar; no pagas nada.',
+    desc: 'Entrenas con tu entrenador, que te manda el plan. Necesitas su código para entrar.',
   },
   {
     value: 'athlete',
     title: 'Atleta',
-    // En la tarjeta va lo corto; el precio completo, en el detalle de abajo.
-    price: CAN_SELL_IN_APP ? `${TRIAL_DAYS} días` : 'Prueba',
+    tag: 'Por tu cuenta',
     icon: 'barbell-outline',
-    // En iOS no se nombran precios de la plataforma (ver CAN_SELL_IN_APP).
-    desc: CAN_SELL_IN_APP
-      ? `Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición. ${TRIAL_DAYS} días con todo abierto y después 10 €/mes.`
-      : 'Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición.',
+    desc: `Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición. Empiezas con ${TRIAL_DAYS} días con todo abierto.`,
   },
   {
     value: 'trainer',
     title: 'Entrenador',
-    // El alta es un euro para todos: filtra al curioso y deja una tarjeta
-    // identificada, que es lo que impide multiplicar cuentas de entrenador.
-    price: CAN_SELL_IN_APP ? '1 € de alta' : 'Pro',
+    tag: 'Para entrenar a otros',
     icon: 'people-outline',
-    desc: CAN_SELL_IN_APP
-      ? `Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos para siempre; del ${FREE_CLIENT_LIMIT + 1} en adelante, ${COACH_MONTHLY_EQUIV_EUR} €/mes (${ANNUAL_PRICE_EUR} € facturados anualmente).`
-      : `Tus alumnos, tus cobros y tu negocio. El plan de entrada incluye ${FREE_CLIENT_LIMIT} alumnos.`,
+    desc: `Tus alumnos, tus cobros y tu negocio. El plan de entrada incluye ${FREE_CLIENT_LIMIT} alumnos.`,
   },
 ];
 
@@ -316,8 +312,7 @@ const styles = StyleSheet.create({
   roleIconOn: { borderColor: colors.hairline },
   roleCardTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   roleCardTitleOn: { color: colors.primaryBright },
-  rolePrice: { ...typography.small, color: colors.primary, fontSize: 11 },
-  rolePriceFree: { color: colors.success },
+  roleTag: { ...typography.small, color: colors.textMuted, fontSize: 11, textAlign: 'center' },
   roleDetail: {
     marginTop: spacing.sm,
     marginBottom: spacing.md,

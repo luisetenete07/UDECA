@@ -987,22 +987,53 @@ export interface HabitLog {
   createdAt: number;
 }
 
-export interface Lesson {
+/**
+ * Lo que comparten una lección y una mini clase: un vídeo (o un PDF) con su
+ * miniatura y su duración.
+ *
+ * Están separadas y no es lo mismo un tipo que otro a propósito. Una mini
+ * clase no puede llevar mini clases dentro: el anidamiento sin fondo es fácil
+ * de escribir y imposible de recorrer para el alumno, que acaba sin saber
+ * dónde está. Un nivel, y que lo imponga el tipo en vez de una costumbre.
+ */
+export interface ContenidoDeCurso {
   id: string;
   title: string;
   /** Tipo de contenido: vídeo (por defecto) o e-book/PDF. */
   kind?: 'video' | 'pdf';
   /** URL del vídeo (Firebase Storage, Vimeo privado, etc.). Puede estar vacío. */
   videoUrl?: string;
+  /** E-book/PDF de apoyo (enlace a Drive, Dropbox...); se ve dentro de la app. */
+  pdfUrl?: string;
+  /**
+   * Duración tal y como la escribe el entrenador ("12 min", "1 h 05").
+   *
+   * No se saca del vídeo a propósito: la mitad están en Vimeo privado o
+   * detrás de un enlace que la app no puede interrogar sin descargarlo, y una
+   * duración a veces sí y a veces no es peor que una escrita a mano siempre.
+   */
   durationLabel?: string;
+  /** Miniatura propia. Sin ella se pinta un marcador con el icono del tipo. */
+  thumbURL?: string;
+}
+
+export interface MiniClase extends ContenidoDeCurso {}
+
+export interface Lesson extends ContenidoDeCurso {
   description?: string;
   /**
    * Candado por antigüedad: días que el alumno debe llevar en el grupo para
    * desbloquear esta lección. Vacío/0 = disponible desde el primer día.
    */
   unlockAfterDays?: number;
-  /** E-book/PDF de apoyo (enlace a Drive, Dropbox...); se ve dentro de la app. */
-  pdfUrl?: string;
+  /**
+   * Mini clases dentro de la lección, en su orden.
+   *
+   * Solo existen si el entrenador las crea. Una lección puede tener su propio
+   * vídeo, tener mini clases, o las dos cosas: hay cursos donde la lección es
+   * la explicación y las mini clases los ejercicios sueltos.
+   */
+  minis?: MiniClase[];
 }
 
 export interface CourseSection {

@@ -7,8 +7,8 @@ import { useAuth } from '../lib/auth-context';
 import { track, trackOnce } from '../lib/analytics';
 import {
   CAN_SELL_IN_APP,
+  TRIAL_DAYS,
   CONTACT_EMAIL,
-  ENTRY_PRICE_EUR,
   FREE_CLIENT_LIMIT,
   claimEntryNow,
   entryCheckoutUrl,
@@ -130,17 +130,16 @@ export function EntryWall() {
     >
       {puedeCobrarAqui ? (
         <>
-          <View style={styles.precioFila}>
-            <Text style={styles.precio}>{ENTRY_PRICE_EUR} €</Text>
-            <Text style={styles.precioNota}>pago único</Text>
-          </View>
+          {/* Sin precio (ver lib/subscription.ts): el alta se completa en la
+              web, que es donde el importe está siempre al día. Aquí solo se
+              dice qué se lleva quien la haga. */}
           <GateText>
             {esAtleta
-              ? 'Con el alta empiezan tus 14 días con todo abierto. Después decides si sigues.'
-              : `El alta incluye ${FREE_CLIENT_LIMIT} alumnos con su propia cuenta. Si tu grupo crece, entonces hablamos de la cuota anual.`}
+              ? `Con el alta empiezan tus ${TRIAL_DAYS} días con todo abierto. Después decides si sigues.`
+              : `El alta incluye ${FREE_CLIENT_LIMIT} alumnos con su propia cuenta. Si tu grupo crece, entonces hablamos.`}
           </GateText>
           <Button
-            title={url ? `Activar por ${ENTRY_PRICE_EUR} €` : 'Contactar para activar'}
+            title={url ? 'Activar mi cuenta en la web' : 'Contactar para activar'}
             onPress={pagar}
             style={{ marginTop: spacing.lg }}
           />
@@ -171,12 +170,4 @@ export function EntryWall() {
 }
 
 const styles = StyleSheet.create({
-  precioFila: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  precio: { ...typography.h1, color: colors.primaryBright, fontSize: 40, fontFamily: fonts.heading },
-  precioNota: { ...typography.small, color: colors.textMuted },
 });
