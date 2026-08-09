@@ -18,16 +18,15 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { Confetti } from '../../components/Confetti';
+import { ResumenEntreno, TarjetaTerminado } from '../../components/DespuesDelEntreno';
 import { PRBurst } from '../../components/PRBurst';
 import { checkLivePR, type LivePR } from '../../lib/livePR';
-import { FadeIn, PopIn } from '../../components/FadeIn';
+import { FadeIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
 import { IntervalTimer } from '../../components/IntervalTimer';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { VideoPlayer } from '../../components/VideoPlayer';
-import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -1276,160 +1275,21 @@ export default function WorkoutScreen() {
   // ---------- Resumen post-entreno ----------
   if (summary) {
     return (
-      <ScreenContainer contentStyle={styles.summaryContent}>
-        <Confetti />
-        <PopIn style={{ alignSelf: 'center' }}>
-          <View style={styles.summaryBadge}>
-            <Ionicons name="checkmark" size={44} color={colors.onPrimary} />
-          </View>
-        </PopIn>
-        <FadeIn delay={150}>
-          <Text style={styles.summaryTitle}>¡Entrenamiento completado!</Text>
-          <Text style={styles.summarySubtitle}>
-            {routine.name} · {day?.name}
-          </Text>
-        </FadeIn>
-
-        <FadeIn delay={300} style={styles.summaryTiles}>
-          {summary.durationMin > 0 ? (
-            <View style={styles.tileHalf}>
-              <StatTile icon="time" value={`${summary.durationMin} min`} label="Duración" />
-            </View>
-          ) : null}
-          <View style={styles.tileHalf}>
-            <StatTile icon="layers" value={`${summary.sets}`} label="Series" />
-          </View>
-          <View style={styles.tileHalf}>
-            <StatTile icon="repeat" value={`${summary.reps}`} label="Reps" />
-          </View>
-          {summary.seconds > 0 ? (
-            <View style={styles.tileHalf}>
-              <StatTile icon="hourglass" value={`${summary.seconds}s`} label="Isométrico" />
-            </View>
-          ) : null}
-          {summary.volumeKg > 0 ? (
-            <View style={styles.tileHalf}>
-              <StatTile
-                icon="barbell"
-                value={`${summary.volumeKg.toLocaleString('es-ES')} kg`}
-                label="Volumen"
-              />
-            </View>
-          ) : null}
-        </FadeIn>
-
-        {summary.prs.length > 0 ? (
-          <FadeIn delay={450}>
-          <Card accent style={styles.prCard}>
-            <View style={styles.prHeader}>
-              <Ionicons name="trophy" size={18} color={colors.primary} />
-              <Text style={styles.prTitle}>
-                {summary.prs.length === 1 ? 'Nuevo récord personal' : 'Nuevos récords personales'}
-              </Text>
-            </View>
-            {summary.prs.map((pr) => (
-              <View key={pr.exerciseName} style={styles.prRow}>
-                <Text style={styles.prExercise}>{pr.exerciseName}</Text>
-                <Text style={styles.prLabel}>{pr.label}</Text>
-              </View>
-            ))}
-            <Button
-              title="Compartir récord"
-              variant="secondary"
-              onPress={handleShareRecord}
-              style={{ marginTop: spacing.sm }}
-            />
-          </Card>
-          </FadeIn>
-        ) : null}
-
-        {summary.newAchievements.length > 0 ? (
-          <FadeIn delay={550}>
-            <Card accent style={styles.prCard}>
-              <View style={styles.prHeader}>
-                <Ionicons name="medal" size={18} color={colors.primary} />
-                <Text style={styles.prTitle}>
-                  {summary.newAchievements.length === 1
-                    ? 'Logro desbloqueado'
-                    : 'Logros desbloqueados'}
-                </Text>
-              </View>
-              {summary.newAchievements.map((a) => (
-                <View key={a.id} style={styles.prRow}>
-                  <View style={styles.achRow}>
-                    <Ionicons
-                      name={a.icon as keyof typeof Ionicons.glyphMap}
-                      size={16}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.prExercise}>{a.title}</Text>
-                  </View>
-                  <Text style={styles.achDesc}>{a.description}</Text>
-                </View>
-              ))}
-            </Card>
-          </FadeIn>
-        ) : null}
-
-        {summary.streak > 1 ? (
-          (() => {
-            // Los hitos se celebran aparte: una racha de 30 días no puede
-            // anunciarse con la misma frase que una de 3. Los números son los
-            // que la gente cuenta de verdad (una semana, un mes, cien días).
-            const HITOS = [7, 14, 30, 50, 100, 200, 365];
-            const hito = HITOS.includes(summary.streak) ? summary.streak : null;
-            return (
-              <View style={[styles.streakRow, hito ? styles.streakMilestone : null]}>
-                <Ionicons
-                  name="flame"
-                  size={hito ? 22 : 18}
-                  color={hito ? colors.primaryBright : colors.primary}
-                />
-                <Text style={[styles.streakText, hito ? styles.streakTextBig : null]}>
-                  {hito === 7
-                    ? 'Una semana seguida entrenando.'
-                    : hito === 30
-                      ? '¡Un mes entero de racha!'
-                      : hito === 365
-                        ? 'Un año. Trescientos sesenta y cinco días.'
-                        : hito
-                          ? `¡${hito} días de racha!`
-                          : `Racha de ${summary.streak} días. Sigue así.`}
-                </Text>
-              </View>
-            );
-          })()
-        ) : null}
-
-        <Text style={styles.completedNote}>
-          Guardado en tu progreso · pestaña Entrenos
-        </Text>
-        <Button
-          title="Compartir mi sesión"
-          onPress={handleShareSummary}
-          style={{ marginTop: spacing.md }}
-        />
-        <Button
-          title="Ir a inicio"
-          onPress={() => router.push('/(client)/dashboard')}
-          style={{ marginTop: spacing.sm }}
-        />
-        {/* Aquí es donde se cae en la cuenta: la pantalla que sale justo
-            después de pulsar "Terminar". Si el resumen dice menos series de
-            las que se hicieron, la salida tiene que estar a la vista, no al
-            día siguiente. */}
-        <Pressable
-          onPress={() => {
-            setSummary(null);
-            corregirEntreno();
-          }}
-          style={styles.againLink}
-          hitSlop={8}
-        >
-          <Ionicons name="create-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.againLinkText}>Me faltan series · corregirlo</Text>
-        </Pressable>
-      </ScreenContainer>
+      <ResumenEntreno
+        cifras={summary}
+        titulo="¡Entrenamiento completado!"
+        subtitulo={`${routine.name} · ${day?.name ?? ''}`}
+        prs={summary.prs}
+        logros={summary.newAchievements}
+        racha={summary.streak}
+        onCompartir={handleShareSummary}
+        onCompartirRecord={handleShareRecord}
+        onIrAInicio={() => router.push('/(client)/dashboard')}
+        onCorregir={() => {
+          setSummary(null);
+          corregirEntreno();
+        }}
+      />
     );
   }
 
@@ -1730,98 +1590,29 @@ export default function WorkoutScreen() {
           </Card>
         </FadeIn>
       ) : showCompleted && completedTodayLog ? (
-        (() => {
-          const t = sessionTotals(completedTodayLog.exercises, measureByExercise);
-          return (
-            <FadeIn>
-              <Card accent style={styles.completedCard}>
-                <PopIn style={{ alignSelf: 'center' }}>
-                  <View style={styles.completedBadge}>
-                    <Ionicons name="checkmark" size={38} color={colors.onPrimary} />
-                  </View>
-                </PopIn>
-                <Text style={styles.completedTitle}>Entrenamiento terminado</Text>
-                <Text style={styles.completedSubtitle}>
-                  {completedTodayLog.routineName || routine.name}
-                  {completedTodayLog.dayName ? ` · ${completedTodayLog.dayName}` : ''}
-                </Text>
-                <View style={styles.completedTiles}>
-                  {completedTodayLog.durationMin ? (
-                    <View style={styles.tileHalf}>
-                      <StatTile
-                        icon="time"
-                        value={`${completedTodayLog.durationMin} min`}
-                        label="Duración"
-                      />
-                    </View>
-                  ) : null}
-                  <View style={styles.tileHalf}>
-                    <StatTile icon="layers" value={`${t.sets}`} label="Series" />
-                  </View>
-                  <View style={styles.tileHalf}>
-                    <StatTile icon="repeat" value={`${t.reps}`} label="Reps" />
-                  </View>
-                  {t.seconds > 0 ? (
-                    <View style={styles.tileHalf}>
-                      <StatTile icon="hourglass" value={`${t.seconds}s`} label="Isométrico" />
-                    </View>
-                  ) : null}
-                  {t.volumeKg > 0 ? (
-                    <View style={styles.tileHalf}>
-                      <StatTile
-                        icon="barbell"
-                        value={`${t.volumeKg.toLocaleString('es-ES')} kg`}
-                        label="Volumen"
-                      />
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={styles.completedNote}>
-                  Guardado en tu progreso · pestaña Entrenos. Vuelve mañana para tu próxima sesión.
-                </Text>
-                {/* Si se le fue el dedo o se dejó una serie sin apuntar, aquí
-                    se arregla. Discreto y debajo: es la salida de un error, no
-                    algo que haya que ofrecer al que ha terminado bien. */}
-                <Pressable onPress={corregirEntreno} style={styles.againLink} hitSlop={8}>
-                  <Ionicons name="create-outline" size={14} color={colors.textMuted} />
-                  <Text style={styles.againLinkText}>Corregir este entreno</Text>
-                </Pressable>
-                <Button
-                  title="Compartir sesión"
-                  onPress={() => handleShareCompleted(completedTodayLog)}
-                  style={{ marginTop: spacing.md }}
-                />
-                <Button
-                  title="Ver mi progreso"
-                  variant="secondary"
-                  onPress={() => router.push('/(client)/progress')}
-                  style={{ marginTop: spacing.sm }}
-                />
-                <Button
-                  title="Ir a inicio"
-                  variant="ghost"
-                  onPress={() => router.push('/(client)/dashboard')}
-                  style={{ marginTop: spacing.sm }}
-                />
-                {isFlex ? (
-                  <Pressable
-                    onPress={() => {
-                      setCombinedDay(null);
-                      setFlexSelection([]);
-                      setFlexResting(false);
-                      setFlexAgain(true);
-                    }}
-                    style={styles.againLink}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="add-circle-outline" size={14} color={colors.textMuted} />
-                    <Text style={styles.againLinkText}>Hacer otro entrenamiento hoy</Text>
-                  </Pressable>
-                ) : null}
-              </Card>
-            </FadeIn>
-          );
-        })()
+        <TarjetaTerminado
+          cifras={{
+            ...sessionTotals(completedTodayLog.exercises, measureByExercise),
+            durationMin: completedTodayLog.durationMin,
+          }}
+          titulo={`${completedTodayLog.routineName || routine.name}${
+            completedTodayLog.dayName ? ` · ${completedTodayLog.dayName}` : ''
+          }`}
+          onCompartir={() => handleShareCompleted(completedTodayLog)}
+          onVerProgreso={() => router.push('/(client)/progress')}
+          onIrAInicio={() => router.push('/(client)/dashboard')}
+          onCorregir={corregirEntreno}
+          onOtroEntreno={
+            isFlex
+              ? () => {
+                  setCombinedDay(null);
+                  setFlexSelection([]);
+                  setFlexResting(false);
+                  setFlexAgain(true);
+                }
+              : undefined
+          }
+        />
       ) : isFlex && (!combinedDay || flexResting) ? null : (
       <>
       {/* El cuánto llevas lo dice el anillo de la cabecera; aquí solo queda el
@@ -2638,116 +2429,5 @@ const styles = StyleSheet.create({
   optionalTitle: { ...typography.h3, color: colors.primaryBright },
   optionalText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
   // ----- Día ya completado hoy -----
-  completedCard: { alignItems: 'stretch', marginBottom: spacing.md },
-  completedBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-    ...shadows.glowGold,
-  },
-  completedTitle: {
-    ...typography.h2,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  completedSubtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  completedTiles: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: spacing.sm,
-  },
-  tileHalf: { width: '48%' },
-  completedNote: {
-    ...typography.small,
-    color: colors.textFaint,
-    textAlign: 'center',
-    marginTop: spacing.md,
-  },
-  againLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'center',
-    paddingVertical: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  againLinkText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
   // ----- Resumen -----
-  summaryContent: { flexGrow: 1, justifyContent: 'center' },
-  summaryBadge: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: spacing.md,
-    ...shadows.glowGold,
-  },
-  summaryTitle: {
-    ...typography.h1,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  summarySubtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-    marginTop: spacing.xs,
-  },
-  summaryTiles: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  prCard: { marginBottom: spacing.md },
-  prHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  prTitle: { ...typography.h3, color: colors.primaryBright },
-  prRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  prExercise: { ...typography.body, color: colors.text },
-  prLabel: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
-  achRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  achDesc: { ...typography.small, color: colors.textMuted, flexShrink: 1, textAlign: 'right' },
-  streakMilestone: {
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  streakTextBig: { ...typography.h3, color: colors.primaryBright },
-  streakRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  streakText: { ...typography.body, color: colors.textMuted },
 });
