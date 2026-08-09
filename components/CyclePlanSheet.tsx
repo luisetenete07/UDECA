@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { diaMes, inicioDeLaSemana } from '../lib/fechas';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
@@ -8,15 +9,7 @@ import { showToast } from './Toast';
 import { createCyclePlan } from '../lib/firestore/cycles';
 import { applyPlanTemplate, getPlanTemplates } from '../lib/firestore/planTemplates';
 import { templateSessions, templateWeeks, type PlanTemplate } from '../lib/planTemplates';
-import {
-  PLAN_TEMPLATES,
-  planEndDate,
-  startOfWeek,
-  totalWeeks,
-  type PlanBlock,
-  type PlanDraft,
-} from '../lib/cyclePlan';
-import { diaMes } from '../lib/fechas';
+import { PLAN_TEMPLATES, planEndDate, totalWeeks, type PlanBlock, type PlanDraft } from '../lib/cyclePlan';
 import { Sheet } from './Sheet';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
@@ -101,7 +94,7 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
     goal,
   };
   const semanas = totalWeeks(draft);
-  const inicio = startOfWeek(startDate);
+  const inicio = inicioDeLaSemana(startDate);
   const fin = planEndDate(draft);
   const entrenos = semanas * sessionsPerWeek;
 

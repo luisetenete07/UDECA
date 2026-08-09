@@ -26,7 +26,7 @@ import { pickProgressPhoto } from '../../lib/image';
 import { MacroCalculator } from '../../components/MacroCalculator';
 import { confirmar } from '../../lib/confirmar';
 import { Sheet } from '../../components/Sheet';
-import { esHoy } from '../../lib/fechas';
+import { esHoy, fechaCorta } from '../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   PHOTO_POSES,
@@ -397,11 +397,7 @@ export default function NutritionScreen() {
                     {PHOTO_POSES.find((x) => x.key === p.pose)?.label ?? p.pose}
                   </Text>
                   <Text style={styles.photoDate}>
-                    {new Date(p.date).toLocaleDateString('es-ES', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    })}
+                    {fechaCorta(p.date)}
                   </Text>
                 </View>
               </Pressable>

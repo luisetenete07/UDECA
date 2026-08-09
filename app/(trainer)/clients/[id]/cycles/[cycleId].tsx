@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { diaMes, diaSemanaCorto } from '../../../../../lib/fechas';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,8 +26,6 @@ import { getWorkoutLogsForClient } from '../../../../../lib/firestore/workoutLog
 import { computeCycleStats } from '../../../../../lib/cycleStats';
 import { descendantIds } from '../../../../../lib/cyclePlan';
 import { buildBlockView } from '../../../../../lib/blockView';
-import { mayusculaInicial } from '../../../../../lib/fechas';
-import { diaMes } from '../../../../../lib/fechas';
 import { Dialogo } from '../../../../../components/Dialogo';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../../../lib/theme';
 import {
@@ -299,13 +298,7 @@ export default function CycleDashboardScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.logDay}>{log.dayName}</Text>
                 <Text style={styles.logMeta}>
-                  {mayusculaInicial(
-                    new Date(log.date).toLocaleDateString('es-ES', {
-                      weekday: 'short',
-                      day: 'numeric',
-                      month: 'short',
-                    })
-                  )}
+                  {diaSemanaCorto(log.date)}
                   {log.durationMin ? ` · ${log.durationMin} min` : ''}
                 </Text>
               </View>

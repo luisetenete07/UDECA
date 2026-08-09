@@ -1,3 +1,4 @@
+import { diaMes, inicioDeLaSemana } from '../lib/fechas';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +10,7 @@ import {
   getProgressTracker,
   saveProgressTracker,
 } from '../lib/firestore/progressTrackers';
-import { startOfWeek, weeklyExerciseMatrix, type MatrixCell } from '../lib/stats';
+import { weeklyExerciseMatrix, type MatrixCell } from '../lib/stats';
 import { moveItem, useDragReorder } from '../lib/useDragReorder';
 import { Dialogo } from './Dialogo';
 import { fonts, colors, radius, spacing, typography } from '../lib/theme';
@@ -19,11 +20,6 @@ const NAME_W = 132;
 const CELL_W = 74;
 const HEADER_H = 46;
 const ROW_H = 52;
-
-/** Cabecera corta de semana: "14 jul". */
-function weekLabel(ts: number): string {
-  return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-}
 
 interface ProgressMatrixProps {
   logs: WorkoutLog[];
@@ -88,7 +84,7 @@ export function ProgressMatrix({
     if (logs.length === 0) return 4;
     const earliest = Math.min(...logs.map((l) => l.date));
     const w =
-      Math.floor((startOfWeek(Date.now()) - startOfWeek(earliest)) / (7 * 24 * 60 * 60 * 1000)) + 1;
+      Math.floor((inicioDeLaSemana(Date.now()) - inicioDeLaSemana(earliest)) / (7 * 24 * 60 * 60 * 1000)) + 1;
     return Math.max(1, w);
   }, [logs]);
 
@@ -296,7 +292,7 @@ export function ProgressMatrix({
                           i === matrix.weekStarts.length - 1 && styles.weekHeadNow,
                         ]}
                       >
-                        {weekLabel(w)}
+                        {diaMes(w)}
                       </Text>
                     </View>
                   ))}

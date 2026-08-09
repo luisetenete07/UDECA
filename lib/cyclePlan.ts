@@ -1,3 +1,4 @@
+import { inicioDeLaSemana, inicioDelDia } from './fechas';
 import type { CycleLevel, TrainingCycle, WeekPlanEntry, WorkoutLog } from './types';
 
 /**
@@ -21,20 +22,6 @@ import type { CycleLevel, TrainingCycle, WeekPlanEntry, WorkoutLog } from './typ
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
-
-export function startOfDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-/** Lunes (00:00) de la semana que contiene `ts`. */
-export function startOfWeek(ts: number): number {
-  const d = new Date(startOfDay(ts));
-  const dow = (d.getDay() + 6) % 7; // 0 = lunes
-  d.setDate(d.getDate() - dow);
-  return d.getTime();
-}
 
 /** Un bloque del plan: el mesociclo y sus semanas. */
 export interface PlanBlock {
@@ -111,7 +98,7 @@ export function totalWeeks(draft: PlanDraft): number {
 }
 
 export function planEndDate(draft: PlanDraft): number {
-  return startOfWeek(draft.startDate) + totalWeeks(draft) * WEEK_MS - DAY_MS;
+  return inicioDeLaSemana(draft.startDate) + totalWeeks(draft) * WEEK_MS - DAY_MS;
 }
 
 /**
@@ -120,7 +107,7 @@ export function planEndDate(draft: PlanDraft): number {
  * justo lo que nadie acierta a mano cuando hay 16 semanas.
  */
 export function buildPlan(draft: PlanDraft): PlannedCycle[] {
-  const start = startOfWeek(draft.startDate);
+  const start = inicioDeLaSemana(draft.startDate);
   const semanas = totalWeeks(draft);
   const out: PlannedCycle[] = [];
 
@@ -254,7 +241,7 @@ export interface CalendarWeek {
 }
 
 function weeksBetween(desde: number, hasta: number): number {
-  return Math.max(1, Math.round((startOfWeek(hasta) - startOfWeek(desde)) / WEEK_MS) + 1);
+  return Math.max(1, Math.round((inicioDeLaSemana(hasta) - inicioDeLaSemana(desde)) / WEEK_MS) + 1);
 }
 
 /**
@@ -277,13 +264,13 @@ export function planCalendar(
   const propios = all.filter((c) => dentro.has(c.id));
   const micros = propios.filter((c) => c.level === 'micro' && c.startDate);
 
-  const desde = startOfWeek(root.startDate ?? root.createdAt);
+  const desde = inicioDeLaSemana(root.startDate ?? root.createdAt);
   const finHijos = propios.reduce<number>((max, c) => Math.max(max, c.endDate ?? 0), 0);
   const hasta = Math.max(root.endDate ?? finHijos, desde + 6 * DAY_MS);
   const semanas = weeksBetween(desde, hasta);
 
-  const diasEntrenados = new Set(logs.map((l) => startOfDay(l.date)));
-  const semanaActual = startOfWeek(now);
+  const diasEntrenados = new Set(logs.map((l) => inicioDelDia(l.date)));
+  const semanaActual = inicioDeLaSemana(now);
 
   const bloques = propios
     .filter((c) => c.level === 'meso' && c.startDate)
@@ -293,7 +280,7 @@ export function planCalendar(
   for (let i = 0; i < semanas; i++) {
     const start = desde + i * WEEK_MS;
     const end = start + 6 * DAY_MS;
-    const micro = micros.find((m) => startOfWeek(m.startDate!) === start) ?? null;
+    const micro = micros.find((m) => inicioDeLaSemana(m.startDate!) === start) ?? null;
     // El bloque sale del padre del micro; si esa semana no tiene micro creado,
     // se busca por fechas para que la banda del bloque no se corte.
     const porPadre = micro?.parentId
@@ -325,7 +312,7 @@ export function planCalendar(
       done,
       target: micro?.targetSessions ?? null,
       isCurrent: start === semanaActual,
-      isPast: end < startOfDay(now),
+      isPast: end < inicioDelDia(now),
       days,
     });
   }
@@ -340,7 +327,7 @@ export function planSummary(weeks: CalendarWeek[], now = Date.now()) {
   const previstos = cerradas.reduce((n, w) => n + (w.target ?? 0), 0);
   const semanaActual = actual
     ? actual.index
-    : weeks.length > 0 && startOfWeek(now) > weeks[weeks.length - 1].start
+    : weeks.length > 0 && inicioDeLaSemana(now) > weeks[weeks.length - 1].start
       ? weeks.length
       : 0;
   return {

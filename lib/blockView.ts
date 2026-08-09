@@ -1,4 +1,5 @@
-import { effectiveLoadKg, loadLabel, startOfWeek } from './stats';
+import { diaMes, inicioDeLaSemana, inicioDelDia } from './fechas';
+import { effectiveLoadKg, loadLabel } from './stats';
 import { planCalendar } from './cyclePlan';
 import { weekSetsByGroup } from './weekPlan';
 import type { Routine, TrainingCycle, WorkoutLog } from './types';
@@ -145,15 +146,9 @@ function seriesHechas(
       porGrupo[grupo] = (porGrupo[grupo] ?? 0) + hechas;
     }
     // Dos entrenos el mismo día son una sesión doble, no dos días de frecuencia.
-    if (algo) dias.add(startOfDayLocal(log.date));
+    if (algo) dias.add(inicioDelDia(log.date));
   }
   return { porGrupo, dias };
-}
-
-function startOfDayLocal(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
 }
 
 // ---------------------------------------------------------------------------
@@ -320,14 +315,14 @@ export function buildBlockView({
       });
     }
   } else {
-    const actual = startOfWeek(now);
+    const actual = inicioDeLaSemana(now);
     for (let i = weeks - 1; i >= 0; i--) {
       const start = actual - i * 7 * DAY_MS;
       semanas.push({
         start,
         end: start + 6 * DAY_MS,
         index: weeks - i,
-        label: etiquetaCorta(start),
+        label: diaMes(start),
         isDeload: false,
         sessionsPlanned: sessionsPerWeek != null ? Math.round(sessionsPerWeek) : null,
         sessionsDone: 0,
@@ -417,10 +412,6 @@ export function buildBlockView({
     hasPlan,
     intensity,
   };
-}
-
-function etiquetaCorta(ts: number): string {
-  return new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 }
 
 /**

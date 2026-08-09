@@ -14,8 +14,11 @@ import {
   esHoy,
   esMismoDia,
   fechaCorta,
+  diasEntre,
   inicioDeLaSemana,
   inicioDelDia,
+  inicioDelMes,
+  masDias,
   mayusculaInicial,
   mesLargo,
 } from '../lib/fechas.ts';
@@ -115,6 +118,64 @@ console.log('\nEl descanso se escribe en minutos y se lee en mm:ss');
     ida.every((t) => minutosSegundos(segundosDeTexto(t)) === t.replace(/^0(\d):/, '$1:')),
     ida.map((t) => `${t}->${minutosSegundos(segundosDeTexto(t))}`).join(' ')
   );
+}
+
+console.log('\nSumar días y contarlos: por calendario, no por milisegundos');
+{
+  // Sumar 86.400.000 ms falla el día que cambia la hora: ese día dura 23 o 25
+  // horas y "mañana" cae a las 23:00 de hoy o a la 1:00 de pasado. Estas dos
+  // funciones son la razón de que el ciclo de días sueltos no se descoloque
+  // en primavera.
+  const jueves = new Date(2026, 7, 6, 9, 30).getTime();
+  comprueba('mañana es el 7', new Date(masDias(jueves, 1)).getDate() === 7);
+  comprueba('ayer es el 5', new Date(masDias(jueves, -1)).getDate() === 5);
+  comprueba('y siempre a las 00:00', new Date(masDias(jueves, 1)).getHours() === 0);
+  comprueba('sumar cero es el mismo día a las 00:00', masDias(jueves, 0) === inicioDelDia(jueves));
+
+  // Marzo de 2026: el cambio de hora en España es el domingo 29.
+  const antes = new Date(2026, 2, 28, 12, 0).getTime();
+  const despues = masDias(antes, 2);
+  comprueba('cruzando el cambio de hora, el 30', new Date(despues).getDate() === 30);
+  comprueba('y sigue siendo medianoche', new Date(despues).getHours() === 0);
+  comprueba('dos días son dos días', diasEntre(antes, despues) === 2);
+  comprueba(
+    'la semana del cambio de hora mide 7 días, no 6',
+    diasEntre(new Date(2026, 2, 23).getTime(), new Date(2026, 2, 30).getTime()) === 7
+  );
+  comprueba('hacia atrás cuenta negativo', diasEntre(despues, antes) === -2);
+  comprueba('el mismo día son cero', diasEntre(antes, antes) === 0);
+  comprueba('la hora no cuenta', diasEntre(new Date(2026, 7, 6, 23, 59), new Date(2026, 7, 7, 0, 1)) === 1);
+}
+
+console.log('\nLa semana empieza en lunes, también el domingo');
+{
+  // El fallo clásico: `getDay()` devuelve 0 para el domingo, así que hay que
+  // retroceder SEIS días, no uno. Había cinco copias de esta función por la
+  // app; ahora hay una, y este es el caso que las cinco podían fallar.
+  const lunes = new Date(2026, 7, 3).getTime();
+  for (let i = 0; i < 7; i++) {
+    const dia = masDias(lunes, i);
+    comprueba(
+      `el día +${i} pertenece a la semana del lunes 3`,
+      inicioDeLaSemana(dia) === lunes,
+      new Date(inicioDeLaSemana(dia)).toDateString()
+    );
+  }
+  comprueba(
+    'el lunes siguiente ya es otra semana',
+    inicioDeLaSemana(masDias(lunes, 7)) === masDias(lunes, 7)
+  );
+  comprueba('a media tarde del domingo sigue siendo esa semana',
+    inicioDeLaSemana(new Date(2026, 7, 9, 18, 45).getTime()) === lunes);
+}
+
+console.log('\nEl mes natural');
+{
+  const ts = new Date(2026, 7, 17, 13, 20).getTime();
+  const uno = new Date(inicioDelMes(ts));
+  comprueba('cae en el día 1', uno.getDate() === 1);
+  comprueba('del mismo mes', uno.getMonth() === 7);
+  comprueba('a las 00:00', uno.getHours() === 0);
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

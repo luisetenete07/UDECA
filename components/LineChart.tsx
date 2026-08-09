@@ -1,4 +1,5 @@
 import React from 'react';
+import { diaMes } from '../lib/fechas';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { colors, fonts, spacing, typography } from '../lib/theme';
@@ -37,8 +38,6 @@ interface LineChartProps {
   showSummary?: boolean;
 }
 
-const shortDate = (ts: number) =>
-  new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 
 /** Número corto: sin decimales si no los tiene ("8", no "8.0"). */
 const formatValue = (v: number) =>
@@ -162,7 +161,7 @@ export function LineChart({
                       fill={colors.textFaint}
                       textAnchor="middle"
                     >
-                      {shortDate(points[i].date)}
+                      {diaMes(points[i].date)}
                     </SvgText>
                   </>
                 ) : null}

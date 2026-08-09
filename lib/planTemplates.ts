@@ -1,4 +1,4 @@
-import { startOfWeek } from './stats';
+import { inicioDeLaSemana } from './fechas';
 import type { PlannedCycle } from './cyclePlan';
 import type { TrainingCycle, WeekPlanEntry } from './types';
 
@@ -103,7 +103,7 @@ export function cyclesFromTemplate(
   template: Pick<PlanTemplate, 'name' | 'goal' | 'blocks'>,
   startDate: number
 ): PlannedCycle[] {
-  const inicio = startOfWeek(startDate);
+  const inicio = inicioDeLaSemana(startDate);
   const semanas = templateWeeks(template);
   const out: PlannedCycle[] = [];
 

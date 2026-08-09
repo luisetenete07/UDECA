@@ -24,7 +24,7 @@ import { getActiveRoutinesForTrainer } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { Chip, ChipRow } from '../../../components/Chip';
-import { inicioDeLaSemana, inicioDelDia } from '../../../lib/fechas';
+import { fechaNumerica, inicioDeLaSemana, inicioDelDia, masDias } from '../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
   CLIENT_STATUS_LABEL,
@@ -77,10 +77,7 @@ function skippedThisWeek(routine: Routine | null | undefined, trainedDays: Set<n
   for (const day of routine.days) {
     if (day.isRest || day.optionalRest || day.weekday == null) continue;
     if (day.weekday >= todayWd) continue; // hoy o futuro: aún no cuenta
-    const d = new Date(monday);
-    d.setDate(d.getDate() + day.weekday);
-    d.setHours(0, 0, 0, 0);
-    if (!trainedDays.has(d.getTime())) skipped++;
+    if (!trainedDays.has(masDias(monday, day.weekday))) skipped++;
   }
   return skipped;
 }
@@ -233,7 +230,7 @@ export default function ClientsScreen() {
   );
 
   const handleExportCsv = () => {
-    const fmt = (ts?: number) => (ts ? new Date(ts).toLocaleDateString('es-ES') : '');
+    const fmt = (ts?: number) => (ts ? fechaNumerica(ts) : '');
     const rows = clients.map((c) => [
       c.name,
       c.email,

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { diaLargo, diaMes, diaYMes, esHoy, inicioDelDia } from '../../lib/fechas';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -43,8 +44,6 @@ import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleSt
 import { planCalendar, planSummary } from '../../lib/cyclePlan';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { anclaConPausas, diasDePausa, diasQueQuedan, pausaActiva } from '../../lib/pausa';
-import { diaLargo } from '../../lib/fechas';
-import { esHoy } from '../../lib/fechas';
 import { cancelarAvisosOlvido, programarAvisosOlvido } from '../../lib/notifications';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
@@ -376,17 +375,11 @@ export default function ClientDashboard() {
   // alumno renueve pronto y le facilita el trabajo al entrenador.
   const paymentAlert = (() => {
     const fee = profile?.monthlyFeeEur ? `${profile.monthlyFeeEur} €` : 'tu cuota';
-    const startDay = (ts: number) => {
-      const d = new Date(ts);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime();
-    };
-    const fmt = (ts: number) =>
-      new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+    const fmt = (ts: number) => diaYMes(ts);
     const due = profile?.nextPaymentDate;
     const status = profile?.paymentStatus;
     if (due) {
-      const days = Math.round((startDay(due) - startDay(Date.now())) / (24 * 60 * 60 * 1000));
+      const days = Math.round((inicioDelDia(due) - inicioDelDia(Date.now())) / (24 * 60 * 60 * 1000));
       if (days < 0) {
         // Se avisa de cuántos días quedan antes de que se pause el acceso.
         // Bloquear sin haber dicho antes que iba a pasar es lo que convierte un
@@ -707,10 +700,7 @@ export default function ClientDashboard() {
                   {activeCyc.targetSessions ? `/${activeCyc.targetSessions}` : ''} sesiones
                   {cs.pctComplete != null ? ` · ${Math.round(cs.pctComplete * 100)}%` : ''}
                   {activeCyc.endDate
-                    ? ` · hasta ${new Date(activeCyc.endDate).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'short',
-                      })}`
+                    ? ` · hasta ${diaMes(activeCyc.endDate)}`
                     : ''}
                 </Text>
                 {activeCyc.goal || bloque?.goal || raiz?.goal ? (

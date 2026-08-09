@@ -1,7 +1,8 @@
+import { inicioDeLaSemana } from '../fechas';
 import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
-import { startOfWeek } from '../stats';
+
 import type { WeeklyCheckIn } from '../types';
 
 const collectionRef = () => collection(db, 'checkIns');
@@ -27,7 +28,7 @@ export async function createCheckIn(
 ): Promise<string> {
   const ref = await addDoc(collectionRef(), stripUndefined({
     ...data,
-    weekStart: startOfWeek(Date.now()),
+    weekStart: inicioDeLaSemana(Date.now()),
     createdAt: Date.now(),
   }));
   return ref.id;
@@ -35,6 +36,6 @@ export async function createCheckIn(
 
 /** true si el alumno ya envió el check-in de la semana en curso. */
 export function hasCheckInThisWeek(checkIns: WeeklyCheckIn[]): boolean {
-  const week = startOfWeek(Date.now());
+  const week = inicioDeLaSemana(Date.now());
   return checkIns.some((c) => c.weekStart === week);
 }

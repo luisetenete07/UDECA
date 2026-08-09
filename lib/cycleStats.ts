@@ -1,3 +1,4 @@
+import { inicioDeLaSemana } from './fechas';
 import { sessionTotals } from './stats';
 import type { TrainingCycle, WorkoutLog } from './types';
 
@@ -106,17 +107,10 @@ export function computeCycleStats(cycle: TrainingCycle, allLogs: WorkoutLog[]): 
  */
 export function cycleWeekInfo(cycle: TrainingCycle): { week: number; totalWeeks: number | null } {
   const now = Date.now();
-  const startOfWeek = (ts: number) => {
-    const d = new Date(ts);
-    d.setHours(0, 0, 0, 0);
-    const dow = (d.getDay() + 6) % 7; // 0 = lunes
-    d.setDate(d.getDate() - dow);
-    return d.getTime();
-  };
   const anchor = cycle.startDate ?? now;
   const cappedNow = cycle.endDate ? Math.min(now, cycle.endDate) : now;
   const week =
-    Math.floor((startOfWeek(Math.max(cappedNow, anchor)) - startOfWeek(anchor)) / (7 * DAY_MS)) + 1;
+    Math.floor((inicioDeLaSemana(Math.max(cappedNow, anchor)) - inicioDeLaSemana(anchor)) / (7 * DAY_MS)) + 1;
   const totalWeeks =
     cycle.startDate && cycle.endDate
       ? Math.max(1, Math.round((cycle.endDate - cycle.startDate) / DAY_MS / 7))

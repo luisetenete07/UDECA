@@ -1,4 +1,4 @@
-import { startOfWeek } from './stats';
+import { inicioDeLaSemana } from './fechas';
 import type { Routine, TrainingCycle, WeekPlanEntry } from './types';
 
 /**
@@ -21,10 +21,10 @@ export function currentWeekCycle(
   cycles: TrainingCycle[],
   now = Date.now()
 ): TrainingCycle | null {
-  const semana = startOfWeek(now);
+  const semana = inicioDeLaSemana(now);
   return (
     cycles.find(
-      (c) => c.level === 'micro' && c.startDate != null && startOfWeek(c.startDate) === semana
+      (c) => c.level === 'micro' && c.startDate != null && inicioDeLaSemana(c.startDate) === semana
     ) ?? null
   );
 }
@@ -114,7 +114,7 @@ export function semanaAnterior(
         c.level === 'micro' &&
         c.id !== micro.id &&
         c.startDate != null &&
-        startOfWeek(c.startDate) === startOfWeek(anterior)
+        inicioDeLaSemana(c.startDate) === inicioDeLaSemana(anterior)
     ) ?? null
   );
 }

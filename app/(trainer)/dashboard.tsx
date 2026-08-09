@@ -1,3 +1,4 @@
+import { diaMes, fechaNumerica, inicioDelDia, inicioDelMes } from '../../lib/fechas';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -241,11 +242,7 @@ export default function TrainerDashboard() {
   const pulso = pulsoDeAlumnos(clients, logs);
   // Tareas de hoy: las del día sin terminar. Estaban solo en la agenda, y una
   // tarea que hay que ir a buscar es una tarea que se olvida.
-  const hoyCero = (() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  })();
+  const hoyCero = inicioDelDia(Date.now());
   const tareasHoy = tasks
     .filter((t) => !t.done && t.scope === 'day' && (t.dueDate ?? hoyCero) <= hoyCero)
     .sort((a, b) => Number(b.flagged ?? false) - Number(a.flagged ?? false))
@@ -258,10 +255,8 @@ export default function TrainerDashboard() {
   const avanceGrupo = resumenDeGrupo(cursosPublicados, avanceAlumnos);
   const byId = (id: string) => clients.find((c) => c.uid === id);
   // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
   const trainedToday = new Set(
-    logs.filter((l) => l.date >= todayStart.getTime()).map((l) => l.clientId)
+    logs.filter((l) => l.date >= inicioDelDia(Date.now())).map((l) => l.clientId)
   ).size;
   // Alumnos con pago pendiente o vencido (para el atajo "Recordar pagos").
   const duePayClients = clients.filter(
@@ -290,11 +285,9 @@ export default function TrainerDashboard() {
     (c) => c.paymentStatus || c.monthlyFeeEur || c.nextPaymentDate
   ) || payments.length > 0;
   // Ingresos realmente cobrados este mes (a partir de los pagos registrados).
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
+  const monthStart = inicioDelMes(Date.now());
   const monthPayments = payments
-    .filter((p) => p.date >= monthStart.getTime())
+    .filter((p) => p.date >= monthStart)
     .sort((a, b) => b.date - a.date);
   const incomeThisMonth = monthPayments.reduce((s, p) => s + (p.amountEur || 0), 0);
   // Historial completo de ingresos (todos los pagos) + total acumulado.
@@ -525,7 +518,7 @@ export default function TrainerDashboard() {
         {showAvatar ? <Avatar name={client?.name} photoURL={client?.photoURL} size={34} /> : null}
         <View style={{ flex: 1 }}>
           {showAvatar ? <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text> : null}
-          <Text style={styles.logDetail}>{new Date(p.date).toLocaleDateString('es-ES')}</Text>
+          <Text style={styles.logDetail}>{fechaNumerica(p.date)}</Text>
         </View>
         {editing ? (
           <>
@@ -1059,10 +1052,7 @@ export default function TrainerDashboard() {
                 </Text>
               </View>
               <Text style={styles.nextPayDate}>
-                {new Date(nextPayment.nextPaymentDate!).toLocaleDateString('es-ES', {
-                  day: 'numeric',
-                  month: 'short',
-                })}
+                {diaMes(nextPayment.nextPaymentDate!)}
               </Text>
             </Pressable>
           ) : null}
@@ -1117,7 +1107,7 @@ export default function TrainerDashboard() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
                   <Text style={styles.logDetail}>
-                    {log.dayName} · {new Date(log.date).toLocaleDateString('es-ES')}
+                    {log.dayName} · {fechaNumerica(log.date)}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
@@ -1158,7 +1148,7 @@ export default function TrainerDashboard() {
                             : 'Pendiente'}
                         {c.monthlyFeeEur ? ` · ${c.monthlyFeeEur} €` : ''}
                         {c.nextPaymentDate
-                          ? ` · vence ${new Date(c.nextPaymentDate).toLocaleDateString('es-ES')}`
+                          ? ` · vence ${fechaNumerica(c.nextPaymentDate)}`
                           : ''}
                       </Text>
                     </View>
@@ -1284,12 +1274,7 @@ export default function TrainerDashboard() {
                         <Text style={styles.logClient}>{c.name}</Text>
                         <Text style={styles.logDetail}>
                           Renueva{' '}
-                          {c.nextPaymentDate
-                            ? new Date(c.nextPaymentDate).toLocaleDateString('es-ES', {
-                                day: 'numeric',
-                                month: 'short',
-                              })
-                            : ''}
+                          {c.nextPaymentDate ? diaMes(c.nextPaymentDate) : ''}
                         </Text>
                       </View>
                       <Text style={styles.payAmount}>{c.monthlyFeeEur} €</Text>

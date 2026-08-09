@@ -1,3 +1,4 @@
+import { inicioDeLaSemana, inicioDelDia, mesCorto } from '../lib/fechas';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { TrainingCycle, WorkoutLog } from '../lib/types';
@@ -5,20 +6,6 @@ import { isLogInCycle } from '../lib/cycleStats';
 import { fonts, colors, radius, spacing, typography } from '../lib/theme';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-function startOfDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-/** Lunes (00:00) de la semana que contiene `ts`. */
-function startOfWeek(ts: number): number {
-  const d = new Date(startOfDay(ts));
-  const dow = (d.getDay() + 6) % 7; // 0 = lunes
-  d.setDate(d.getDate() - dow);
-  return d.getTime();
-}
 
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
@@ -37,7 +24,7 @@ export function CycleProgress({
   const model = useMemo(() => {
     const now = Date.now();
     const cycleLogs = logs.filter((l) => isLogInCycle(l, cycle));
-    const trained = new Set(cycleLogs.map((l) => startOfDay(l.date)));
+    const trained = new Set(cycleLogs.map((l) => inicioDelDia(l.date)));
 
     // Rango del calendario: desde el inicio del ciclo (o del primer entreno) hasta
     // hoy (o el fin del ciclo si ya terminó).
@@ -45,8 +32,8 @@ export function CycleProgress({
       cycle.startDate ??
       (cycleLogs.length > 0 ? Math.min(...cycleLogs.map((l) => l.date)) : now);
     const cappedNow = cycle.endDate ? Math.min(now, cycle.endDate) : now;
-    const firstWeek = startOfWeek(anchorStart);
-    const lastWeek = startOfWeek(Math.max(cappedNow, anchorStart));
+    const firstWeek = inicioDeLaSemana(anchorStart);
+    const lastWeek = inicioDeLaSemana(Math.max(cappedNow, anchorStart));
 
     // Semanas totales previstas (si el coach fijó fin) y semana actual.
     const totalWeeks =
@@ -60,9 +47,9 @@ export function CycleProgress({
       days: { ts: number; day: number; trained: boolean; inCycle: boolean; isToday: boolean }[];
       monthLabel: string | null;
     }[] = [];
-    const today = startOfDay(now);
-    const cycleStartDay = cycle.startDate ? startOfDay(cycle.startDate) : firstWeek;
-    const cycleEndDay = cycle.endDate ? startOfDay(cycle.endDate) : lastWeek + 6 * DAY_MS;
+    const today = inicioDelDia(now);
+    const cycleStartDay = cycle.startDate ? inicioDelDia(cycle.startDate) : firstWeek;
+    const cycleEndDay = cycle.endDate ? inicioDelDia(cycle.endDate) : lastWeek + 6 * DAY_MS;
     let lastMonth = -1;
     for (let w = firstWeek; w <= lastWeek; w += 7 * DAY_MS) {
       const days = [];
@@ -72,7 +59,7 @@ export function CycleProgress({
         const d = new Date(ts);
         const m = d.getMonth();
         if (monthLabel === null && m !== lastMonth) {
-          monthLabel = d.toLocaleDateString('es-ES', { month: 'short' });
+          monthLabel = mesCorto(d);
           lastMonth = m;
         }
         days.push({

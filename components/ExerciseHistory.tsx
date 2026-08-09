@@ -1,4 +1,5 @@
 import React from 'react';
+import { diaMes } from '../lib/fechas';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
@@ -195,7 +196,7 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
             <View key={s.id} style={styles.dia}>
               <View style={styles.diaCabecera}>
                 <Text style={styles.diaFecha}>
-                  {fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                  {diaMes(fecha)}
                 </Text>
                 <Text style={styles.diaNombre} numberOfLines={1}>
                   {s.dayName}

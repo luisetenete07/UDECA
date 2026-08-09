@@ -1,3 +1,4 @@
+import { inicioDeLaSemana } from '../fechas';
 import {
   addDoc,
   collection,
@@ -12,7 +13,7 @@ import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import { writePlan } from './cycles';
 import { cyclesFromTemplate, templateFromCycles, type PlanTemplate } from '../planTemplates';
-import { startOfWeek } from '../stats';
+
 import type { TrainingCycle, WeekPlanEntry } from '../types';
 
 const collectionRef = () => collection(db, 'planTemplates');
@@ -80,14 +81,14 @@ export async function applyWeekToClients(
   weekPlan: WeekPlanEntry[],
   cyclesByClient: { clientId: string; cycles: TrainingCycle[] }[]
 ): Promise<{ aplicados: number; sinSemana: string[] }> {
-  const lunes = startOfWeek(weekStart);
+  const lunes = inicioDeLaSemana(weekStart);
   const batch = writeBatch(db);
   const sinSemana: string[] = [];
   let aplicados = 0;
 
   for (const { clientId, cycles } of cyclesByClient) {
     const micro = cycles.find(
-      (c) => c.level === 'micro' && c.startDate != null && startOfWeek(c.startDate) === lunes
+      (c) => c.level === 'micro' && c.startDate != null && inicioDeLaSemana(c.startDate) === lunes
     );
     if (!micro) {
       sinSemana.push(clientId);

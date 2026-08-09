@@ -1,12 +1,5 @@
-import {
-  addDays,
-  setsByMuscleGroup,
-  startOfWeek,
-  weeklyExerciseMatrix,
-  workoutsByMonth,
-  type MatrixCell,
-  type MatrixRow,
-} from './stats';
+import { diaMes, fechaLegible, inicioDeLaSemana, masDias, mayusculaInicial } from './fechas';
+import { setsByMuscleGroup, weeklyExerciseMatrix, workoutsByMonth, type MatrixCell, type MatrixRow } from './stats';
 import { UDECA_LOGO_DATA_URI } from './udecaLogo';
 import type { Routine, UserProfile, WeightLog, WorkoutLog } from './types';
 
@@ -201,10 +194,6 @@ const ARROW: Record<Direction, string> = {
   none: '',
 };
 
-const fmtDay = (ts: number) =>
-  new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-const fmtWeek = (ts: number) =>
-  new Date(ts).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 const fmtKg = (n: number) => `${n.toFixed(1).replace('.', ',')} kg`;
 
 /**
@@ -227,7 +216,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
 
   // ----- Periodo -----
   const semanas = Math.max(1, Math.round(weeks));
-  const desde = addDays(startOfWeek(Date.now()), -7 * (semanas - 1));
+  const desde = masDias(inicioDeLaSemana(Date.now()), -7 * (semanas - 1));
   const hasta = Date.now();
   // Todo el informe habla del MISMO periodo que la tabla de la pantalla: si no,
   // los totales de arriba no cuadrarían con las columnas de abajo.
@@ -297,7 +286,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
   const tablaSemanas = filas.length
     ? `<table class="grid">
         <thead><tr><th class="ex">Ejercicio</th>${columnas
-          .map((w, i) => `<th class="wk${i === columnas.length - 1 ? ' now' : ''}">${fmtWeek(w)}</th>`)
+          .map((w, i) => `<th class="wk${i === columnas.length - 1 ? ' now' : ''}">${diaMes(w)}</th>`)
           .join('')}</tr></thead>
         <tbody>${filas
           .map(
@@ -314,7 +303,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
   const meses = workoutsByMonth(logs, measureByExercise)
     .slice(0, 6)
     .map((m) => {
-      const label = m.label.charAt(0).toUpperCase() + m.label.slice(1);
+      const label = mayusculaInicial(m.label);
       return `<tr>
         <td>${escapeHtml(label)}</td>
         <td class="num">${m.sessions.length}</td>
@@ -493,9 +482,9 @@ export function buildClientReportHtml(data: ClientReportData): string {
           }${client.goal ? ` · Objetivo: ${escapeHtml(client.goal)}` : ''}</div>
         </div>
         <div class="stamp">
-          <b>${fmtDay(desde)} — ${fmtDay(hasta)}</b>
+          <b>${fechaLegible(desde)} — ${fechaLegible(hasta)}</b>
           ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}<br />
-          Emitido el ${fmtDay(Date.now())}${
+          Emitido el ${fechaLegible(Date.now())}${
             coachName ? `<br />por ${escapeHtml(coachName)}` : ''
           }
         </div>

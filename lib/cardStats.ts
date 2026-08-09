@@ -1,5 +1,5 @@
 import type { DatoTarjeta } from '../components/ProgressCard';
-import { mayusculaInicial } from './fechas';
+import { mayusculaInicial, mesLargo } from './fechas';
 import { numeroFundador } from './fundador';
 
 /**
@@ -22,10 +22,13 @@ const MES_MS = 30.4 * 24 * 60 * 60 * 1000;
 // enseña. Aquí se reexporta para no tener dos formas de escribir lo mismo.
 export { numeroFundador } from './fundador';
 
-/** "mayo de 2026", con la inicial en mayúscula solo si va sola. */
+/**
+ * "mayo de 2026", en minúscula: va dentro de una frase ("entrenando desde
+ * mayo de 2026"), así que no lleva la mayúscula de `mesLargo`.
+ */
 export function desdeCuando(ts?: number): string | undefined {
   if (!ts) return undefined;
-  return new Date(ts).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  return mesLargo(ts).toLowerCase();
 }
 
 export interface DatosEntrenador {

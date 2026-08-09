@@ -1,3 +1,4 @@
+import { inicioDelDia, masDias } from './fechas';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
@@ -20,9 +21,7 @@ export async function getCycleAnchor(routineId: string): Promise<number | null> 
 
 /** Fija el ancla del ciclo a HOY (medianoche) para reiniciar en el Día 1. */
 export async function setCycleAnchorToday(routineId: string): Promise<number> {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  const ts = d.getTime();
+  const ts = inicioDelDia(Date.now());
   try {
     await AsyncStorage.setItem(key(routineId), String(ts));
   } catch {
@@ -41,10 +40,11 @@ export async function setCycleAnchorForIndex(
   index: number,
   cycleLength: number
 ): Promise<number> {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
   const offsetDays = ((cycleLength - index) % cycleLength + cycleLength) % cycleLength;
-  const ts = d.getTime() + offsetDays * 24 * 60 * 60 * 1000;
+  // Con `masDias` y no sumando milisegundos: el día que cambia la hora dura 23
+  // o 25 horas, y el ancla caería a las 23:00 del día anterior, corriendo el
+  // ciclo entero un día.
+  const ts = masDias(Date.now(), offsetDays);
   try {
     await AsyncStorage.setItem(key(routineId), String(ts));
   } catch {

@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { diaLargo, inicioDelDia, mesLargo } from '../../lib/fechas';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   LayoutAnimation,
@@ -30,9 +31,7 @@ import {
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { Segmented } from '../../components/Segmented';
-import { diaLargo, mesLargo } from '../../lib/fechas';
 import { Dialogo } from '../../components/Dialogo';
-import { inicioDelDia } from '../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,

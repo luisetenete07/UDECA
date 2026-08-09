@@ -1,6 +1,7 @@
+import { inicioDeLaSemana, inicioDelDia, masDias } from '../lib/fechas';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { addDays, startOfWeek } from '../lib/stats';
+
 import { colors, fonts, spacing } from '../lib/theme';
 import { WEEKDAY_LABELS } from '../lib/types';
 
@@ -17,13 +18,11 @@ export function ConsistencyMap({
   days: Set<number>;
   weeks?: number;
 }) {
-  const currentWeekStart = startOfWeek(Date.now());
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayTs = today.getTime();
+  const currentWeekStart = inicioDeLaSemana(Date.now());
+  const todayTs = inicioDelDia(Date.now());
 
   const weekStarts = Array.from({ length: weeks }, (_, i) =>
-    addDays(currentWeekStart, -7 * (weeks - 1 - i))
+    masDias(currentWeekStart, -7 * (weeks - 1 - i))
   );
 
   return (
@@ -33,7 +32,7 @@ export function ConsistencyMap({
           <View key={label} style={styles.row}>
             <Text style={styles.rowLabel}>{label}</Text>
             {weekStarts.map((ws) => {
-              const dayTs = addDays(ws, row);
+              const dayTs = masDias(ws, row);
               const trained = days.has(dayTs);
               const isFuture = dayTs > todayTs;
               const isToday = dayTs === todayTs;

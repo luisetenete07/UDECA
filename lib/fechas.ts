@@ -61,6 +61,46 @@ export function fechaLegible(ts: number | Date): string {
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/**
+ * "5/8/2026". La fecha suelta de una fila de lista, donde lo que importa es
+ * ocupar poco y poder comparar dos líneas de un vistazo.
+ */
+export function fechaNumerica(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return d.toLocaleDateString('es-ES');
+}
+
+/** "5 de agosto". El día dicho como se dice en voz alta, sin año ni semana. */
+export function diaYMes(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+}
+
+/** "ago". Para los ejes de las gráficas, donde solo cabe el mes. */
+export function mesCorto(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return d.toLocaleDateString('es-ES', { month: 'short' });
+}
+
+/** "agosto", el mes a secas. Para meterlo en una frase que ya trae el día. */
+export function nombreDelMes(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return d.toLocaleDateString('es-ES', { month: 'long' });
+}
+
+/**
+ * "Sáb, 9 ago". La fecha de una sesión en una lista de sesiones.
+ *
+ * Lleva el día de la semana porque en un historial de entrenos eso es lo que
+ * se busca —"¿el de los sábados?"— y el número solo no lo dice.
+ */
+export function diaSemanaCorto(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return mayusculaInicial(
+    d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
+  );
+}
+
 /*
  * Comparar días, no instantes.
  *
@@ -104,4 +144,35 @@ export function inicioDeLaSemana(ts: number | Date): number {
   const dia = d.getDay();
   d.setDate(d.getDate() - (dia === 0 ? 6 : dia - 1));
   return d.getTime();
+}
+
+/** El día 1 de ese mes, a las 00:00. Para lo que se cuenta por meses naturales. */
+export function inicioDelMes(ts: number | Date): number {
+  const d = new Date(inicioDelDia(ts));
+  d.setDate(1);
+  return d.getTime();
+}
+
+/**
+ * `n` días después (o antes, con `n` negativo), a las 00:00.
+ *
+ * Se suma con `setDate` y no sumando milisegundos a propósito: los días que
+ * cambia la hora duran 23 o 25 horas, y "dentro de una semana" sumando
+ * 7×86400000 cae una hora antes o después y puede saltarse el día.
+ */
+export function masDias(ts: number | Date, n: number): number {
+  const d = new Date(inicioDelDia(ts));
+  d.setDate(d.getDate() + n);
+  return d.getTime();
+}
+
+/**
+ * Días de calendario entre dos fechas (b − a).
+ *
+ * El redondeo absorbe el desfase de ±1 h de los cambios de hora: sin él, la
+ * semana del cambio de hora mide 6,96 días, se trunca a 6 y el ciclo de días
+ * sueltos se desplaza un día para todo el que entrene en primavera.
+ */
+export function diasEntre(a: number | Date, b: number | Date): number {
+  return Math.round((inicioDelDia(b) - inicioDelDia(a)) / (24 * 60 * 60 * 1000));
 }

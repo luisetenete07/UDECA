@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { diaLargo, diaSemanaCorto, esMismoDia, inicioDelDia, masDias } from '../../lib/fechas';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import {
   AppState,
@@ -36,7 +37,6 @@ import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { applyWeekPlan } from '../../lib/weekPlan';
 import { esfuerzoDePct, pctCombinado, textoIntensidad } from '../../lib/intensidad';
 import { RirPicker } from '../../components/RirPicker';
-import { diaLargo, mayusculaInicial } from '../../lib/fechas';
 import { anclaConPausas, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
 import { SessionHeader } from '../../components/SessionHeader';
@@ -75,7 +75,6 @@ import {
 import { Sheet } from '../../components/Sheet';
 import { Chip, ChipRow } from '../../components/Chip';
 import { minutosSegundos } from '../../lib/duracion';
-import { esMismoDia, inicioDelDia } from '../../lib/fechas';
 import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
   clusterBlocks,
@@ -574,9 +573,7 @@ export default function WorkoutScreen() {
   const chooseFlexRest = async () => {
     setFlexResting(true);
     if (profile) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      addFlexRestDay(profile.uid, today.getTime()).catch(() => {});
+      addFlexRestDay(profile.uid, inicioDelDia(Date.now())).catch(() => {});
     }
   };
 
@@ -627,10 +624,8 @@ export default function WorkoutScreen() {
     const out: { ts: number; label: string; what: string }[] = [];
     const rest = new Set((profile?.flexRestDays ?? []).map((t) => inicioDelDia(t)));
     for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() - i);
-      const ts = d.getTime();
+      const ts = masDias(Date.now(), -i);
+      const d = new Date(ts);
       const logsThatDay = history.filter(
         (l) => routine && l.routineId === routine.id && inicioDelDia(l.date) === ts
       );
@@ -654,7 +649,7 @@ export default function WorkoutScreen() {
             ? 'Hoy'
             : i === 1
               ? 'Ayer'
-              : d.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit' }),
+              : diaSemanaCorto(d),
         what,
       });
     }
@@ -1478,15 +1473,9 @@ export default function WorkoutScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.pastDraftTitle}>Tienes un entreno sin terminar</Text>
               <Text style={styles.pastDraftSub}>
-                {mayusculaInicial(
-                  `${pastDraft.dayName ? `${pastDraft.dayName} · ` : ''}${new Date(
-                    pastDraft.startedAt ?? pastDraft.savedAt
-                  ).toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'short',
-                  })}`
-                )}
+                {`${pastDraft.dayName ? `${pastDraft.dayName} · ` : ''}${diaSemanaCorto(
+                  pastDraft.startedAt ?? pastDraft.savedAt
+                )}`}
               </Text>
             </View>
             <View style={styles.pastDraftActions}>

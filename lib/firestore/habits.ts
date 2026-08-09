@@ -1,3 +1,4 @@
+import { inicioDelDia } from '../fechas';
 import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
@@ -8,9 +9,7 @@ const logsRef = () => collection(db, 'habitLogs');
 
 /** Inicio del día actual (medianoche local). */
 export function todayStart(): number {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+  return inicioDelDia(Date.now());
 }
 
 export async function getHabitsForClient(

@@ -1,4 +1,4 @@
-import { startOfWeek } from './stats';
+import { inicioDeLaSemana, inicioDelDia } from './fechas';
 import type { UserProfile, WorkoutLog } from './types';
 
 /**
@@ -53,9 +53,7 @@ function seriesYsesiones(logs: WorkoutLog[], desde: number, hasta: number) {
       if (hechas > 0) algo = true;
     }
     if (algo) {
-      const d = new Date(l.date);
-      d.setHours(0, 0, 0, 0);
-      dias.add(d.getTime());
+      dias.add(inicioDelDia(l.date));
     }
   }
   return { series, sesiones: dias.size };
@@ -68,7 +66,7 @@ export function tendenciaDeAlumnos(
 ): AlumnoTendencia[] {
   // Se corta por semanas naturales: comparar "los últimos 14 días" contra "los
   // 14 anteriores" a media semana mezcla trozos de semana y da saltos raros.
-  const finAhora = startOfWeek(now) + 7 * DIA_MS;
+  const finAhora = inicioDeLaSemana(now) + 7 * DIA_MS;
   const iniAhora = finAhora - VENTANA_MS;
   const iniAntes = iniAhora - VENTANA_MS;
 

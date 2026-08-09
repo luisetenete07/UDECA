@@ -63,7 +63,7 @@ import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
 import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
-import { fechaCorta } from '../../../../lib/fechas';
+import { diaMes, fechaCorta, fechaNumerica, mesLargo } from '../../../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
 import {
   CHECKIN_FIELDS,
@@ -420,10 +420,7 @@ export default function ClientDetailScreen() {
         bestPushReps: push.reps ? `${push.reps.name}: ${push.reps.value} reps` : undefined,
         bestPullReps: pull.reps ? `${pull.reps.name}: ${pull.reps.value} reps` : undefined,
         weightChangeKg: weightChange,
-        periodLabel: new Date().toLocaleDateString('es-ES', {
-          month: 'long',
-          year: 'numeric',
-        }),
+        periodLabel: mesLargo(Date.now()),
       });
       if (result === 'downloaded') showToast('Resumen descargado');
       if (!result) showToast('No se pudo generar la imagen');
@@ -847,7 +844,7 @@ export default function ClientDetailScreen() {
               <View key={p.id} style={styles.photoItem}>
                 <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
                 <Text style={styles.photoDate}>
-                  {new Date(p.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                  {diaMes(p.date)}
                 </Text>
               </View>
             ))}
@@ -1005,10 +1002,7 @@ export default function ClientDetailScreen() {
             <View key={c.id} style={styles.checkInRow}>
               <Text style={styles.checkInDate}>
                 Semana del{' '}
-                {new Date(c.weekStart).toLocaleDateString('es-ES', {
-                  day: '2-digit',
-                  month: 'short',
-                })}
+                {diaMes(c.weekStart)}
               </Text>
               <View style={styles.checkInScores}>
                 {CHECKIN_FIELDS.map((f) => (
@@ -1043,7 +1037,7 @@ export default function ClientDetailScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.logTitle}>{log.dayName}</Text>
                   <Text style={styles.logDate}>
-                    {new Date(log.date).toLocaleDateString('es-ES')}
+                    {fechaNumerica(log.date)}
                   </Text>
                 </View>
                 <Text style={styles.logExercises}>{log.exercises.length} ejercicios</Text>

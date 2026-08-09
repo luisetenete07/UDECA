@@ -1,7 +1,8 @@
+import { inicioDeLaSemana, masDias } from '../lib/fechas';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { addDays, startOfWeek } from '../lib/stats';
+
 import { colors, fonts, spacing, typography } from '../lib/theme';
 import { todayWeekday, WEEKDAY_LABELS, type Routine } from '../lib/types';
 
@@ -16,7 +17,7 @@ export function WeekStrip({
   routine: Routine | null;
   trainedDays: Set<number>;
 }) {
-  const weekStart = startOfWeek(Date.now());
+  const weekStart = inicioDeLaSemana(Date.now());
   const today = todayWeekday();
   const plannedWeekdays = new Set(
     (routine?.days ?? []).map((d) => d.weekday).filter((w): w is number => w !== undefined)
@@ -25,7 +26,7 @@ export function WeekStrip({
   return (
     <View style={styles.row}>
       {WEEKDAY_LABELS.map((label, i) => {
-        const dayTs = addDays(weekStart, i);
+        const dayTs = masDias(weekStart, i);
         const trained = trainedDays.has(dayTs);
         const planned = plannedWeekdays.has(i);
         const isToday = i === today;

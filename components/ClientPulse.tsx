@@ -1,3 +1,4 @@
+import { inicioDelDia } from '../lib/fechas';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Avatar } from './Avatar';
@@ -45,8 +46,7 @@ export function pulsoDeAlumnos(
     if (l.date > previo) ultimo.set(l.clientId, l.date);
   }
 
-  const hoy = new Date(now);
-  hoy.setHours(0, 0, 0, 0);
+  const hoy = new Date(inicioDelDia(now));
 
   return clients
     .map((c) => {

@@ -1,3 +1,4 @@
+import { fechaNumerica, inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
@@ -37,22 +38,7 @@ import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
-import {
-  isComboExercise,
-  isIsometricExercise,
-  toNum,
-  listExercisesInLogs,
-  monthKeyOf,
-  sessionTotals,
-  setsByMuscleGroup,
-  startOfWeek,
-  topExercises,
-  trainingDays,
-  weeklyActivity,
-  weeklySetsForGroups,
-  thenVsNow,
-  workoutsByMonth,
-} from '../../lib/stats';
+import { isComboExercise, isIsometricExercise, toNum, listExercisesInLogs, monthKeyOf, sessionTotals, setsByMuscleGroup, topExercises, trainingDays, weeklyActivity, weeklySetsForGroups, thenVsNow, workoutsByMonth } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
 import { confirmar } from '../../lib/confirmar';
@@ -71,9 +57,6 @@ import {
 type Tab = 'workouts' | 'weight' | 'exercises';
 
 /** Pone en mayúscula la primera letra (para "julio 2026" → "Julio 2026"). */
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 interface ProgressData {
   weightLogs: WeightLog[];
@@ -346,19 +329,14 @@ export default function ProgressScreen() {
   // sesión o en la semana. `muscleByExercise` (grupo del ejercicio) refina la
   // clasificación por nombre.
   const muscleIntensity = useMemo(() => {
-    const startOfDayTs = (ts: number) => {
-      const d = new Date(ts);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime();
-    };
     if (muscleMode === 'session') {
-      const lastSessionDay = workoutLogs.length > 0 ? startOfDayTs(workoutLogs[0].date) : 0;
-      const sessionLogs = workoutLogs.filter((l) => startOfDayTs(l.date) === lastSessionDay);
+      const lastSessionDay = workoutLogs.length > 0 ? inicioDelDia(workoutLogs[0].date) : 0;
+      const sessionLogs = workoutLogs.filter((l) => inicioDelDia(l.date) === lastSessionDay);
       return muscleLoad(sessionLogs, undefined, gruposDeEjercicio, musclesByExercise);
     }
     // Semana NATURAL (lunes 00:00 → domingo 23:59), no los últimos 7 días: al
     // pasar el domingo el mapa arranca limpio.
-    return muscleLoad(workoutLogs, startOfWeek(Date.now()), gruposDeEjercicio, musclesByExercise);
+    return muscleLoad(workoutLogs, inicioDeLaSemana(Date.now()), gruposDeEjercicio, musclesByExercise);
   }, [workoutLogs, muscleMode, gruposDeEjercicio, musclesByExercise]);
 
   const muscleMap = useMemo(
@@ -554,7 +532,7 @@ export default function ProgressScreen() {
               <FadeIn key={m.key} delay={Math.min(mi * 60, 240)}>
               <Card style={styles.section}>
                 <Pressable style={styles.monthHeader} onPress={() => toggleMonth(m.key)}>
-                  <Text style={styles.monthTitle}>{capitalize(m.label)}</Text>
+                  <Text style={styles.monthTitle}>{mayusculaInicial(m.label)}</Text>
                   <Text style={styles.monthCount}>
                     {m.sessions.length} {m.sessions.length === 1 ? 'sesión' : 'sesiones'}
                   </Text>
@@ -603,7 +581,7 @@ export default function ProgressScreen() {
                           <View style={styles.sessionDateBox}>
                             <Text style={styles.sessionDay}>{d.getDate()}</Text>
                             <Text style={styles.sessionMon}>
-                              {d.toLocaleDateString('es-ES', { month: 'short' })}
+                              {mesCorto(d)}
                             </Text>
                           </View>
                           <View style={{ flex: 1 }}>
@@ -845,7 +823,7 @@ export default function ProgressScreen() {
                 <View key={log.id} style={styles.logRow}>
                   <Text style={styles.logValue}>{log.weightKg} kg</Text>
                   <Text style={styles.logDate}>
-                    {new Date(log.date).toLocaleDateString('es-ES')}
+                    {fechaNumerica(log.date)}
                   </Text>
                   <Pressable onPress={() => handleDeleteWeight(log.id)} hitSlop={8}>
                     <Ionicons name="trash-outline" size={16} color={colors.textFaint} />

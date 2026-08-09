@@ -1,4 +1,4 @@
-import { inicioDelDia } from './fechas';
+import { inicioDelDia, nombreDelMes } from './fechas';
 
 /**
  * Pausa del plan: unos días en los que la programación no exige nada.
@@ -166,11 +166,10 @@ export function textoRango(p: PausaPlan): string {
   const a = new Date(p.desde);
   const b = new Date(p.hasta);
   const mismoMes = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
-  const mes = (d: Date) => d.toLocaleDateString('es-ES', { month: 'long' });
   if (inicioDelDia(p.desde) === inicioDelDia(p.hasta)) {
-    return `El ${a.getDate()} de ${mes(a)}`;
+    return `El ${a.getDate()} de ${nombreDelMes(a)}`;
   }
   return mismoMes
-    ? `Del ${a.getDate()} al ${b.getDate()} de ${mes(b)}`
-    : `Del ${a.getDate()} de ${mes(a)} al ${b.getDate()} de ${mes(b)}`;
+    ? `Del ${a.getDate()} al ${b.getDate()} de ${nombreDelMes(b)}`
+    : `Del ${a.getDate()} de ${nombreDelMes(a)} al ${b.getDate()} de ${nombreDelMes(b)}`;
 }

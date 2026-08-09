@@ -1,3 +1,4 @@
+import { diaMes, inicioDelDia } from '../../../../lib/fechas';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -109,11 +110,7 @@ export default function RoutineEditorScreen() {
   const [savingNew, setSavingNew] = useState(false);
   const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
   const [scheduleLabel, setScheduleLabel] = useState('Sensaciones');
-  const [cycleStartDate, setCycleStartDate] = useState<number>(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  });
+  const [cycleStartDate, setCycleStartDate] = useState<number>(() => inicioDelDia(Date.now()));
   const [restText, setRestText] = useState<Record<string, string>>({});
   // Ejercicio pendiente de mover/copiar a otro día (abre el selector de día).
   const [movePicker, setMovePicker] = useState<{ dayId: string; ex: RoutineExercise } | null>(
@@ -800,9 +797,7 @@ export default function RoutineEditorScreen() {
 
             <Pressable
               onPress={() => {
-                const d = new Date();
-                d.setHours(0, 0, 0, 0);
-                setCycleStartDate(d.getTime());
+                setCycleStartDate(inicioDelDia(Date.now()));
                 showToast('Ciclo reiniciado hoy');
               }}
               style={styles.cycleResetBtn}
@@ -810,10 +805,7 @@ export default function RoutineEditorScreen() {
               <Ionicons name="refresh" size={14} color={colors.primary} />
               <Text style={styles.cycleResetText}>
                 Empezar ciclo hoy · actual:{' '}
-                {new Date(cycleStartDate).toLocaleDateString('es-ES', {
-                  day: '2-digit',
-                  month: 'short',
-                })}
+                {diaMes(cycleStartDate)}
               </Text>
             </Pressable>
           </>

@@ -22,9 +22,7 @@ function toISO(ts: number): string {
 function fromISO(value: string): number | null {
   const [y, m, d] = value.split('-').map(Number);
   if (!y || !m || !d) return null;
-  const nd = new Date(y, m - 1, d);
-  nd.setHours(0, 0, 0, 0);
-  return nd.getTime();
+  return inicioDelDia(new Date(y, m - 1, d));
 }
 
 /**

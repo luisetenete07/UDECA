@@ -1,3 +1,4 @@
+import { diaMes, inicioDelDia } from '../../lib/fechas';
 import React, { useCallback, useState } from 'react';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -121,11 +122,7 @@ export default function MyPlanScreen() {
   const [days, setDays] = useState<RoutineDay[]>([]);
   const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
   const [scheduleLabel, setScheduleLabel] = useState('Sensaciones');
-  const [cycleStartDate, setCycleStartDate] = useState<number>(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  });
+  const [cycleStartDate, setCycleStartDate] = useState<number>(() => inicioDelDia(Date.now()));
   // Qué días están desplegados. Todos cerrados al entrar, igual que en el
   // editor del coach: son el mismo editor con el mismo gesto, y abrir el
   // primero llenaba la pantalla de campos antes de saber qué se venía a tocar.
@@ -313,9 +310,7 @@ export default function MyPlanScreen() {
             </Text>
             <Pressable
               onPress={() => {
-                const d = new Date();
-                d.setHours(0, 0, 0, 0);
-                setCycleStartDate(d.getTime());
+                setCycleStartDate(inicioDelDia(Date.now()));
                 showToast('Ciclo reiniciado hoy');
               }}
               style={styles.cycleResetBtn}
@@ -323,7 +318,7 @@ export default function MyPlanScreen() {
               <Ionicons name="refresh" size={14} color={colors.primary} />
               <Text style={styles.cycleResetText}>
                 Empezar ciclo hoy · actual:{' '}
-                {new Date(cycleStartDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                {diaMes(cycleStartDate)}
               </Text>
             </Pressable>
           </>

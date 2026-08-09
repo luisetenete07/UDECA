@@ -14,9 +14,9 @@ import {
   planCalendar,
   planEndDate,
   planSummary,
-  startOfWeek,
   totalWeeks,
 } from '../lib/cyclePlan.ts';
+import { inicioDeLaSemana } from '../lib/fechas.ts';
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEK = 7 * DAY;
@@ -109,7 +109,7 @@ comprueba(
 );
 
 console.log('\n3) Calendario y cumplimiento');
-const lunes = startOfWeek(draft.startDate);
+const lunes = inicioDeLaSemana(draft.startDate);
 // Semana 1: entrena 4 días (cumple). Semana 2: solo 1. Semana 3: ninguno.
 const logs = [
   ...[0, 1, 3, 5].map((d) => ({ date: lunes + d * DAY })),

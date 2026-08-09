@@ -7,6 +7,7 @@ import {
   type WeightLog,
   type WorkoutLog,
 } from './types';
+import { diasEntre, inicioDeLaSemana, inicioDelDia, masDias, mesLargo } from './fechas';
 
 /**
  * Convierte a número tolerando la coma decimal española (66,4 → 66.4). Sin
@@ -63,39 +64,16 @@ export function lastPerformanceByExercise(
   return result;
 }
 
-/**
- * Suma días de calendario devolviendo la medianoche local resultante.
- * Imprescindible frente a sumar milisegundos: el día del cambio de hora
- * dura 23 o 25 horas y desalinearía rachas, mapas y semanas.
+/*
+ * Las fechas viven en lib/fechas.ts, que es la única copia de cada una.
+ *
+ * Aquí había otras cuatro —`masDias`, `diasEntre`, `inicioDelDia`, `inicioDeLaSemana`—
+ * y las mismas estaban repetidas en lib/cyclePlan.ts, lib/cycleStats.ts y
+ * components/CycleProgress.tsx. Cinco versiones de "cuándo empieza la semana"
+ * son cinco oportunidades de equivocarse con el domingo, que es el fallo
+ * clásico de esa función: `getDay()` devuelve 0 y hay que retroceder seis
+ * días, no uno.
  */
-export function addDays(ts: number, n: number): number {
-  const d = new Date(ts);
-  d.setDate(d.getDate() + n);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-/**
- * Número de días de calendario entre dos fechas (b - a). El round() absorbe
- * el desfase de ±1h de los cambios de hora, así que es seguro frente a DST.
- */
-export function dayDiff(a: number, b: number): number {
-  return Math.round((startOfDay(b) - startOfDay(a)) / (1000 * 60 * 60 * 24));
-}
-
-export function startOfDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-export function startOfWeek(ts: number): number {
-  const d = new Date(ts);
-  const day = d.getDay() === 0 ? 7 : d.getDay();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - day + 1);
-  return d.getTime();
-}
 
 /**
  * Racha actual de días de entrenamiento: número de días consecutivos (hasta
@@ -134,9 +112,9 @@ function weekdayOf(ts: number): number {
 export function currentStreak(logs: WorkoutLog[], plan?: StreakPlan, floorTs?: number): number {
   if (logs.length === 0) return 0;
   const DAY = 24 * 60 * 60 * 1000;
-  const trained = new Set(logs.map((l) => startOfDay(l.date)));
+  const trained = new Set(logs.map((l) => inicioDelDia(l.date)));
   const oldest = Math.min(...trained);
-  const today = startOfDay(Date.now());
+  const today = inicioDelDia(Date.now());
 
   const r = plan?.routine;
   // ¿Tocaba entrenar el día d? true/false según el plan; null = plan desconocido.
@@ -179,7 +157,7 @@ export function currentStreak(logs: WorkoutLog[], plan?: StreakPlan, floorTs?: n
 
 /** cycleDayIndex local (evita dependencia circular con lib/schedule). */
 function cycleDayIndexForStreak(anchor: number, len: number, now: number): number {
-  const elapsed = dayDiff(anchor, now);
+  const elapsed = diasEntre(anchor, now);
   return ((elapsed % len) + len) % len;
 }
 
@@ -189,12 +167,12 @@ function cycleDayIndexForStreak(anchor: number, len: number, now: number): numbe
  * son de una anterior (la semana termina el domingo a las 23:59).
  */
 export function weekKeyOf(ts: number = Date.now()): string {
-  return String(startOfWeek(ts));
+  return String(inicioDeLaSemana(ts));
 }
 
 /** Número de sesiones registradas en la semana en curso (lunes-domingo). */
 export function sessionsThisWeek(logs: WorkoutLog[]): number {
-  const weekStart = startOfWeek(Date.now());
+  const weekStart = inicioDeLaSemana(Date.now());
   return logs.filter((l) => l.date >= weekStart).length;
 }
 
@@ -229,7 +207,7 @@ export function bestStreakInMonth(logs: WorkoutLog[], ref: number = Date.now()):
   const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
   const days = [
     ...new Set(
-      logs.filter((l) => l.date >= start && l.date < end).map((l) => startOfDay(l.date))
+      logs.filter((l) => l.date >= start && l.date < end).map((l) => inicioDelDia(l.date))
     ),
   ].sort((a, b) => a - b);
   let best = 0;
@@ -245,7 +223,7 @@ export function bestStreakInMonth(logs: WorkoutLog[], ref: number = Date.now()):
 
 /** Número de semanas distintas con al menos un entrenamiento. */
 export function activeWeeks(logs: WorkoutLog[]): number {
-  return new Set(logs.map((l) => startOfWeek(l.date))).size;
+  return new Set(logs.map((l) => inicioDeLaSemana(l.date))).size;
 }
 
 export interface Achievement {
@@ -631,13 +609,13 @@ export function weekComparison(logs: WorkoutLog[]): {
   lastWeek: number;
   activeClients: number;
 } {
-  const currentWeek = startOfWeek(Date.now());
-  const previousWeek = addDays(currentWeek, -7);
+  const currentWeek = inicioDeLaSemana(Date.now());
+  const previousWeek = masDias(currentWeek, -7);
   let thisWeek = 0;
   let lastWeek = 0;
   const active = new Set<string>();
   for (const log of logs) {
-    const week = startOfWeek(log.date);
+    const week = inicioDeLaSemana(log.date);
     if (week === currentWeek) {
       thisWeek += 1;
       active.add(log.clientId);
@@ -673,15 +651,15 @@ export function weeklySetsForGroups(
   groups: string[],
   weeks = 8
 ): { weekStart: number; byGroup: Record<string, number> }[] {
-  const currentWeek = startOfWeek(Date.now());
+  const currentWeek = inicioDeLaSemana(Date.now());
   const wanted = new Set(groups);
   const result = Array.from({ length: weeks }, (_, i) => ({
-    weekStart: addDays(currentWeek, -7 * (weeks - 1 - i)),
+    weekStart: masDias(currentWeek, -7 * (weeks - 1 - i)),
     byGroup: Object.fromEntries(groups.map((g) => [g, 0])) as Record<string, number>,
   }));
   const index = new Map(result.map((r, i) => [r.weekStart, i]));
   for (const log of logs) {
-    const i = index.get(startOfWeek(log.date));
+    const i = index.get(inicioDeLaSemana(log.date));
     if (i === undefined) continue;
     for (const ex of log.exercises) {
       const group = muscleByExercise[ex.exerciseId];
@@ -746,10 +724,7 @@ export function workoutsByMonth(
       const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
       m = {
         key,
-        label: new Date(monthStart).toLocaleDateString('es-ES', {
-          month: 'long',
-          year: 'numeric',
-        }),
+        label: mesLargo(monthStart),
         monthStart,
         sessions: [],
         totalSets: 0,
@@ -776,15 +751,15 @@ export function weeklyActivity(
   logs: WorkoutLog[],
   weeks = 8
 ): { weekStart: number; sessions: number; volumeKg: number }[] {
-  const currentWeek = startOfWeek(Date.now());
+  const currentWeek = inicioDeLaSemana(Date.now());
   const result = Array.from({ length: weeks }, (_, i) => ({
-    weekStart: addDays(currentWeek, -7 * (weeks - 1 - i)),
+    weekStart: masDias(currentWeek, -7 * (weeks - 1 - i)),
     sessions: 0,
     volumeKg: 0,
   }));
   const index = new Map(result.map((r, i) => [r.weekStart, i]));
   for (const log of logs) {
-    const i = index.get(startOfWeek(log.date));
+    const i = index.get(inicioDeLaSemana(log.date));
     if (i === undefined) continue;
     result[i].sessions += 1;
     result[i].volumeKg += sessionTotals(log.exercises).volumeKg;
@@ -817,9 +792,9 @@ export function weeklyVolume(
   muscleByExercise: Record<string, string> = {},
   weeks = 8
 ): WeeklyVolumePoint[] {
-  const currentWeek = startOfWeek(Date.now());
+  const currentWeek = inicioDeLaSemana(Date.now());
   const result: WeeklyVolumePoint[] = Array.from({ length: weeks }, (_, i) => ({
-    weekStart: addDays(currentWeek, -7 * (weeks - 1 - i)),
+    weekStart: masDias(currentWeek, -7 * (weeks - 1 - i)),
     volumeKg: 0,
     isoSeconds: 0,
     isoPushSeconds: 0,
@@ -827,7 +802,7 @@ export function weeklyVolume(
   }));
   const index = new Map(result.map((r, i) => [r.weekStart, i]));
   for (const log of logs) {
-    const i = index.get(startOfWeek(log.date));
+    const i = index.get(inicioDeLaSemana(log.date));
     if (i === undefined) continue;
     const bucket = result[i];
     for (const ex of log.exercises) {
@@ -872,7 +847,7 @@ export function topExercises(logs: WorkoutLog[], n = 5): { name: string; count: 
 
 /** Días (timestamp a medianoche) con al menos un entrenamiento. */
 export function trainingDays(logs: WorkoutLog[]): Set<number> {
-  return new Set(logs.map((l) => startOfDay(l.date)));
+  return new Set(logs.map((l) => inicioDelDia(l.date)));
 }
 
 /** Ejercicios que aparecen en el historial (id + nombre), más recientes primero. */
@@ -993,15 +968,15 @@ export function weeklyExerciseMatrix(
   weeks = 8,
   measureByExercise?: Record<string, string>
 ): WeeklyMatrix {
-  const currentWeek = startOfWeek(Date.now());
-  const weekStarts = Array.from({ length: weeks }, (_, i) => addDays(currentWeek, -7 * (weeks - 1 - i)));
+  const currentWeek = inicioDeLaSemana(Date.now());
+  const weekStarts = Array.from({ length: weeks }, (_, i) => masDias(currentWeek, -7 * (weeks - 1 - i)));
   const colOf = new Map(weekStarts.map((w, i) => [w, i]));
 
   // exerciseId -> { name, measure, cells }
   const rows = new Map<string, MatrixRow>();
 
   for (const log of logs) {
-    const col = colOf.get(startOfWeek(log.date));
+    const col = colOf.get(inicioDeLaSemana(log.date));
     if (col === undefined) continue;
     for (const ex of log.exercises) {
       const measure: 'reps' | 'seconds' =

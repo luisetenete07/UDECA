@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { diaLargo } from '../../../../lib/fechas';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,11 +59,7 @@ export default function SessionDetailScreen() {
       <Stack.Screen options={{ headerLeft: backButton }} />
       <Text style={styles.title}>{log.dayName}</Text>
       <Text style={styles.subtitle}>
-        {log.routineName} · {new Date(log.date).toLocaleDateString('es-ES', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-        })}
+        {log.routineName} · {diaLargo(log.date)}
       </Text>
 
       {log.exercises.map((ex, i) => {

@@ -1,3 +1,4 @@
+import { inicioDeLaSemana } from '../../lib/fechas';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Redirect, useFocusEffect } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
@@ -16,7 +17,7 @@ import {
   syncMySocialStats,
 } from '../../lib/firestore/social';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { monthKeyOf, startOfWeek } from '../../lib/stats';
+import { monthKeyOf } from '../../lib/stats';
 import { isOnline } from '../../lib/presence';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import type { SocialStats } from '../../lib/types';
@@ -219,7 +220,7 @@ export default function SocialScreen() {
         // → domingo 23:59), pero si aún no hay ninguno —un lunes por la mañana
         // no lo habrá— se muestran los últimos conseguidos en vez de dejar el
         // tablón vacío: el mérito no desaparece al cambiar de semana.
-        const weekStart = startOfWeek(Date.now());
+        const weekStart = inicioDeLaSemana(Date.now());
         const withPR = members
           .filter((m) => m.lastPR)
           .sort((a, b) => (b.lastPR?.date ?? 0) - (a.lastPR?.date ?? 0));

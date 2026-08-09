@@ -1,4 +1,4 @@
-import { dayDiff } from './stats';
+import { diasEntre } from './fechas';
 import { weekdayOf, type Routine, type RoutineDay } from './types';
 
 /** Nombres heredados del modo "Sensaciones" que ya no queremos mostrar. */
@@ -35,7 +35,7 @@ export interface TodaySession {
  */
 export function cycleDayIndex(cycleStartDate: number, cycleLength: number, now = Date.now()): number {
   if (cycleLength <= 0) return 0;
-  const elapsed = dayDiff(cycleStartDate, now);
+  const elapsed = diasEntre(cycleStartDate, now);
   return ((elapsed % cycleLength) + cycleLength) % cycleLength;
 }
 
