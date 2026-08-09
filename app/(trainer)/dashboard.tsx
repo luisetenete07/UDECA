@@ -1,4 +1,5 @@
-import { diaMes, fechaNumerica, inicioDelDia, inicioDelMes } from '../../lib/fechas';
+import { alumnosInactivos, resumenDeCobros } from '../../lib/cobros';
+import { diaMes, fechaNumerica, inicioDelDia } from '../../lib/fechas';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -226,23 +227,13 @@ export default function TrainerDashboard() {
   }
 
   const now = Date.now();
-  const lastLogByClient = new Map<string, number>();
-  logs.forEach((log) => {
-    const current = lastLogByClient.get(log.clientId);
-    if (!current || log.date > current) lastLogByClient.set(log.clientId, log.date);
-  });
-
-  const inactiveClients = clients.filter((client) => {
-    const last = lastLogByClient.get(client.uid);
-    if (!last) return true;
-    return (now - last) / (1000 * 60 * 60 * 24) > INACTIVE_DAYS_THRESHOLD;
-  });
+  const inactiveClients = alumnosInactivos(clients, logs, INACTIVE_DAYS_THRESHOLD, now);
 
   const wk = weekComparison(logs);
   const pulso = pulsoDeAlumnos(clients, logs);
   // Tareas de hoy: las del día sin terminar. Estaban solo en la agenda, y una
   // tarea que hay que ir a buscar es una tarea que se olvida.
-  const hoyCero = inicioDelDia(Date.now());
+  const hoyCero = inicioDelDia(now);
   const tareasHoy = tasks
     .filter((t) => !t.done && t.scope === 'day' && (t.dueDate ?? hoyCero) <= hoyCero)
     .sort((a, b) => Number(b.flagged ?? false) - Number(a.flagged ?? false))
@@ -256,58 +247,11 @@ export default function TrainerDashboard() {
   const byId = (id: string) => clients.find((c) => c.uid === id);
   // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
   const trainedToday = new Set(
-    logs.filter((l) => l.date >= inicioDelDia(Date.now())).map((l) => l.clientId)
+    logs.filter((l) => l.date >= hoyCero).map((l) => l.clientId)
   ).size;
-  // Alumnos con pago pendiente o vencido (para el atajo "Recordar pagos").
-  const duePayClients = clients.filter(
-    (c) => c.paymentStatus === 'pending' || c.paymentStatus === 'overdue'
-  );
 
-  // ----- Resumen de cobros -----
-  const feeOf = (c: UserProfile) => c.monthlyFeeEur ?? 0;
-  const pendingAmount = clients
-    .filter((c) => c.paymentStatus === 'pending' || c.paymentStatus === 'overdue')
-    .reduce((s, c) => s + feeOf(c), 0);
-  const payCounts = clients.reduce(
-    (acc, c) => {
-      if (c.paymentStatus) acc[c.paymentStatus] = (acc[c.paymentStatus] ?? 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-  const overdueCount = clients.filter(
-    (c) => c.nextPaymentDate && c.nextPaymentDate < now
-  ).length;
-  const dueSoonCount = clients.filter(
-    (c) => c.nextPaymentDate && c.nextPaymentDate >= now && c.nextPaymentDate < now + 7 * DAY_MS
-  ).length;
-  const showBilling = clients.some(
-    (c) => c.paymentStatus || c.monthlyFeeEur || c.nextPaymentDate
-  ) || payments.length > 0;
-  // Ingresos realmente cobrados este mes (a partir de los pagos registrados).
-  const monthStart = inicioDelMes(Date.now());
-  const monthPayments = payments
-    .filter((p) => p.date >= monthStart)
-    .sort((a, b) => b.date - a.date);
-  const incomeThisMonth = monthPayments.reduce((s, p) => s + (p.amountEur || 0), 0);
-  // Historial completo de ingresos (todos los pagos) + total acumulado.
-  const allPaymentsSorted = [...payments].sort((a, b) => b.date - a.date);
-  const incomeAllTime = payments.reduce((s, p) => s + (p.amountEur || 0), 0);
-  // Proyección: renovaciones con fecha en los próximos 30 días (cuota fijada).
-  const upcoming = clients.filter(
-    (c) =>
-      c.nextPaymentDate &&
-      c.nextPaymentDate >= now &&
-      c.nextPaymentDate < now + 30 * DAY_MS &&
-      (c.monthlyFeeEur ?? 0) > 0
-  );
-  const projected30 = upcoming.reduce((s, c) => s + (c.monthlyFeeEur ?? 0), 0);
-  // El próximo cobro que se avecina (aún no vencido): el alumno con la fecha
-  // de renovación más cercana. Se muestra con nombre para saber de quién es.
-  const nextPayment = clients
-    .filter((c) => c.nextPaymentDate && c.nextPaymentDate >= now)
-    .sort((a, b) => (a.nextPaymentDate ?? 0) - (b.nextPaymentDate ?? 0))[0] ?? null;
-
+  // Los cobros, enteros y comprobados aparte (ver lib/cobros.ts).
+  const cobros = resumenDeCobros(clients, payments, now);
 
   const handleApproveRequest = async (req: JoinRequest) => {
     // Aviso inmediato si ya sabemos que está lleno, para no hacerle esperar a
@@ -366,7 +310,7 @@ export default function TrainerDashboard() {
 
   // Un toque: recordatorio de pago a TODOS los alumnos con pago pendiente.
   const handleRemindAllPayments = async () => {
-    if (duePayClients.length === 0) {
+    if (cobros.aReclamar.length === 0) {
       showToast('No hay pagos pendientes');
       return;
     }
@@ -375,7 +319,7 @@ export default function TrainerDashboard() {
       // Un fallo puntual (push de un alumno sin token) NO debe tumbar el resto:
       // se avisa a todos los que se pueda y se cuentan los envíos con éxito.
       const results = await Promise.allSettled(
-        duePayClients.map((c) =>
+        cobros.aReclamar.map((c) =>
           notifyUser(
             c.uid,
             'Recordatorio de pago',
@@ -493,7 +437,7 @@ export default function TrainerDashboard() {
   // Historial agrupado por alumno (para la vista "Histórico" tipo Excel).
   const incomeByClient = (() => {
     const m = new Map<string, import('../../lib/types').Payment[]>();
-    for (const p of allPaymentsSorted) {
+    for (const p of cobros.pagos) {
       const arr = m.get(p.clientId) ?? [];
       arr.push(p);
       m.set(p.clientId, arr);
@@ -603,7 +547,7 @@ export default function TrainerDashboard() {
           milisegundos por detrás del anterior. Es lo que hace que la pantalla
           se sienta viva sin que nada se mueva mientras se usa — una animación
           que sigue en marcha cuando ya estás leyendo, molesta. */}
-      {requests.length > 0 || overdueCount > 0 ? (
+      {requests.length > 0 || cobros.vencidos > 0 ? (
         <FadeIn>
         <Card accent style={styles.section}>
           <View style={styles.titleRow}>
@@ -614,15 +558,15 @@ export default function TrainerDashboard() {
               pestaña de Clientes: desde ahí habría que buscar a mano quiénes
               son y volver. La respuesta a "¿quién me debe?" se da donde se
               hace la pregunta. */}
-          {overdueCount > 0 ? (
+          {cobros.vencidos > 0 ? (
             <Pressable style={styles.attentionRow} onPress={() => setPayListOpen(true)}>
               <View style={[styles.attentionIcon, { backgroundColor: colors.dangerMuted }]}>
                 <Ionicons name="cash-outline" size={17} color={colors.danger} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.attentionTitle}>
-                  {overdueCount} pago{overdueCount === 1 ? '' : 's'} vencido
-                  {overdueCount === 1 ? '' : 's'}
+                  {cobros.vencidos} pago{cobros.vencidos === 1 ? '' : 's'} vencido
+                  {cobros.vencidos === 1 ? '' : 's'}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
@@ -970,9 +914,9 @@ export default function TrainerDashboard() {
         >
           <View>
             <Ionicons name="cash-outline" size={20} color={colors.primary} />
-            {duePayClients.length > 0 && !paysReminded ? (
+            {cobros.aReclamar.length > 0 && !paysReminded ? (
               <View style={styles.quickBadge}>
-                <Text style={styles.quickBadgeText}>{duePayClients.length}</Text>
+                <Text style={styles.quickBadgeText}>{cobros.aReclamar.length}</Text>
               </View>
             ) : null}
           </View>
@@ -984,18 +928,18 @@ export default function TrainerDashboard() {
       </FadeIn>
 
 
-      {showBilling ? (
+      {cobros.hayDatos ? (
         <FadeIn delay={210}>
         <View style={styles.section}>
         <CollapsibleCard
           id="cobros"
           icon="cash-outline"
           title="Cobros del mes"
-          hint={`${incomeThisMonth} € · ${pendingAmount} € pendiente`}
+          hint={`${cobros.ingresoDelMes} € · ${cobros.importePendiente} € pendiente`}
         >
           <View style={styles.revenueRow}>
             <Pressable style={styles.revenueBox} onPress={() => setIncomeOpen(true)}>
-              <CountUp value={incomeThisMonth} suffix=" €" style={styles.revenueValue} />
+              <CountUp value={cobros.ingresoDelMes} suffix=" €" style={styles.revenueValue} />
               <Text style={styles.revenueLabel}>Ingresado este mes</Text>
               <Ionicons
                 name="create-outline"
@@ -1006,11 +950,11 @@ export default function TrainerDashboard() {
             </Pressable>
             <Pressable style={styles.revenueBox} onPress={() => setPayListOpen(true)}>
               <CountUp
-                value={pendingAmount}
+                value={cobros.importePendiente}
                 suffix=" €"
                 style={[styles.revenueValue, { color: '#C9902B' }]}
               />
-              <Text style={styles.revenueLabel}>Pendiente ({duePayClients.length})</Text>
+              <Text style={styles.revenueLabel}>Pendiente ({cobros.aReclamar.length})</Text>
               <Ionicons
                 name="chevron-forward"
                 size={13}
@@ -1018,15 +962,15 @@ export default function TrainerDashboard() {
                 style={styles.revenueBoxIcon}
               />
             </Pressable>
-            {projected30 > 0 ? (
+            {cobros.previsto30 > 0 ? (
               <Pressable style={styles.revenueBox} onPress={() => setUpcomingOpen(true)}>
                 <CountUp
-                  value={projected30}
+                  value={cobros.previsto30}
                   suffix=" €"
                   style={[styles.revenueValue, { color: colors.textMuted }]}
                 />
                 <Text style={styles.revenueLabel}>
-                  Previsto 30 días ({upcoming.length})
+                  Previsto 30 días ({cobros.renuevanEn30.length})
                 </Text>
                 <Ionicons
                   name="chevron-forward"
@@ -1037,38 +981,38 @@ export default function TrainerDashboard() {
               </Pressable>
             ) : null}
           </View>
-          {nextPayment ? (
+          {cobros.proximoCobro ? (
             <Pressable
-              onPress={() => router.push(`/(trainer)/clients/${nextPayment.uid}`)}
+              onPress={() => router.push(`/(trainer)/clients/${cobros.proximoCobro!.uid}`)}
               style={styles.nextPayRow}
               hitSlop={4}
             >
-              <Avatar name={nextPayment.name} photoURL={nextPayment.photoURL} size={30} />
+              <Avatar name={cobros.proximoCobro.name} photoURL={cobros.proximoCobro.photoURL} size={30} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.nextPayLabel}>Próximo cobro</Text>
                 <Text style={styles.nextPayName} numberOfLines={1}>
-                  {nextPayment.name}
-                  {nextPayment.monthlyFeeEur ? ` · ${nextPayment.monthlyFeeEur} €` : ''}
+                  {cobros.proximoCobro.name}
+                  {cobros.proximoCobro.monthlyFeeEur ? ` · ${cobros.proximoCobro.monthlyFeeEur} €` : ''}
                 </Text>
               </View>
               <Text style={styles.nextPayDate}>
-                {diaMes(nextPayment.nextPaymentDate!)}
+                {diaMes(cobros.proximoCobro.nextPaymentDate!)}
               </Text>
             </Pressable>
           ) : null}
           <View style={styles.countsRow}>
-            {PAYMENT_STATUSES.filter((p) => payCounts[p]).map((p) => (
+            {PAYMENT_STATUSES.filter((p) => cobros.porEstado[p]).map((p) => (
               <View key={p} style={styles.countChip}>
                 <View
                   style={[styles.dot, { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[p]] }]}
                 />
                 <Text style={styles.countText}>
-                  {payCounts[p]} {PAYMENT_STATUS_LABEL[p]}
+                  {cobros.porEstado[p]} {PAYMENT_STATUS_LABEL[p]}
                 </Text>
               </View>
             ))}
           </View>
-          {duePayClients.length > 0 ? (
+          {cobros.aReclamar.length > 0 ? (
             <Pressable
               onPress={() => setPayListOpen(true)}
               style={styles.dueBanner}
@@ -1076,8 +1020,8 @@ export default function TrainerDashboard() {
             >
               <Ionicons name="alert-circle" size={15} color={colors.danger} />
               <Text style={styles.dueText}>
-                {duePayClients.length} pago{duePayClients.length === 1 ? '' : 's'} pendiente
-                {duePayClients.length === 1 ? '' : 's'}
+                {cobros.aReclamar.length} pago{cobros.aReclamar.length === 1 ? '' : 's'} pendiente
+                {cobros.aReclamar.length === 1 ? '' : 's'}
               </Text>
               <Ionicons name="chevron-forward" size={14} color={colors.danger} />
             </Pressable>
@@ -1123,12 +1067,12 @@ export default function TrainerDashboard() {
       <Sheet
         visible={payListOpen}
         onClose={() => setPayListOpen(false)}
-        titulo={`Pagos pendientes (${duePayClients.length})`}
+        titulo={`Pagos pendientes (${cobros.aReclamar.length})`}
       >
-            {duePayClients.length === 0 ? (
+            {cobros.aReclamar.length === 0 ? (
               <Text style={styles.mutedText}>No hay pagos pendientes.</Text>
             ) : (
-              duePayClients.map((c) => (
+              cobros.aReclamar.map((c) => (
                 <View key={c.uid} style={styles.payRow}>
                   <Pressable
                     onPress={() => {
@@ -1210,7 +1154,7 @@ export default function TrainerDashboard() {
                 {incomeScope === 'month' ? 'Ingresado este mes' : 'Total ingresado hasta la fecha'}
               </Text>
               <Text style={styles.totalValue}>
-                {(incomeScope === 'month' ? incomeThisMonth : incomeAllTime).toLocaleString('es-ES')}{' '}
+                {(incomeScope === 'month' ? cobros.ingresoDelMes : cobros.ingresoTotal).toLocaleString('es-ES')}{' '}
                 €
               </Text>
             </View>
@@ -1218,11 +1162,11 @@ export default function TrainerDashboard() {
               Ajusta el importe o elimina un pago si hubo un error.
             </Text>
             {incomeScope === 'month' ? (
-              monthPayments.length === 0 ? (
+              cobros.pagosDelMes.length === 0 ? (
                 <Text style={styles.mutedText}>Aún no hay pagos registrados este mes.</Text>
               ) : (
                 <ScrollView style={{ maxHeight: 400 }}>
-                  {monthPayments.map((p) => renderPayRow(p, true))}
+                  {cobros.pagosDelMes.map((p) => renderPayRow(p, true))}
                 </ScrollView>
               )
             ) : incomeByClient.length === 0 ? (
@@ -1251,13 +1195,13 @@ export default function TrainerDashboard() {
       <Sheet
         visible={upcomingOpen}
         onClose={() => setUpcomingOpen(false)}
-        titulo={`Previsto 30 días (${projected30} €)`}
+        titulo={`Previsto 30 días (${cobros.previsto30} €)`}
       >
-            {upcoming.length === 0 ? (
+            {cobros.renuevanEn30.length === 0 ? (
               <Text style={styles.mutedText}>No hay renovaciones previstas en 30 días.</Text>
             ) : (
               <ScrollView style={{ maxHeight: 420 }}>
-                {upcoming
+                {cobros.renuevanEn30
                   .slice()
                   .sort((a, b) => (a.nextPaymentDate ?? 0) - (b.nextPaymentDate ?? 0))
                   .map((c) => (
