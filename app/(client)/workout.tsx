@@ -405,12 +405,11 @@ export default function WorkoutScreen() {
           setViewIndex(draft.viewIndex ?? (resume >= 0 ? resume : 0));
           restoredHere = true;
         } else if (draftDay < today) {
-          // El borrador principal es de un día anterior: pásalo a "pendiente" para
-          // que empezar hoy no lo borre, y libéralo del borrador/sesión activos.
+          // El borrador principal es de un día anterior: se guarda como
+          // "pendiente" ANTES de olvidarlo, para que empezar hoy no lo borre.
+          // El orden importa: al revés se perdería el entreno de ayer.
           AsyncStorage.setItem(pendingKey(uid), JSON.stringify(draft)).catch(() => {});
-          AsyncStorage.removeItem(draftKey(uid)).catch(() => {});
-          clearActiveSession(uid);
-          remoteDraftRef.current = null;
+          olvidarBorrador();
           pending = draft;
         }
       }
@@ -485,16 +484,48 @@ export default function WorkoutScreen() {
     };
   }, []);
 
-  const discardDraft = () => {
-    if (!routine || !selectedDayId) return;
-    const day = routine.days.find((d) => d.id === selectedDayId);
+  /**
+   * Olvida el borrador de la sesión, entero.
+   *
+   * Un borrador vive en TRES sitios —el disco de este móvil, la cuenta (para
+   * que otro dispositivo lo recoja) y la subida en cola que aún no ha salido—
+   * y olvidarlo mal es peor que no olvidarlo: si se borra el del disco pero no
+   * el de la cuenta, vuelve solo al abrir la pantalla y el alumno se encuentra
+   * un entreno que creía terminado. Estaba escrito cinco veces, y cada copia
+   * era una ocasión de dejarse uno de los tres.
+   *
+   * `tambienElPendiente` borra además el de arrastre, el de un día anterior
+   * que quedó sin terminar. Solo se hace al guardar de verdad: en los demás
+   * casos ese entreno sigue esperando y no hay por qué tirarlo.
+   */
+  const olvidarBorrador = ({ tambienElPendiente = false } = {}) => {
     if (profile) {
       AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
+      if (tambienElPendiente) AsyncStorage.removeItem(pendingKey(profile.uid)).catch(() => {});
       clearActiveSession(profile.uid);
     }
     remoteDraftRef.current = null;
     if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
-    if (day) setLog(buildLog(day));
+  };
+
+  /**
+   * Devuelve la pantalla al día tal y como está en la rutina, sin nada
+   * apuntado. Es lo que hay que hacer después de guardar o de cancelar: si el
+   * log se quedara lleno de series marcadas, la pantalla creería que hay un
+   * entreno en curso.
+   */
+  const dejarElDiaLimpio = () => {
+    const diaReal = routine?.days.find((d) => d.id === selectedDayId);
+    const limpio = diaReal ? buildLog(diaReal) : [];
+    setLog(limpio);
+    pristineRef.current = JSON.stringify(limpio);
+    setViewIndex(0);
+  };
+
+  const discardDraft = () => {
+    if (!routine || !selectedDayId) return;
+    olvidarBorrador();
+    dejarElDiaLimpio();
     startedAt.current = null;
     setRestored(false);
   };
@@ -586,11 +617,7 @@ export default function WorkoutScreen() {
     setViewIndex(0);
     setRestored(false);
     startedAt.current = null;
-    if (profile) {
-      AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
-      clearActiveSession(profile.uid);
-    }
-    remoteDraftRef.current = null;
+    olvidarBorrador();
     stopRest();
   };
 
@@ -1011,17 +1038,8 @@ export default function WorkoutScreen() {
     if (!routine) return;
     setCorrigiendo(null);
     setCombinedDay(null);
-    const diaReal = routine.days.find((d) => d.id === selectedDayId);
-    const limpio = diaReal ? buildLog(diaReal) : [];
-    setLog(limpio);
-    pristineRef.current = JSON.stringify(limpio);
-    setViewIndex(0);
-    if (profile) {
-      AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
-      clearActiveSession(profile.uid);
-    }
-    remoteDraftRef.current = null;
-    if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
+    dejarElDiaLimpio();
+    olvidarBorrador();
   };
 
   // Lo que se toca una vez al mes vive detrás del punto de la cabecera, no
@@ -1141,18 +1159,11 @@ export default function WorkoutScreen() {
         setCombinedDay(null);
         // Se vuelve a dejar el día como está: si el log siguiera lleno de
         // series marcadas, la pantalla creería que hay un entreno en curso y
-        // no volvería a enseñar la tarjeta de terminado.
-        const diaReal = routine.days.find((d) => d.id === selectedDayId);
-        const limpio = diaReal ? buildLog(diaReal) : [];
-        setLog(limpio);
-        pristineRef.current = JSON.stringify(limpio);
-        // El borrador que se haya ido escribiendo mientras se corregía ya no
-        // vale: si se quedara, mañana se ofrecería como "entreno sin terminar".
-        AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
-        clearActiveSession(profile.uid);
-        remoteDraftRef.current = null;
-        if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
-        setViewIndex(0);
+        // no volvería a enseñar la tarjeta de terminado. Y el borrador que se
+        // haya ido escribiendo mientras se corregía ya no vale: si se quedara,
+        // mañana se ofrecería como "entreno sin terminar".
+        dejarElDiaLimpio();
+        olvidarBorrador();
         showToast('Entreno corregido');
         return;
       }
@@ -1199,13 +1210,9 @@ export default function WorkoutScreen() {
       // si a las 19:40 el alumno ya lo ha dado por terminado.
       cancelarAvisosOlvido().catch(() => {});
       stopRest();
-      if (profile) {
-        AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
-        AsyncStorage.removeItem(pendingKey(profile.uid)).catch(() => {});
-        clearActiveSession(profile.uid);
-      }
-      remoteDraftRef.current = null;
-      if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
+      // También el de arrastre: la sesión ya está registrada, así que ese
+      // entreno de un día anterior deja de estar esperando.
+      olvidarBorrador({ tambienElPendiente: true });
       setRestored(false);
       setResumeDate(null);
       setPastDraft(null);
