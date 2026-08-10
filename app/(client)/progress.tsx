@@ -1,3 +1,4 @@
+import { unido } from '../../lib/texto';
 import { fechaNumerica, inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -566,14 +567,12 @@ export default function ProgressScreen() {
                   const t = sessionTotals(s.exercises, measureByExercise);
                   const open = expandedSessions[s.id];
                   const d = new Date(s.date);
-                  const meta = [
+                  const meta = unido(
                     `${t.sets} series`,
-                    t.reps > 0 ? `${t.reps} reps` : null,
-                    t.seconds > 0 ? `${t.seconds}s` : null,
-                    t.volumeKg > 0 ? `${t.volumeKg.toLocaleString('es-ES')} kg` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ');
+                    t.reps > 0 && `${t.reps} reps`,
+                    t.seconds > 0 && `${t.seconds}s`,
+                    t.volumeKg > 0 && `${t.volumeKg.toLocaleString('es-ES')} kg`
+                  );
                   return (
                     <View key={s.id}>
                       <View style={styles.sessionRow}>

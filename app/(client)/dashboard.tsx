@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { diaLargo, diaMes, diaYMes, esHoy, inicioDelDia } from '../../lib/fechas';
+import { unido } from '../../lib/texto';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -258,11 +259,22 @@ export default function ClientDashboard() {
   const nextDay = todaySession.day;
   const isCycle = routine?.schedule === 'cycle';
 
+  /*
+   * El aviso de peso solo se le pone a quien YA se pesa.
+   *
+   * Antes salía también a quien no lo había registrado nunca, y a ese no había
+   * forma de quitárselo: un recordatorio ámbar en su pantalla de inicio, todos
+   * los días, para siempre, por no usar algo que es opcional. Eso no es un
+   * recordatorio, es una piedra en el zapato.
+   *
+   * A quien empieza ya se lo ofrece "Primeros pasos" —una vez, con su casilla
+   * y su forma de darlo por hecho—, así que el aviso no aportaba nada nuevo:
+   * repetía la misma invitación sin la salida.
+   */
   const lastWeightLog = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
-  const daysSinceWeight = lastWeightLog
-    ? (Date.now() - lastWeightLog.date) / (1000 * 60 * 60 * 24)
-    : Infinity;
-  const showWeightReminder = daysSinceWeight > WEIGHT_REMINDER_DAYS;
+  const showWeightReminder =
+    !!lastWeightLog &&
+    (Date.now() - lastWeightLog.date) / (1000 * 60 * 60 * 24) > WEIGHT_REMINDER_DAYS;
 
   const today = todayStart();
   const todayLogByHabit = new Map(
@@ -557,9 +569,11 @@ export default function ClientDashboard() {
               {routine?.schedule === 'flex'
                 ? `${flexLabel(routine.scheduleLabel)} · eliges tú`
                 : isCycle
-                  ? `Días sueltos · ${todaySession.cycleLabel ?? ''}${
-                      todaySession.day?.intensity ? ` · Int. ${todaySession.day.intensity}/10` : ''
-                    }`
+                  ? unido(
+                      'Días sueltos',
+                      todaySession.cycleLabel,
+                      todaySession.day?.intensity && `Int. ${todaySession.day.intensity}/10`
+                    )
                   : todaysDay
                     ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}`
                     : 'Tu entrenamiento'}
@@ -643,9 +657,7 @@ export default function ClientDashboard() {
           <View style={styles.reminderBanner}>
             <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
             <Text style={styles.reminderText}>
-              {lastWeightLog
-                ? 'Llevas más de una semana sin registrar tu peso.'
-                : 'Todavía no has registrado tu peso. Empieza tu seguimiento.'}
+              Llevas más de una semana sin registrar tu peso.
             </Text>
           </View>
         </Pressable>

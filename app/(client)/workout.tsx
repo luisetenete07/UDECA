@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { diaLargo, diaSemanaCorto, esMismoDia, inicioDelDia, masDias } from '../../lib/fechas';
+import { unido } from '../../lib/texto';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
 import {
   AppState,
@@ -1278,7 +1279,7 @@ export default function WorkoutScreen() {
       <ResumenEntreno
         cifras={summary}
         titulo="¡Entrenamiento completado!"
-        subtitulo={`${routine.name} · ${day?.name ?? ''}`}
+        subtitulo={unido(routine.name, day?.name)}
         prs={summary.prs}
         logros={summary.newAchievements}
         racha={summary.streak}
@@ -1725,12 +1726,10 @@ export default function WorkoutScreen() {
         // lleva una casilla por bloque y un botón para ese descanso corto.
         const cluster = planned?.cluster;
         const bloques = cluster ? clusterBlocks(cluster) : 1;
-        const categoriaEjercicio = [
+        const categoriaEjercicio = unido(
           planned?.muscleGroup ?? muscleByExercise[exercise.exerciseId],
-          planned?.subgroup,
-        ]
-          .filter(Boolean)
-          .join(' · ');
+          planned?.subgroup
+        );
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
