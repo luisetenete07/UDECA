@@ -553,13 +553,18 @@ export default function ClientDetailScreen() {
         {/* Lo que hace el botón, debajo del botón: metido entre paréntesis en
             el propio rótulo partía el texto en dos líneas y se leía peor. */}
         <Text style={styles.payHint}>Suma un mes a la fecha de arriba.</Text>
+        {/* Dos piezas en la fila y no tres. Quitar la fecha estaba metido aquí
+            como un botón cuadrado, y además de dejar la fila a tres alturas
+            distintas ponía una acción destructiva a un dedo de una que se usa
+            a diario. Ahora va abajo, como enlace, igual que el resto de lo
+            destructivo en la app. */}
         <View style={styles.payBtnRow}>
           <TextField
             value={extendDaysInput}
             onChangeText={setExtendDaysInput}
             keyboardType="number-pad"
             placeholder="Días"
-            style={styles.daysField}
+            containerStyle={styles.daysField}
           />
           <Button
             title="Añadir días"
@@ -568,13 +573,13 @@ export default function ClientDetailScreen() {
             disabled={!(parseInt(extendDaysInput, 10) > 0)}
             style={{ flex: 1 }}
           />
-          {client.nextPaymentDate ? (
-            <Pressable onPress={handleClearNextPayment} style={styles.clearDateBtn} hitSlop={6}>
-              <Ionicons name="calendar-outline" size={16} color={colors.danger} />
-              <Ionicons name="close" size={12} color={colors.danger} style={styles.clearDateX} />
-            </Pressable>
-          ) : null}
         </View>
+        {client.nextPaymentDate ? (
+          <Pressable onPress={handleClearNextPayment} style={styles.quitarFecha} hitSlop={8}>
+            <Ionicons name="close-circle-outline" size={14} color={colors.textFaint} />
+            <Text style={styles.quitarFechaTexto}>Quitar la fecha de próximo pago</Text>
+          </Pressable>
+        ) : null}
 
         {client.paymentStatus === 'pending' || client.paymentStatus === 'overdue' ? (
           <Button
@@ -1184,19 +1189,25 @@ const styles = StyleSheet.create({
     ...tabularNums,
   },
   payHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.xs, textAlign: 'center' },
-  payBtnRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  daysField: { width: 76, marginBottom: 0, textAlign: 'center' },
-  clearDateBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
+  // `stretch` para que el campo y el botón midan lo mismo: sus alturas
+  // naturales no coinciden y centrados quedaban desalineados.
+  payBtnRow: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm, marginTop: spacing.sm },
+  daysField: { width: 84, marginBottom: 0 },
+  /*
+   * 52 de alto, como el campo y el botón que tiene al lado.
+   *
+   * Estaba en 44 y con `alignItems: 'center'` flotaba en medio de la fila,
+   * ocho píxeles más bajo que sus dos vecinos. Es de esas cosas que no se
+   * saben nombrar pero se ven: la fila parecía mal montada.
+   */
+  quitarFecha: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
   },
-  clearDateX: { marginLeft: -3, marginTop: -8 },
+  quitarFechaTexto: { ...typography.small, color: colors.textFaint },
   payChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
