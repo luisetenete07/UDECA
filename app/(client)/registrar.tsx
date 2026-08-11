@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import { useFocusEffect } from 'expo-router';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Chip, ChipRow } from '../../components/Chip';
+import { DictarEntreno } from '../../components/DictarEntreno';
 import { EmptyState } from '../../components/EmptyState';
 import { CardsSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -21,6 +22,7 @@ import {
 } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { notifyUser } from '../../lib/notifications';
+import { aLog, catalogoParaLaIA, diaMasProbable, type Dictado } from '../../lib/dictado';
 import {
   conUnaSerieMas,
   conUnaSerieMenos,
@@ -34,6 +36,7 @@ import {
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import { EXERCISE_MEASURES, isHoldMeasure, resolveLoad } from '../../lib/types';
 import type {
+  Exercise,
   ExerciseMeasure,
   LoggedExercise,
   Routine,
@@ -66,6 +69,8 @@ export default function RegistrarScreen() {
   const [log, setLog] = useState<LoggedExercise[]>([]);
   const [medidas, setMedidas] = useState<Record<string, ExerciseMeasure>>({});
   const [minutos, setMinutos] = useState('');
+  const [biblioteca, setBiblioteca] = useState<Exercise[]>([]);
+  const [dictadoAbierto, setDictadoAbierto] = useState(false);
 
   /** La medida que vale: la del plan, si no la de la biblioteca, si no reps. */
   const medidaDe = (ex: LoggedExercise): ExerciseMeasure => {
@@ -92,6 +97,7 @@ export default function RegistrarScreen() {
         if (cancelado) return;
         setRoutine(r);
         setLogs(hist);
+        setBiblioteca(biblioteca);
         // La medida ACTUAL de cada ejercicio (repeticiones o segundos). Sin
         // ella, un aguante de 30 segundos se guardaría como 30 repeticiones y
         // el volumen del histórico contaría lo que no es.
@@ -129,8 +135,21 @@ export default function RegistrarScreen() {
     );
   };
 
-  const guardar = async () => {
-    if (!profile || !routine || !diaDelPlan) return;
+  /**
+   * Guardar con unos datos concretos, no con lo que haya en pantalla.
+   *
+   * Existe así por el dictado: cuando la IA rellena y registra de una vez, el
+   * estado de React todavía no se ha actualizado y guardar "lo que hay" sería
+   * guardar lo de antes. Se le pasan los datos a la cara.
+   */
+  const guardarCon = async (datos: {
+    log: LoggedExercise[];
+    dia: number;
+    diaPlan: RoutineDay;
+    minutos: string;
+  }) => {
+    const { log, dia, diaPlan, minutos } = datos;
+    if (!profile || !routine) return;
     if (!hayAlgoQueGuardar(log)) {
       showToast('Ponle al menos una serie');
       return;
@@ -143,7 +162,7 @@ export default function RegistrarScreen() {
         clientId: profile.uid,
         routineId: routine.id,
         routineName: routine.name,
-        dayName: diaDelPlan.name,
+        dayName: diaPlan.name,
         date: fechaDelRegistro(dia),
         // Se sella la medida, igual que al terminar una sesión: así el
         // histórico y las estadísticas lo leen bien años después aunque la
@@ -160,7 +179,7 @@ export default function RegistrarScreen() {
         notifyUser(
           routine.trainerId,
           'Entreno registrado',
-          `${profile.name.split(' ')[0]} ha registrado ${diaDelPlan.name} del ${diaYMes(dia)}.`
+          `${profile.name.split(' ')[0]} ha registrado ${diaPlan.name} del ${diaYMes(dia)}.`
         ).catch(() => {});
       }
       showToast('Entreno registrado');
@@ -169,6 +188,36 @@ export default function RegistrarScreen() {
       showToast(e instanceof Error ? e.message : 'No se pudo registrar');
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const guardar = () => {
+    if (!diaDelPlan) return;
+    guardarCon({ log, dia, diaPlan: diaDelPlan, minutos });
+  };
+
+  /** Los ejercicios entre los que la IA puede elegir al oír el dictado. */
+  const catalogo = useMemo(() => catalogoParaLaIA(routine, biblioteca), [routine, biblioteca]);
+
+  /**
+   * Lo dictado, ya en la pantalla.
+   *
+   * Manda sobre lo que hubiera puesto: día, entreno, ejercicios y duración. Lo
+   * dictado es lo que se hizo; lo que había era una plantilla del plan que
+   * nadie ha confirmado todavía.
+   */
+  const aplicarDictado = (d: Dictado, registrar: boolean) => {
+    const nuevoLog = aLog(d, catalogo);
+    const cuando = d.haceDias !== undefined ? (diasParaElegir()[d.haceDias] ?? dia) : dia;
+    const planDia = diaMasProbable(d, routine, diaDelPlan);
+    const nuevosMinutos = d.duracionMin ? String(d.duracionMin) : minutos;
+    setLog(nuevoLog);
+    setDia(cuando);
+    if (planDia) setDiaId(planDia.id);
+    setMinutos(nuevosMinutos);
+    setDictadoAbierto(false);
+    if (registrar && planDia) {
+      guardarCon({ log: nuevoLog, dia: cuando, diaPlan: planDia, minutos: nuevosMinutos });
     }
   };
 
@@ -202,6 +251,22 @@ export default function RegistrarScreen() {
         />
       ) : (
         <>
+          {/* Antes que rellenar treinta casillas: contarlo. Va arriba del todo
+              porque el que llega aquí tres días después no viene con ganas de
+              escribir, y si el atajo está abajo no lo ve nadie. */}
+          <Pressable style={styles.dictar} onPress={() => setDictadoAbierto(true)}>
+            <View style={styles.dictarIcono}>
+              <Ionicons name="mic" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.dictarTexto}>
+              <Text style={styles.dictarTitulo}>Cuéntamelo hablando</Text>
+              <Text style={styles.dictarPie}>
+                Dime las series y las marcas en voz alta y lo apunto yo.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+
           <Card accent style={styles.tarjeta}>
             <Text style={styles.tituloTarjeta}>¿Qué día fue?</Text>
             <ChipRow scroll>
@@ -326,6 +391,13 @@ export default function RegistrarScreen() {
             loading={guardando}
             disabled={!hayAlgoQueGuardar(log)}
           />
+
+          <DictarEntreno
+            visible={dictadoAbierto}
+            onClose={() => setDictadoAbierto(false)}
+            catalogo={catalogo}
+            onAplicar={aplicarDictado}
+          />
         </>
       )}
     </ScreenContainer>
@@ -344,6 +416,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   tarjeta: { marginBottom: spacing.md },
+  dictar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceAlt,
+  },
+  dictarIcono: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  dictarTexto: { flex: 1, gap: 2 },
+  dictarTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  dictarPie: { ...typography.small, color: colors.textMuted, lineHeight: 17 },
   tituloTarjeta: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   texto: { ...typography.small, color: colors.textMuted },
   aviso: {

@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Webhook de Stripe para confirmar cobros de UDECA automáticamente (desplegable gratis en Vercel).",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
     "firebase-admin": "^12.7.0",
     "stripe": "^17.5.0"
   }

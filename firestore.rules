@@ -624,5 +624,18 @@ service cloud.firestore {
     match /config/{docId} {
       allow read, write: if false;
     }
+
+    /**
+     * Cuántos dictados de entreno lleva hoy cada persona.
+     *
+     * Cada dictado es una llamada a la IA y cada llamada cuesta dinero de
+     * verdad, así que hay un tope diario por cuenta. Cerrada por completo: si
+     * se pudiera escribir desde la app, el tope lo pondría quien quisiera
+     * saltárselo. La lleva api/apuntar-entreno con permisos de administrador,
+     * que no pasan por estas reglas.
+     */
+    match /aiUsage/{clave} {
+      allow read, write: if false;
+    }
   }
 }

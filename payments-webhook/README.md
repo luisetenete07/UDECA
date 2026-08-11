@@ -77,3 +77,34 @@ respaldo por si algún pago no cuadra o se cobra por otro medio.
   cobro dos veces.
 - Bizum/PayPal no tienen webhook aquí: para esos, se sigue usando el flujo manual
   ("Ya he pagado" → confirmar).
+
+## Extra · Apuntar el entreno dictado por voz (`/api/apuntar-entreno`)
+
+Cuando alguien registra un entreno de días atrás, puede contarlo hablando en vez
+de rellenar treinta casillas. El móvil pasa la voz a texto (el dictado del
+teclado, o el del navegador en el ordenador) y este endpoint convierte ese texto
+en series y marcas usando la API de Anthropic.
+
+Vive aquí, y no en la app, porque **la clave es un secreto y el repositorio de la
+app es público**: una clave metida en la app se saca del paquete en dos minutos
+y la factura la paga UDECA.
+
+| Variable | Valor |
+|---|---|
+| `ANTHROPIC_API_KEY` | Tu clave de https://console.anthropic.com (empieza por `sk-ant-…`) |
+| `ANTHROPIC_MODEL` | *(opcional)* el modelo a usar. Sin ella se usa el que trae por defecto |
+
+Notas:
+
+- Solo atiende a quien tiene sesión iniciada en la app, y hay que demostrarlo con
+  el token de Firebase: el `uid` no se acepta en el cuerpo de la petición.
+- Hay un **tope de 40 dictados por persona y día**, contado en la colección
+  `aiUsage` de Firestore. Es lo que impide que una cuenta desbocada se lleve la
+  factura por delante.
+- El endpoint **no escribe nada** en el histórico: devuelve lo que ha entendido y
+  la app se lo enseña a la persona, que es quien confirma. Una IA que escribe
+  sola en el historial de alguien es una IA que un día le apunta cuarenta
+  dominadas que no hizo.
+- Si no pones `ANTHROPIC_API_KEY`, el resto de la app funciona igual: el botón de
+  dictar avisa de que no se pudo apuntar y el entreno se sigue registrando a
+  mano.
