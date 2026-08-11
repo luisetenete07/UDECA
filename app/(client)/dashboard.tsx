@@ -668,6 +668,24 @@ export default function ClientDashboard() {
         </Pressable>
       ) : null}
 
+      {/* La temporada. El atleta no tiene a nadie que le diga cuándo apretar y
+          cuándo soltar: si no se lo reparte él, no se lo reparte nadie. */}
+      {profile?.role === 'athlete' ? (
+        <Pressable
+          onPress={() => router.push('/(client)/planning')}
+          style={styles.myPlanEntry}
+        >
+          <View style={styles.myPlanIcon}>
+            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.myPlanTitle}>Mi temporada</Text>
+            <Text style={styles.myPlanSub}>Bloques, semanas y descargas.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </Pressable>
+      ) : null}
+
       {showWeightReminder ? (
         <Pressable onPress={() => router.push('/(client)/progress')}>
           <View style={styles.reminderBanner}>

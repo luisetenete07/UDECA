@@ -11,6 +11,7 @@ import {
   buildPlan,
   buildCycleTree,
   descendantIds,
+  bandasDelPlan,
   planCalendar,
   planEndDate,
   planSummary,
@@ -145,6 +146,27 @@ comprueba(
   String(Math.round(resumen.adherence * 100))
 );
 comprueba('el bloque actual es Acumulación', resumen.block?.name === 'Acumulación');
+
+console.log('\n3b) La temporada en bandas');
+{
+  // Una lista de veinticuatro semanas no dice en qué punto de la temporada se
+  // está, que es justo lo que se viene a mirar. En bandas sí.
+  const bandas = bandasDelPlan(semanas);
+  comprueba('una banda por bloque', bandas.length === 2, String(bandas.length));
+  comprueba('con su nombre', bandas[0].nombre === 'Acumulación' && bandas[1].nombre === 'Intensificación');
+  comprueba('la primera son 4 semanas', bandas[0].semanas === 4);
+  comprueba('la segunda son 3', bandas[1].semanas === 3);
+  comprueba('las semanas se numeran seguidas', bandas[0].desde === 1 && bandas[1].desde === 5);
+  comprueba('la descarga cae en la última de la primera', bandas[0].descargas.join() === 'false,false,false,true');
+  comprueba('la semana 1 se cumplió', bandas[0].hechas[0] === true);
+  comprueba('la 2 no llegó a la meta', bandas[0].hechas[1] === false);
+  comprueba('hoy está en la primera banda, segunda semana', bandas[0].actual === 1);
+  comprueba('y no en la segunda banda', bandas[1].actual === -1);
+  comprueba(
+    'todas las semanas del plan están en alguna banda',
+    bandas.reduce((n, b) => n + b.semanas, 0) === semanas.length
+  );
+}
 
 console.log('\n4) Dos planes seguidos no se mezclan');
 const segundo = guardados.map((c, i) => ({

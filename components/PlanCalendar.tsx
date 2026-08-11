@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from './ProgressBar';
-import { planCalendar, planSummary, type CalendarWeek } from '../lib/cyclePlan';
+import { bandasDelPlan, planCalendar, planSummary, type CalendarWeek } from '../lib/cyclePlan';
 import { diaMes } from '../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { TrainingCycle, WorkoutLog } from '../lib/types';
@@ -31,9 +31,9 @@ export function PlanCalendar({
   /** Solo la semana actual y las dos siguientes (para la ficha del alumno). */
   compact?: boolean;
 }) {
-  const { weeks, resumen } = useMemo(() => {
+  const { weeks, resumen, bandas } = useMemo(() => {
     const todas = planCalendar(root, cycles, logs);
-    return { weeks: todas, resumen: planSummary(todas) };
+    return { weeks: todas, resumen: planSummary(todas), bandas: bandasDelPlan(todas) };
   }, [root, cycles, logs]);
 
   const visibles = useMemo(() => {
@@ -69,6 +69,57 @@ export function PlanCalendar({
       {resumen.adherence != null ? (
         <View style={{ marginBottom: spacing.md }}>
           <ProgressBar progress={resumen.adherence} height={6} />
+        </View>
+      ) : null}
+
+      {/* La temporada entera de un vistazo. Va ANTES del detalle porque es la
+          pregunta que uno se hace al abrir esto: en qué punto vamos. */}
+      {!compact && bandas.length > 0 ? (
+        <View style={styles.bandas}>
+          {bandas.map((b) => (
+            <View key={`${b.nombre}-${b.desde}`} style={styles.banda}>
+              <View style={styles.bandaCabecera}>
+                <Text style={styles.bandaNombre} numberOfLines={1}>
+                  {b.nombre}
+                </Text>
+                <Text style={styles.bandaSemanas}>
+                  {b.semanas} sem{b.semanas === 1 ? '' : 's'}
+                </Text>
+              </View>
+              <View style={styles.bandaCeldas}>
+                {Array.from({ length: b.semanas }, (_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.celda,
+                      b.pasadas[i] && (b.hechas[i] ? styles.celdaHecha : styles.celdaFallada),
+                      b.descargas[i] && styles.celdaDescarga,
+                      i === b.actual && styles.celdaHoy,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.celdaTexto,
+                        (b.pasadas[i] && b.hechas[i]) || i === b.actual
+                          ? styles.celdaTextoFuerte
+                          : null,
+                      ]}
+                    >
+                      {b.desde + i}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ))}
+          <View style={styles.leyenda}>
+            <View style={[styles.celda, styles.celdaHecha, styles.celdaLeyenda]} />
+            <Text style={styles.leyendaTexto}>cumplida</Text>
+            <View style={[styles.celda, styles.celdaFallada, styles.celdaLeyenda]} />
+            <Text style={styles.leyendaTexto}>fallada</Text>
+            <View style={[styles.celda, styles.celdaDescarga, styles.celdaLeyenda]} />
+            <Text style={styles.leyendaTexto}>descarga</Text>
+          </View>
         </View>
       ) : null}
 
@@ -160,6 +211,38 @@ const styles = StyleSheet.create({
   adherenceBox: { alignItems: 'flex-end' },
   adherencePct: { ...typography.h3, color: colors.primaryBright },
   adherenceLabel: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  bandas: { marginBottom: spacing.md, gap: spacing.sm },
+  banda: { gap: 5 },
+  bandaCabecera: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  bandaNombre: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    flex: 1,
+  },
+  bandaSemanas: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  bandaCeldas: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  celda: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  celdaHecha: { backgroundColor: colors.primary, borderColor: colors.primary },
+  // Una semana pasada sin cumplir no se pinta de rojo: no es un error, es un
+  // dato. En rojo, un plan normal parecería un desastre.
+  celdaFallada: { backgroundColor: colors.surface, borderColor: colors.borderStrong },
+  celdaDescarga: { borderColor: colors.primaryBright, borderStyle: 'dashed' },
+  celdaHoy: { borderColor: colors.accent, borderWidth: 2 },
+  celdaTexto: { fontSize: 10, color: colors.textFaint, fontFamily: fonts.medium },
+  celdaTextoFuerte: { color: colors.onPrimary },
+  leyenda: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  celdaLeyenda: { width: 12, height: 12 },
+  leyendaTexto: { fontSize: 10, color: colors.textFaint, marginRight: spacing.sm },
   blockHead: {
     flexDirection: 'row',
     alignItems: 'center',

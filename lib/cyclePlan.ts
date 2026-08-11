@@ -319,6 +319,62 @@ export function planCalendar(
   return filas;
 }
 
+export interface BandaDeBloque {
+  /** El mesociclo, o null para las semanas que no cuelgan de ninguno. */
+  block: TrainingCycle | null;
+  nombre: string;
+  /** Semanas que ocupa (1..n) y desde qué semana del plan empieza. */
+  semanas: number;
+  desde: number;
+  /** Cuáles de sus semanas son de descarga, por posición dentro de la banda. */
+  descargas: boolean[];
+  /** Semanas ya cerradas y semanas cumplidas, para el color de cada celda. */
+  hechas: boolean[];
+  pasadas: boolean[];
+  /** Posición de la semana en curso dentro de la banda; -1 si no cae aquí. */
+  actual: number;
+}
+
+/**
+ * La temporada de un vistazo: una banda por bloque, y dentro una celda por
+ * semana.
+ *
+ * El calendario semana a semana sirve para trabajar; esto sirve para ENTENDER.
+ * Un plan de veinticuatro semanas en forma de lista son veinticuatro filas que
+ * hay que recorrer para saber en qué punto de la temporada se está, y esa es
+ * justo la pregunta que se hace un entrenador al abrir la planificación. En
+ * bandas se ve de un golpe: cuánto queda del bloque, cuándo cae la descarga y
+ * dónde se cayó el alumno.
+ */
+export function bandasDelPlan(weeks: CalendarWeek[]): BandaDeBloque[] {
+  const bandas: BandaDeBloque[] = [];
+  for (const w of weeks) {
+    const ultima = bandas[bandas.length - 1];
+    const mismaBanda =
+      ultima && (w.block ? ultima.block?.id === w.block.id : ultima.block === null);
+    const banda: BandaDeBloque = mismaBanda
+      ? ultima
+      : {
+          block: w.block,
+          nombre: w.block?.name ?? 'Sin bloque',
+          semanas: 0,
+          desde: w.index,
+          descargas: [],
+          hechas: [],
+          pasadas: [],
+          actual: -1,
+        };
+    if (!mismaBanda) bandas.push(banda);
+    banda.semanas += 1;
+    banda.descargas.push(w.isDeload);
+    // "Cumplida" es haber llegado a la meta; sin meta, haber entrenado algo.
+    banda.hechas.push(w.target ? w.done >= w.target : w.done > 0);
+    banda.pasadas.push(w.isPast);
+    if (w.isCurrent) banda.actual = banda.semanas - 1;
+  }
+  return bandas;
+}
+
 /** Resumen del plan para la cabecera: semana x de n y cumplimiento. */
 export function planSummary(weeks: CalendarWeek[], now = Date.now()) {
   const actual = weeks.find((w) => w.isCurrent);

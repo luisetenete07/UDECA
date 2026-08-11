@@ -179,6 +179,8 @@ export default function ClientLayout() {
       <Tabs.Screen name="my-plan" options={{ href: null }} />
       {/* Registrar un entreno de otro día (se abre desde Entreno y Progreso). */}
       <Tabs.Screen name="registrar" options={{ href: null }} />
+      {/* Temporada del atleta: sus bloques y sus semanas (se abre desde Inicio). */}
+      <Tabs.Screen name="planning" options={{ href: null }} />
     </Tabs>
     {/* Crono de descanso global: sigue corriendo y visible en cualquier pestaña. */}
     <GlobalRestTimer />
