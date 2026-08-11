@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ProgressCard, type DatoTarjeta } from './ProgressCard';
 import { useAuth } from '../lib/auth-context';
 import {
@@ -8,12 +9,17 @@ import {
   tarjetaDeEntrenador,
   textoDesde,
 } from '../lib/cardStats';
+import { datosDelCarne } from '../lib/carne';
+import { shareMemberImage } from '../lib/brandCards';
+import { showToast } from './Toast';
 import { estadoInsignia, numeroFundador } from '../lib/fundador';
+import { getCourseProgress } from '../lib/firestore/courseProgress';
+import { getActiveRoutineForClient } from '../lib/firestore/routines';
 import { getSocialLeaderboard } from '../lib/firestore/social';
 import { getClientsForTrainer } from '../lib/firestore/users';
 import { getWorkoutLogsForClient, getWorkoutLogsForTrainer } from '../lib/firestore/workoutLogs';
 import { currentStreak } from '../lib/stats';
-import { colors, spacing, typography } from '../lib/theme';
+import { colors, fonts, spacing, typography } from '../lib/theme';
 
 /**
  * La tarjeta, en el perfil y sin puerta delante.
@@ -33,9 +39,31 @@ export function MemberCard() {
   const [datos, setDatos] = useState<DatoTarjeta[]>([]);
 
   const esEntrenador = profile?.role === 'trainer';
-  const rol = esEntrenador ? 'Entrenador' : profile?.role === 'athlete' ? 'Atleta' : 'Alumno';
+  // Quién es dentro de UDECA. Se calcula igual aquí y en la imagen que se
+  // comparte: son la misma tarjeta, y decir "Alumno" dentro y "Formación"
+  // fuera sería tener dos.
+  const [soloCursos, setSoloCursos] = useState(false);
+  const carne = datosDelCarne(profile, { conCursos: soloCursos, conPlan: !soloCursos });
+  const rol = carne?.titulo
+    ? carne.titulo.charAt(0) + carne.titulo.slice(1).toLowerCase()
+    : 'Miembro';
+  const [compartiendo, setCompartiendo] = useState(false);
   // El número es suyo para siempre; encenderlo depende de estar al día.
   const insignia = estadoInsignia(profile);
+
+  const compartir = async () => {
+    if (!carne) return;
+    setCompartiendo(true);
+    try {
+      const r = await shareMemberImage(carne);
+      if (r === 'downloaded') showToast('Carné descargado');
+      if (r === null) showToast('No se ha podido crear la imagen');
+    } catch {
+      showToast('No se ha podido compartir');
+    } finally {
+      setCompartiendo(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -81,8 +109,23 @@ export function MemberCard() {
             return;
           }
 
-          const logs = await getWorkoutLogsForClient(profile.uid);
+          const [logs, rutina, vistas] = await Promise.all([
+            getWorkoutLogsForClient(profile.uid),
+            getActiveRoutineForClient(profile.uid).catch(() => null),
+            getCourseProgress(profile.uid).catch(() => ({}) as Record<string, unknown>),
+          ]);
           if (!vivo) return;
+          /*
+           * Cuenta de FORMACIÓN: la que está aquí por los cursos y no por
+           * entrenar. Se reconoce por lo que hace —ve lecciones y no tiene
+           * plan— y no por una casilla, que habría que mantener a mano y
+           * quedaría mal puesta el día que esa persona empiece a entrenar.
+           *
+           * Quien compró la formación y todavía no ha abierto ninguna lección
+           * sale como alumno hasta que la abra. Es preferible a lo contrario:
+           * llamar "Formación" a alguien por lo que aún no ha hecho.
+           */
+          setSoloCursos(!rutina && logs.length === 0 && Object.keys(vistas).length > 0);
 
           // El puesto solo tiene sentido dentro de un grupo. El atleta que se
           // autoentrena es su propio entrenador: ahí no hay clasificación.
@@ -148,12 +191,34 @@ export function MemberCard() {
       ) : (
         <Text style={styles.ayuda}>Arrástrala para girarla</Text>
       )}
+
+      {/* Un carné se enseña. El de dentro se mira; este sale a WhatsApp o a
+          una historia, y ahí es donde el número de fundador hace algo. */}
+      <Pressable onPress={compartir} disabled={compartiendo} style={styles.compartir} hitSlop={8}>
+        <Ionicons
+          name={compartiendo ? 'hourglass-outline' : 'share-social-outline'}
+          size={15}
+          color={colors.primary}
+        />
+        <Text style={styles.compartirTexto}>
+          {compartiendo ? 'Preparando…' : 'Compartir mi carné'}
+        </Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   bloque: { marginBottom: spacing.lg },
+  compartir: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  compartirTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   ayuda: {
     ...typography.small,
     color: colors.textFaint,
