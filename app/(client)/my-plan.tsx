@@ -26,7 +26,7 @@ import {
 import { flexLabel } from '../../lib/schedule';
 import { SERIES_POR_DEFECTO } from '../../lib/gtg';
 import { minutosSegundos, segundosDeTexto } from '../../lib/duracion';
-import { nuevoId } from '../../lib/ids';
+import { idDeEjercicioPropio as slug, nuevoId } from '../../lib/ids';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
   CLUSTER_DEFAULT,
@@ -50,14 +50,6 @@ import {
   WEEKDAY_LABELS,
 } from '../../lib/types';
 
-const slug = (s: string) =>
-  'self-' +
-  (s || 'ej')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
 
 /** Variantes de carga (calistenia): normal / lastrado / con goma. */
 function newExercise(name = '', measure: ExerciseMeasure = 'reps', reps = '10'): RoutineExercise {
@@ -453,6 +445,10 @@ export default function MyPlanScreen() {
                         <Ionicons name="add" size={15} color={colors.text} />
                       </Pressable>
                     </View>
+                  ) : schedule === 'flex' && !day.isRest && day.gtg ? (
+                    <Text style={styles.intensityLabel}>
+                      Todo el día · {day.gtgSetsPerDay ?? SERIES_POR_DEFECTO} series
+                    </Text>
                   ) : schedule === 'flex' && !day.isRest ? (
                     // En Sensaciones eliges rutina cada día: saber cuánto te va
                     // a pedir cada una es lo que hace que la elección signifique
@@ -488,6 +484,37 @@ export default function MyPlanScreen() {
                     valor={day.weekday}
                     onChange={(weekday) => patchDay(di, { weekday })}
                   />
+                ) : null}
+
+                {/* Sensaciones: esta rutina puede ser un día de grease the
+                    groove. Es la opción para el día sin cuerpo para una
+                    sesión: en vez de no hacer nada, series fáciles repartidas
+                    por todo el día. */}
+                {schedule === 'flex' && !day.isRest ? (
+                  <View style={styles.gtgFila}>
+                    <Chip
+                      texto="Grease the groove"
+                      icono={day.gtg ? 'repeat' : 'repeat-outline'}
+                      activo={!!day.gtg}
+                      compacto
+                      onPress={() => patchDay(di, { gtg: !day.gtg })}
+                    />
+                    {day.gtg ? (
+                      <TextField
+                        keyboardType="number-pad"
+                        placeholder={`${SERIES_POR_DEFECTO} series al día`}
+                        value={day.gtgSetsPerDay ? String(day.gtgSetsPerDay) : ''}
+                        onChangeText={(v) => {
+                          const n = Number.parseInt(v, 10);
+                          patchDay(di, {
+                            gtgSetsPerDay: Number.isFinite(n) && n > 0 ? n : undefined,
+                          });
+                        }}
+                        containerStyle={styles.gtgCampo}
+                        style={{ marginBottom: 0 }}
+                      />
+                    ) : null}
+                  </View>
                 ) : null}
 
                 {!day.isRest ? (
@@ -842,6 +869,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   intensityRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  gtgFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  gtgCampo: { flex: 1, marginBottom: 0 },
   intensityLabel: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   stepBtn: {
     width: 32,

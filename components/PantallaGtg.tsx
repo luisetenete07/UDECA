@@ -8,7 +8,7 @@ import { TextField } from './TextField';
 import { progresoGtg, textoDelDia } from '../lib/gtg';
 import { isHoldMeasure } from '../lib/types';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
-import type { Routine, WorkoutLog } from '../lib/types';
+import type { Routine, RoutineDay, WorkoutLog } from '../lib/types';
 
 /**
  * La pantalla de grease the groove.
@@ -23,23 +23,25 @@ import type { Routine, WorkoutLog } from '../lib/types';
  */
 export function PantallaGtg({
   routine,
+  dia,
   entrenoDeHoy,
   guardando,
   onAnadirSerie,
   onDeshacer,
 }: {
   routine: Routine;
+  /** El día que se entrena: el primero de la rutina, o el elegido en Sensaciones. */
+  dia: RoutineDay | null;
   entrenoDeHoy: WorkoutLog | null;
   guardando?: boolean;
   onAnadirSerie: (exerciseId: string, nombre: string, marca: string) => void;
   onDeshacer: () => void;
 }) {
-  const dia = routine.days[0];
   const ejercicios = dia?.exercises ?? [];
   const [elegido, setElegido] = useState(ejercicios[0]?.exerciseId ?? '');
   const [marca, setMarca] = useState('');
 
-  const p = progresoGtg(routine, entrenoDeHoy);
+  const p = progresoGtg(routine, entrenoDeHoy, dia);
   const ejercicio = ejercicios.find((e) => e.exerciseId === elegido) ?? ejercicios[0];
   const enSegundos = isHoldMeasure(ejercicio?.measure);
 

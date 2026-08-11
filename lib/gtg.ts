@@ -1,5 +1,5 @@
 import { esMismoDia } from './fechas';
-import type { LoggedExercise, Routine, WorkoutLog } from './types';
+import type { LoggedExercise, Routine, RoutineDay, WorkoutLog } from './types';
 
 /**
  * Grease the groove: muchas series fáciles repartidas por el día.
@@ -29,24 +29,61 @@ import type { LoggedExercise, Routine, WorkoutLog } from './types';
 /** Series al día por omisión, si el entrenador no dice otra cosa. */
 export const SERIES_POR_DEFECTO = 6;
 
-/** ¿Está esta rutina en modo grease the groove? */
-export function esGtg(routine: Routine | null | undefined): boolean {
+/**
+ * ¿Toca grease the groove?
+ *
+ * Hay dos formas de llegar aquí, y las dos son legítimas:
+ *  - la rutina ENTERA está en este modo (`schedule === 'gtg'`);
+ *  - o es una de las rutinas de Sensaciones, marcada día a día. Ahí conviven
+ *    varias formas de entrenar y el alumno elige una cada mañana: el día que
+ *    no tiene cuerpo para una sesión puede hacer seis series fáciles
+ *    repartidas en vez de no hacer nada.
+ *
+ * Con día, manda el día: en Sensaciones la rutina no está en modo gtg y aun
+ * así el día elegido puede serlo.
+ */
+export function esGtg(
+  routine: Routine | null | undefined,
+  dia?: RoutineDay | null
+): boolean {
+  if (dia) return dia.gtg === true;
   return routine?.schedule === 'gtg';
 }
 
-/** Cuántas series se buscan hoy. */
-export function objetivoDelDia(routine: Routine | null | undefined): number {
+/** Cuántas series se buscan hoy. Las del día mandan sobre las de la rutina. */
+export function objetivoDelDia(
+  routine: Routine | null | undefined,
+  dia?: RoutineDay | null
+): number {
+  if (dia?.gtg) {
+    return Math.max(1, dia.gtgSetsPerDay ?? routine?.gtgSetsPerDay ?? SERIES_POR_DEFECTO);
+  }
   if (!esGtg(routine)) return 0;
   return Math.max(1, routine?.gtgSetsPerDay ?? SERIES_POR_DEFECTO);
 }
 
-/** El registro de HOY de esta rutina, si ya se empezó. */
+/**
+ * El registro de HOY de esta rutina, si ya se empezó.
+ *
+ * Con `nombreDelDia` se exige además que sea el de ESE día. Hace falta en
+ * Sensaciones: si por la mañana se hizo una sesión normal y por la tarde se
+ * elige el día de grease the groove, las series sueltas no pueden colarse
+ * dentro del entreno de la mañana.
+ */
 export function entrenoDeHoy(
   logs: WorkoutLog[],
   routineId: string,
-  ahora = Date.now()
+  ahora = Date.now(),
+  nombreDelDia?: string
 ): WorkoutLog | null {
-  return logs.find((l) => l.routineId === routineId && esMismoDia(l.date, ahora)) ?? null;
+  return (
+    logs.find(
+      (l) =>
+        l.routineId === routineId &&
+        esMismoDia(l.date, ahora) &&
+        (nombreDelDia === undefined || l.dayName === nombreDelDia)
+    ) ?? null
+  );
 }
 
 /** Series ya hechas hoy, sumando las de todos los ejercicios. */
@@ -68,9 +105,10 @@ export interface ProgresoGtg {
 
 export function progresoGtg(
   routine: Routine | null | undefined,
-  log: WorkoutLog | null
+  log: WorkoutLog | null,
+  dia?: RoutineDay | null
 ): ProgresoGtg {
-  const objetivo = objetivoDelDia(routine);
+  const objetivo = objetivoDelDia(routine, dia);
   const hechas = seriesDeHoy(log);
   return {
     hechas,

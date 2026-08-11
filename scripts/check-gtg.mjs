@@ -143,6 +143,55 @@ console.log('\nLo que se le dice, que no es lo mismo que animar a más');
   comprueba('nunca felicita por hacer de más', !/genial|crack|máquina|más/i.test(conObjetivo(12, 8)));
 }
 
+console.log('\nDentro de Sensaciones, una rutina suelta puede ser gtg');
+{
+  // Es la opción para el día sin cuerpo para una sesión: en vez de no hacer
+  // nada, series fáciles repartidas. La rutina NO está en modo gtg; el día sí.
+  const sensaciones = rutina({ schedule: 'flex' });
+  const diaSuave = { id: 'd2', name: 'Dominadas sueltas', gtg: true, exercises: [] };
+  const diaNormal = { id: 'd3', name: 'Empuje', exercises: [] };
+
+  comprueba('la rutina de Sensaciones no es gtg', !esGtg(sensaciones));
+  comprueba('pero el día marcado sí', esGtg(sensaciones, diaSuave));
+  comprueba('y el que no, no', !esGtg(sensaciones, diaNormal));
+  comprueba('con día normal no hay objetivo', objetivoDelDia(sensaciones, diaNormal) === 0);
+  comprueba(
+    'sin decir cuántas, las de por defecto',
+    objetivoDelDia(sensaciones, diaSuave) === SERIES_POR_DEFECTO
+  );
+  comprueba(
+    'las del día mandan sobre las de la rutina',
+    objetivoDelDia(rutina({ schedule: 'flex', gtgSetsPerDay: 10 }), { ...diaSuave, gtgSetsPerDay: 3 }) === 3
+  );
+  comprueba(
+    'y si el día no dice nada, las de la rutina',
+    objetivoDelDia(rutina({ schedule: 'flex', gtgSetsPerDay: 10 }), diaSuave) === 10
+  );
+  comprueba(
+    'el progreso también cuenta contra el objetivo del día',
+    progresoGtg(sensaciones, log(2), { ...diaSuave, gtgSetsPerDay: 8 }).quedan === 6
+  );
+}
+
+console.log('\nEl entreno del día es el de ESA rutina, no el de cualquiera');
+{
+  // En Sensaciones se puede hacer una sesión por la mañana y elegir el día de
+  // gtg por la tarde. Las series sueltas no pueden colarse dentro del entreno
+  // de la mañana: serían series de otro entrenamiento.
+  const manana = { ...log(4), id: 'manana', dayName: 'Empuje' };
+  const tarde = { ...log(2), id: 'tarde', dayName: 'Dominadas sueltas' };
+
+  comprueba('sin pedir día, vale el primero de hoy', entrenoDeHoy([manana], 'r')?.id === 'manana');
+  comprueba(
+    'pidiendo el día de gtg, no vale el de la mañana',
+    entrenoDeHoy([manana], 'r', Date.now(), 'Dominadas sueltas') === null
+  );
+  comprueba(
+    'y encuentra el suyo si ya existe',
+    entrenoDeHoy([manana, tarde], 'r', Date.now(), 'Dominadas sueltas')?.id === 'tarde'
+  );
+}
+
 console.log('\nUn día entero de gtg vale UN día de racha');
 {
   // Aquí se entrena todos los días, así que un día sin ninguna serie es un día

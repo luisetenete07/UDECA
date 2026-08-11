@@ -563,6 +563,18 @@ export interface RoutineDay {
    * el 90 %") de una forma que un 9/10 no consigue.
    */
   intensityPct?: number;
+  /**
+   * En Sensaciones, esta "rutina" no es una sesión: es un día de grease the
+   * groove, series sueltas repartidas por todo el día y ninguna al fallo.
+   *
+   * Se marca por día y no por rutina entera porque en Sensaciones conviven
+   * varias formas de entrenar y el alumno elige una cada mañana: el día que no
+   * tiene cuerpo para una sesión puede hacer seis dominadas fáciles repartidas
+   * en vez de no hacer nada.
+   */
+  gtg?: boolean;
+  /** Solo con `gtg`: series al día de ESTE día. Sin valor, las de la rutina. */
+  gtgSetsPerDay?: number;
   /** El coach activa el temporizador de intervalos (EMOM) para este día. */
   showIntervalTimer?: boolean;
   /**

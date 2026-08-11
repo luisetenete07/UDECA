@@ -167,6 +167,21 @@ export function masDias(ts: number | Date, n: number): number {
 }
 
 /**
+ * Las 12:00 de ese día, en hora local.
+ *
+ * Es la hora que se le pone a un entreno registrado más tarde, cuando no se
+ * sabe a qué hora fue. Las 00:00 no valen: cualquier resta de un rato o un
+ * desfase de zona horaria lo empujaría al día anterior, y el entreno saldría
+ * en el día equivocado del histórico. El mediodía deja doce horas de margen a
+ * cada lado.
+ */
+export function mediodiaDe(ts: number | Date): number {
+  const d = new Date(inicioDelDia(ts));
+  d.setHours(12, 0, 0, 0);
+  return d.getTime();
+}
+
+/**
  * Días de calendario entre dos fechas (b − a).
  *
  * El redondeo absorbe el desfase de ±1 h de los cambios de hora: sin él, la

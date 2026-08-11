@@ -13,3 +13,28 @@
 export function nuevoId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
+/**
+ * Id de un ejercicio escrito a mano, deducido de su nombre.
+ *
+ * El atleta se autoentrena y escribe los nombres él: "Dominadas" no viene de
+ * ninguna biblioteca y no tiene id de Firestore. Que el id salga del NOMBRE, y
+ * siempre igual, es lo que hace que las dominadas que puso en su plan, las que
+ * añadió a mitad de sesión y las de hace tres meses sean el mismo ejercicio: si
+ * no, cada una iría por su lado y no habría ni récords ni "la última vez".
+ *
+ * Va con prefijo para no confundirse nunca con un id de la biblioteca de un
+ * entrenador, y sin tildes ni mayúsculas para que "Dominadas" y "dominadas"
+ * sean lo mismo, que es lo que espera quien las escribe.
+ */
+export function idDeEjercicioPropio(nombre: string): string {
+  return (
+    'self-' +
+    (nombre || 'ej')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+  );
+}

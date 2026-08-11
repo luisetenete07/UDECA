@@ -1,7 +1,7 @@
 import { unido } from '../../lib/texto';
 import { fechaNumerica, inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
 import React, { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   Modal,
   Pressable,
@@ -66,6 +66,7 @@ interface ProgressData {
 
 export default function ProgressScreen() {
   const { profile, refreshProfile } = useAuth();
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('workouts');
   const [muscleMode, setMuscleMode] = useState<'session' | 'week'>('week');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
@@ -439,6 +440,20 @@ export default function ProgressScreen() {
         valor={tab}
         onChange={setTab}
       />
+
+      {/* Se entrena sin el móvil delante más de lo que parece, y es aquí donde
+          se nota: se abre el histórico, se ve el hueco de ayer y se quiere
+          rellenar. */}
+      {tab === 'workouts' ? (
+        <Pressable
+          onPress={() => router.push('/(client)/registrar')}
+          style={styles.registrarFila}
+          hitSlop={6}
+        >
+          <Ionicons name="create-outline" size={16} color={colors.primary} />
+          <Text style={styles.registrarTexto}>Registrar un entreno de otro día</Text>
+        </Pressable>
+      ) : null}
 
       {tab === 'workouts' ? (
         months.length === 0 ? (
@@ -1013,6 +1028,15 @@ function MonthStat({ value, label }: { value: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  registrarFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  registrarTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',

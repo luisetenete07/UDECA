@@ -418,6 +418,31 @@ export default function RoutineEditorScreen() {
     );
   };
 
+  /**
+   * Sensaciones: marca esta rutina como grease the groove.
+   *
+   * Es la opción para el día que el alumno no tiene cuerpo para una sesión:
+   * en vez de no hacer nada, seis series fáciles repartidas. Y va por rutina y
+   * no por plan entero porque en Sensaciones conviven varias formas de
+   * entrenar y el alumno elige una cada mañana.
+   */
+  const toggleGtgDay = (dayId: string) => {
+    setDays((prev) =>
+      prev.map((d) => (d.id === dayId ? { ...d, gtg: !d.gtg, isRest: false } : d))
+    );
+  };
+
+  const updateDayGtgSets = (dayId: string, valor: string) => {
+    const n = Number.parseInt(valor, 10);
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? { ...d, gtgSetsPerDay: Number.isFinite(n) && n > 0 ? n : undefined }
+          : d
+      )
+    );
+  };
+
   const toggleIntervalTimer = (dayId: string) => {
     setDays((prev) =>
       prev.map((d) => (d.id === dayId ? { ...d, showIntervalTimer: !d.showIntervalTimer } : d))
@@ -871,6 +896,9 @@ export default function RoutineEditorScreen() {
           );
         } else if (schedule === 'flex') {
           if (day.isRest) summaryParts.push('Descanso');
+          else if (day.gtg) {
+            summaryParts.push(`Todo el día · ${day.gtgSetsPerDay ?? SERIES_POR_DEFECTO} series`);
+          }
           else if (day.intensityPct) {
             summaryParts.push(`${day.intensityPct} %`);
             const palabra = esfuerzoDePct(day.intensityPct);
@@ -1003,6 +1031,34 @@ export default function RoutineEditorScreen() {
             // En Sensaciones el alumno elige entre varias rutinas: lo que
             // necesita saber antes de elegir es cuánto le va a pedir cada una.
             !day.isRest ? (
+              <>
+              <View style={styles.gtgFila}>
+                <Chip
+                  texto="Grease the groove"
+                  icono={day.gtg ? 'repeat' : 'repeat-outline'}
+                  activo={!!day.gtg}
+                  compacto
+                  onPress={() => toggleGtgDay(day.id)}
+                />
+                {day.gtg ? (
+                  <TextField
+                    keyboardType="number-pad"
+                    placeholder={`${SERIES_POR_DEFECTO} series al día`}
+                    value={day.gtgSetsPerDay ? String(day.gtgSetsPerDay) : ''}
+                    onChangeText={(v) => updateDayGtgSets(day.id, v)}
+                    containerStyle={styles.gtgCampo}
+                    style={{ marginBottom: 0 }}
+                  />
+                ) : null}
+              </View>
+              {day.gtg ? (
+                <Text style={styles.optionalHint}>
+                  Esta rutina no es una sesión: son series sueltas repartidas por todo el día,
+                  ninguna al fallo. El alumno la elige sola, no encadenada con otra, y en
+                  repeticiones va el objetivo de CADA serie.
+                </Text>
+              ) : null}
+              {day.gtg ? null : (
               <View style={styles.dayIntensityRow}>
                 <Text style={styles.dayIntensityLabel}>
                   Intensidad · {day.intensityPct ? `${day.intensityPct} %` : 'sin poner'}
@@ -1035,6 +1091,8 @@ export default function RoutineEditorScreen() {
                   </Pressable>
                 </View>
               </View>
+              )}
+              </>
             ) : null
           ) : (
           <View style={styles.weekdayRow}>
@@ -1589,6 +1647,13 @@ const styles = StyleSheet.create({
   },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   checkLabel: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
+  gtgFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  gtgCampo: { flex: 1, marginBottom: 0 },
   dayIntensityRow: { marginBottom: spacing.sm },
   dayIntensityLabel: {
     ...typography.label,
