@@ -113,6 +113,15 @@ function VimeoVideo({
         setSupportMultipleWindows={false}
         javaScriptCanOpenWindowsAutomatically={false}
         onShouldStartLoadWithRequest={(req: { url: string }) => seQuedaDentro(req.url, embedUrl)}
+        // Contenido de curso: fuera el menú de mantener pulsado (copiar el
+        // enlace, compartir) y la vista previa 3D Touch, que son las dos
+        // formas de sacar la dirección del vídeo sin salir de la app.
+        {...(protectedContent
+          ? {
+              allowsLinkPreview: false,
+              suppressMenuItems: ['copy', 'share', 'select', 'selectAll', 'lookup', 'translate'],
+            }
+          : null)}
         style={{ flex: 1, backgroundColor: '#000', borderRadius: radius.md }}
       />
     </View>

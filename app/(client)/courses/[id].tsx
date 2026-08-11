@@ -11,6 +11,8 @@ import { MiniaturaCurso } from '../../../components/MiniaturaCurso';
 import { ProgressRing } from '../../../components/ProgressRing';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { VideoPlayer } from '../../../components/VideoPlayer';
+import { MarcaDeAgua, useProteccionDePantalla } from '../../../components/MarcaDeAgua';
+import { avisoDeProteccion } from '../../../lib/marcaDeAgua';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
 import { getCourse } from '../../../lib/firestore/courses';
@@ -274,6 +276,7 @@ export default function ClientCourseDetailScreen() {
       <ReproductorLeccion
         contenido={activeLesson}
         leccion={leccionDeLoActivo}
+        profile={profile}
         vista={activeLesson ? vista(activeLesson.id) : false}
         haySiguiente={
           !!estado.siguiente && !!activeLesson && estado.siguiente.id !== activeLesson.id
@@ -310,6 +313,7 @@ function ReproductorLeccion({
   haySiguiente,
   onCerrar,
   onMarcar,
+  profile,
 }: {
   contenido: ContenidoDeCurso | null;
   leccion: Lesson | null;
@@ -317,9 +321,14 @@ function ReproductorLeccion({
   haySiguiente: boolean;
   onCerrar: () => void;
   onMarcar: () => void;
+  profile: ReturnType<typeof useAuth>['profile'];
 }) {
+  const esPdf = contenido?.kind === 'pdf' || (!contenido?.videoUrl && !!contenido?.pdfUrl);
+  // Mientras hay una clase abierta, el sistema no deja grabar la pantalla
+  // (Android e iOS). Se apaga al cerrar: bloquearlo todo el rato impediría al
+  // alumno hacerle una captura a su propio entreno.
+  useProteccionDePantalla(!!contenido && !esPdf);
   if (!contenido) return null;
-  const esPdf = contenido.kind === 'pdf' || (!contenido.videoUrl && !!contenido.pdfUrl);
   return (
     <Modal visible animationType="slide" onRequestClose={onCerrar} transparent={false}>
       <View style={styles.repFondo}>
@@ -343,8 +352,25 @@ function ReproductorLeccion({
               </View>
             )
           ) : (
-            <VideoPlayer url={contenido.videoUrl} protectedContent />
+            /* El nombre de quien está viendo la clase, encima de la clase. No
+               impide copiar: hace que la copia lleve el nombre de quien la
+               filtró, que contra una cámara apuntando a la pantalla es lo
+               único que queda. */
+            <MarcaDeAgua profile={profile}>
+              <VideoPlayer url={contenido.videoUrl} protectedContent />
+            </MarcaDeAgua>
           )}
+
+          {/* Se le dice lo que hay, y solo lo que hay: en móvil el sistema no
+              deja grabar; en web no hay forma de impedirlo y prometerlo sería
+              mentir. Lo que sí es verdad en las dos es que el vídeo lleva su
+              nombre encima. */}
+          {!esPdf && contenido.videoUrl ? (
+            <View style={styles.avisoProteccion}>
+              <Ionicons name="shield-checkmark-outline" size={14} color={colors.textFaint} />
+              <Text style={styles.avisoProteccionTexto}>{avisoDeProteccion(Platform.OS)}</Text>
+            </View>
+          ) : null}
 
           <Text style={styles.lessonTitle}>{contenido.title}</Text>
           {contenido.durationLabel ? (
@@ -529,6 +555,13 @@ const styles = StyleSheet.create({
   },
   repCerrar: { padding: 2 },
   repCabeceraTexto: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
+  avisoProteccion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  avisoProteccionTexto: { ...typography.small, color: colors.textFaint, flex: 1, fontSize: 11 },
   repContenido: { padding: spacing.md, paddingBottom: spacing.xl, maxWidth: 860, width: '100%', alignSelf: 'center' },
   lessonTitle: { ...typography.h2, color: colors.text, marginTop: spacing.md },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },
