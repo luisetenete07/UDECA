@@ -43,11 +43,19 @@ import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
 import {
   createWorkoutLog,
+  deleteWorkoutLog,
   getWorkoutLogsForClient,
   updateWorkoutLog,
 } from '../../lib/firestore/workoutLogs';
 import { syncMySocialStats } from '../../lib/firestore/social';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
+import {
+  conSerieAnadida,
+  entrenoDeHoy,
+  esGtg,
+  sinLaUltimaSerie,
+} from '../../lib/gtg';
+import { PantallaGtg } from '../../components/PantallaGtg';
 import { getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import {
   addFlexRestDay,
@@ -560,6 +568,7 @@ export default function WorkoutScreen() {
   const dismissPastDraft = () => setPastDismissed(true);
 
   const isFlex = routine?.schedule === 'flex';
+  const esModoGtg = esGtg(routine);
   const day = combinedDay ?? routine?.days.find((d) => d.id === selectedDayId) ?? null;
   /*
    * Con el plan en pausa el ciclo está congelado, así que el día que se propone
@@ -1086,6 +1095,79 @@ export default function WorkoutScreen() {
       : []),
   ];
 
+  /*
+   * ---------- Grease the groove ----------
+   *
+   * Aquí no se abre una sesión: se entra, se apunta una serie y se sale, seis u
+   * ocho veces al día. Por eso no pasa por el borrador ni por "Terminar
+   * entreno": cada serie se escribe directamente en el registro del día, que es
+   * UNO solo. Si cada serie creara su entreno, la racha contaría ocho días en
+   * uno y el histórico tendría ocho filas por jornada.
+   */
+  const gtgLog = routine && esModoGtg ? entrenoDeHoy(history, routine.id) : null;
+
+  const anadirSerieGtg = async (exerciseId: string, nombre: string, marca: string) => {
+    if (!profile || !routine) return;
+    const diaGtg = routine.days[0];
+    const enPlan = diaGtg?.exercises.find((e) => e.exerciseId === exerciseId);
+    const measure = enPlan?.measure ?? measureByExercise[exerciseId] ?? 'reps';
+    setSaving(true);
+    try {
+      const exercises = conSerieAnadida(
+        gtgLog?.exercises ?? [],
+        { exerciseId, name: nombre, measure },
+        marca
+      );
+      if (gtgLog) {
+        await updateWorkoutLog(gtgLog.id, { exercises });
+      } else {
+        await createWorkoutLog({
+          trainerId: routine.trainerId,
+          clientId: profile.uid,
+          routineId: routine.id,
+          routineName: routine.name,
+          dayName: diaGtg?.name || 'Grease the groove',
+          date: Date.now(),
+          exercises,
+        });
+        // Con la primera serie el día ya está empezado: sobra el aviso de las
+        // ocho de la tarde diciendo que no ha entrenado.
+        cancelarAvisosOlvido().catch(() => {});
+      }
+      const freshLogs = await getWorkoutLogsForClient(profile.uid);
+      setHistory(freshLogs);
+      if (!gtgLog) syncMySocialStats(profile, freshLogs).catch(() => {});
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      }
+    } catch {
+      // Sin la cola de offline a propósito: la cola solo sabe CREAR entrenos, y
+      // aquí casi todas las series son una actualización del registro del día.
+      // Encolarlas crearía un entreno suelto por serie, que es justo lo que
+      // este modo evita.
+      showToast('No se pudo apuntar la serie. Inténtalo en un momento.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const quitarSerieGtg = async () => {
+    if (!profile || !gtgLog) return;
+    setSaving(true);
+    try {
+      const exercises = sinLaUltimaSerie(gtgLog.exercises);
+      // Si era la única serie del día, el entreno entero se va: un registro sin
+      // series contaría como día entrenado en la racha sin haber hecho nada.
+      if (exercises.length === 0) await deleteWorkoutLog(gtgLog.id);
+      else await updateWorkoutLog(gtgLog.id, { exercises });
+      setHistory(await getWorkoutLogsForClient(profile.uid));
+    } catch {
+      showToast('No se pudo quitar la serie');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!profile || !routine || !day) return;
     setSaving(true);
@@ -1309,10 +1391,13 @@ export default function WorkoutScreen() {
 
       <SessionHeader
         titulo={routine.name}
-        dia={day && !showCompleted ? day.name : null}
-        intensidad={showCompleted ? null : textoIntensidad(day, routine.schedule)}
+        dia={day && !showCompleted && !esModoGtg ? day.name : null}
+        intensidad={showCompleted || esModoGtg ? null : textoIntensidad(day, routine.schedule)}
         hechas={doneSets}
-        totales={showCompleted ? 0 : totalSets}
+        // En grease the groove el anillo del día lo lleva su propia pantalla,
+        // con las series repartidas; dos anillos distintos en la misma pantalla
+        // se leen mal.
+        totales={showCompleted || esModoGtg ? 0 : totalSets}
         acciones={accionesSesion}
         onSalir={() => {
           // Con la sesión en marcha no se sale a la ligera: confirmación.
@@ -1390,7 +1475,7 @@ export default function WorkoutScreen() {
         </View>
       </Modal>
 
-      {isFlex ? null : (
+      {isFlex || esModoGtg ? null : (
         <ChipRow scroll>
           {routine.days.map((d, i) => {
             const isCycle = routine.schedule === 'cycle';
@@ -1530,7 +1615,15 @@ export default function WorkoutScreen() {
         ))}
       </Sheet>
 
-      {showOptionalChoice ? (
+      {esModoGtg ? (
+        <PantallaGtg
+          routine={routine}
+          entrenoDeHoy={gtgLog}
+          guardando={saving}
+          onAnadirSerie={anadirSerieGtg}
+          onDeshacer={quitarSerieGtg}
+        />
+      ) : showOptionalChoice ? (
         <FadeIn>
           <Card accent style={styles.optionalCard}>
             <View style={styles.optionalHeader}>

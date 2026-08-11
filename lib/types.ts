@@ -579,7 +579,14 @@ export interface RoutineDay {
  *  - 'cycle' (Método REIN TENA): los días rotan en un ciclo constante
  *    (Día 1 → 2 → 3 → ... → repite) independientemente del día de la semana.
  */
-export type RoutineSchedule = 'weekly' | 'cycle' | 'flex';
+/**
+ * Cómo se programa una rutina.
+ *
+ * 'gtg' (grease the groove) no es una variante de las otras: es un método
+ * distinto, con series fáciles repartidas por el día y sin llegar nunca al
+ * fallo. Ver lib/gtg.ts.
+ */
+export type RoutineSchedule = 'weekly' | 'cycle' | 'flex' | 'gtg';
 
 export const WEEKDAY_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const;
 export const WEEKDAY_NAMES = [
@@ -619,6 +626,11 @@ export interface Routine {
   scheduleLabel?: string;
   /** Método REIN TENA: fecha (medianoche) en que el ciclo empieza por el Día 1. */
   cycleStartDate?: number;
+  /**
+   * Solo en 'gtg': series que se buscan AL DÍA, repartidas. Sin valor, las de
+   * por defecto (ver lib/gtg.ts).
+   */
+  gtgSetsPerDay?: number;
   /** (Obsoleto) intensidad global; ahora se define por día en RoutineDay. */
   intensity?: number;
   createdAt: number;
@@ -636,6 +648,7 @@ export interface RoutineTemplate {
   schedule?: RoutineSchedule;
   scheduleLabel?: string;
   cycleStartDate?: number;
+  gtgSetsPerDay?: number;
   days: RoutineDay[];
   createdAt: number;
 }

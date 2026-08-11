@@ -35,6 +35,7 @@ import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
+import { entrenoDeHoy, esGtg, progresoGtg, textoDelDia } from '../../lib/gtg';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
 import { createCoachCheckoutUrl } from '../../lib/connect';
@@ -258,6 +259,12 @@ export default function ClientDashboard() {
   const optionalRest = todaySession.optionalRest;
   const nextDay = todaySession.day;
   const isCycle = routine?.schedule === 'cycle';
+  // Grease the groove: la tarjeta de hoy no es "empezar sesión" sino "cuántas
+  // series llevas", porque a esta pantalla se vuelve seis veces al día.
+  const esModoGtg = esGtg(routine);
+  const progresoDelDia = esModoGtg
+    ? progresoGtg(routine, entrenoDeHoy(workoutLogs, routine!.id))
+    : null;
 
   /*
    * El aviso de peso solo se le pone a quien YA se pesa.
@@ -566,7 +573,9 @@ export default function ClientDashboard() {
         >
           <View style={{ flex: 1 }}>
             <Text style={styles.todayLabel}>
-              {routine?.schedule === 'flex'
+              {esModoGtg
+                ? 'Grease the groove'
+                : routine?.schedule === 'flex'
                 ? `${flexLabel(routine.scheduleLabel)} · eliges tú`
                 : isCycle
                   ? unido(
@@ -578,7 +587,14 @@ export default function ClientDashboard() {
                     ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}`
                     : 'Tu entrenamiento'}
             </Text>
-            {routine && optionalRest ? (
+            {routine && progresoDelDia ? (
+              <>
+                <Text style={styles.todayTitle}>
+                  {progresoDelDia.hechas} de {progresoDelDia.objetivo} series
+                </Text>
+                <Text style={styles.todaySub}>{textoDelDia(progresoDelDia)}</Text>
+              </>
+            ) : routine && optionalRest ? (
               <>
                 <Text style={styles.todayTitle}>Descanso opcional</Text>
                 <Text style={styles.todaySub}>

@@ -24,6 +24,7 @@ import {
   updateRoutine,
 } from '../../lib/firestore/routines';
 import { flexLabel } from '../../lib/schedule';
+import { SERIES_POR_DEFECTO } from '../../lib/gtg';
 import { minutosSegundos, segundosDeTexto } from '../../lib/duracion';
 import { nuevoId } from '../../lib/ids';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
@@ -72,6 +73,7 @@ interface Starter {
   label: string;
   schedule: RoutineSchedule;
   scheduleLabel?: string;
+  gtgSetsPerDay?: number;
   build: () => RoutineDay[];
 }
 const ex = (name: string, sets: number, reps: string, measure: ExerciseMeasure = 'reps') => ({
@@ -110,6 +112,18 @@ const STARTERS: Starter[] = [
       { id: nuevoId(), name: 'Suave (poca energía)', exercises: [ex('Remo australiano', 3, '12'), ex('Flexiones rodillas', 3, '12'), ex('Plancha abdominal', 3, '30', 'seconds')] },
     ],
   },
+  {
+    key: 'gtg',
+    label: 'Grease the groove · dominadas',
+    schedule: 'gtg',
+    gtgSetsPerDay: 6,
+    // Las repeticiones son el objetivo de CADA serie suelta, no del día: tres
+    // dominadas fáciles, seis veces repartidas. Y "series" queda en 1 porque en
+    // este modo la serie se apunta de una en una, según sale.
+    build: () => [
+      { id: nuevoId(), name: 'Dominadas todo el día', exercises: [ex('Dominadas', 1, '3')] },
+    ],
+  },
 ];
 
 export default function MyPlanScreen() {
@@ -123,6 +137,14 @@ export default function MyPlanScreen() {
   const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
   const [scheduleLabel, setScheduleLabel] = useState('Sensaciones');
   const [cycleStartDate, setCycleStartDate] = useState<number>(() => inicioDelDia(Date.now()));
+  // Series al día del modo grease the groove, como texto mientras se teclea.
+  const [gtgSets, setGtgSets] = useState('');
+  /** Las series al día en número; vacío o disparatado deja las de por defecto. */
+  const seriesAlDia = (): number | undefined => {
+    if (schedule !== 'gtg') return undefined;
+    const n = Number.parseInt(gtgSets, 10);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  };
   // Qué días están desplegados. Todos cerrados al entrar, igual que en el
   // editor del coach: son el mismo editor con el mismo gesto, y abrir el
   // primero llenaba la pantalla de campos antes de saber qué se venía a tocar.
@@ -143,6 +165,7 @@ export default function MyPlanScreen() {
         setSchedule(r.schedule ?? 'weekly');
         if (r.scheduleLabel) setScheduleLabel(flexLabel(r.scheduleLabel));
         if (r.cycleStartDate) setCycleStartDate(r.cycleStartDate);
+        if (r.gtgSetsPerDay) setGtgSets(String(r.gtgSetsPerDay));
       } else {
         setRoutineId(null);
         setName('Mi plan');
@@ -191,6 +214,7 @@ export default function MyPlanScreen() {
   const applyStarter = (s: Starter) => {
     setSchedule(s.schedule);
     if (s.scheduleLabel) setScheduleLabel(s.scheduleLabel);
+    if (s.gtgSetsPerDay) setGtgSets(String(s.gtgSetsPerDay));
     const built = s.build();
     setDays(built);
     setExpanded(built.length ? { [built[0].id]: true } : {});
@@ -217,6 +241,7 @@ export default function MyPlanScreen() {
       schedule,
       cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
       scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
+      gtgSetsPerDay: seriesAlDia(),
     };
     setSaving(true);
     try {
@@ -284,11 +309,28 @@ export default function MyPlanScreen() {
             { valor: 'weekly' as RoutineSchedule, texto: 'Semana' },
             { valor: 'cycle' as RoutineSchedule, texto: 'Días sueltos' },
             { valor: 'flex' as RoutineSchedule, texto: flexLabel(scheduleLabel) },
+            { valor: 'gtg' as RoutineSchedule, texto: 'Grease the groove' },
           ]}
           onChange={setSchedule}
         />
 
-        {schedule === 'flex' ? (
+        {schedule === 'gtg' ? (
+          <>
+            <Text style={styles.scheduleHint}>
+              Un ejercicio (o dos) repartido en series sueltas por todo el día, y ninguna al fallo:
+              cada serie se queda a la mitad de lo que podrías hacer. Se usa el primer día de abajo,
+              y en repeticiones va el objetivo de cada serie.
+            </Text>
+            <TextField
+              label="Series al día"
+              keyboardType="number-pad"
+              placeholder={String(SERIES_POR_DEFECTO)}
+              value={gtgSets}
+              onChangeText={setGtgSets}
+              style={{ marginTop: spacing.sm, marginBottom: 0 }}
+            />
+          </>
+        ) : schedule === 'flex' ? (
           <>
             <Text style={styles.scheduleHint}>
               Creas varias rutinas (los "días" de abajo) y antes de entrenar eliges cuál hacer según

@@ -1,5 +1,6 @@
 import {
   resolveLoad,
+  type RoutineSchedule,
   setMarks,
   type ExerciseLoad,
   type ExerciseMeasure,
@@ -88,7 +89,7 @@ export function lastPerformanceByExercise(
 /** Contexto de plan para la racha: rutina activa y ancla del ciclo del alumno. */
 export interface StreakPlan {
   routine?: {
-    schedule?: 'weekly' | 'cycle' | 'flex';
+    schedule?: RoutineSchedule;
     cycleStartDate?: number;
     days: { weekday?: number; isRest?: boolean }[];
   } | null;
@@ -126,6 +127,10 @@ export function currentStreak(logs: WorkoutLog[], plan?: StreakPlan, floorTs?: n
       const day = r.days[idx];
       return day ? !day.isRest : null;
     }
+    // Grease the groove no tiene días de descanso: se entrena todos los días,
+    // poco y repartido. Un día sin ninguna serie es un día saltado, no un
+    // descanso del plan.
+    if (r.schedule === 'gtg') return true;
     if (r.schedule === 'flex') return null;
     const usesWeekdays = r.days.some((day) => day.weekday !== undefined);
     if (!usesWeekdays) return null;

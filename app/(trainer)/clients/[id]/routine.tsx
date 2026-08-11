@@ -37,6 +37,7 @@ import {
 import { getClientsForTrainer, getUserProfile } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
 import { flexLabel } from '../../../../lib/schedule';
+import { SERIES_POR_DEFECTO } from '../../../../lib/gtg';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
 import { nuevoId } from '../../../../lib/ids';
@@ -111,6 +112,18 @@ export default function RoutineEditorScreen() {
   const [schedule, setSchedule] = useState<RoutineSchedule>('weekly');
   const [scheduleLabel, setScheduleLabel] = useState('Sensaciones');
   const [cycleStartDate, setCycleStartDate] = useState<number>(() => inicioDelDia(Date.now()));
+  // Series al día del modo grease the groove, como texto mientras se teclea.
+  const [gtgSets, setGtgSets] = useState('');
+  /**
+   * Las series al día, ya en número. Vacío o disparatado devuelve `undefined`,
+   * que no es lo mismo que cero: sin valor se usan las de por defecto, y con un
+   * cero guardado el alumno abriría la pantalla sin nada que hacer.
+   */
+  const seriesAlDia = (): number | undefined => {
+    if (schedule !== 'gtg') return undefined;
+    const n = Number.parseInt(gtgSets, 10);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  };
   const [restText, setRestText] = useState<Record<string, string>>({});
   // Ejercicio pendiente de mover/copiar a otro día (abre el selector de día).
   const [movePicker, setMovePicker] = useState<{ dayId: string; ex: RoutineExercise } | null>(
@@ -149,6 +162,7 @@ export default function RoutineEditorScreen() {
         setSchedule(existing.schedule ?? 'weekly');
         if (existing.scheduleLabel) setScheduleLabel(flexLabel(existing.scheduleLabel));
         if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
+        if (existing.gtgSetsPerDay) setGtgSets(String(existing.gtgSetsPerDay));
       } else {
         setDays([{ id: nuevoId(), name: 'Día 1', exercises: [] }]);
       }
@@ -592,6 +606,7 @@ export default function RoutineEditorScreen() {
     setSchedule(t.schedule ?? 'weekly');
     if (t.scheduleLabel) setScheduleLabel(flexLabel(t.scheduleLabel));
     if (t.cycleStartDate) setCycleStartDate(t.cycleStartDate);
+    setGtgSets(t.gtgSetsPerDay ? String(t.gtgSetsPerDay) : '');
     setDays(
       t.days.map((d) => ({
         ...d,
@@ -618,6 +633,7 @@ export default function RoutineEditorScreen() {
         schedule,
         cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
         scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
+        gtgSetsPerDay: seriesAlDia(),
         days,
       });
       setTemplates(await getRoutineTemplatesForTrainer(profile.uid));
@@ -640,6 +656,7 @@ export default function RoutineEditorScreen() {
         schedule,
         cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
         scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
+        gtgSetsPerDay: seriesAlDia(),
       };
       if (routineId) {
         await updateRoutine(routineId, { name, days, ...scheduleFields });
@@ -667,7 +684,7 @@ export default function RoutineEditorScreen() {
     } finally {
       setSaving(false);
     }
-  }, [profile, clientId, routineId, name, days, schedule, cycleStartDate, router]);
+  }, [profile, clientId, routineId, name, days, schedule, scheduleLabel, cycleStartDate, gtgSets, router]);
 
   if (loading) return <LoadingScreen />;
 
@@ -769,11 +786,29 @@ export default function RoutineEditorScreen() {
             { valor: 'weekly' as RoutineSchedule, texto: 'Semana' },
             { valor: 'cycle' as RoutineSchedule, texto: 'Días sueltos' },
             { valor: 'flex' as RoutineSchedule, texto: flexLabel(scheduleLabel) },
+            { valor: 'gtg' as RoutineSchedule, texto: 'Grease the groove' },
           ]}
           onChange={setSchedule}
         />
 
-        {schedule === 'flex' ? (
+        {schedule === 'gtg' ? (
+          <>
+            <Text style={styles.scheduleHint}>
+              Un solo ejercicio (o dos), repartido en series sueltas a lo largo del día. Ninguna al
+              fallo: cada serie se queda a la mitad de lo que el alumno podría hacer. Se usa el
+              primer día de abajo; el objetivo por serie es el campo de repeticiones del ejercicio.
+            </Text>
+            <TextField
+              label="Series al día"
+              containerStyle={{ marginTop: spacing.md }}
+              keyboardType="number-pad"
+              placeholder={String(SERIES_POR_DEFECTO)}
+              value={gtgSets}
+              onChangeText={setGtgSets}
+              style={{ marginTop: spacing.sm, marginBottom: 0 }}
+            />
+          </>
+        ) : schedule === 'flex' ? (
           <>
             <Text style={styles.scheduleHint}>
               Modo a elección: creas varias rutinas (los "días" de abajo) y el alumno, antes de
@@ -830,6 +865,10 @@ export default function RoutineEditorScreen() {
           if (day.optionalRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso opcional');
           else if (day.isRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso');
           else summaryParts.push(`Día ${dayIndex + 1}`, `Intensidad ${day.intensity ?? 5}`);
+        } else if (schedule === 'gtg') {
+          summaryParts.push(
+            dayIndex === 0 ? `${seriesAlDia() ?? SERIES_POR_DEFECTO} series al día` : 'No se usa'
+          );
         } else if (schedule === 'flex') {
           if (day.isRest) summaryParts.push('Descanso');
           else if (day.intensityPct) {
@@ -891,7 +930,15 @@ export default function RoutineEditorScreen() {
             style={{ marginTop: spacing.sm }}
           />
 
-          {schedule === 'cycle' ? (
+          {schedule === 'gtg' ? (
+            // No hay día de la semana ni intensidad que ajustar: en gtg se
+            // entrena todos los días y la intensidad es siempre baja a propósito.
+            <Text style={styles.optionalHint}>
+              {dayIndex === 0
+                ? 'Este es el día que se entrena. Pon uno o dos ejercicios y, en repeticiones, el objetivo de CADA serie suelta (la mitad de lo que el alumno podría hacer).'
+                : 'En grease the groove solo se usa el primer día. Este no se le muestra al alumno.'}
+            </Text>
+          ) : schedule === 'cycle' ? (
             <>
             <View style={styles.cycleDayRow}>
               <View style={styles.cyclePill}>

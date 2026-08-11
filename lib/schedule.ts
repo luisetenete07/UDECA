@@ -77,6 +77,14 @@ export function resolveSessionFor(
     return { day: null, isRest: false, optionalRest: false };
   }
 
+  // Grease the groove: todos los días son el mismo día, y no se "empieza" una
+  // sesión: se van sumando series sueltas (ver lib/gtg.ts). Se devuelve el
+  // primer día para que la pantalla sepa qué ejercicios tocan, y nunca es
+  // descanso: el método vive de la repetición diaria.
+  if (routine.schedule === 'gtg') {
+    return { day: routine.days[0] ?? null, isRest: false, optionalRest: false };
+  }
+
   if (routine.schedule === 'cycle' && routine.cycleStartDate) {
     // El ancla más reciente manda: si el alumno reinició su ciclo (override) o
     // el coach lo reprogramó (cycleStartDate), gana la fecha más nueva.

@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /**
- * Un selector de dos o tres opciones, y el mismo en toda la app.
+ * Un selector de unas pocas opciones, y el mismo en toda la app.
  *
  * Había tres versiones distintas de esto —la agenda, la rutina, el plan del
  * atleta— con paletas parecidas y medidas que no coincidían: mismo control,
@@ -54,24 +54,49 @@ export function Segmented<T extends string>({
     return () => a.stop();
   }, [desliz, indice]);
 
+  /*
+   * A partir de cuatro opciones se parte en dos filas. En una sola, cada
+   * segmento se queda con menos de la mitad del ancho del móvil y los textos
+   * empiezan a cortarse: "Días sueltos" pasa a "Días sue…", que es justo la
+   * palabra por la que se distinguen las opciones.
+   */
+  const partido = opciones.length > 3;
+  const porFila = partido ? Math.ceil(opciones.length / 2) : opciones.length;
+  const alto = compacto ? ALTO_COMPACTO : ALTO;
   // Los segmentos reparten el ancho a partes iguales, así que la pastilla se
-  // calcula y no hace falta medir uno por uno.
-  const anchoSeg = opciones.length > 0 ? (ancho - PADDING * 2) / opciones.length : 0;
+  // calcula y no hace falta medir uno por uno. Partiendo en filas se redondea a
+  // la baja: con decimales, dos segmentos de media caja suman una micra de más
+  // y el navegador los manda a líneas distintas, uno por fila.
+  // El ancho medido incluye el borde y el relleno de la caja: si no se
+  // descuentan, cada segmento sale un pelo más ancho de lo que cabe y, al
+  // partir en filas, no entran dos por fila.
+  const util = ancho - PADDING * 2 - BORDE * 2;
+  const bruto = porFila > 0 ? util / porFila : 0;
+  const anchoSeg = partido ? Math.floor(bruto) : bruto;
+  // Con una sola opción no hay nada que interpolar (haría falta un rango de
+  // dos valores), y tampoco hay a dónde deslizarse.
+  const rango = opciones.map((_, i) => i);
 
   return (
     <View style={styles.caja} onLayout={(e) => setAncho(e.nativeEvent.layout.width)}>
-      {anchoSeg > 0 ? (
+      {anchoSeg > 0 && opciones.length > 1 ? (
         <Animated.View
           style={[
             styles.pastilla,
             {
               width: anchoSeg,
-              height: compacto ? ALTO_COMPACTO : ALTO,
+              height: alto,
               transform: [
                 {
                   translateX: desliz.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, anchoSeg],
+                    inputRange: rango,
+                    outputRange: rango.map((i) => (i % porFila) * anchoSeg),
+                  }),
+                },
+                {
+                  translateY: desliz.interpolate({
+                    inputRange: rango,
+                    outputRange: rango.map((i) => Math.floor(i / porFila) * alto),
                   }),
                 },
               ],
@@ -91,7 +116,18 @@ export function Segmented<T extends string>({
               if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
               onChange(o.valor);
             }}
-            style={[styles.segmento, { height: compacto ? ALTO_COMPACTO : ALTO }]}
+            style={[
+              styles.segmento,
+              { height: alto },
+              // En dos filas el ancho no puede salir de `flex: 1`, o la última
+              // fila incompleta repartiría su hueco entre menos segmentos y no
+              // cuadrarían con la pastilla. Se fija por `flexBasis` y no por
+              // `width`: el `flexBasis: 0` que arrastra `flex: 1` gana al ancho
+              // y dejaría los segmentos a cero (invisibles).
+              anchoSeg > 0 && partido
+                ? { flexGrow: 0, flexShrink: 0, flexBasis: anchoSeg }
+                : null,
+            ]}
           >
             {o.icono ? (
               <Ionicons
@@ -125,15 +161,17 @@ export function Segmented<T extends string>({
 }
 
 const PADDING = 4;
+const BORDE = 1;
 const ALTO = 40;
 const ALTO_COMPACTO = 34;
 
 const styles = StyleSheet.create({
   caja: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,
-    borderWidth: 1,
+    borderWidth: BORDE,
     borderColor: colors.border,
     padding: PADDING,
     marginBottom: spacing.md,
