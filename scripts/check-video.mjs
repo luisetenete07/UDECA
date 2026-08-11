@@ -14,8 +14,10 @@ import {
   miniaturaDeYouTube,
   parseVimeoUrl,
   parseYouTubeId,
+  seQuedaDentro,
   urlDeOEmbedVimeo,
   vimeoEmbedUrl,
+  youTubeEmbedUrl,
 } from '../lib/video.ts';
 
 let fallos = 0;
@@ -90,6 +92,30 @@ console.log('\nA Vimeo se le pregunta por la dirección correcta');
     'el hash va en la pregunta',
     con.includes(encodeURIComponent('https://vimeo.com/123456789/a1b2c3'))
   );
+}
+
+console.log('\nEn móvil, el vídeo no saca al alumno de la app');
+{
+  // El reproductor de YouTube trae sus propios enlaces —el título, el logo,
+  // "Ver en YouTube"— y cualquiera de ellos dejaba al alumno en la app de
+  // YouTube, con el vídeo del curso a la vista de quien pase por allí.
+  const embed = youTubeEmbedUrl('dQw4w9WgXcQ');
+  comprueba('el propio reproductor carga', seQuedaDentro(embed, embed));
+  comprueba('y lo que necesita para reproducir también',
+    seQuedaDentro('https://rr3---sn-x.googlevideo.com/videoplayback?x=1', embed));
+  comprueba('las miniaturas también', seQuedaDentro('https://i.ytimg.com/vi/x/hq.jpg', embed));
+  comprueba('pero la página de YouTube NO', !seQuedaDentro('https://www.youtube.com/watch?v=dQw4w9WgXcQ', embed));
+  comprueba('ni el canal', !seQuedaDentro('https://www.youtube.com/@alguien', embed));
+  comprueba('ni la app por esquema propio', !seQuedaDentro('vnd.youtube://dQw4w9WgXcQ', embed));
+  comprueba('ni un enlace cualquiera', !seQuedaDentro('https://ejemplo.com', embed));
+
+  const vimeo = vimeoEmbedUrl({ id: '123456789', hash: 'abc' });
+  comprueba('el reproductor de Vimeo carga', seQuedaDentro(vimeo, vimeo));
+  comprueba('y su cdn', seQuedaDentro('https://f.vimeocdn.com/p/x.mp4', vimeo));
+  comprueba('pero la página de Vimeo no', !seQuedaDentro('https://vimeo.com/123456789', vimeo));
+
+  comprueba('about:blank sí, que es el arranque', seQuedaDentro('about:blank', embed));
+  comprueba('una dirección rota no rompe nada', !seQuedaDentro('no es una url', embed));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

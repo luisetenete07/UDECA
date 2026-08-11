@@ -2,7 +2,13 @@ import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { parseVimeoUrl, parseYouTubeId, vimeoEmbedUrl, youTubeEmbedUrl } from '../lib/video';
+import {
+  parseVimeoUrl,
+  parseYouTubeId,
+  seQuedaDentro,
+  vimeoEmbedUrl,
+  youTubeEmbedUrl,
+} from '../lib/video';
 import { colors, radius, spacing, typography } from '../lib/theme';
 
 /**
@@ -82,7 +88,18 @@ function VimeoVideo({
       },
     });
   }
-  // Nativo (iOS/Android): player de Vimeo dentro de un WebView.
+  /*
+   * Nativo (iOS/Android): el reproductor dentro de un WebView.
+   *
+   * Con un vídeo de YouTube, el reproductor incrustado trae sus propios
+   * enlaces —el título, el logo, "Ver en YouTube"— y cualquiera de ellos
+   * sacaba al alumno de UDECA y lo dejaba en la app de YouTube, con el vídeo
+   * del curso a la vista de quien pase por allí y sin forma cómoda de volver.
+   *
+   * Se arregla no dejando que el WebView navegue a ninguna otra parte: solo
+   * carga el propio reproductor y lo que este necesite. Un toque en "Ver en
+   * YouTube" no hace nada, que es exactamente lo que tiene que hacer.
+   */
   const { WebView } = require('react-native-webview');
   return (
     <View style={styles.video}>
@@ -91,6 +108,11 @@ function VimeoVideo({
         allowsFullscreenVideo
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
+        // Sin ventanas nuevas: en Android un enlace con target=_blank abría la
+        // app de YouTube por su cuenta, sin pasar por la comprobación de abajo.
+        setSupportMultipleWindows={false}
+        javaScriptCanOpenWindowsAutomatically={false}
+        onShouldStartLoadWithRequest={(req: { url: string }) => seQuedaDentro(req.url, embedUrl)}
         style={{ flex: 1, backgroundColor: '#000', borderRadius: radius.md }}
       />
     </View>

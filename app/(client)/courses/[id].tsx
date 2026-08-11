@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -115,77 +115,12 @@ export default function ClientCourseDetailScreen() {
 
   return (
     <ScreenContainer maxWidth={860}>
-      {activeLesson ? (
-        <>
-          {activeLesson.kind === 'pdf' || (!activeLesson.videoUrl && activeLesson.pdfUrl) ? (
-            activeLesson.pdfUrl ? (
-              <EmbeddedDoc url={activeLesson.pdfUrl} />
-            ) : (
-              <View style={styles.docPlaceholder}>
-                <Ionicons name="document-text-outline" size={28} color={colors.textFaint} />
-                <Text style={styles.metaText}>Documento no disponible</Text>
-              </View>
-            )
-          ) : (
-            <VideoPlayer url={activeLesson.videoUrl} protectedContent />
-          )}
-
-          <Text style={styles.lessonTitle}>{activeLesson.title}</Text>
-          {activeLesson.durationLabel ? (
-            <View style={styles.metaRow}>
-              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.metaText}>{activeLesson.durationLabel}</Text>
-            </View>
-          ) : null}
-          {/* La descripción es de la LECCIÓN: una mini clase no tiene texto
-              propio, y enseñar el de su lección da el contexto de dónde está. */}
-          {leccionDeLoActivo?.description ? (
-            <Text style={styles.lessonDesc}>{leccionDeLoActivo.description}</Text>
-          ) : null}
-
-          {/* Terminar una lección y empezar la siguiente son dos gestos que
-              siempre van juntos: aquí es uno. Si ya estaba vista, el botón
-              deja de empujar y solo permite desmarcarla. */}
-          {tieneContenido(activeLesson) ? (
-            vista(activeLesson.id) ? (
-              <Button
-                title="Quitar de vistas"
-                variant="secondary"
-                onPress={() => alternarVista(activeLesson.id)}
-                style={{ marginTop: spacing.md }}
-              />
-            ) : (
-              <Button
-                title={estado.siguiente && estado.siguiente.id !== activeLesson.id
-                  ? 'Vista · ir a la siguiente'
-                  : 'Marcar como vista'}
-                onPress={() => {
-                  alternarVista(activeLesson.id);
-                  const resto = estadoDeCurso(
-                    course,
-                    [...vistas, activeLesson.id],
-                    memberDays
-                  ).siguiente;
-                  if (resto) setActiveLessonId(resto.id);
-                }}
-                style={{ marginTop: spacing.md }}
-              />
-            )
-          ) : null}
-        </>
-      ) : course.coverURL ? (
+      {/* La portada del curso, no el vídeo: el vídeo se abre a pantalla
+          completa al tocar una lección (ver ReproductorLeccion). Antes se
+          cambiaba aquí arriba y había que subir a buscarlo cada vez, en móvil
+          y en ordenador. */}
+      {course.coverURL ? (
         <Image source={{ uri: course.coverURL }} style={styles.courseCover} resizeMode="cover" />
-      ) : null}
-
-      {/* E-book adjunto a una lección de VÍDEO (material de apoyo). */}
-      {activeLesson?.kind !== 'pdf' && activeLesson?.videoUrl && activeLesson?.pdfUrl ? (
-        <View style={styles.pdfBlock}>
-          <View style={styles.pdfHead}>
-            <Ionicons name="document-text-outline" size={15} color={colors.primary} />
-            <Text style={styles.pdfTitle}>E-book de la lección</Text>
-          </View>
-          <EmbeddedDoc url={activeLesson.pdfUrl} />
-        </View>
       ) : null}
 
       <View style={styles.privateBadge}>
@@ -335,7 +270,118 @@ export default function ClientCourseDetailScreen() {
           );
         })
       )}
+
+      <ReproductorLeccion
+        contenido={activeLesson}
+        leccion={leccionDeLoActivo}
+        vista={activeLesson ? vista(activeLesson.id) : false}
+        haySiguiente={
+          !!estado.siguiente && !!activeLesson && estado.siguiente.id !== activeLesson.id
+        }
+        onCerrar={() => setActiveLessonId(null)}
+        onMarcar={() => {
+          if (!activeLesson) return;
+          alternarVista(activeLesson.id);
+          const resto = estadoDeCurso(course, [...vistas, activeLesson.id], memberDays).siguiente;
+          // Encadenar sin cerrar: terminar una lección y empezar la siguiente
+          // son dos gestos que siempre van juntos, así que aquí es uno.
+          if (resto && resto.id !== activeLesson.id) setActiveLessonId(resto.id);
+          else setActiveLessonId(null);
+        }}
+      />
     </ScreenContainer>
+  );
+}
+
+/**
+ * La lección, a pantalla completa.
+ *
+ * Antes el vídeo se cambiaba en una tarjeta arriba del todo y la lista estaba
+ * debajo: al tocar la lección catorce había que subir a buscarlo, en móvil y
+ * en ordenador. Ahora se abre encima, ocupando la pantalla, y al cerrar la
+ * lista sigue justo donde estaba.
+ *
+ * Es también lo que se espera de un vídeo hoy: se toca y se ve, sin pasos.
+ */
+function ReproductorLeccion({
+  contenido,
+  leccion,
+  vista,
+  haySiguiente,
+  onCerrar,
+  onMarcar,
+}: {
+  contenido: ContenidoDeCurso | null;
+  leccion: Lesson | null;
+  vista: boolean;
+  haySiguiente: boolean;
+  onCerrar: () => void;
+  onMarcar: () => void;
+}) {
+  if (!contenido) return null;
+  const esPdf = contenido.kind === 'pdf' || (!contenido.videoUrl && !!contenido.pdfUrl);
+  return (
+    <Modal visible animationType="slide" onRequestClose={onCerrar} transparent={false}>
+      <View style={styles.repFondo}>
+        <View style={styles.repCabecera}>
+          <Pressable onPress={onCerrar} hitSlop={10} style={styles.repCerrar}>
+            <Ionicons name="chevron-down" size={24} color={colors.text} />
+          </Pressable>
+          <Text style={styles.repCabeceraTexto} numberOfLines={1}>
+            {contenido.title || 'Lección'}
+          </Text>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.repContenido}>
+          {esPdf ? (
+            contenido.pdfUrl ? (
+              <EmbeddedDoc url={contenido.pdfUrl} />
+            ) : (
+              <View style={styles.docPlaceholder}>
+                <Ionicons name="document-text-outline" size={28} color={colors.textFaint} />
+                <Text style={styles.metaText}>Documento no disponible</Text>
+              </View>
+            )
+          ) : (
+            <VideoPlayer url={contenido.videoUrl} protectedContent />
+          )}
+
+          <Text style={styles.lessonTitle}>{contenido.title}</Text>
+          {contenido.durationLabel ? (
+            <View style={styles.metaRow}>
+              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.metaText}>{contenido.durationLabel}</Text>
+            </View>
+          ) : null}
+          {/* La descripción es de la LECCIÓN: una mini clase no tiene texto
+              propio, y enseñar el de su lección da el contexto de dónde está. */}
+          {leccion?.description ? (
+            <Text style={styles.lessonDesc}>{leccion.description}</Text>
+          ) : null}
+
+          {tieneContenido(contenido) ? (
+            <Button
+              title={vista ? 'Quitar de vistas' : haySiguiente ? 'Vista · ir a la siguiente' : 'Marcar como vista'}
+              variant={vista ? 'secondary' : 'primary'}
+              onPress={onMarcar}
+              style={{ marginTop: spacing.md }}
+            />
+          ) : null}
+
+          {/* El e-book de apoyo de una lección de vídeo, dentro de la propia
+              lección: es material de ESA lección y fuera se perdía. */}
+          {!esPdf && contenido.videoUrl && contenido.pdfUrl ? (
+            <View style={styles.pdfBlock}>
+              <View style={styles.pdfHead}>
+                <Ionicons name="document-text-outline" size={15} color={colors.primary} />
+                <Text style={styles.pdfTitle}>E-book de la lección</Text>
+              </View>
+              <EmbeddedDoc url={contenido.pdfUrl} />
+            </View>
+          ) : null}
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
@@ -471,6 +517,19 @@ function EmbeddedDoc({ url }: { url: string }) {
 }
 
 const styles = StyleSheet.create({
+  repFondo: { flex: 1, backgroundColor: colors.background },
+  repCabecera: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    // Sitio para la barra de estado: el reproductor ocupa la pantalla entera.
+    paddingTop: Platform.OS === 'web' ? spacing.md : spacing.xl + spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  repCerrar: { padding: 2 },
+  repCabeceraTexto: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
+  repContenido: { padding: spacing.md, paddingBottom: spacing.xl, maxWidth: 860, width: '100%', alignSelf: 'center' },
   lessonTitle: { ...typography.h2, color: colors.text, marginTop: spacing.md },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },
   metaText: { ...typography.small, color: colors.textMuted },

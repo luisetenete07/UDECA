@@ -120,3 +120,31 @@ export function miniaturaDelEnlace(url: string | undefined): string | null {
   const yt = parseYouTubeId(url);
   return yt ? miniaturaDeYouTube(yt) : null;
 }
+
+/**
+ * ¿Puede el WebView cargar esta dirección?
+ *
+ * Solo el propio reproductor y los dominios que necesita para funcionar. Todo
+ * lo demás —la página de YouTube, la de Vimeo, un enlace de un comentario— se
+ * queda fuera: el alumno se ha metido en una lección de su curso, no en un
+ * navegador.
+ */
+export function seQuedaDentro(destino: string, embedUrl: string): boolean {
+  if (destino === embedUrl || destino === 'about:blank') return true;
+  try {
+    const host = new URL(destino).hostname.replace(/^www\./, '');
+    const propio = new URL(embedUrl).hostname.replace(/^www\./, '');
+    if (host === propio) return true;
+    // Lo que el reproductor carga por dentro para poder reproducir.
+    return [
+      'youtube-nocookie.com',
+      'googlevideo.com',
+      'ytimg.com',
+      'player.vimeo.com',
+      'vimeocdn.com',
+      'f.vimeocdn.com',
+    ].some((d) => host === d || host.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
