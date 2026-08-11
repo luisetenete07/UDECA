@@ -6,7 +6,7 @@ import { Card } from '../../components/Card';
 import { CyclePlanSheet } from '../../components/CyclePlanSheet';
 import { CycleSheet } from '../../components/CycleSheet';
 import { EmptyState } from '../../components/EmptyState';
-import { LoadingScreen } from '../../components/LoadingScreen';
+import { CardsSkeleton } from '../../components/Skeleton';
 import { PlanCalendar } from '../../components/PlanCalendar';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { useAuth } from '../../lib/auth-context';
@@ -58,7 +58,13 @@ export default function PlanningScreen() {
     }, [cargar])
   );
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <CardsSkeleton tarjetas={2} />
+      </ScreenContainer>
+    );
+  }
 
   const raiz = buildCycleTree(cycles);
   const planes = raiz.filter((n) => n.children.length > 0);

@@ -18,7 +18,7 @@ import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { LineChart } from '../../components/LineChart';
-import { LoadingScreen } from '../../components/LoadingScreen';
+import { CardsSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { WeightChart } from '../../components/WeightChart';
@@ -393,7 +393,13 @@ export default function ProgressScreen() {
     return enCurso.find((c) => c.level === 'meso') ?? enCurso.find((c) => c.level === 'macro') ?? null;
   }, [cycles]);
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <CardsSkeleton tarjetas={3} />
+      </ScreenContainer>
+    );
+  }
 
   const toggleSession = (id: string) =>
     setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));

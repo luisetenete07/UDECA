@@ -8,7 +8,7 @@
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-texto.mjs
  */
-import { SEPARADOR, unido } from '../lib/texto.ts';
+import { conMiles, SEPARADOR, unido } from '../lib/texto.ts';
 
 let fallos = 0;
 function comprueba(nombre, condicion, detalle = '') {
@@ -63,6 +63,21 @@ console.log('\nLos espacios de los bordes no cuentan');
 {
   comprueba('se recortan', unido('  A  ', ' B ') === `A${SEPARADOR}B`);
   comprueba('pero los de dentro no', unido('Muscle up', 'Front lever') === `Muscle up${SEPARADOR}Front lever`);
+}
+
+console.log('\nLos miles, iguales en todos los móviles');
+{
+  // A mano y no con toLocaleString: esa función depende de los datos de idioma
+  // del motor y devuelve "8000" en un Android con ICU recortado donde un
+  // iPhone devuelve "8.000". La misma pantalla no puede verse distinta según
+  // el móvil.
+  comprueba('mil', conMiles(1000) === '1.000');
+  comprueba('ocho mil', conMiles(8000) === '8.000');
+  comprueba('un millón', conMiles(1234567) === '1.234.567');
+  comprueba('menos de mil se queda igual', conMiles(999) === '999');
+  comprueba('cero', conMiles(0) === '0');
+  comprueba('negativos', conMiles(-4500) === '-4.500');
+  comprueba('decimales se redondean', conMiles(1499.6) === '1.500');
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

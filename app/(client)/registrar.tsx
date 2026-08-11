@@ -7,7 +7,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Chip, ChipRow } from '../../components/Chip';
 import { EmptyState } from '../../components/EmptyState';
-import { LoadingScreen } from '../../components/LoadingScreen';
+import { CardsSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
@@ -172,7 +172,13 @@ export default function RegistrarScreen() {
     }
   };
 
-  if (loading) return <LoadingScreen />;
+  if (loading) {
+    return (
+      <ScreenContainer>
+        <CardsSkeleton tarjetas={3} />
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer>

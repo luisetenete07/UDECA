@@ -63,6 +63,29 @@ const styles = StyleSheet.create({
 });
 
 /**
+ * El esqueleto de una pantalla de tarjetas, que es la forma de casi todas las
+ * del alumno: un título arriba y unas cuantas fichas debajo.
+ *
+ * Existe para que dejen de quedarse en blanco mientras cargan. El logo latiendo
+ * dice "espera"; esto dice "ya llega, y va a tener esta pinta", y de paso el
+ * ojo ya está colocando dónde va cada cosa cuando aparece.
+ */
+export function CardsSkeleton({ tarjetas = 3 }: { tarjetas?: number }) {
+  return (
+    <View style={{ gap: spacing.md }}>
+      <Bar width="50%" height={28} />
+      {Array.from({ length: tarjetas }).map((_, i) => (
+        <View key={i} style={styles.card}>
+          <Bar width="45%" height={14} />
+          <Bar width="100%" height={11} />
+          <Bar width="75%" height={11} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/**
  * El esqueleto del panel: una alerta, el bloque grande con su círculo y dos
  * tarjetas. Imita la pantalla de verdad para que al llegar los datos nada
  * salte de sitio.

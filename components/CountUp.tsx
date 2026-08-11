@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Text, type StyleProp, type TextStyle } from 'react-native';
+import { conMiles } from '../lib/texto';
 
 /**
  * Una cifra que sube hasta su valor al entrar en pantalla.
@@ -57,10 +58,18 @@ export function CountUp({
     };
   }, [anim, value, duration]);
 
-  const texto = visible.toLocaleString('es-ES', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+  /*
+   * El formato se escribe a mano y no con `toLocaleString`: esa función
+   * depende de los datos de idioma que traiga el motor, y en un Android con
+   * ICU recortado devuelve "8000" donde un iPhone devuelve "8.000". La misma
+   * pantalla no puede verse distinta según el móvil.
+   */
+  const texto =
+    decimals > 0
+      ? `${conMiles(Math.trunc(visible))},${Math.abs(visible % 1)
+          .toFixed(decimals)
+          .slice(2)}`
+      : conMiles(visible);
 
   return (
     <Text style={style}>
