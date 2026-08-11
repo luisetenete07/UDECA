@@ -96,6 +96,12 @@ export interface UserProfile {
   /** Peso objetivo del alumno en kg. */
   targetWeightKg?: number;
   /**
+   * Pasos al día que se propone. Sin valor, los de por omisión (ver
+   * lib/pasos.ts). Va en el perfil y no en cada día porque es un objetivo, no
+   * un dato del martes.
+   */
+  stepGoal?: number;
+  /**
    * Solo en clientes: momento en que el alumno declaró "ya he pagado" (pendiente
    * de que el entrenador lo confirme). Se limpia al registrar el cobro.
    */

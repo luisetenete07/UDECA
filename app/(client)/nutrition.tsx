@@ -24,6 +24,8 @@ import { getMealBooksForTrainer } from '../../lib/firestore/mealBooks';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { pickProgressPhoto } from '../../lib/image';
 import { MacroCalculator } from '../../components/MacroCalculator';
+import { ContadorDePasos } from '../../components/ContadorDePasos';
+import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { confirmar } from '../../lib/confirmar';
 import { Sheet } from '../../components/Sheet';
 import { esHoy, fechaCorta } from '../../lib/fechas';
@@ -56,19 +58,24 @@ export default function NutritionScreen() {
   const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
   const [zoomPhoto, setZoomPhoto] = useState<string | null>(null);
   const [calcOpen, setCalcOpen] = useState(false);
+  // Último peso registrado: solo para estimar el gasto de andar. Sin él, la
+  // estimación no se enseña en vez de inventarse un peso medio.
+  const [ultimoPeso, setUltimoPeso] = useState<number | undefined>(undefined);
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [planData, mealData, photoData, bookData] = await Promise.all([
+    const [planData, mealData, photoData, bookData, pesos] = await Promise.all([
       getActiveNutritionPlanForClient(profile.uid),
       getMealLogsForClient(profile.uid),
       getProgressPhotosForClient(profile.uid),
       profile.trainerId ? getMealBooksForTrainer(profile.trainerId).catch(() => []) : Promise.resolve([]),
+      getWeightLogsForClient(profile.uid).catch(() => []),
     ]);
     setPlan(planData);
     setMeals(mealData);
     setPhotos(photoData);
     setBooks(bookData);
+    setUltimoPeso(pesos.length > 0 ? pesos[pesos.length - 1].weightKg : undefined);
     setLoading(false);
   }, [profile]);
 
@@ -209,6 +216,11 @@ export default function NutritionScreen() {
   return (
     <ScreenContainer>
       <Text style={styles.title}>Mi nutrición</Text>
+
+      {/* Los pasos van aquí y no en Progreso: no son entrenamiento, son el
+          gasto del resto del día, y es al lado de las calorías donde esa cifra
+          significa algo. */}
+      {profile ? <ContadorDePasos profile={profile} pesoKg={ultimoPeso} /> : null}
 
       {!targets ? (
         <Card style={styles.section}>

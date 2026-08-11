@@ -346,6 +346,19 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // Pasos del día. Un documento por alumno y día, que se reescribe según
+    // avanza la jornada; por eso aquí sí se permite actualizar, al revés que
+    // en el peso, donde cada registro es un hecho cerrado.
+    match /stepLogs/{logId} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.clientId == request.auth.uid
+        && request.resource.data.clientId == request.auth.uid;
+    }
+
     // Planes nutricionales asignados a cada cliente.
     match /nutritionPlans/{planId} {
       allow read: if request.auth != null

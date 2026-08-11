@@ -28,3 +28,22 @@ export function unido(...partes: (string | number | null | undefined | false)[])
     .filter((p) => p.length > 0)
     .join(SEPARADOR);
 }
+
+/**
+ * Un número con el punto de los miles, como se escribe en español.
+ *
+ * Escrito a mano y no con `toLocaleString` porque esa función depende de los
+ * datos de idioma que traiga el motor: en un Android con ICU recortado
+ * devuelve "8000" y en un iPhone "8.000", y la misma pantalla se ve distinta
+ * según el móvil. Aquí, ocho mil son 8.000 en todas partes.
+ */
+export function conMiles(n: number): string {
+  const negativo = n < 0;
+  const entero = Math.abs(Math.round(n)).toString();
+  let salida = '';
+  for (let i = 0; i < entero.length; i++) {
+    if (i > 0 && (entero.length - i) % 3 === 0) salida += '.';
+    salida += entero[i];
+  }
+  return negativo ? `-${salida}` : salida;
+}
