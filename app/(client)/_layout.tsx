@@ -17,6 +17,7 @@ import { clientIsLocked, hasPlatformAccess, needsEntryPayment } from '../../lib/
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { useTabScreenOptions } from '../../lib/navTheme';
+import { useT } from '../../lib/idioma';
 
 const onboardingKey = (uid: string) => `udeca-onboarding-${uid}`;
 
@@ -24,6 +25,7 @@ export default function ClientLayout() {
   const { loading, firebaseUser, profile, emailVerified, refreshProfile } = useAuth();
   // Antes de los `return` de abajo: un hook no puede quedarse sin llamar.
   const tabOptions = useTabScreenOptions();
+  const t = useT();
   // null = comprobando; true = ya visto; false = mostrar bienvenida.
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
   // Una vez terminado en esta sesión, no dejamos que un refresco del perfil lo
@@ -123,14 +125,14 @@ export default function ClientLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Inicio',
+          title: t('Inicio'),
           tabBarIcon: (props) => <TabIcon {...props} outline="home-outline" filled="home" />,
         }}
       />
       <Tabs.Screen
         name="workout"
         options={{
-          title: 'Entreno',
+          title: t('Entreno'),
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="barbell-outline" filled="barbell" />
           ),
@@ -139,7 +141,7 @@ export default function ClientLayout() {
       <Tabs.Screen
         name="courses"
         options={{
-          title: 'Cursos',
+          title: t('Cursos'),
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="school-outline" filled="school" />
           ),
@@ -148,7 +150,7 @@ export default function ClientLayout() {
       <Tabs.Screen
         name="nutrition"
         options={{
-          title: 'Nutrición',
+          title: t('Nutrición'),
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="nutrition-outline" filled="nutrition" />
           ),
@@ -157,7 +159,7 @@ export default function ClientLayout() {
       <Tabs.Screen
         name="progress"
         options={{
-          title: 'Progreso',
+          title: t('Progreso'),
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="trending-up-outline" filled="trending-up" />
           ),
@@ -167,7 +169,7 @@ export default function ClientLayout() {
       <Tabs.Screen
         name="social"
         options={{
-          title: 'Social',
+          title: t('Social'),
           href: isAthlete ? null : undefined,
           tabBarIcon: (props) => <TabIcon {...props} outline="people-outline" filled="people" />,
         }}

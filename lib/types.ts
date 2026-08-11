@@ -102,6 +102,13 @@ export interface UserProfile {
    */
   stepGoal?: number;
   /**
+   * Idioma elegido ('es' | 'en'). Sin valor, el del teléfono. No se guarda
+   * "es" por omisión a propósito: quien no ha elegido no ha elegido español,
+   * ha elegido "lo que hable mi móvil", y el día que cambie de móvil quiere
+   * que la app le siga.
+   */
+  language?: string;
+  /**
    * Solo en clientes: momento en que el alumno declaró "ya he pagado" (pendiente
    * de que el entrenador lo confirme). Se limpia al registrar el cobro.
    */

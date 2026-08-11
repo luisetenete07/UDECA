@@ -12,6 +12,7 @@ import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { emailFieldProps, TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { useT } from '../../lib/idioma';
 import { useGoogleSignIn } from '../../lib/googleAuth';
 import { track } from '../../lib/analytics';
 import { auth } from '../../lib/firebase';
@@ -24,6 +25,7 @@ import {
 import { colors, fieldLabel, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 
 export default function LoginScreen() {
+  const t = useT();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -150,7 +152,7 @@ export default function LoginScreen() {
             style={styles.otherAcc}
           >
             <Ionicons name="add" size={18} color={colors.primary} />
-            <Text style={styles.otherAccText}>Usar otra cuenta</Text>
+            <Text style={styles.otherAccText}>{t('Usar otra cuenta')}</Text>
           </Pressable>
         </Card>
       ) : (
@@ -158,11 +160,11 @@ export default function LoginScreen() {
           {accounts.length > 0 ? (
             <Pressable onPress={() => setPicking(true)} style={styles.backToAccounts} hitSlop={6}>
               <Ionicons name="chevron-back" size={16} color={colors.primary} />
-              <Text style={styles.otherAccText}>Cuentas guardadas</Text>
+              <Text style={styles.otherAccText}>{t('Cuentas guardadas')}</Text>
             </Pressable>
           ) : null}
           <TextField
-            label="Correo electrónico"
+            label={t('Correo electrónico')}
             {...emailFieldProps}
             value={email}
             onChangeText={setEmail}
@@ -172,7 +174,7 @@ export default function LoginScreen() {
           />
           <TextField
             ref={passwordRef}
-            label="Contraseña"
+            label={t('Contraseña')}
             secureTextEntry
             autoComplete="password"
             value={password}
@@ -186,14 +188,14 @@ export default function LoginScreen() {
           {info ? <Text style={styles.info}>{info}</Text> : null}
 
           <Button
-            title="Iniciar sesión"
+            title={t('Iniciar sesión')}
             onPress={handleSubmit}
             loading={loading}
             style={styles.submit}
           />
 
           <Pressable onPress={handleForgotPassword} hitSlop={6}>
-            <Text style={styles.forgot}>¿Has olvidado tu contraseña?</Text>
+            <Text style={styles.forgot}>{t('¿Has olvidado tu contraseña?')}</Text>
           </Pressable>
 
           {/* Google, debajo del correo y no encima: quien ya tiene cuenta
@@ -204,7 +206,7 @@ export default function LoginScreen() {
             <>
               <Separador />
               <BotonGoogle
-                texto="Continuar con Google"
+                texto={t('Continuar con Google')}
                 cargando={google.entrando}
                 onPress={entrarConGoogle}
               />
@@ -215,9 +217,9 @@ export default function LoginScreen() {
       )}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>¿No tienes cuenta?</Text>
+        <Text style={styles.footerText}>{t('¿No tienes cuenta?')}</Text>
         <Link href="/(auth)/register" asChild>
-          <Text style={styles.link}> Regístrate</Text>
+          <Text style={styles.link}> {t('Regístrate')}</Text>
         </Link>
       </View>
     </ScreenContainer>

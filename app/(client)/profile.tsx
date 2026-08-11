@@ -17,6 +17,7 @@ import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import { updateUserProfile } from '../../lib/firestore/users';
+import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { pickAvatar } from '../../lib/image';
@@ -284,6 +285,8 @@ export default function ClientProfileScreen() {
 
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
       <MemberCard />
+
+      <SelectorDeIdioma />
 
       {/* Aquí había tres cifras enormes —entrenos, racha, semanas— justo
           debajo de la tarjeta... que rota exactamente esas mismas tres. Las

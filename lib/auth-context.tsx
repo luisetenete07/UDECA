@@ -19,6 +19,7 @@ import { registerForPushNotificationsAsync } from './notifications';
 import { forgetAccount, rememberAccount } from './rememberedAccounts';
 import { clearCache } from './screenCache';
 import { trialUntil } from './subscription';
+import { aplicarIdiomaDelPerfil } from './idioma';
 import type { UserProfile, UserRole } from './types';
 
 interface AuthContextValue {
@@ -98,6 +99,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (snap.exists()) {
         const p = snap.data() as UserProfile;
         setProfile(p);
+        // El idioma que haya elegido, en cuanto se sabe quién es. Sin elegir,
+        // se queda el del teléfono.
+        aplicarIdiomaDelPerfil(p.language);
         // Recuerda esta cuenta en el dispositivo para el selector de acceso
         // (con nombre, rol y foto completos).
         rememberAccount({ email: p.email, name: p.name, role: p.role, photoURL: p.photoURL });

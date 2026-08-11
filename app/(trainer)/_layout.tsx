@@ -7,12 +7,14 @@ import { EntryWall } from '../../components/EntryWall';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { useTabScreenOptions } from '../../lib/navTheme';
+import { useT } from '../../lib/idioma';
 import { hasPlatformAccess, needsEntryPayment } from '../../lib/subscription';
 
 export default function TrainerLayout() {
   const { loading, firebaseUser, profile, emailVerified } = useAuth();
   // Antes de los `return` de abajo: un hook no puede quedarse sin llamar.
   const tabOptions = useTabScreenOptions();
+  const t = useT();
 
   if (loading) return <LoadingScreen />;
   if (!firebaseUser || !profile) return <Redirect href="/(auth)/login" />;
@@ -37,21 +39,21 @@ export default function TrainerLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Inicio',
+          title: t('Inicio'),
           tabBarIcon: (props) => <TabIcon {...props} outline="home-outline" filled="home" />,
         }}
       />
       <Tabs.Screen
         name="clients"
         options={{
-          title: 'Clientes',
+          title: t('Clientes'),
           tabBarIcon: (props) => <TabIcon {...props} outline="people-outline" filled="people" />,
         }}
       />
       <Tabs.Screen
         name="exercises"
         options={{
-          title: 'Ejercicios',
+          title: t('Ejercicios'),
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="barbell-outline" filled="barbell" />
           ),
@@ -60,7 +62,7 @@ export default function TrainerLayout() {
       <Tabs.Screen
         name="courses"
         options={{
-          title: 'Cursos',
+          title: t('Cursos'),
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="school-outline" filled="school" />
           ),
@@ -81,7 +83,7 @@ export default function TrainerLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil',
+          title: t('Perfil'),
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="person-circle-outline" filled="person-circle" />
           ),

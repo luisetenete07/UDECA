@@ -7,6 +7,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
+import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -406,6 +407,8 @@ export default function TrainerProfileScreen() {
 
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
       <MemberCard />
+
+      <SelectorDeIdioma />
 
       {/* De aquí abajo, todo son ajustes: cosas que se tocan una vez y no se
           vuelven a mirar. Plegadas, el perfil pasa de tres pantallas y media a
