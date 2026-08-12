@@ -32,17 +32,27 @@ import type { UserProfile } from './types';
 export const PASO_MS = 7000;
 
 /**
+ * Hasta dónde puede bajar la marca.
+ *
+ * Por debajo de esto está la barra de controles del reproductor blindado, y
+ * una marca encima de los botones tapa el tiempo y estorba justo a quien está
+ * viendo la clase de buena fe.
+ */
+export const SUELO = 0.72;
+
+/**
  * Las posiciones por las que va pasando, en fracción del ancho y del alto.
  *
  * Ninguna está en el centro: la marca tiene que molestar al que la quiera
- * quitar, no al que está viendo la clase.
+ * quitar, no al que está viendo la clase. Y ninguna baja de `SUELO`, que es
+ * donde empiezan los controles.
  */
 export const POSICIONES: { x: number; y: number }[] = [
   { x: 0.06, y: 0.08 },
-  { x: 0.58, y: 0.82 },
+  { x: 0.58, y: 0.7 },
   { x: 0.62, y: 0.1 },
-  { x: 0.08, y: 0.78 },
-  { x: 0.34, y: 0.45 },
+  { x: 0.08, y: 0.66 },
+  { x: 0.34, y: 0.42 },
 ];
 
 /**
@@ -77,7 +87,21 @@ export function posicionDeMarca(paso: number): { x: number; y: number } {
  */
 export function avisoDeProteccion(plataforma: string): string {
   if (plataforma === 'web') {
-    return 'Este vídeo lleva tu nombre marcado. No lo compartas ni lo grabes.';
+    return 'Clase protegida: sin descargas, sin menú y con tu nombre marcado encima. No la compartas ni la grabes.';
   }
-  return 'Vídeo protegido: no se puede grabar la pantalla y lleva tu nombre marcado.';
+  return 'Clase protegida: no se puede grabar la pantalla ni hacer capturas, y lleva tu nombre marcado encima.';
+}
+
+/**
+ * Lo que se lee al destapar la clase después de una captura.
+ *
+ * Lleva el nombre a propósito, y en segunda persona. El disuasorio de verdad
+ * de una marca de agua no es que exista: es acordarse de que existe justo en
+ * el momento de hacer la copia.
+ */
+export function avisoDeCaptura(nombre?: string | null): string {
+  const quien = (nombre ?? '').trim().split(' ')[0];
+  return quien
+    ? `${quien}, esta clase va marcada con tu nombre: cualquier copia lleva tu cuenta encima. Compartirla es motivo de baja.`
+    : 'Esta clase va marcada con tu nombre: cualquier copia lleva tu cuenta encima. Compartirla es motivo de baja.';
 }

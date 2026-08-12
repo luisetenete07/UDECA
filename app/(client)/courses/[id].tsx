@@ -11,8 +11,12 @@ import { MiniaturaCurso } from '../../../components/MiniaturaCurso';
 import { ProgressRing } from '../../../components/ProgressRing';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { VideoPlayer } from '../../../components/VideoPlayer';
-import { MarcaDeAgua, useProteccionDePantalla } from '../../../components/MarcaDeAgua';
-import { avisoDeProteccion } from '../../../lib/marcaDeAgua';
+import {
+  MarcaDeAgua,
+  useProteccionDePantalla,
+  useSinCopiaEnWeb,
+} from '../../../components/MarcaDeAgua';
+import { avisoDeCaptura, avisoDeProteccion } from '../../../lib/marcaDeAgua';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
 import { getCourse } from '../../../lib/firestore/courses';
@@ -324,10 +328,18 @@ function ReproductorLeccion({
   profile: ReturnType<typeof useAuth>['profile'];
 }) {
   const esPdf = contenido?.kind === 'pdf' || (!contenido?.videoUrl && !!contenido?.pdfUrl);
+  const [pillado, setPillado] = useState(false);
   // Mientras hay una clase abierta, el sistema no deja grabar la pantalla
   // (Android e iOS). Se apaga al cerrar: bloquearlo todo el rato impediría al
   // alumno hacerle una captura a su propio entreno.
-  useProteccionDePantalla(!!contenido && !esPdf);
+  //
+  // El aviso de captura es para donde el bloqueo no llega (un iOS antiguo): se
+  // tapa la clase y hay que volver a destaparla a mano. No es una cerradura
+  // —quien lo intenta ya tiene su captura—, es que sepa que se ha visto.
+  useProteccionDePantalla(!!contenido, () => setPillado(true));
+  // Y el PDF de una lección también es material del curso: mientras esté
+  // abierto, en el navegador no hay menú, ni selección, ni arrastrar fuera.
+  useSinCopiaEnWeb(!!contenido);
   if (!contenido) return null;
   return (
     <Modal visible animationType="slide" onRequestClose={onCerrar} transparent={false}>
@@ -406,6 +418,20 @@ function ReproductorLeccion({
             </View>
           ) : null}
         </ScrollView>
+
+        {/* Se ha detectado una captura: se tapa la clase. Hay que destaparla a
+            mano, y al hacerlo se lee de quién es la copia que se acaba de
+            llevar. Es lo único que se puede hacer donde el sistema no bloquea,
+            y es más de lo que parece: lo que frena de verdad no es la
+            cerradura, es saber que hay nombre puesto. */}
+        {pillado ? (
+          <View style={styles.tapa}>
+            <Ionicons name="eye-off-outline" size={30} color={colors.text} />
+            <Text style={styles.tapaTitulo}>Captura detectada</Text>
+            <Text style={styles.tapaTexto}>{avisoDeCaptura(profile?.name)}</Text>
+            <Button title="Seguir viendo la clase" onPress={() => setPillado(false)} />
+          </View>
+        ) : null}
       </View>
     </Modal>
   );
@@ -537,13 +563,39 @@ function EmbeddedDoc({ url }: { url: string }) {
   const { WebView } = require('react-native-webview');
   return (
     <View style={styles.pdfNative}>
-      <WebView source={{ uri: src }} style={{ flex: 1, borderRadius: radius.md }} />
+      <WebView
+        source={{ uri: src }}
+        // Un e-book de un curso es material de pago igual que el vídeo. Fuera
+        // el menú de mantener pulsado (copiar, compartir, "abrir en...") y la
+        // vista previa, que son las formas de sacarlo de la app sin descargarlo.
+        allowsLinkPreview={false}
+        suppressMenuItems={['copy', 'share', 'select', 'selectAll', 'lookup', 'translate']}
+        setSupportMultipleWindows={false}
+        javaScriptCanOpenWindowsAutomatically={false}
+        style={{ flex: 1, borderRadius: radius.md }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   repFondo: { flex: 1, backgroundColor: colors.background },
+  tapa: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  tapaTitulo: { ...typography.h2, color: colors.text, textAlign: 'center' },
+  tapaTexto: {
+    ...typography.small,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: spacing.md,
+  },
   repCabecera: {
     flexDirection: 'row',
     alignItems: 'center',

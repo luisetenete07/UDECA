@@ -148,3 +148,34 @@ export function seQuedaDentro(destino: string, embedUrl: string): boolean {
     return false;
   }
 }
+
+/**
+ * Lo mismo, para el reproductor blindado.
+ *
+ * Ahí la página es NUESTRA y el reproductor de la plataforma va dentro, en un
+ * marco. Se le deja cargar su propio reproductor y lo que necesite para
+ * funcionar; todo lo demás —y en particular youtube.com, que es donde llevan
+ * "Ver en YouTube" y el logo— se queda fuera. El cristal ya impide pulsarlos;
+ * esto es la segunda cerradura, por si algún día el cristal falla.
+ */
+export function seQuedaDentroDelBlindaje(destino: string): boolean {
+  if (destino === 'about:blank' || destino.startsWith('data:')) return true;
+  try {
+    const u = new URL(destino);
+    const host = u.hostname.replace(/^www\./, '');
+    // La propia página del reproductor se carga con un origen prestado
+    // (youtube.com o player.vimeo.com) para que la API de la plataforma pueda
+    // hablar con ella. Ese origen se admite A SECAS: sin ruta, que es como
+    // llega. Con ruta ya sería la página de YouTube, y ahí no se va.
+    if (u.pathname === '' || u.pathname === '/') return true;
+    return [
+      'youtube-nocookie.com',
+      'googlevideo.com',
+      'ytimg.com',
+      'player.vimeo.com',
+      'vimeocdn.com',
+    ].some((d) => host === d || host.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}

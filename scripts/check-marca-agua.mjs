@@ -9,9 +9,11 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-marca-agua.mjs
  */
 import {
+  avisoDeCaptura,
   avisoDeProteccion,
   PASO_MS,
   POSICIONES,
+  SUELO,
   posicionDeMarca,
   textoDeMarca,
 } from '../lib/marcaDeAgua.ts';
@@ -53,6 +55,10 @@ console.log('\nLa marca se mueve');
     POSICIONES.every((p) => Math.abs(p.x - 0.5) > 0.1 || Math.abs(p.y - 0.5) > 0.1)
   );
   comprueba('las esquinas están repartidas', new Set(POSICIONES.map((p) => `${p.x > 0.5}-${p.y > 0.5}`)).size >= 3);
+  // Abajo del todo están los controles del reproductor blindado: una marca
+  // encima de los botones tapa el tiempo y estorba al que ve la clase de
+  // buena fe, que es justo a quien no hay que estorbar.
+  comprueba('ninguna cae sobre los controles', POSICIONES.every((p) => p.y <= SUELO), String(SUELO));
 
   comprueba('va cambiando con los pasos', posicionDeMarca(0) !== posicionDeMarca(1));
   comprueba('da la vuelta', posicionDeMarca(POSICIONES.length) === posicionDeMarca(0));
@@ -74,6 +80,22 @@ console.log('\nLo que se le promete al usuario');
     comprueba(`en ${p} se dice que no se puede grabar`, /no se puede grabar/i.test(t), t);
     comprueba(`en ${p} también se avisa de la marca`, /nombre/i.test(t));
   }
+}
+
+console.log('\nLo que se lee al destapar tras una captura');
+{
+  // En segunda persona y con el nombre: el disuasorio de una marca de agua no
+  // es que exista, es acordarse de que existe justo al hacer la copia.
+  const con = avisoDeCaptura('Marcos Ruiz');
+  comprueba('llama a la persona por su nombre', con.startsWith('Marcos,'), con);
+  comprueba('solo el nombre de pila', !con.includes('Ruiz'));
+  comprueba('recuerda que la copia lleva su cuenta', /tu cuenta/i.test(con));
+  comprueba('y que compartir tiene consecuencias', /baja/i.test(con));
+
+  const sin = avisoDeCaptura(undefined);
+  comprueba('sin nombre, sigue teniendo sentido', sin.startsWith('Esta clase'), sin);
+  comprueba('y no empieza con una coma suelta', !sin.startsWith(','));
+  comprueba('un nombre en blanco es como no tenerlo', avisoDeCaptura('   ') === sin);
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
