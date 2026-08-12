@@ -25,7 +25,9 @@ import { updateUserProfile } from '../../lib/firestore/users';
 import { pickProgressPhoto } from '../../lib/image';
 import { MacroCalculator } from '../../components/MacroCalculator';
 import { ContadorDePasos } from '../../components/ContadorDePasos';
+import { BloqueDePeso } from '../../components/BloqueDePeso';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
+import type { WeightLog } from '../../lib/types';
 import { confirmar } from '../../lib/confirmar';
 import { Sheet } from '../../components/Sheet';
 import { esHoy, fechaCorta } from '../../lib/fechas';
@@ -58,13 +60,19 @@ export default function NutritionScreen() {
   const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
   const [zoomPhoto, setZoomPhoto] = useState<string | null>(null);
   const [calcOpen, setCalcOpen] = useState(false);
-  // Último peso registrado: solo para estimar el gasto de andar. Sin él, la
-  // estimación no se enseña en vez de inventarse un peso medio.
-  const [ultimoPeso, setUltimoPeso] = useState<number | undefined>(undefined);
+  // El peso vive aquí desde que se sacó de Progreso: no sube ni baja por lo
+  // que levantas, sube y baja por lo que comes. Y de paso es lo que permite
+  // estimar el gasto de andar sin inventarse un peso medio.
+  const [pesos, setPesos] = useState<WeightLog[]>([]);
+
+  // El último peso apuntado, que es lo que necesita el contador de pasos para
+  // estimar las calorías del día. Sin él no se estima nada, en vez de tirar de
+  // un peso medio inventado.
+  const ultimoPeso = pesos.length > 0 ? pesos[pesos.length - 1].weightKg : undefined;
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [planData, mealData, photoData, bookData, pesos] = await Promise.all([
+    const [planData, mealData, photoData, bookData, pesoData] = await Promise.all([
       getActiveNutritionPlanForClient(profile.uid),
       getMealLogsForClient(profile.uid),
       getProgressPhotosForClient(profile.uid),
@@ -75,7 +83,7 @@ export default function NutritionScreen() {
     setMeals(mealData);
     setPhotos(photoData);
     setBooks(bookData);
-    setUltimoPeso(pesos.length > 0 ? pesos[pesos.length - 1].weightKg : undefined);
+    setPesos(pesoData);
     setLoading(false);
   }, [profile]);
 
@@ -222,6 +230,12 @@ export default function NutritionScreen() {
   return (
     <ScreenContainer>
       <Text style={styles.title}>Mi nutrición</Text>
+
+      {/* El peso, lo primero: es la cifra que la gente viene a mirar y a
+          apuntar, y es aquí —junto a las calorías, los macros y los pasos—
+          donde significa algo. En Progreso estaba entre los entrenos y los
+          ejercicios, que es justo lo que no la explica. */}
+      <BloqueDePeso profile={profile} logs={pesos} onCambio={load} />
 
       {/* Los pasos van aquí y no en Progreso: no son entrenamiento, son el
           gasto del resto del día, y es al lado de las calorías donde esa cifra

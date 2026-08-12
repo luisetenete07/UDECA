@@ -1,5 +1,5 @@
 import { unido } from '../../lib/texto';
-import { fechaNumerica, inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
+import { inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -20,8 +20,7 @@ import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { LineChart } from '../../components/LineChart';
 import { CardsSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { TextField } from '../../components/TextField';
-import { WeightChart } from '../../components/WeightChart';
+import { BloqueDePeso } from '../../components/BloqueDePeso';
 import { MuscleMap } from '../../components/MuscleMap';
 import { shareSessionImage } from '../../lib/brandCards';
 import { buildClientReportHtml } from '../../lib/report';
@@ -35,14 +34,13 @@ import { buildBlockView } from '../../lib/blockView';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { updateUserProfile } from '../../lib/firestore/users';
-import { createWeightLog, deleteWeightLog, getWeightLogsForClient } from '../../lib/firestore/weightLogs';
+import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
 import { isComboExercise, isIsometricExercise, toNum, listExercisesInLogs, monthKeyOf, sessionTotals, setsByMuscleGroup, topExercises, trainingDays, weeklyActivity, weeklySetsForGroups, thenVsNow, workoutsByMonth } from '../../lib/stats';
 import { ConsistencyMap } from '../../components/ConsistencyMap';
 import { FadeIn } from '../../components/FadeIn';
-import { confirmar } from '../../lib/confirmar';
 import { Dialogo } from '../../components/Dialogo';
 import { Segmented } from '../../components/Segmented';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
@@ -55,7 +53,16 @@ import {
   type WorkoutLog,
 } from '../../lib/types';
 
-type Tab = 'workouts' | 'weight' | 'exercises';
+/*
+ * Las tres vistas del progreso.
+ *
+ * La de en medio era "Peso" y ahora es "Nutrición": el peso no sube ni baja
+ * por lo que levantas, sube y baja por lo que comes, así que se fue con las
+ * calorías, los macros y los pasos. Aquí se sigue mirando su evolución —que es
+ * a lo que se viene a esta pantalla— y se apunta desde el mismo bloque, que es
+ * el mismo componente que se usa allí.
+ */
+type Tab = 'workouts' | 'nutrition' | 'exercises';
 
 /** Pone en mayúscula la primera letra (para "julio 2026" → "Julio 2026"). */
 
@@ -106,10 +113,6 @@ export default function ProgressScreen() {
     exerciseIds: [],
   });
 
-  const [weightInput, setWeightInput] = useState('');
-  const [notesInput, setNotesInput] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   /**
    * Categoría de cada ejercicio. Manda la biblioteca del entrenador, y el plan
@@ -188,42 +191,6 @@ export default function ProgressScreen() {
       load();
     }, [load])
   );
-
-  const handleAddWeight = async () => {
-    if (!profile) return;
-    const parsed = Number(weightInput.replace(',', '.'));
-    if (!parsed || parsed <= 0) {
-      setError('Introduce un peso válido en kg.');
-      return;
-    }
-    setError(null);
-    setSaving(true);
-    try {
-      await createWeightLog({
-        trainerId: profile.trainerId ?? '',
-        clientId: profile.uid,
-        date: Date.now(),
-        weightKg: parsed,
-        notes: notesInput.trim() || undefined,
-      });
-      setWeightInput('');
-      setNotesInput('');
-      await load();
-      showToast('Peso guardado');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo guardar. Inténtalo de nuevo.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-
-  const handleDeleteWeight = async (id: string) => {
-    if (!(await confirmar('¿Borrar este registro de peso?'))) return;
-    setWeightLogs((prev) => prev.filter((l) => l.id !== id));
-    await deleteWeightLog(id);
-    showToast('Registro borrado');
-  };
 
   // Exportar a PDF es OPCIONAL: la tabla se consulta dentro de la app. El
   // informe sale con lo que se está viendo: mismas semanas, mismos ejercicios.
@@ -440,7 +407,7 @@ export default function ProgressScreen() {
       <Segmented
         opciones={[
           { valor: 'workouts' as const, texto: 'Entrenos', icono: 'barbell-outline' },
-          { valor: 'weight' as const, texto: 'Peso', icono: 'scale-outline' },
+          { valor: 'nutrition' as const, texto: 'Nutrición', icono: 'nutrition-outline' },
           { valor: 'exercises' as const, texto: 'Ejercicios', icono: 'trending-up-outline' },
         ]}
         valor={tab}
@@ -814,44 +781,22 @@ export default function ProgressScreen() {
         )
       ) : null}
 
-      {tab === 'weight' ? (
+      {tab === 'nutrition' ? (
         <>
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Evolución del peso</Text>
-            <WeightChart logs={weightLogs} />
-          </Card>
-
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Registrar peso</Text>
-            <TextField
-              placeholder="Peso en kg (ej. 66,4)"
-              keyboardType="decimal-pad"
-              value={weightInput}
-              onChangeText={setWeightInput}
-            />
-            <TextField placeholder="Notas (opcional)" value={notesInput} onChangeText={setNotesInput} />
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            <Button title="Guardar registro" onPress={handleAddWeight} loading={saving} />
-          </Card>
-
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Historial</Text>
-            {weightLogs.length === 0 ? (
-              <EmptyState title="Todavía no has registrado tu peso" />
-            ) : (
-              [...weightLogs].reverse().map((log) => (
-                <View key={log.id} style={styles.logRow}>
-                  <Text style={styles.logValue}>{log.weightKg} kg</Text>
-                  <Text style={styles.logDate}>
-                    {fechaNumerica(log.date)}
-                  </Text>
-                  <Pressable onPress={() => handleDeleteWeight(log.id)} hitSlop={8}>
-                    <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
-                  </Pressable>
-                </View>
-              ))
-            )}
-          </Card>
+          {/* El mismo bloque que hay en Nutrición, no una copia: un formulario
+              duplicado en dos pantallas acaba siendo dos formularios que se
+              comportan distinto. */}
+          <BloqueDePeso profile={profile} logs={weightLogs} onCambio={load} conTitulo={false} />
+          {/* Y el resto de la nutrición está donde está: las comidas, los
+              macros y los pasos no caben aquí sin duplicarlos también. */}
+          <Pressable
+            onPress={() => router.push('/(client)/nutrition')}
+            style={styles.registrarFila}
+            hitSlop={6}
+          >
+            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
+            <Text style={styles.registrarTexto}>Comidas, macros y pasos</Text>
+          </Pressable>
         </>
       ) : tab === 'exercises' ? (
         <>
@@ -1074,7 +1019,6 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },
   logRow: {
     flexDirection: 'row',
     alignItems: 'center',

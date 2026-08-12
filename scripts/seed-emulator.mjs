@@ -159,10 +159,16 @@ for (const uid of [cli, cli2, cli3]) {
 // entrenador.
 await como('alumno@demo.test');
 await limpiar('workoutLogs', 'clientId', cli);
+// El peso también: se apunta desde Nutrición y desde Progreso, y sin esto un
+// peso puesto en una revisión anterior aparecía en la siguiente como si fuera
+// de la semilla.
+await limpiar('weightLogs', 'clientId', cli);
 await como('alumno2@demo.test');
 await limpiar('workoutLogs', 'clientId', cli2);
+await limpiar('weightLogs', 'clientId', cli2);
 await como('atleta@demo.test');
 await limpiar('workoutLogs', 'clientId', atleta);
+await limpiar('weightLogs', 'clientId', atleta);
 await limpiar('exercises', 'trainerId', atleta);
 await limpiar('routines', 'trainerId', atleta);
 

@@ -39,6 +39,7 @@ import { entrenoDeHoy, esGtg, progresoGtg, textoDelDia } from '../../lib/gtg';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
 import { enlaceDePagoDe, urlDePago } from '../../lib/enlaceDePago';
+import { kgCorto } from '../../lib/peso';
 import { clientDaysUntilLock } from '../../lib/subscription';
 import { notifyUser } from '../../lib/notifications';
 import { showToast } from '../../components/Toast';
@@ -286,7 +287,7 @@ export default function ClientDashboard() {
   // atleta, el último paso es crear su propio plan (no hay check-in de coach).
   const firstSteps = [
     { key: 'photo', label: 'Sube tu foto de perfil', done: Boolean(profile?.photoURL), go: '/(client)/profile' as const },
-    { key: 'weight', label: 'Registra tu peso inicial', done: weightLogs.length > 0, go: '/(client)/progress' as const },
+    { key: 'weight', label: 'Registra tu peso inicial', done: weightLogs.length > 0, go: '/(client)/nutrition' as const },
     isAthlete
       ? { key: 'plan', label: 'Crea tu plan de entreno', done: Boolean(routine), go: '/(client)/my-plan' as const }
       : { key: 'checkin', label: 'Envía tu primer check-in', done: hasAnyCheckIn, go: null },
@@ -761,13 +762,14 @@ export default function ClientDashboard() {
 
       {/* La racha y las sesiones ya están en el anillo de arriba: repetirlas
           aquí en tres cuadros iguales le quitaba peso a las dos. Queda el peso,
-          que no está en ningún otro sitio de esta pantalla. */}
+          que no está en ningún otro sitio de esta pantalla. Lleva a Nutrición,
+          que es donde se apunta desde que dejó de estar en Progreso. */}
       <FadeIn delay={210}>
-      <Pressable onPress={() => router.push('/(client)/progress')} style={styles.weightRow}>
+      <Pressable onPress={() => router.push('/(client)/nutrition')} style={styles.weightRow}>
         <Ionicons name="body-outline" size={17} color={colors.textMuted} />
         <Text style={styles.weightLabel}>Peso</Text>
         <Text style={styles.weightValue}>
-          {currentWeight != null ? `${currentWeight.toLocaleString('es-ES')} kg` : 'Sin registrar'}
+          {currentWeight != null ? `${kgCorto(currentWeight)} kg` : 'Sin registrar'}
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
       </Pressable>
