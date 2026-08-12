@@ -82,6 +82,20 @@ Guarda.
 
 Copia el **ID de cliente** → `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`.
 
+> **Cómo saber de qué tipo es un identificador que ya tienes**, sin entrar a
+> Google Cloud. Se le pregunta a Google: se pide una autorización usando el
+> esquema propio de las apps instaladas y se mira el error.
+>
+> ```bash
+> ID=EL-QUE-SEA.apps.googleusercontent.com
+> curl -sL -o /dev/null -w "%{url_effective}\n" \
+>   "https://accounts.google.com/o/oauth2/v2/auth?client_id=$ID&response_type=code&scope=openid&redirect_uri=com.googleusercontent.apps.${ID%.apps.googleusercontent.com}:/oauthredirect"
+> ```
+>
+> Si la respuesta lleva `authError=`, descodifícalo (es base64) y lo dirá:
+> *"Custom scheme URIs are not allowed for 'WEB' client type"* significa que es
+> el de **web**. Si no hay error, es de **app instalada** (iOS o Android).
+
 ### 2.3 · El de Android (hay que crearlo, y necesita la huella SHA-1)
 
 Android exige la **huella del certificado con el que se firma la app**. Como
