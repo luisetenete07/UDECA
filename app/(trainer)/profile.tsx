@@ -20,11 +20,9 @@ import {
   normalizeInviteCode,
   setCoachSubscription,
   setTrainerInviteCode,
-  setTrainerPaymentLink,
   updateUserProfile,
 } from '../../lib/firestore/users';
 import { pickAvatar } from '../../lib/image';
-import { disconnectCoachPayments, getConnectStatus, startCoachOnboarding } from '../../lib/connect';
 import {
   DAY_MS,
   isAdmin,
@@ -54,16 +52,6 @@ export default function TrainerProfileScreen() {
   const [codeInput, setCodeInput] = useState('');
   const [savingCode, setSavingCode] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
-  // Enlace de cobro (Stripe/Bizum/PayPal…) que verán los alumnos para pagar.
-  const [payLink, setPayLink] = useState(profile?.paymentLink ?? '');
-  const [savingPayLink, setSavingPayLink] = useState(false);
-  const [payLinkSaved, setPayLinkSaved] = useState(false);
-  // Stripe Connect (cobros directos sin comisión de UDECA).
-  const [connecting, setConnecting] = useState(false);
-  const [checkingConnect, setCheckingConnect] = useState(false);
-  const [disconnecting, setDisconnecting] = useState(false);
-  const chargesEnabled = Boolean(profile?.stripeChargesEnabled);
-  const hasConnectAccount = Boolean(profile?.stripeAccountId);
   // Panel admin UDECA (solo cuentas administradoras).
   const [adminOpen, setAdminOpen] = useState(false);
   // Errores reales de los usuarios (solo CEO).
@@ -245,72 +233,6 @@ export default function TrainerProfileScreen() {
     }
   };
 
-  // Inicia el alta de Stripe Connect (abre el formulario de Stripe).
-  const handleConnect = async () => {
-    setConnecting(true);
-    try {
-      const r = await startCoachOnboarding(profile);
-      if (r.ok && r.url) {
-        Linking.openURL(r.url).catch(() => {});
-      } else {
-        showToast(r.reason ? `No se pudo: ${r.reason}` : 'No se pudo abrir el alta');
-      }
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  // Comprueba si Stripe ya ha activado los cobros de la cuenta del coach.
-  const handleRefreshConnect = async () => {
-    setCheckingConnect(true);
-    try {
-      const s = await getConnectStatus(profile);
-      await refreshProfile();
-      if (s.chargesEnabled) showToast('¡Cobros activados! Ya puedes recibir pagos');
-      else if (s.reason) showToast(`Aún no: ${s.reason}`);
-      else showToast('Alta aún en revisión. Termina los datos en Stripe.');
-    } finally {
-      setCheckingConnect(false);
-    }
-  };
-
-  // Desvincula la cuenta de cobros (la app olvida la cuenta de Stripe).
-  const handleDisconnectPayments = async () => {
-    const ok = await confirmAdmin(
-      '¿Desvincular tu cuenta de cobros? Tus alumnos dejarán de poder pagarte por la app hasta que la vuelvas a conectar. Tu cuenta de Stripe y tus pagos anteriores no se borran.'
-    );
-    if (!ok) return;
-    setDisconnecting(true);
-    try {
-      const r = await disconnectCoachPayments(profile);
-      await refreshProfile();
-      showToast(r.ok ? 'Cuenta de cobros desvinculada' : r.reason ? `No se pudo: ${r.reason}` : 'No se pudo desvincular');
-    } finally {
-      setDisconnecting(false);
-    }
-  };
-
-  const handleSavePayLink = async () => {
-    if (!profile) return;
-    const url = payLink.trim();
-    if (url && !/^https?:\/\//i.test(url)) {
-      showToast('El enlace debe empezar por https://');
-      return;
-    }
-    setSavingPayLink(true);
-    try {
-      // Con enlace vacío BORRA el campo (si no, reaparecería el antiguo).
-      await setTrainerPaymentLink(profile.uid, url);
-      await refreshProfile();
-      setPayLinkSaved(true);
-      setTimeout(() => setPayLinkSaved(false), 2500);
-    } catch {
-      showToast('No se pudo guardar el enlace');
-    } finally {
-      setSavingPayLink(false);
-    }
-  };
-
   const handleSaveCode = async () => {
     if (!profile) return;
     setCodeError(null);
@@ -478,88 +400,36 @@ export default function TrainerProfileScreen() {
         )}
       </CollapsibleCard>
 
-      {/* Sin cobros conectados hay trabajo pendiente, así que se abre sola.
-          Conectada, no hay nada que hacer y se queda recogida. */}
+      {/* El cobro ya no se configura aquí: se configura por alumno.
+
+          Antes había dos formas —dar de alta una cuenta conectada de Stripe o
+          pegar un enlace común— y las dos cobraban lo mismo a todo el grupo.
+          Eso solo funciona si todo el mundo paga igual, y casi nunca es así:
+          la tarifa de lanzamiento, el plan trimestral y el precio pactado a
+          mano son enlaces distintos. Ahora cada alumno lleva el suyo en su
+          ficha, junto a su cuota. */}
       <CollapsibleCard
         id="coach-cobros"
         icon="card-outline"
         title="Cobra a tus alumnos"
-        hint={chargesEnabled ? 'Activo' : 'Sin conectar'}
-        defaultOpen={!chargesEnabled}
-      >
-        {chargesEnabled ? (
-          <Text style={styles.helperText}>
-            Tus cobros están activos. Cuando un alumno pague su cuota desde la app, el dinero irá
-            directo a tu cuenta. UDECA no te cobra ninguna comisión: recibes el 100 %.
-          </Text>
-        ) : (
-          <Text style={styles.helperText}>
-            Conecta tu cuenta una vez y cobra a tus alumnos desde la app.{' '}
-            <Text style={styles.connectStrong}>Sin comisiones de UDECA: recibes el 100 %.</Text> El
-            alumno paga con tarjeta y el dinero llega directo a ti.
-          </Text>
-        )}
-        {chargesEnabled ? (
-          <Button
-            title={checkingConnect ? 'Comprobando...' : 'Revisar mis datos de cobro'}
-            variant="secondary"
-            onPress={handleConnect}
-            loading={connecting}
-          />
-        ) : (
-          <>
-            <Button
-              title="Conectar mis cobros"
-              onPress={handleConnect}
-              loading={connecting}
-            />
-            <Button
-              title={checkingConnect ? 'Comprobando...' : 'Ya lo he hecho · Actualizar'}
-              variant="secondary"
-              onPress={handleRefreshConnect}
-              loading={checkingConnect}
-              style={{ marginTop: spacing.sm }}
-            />
-          </>
-        )}
-        {hasConnectAccount ? (
-          <Button
-            title={disconnecting ? 'Desvinculando...' : 'Desvincular cuenta de cobros'}
-            variant="ghost"
-            onPress={handleDisconnectPayments}
-            loading={disconnecting}
-            style={{ marginTop: spacing.xs }}
-          />
-        ) : null}
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        id="coach-otro-cobro"
-        icon="link-outline"
-        title="Otro método de cobro"
-        hint={payLink ? 'Puesto' : 'Sin poner'}
+        hint="En cada ficha"
         defaultOpen={false}
       >
         <Text style={styles.helperText}>
-          ¿Prefieres Bizum, PayPal.me, Revolut u otro enlace? Pégalo aquí y tus alumnos verán un
-          botón "Pagar ahora" en su aviso de cobro.
+          El enlace de cobro va en la ficha de cada alumno, junto a su cuota. Así puedes tener
+          tantos planes como quieras: cada uno paga el suyo de un toque, con el enlace que le
+          corresponde. Sirve cualquiera: Stripe, Bizum, PayPal.me, Revolut...
         </Text>
-        <TextField
-          label="Enlace de pago"
-          value={payLink}
-          onChangeText={setPayLink}
-          placeholder="https://buy.stripe.com/…"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-        />
-        {payLinkSaved ? <Text style={styles.savedText}>Enlace guardado</Text> : null}
+        {profile?.paymentLink ? (
+          <Text style={styles.helperText}>
+            Tu enlace común de antes sigue guardado y aparece ya escrito al abrir la ficha de cada
+            alumno: solo tienes que darle a guardar, o cambiarlo por el que le toque.
+          </Text>
+        ) : null}
         <Button
-          title="Guardar enlace de pago"
+          title="Ir a mis alumnos"
           variant="secondary"
-          onPress={handleSavePayLink}
-          loading={savingPayLink}
-          disabled={payLink.trim() === (profile?.paymentLink ?? '')}
+          onPress={() => router.push('/(trainer)/clients')}
         />
       </CollapsibleCard>
 
@@ -1007,8 +877,6 @@ const styles = StyleSheet.create({
   },
   coachIconDanger: { borderColor: colors.danger },
   helperText: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
-  connectStrong: { color: colors.text, fontFamily: fonts.semiBold },
-  savedText: { ...typography.small, color: colors.primaryBright, marginBottom: spacing.sm },
   codeBox: {
     backgroundColor: colors.surfaceAlt,
     borderRadius: radius.md,

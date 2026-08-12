@@ -130,12 +130,15 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
 }
 
 /**
- * Fija (o BORRA) el enlace de pago del entrenador. Con enlace vacío elimina el
- * campo de verdad (deleteField), porque `updateUserProfile` descarta los
- * `undefined` y el enlace antiguo volvería a aparecer al recargar el perfil.
+ * Fija (o BORRA) el enlace de pago de UN ALUMNO, desde su ficha.
+ *
+ * Va por alumno y no por entrenador porque los precios no son uno solo: cada
+ * plan tiene el suyo. Con enlace vacío elimina el campo de verdad
+ * (deleteField), porque `updateUserProfile` descarta los `undefined` y el
+ * enlace antiguo volvería a aparecer al recargar el perfil.
  */
-export async function setTrainerPaymentLink(uid: string, link: string) {
-  await updateDoc(doc(db, 'users', uid), {
+export async function setClientPaymentLink(clientId: string, link: string) {
+  await updateDoc(doc(db, 'users', clientId), {
     paymentLink: link ? link : deleteField(),
   });
 }

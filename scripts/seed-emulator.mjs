@@ -145,6 +145,15 @@ for (const [uid, name, email, fee, dias, estado] of alumnos) {
 await como('coach@demo.test');
 await setDoc(doc(db, 'users', cli), { trackRir: true }, { merge: true });
 
+// El enlace de cobro de cada alumno también lo pone el ENTRENADOR (las reglas
+// se lo prohíben al alumno), así que se limpia desde aquí. Sin esto, un enlace
+// puesto a mano en una prueba anterior sobrevivía a la siembra —los perfiles se
+// escriben con `merge`— y la siguiente revisión empezaba con datos que nadie
+// había puesto.
+for (const uid of [cli, cli2, cli3]) {
+  await setDoc(doc(db, 'users', uid), { paymentLink: deleteField() }, { merge: true });
+}
+
 // Limpieza previa: cada uno borra lo suyo (las reglas no dejan borrar lo
 // ajeno). El orden importa: primero los entrenos de cada alumno, luego lo del
 // entrenador.

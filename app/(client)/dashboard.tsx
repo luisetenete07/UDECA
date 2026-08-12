@@ -38,7 +38,7 @@ import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { entrenoDeHoy, esGtg, progresoGtg, textoDelDia } from '../../lib/gtg';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
-import { createCoachCheckoutUrl } from '../../lib/connect';
+import { enlaceDePagoDe, urlDePago } from '../../lib/enlaceDePago';
 import { clientDaysUntilLock } from '../../lib/subscription';
 import { notifyUser } from '../../lib/notifications';
 import { showToast } from '../../components/Toast';
@@ -73,17 +73,6 @@ interface ClientDashData {
   cycleAnchor: number | null;
 }
 
-/**
- * Enlace de pago listo para abrir. Si es un enlace de Stripe, le añade el
- * client_reference_id (uid del alumno) para que el webhook sepa QUIÉN pagó y
- * confirme el cobro automáticamente. Otros enlaces (Bizum/PayPal) se abren tal cual.
- */
-function buildPayUrl(link: string, clientId: string): string {
-  if (!clientId || !/stripe\.com/i.test(link)) return link;
-  const sep = link.includes('?') ? '&' : '?';
-  return `${link}${sep}client_reference_id=${encodeURIComponent(clientId)}`;
-}
-
 export default function ClientDashboard() {
   const { profile, refreshProfile } = useAuth();
   const [reporting, setReporting] = useState(false);
@@ -106,10 +95,6 @@ export default function ClientDashboard() {
   // muestra la tarjeta — nunca rompe el resto del inicio.
   const [cycles, setCycles] = useState<TrainingCycle[]>([]);
   const [activeCyc, setActiveCyc] = useState<TrainingCycle | null>(null);
-  const [trainerPayLink, setTrainerPayLink] = useState<string | null>(null);
-  // Cobros del coach por Stripe Connect (directo, sin comisión de UDECA).
-  const [trainerConnect, setTrainerConnect] = useState(false);
-  const [payingConnect, setPayingConnect] = useState(false);
 
   const load = useCallback(
     async (isActive?: () => boolean) => {
@@ -199,26 +184,6 @@ export default function ClientDashboard() {
       })
       .catch(() => {});
   }, [profile]);
-
-  // Info de cobro del entrenador (Connect o enlace). Se refresca en CADA foco
-  // del inicio: así, si el coach acaba de conectar Stripe o cambia el enlace,
-  // el alumno ve el botón de pagar correcto sin tener que reiniciar la app.
-  useFocusEffect(
-    useCallback(() => {
-      if (!profile?.trainerId) return;
-      let active = true;
-      getUserProfile(profile.trainerId)
-        .then((t) => {
-          if (!active) return;
-          setTrainerPayLink(t?.paymentLink ?? null);
-          setTrainerConnect(Boolean(t?.stripeChargesEnabled));
-        })
-        .catch(() => {});
-      return () => {
-        active = false;
-      };
-    }, [profile?.trainerId])
-  );
 
   if (loading)
     return (
@@ -328,44 +293,12 @@ export default function ClientDashboard() {
     { key: 'workout', label: 'Completa tu primer entrenamiento', done: workoutLogs.length > 0, go: '/(client)/workout' as const },
   ] as const;
   const showFirstSteps = firstSteps.some((s) => !s.done);
-  const stepsDone = firstSteps.filter((s) => s.done).length;
 
-  // Pago de la cuota al coach por Stripe Connect (directo, sin comisión UDECA).
-  // Tras pagar, el webhook marca el cobro solo (client_reference_id = uid).
-  // Si el checkout falla (red, coach a medio conectar…) y el coach tiene un
-  // enlace de pago propio, se ofrece ese enlace como respaldo: pagar NUNCA
-  // debe quedarse sin salida.
-  const handlePayConnect = async () => {
-    if (!profile?.trainerId || !profile.monthlyFeeEur) return;
-    setPayingConnect(true);
-    try {
-      const r = await createCoachCheckoutUrl(profile.trainerId, profile.uid, profile.monthlyFeeEur);
-      if (r.ok && r.url) {
-        const opened = await Linking.openURL(r.url).then(
-          () => true,
-          () => false
-        );
-        if (!opened) showToast('No se pudo abrir la pasarela de pago');
-        return;
-      }
-      // Falló el checkout: respaldo con el enlace del coach si lo hay.
-      if (trainerPayLink) {
-        Linking.openURL(buildPayUrl(trainerPayLink, profile.uid)).catch(() =>
-          showToast('No se pudo abrir el pago')
-        );
-        return;
-      }
-      showToast(r.reason ? `No se pudo: ${r.reason}` : 'No se pudo abrir el pago. Reinténtalo.');
-    } catch {
-      if (trainerPayLink) {
-        Linking.openURL(buildPayUrl(trainerPayLink, profile.uid)).catch(() => {});
-      } else {
-        showToast('No se pudo abrir el pago. Reinténtalo.');
-      }
-    } finally {
-      setPayingConnect(false);
-    }
-  };
+  // Su enlace de cobro: el de SU ficha, con SU precio. Sale del propio perfil,
+  // que ya viene cargado, así que no hace falta ir a buscar el del entrenador
+  // cada vez que se abre el inicio.
+  const enlaceDelPago = enlaceDePagoDe(profile);
+  const stepsDone = firstSteps.filter((s) => s.done).length;
 
   // El alumno declara que ya ha pagado: lo registra y avisa al entrenador.
   const handleReportPayment = async () => {
@@ -487,38 +420,32 @@ export default function ClientDashboard() {
               </View>
             ) : (
               <View style={styles.payActions}>
-                {trainerConnect && profile?.monthlyFeeEur ? (
-                  <Pressable onPress={handlePayConnect} disabled={payingConnect} style={styles.payBtn}>
-                    <Ionicons name="card" size={15} color={colors.onPrimary} />
-                    <Text style={styles.payBtnText}>
-                      {payingConnect ? 'Abriendo...' : `Pagar ${profile.monthlyFeeEur} €`}
-                    </Text>
-                  </Pressable>
-                ) : trainerPayLink ? (
+                {/* El enlace es SUYO, no del grupo: lo pone su entrenador en su
+                    ficha, con su precio. Sin enlace no hay botón, y se paga
+                    por donde se pagaba: no se ofrece uno común que cobraría
+                    otra cantidad. */}
+                {enlaceDelPago ? (
                   <Pressable
                     onPress={() =>
-                      Linking.openURL(buildPayUrl(trainerPayLink, profile?.uid ?? '')).catch(() =>
+                      Linking.openURL(urlDePago(enlaceDelPago, profile?.uid ?? '')).catch(() =>
                         showToast('No se pudo abrir el pago')
                       )
                     }
                     style={styles.payBtn}
                   >
                     <Ionicons name="card" size={15} color={colors.onPrimary} />
-                    <Text style={styles.payBtnText}>Pagar ahora</Text>
+                    <Text style={styles.payBtnText}>
+                      {profile?.monthlyFeeEur ? `Pagar ${profile.monthlyFeeEur} €` : 'Pagar ahora'}
+                    </Text>
                   </Pressable>
                 ) : null}
-                {/* Con Stripe conectado el cobro se confirma solo (webhook), así
-                    que no ofrecemos el "Ya he pagado" manual: solo se paga y el
-                    aviso desaparece cuando el pago consta de verdad. */}
-                {!(trainerConnect && profile?.monthlyFeeEur) ? (
-                  <Pressable
-                    onPress={handleReportPayment}
-                    disabled={reporting}
-                    style={styles.payReportBtn}
-                  >
-                    <Text style={styles.payReportBtnText}>Ya he pagado</Text>
-                  </Pressable>
-                ) : null}
+                <Pressable
+                  onPress={handleReportPayment}
+                  disabled={reporting}
+                  style={styles.payReportBtn}
+                >
+                  <Text style={styles.payReportBtnText}>Ya he pagado</Text>
+                </Pressable>
               </View>
             )}
           </View>

@@ -18,10 +18,14 @@ coach no tiene que confirmar nada a mano.
 
 ## Paso 1 · Enlace de pago en Stripe
 
-1. En Stripe: **Payment Links** → **New** → crea un enlace con tu cuota (p. ej.
+1. En Stripe: **Payment Links** → **New** → crea un enlace con la cuota (p. ej.
    "Cuota mensual UDECA", precio recurrente o único, como prefieras).
 2. Copia la URL (`https://buy.stripe.com/...`).
-3. Pégala en la app: **UDECA → Perfil (coach) → Cobros → Enlace de pago**.
+3. Pégala en la app: **UDECA → Alumnos → (el alumno) → Cobro → Enlace de pago**.
+
+El enlace va **por alumno**, no por entrenador: cada plan tiene su precio, y con
+uno común el botón cobraría de más a unos y de menos a otros. Crea en Stripe un
+enlace por tarifa y pégalo en la ficha de quien le corresponda.
 
 La app añade sola `?client_reference_id=<id del alumno>` al abrir el enlace, así
 el webhook sabe **quién** pagó.
@@ -71,8 +75,13 @@ respaldo por si algún pago no cuadra o se cobra por otro medio.
 
 - **Un coach = una cuenta de Stripe.** Este webhook usa una sola cuenta de
   Stripe (la del coach). Si en el futuro UDECA tiene muchos coaches, cada uno con
-  su Stripe, se migraría a **Stripe Connect** (una sola plataforma con muchos
-  coaches). Es un cambio futuro; para uno o pocos coaches, esto vale.
+  su Stripe, habría que montar una plataforma con muchas cuentas conectadas. Es
+  un cambio futuro; para uno o pocos coaches, esto vale.
+- Hubo un alta de cuentas conectadas (`/api/connect`) para que cada coach cobrara
+  desde la app sin pegar enlaces. Se quitó: obligaba a darse de alta en Stripe y
+  cobraba lo mismo a todos los alumnos, calculado desde la cuota. Un enlace por
+  alumno hace lo mismo, sirve igual para Bizum o PayPal y no obliga a nadie a
+  nada.
 - El webhook es **idempotente**: si Stripe reenvía un evento, no se cuenta el
   cobro dos veces.
 - Bizum/PayPal no tienen webhook aquí: para esos, se sigue usando el flujo manual

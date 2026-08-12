@@ -52,12 +52,14 @@ import {
   getUserProfile,
   removeClientFromTrainer,
   registerClientPayment,
+  setClientPaymentLink,
   setClientPlanPauses,
   setClientTrackRir,
   updateClientBilling,
   updateClientPaymentStatus,
   updateClientStatus,
 } from '../../../../lib/firestore/users';
+import { enlaceValido, pistaDelEnlace } from '../../../../lib/enlaceDePago';
 import { useAuth } from '../../../../lib/auth-context';
 import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
@@ -124,6 +126,12 @@ export default function ClientDetailScreen() {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [feeInput, setFeeInput] = useState('');
+  // El enlace con el que paga ESTE alumno. Va por alumno y no por entrenador
+  // porque cada plan tiene su precio: con uno común el botón cobraría de más
+  // a unos y de menos a otros.
+  const [linkInput, setLinkInput] = useState('');
+  const [savingLink, setSavingLink] = useState(false);
+  const [linkSaved, setLinkSaved] = useState(false);
   const [extendDaysInput, setExtendDaysInput] = useState('');
   const [remindingPayment, setRemindingPayment] = useState(false);
   const [paymentReminderSent, setPaymentReminderSent] = useState(false);
@@ -163,6 +171,10 @@ export default function ClientDetailScreen() {
         );
         setCoachNote(noteData);
         setFeeInput(clientData?.monthlyFeeEur ? String(clientData.monthlyFeeEur) : '');
+        // Si el alumno aún no tiene enlace propio y el entrenador guardaba el
+        // común de antes, se ofrece ya escrito: un toque en guardar y queda
+        // migrado, sin tener que ir a buscarlo otra vez.
+        setLinkInput(clientData?.paymentLink ?? profile?.paymentLink ?? '');
         setRoutines(routineData);
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
@@ -257,6 +269,27 @@ export default function ClientDetailScreen() {
     const monthlyFeeEur = Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
     setClient({ ...client, monthlyFeeEur });
     await updateClientBilling(id, { monthlyFeeEur });
+  };
+
+  const handleSaveLink = async () => {
+    if (!id || !client) return;
+    const url = linkInput.trim();
+    if (url && !enlaceValido(url)) {
+      showToast('El enlace debe empezar por https://');
+      return;
+    }
+    setSavingLink(true);
+    try {
+      // Con enlace vacío BORRA el campo: si no, el antiguo reaparecería.
+      await setClientPaymentLink(id, url);
+      setClient({ ...client, paymentLink: url || undefined });
+      setLinkSaved(true);
+      setTimeout(() => setLinkSaved(false), 2500);
+    } catch {
+      showToast('No se pudo guardar el enlace');
+    } finally {
+      setSavingLink(false);
+    }
   };
 
   // Registra el pago: marca "Pagado" y empuja la fecha un mes desde la última
@@ -517,6 +550,30 @@ export default function ClientDetailScreen() {
           />
           <Text style={styles.euroLabel}>€ / mes</Text>
         </View>
+
+        {/* El enlace de pago, justo debajo de la cuota: son la misma decisión.
+            Lo que se cobra y por dónde se cobra van juntos, y así se ve de un
+            vistazo si el importe del enlace y la cuota cuadran. */}
+        <Text style={styles.paymentLabel}>Enlace de pago de {client.name.split(' ')[0]}</Text>
+        <TextField
+          value={linkInput}
+          onChangeText={setLinkInput}
+          placeholder="https://buy.stripe.com/…"
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          style={{ marginBottom: spacing.xs }}
+        />
+        <Text style={styles.payHint}>{pistaDelEnlace(linkInput, client.monthlyFeeEur)}</Text>
+        {linkSaved ? <Text style={styles.guardado}>Enlace guardado</Text> : null}
+        <Button
+          title="Guardar enlace"
+          variant="secondary"
+          onPress={handleSaveLink}
+          loading={savingLink}
+          disabled={linkInput.trim() === (client.paymentLink ?? '')}
+          style={{ marginTop: spacing.xs, marginBottom: spacing.md }}
+        />
 
         <Text style={styles.paymentLabel}>Próximo pago</Text>
         <View style={styles.nextPayRow}>
@@ -1189,6 +1246,12 @@ const styles = StyleSheet.create({
     ...tabularNums,
   },
   payHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.xs, textAlign: 'center' },
+  guardado: {
+    ...typography.small,
+    color: colors.primaryBright,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
   // `stretch` para que el campo y el botón midan lo mismo: sus alturas
   // naturales no coinciden y centrados quedaban desalineados.
   payBtnRow: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm, marginTop: spacing.sm },

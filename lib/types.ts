@@ -72,8 +72,18 @@ export interface UserProfile {
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /**
-   * Solo en entrenadores: enlace de cobro (Stripe Payment Link, Bizum, PayPal.me…)
-   * que sus alumnos abren para pagar la cuota con un toque desde el aviso de cobro.
+   * Enlace de cobro de ESTE alumno (Stripe Payment Link, Bizum, PayPal.me…):
+   * el que abre para pagar su cuota de un toque desde el aviso de cobro. Lo
+   * pone su entrenador en su ficha, junto a la cuota.
+   *
+   * Va por alumno y no por entrenador porque los precios no son uno solo: la
+   * tarifa de lanzamiento, el plan trimestral, el que vino de una promoción y
+   * el que pactó un precio a mano son cuatro enlaces distintos. Con uno común
+   * el botón cobraba de más a unos y de menos a otros.
+   *
+   * (En cuentas de entrenador antiguas puede quedar el enlace común de antes.
+   * Ya no se usa para cobrar: solo se ofrece como sugerencia al rellenar la
+   * ficha de cada alumno, para no tener que buscarlo otra vez.)
    */
   paymentLink?: string;
   /** Solo en clientes: uid del entrenador al que pertenecen. */
@@ -81,10 +91,15 @@ export interface UserProfile {
   /** Stripe: id de cliente y de suscripción (los escribe el webhook). */
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
-  /** Solo en coaches con Connect: id de su cuenta conectada de Stripe. */
-  stripeAccountId?: string;
-  /** true cuando su cuenta de Stripe Connect ya puede recibir cobros. */
-  stripeChargesEnabled?: boolean;
+  /*
+   * Aquí vivían `stripeAccountId` y `stripeChargesEnabled`, de cuando el
+   * entrenador daba de alta una cuenta conectada de Stripe para cobrar desde
+   * la app. Se quitó: obligaba a montar una cuenta y cobraba lo mismo a todos
+   * los alumnos, calculado desde la cuota. El enlace por alumno hace lo mismo,
+   * vale igual para Bizum o PayPal y no obliga a darse de alta en nada.
+   *
+   * Puede que sigan escritos en cuentas viejas. No los lee nadie.
+   */
   /** Solo en clientes: objetivo principal del cliente. */
   goal?: string;
   /** Avatar del usuario como data URL (base64) o URL remota. */

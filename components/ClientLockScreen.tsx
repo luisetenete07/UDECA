@@ -5,7 +5,7 @@ import { Button } from './Button';
 import { GateScreen } from './GateScreen';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
-import { createCoachCheckoutUrl } from '../lib/connect';
+import { enlaceDePagoDe, urlDePago } from '../lib/enlaceDePago';
 import { getUserProfile, reportClientPayment } from '../lib/firestore/users';
 import { notifyUser } from '../lib/notifications';
 import { colors, spacing, typography } from '../lib/theme';
@@ -27,7 +27,9 @@ export function ClientLockScreen() {
   const [paying, setPaying] = React.useState(false);
   const [reporting, setReporting] = React.useState(false);
   const [trainerName, setTrainerName] = React.useState<string | null>(null);
-  const [payLink, setPayLink] = React.useState<string | null>(null);
+  // Su enlace, el de su ficha, con su precio. Del entrenador solo hace falta
+  // el nombre: quien está al otro lado es una persona, no una pasarela.
+  const payLink = enlaceDePagoDe(profile);
 
   React.useEffect(() => {
     if (!profile?.trainerId) return;
@@ -36,7 +38,6 @@ export function ClientLockScreen() {
       .then((t) => {
         if (!vivo || !t) return;
         setTrainerName(t.name?.split(' ')[0] ?? null);
-        setPayLink(t.paymentLink ?? null);
       })
       .catch(() => {});
     return () => {
@@ -47,21 +48,10 @@ export function ClientLockScreen() {
   const cuota = profile?.monthlyFeeEur ? `${profile.monthlyFeeEur} €` : 'tu cuota';
 
   const pagar = async () => {
-    if (!profile?.trainerId || !profile.monthlyFeeEur) return;
+    if (!profile || !payLink) return;
     setPaying(true);
     try {
-      const r = await createCoachCheckoutUrl(profile.trainerId, profile.uid, profile.monthlyFeeEur);
-      if (r.ok && r.url) {
-        await Linking.openURL(r.url);
-        return;
-      }
-      // Si la pasarela falla, el enlace propio del coach es la salida: pagar
-      // nunca debe quedarse sin camino, y menos desde una pantalla de bloqueo.
-      if (payLink) {
-        await Linking.openURL(payLink);
-        return;
-      }
-      showToast('No se pudo abrir el pago. Avisa a tu entrenador.');
+      await Linking.openURL(urlDePago(payLink, profile.uid));
     } catch {
       showToast('No se pudo abrir el pago. Reinténtalo.');
     } finally {
@@ -110,18 +100,23 @@ export function ClientLockScreen() {
           No pierdes nada: tu plan, tu historial y tus marcas siguen guardados.
         </Text>
       </View>
-      <Button
-        title={paying ? 'Abriendo...' : 'Pagar ahora'}
-        onPress={pagar}
-        loading={paying}
-        style={{ marginTop: spacing.md }}
-      />
+      {/* Sin enlace no hay botón, y no pasa nada: hay entrenadores que cobran
+          en mano o por transferencia. Lo que nunca falta es "Ya he pagado",
+          que es la salida de esta pantalla venga el dinero por donde venga. */}
+      {payLink ? (
+        <Button
+          title={paying ? 'Abriendo...' : 'Pagar ahora'}
+          onPress={pagar}
+          loading={paying}
+          style={{ marginTop: spacing.md }}
+        />
+      ) : null}
       <Button
         title={reporting ? 'Avisando...' : 'Ya he pagado'}
-        variant="secondary"
+        variant={payLink ? 'secondary' : 'primary'}
         onPress={yaHePagado}
         loading={reporting}
-        style={{ marginTop: spacing.sm }}
+        style={{ marginTop: payLink ? spacing.sm : spacing.md }}
       />
     </GateScreen>
   );

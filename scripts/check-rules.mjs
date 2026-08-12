@@ -100,6 +100,18 @@ await comprobar('cambiar la cuota mensual', true, () =>
     { merge: true }
   )
 );
+// El enlace con el que paga ESE alumno. Va por alumno porque cada plan tiene
+// su precio; lo pone el entrenador junto a la cuota.
+await comprobar('ponerle su enlace de pago', true, () =>
+  setDoc(
+    doc(db, 'users', alumno.id),
+    { paymentLink: `https://buy.stripe.com/${Date.now()}` },
+    { merge: true }
+  )
+);
+await comprobar('y quitárselo', true, () =>
+  setDoc(doc(db, 'users', alumno.id), { paymentLink: deleteField() }, { merge: true })
+);
 await comprobar('cambiarle el nombre', false, () =>
   setDoc(doc(db, 'users', alumno.id), { name: 'No debería' }, { merge: true })
 );
@@ -214,6 +226,27 @@ await comprobar('pero no puede colar otra cosa de paso', false, () =>
     { merge: true }
   )
 );
+
+// El enlace de pago lo pone el ENTRENADOR. Si el alumno pudiera cambiárselo,
+// se pegaría un enlace de 5 € y estaría cambiándose la cuota.
+await comprobar('el entrenador le pone un enlace (preparación)', true, () =>
+  setDoc(
+    doc(db, 'users', otro.user.uid),
+    { paymentLink: 'https://buy.stripe.com/del-entrenador' },
+    { merge: true }
+  )
+);
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+await comprobar('el alumno NO se cambia su enlace de pago', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { paymentLink: 'https://buy.stripe.com/5-euros' }, { merge: true })
+);
+await comprobar('ni se lo borra', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { paymentLink: deleteField() }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+// Se recoge lo que ha ensuciado la prueba: el enlace lo puso ella, no la
+// semilla, y dejarlo puesto engaña a cualquier revisión posterior.
+await setDoc(doc(db, 'users', otro.user.uid), { paymentLink: deleteField() }, { merge: true });
 // Cursos: quién puede decir que ha visto una lección.
 //
 // El caso que importa es el del ENTRENADOR. Si pudiera marcar lecciones como

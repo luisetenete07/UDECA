@@ -124,7 +124,11 @@ service cloud.firestore {
               // seguiría creyendo que ese dato existe y se le quedaría la
               // intensidad en blanco sin saber por qué. El atleta no lo
               // necesita: se le pregunta por su rol, no por este campo.
-              'trackRir'
+              'trackRir',
+              // El enlace con el que paga su cuota lo pone su ENTRENADOR, en
+              // su ficha (más abajo). Poder cambiárselo uno mismo sería poder
+              // cambiarse la cuota: se pega el enlace de 5 € y a cobrar.
+              'paymentLink'
             ])
         )
         || (
@@ -146,8 +150,13 @@ service cloud.firestore {
             // (lesión, viaje). Lo escriben las dos partes —el entrenador desde
             // la ficha y el alumno desde su perfil— porque cualquiera de los
             // dos puede ser el primero en enterarse.
+            // `paymentLink`: el enlace con el que paga ESE alumno. Lo pone su
+            // entrenador junto a la cuota; va por alumno porque cada plan
+            // tiene su precio. El alumno no lo escribe: es a él a quien se le
+            // cobra, y poder cambiarse el enlace sería poder cambiarse la
+            // cuota.
             request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses'])
+              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses', 'paymentLink'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)
