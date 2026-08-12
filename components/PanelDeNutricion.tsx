@@ -2,36 +2,36 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { EmptyState } from '../../components/EmptyState';
-import { CardsSkeleton } from '../../components/Skeleton';
-import { ScreenContainer } from '../../components/ScreenContainer';
-import { TextField } from '../../components/TextField';
-import { showToast } from '../../components/Toast';
-import { useAuth } from '../../lib/auth-context';
+import { Button } from './Button';
+import { Card } from './Card';
+import { EmptyState } from './EmptyState';
+import { CardsSkeleton } from './Skeleton';
+import { ScreenContainer } from './ScreenContainer';
+import { TextField } from './TextField';
+import { showToast } from './Toast';
+import { useAuth } from '../lib/auth-context';
 import {
   createMealLog,
   getActiveNutritionPlanForClient,
   getMealLogsForClient,
-} from '../../lib/firestore/nutrition';
+} from '../lib/firestore/nutrition';
 import {
   createProgressPhoto,
   deleteProgressPhoto,
   getProgressPhotosForClient,
-} from '../../lib/firestore/progressPhotos';
-import { getMealBooksForTrainer } from '../../lib/firestore/mealBooks';
-import { updateUserProfile } from '../../lib/firestore/users';
-import { pickProgressPhoto } from '../../lib/image';
-import { MacroCalculator } from '../../components/MacroCalculator';
-import { ContadorDePasos } from '../../components/ContadorDePasos';
-import { BloqueDePeso } from '../../components/BloqueDePeso';
-import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
-import type { WeightLog } from '../../lib/types';
-import { confirmar } from '../../lib/confirmar';
-import { Sheet } from '../../components/Sheet';
-import { esHoy, fechaCorta } from '../../lib/fechas';
-import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
+} from '../lib/firestore/progressPhotos';
+import { getMealBooksForTrainer } from '../lib/firestore/mealBooks';
+import { updateUserProfile } from '../lib/firestore/users';
+import { pickProgressPhoto } from '../lib/image';
+import { MacroCalculator } from './MacroCalculator';
+import { ContadorDePasos } from './ContadorDePasos';
+import { BloqueDePeso } from './BloqueDePeso';
+import { getWeightLogsForClient } from '../lib/firestore/weightLogs';
+import type { WeightLog } from '../lib/types';
+import { confirmar } from '../lib/confirmar';
+import { Sheet } from './Sheet';
+import { esHoy, fechaCorta } from '../lib/fechas';
+import { fonts, colors, radius, spacing, tabularNums, typography } from '../lib/theme';
 import {
   PHOTO_POSES,
   type MealBook,
@@ -39,9 +39,22 @@ import {
   type NutritionPlan,
   type PhotoPose,
   type ProgressPhoto,
-} from '../../lib/types';
+} from '../lib/types';
 
-export default function NutritionScreen() {
+/**
+ * Toda la nutrición: el peso, los pasos, los macros, las comidas, las libretas
+ * del coach y las fotos de progreso.
+ *
+ * Era una pestaña propia de la app y ahora vive dentro de Progreso, en la
+ * pestaña de Nutrición. El motivo es que las dos cosas se miran juntas: lo que
+ * come y lo que pesa alguien es la mitad de la explicación de lo que le pasa
+ * entrenando, y tenerlas en dos sitios distintos obligaba a saltar de una a
+ * otra para entender una sola cosa. De paso, la barra de abajo baja de seis
+ * pestañas a cinco, que es lo que cabe en un móvil sin apretar.
+ *
+ * Sigue cargando lo suyo: nadie de fuera tiene que saber qué necesita.
+ */
+export function PanelDeNutricion() {
   const { profile, refreshProfile } = useAuth();
   const [plan, setPlan] = useState<NutritionPlan | null>(null);
   const [meals, setMeals] = useState<MealLog[]>([]);
@@ -219,18 +232,10 @@ export default function NutritionScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <ScreenContainer>
-        <CardsSkeleton tarjetas={4} />
-      </ScreenContainer>
-    );
-  }
+  if (loading) return <CardsSkeleton tarjetas={4} />;
 
   return (
-    <ScreenContainer>
-      <Text style={styles.title}>Mi nutrición</Text>
-
+    <>
       {/* El peso, lo primero: es la cifra que la gente viene a mirar y a
           apuntar, y es aquí —junto a las calorías, los macros y los pasos—
           donde significa algo. En Progreso estaba entre los entrenos y los
@@ -465,7 +470,7 @@ export default function NutritionScreen() {
           <MacroCalculator submitLabel="Guardar mis macros" onDone={handleSaveMacros} />
         </ScreenContainer>
       </Modal>
-    </ScreenContainer>
+    </>
   );
 }
 

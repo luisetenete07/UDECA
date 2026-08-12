@@ -148,15 +148,6 @@ export default function ClientLayout() {
         }}
       />
       <Tabs.Screen
-        name="nutrition"
-        options={{
-          title: t('Nutrición'),
-          tabBarIcon: (props) => (
-            <TabIcon {...props} outline="nutrition-outline" filled="nutrition" />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="progress"
         options={{
           title: t('Progreso'),

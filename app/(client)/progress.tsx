@@ -1,7 +1,7 @@
 import { unido } from '../../lib/texto';
 import { inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
-import React, { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Modal,
   Pressable,
@@ -20,7 +20,7 @@ import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { LineChart } from '../../components/LineChart';
 import { CardsSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { BloqueDePeso } from '../../components/BloqueDePeso';
+import { PanelDeNutricion } from '../../components/PanelDeNutricion';
 import { MuscleMap } from '../../components/MuscleMap';
 import { shareSessionImage } from '../../lib/brandCards';
 import { buildClientReportHtml } from '../../lib/report';
@@ -74,7 +74,13 @@ interface ProgressData {
 export default function ProgressScreen() {
   const { profile, refreshProfile } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>('workouts');
+  // Se puede llegar pidiendo una pestaña concreta: el peso del inicio abre
+  // directamente la de Nutrición, que si no habría que buscarla a mano.
+  const { tab: tabPedida } = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<Tab>(tabPedida === 'nutricion' ? 'nutrition' : 'workouts');
+  useEffect(() => {
+    if (tabPedida === 'nutricion') setTab('nutrition');
+  }, [tabPedida]);
   const [muscleMode, setMuscleMode] = useState<'session' | 'week'>('week');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
@@ -781,23 +787,13 @@ export default function ProgressScreen() {
         )
       ) : null}
 
+      {/* La nutrición ENTERA: el peso, los pasos, los macros, las comidas, las
+          libretas del coach y las fotos. Era una pestaña propia de la app y
+          ahora vive aquí, porque es aquí donde se lee junto a los entrenos:
+          lo que come y lo que pesa alguien explica la mitad de lo que le pasa
+          entrenando. */}
       {tab === 'nutrition' ? (
-        <>
-          {/* El mismo bloque que hay en Nutrición, no una copia: un formulario
-              duplicado en dos pantallas acaba siendo dos formularios que se
-              comportan distinto. */}
-          <BloqueDePeso profile={profile} logs={weightLogs} onCambio={load} conTitulo={false} />
-          {/* Y el resto de la nutrición está donde está: las comidas, los
-              macros y los pasos no caben aquí sin duplicarlos también. */}
-          <Pressable
-            onPress={() => router.push('/(client)/nutrition')}
-            style={styles.registrarFila}
-            hitSlop={6}
-          >
-            <Ionicons name="restaurant-outline" size={16} color={colors.primary} />
-            <Text style={styles.registrarTexto}>Comidas, macros y pasos</Text>
-          </Pressable>
-        </>
+        <PanelDeNutricion />
       ) : tab === 'exercises' ? (
         <>
           <Card style={styles.section}>
