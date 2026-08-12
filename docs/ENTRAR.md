@@ -125,17 +125,82 @@ Copia el **ID de cliente** → `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`.
 > dejará de funcionar en la versión de la tienda. Es el fallo más típico de
 > todo esto.
 
-### 2.4 · Dónde se pegan los tres
+### 2.4 · Qué haces con los tres identificadores
 
-En **dos sitios**, porque se usan en momentos distintos:
+Un identificador de cliente es un texto largo con esta pinta:
 
-1. En tu `.env` local (para probar): las tres líneas `EXPO_PUBLIC_GOOGLE_*`.
-2. En `eas.json`, dentro de `build.preview.env` y `build.production.env`
-   (para que viajen en los builds de tienda), junto a las de Firebase que ya
-   están ahí.
+```
+1042172841881-a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6.apps.googleusercontent.com
+```
 
-No son secretos: viajan dentro de la app y se pueden leer. Lo que protege la
-cuenta es el paquete y la huella declarados junto al cliente.
+No es un secreto: viaja dentro de la app y cualquiera puede leerlo. Lo que
+protege la cuenta es el paquete y la huella declarados junto al cliente. Por
+eso puede estar en `eas.json`, que sí está en el repositorio.
+
+Van en **dos sitios**, porque se usan en momentos distintos.
+
+#### a) En `eas.json` — para los builds de tienda
+
+Los huecos **ya están puestos**, en los dos perfiles (`preview` y
+`production`). Solo tienes que pegar cada valor entre las comillas:
+
+```json
+"EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1042172841881-xxxx.apps.googleusercontent.com",
+"EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1042172841881-yyyy.apps.googleusercontent.com",
+"EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "1042172841881-zzzz.apps.googleusercontent.com"
+```
+
+Cuidado con dos cosas al pegar: que **no se te quede una coma de más** al final
+del último, y que lo pegues en **los dos perfiles**. Si solo lo pones en
+`production`, el APK de pruebas (`preview`) saldrá sin botón de Google y
+parecerá que no funciona.
+
+Para comprobar que el archivo sigue siendo válido:
+
+```bash
+node -e "JSON.parse(require('fs').readFileSync('eas.json','utf8')); console.log('eas.json correcto')"
+```
+
+#### b) En un archivo `.env` — para probar en tu ordenador
+
+Ese archivo **no está en el repositorio a propósito** (`.gitignore` lo excluye)
+y lo creas tú, en la carpeta del proyecto, al lado de `package.json`. Copia
+`.env.example`, renómbralo a `.env` y rellénalo:
+
+```bash
+cp .env.example .env
+```
+
+Y dentro, además de las de Firebase, las tres de Google:
+
+```
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=1042172841881-xxxx.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=1042172841881-yyyy.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=1042172841881-zzzz.apps.googleusercontent.com
+```
+
+Ahí van **sin comillas y sin espacios** alrededor del `=`. Es un formato
+distinto al de `eas.json` y es el fallo más común: `EXPO_PUBLIC_..= "abc"`
+guarda literalmente `"abc"` con las comillas dentro, y entonces Google
+responde que el cliente no existe.
+
+#### c) Dónde NO van
+
+En ningún archivo de `lib/`. La app los lee sola de las variables de entorno
+(`lib/googleAuth.ts` → `IDS_DE_GOOGLE`); no hay que tocar código para esto.
+
+#### d) Qué pasa si te falta alguno
+
+Nada se rompe, y esa es la idea: sin identificador para una plataforma, **el
+botón de Google no aparece en ella** en vez de aparecer y fallar al pulsarlo.
+Así que si haces un build y no ves el botón, lo que falta es el identificador
+de esa plataforma — o el de web, que hace falta para las tres.
+
+#### e) Al cambiarlos hay que volver a compilar
+
+Las variables `EXPO_PUBLIC_*` se meten **dentro del paquete** al compilar; no
+se leen al arrancar. Cambiar `eas.json` y no hacer un build nuevo no cambia
+nada en el móvil que ya tienes instalado.
 
 ---
 
