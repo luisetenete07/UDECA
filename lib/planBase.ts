@@ -42,6 +42,28 @@ export function isAdmin(profile: UserProfile | null): boolean {
   return !!profile?.email && ADMIN_EMAILS.includes(profile.email.toLowerCase());
 }
 
+/**
+ * Cuentas con acceso permanente, SIN poderes de administración.
+ *
+ * Son las cuentas de la casa: la que se usa para enseñar la app, para grabar
+ * los vídeos y para revisar de verdad lo que ve un atleta. No pagan y no
+ * caducan nunca, porque una cuenta de demostración que se queda fuera a mitad
+ * de una presentación es un problema en el peor momento posible.
+ *
+ * Va aparte de `ADMIN_EMAILS` a propósito, y no es un detalle: un admin puede
+ * regalar suscripciones a cualquiera y las reglas de Firestore se lo permiten
+ * (ver `isUdecaAdmin` en firestore.rules). Meter aquí una cuenta de escaparate
+ * sería darle las llaves de la caja para ahorrarse una lista de cuatro líneas.
+ *
+ * Lo que da: se salta el muro de pago y el alta de 1 €. Nada más.
+ */
+export const CUENTAS_ILIMITADAS = ['udeca.app+atleta@gmail.com'];
+
+/** ¿Es una de las cuentas de la casa, con acceso de por vida? */
+export function accesoIlimitado(profile: UserProfile | null): boolean {
+  return !!profile?.email && CUENTAS_ILIMITADAS.includes(profile.email.trim().toLowerCase());
+}
+
 export interface SubscriptionState {
   /** true si el coach puede usar la plataforma. */
   active: boolean;
@@ -62,7 +84,13 @@ export function subscriptionState(
   if (!profile || (profile.role !== 'trainer' && profile.role !== 'athlete')) {
     return { active: true, daysLeft: null, legacy: true, trial: false };
   }
-  if (isAdmin(profile)) return { active: true, daysLeft: null, legacy: false, trial: false };
+  // Admins y cuentas de la casa: dentro siempre, sin cuenta atrás y sin
+  // "estás de prueba". No es lo mismo que una cuenta fundadora (`legacy`):
+  // aquella no tiene fecha porque es anterior al cobro; estas la tienen y da
+  // igual lo que ponga.
+  if (isAdmin(profile) || accesoIlimitado(profile)) {
+    return { active: true, daysLeft: null, legacy: false, trial: false };
+  }
   if (profile.subscriptionUntil === undefined) {
     return { active: true, daysLeft: null, legacy: true, trial: false };
   }
@@ -115,4 +143,35 @@ export function hasPlatformAccess(profile: UserProfile | null, now: number = Dat
   if (profile.role === 'athlete') return subscriptionState(profile, now).active;
   // Alumno de un coach: entra gratis por definición.
   return true;
+}
+
+/**
+ * Desde cuándo se exige el alta de 1 €.
+ *
+ * Las cuentas anteriores no la pagan nunca: cambiar las reglas a mitad de
+ * partida y dejar fuera a quien ya estaba dentro es la forma más rápida de
+ * perder a los primeros, que son justo los que menos merecen perderse.
+ */
+export const ENTRY_REQUIRED_FROM = Date.parse('2026-08-03T00:00:00Z');
+
+/**
+ * ¿Le falta pagar el alta a esta cuenta?
+ *
+ * Solo a quien paga plataforma (entrenador y atleta) y solo si se registró
+ * después de que existiera el alta. El alumno de un coach no paga nunca.
+ */
+export function needsEntryPayment(profile: UserProfile | null): boolean {
+  if (!profile) return false;
+  if (profile.role !== 'trainer' && profile.role !== 'athlete') return false;
+  // Las cuentas de la casa tampoco pagan el euro: no son clientes, son la
+  // app enseñándose a sí misma.
+  if (isAdmin(profile) || accesoIlimitado(profile)) return false;
+  if (profile.entryPaidAt) return false;
+  // Cuenta fundadora: existía antes de que hubiera alta.
+  if ((profile.createdAt ?? 0) < ENTRY_REQUIRED_FROM) return false;
+  // Estar de prueba NO exime: la prueba es justo lo que compra el euro. Solo se
+  // salta el alta quien ya paga una suscripción de verdad (o a quien se le ha
+  // extendido el acceso a mano), porque a ese ya se le conoce la tarjeta.
+  const estado = subscriptionState(profile);
+  return !estado.active || estado.trial;
 }

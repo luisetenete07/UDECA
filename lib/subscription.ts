@@ -4,7 +4,6 @@ import {
   clientSlotsOf,
   DAY_MS,
   FREE_CLIENT_LIMIT,
-  isAdmin,
   subscriptionState,
 } from './planBase';
 
@@ -61,7 +60,16 @@ export const ATHLETE_MONTHLY_EUR = 10;
  * Sacarlas permite comprobar quién tiene acceso sin montar media app; dejarlas
  * reexportadas evita tocar los treinta sitios que ya las importaban de aquí.
  */
-export { ADMIN_EMAILS, clientSlotsOf, DAY_MS, FREE_CLIENT_LIMIT } from './planBase';
+export {
+  accesoIlimitado,
+  ADMIN_EMAILS,
+  clientSlotsOf,
+  CUENTAS_ILIMITADAS,
+  DAY_MS,
+  ENTRY_REQUIRED_FROM,
+  FREE_CLIENT_LIMIT,
+  needsEntryPayment,
+} from './planBase';
 
 /**
  * Payment Links de Stripe para las suscripciones de plataforma. Se crean en el
@@ -96,35 +104,6 @@ export function entryCheckoutUrl(profile: UserProfile | null): string | null {
     `${base}${sep}client_reference_id=${encodeURIComponent(profile.uid)}` +
     `&prefilled_email=${encodeURIComponent(profile.email)}`
   );
-}
-
-/**
- * Desde cuándo se exige el alta de 1 €.
- *
- * Las cuentas anteriores no la pagan nunca: cambiar las reglas a mitad de
- * partida y dejar fuera a quien ya estaba dentro es la forma más rápida de
- * perder a los primeros, que son justo los que menos merecen perderse.
- */
-export const ENTRY_REQUIRED_FROM = Date.parse('2026-08-03T00:00:00Z');
-
-/**
- * ¿Le falta pagar el alta a esta cuenta?
- *
- * Solo a quien paga plataforma (entrenador y atleta) y solo si se registró
- * después de que existiera el alta. El alumno de un coach no paga nunca.
- */
-export function needsEntryPayment(profile: UserProfile | null): boolean {
-  if (!profile) return false;
-  if (profile.role !== 'trainer' && profile.role !== 'athlete') return false;
-  if (isAdmin(profile)) return false;
-  if (profile.entryPaidAt) return false;
-  // Cuenta fundadora: existía antes de que hubiera alta.
-  if ((profile.createdAt ?? 0) < ENTRY_REQUIRED_FROM) return false;
-  // Estar de prueba NO exime: la prueba es justo lo que compra el euro. Solo se
-  // salta el alta quien ya paga una suscripción de verdad (o a quien se le ha
-  // extendido el acceso a mano), porque a ese ya se le conoce la tarjeta.
-  const estado = subscriptionState(profile);
-  return !estado.active || estado.trial;
 }
 
 /** Endpoint de comprobación bajo demanda (Vercel). Activa la cuenta al momento. */
