@@ -129,6 +129,33 @@ Tipo de aplicación: **Android**.
 
 Copia el **ID de cliente** → `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`.
 
+> ### Y ENCIENDE EL ESQUEMA DE URI PERSONALIZADO
+>
+> Esto no está en ninguna guía y tumba el botón de Google en Android entero.
+>
+> Desde 2022, los clientes de Android nuevos nacen con el **esquema de URI
+> personalizado desactivado**. Y la app vuelve de Google justo por ahí
+> (`entrenadores.app:/oauthredirect`). Sin encenderlo, Google contesta:
+>
+> ```
+> invalid_request · Custom URI scheme is not enabled for your Android client.
+> ```
+>
+> Se enciende en **Google Cloud → Credenciales → tu cliente de Android →
+> Configuración avanzada → "Habilitar esquema de URI personalizado"** → guardar.
+> Tarda unos minutos en surtir efecto.
+>
+> Para comprobar si está encendido, sin instalar nada:
+>
+> ```bash
+> ID=TU-CLIENTE-ANDROID.apps.googleusercontent.com
+> curl -sL -o /dev/null -w "%{url_effective}\n" \
+>   "https://accounts.google.com/o/oauth2/v2/auth?client_id=$ID&response_type=code&scope=openid&redirect_uri=entrenadores.app%3A%2Foauthredirect"
+> ```
+>
+> Si la dirección final trae `authError=`, descodifica ese texto (es base64) y
+> te dirá qué falla. Sin `authError`, está bien.
+
 > **Cuando publiques en Play Store, hay una SEGUNDA huella.** Google Play
 > vuelve a firmar la app con su propio certificado ("Play App Signing"), así
 > que la huella que ve Google al entrar deja de ser la de EAS. Se coge en
