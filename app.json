@@ -14,7 +14,8 @@
       "bundleIdentifier": "com.udeca.app",
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "entrenadores.app",
@@ -45,7 +46,8 @@
         {
           "color": "#E0242F"
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true
