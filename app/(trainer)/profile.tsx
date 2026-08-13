@@ -400,39 +400,6 @@ export default function TrainerProfileScreen() {
         )}
       </CollapsibleCard>
 
-      {/* El cobro ya no se configura aquí: se configura por alumno.
-
-          Antes había dos formas —dar de alta una cuenta conectada de Stripe o
-          pegar un enlace común— y las dos cobraban lo mismo a todo el grupo.
-          Eso solo funciona si todo el mundo paga igual, y casi nunca es así:
-          la tarifa de lanzamiento, el plan trimestral y el precio pactado a
-          mano son enlaces distintos. Ahora cada alumno lleva el suyo en su
-          ficha, junto a su cuota. */}
-      <CollapsibleCard
-        id="coach-cobros"
-        icon="card-outline"
-        title="Cobra a tus alumnos"
-        hint="En cada ficha"
-        defaultOpen={false}
-      >
-        <Text style={styles.helperText}>
-          El enlace de cobro va en la ficha de cada alumno, junto a su cuota. Así puedes tener
-          tantos planes como quieras: cada uno paga el suyo de un toque, con el enlace que le
-          corresponde. Sirve cualquiera: Stripe, Bizum, PayPal.me, Revolut...
-        </Text>
-        {profile?.paymentLink ? (
-          <Text style={styles.helperText}>
-            Tu enlace común de antes sigue guardado y aparece ya escrito al abrir la ficha de cada
-            alumno: solo tienes que darle a guardar, o cambiarlo por el que le toque.
-          </Text>
-        ) : null}
-        <Button
-          title="Ir a mis alumnos"
-          variant="secondary"
-          onPress={() => router.push('/(trainer)/clients')}
-        />
-      </CollapsibleCard>
-
       <CollapsibleCard
         id="coach-clasificacion"
         icon="trophy-outline"
