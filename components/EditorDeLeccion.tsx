@@ -48,6 +48,37 @@ function CamposDeContenido({
   const esPdf = (contenido.kind ?? 'video') === 'pdf';
   return (
     <>
+      {/* Quién la ve. Va aquí arriba, junto al tipo de contenido, porque es
+          una decisión del mismo orden: qué es esto y para quién es. */}
+      <Pressable
+        onPress={() => onCambiar({ vip: contenido.vip === true ? undefined : true })}
+        style={styles.filaVip}
+        hitSlop={6}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: contenido.vip === true }}
+      >
+        <Ionicons
+          name={contenido.vip === true ? 'lock-closed' : 'people-outline'}
+          size={16}
+          color={contenido.vip === true ? colors.primaryBright : colors.textMuted}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.vipTitulo, contenido.vip === true && { color: colors.primaryBright }]}>
+            {contenido.vip === true ? 'Solo alumnos VIP' : 'Para todos tus alumnos'}
+          </Text>
+          {!compacto ? (
+            <Text style={styles.vipPista}>
+              {contenido.vip === true
+                ? 'Solo la ven los alumnos que hayas marcado como VIP en su ficha. Para el resto no existe.'
+                : 'Toca para reservarla a tus alumnos VIP.'}
+            </Text>
+          ) : null}
+        </View>
+        <View style={[styles.vipInterruptor, contenido.vip === true && styles.vipInterruptorOn]}>
+          <View style={[styles.vipBola, contenido.vip === true && styles.vipBolaOn]} />
+        </View>
+      </Pressable>
+
       <Opciones
         opciones={[
           { valor: 'video', texto: 'Vídeo' },
@@ -258,6 +289,31 @@ const styles = StyleSheet.create({
   numero: { ...typography.label, color: colors.primary, flex: 1 },
   numeroMini: { ...typography.label, color: colors.textMuted, flex: 1, fontSize: 11 },
   pista: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm },
+  filaVip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.sm,
+  },
+  vipTitulo: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  vipPista: { ...typography.small, color: colors.textFaint, fontSize: 11, marginTop: 1, lineHeight: 15 },
+  vipInterruptor: {
+    width: 38,
+    height: 22,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  vipInterruptorOn: { backgroundColor: colors.primaryMuted, borderColor: colors.hairline },
+  vipBola: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.textFaint },
+  vipBolaOn: { backgroundColor: colors.primary, alignSelf: 'flex-end' },
   filaMiniatura: {
     flexDirection: 'row',
     alignItems: 'center',

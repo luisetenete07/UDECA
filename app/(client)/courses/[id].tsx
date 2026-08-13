@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -11,6 +21,8 @@ import { MiniaturaCurso } from '../../../components/MiniaturaCurso';
 import { ProgressRing } from '../../../components/ProgressRing';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { VideoPlayer } from '../../../components/VideoPlayer';
+import { BotonAmpliar, VisorDeVideo } from '../../../components/VisorDeVideo';
+import { mereceAmpliar, tamanoDelVisor } from '../../../lib/visorDeVideo';
 import {
   MarcaDeAgua,
   useProteccionDePantalla,
@@ -22,6 +34,7 @@ import { useAuth } from '../../../lib/auth-context';
 import { getCourse } from '../../../lib/firestore/courses';
 import { getCourseProgress, setLessonsSeen } from '../../../lib/firestore/courseProgress';
 import { contenidosDeLeccion, estadoDeCurso, tieneContenido } from '../../../lib/courseProgress';
+import { cursoParaMi, esVip } from '../../../lib/vip';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { ContenidoDeCurso, Course, Lesson } from '../../../lib/types';
 
@@ -46,7 +59,11 @@ export default function ClientCourseDetailScreen() {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      setCourse(await getCourse(id));
+      // Podado por VIP antes de nada (ver lib/vip.ts). Un alumno que llegue
+      // por enlace directo a un curso entero VIP se encuentra un curso vacío,
+      // no sus clases.
+      const c = await getCourse(id);
+      setCourse(c ? cursoParaMi(c, esVip(profile)) : c);
       // Nada de autoseleccionar la primera lección: el curso se abre por su
       // índice de secciones y el alumno elige dónde entrar.
       setLoading(false);
@@ -329,6 +346,11 @@ function ReproductorLeccion({
 }) {
   const esPdf = contenido?.kind === 'pdf' || (!contenido?.videoUrl && !!contenido?.pdfUrl);
   const [pillado, setPillado] = useState(false);
+  const [ampliado, setAmpliado] = useState(false);
+  // El vídeo ya no cabe en la columna de texto: se calcula el 16:9 más grande
+  // que entra en esta pantalla (ver lib/visorDeVideo).
+  const { width: ancho, height: alto } = useWindowDimensions();
+  const tamVideo = tamanoDelVisor(ancho, alto);
   // Mientras hay una clase abierta, el sistema no deja grabar la pantalla
   // (Android e iOS). Se apaga al cerrar: bloquearlo todo el rato impediría al
   // alumno hacerle una captura a su propio entreno.
@@ -368,11 +390,32 @@ function ReproductorLeccion({
                impide copiar: hace que la copia lleve el nombre de quien la
                filtró, que contra una cámara apuntando a la pantalla es lo
                único que queda. */
-            <MarcaDeAgua profile={profile}>
-              <VideoPlayer url={contenido.videoUrl} protectedContent />
-            </MarcaDeAgua>
+            <>
+              {/* El vídeo, tan ancho como caben 16:9 en esta pantalla y no
+                  atado a la columna de texto: en un ordenador esa columna
+                  dejaba la clase en un tercio de la pantalla, que para ver una
+                  técnica no da. */}
+              <View style={[styles.repVideo, { width: tamVideo.width, height: tamVideo.height }]}>
+                <MarcaDeAgua profile={profile}>
+                  <VideoPlayer url={contenido.videoUrl} protectedContent />
+                </MarcaDeAgua>
+              </View>
+              {mereceAmpliar(tamVideo.width, ancho, alto) ? (
+                <BotonAmpliar onPress={() => setAmpliado(true)} />
+              ) : null}
+              <VisorDeVideo
+                visible={ampliado}
+                url={contenido.videoUrl}
+                titulo={contenido.title}
+                profile={profile}
+                onCerrar={() => setAmpliado(false)}
+              />
+            </>
           )}
 
+          {/* El texto se queda en su columna legible aunque el vídeo sea muy
+              ancho: una línea de 2.000 px no la lee nadie. */}
+          <View style={styles.repTexto}>
           {/* Se le dice lo que hay, y solo lo que hay: en móvil el sistema no
               deja grabar; en web no hay forma de impedirlo y prometerlo sería
               mentir. Lo que sí es verdad en las dos es que el vídeo lleva su
@@ -417,6 +460,7 @@ function ReproductorLeccion({
               <EmbeddedDoc url={contenido.pdfUrl} />
             </View>
           ) : null}
+          </View>
         </ScrollView>
 
         {/* Se ha detectado una captura: se tapa la clase. Hay que destaparla a
@@ -614,7 +658,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   avisoProteccionTexto: { ...typography.small, color: colors.textFaint, flex: 1, fontSize: 11 },
-  repContenido: { padding: spacing.md, paddingBottom: spacing.xl, maxWidth: 860, width: '100%', alignSelf: 'center' },
+  // El contenido se centra y ya no lo estrangula un ancho de 860: el vídeo
+  // manda y el texto de debajo se queda en su columna legible.
+  repContenido: {
+    padding: spacing.md,
+    paddingBottom: spacing.xl,
+    width: '100%',
+    alignItems: 'center',
+  },
+  repVideo: { borderRadius: radius.md, overflow: 'hidden', backgroundColor: '#000' },
+  repTexto: { width: '100%', maxWidth: 860 },
   lessonTitle: { ...typography.h2, color: colors.text, marginTop: spacing.md },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },
   metaText: { ...typography.small, color: colors.textMuted },

@@ -1,0 +1,129 @@
+import React from 'react';
+import { Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { MarcaDeAgua } from './MarcaDeAgua';
+import { VideoPlayer } from './VideoPlayer';
+import { avisoDeProteccion } from '../lib/marcaDeAgua';
+import { tamanoDelVisor } from '../lib/visorDeVideo';
+import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import type { UserProfile } from '../lib/types';
+
+/**
+ * Un vídeo a casi toda la pantalla, SIN salir de la app.
+ *
+ * Es el término medio que hacía falta. Por un lado, el vídeo metido en la
+ * columna de contenido se queda pequeño en un ordenador y no sirve para lo
+ * único que sirve un vídeo de técnica: mirar de cerca dónde va el codo. Por
+ * otro, la pantalla completa de verdad —la del navegador o la del sistema— no
+ * se puede usar: ahí el vídeo lo pinta el sistema POR ENCIMA de todo, y con él
+ * se van la marca de agua con el nombre de quien mira y el cristal que tapa los
+ * controles de YouTube. Se ganaría tamaño y se perdería el blindaje entero.
+ *
+ * Así que se amplía dentro: el vídeo sigue siendo un elemento nuestro, con su
+ * marca de agua encima y sin acceso a los controles de la plataforma, y ocupa
+ * casi todo (ver `lib/visorDeVideo` para las medidas).
+ *
+ * Se usa en los dos sitios donde hay vídeo —la técnica de un ejercicio durante
+ * el entreno y las clases de los cursos— porque las protecciones tienen que ser
+ * las mismas en los dos. Dos visores distintos serían dos sitios donde se puede
+ * colar un botón de compartir.
+ */
+export function VisorDeVideo({
+  url,
+  titulo,
+  profile,
+  visible,
+  onCerrar,
+}: {
+  url?: string;
+  titulo?: string;
+  profile: Pick<UserProfile, 'name' | 'uid'> | null | undefined;
+  visible: boolean;
+  onCerrar: () => void;
+}) {
+  const { width, height } = useWindowDimensions();
+  const tam = tamanoDelVisor(width, height);
+
+  return (
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onCerrar}>
+      {/* El fondo cierra al tocarlo. En un vídeo a casi toda la pantalla, el
+          gesto natural para salir es tocar fuera; sin esto habría que buscar
+          la aspa con el dedo. */}
+      <Pressable style={styles.fondo} onPress={onCerrar}>
+        <View style={styles.barra}>
+          <Text style={styles.titulo} numberOfLines={1}>
+            {titulo ?? 'Vídeo'}
+          </Text>
+          <Pressable onPress={onCerrar} hitSlop={12} style={styles.cerrar}>
+            <Ionicons name="close" size={22} color={colors.text} />
+          </Pressable>
+        </View>
+
+        {/* El vídeo no cierra al tocarlo: ahí dentro están nuestros controles. */}
+        <Pressable
+          style={[styles.marco, { width: tam.width, height: tam.height }]}
+          onPress={(e) => e.stopPropagation?.()}
+        >
+          <MarcaDeAgua profile={profile}>
+            <VideoPlayer url={url} protectedContent />
+          </MarcaDeAgua>
+        </Pressable>
+
+        <View style={styles.aviso}>
+          <Ionicons name="shield-checkmark-outline" size={13} color={colors.textFaint} />
+          <Text style={styles.avisoTexto}>{avisoDeProteccion(Platform.OS)}</Text>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+/** El enlace que abre el visor. Mismo aspecto en el entreno y en los cursos. */
+export function BotonAmpliar({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.ampliar} hitSlop={8}>
+      <Ionicons name="scan-outline" size={14} color={colors.primary} />
+      <Text style={styles.ampliarTexto}>Ver más grande</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  fondo: {
+    flex: 1,
+    // Negro casi opaco y no del todo: se sigue intuyendo la app detrás, así
+    // que se entiende que esto es una ventana y no otra pantalla.
+    backgroundColor: 'rgba(0,0,0,0.96)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+  },
+  barra: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    width: '100%',
+    maxWidth: 1400,
+  },
+  titulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
+  cerrar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+  },
+  marco: { borderRadius: radius.md, overflow: 'hidden', backgroundColor: '#000' },
+  aviso: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 520 },
+  avisoTexto: { ...typography.small, color: colors.textFaint, fontSize: 11, flex: 1 },
+  ampliar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+  },
+  ampliarTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+});

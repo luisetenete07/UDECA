@@ -242,6 +242,9 @@ for (const [name, muscleGroup, measure] of EJ) {
   const r = await addDoc(collection(db, 'exercises'), {
     trainerId: coach, name, muscleGroup, measure, createdAt: now,
     muscles: ['lats', 'biceps'], description: 'Técnica estricta, sin balanceo.',
+    // Con vídeo: es lo que hace aparecer "Ver técnica" durante el entreno, y
+    // sin él no hay forma de revisar el visor de vídeo en el emulador.
+    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
   });
   ids.push({ id: r.id, name });
 }
@@ -465,6 +468,30 @@ for (const uid of [cli, cli2]) {
   }
 }
 
+/**
+ * La cuenta del CEO, con poderes de administración.
+ *
+ * Se siembra con SU correo de verdad (el de `ADMIN_EMAILS`) porque las reglas
+ * miran el correo del token, no una casilla: sin esta cuenta el panel de
+ * administración no se puede abrir ni probar en el emulador, que es
+ * justamente donde interesa comprobar que un atleta caducado se puede
+ * reactivar sin tocar la base de datos a mano.
+ */
+const ceo = await ensure('luistenaf@gmail.com', 'Luis Tena');
+await como('luistenaf@gmail.com');
+const ceoExiste = (await getDoc(doc(db, 'users', ceo))).exists();
+await setDoc(
+  doc(db, 'users', ceo),
+  {
+    uid: ceo, role: 'trainer', name: 'Luis Tena (CEO)', email: 'luistenaf@gmail.com',
+    createdAt: now - 300 * DAY, inviteCode: 'CEO001', emailVerificationRequired: false,
+    ...(ceoExiste ? {} : { clientCount: 0 }),
+  },
+  { merge: true }
+);
+await setDoc(doc(db, 'trainerCodes', 'CEO001'), { trainerId: ceo, full: false });
+
+await como('coach@demo.test');
 for (const dias of [10, 40, 70]) {
   await addDoc(collection(db, 'payments'), {
     trainerId: coach, clientId: cli, amountEur: 45, date: now - dias * DAY, createdAt: now - dias * DAY,
@@ -477,5 +504,6 @@ console.log(`Emulador sembrado.
   alumno2@demo.test (alumno con pago pendiente)
   alumno3@demo.test (alumno solo para la clasificación)
   atleta@demo.test  (atleta autoentrenado, en prueba gratuita)
+  luistenaf@gmail.com (el CEO, con panel de administración)
   contraseña: ${PW}`);
 process.exit(0);

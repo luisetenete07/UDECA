@@ -15,6 +15,7 @@ import {
   leccionesContables,
   type LessonsSeen,
 } from '../../../lib/courseProgress';
+import { cursosParaMi, esVip } from '../../../lib/vip';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { Course } from '../../../lib/types';
 
@@ -33,7 +34,10 @@ export default function ClientCoursesScreen() {
     }
     const data = await getPublishedCourses(profile.trainerId);
     data.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.createdAt - b.createdAt);
-    setCourses(data);
+    // Las clases VIP se podan AQUÍ, antes de contar nada (ver lib/vip.ts): si
+    // se ocultaran solo al pintar, seguirían sumando al total y este alumno se
+    // quedaría en un porcentaje que no puede subir nunca.
+    setCourses(cursosParaMi(data, esVip(profile)));
     setVistas(await getCourseProgress(profile.uid));
     setLoading(false);
     setRefreshing(false);

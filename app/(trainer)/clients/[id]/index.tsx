@@ -53,6 +53,7 @@ import {
   setClientPaymentLink,
   setClientPlanPauses,
   setClientTrackRir,
+  setClientVip,
   updateClientBilling,
   updateClientPaymentStatus,
   updateClientStatus,
@@ -754,6 +755,43 @@ export default function ClientDetailScreen() {
           style={{ height: 96, textAlignVertical: 'top', marginTop: spacing.sm, marginBottom: 0 }}
         />
         {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
+      </CollapsibleCard>
+
+      {/* VIP: qué plan tiene contratado, en la práctica. Va aquí arriba —con
+          los pagos y la rutina— y no escondido entre los ajustes, porque es
+          una decisión de negocio: es lo que separa al que paga el plan de
+          arriba del que paga el normal. */}
+      <CollapsibleCard
+        id="alumno-vip"
+        icon="lock-closed-outline"
+        title="Alumno VIP"
+        hint={client?.vip === true ? 'Sí' : 'No'}
+        defaultOpen={false}
+      >
+        <View style={styles.rirRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.mutedText}>
+              Los alumnos VIP ven además las clases que hayas marcado como VIP dentro de tus
+              cursos. Para el resto, esas clases no existen: no se les enseña un candado ni un
+              anuncio de lo que no tienen.
+            </Text>
+          </View>
+          <Switch
+            value={client?.vip === true}
+            onValueChange={async (v) => {
+              if (!id || !client) return;
+              setClient({ ...client, vip: v });
+              try {
+                await setClientVip(id, v);
+              } catch {
+                setClient({ ...client, vip: !v });
+                showToast('No se pudo guardar');
+              }
+            }}
+            trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
+            thumbColor={colors.white}
+          />
+        </View>
       </CollapsibleCard>
 
       <CollapsibleCard

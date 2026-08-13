@@ -30,6 +30,7 @@ import {
 } from '../../lib/firestore/coachTasks';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
+import { ConectarCalendario } from '../../components/ConectarCalendario';
 import { Segmented } from '../../components/Segmented';
 import { Dialogo } from '../../components/Dialogo';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
@@ -622,6 +623,9 @@ export default function CoachCalendarScreen() {
       ) : (
         tasksContent
       )}
+
+      {/* La agenda, en el calendario que ya mira cada mañana. */}
+      <ConectarCalendario perfil={profile} tareas={tasks} alumnos={clients} ciclos={cycles} />
 
       <MoveTaskModal
         task={movingTask}

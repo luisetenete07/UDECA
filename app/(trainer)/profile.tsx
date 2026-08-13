@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { Segmented } from '../../components/Segmented';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
 import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
@@ -16,6 +17,7 @@ import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import {
   deleteCoachAccount,
+  getAllAthletes,
   getAllCoaches,
   normalizeInviteCode,
   setCoachSubscription,
@@ -25,6 +27,7 @@ import {
 import { pickAvatar } from '../../lib/image';
 import {
   DAY_MS,
+  accesoIlimitado,
   isAdmin,
   subscriptionState,
 } from '../../lib/subscription';
@@ -65,6 +68,11 @@ export default function TrainerProfileScreen() {
   const [funnelDays, setFunnelDays] = useState(30);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
+  // Qué cuentas se están gestionando. Los atletas pagan igual que los coaches
+  // —al mes en vez de al año— y hasta ahora no salían en ninguna pantalla:
+  // a un atleta con la prueba caducada había que arreglárselo a mano en la
+  // base de datos.
+  const [rolAdmin, setRolAdmin] = useState<'trainer' | 'athlete'>('trainer');
   // Clasificación y presencia del grupo (socialStats de sus alumnos).
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<SocialStats | null>(null);
@@ -137,17 +145,23 @@ export default function TrainerProfileScreen() {
     }
   };
 
-  const openAdmin = async () => {
+  const openAdmin = async (rol: 'trainer' | 'athlete' = rolAdmin) => {
     setAdminOpen(true);
+    setRolAdmin(rol);
     setLoadingCoaches(true);
+    setCoaches([]);
     try {
-      setCoaches(await getAllCoaches());
+      setCoaches(rol === 'athlete' ? await getAllAthletes() : await getAllCoaches());
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo cargar');
     } finally {
       setLoadingCoaches(false);
     }
   };
+
+  /** El plan que le toca a esa cuenta: el coach paga al año, el atleta al mes. */
+  const planDe = (c: UserProfile): 'annual' | 'monthly' =>
+    c.role === 'athlete' ? 'monthly' : 'annual';
 
   // Confirmación multiplataforma para acciones destructivas del admin.
   const confirmAdmin = (message: string): Promise<boolean> => {
@@ -173,10 +187,12 @@ export default function TrainerProfileScreen() {
       return;
     setUpdatingCoach(coach.uid);
     try {
-      await setCoachSubscription(coach.uid, 0);
+      await setCoachSubscription(coach.uid, 0, planDe(coach));
       setCoaches((prev) =>
         prev.map((c) =>
-          c.uid === coach.uid ? { ...c, subscriptionUntil: 0, subscriptionPlan: 'annual' } : c
+          c.uid === coach.uid
+            ? { ...c, subscriptionUntil: 0, subscriptionPlan: planDe(coach) }
+            : c
         )
       );
       showToast('Suscripción retirada');
@@ -217,11 +233,11 @@ export default function TrainerProfileScreen() {
           ? coach.subscriptionUntil
           : Date.now();
       const until = base + days * DAY_MS;
-      await setCoachSubscription(coach.uid, until);
+      await setCoachSubscription(coach.uid, until, planDe(coach));
       setCoaches((prev) =>
         prev.map((c) =>
           c.uid === coach.uid
-            ? { ...c, subscriptionUntil: until, subscriptionPlan: 'annual' }
+            ? { ...c, subscriptionUntil: until, subscriptionPlan: planDe(coach) }
             : c
         )
       );
@@ -599,8 +615,8 @@ export default function TrainerProfileScreen() {
       {admin ? (
         <Card accent style={styles.section}>
           <View style={styles.subHeader}>
-            <Text style={styles.sectionTitle}>Admin UDECA · coaches</Text>
-            <Pressable onPress={adminOpen ? () => setAdminOpen(false) : openAdmin} hitSlop={8}>
+            <Text style={styles.sectionTitle}>Admin UDECA · cuentas</Text>
+            <Pressable onPress={adminOpen ? () => setAdminOpen(false) : () => openAdmin()} hitSlop={8}>
               <Ionicons
                 name={adminOpen ? 'chevron-up' : 'chevron-down'}
                 size={20}
@@ -610,19 +626,41 @@ export default function TrainerProfileScreen() {
           </View>
           {!adminOpen ? (
             <Text style={styles.helperText}>
-              Gestiona las suscripciones de los coaches de la plataforma.
+              Gestiona las suscripciones de quien paga: entrenadores y atletas.
             </Text>
-          ) : loadingCoaches ? (
-            <Text style={styles.helperText}>Cargando coaches...</Text>
           ) : (
+            <>
+              <Segmented<'trainer' | 'athlete'>
+                opciones={[
+                  { valor: 'trainer', texto: 'Entrenadores' },
+                  { valor: 'athlete', texto: 'Atletas' },
+                ]}
+                valor={rolAdmin}
+                onChange={openAdmin}
+              />
+              {loadingCoaches ? (
+                <Text style={styles.helperText}>Cargando…</Text>
+              ) : coaches.length === 0 ? (
+                <Text style={styles.helperText}>
+                  {rolAdmin === 'athlete'
+                    ? 'Todavía no hay ningún atleta registrado.'
+                    : 'Todavía no hay ningún entrenador registrado.'}
+                </Text>
+              ) : (
             coaches.map((c) => {
               const s = subscriptionState(c);
+              // "De prueba" se dice aparte de "Activo": las dos dejan entrar,
+              // pero una es alguien que paga y la otra alguien a quien se le
+              // acaba el plazo. Confundirlas es no saber a quién hay que
+              // llamar esta semana.
               const label = isAdmin(c)
                 ? 'Admin'
-                : s.legacy
+                : accesoIlimitado(c)
+                  ? 'Cuenta de la casa'
+                  : s.legacy
                   ? 'Fundador'
                   : s.active
-                    ? `Activo · hasta ${c.subscriptionUntil ? fechaCorta(c.subscriptionUntil) : '—'}`
+                    ? `${s.trial ? 'De prueba' : 'Activo'} · hasta ${c.subscriptionUntil ? fechaCorta(c.subscriptionUntil) : '—'}`
                     : c.subscriptionUntil
                       ? `CADUCADO · desde ${fechaCorta(c.subscriptionUntil)}`
                       : 'SIN ACTIVAR';
@@ -641,9 +679,9 @@ export default function TrainerProfileScreen() {
                     {!isAdmin(c) ? (
                       <View style={styles.coachActions}>
                         <Button
-                          title="+1 año"
+                          title={c.role === 'athlete' ? '+1 mes' : '+1 año'}
                           variant="secondary"
-                          onPress={() => extendCoach(c, 365)}
+                          onPress={() => extendCoach(c, c.role === 'athlete' ? 30 : 365)}
                           loading={updatingCoach === c.uid}
                           style={styles.coachBtn}
                         />
@@ -700,6 +738,8 @@ export default function TrainerProfileScreen() {
                 </View>
               );
             })
+              )}
+            </>
           )}
         </Card>
       ) : null}

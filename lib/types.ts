@@ -112,6 +112,13 @@ export interface UserProfile {
   goalMid?: string;
   /** Objetivo a largo plazo (una línea). */
   goalLong?: string;
+  /**
+   * Alumno VIP: ve también las clases que su entrenador marca como VIP.
+   *
+   * Lo escribe SU entrenador desde la ficha, nunca el propio alumno: si
+   * pudiera ponérselo él, "VIP" sería una casilla y no un plan.
+   */
+  vip?: boolean;
   /** Avatar del usuario como data URL (base64) o URL remota. */
   photoURL?: string;
   /** Breve biografía / presentación del alumno. */
@@ -186,8 +193,14 @@ export interface UserProfile {
    * salir con un día de diferencia sin pisarse. Solo lo escribe el backend.
    */
   trialNudgeStage?: number;
-  /** Plan contratado. De momento solo existe el anual (180 €/año). */
-  subscriptionPlan?: 'annual';
+  /**
+   * Plan contratado: el entrenador paga al año y el atleta al mes.
+   *
+   * No decide el acceso —eso lo decide `subscriptionUntil`— pero sí lo que se
+   * lee en la ficha, así que un atleta con 'annual' escrito dice que ha
+   * contratado algo que no existe para él.
+   */
+  subscriptionPlan?: 'annual' | 'monthly';
   /**
    * Número de fundador, si entró durante la campaña. Es correlativo y no se
    * reutiliza: el 7 es el séptimo que pagó su alta, y lo sigue siendo aunque
@@ -1047,6 +1060,14 @@ export interface ContenidoDeCurso {
    * duración a veces sí y a veces no es peor que una escrita a mano siempre.
    */
   durationLabel?: string;
+  /**
+   * Solo para los alumnos VIP (ver lib/vip.ts).
+   *
+   * Va en el CONTENIDO y no en el curso porque lo normal es un curso con casi
+   * todo abierto y unas cuantas clases del plan de arriba: dos cursos gemelos
+   * para eso serían dos cursos que mantener a la vez.
+   */
+  vip?: boolean;
 }
 
 /**

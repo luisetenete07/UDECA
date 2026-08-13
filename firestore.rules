@@ -128,7 +128,10 @@ service cloud.firestore {
               // El enlace con el que paga su cuota lo pone su ENTRENADOR, en
               // su ficha (más abajo). Poder cambiárselo uno mismo sería poder
               // cambiarse la cuota: se pega el enlace de 5 € y a cobrar.
-              'paymentLink'
+              'paymentLink',
+              // Ser VIP es el plan que ha contratado, no una casilla suya:
+              // poder marcárselo sería llevarse gratis el contenido de arriba.
+              'vip'
             ])
         )
         || (
@@ -156,7 +159,11 @@ service cloud.firestore {
             // cobra, y poder cambiarse el enlace sería poder cambiarse la
             // cuota.
             request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses', 'paymentLink'])
+              // `vip`: si ese alumno ve las clases VIP de los cursos. Lo
+              // decide el entrenador, que es quien le cobra el plan que las
+              // incluye. Si pudiera ponérselo el alumno, "VIP" sería una
+              // casilla y no un plan.
+              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses', 'paymentLink', 'vip'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)

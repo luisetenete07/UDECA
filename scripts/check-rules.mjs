@@ -227,6 +227,33 @@ await comprobar('pero no puede colar otra cosa de paso', false, () =>
   )
 );
 
+// Ser VIP es el plan que ese alumno tiene contratado, no una casilla suya. Si
+// pudiera marcárselo él, se llevaría gratis las clases del plan de arriba.
+console.log('\nAlumno VIP (clases reservadas)');
+await comprobar('el entrenador marca VIP a su alumno', true, () =>
+  setDoc(doc(db, 'users', alumno.id), { vip: true }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+await comprobar('el alumno NO se marca VIP a sí mismo', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { vip: true }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador se lo quita', true, () =>
+  setDoc(doc(db, 'users', alumno.id), { vip: false }, { merge: true })
+);
+await comprobar('y no puede colar la suscripción de paso', false, () =>
+  setDoc(
+    doc(db, 'users', alumno.id),
+    { vip: true, subscriptionUntil: Date.now() + 999999999 },
+    { merge: true }
+  )
+);
+// No se deja puesto: el resto de comprobaciones no tienen por qué encontrarse
+// un alumno VIP de la vez anterior.
+await comprobar('limpieza', true, () =>
+  setDoc(doc(db, 'users', alumno.id), { vip: false }, { merge: true })
+);
+
 // El enlace de pago lo pone el ENTRENADOR. Si el alumno pudiera cambiárselo,
 // se pegaría un enlace de 5 € y estaría cambiándose la cuota.
 await comprobar('el entrenador le pone un enlace (preparación)', true, () =>

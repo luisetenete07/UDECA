@@ -47,7 +47,13 @@
           "color": "#E0242F"
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Permite a UDECA escribir tus cobros, tus bloques y tus tareas en tu calendario."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

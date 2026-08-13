@@ -27,7 +27,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { IntervalTimer } from '../../components/IntervalTimer';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { VideoPlayer } from '../../components/VideoPlayer';
+import { VisorDeVideo } from '../../components/VisorDeVideo';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -231,7 +231,11 @@ export default function WorkoutScreen() {
   // Índice del ejercicio que se muestra en el modo enfocado (1 por pantalla).
   const [viewIndex, setViewIndex] = useState(0);
   // Índice del ejercicio con el vídeo de técnica desplegado (null = ninguno).
-  const [videoOpenIndex, setVideoOpenIndex] = useState<number | null>(null);
+  // El vídeo de técnica se abre en el visor, a casi toda la pantalla y con
+  // las mismas protecciones que los cursos (ver components/VisorDeVideo). En
+  // una tira de 200 px metida entre dos series no se ve dónde va el codo, que
+  // es lo único que se viene a mirar.
+  const [videoAbierto, setVideoAbierto] = useState<{ url: string; titulo: string } | null>(null);
   // Índice del ejercicio con el campo de nota abierto (null = ninguno).
   const [noteOpenIndex, setNoteOpenIndex] = useState<number | null>(null);
   // Ancla local del ciclo (Método REIN TENA): el alumno puede reiniciar en Día 1.
@@ -1569,6 +1573,17 @@ export default function WorkoutScreen() {
           la sesión en marcha desaparece —lo que toca entonces es entrenar. */}
       {!inProgress ? <RegistrarOtroDia compacto /> : null}
 
+      {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app:
+          mismas protecciones que en los cursos (ni compartir, ni salirse, ni
+          los controles de YouTube a la vista). */}
+      <VisorDeVideo
+        visible={videoAbierto !== null}
+        url={videoAbierto?.url}
+        titulo={videoAbierto?.titulo}
+        profile={profile}
+        onCerrar={() => setVideoAbierto(null)}
+      />
+
       <Modal
         visible={exitConfirmOpen}
         animationType="fade"
@@ -2092,25 +2107,17 @@ export default function WorkoutScreen() {
               <>
                 <Pressable
                   onPress={() =>
-                    setVideoOpenIndex(videoOpenIndex === exerciseIndex ? null : exerciseIndex)
+                    setVideoAbierto({
+                      url: videoByExercise[exercise.exerciseId],
+                      titulo: exercise.name,
+                    })
                   }
                   style={styles.videoLink}
                   hitSlop={4}
                 >
-                  <Ionicons
-                    name={videoOpenIndex === exerciseIndex ? 'chevron-up' : 'play-circle-outline'}
-                    size={15}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.videoLinkText}>
-                    {videoOpenIndex === exerciseIndex ? 'Ocultar técnica' : 'Ver técnica'}
-                  </Text>
+                  <Ionicons name="play-circle-outline" size={15} color={colors.primary} />
+                  <Text style={styles.videoLinkText}>Ver técnica</Text>
                 </Pressable>
-                {videoOpenIndex === exerciseIndex ? (
-                  <View style={{ marginBottom: spacing.sm }}>
-                    <VideoPlayer url={videoByExercise[exercise.exerciseId]} />
-                  </View>
-                ) : null}
               </>
             ) : null}
             {prev ? (
