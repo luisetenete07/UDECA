@@ -125,7 +125,7 @@ export function Onboarding({
             title: 'Registra tu progreso',
             lines: [
               'Peso, fotos y tus entrenos quedan guardados en Progreso, mes a mes.',
-              'Cada semana, envía tu check-in (energía, sueño, sensaciones): tu coach lo lee y ajusta tu plan.',
+              'Tu coach ve cómo va tu semana y ajusta tu plan sin que tengas que pedírselo.',
             ],
           },
         ];

@@ -139,8 +139,6 @@ export interface UserProfile {
    * Apagado por omisión: son muchos avisos y hay que pedirlos.
    */
   missedWorkoutRemindersEnabled?: boolean;
-  /** Recordatorio semanal del check-in (domingos). */
-  checkinReminderEnabled?: boolean;
   /** Estado del alumno gestionado por el entrenador. */
   status?: ClientStatus;
   /** Estado de pago del alumno, gestionado por el entrenador. */
@@ -976,33 +974,6 @@ export interface SocialStats {
   lastSeen?: number;
   updatedAt: number;
 }
-
-/**
- * Check-in semanal del alumno: pulso subjetivo (energía, sueño, adherencia,
- * sensaciones) que el entrenador revisa en la ficha. Práctica estándar del
- * coaching online serio.
- */
-export interface WeeklyCheckIn {
-  id: string;
-  trainerId: string;
-  clientId: string;
-  /** Inicio (lunes) de la semana a la que corresponde el check-in. */
-  weekStart: number;
-  /** Valoraciones de 1 (muy mal) a 5 (excelente). */
-  energy: number;
-  sleep: number;
-  adherence: number;
-  soreness: number;
-  notes?: string;
-  createdAt: number;
-}
-
-export const CHECKIN_FIELDS: { key: 'energy' | 'sleep' | 'adherence' | 'soreness'; label: string }[] = [
-  { key: 'energy', label: 'Energía' },
-  { key: 'sleep', label: 'Sueño' },
-  { key: 'adherence', label: 'Dieta y adherencia' },
-  { key: 'soreness', label: 'Sensaciones físicas' },
-];
 
 /**
  * Solicitud de un alumno para unirse al grupo de un entrenador. Se crea al

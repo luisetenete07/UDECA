@@ -113,27 +113,3 @@ export function resumenDeCobros(
   };
 }
 
-/**
- * Alumnos que llevan sin entrenar más de `dias`.
- *
- * El que nunca ha entrenado cuenta como inactivo: es al que más falta le hace
- * que su entrenador se dé cuenta, y dejarlo fuera por no tener ninguna sesión
- * con la que comparar sería esconder justo ese caso.
- */
-export function alumnosInactivos(
-  clients: UserProfile[],
-  logs: { clientId: string; date: number }[],
-  dias: number,
-  ahora = Date.now()
-): UserProfile[] {
-  const ultimo = new Map<string, number>();
-  for (const log of logs) {
-    const actual = ultimo.get(log.clientId);
-    if (!actual || log.date > actual) ultimo.set(log.clientId, log.date);
-  }
-  return clients.filter((c) => {
-    const fecha = ultimo.get(c.uid);
-    if (!fecha) return true;
-    return (ahora - fecha) / DIA > dias;
-  });
-}

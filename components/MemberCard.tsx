@@ -10,7 +10,6 @@ import {
   textoDesde,
 } from '../lib/cardStats';
 import { datosDelCarne } from '../lib/carne';
-import { shareMemberImage } from '../lib/brandCards';
 import { showToast } from './Toast';
 import { estadoInsignia, numeroFundador } from '../lib/fundador';
 import { getCourseProgress } from '../lib/firestore/courseProgress';
@@ -47,23 +46,8 @@ export function MemberCard() {
   const rol = carne?.titulo
     ? carne.titulo.charAt(0) + carne.titulo.slice(1).toLowerCase()
     : 'Miembro';
-  const [compartiendo, setCompartiendo] = useState(false);
   // El número es suyo para siempre; encenderlo depende de estar al día.
   const insignia = estadoInsignia(profile);
-
-  const compartir = async () => {
-    if (!carne) return;
-    setCompartiendo(true);
-    try {
-      const r = await shareMemberImage(carne);
-      if (r === 'downloaded') showToast('Carné descargado');
-      if (r === null) showToast('No se ha podido crear la imagen');
-    } catch {
-      showToast('No se ha podido compartir');
-    } finally {
-      setCompartiendo(false);
-    }
-  };
 
   useFocusEffect(
     useCallback(() => {
@@ -192,33 +176,12 @@ export function MemberCard() {
         <Text style={styles.ayuda}>Arrástrala para girarla</Text>
       )}
 
-      {/* Un carné se enseña. El de dentro se mira; este sale a WhatsApp o a
-          una historia, y ahí es donde el número de fundador hace algo. */}
-      <Pressable onPress={compartir} disabled={compartiendo} style={styles.compartir} hitSlop={8}>
-        <Ionicons
-          name={compartiendo ? 'hourglass-outline' : 'share-social-outline'}
-          size={15}
-          color={colors.primary}
-        />
-        <Text style={styles.compartirTexto}>
-          {compartiendo ? 'Preparando…' : 'Compartir mi carné'}
-        </Text>
-      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   bloque: { marginBottom: spacing.lg },
-  compartir: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'center',
-    paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  compartirTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   ayuda: {
     ...typography.small,
     color: colors.textFaint,

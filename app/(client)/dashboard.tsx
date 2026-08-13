@@ -9,7 +9,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
 import { UpgradePopup } from '../../components/UpgradeCard';
 import { Card } from '../../components/Card';
-import { CheckInCard } from '../../components/CheckInCard';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { ProgressBar } from '../../components/ProgressBar';
 import { CountUp } from '../../components/CountUp';
@@ -20,7 +19,6 @@ import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
-import { getCheckInsForClient, hasCheckInThisWeek } from '../../lib/firestore/checkins';
 import {
   getHabitLogsForClient,
   getHabitsForClient,
@@ -67,8 +65,6 @@ interface ClientDashData {
   routine: Routine | null;
   weightLogs: WeightLog[];
   workoutLogs: WorkoutLog[];
-  needsCheckIn: boolean;
-  hasAnyCheckIn: boolean;
   habits: Habit[];
   habitLogs: HabitLog[];
   cycleAnchor: number | null;
@@ -84,8 +80,6 @@ export default function ClientDashboard() {
   const [routine, setRoutine] = useState<Routine | null>(cached?.routine ?? null);
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>(cached?.weightLogs ?? []);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
-  const [needsCheckIn, setNeedsCheckIn] = useState(cached?.needsCheckIn ?? false);
-  const [hasAnyCheckIn, setHasAnyCheckIn] = useState(cached?.hasAnyCheckIn ?? true);
   const [habits, setHabits] = useState<Habit[]>(cached?.habits ?? []);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>(cached?.habitLogs ?? []);
   const [cycleAnchor, setCycleAnchor] = useState<number | null>(cached?.cycleAnchor ?? null);
@@ -102,12 +96,11 @@ export default function ClientDashboard() {
       if (!profile) return;
       // Sube entrenos que quedaron pendientes por falta de conexión.
       await flushPendingWorkouts().catch(() => {});
-      const [routineData, weightData, workoutData, checkIns, habitData, habitLogData] =
+      const [routineData, weightData, workoutData, habitData, habitLogData] =
         await Promise.all([
           getActiveRoutineForClient(profile.uid),
           getWeightLogsForClient(profile.uid),
           getWorkoutLogsForClient(profile.uid),
-          getCheckInsForClient(profile.uid),
           getHabitsForClient(profile.uid),
           getHabitLogsForClient(profile.uid),
         ]);
@@ -117,16 +110,12 @@ export default function ClientDashboard() {
       setRoutine(routineData);
       setWeightLogs(weightData);
       setWorkoutLogs(workoutData);
-      setNeedsCheckIn(!hasCheckInThisWeek(checkIns));
-      setHasAnyCheckIn(checkIns.length > 0);
       setHabits(habitData);
       setHabitLogs(habitLogData);
       setCached(cacheKey, {
         routine: routineData,
         weightLogs: weightData,
         workoutLogs: workoutData,
-        needsCheckIn: !hasCheckInThisWeek(checkIns),
-        hasAnyCheckIn: checkIns.length > 0,
         habits: habitData,
         habitLogs: habitLogData,
         cycleAnchor: anchor,
@@ -283,14 +272,13 @@ export default function ClientDashboard() {
   const targetSessions = routine?.days.length ?? 0;
   const weekProgress = targetSessions > 0 ? Math.min(sessions / targetSessions, 1) : 0;
 
-  // Checklist de bienvenida: se oculta cuando está todo completado. Para el
-  // atleta, el último paso es crear su propio plan (no hay check-in de coach).
+  // Checklist de bienvenida: se oculta cuando está todo completado.
   const firstSteps = [
     { key: 'photo', label: 'Sube tu foto de perfil', done: Boolean(profile?.photoURL), go: '/(client)/profile' as const },
     { key: 'weight', label: 'Registra tu peso inicial', done: weightLogs.length > 0, go: '/(client)/progress?tab=nutricion' as const },
-    isAthlete
-      ? { key: 'plan', label: 'Crea tu plan de entreno', done: Boolean(routine), go: '/(client)/my-plan' as const }
-      : { key: 'checkin', label: 'Envía tu primer check-in', done: hasAnyCheckIn, go: null },
+    ...(isAthlete
+      ? [{ key: 'plan', label: 'Crea tu plan de entreno', done: Boolean(routine), go: '/(client)/my-plan' as const }]
+      : []),
     { key: 'workout', label: 'Completa tu primer entrenamiento', done: workoutLogs.length > 0, go: '/(client)/workout' as const },
   ] as const;
   const showFirstSteps = firstSteps.some((s) => !s.done);
@@ -811,10 +799,6 @@ export default function ClientDashboard() {
             </Pressable>
           ))}
         </Card>
-      ) : null}
-
-      {needsCheckIn && profile && !isAthlete ? (
-        <CheckInCard profile={profile} onDone={() => setNeedsCheckIn(false)} />
       ) : null}
 
       {habits.length > 0 ? (

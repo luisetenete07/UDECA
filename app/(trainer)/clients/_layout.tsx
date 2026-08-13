@@ -13,7 +13,6 @@ export default function ClientsLayout() {
       {/* Estas dos ya llevan su título dentro, grande. Repetirlo en la barra es
           decir lo mismo dos veces y gastar una fila en ello: se queda solo la
           flecha de volver. */}
-      <Stack.Screen name="[id]/overview" options={{ title: '' }} />
       <Stack.Screen name="[id]/routine" options={{ title: 'Rutina' }} />
       <Stack.Screen name="[id]/nutrition" options={{ title: 'Nutrición' }} />
       <Stack.Screen name="[id]/session" options={{ title: 'Sesión' }} />

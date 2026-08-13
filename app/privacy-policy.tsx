@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
         progreso.{'\n'}
         • <Text style={styles.bold}>Nutrición:</Text> macros y datos que introduzcas, y fotos de
         progreso (opcionales).{'\n'}
-        • <Text style={styles.bold}>Comunicación:</Text> mensajes y check-ins con tu entrenador, y
+        • <Text style={styles.bold}>Comunicación:</Text> mensajes con tu entrenador, y
         anuncios del grupo.{'\n'}
         • <Text style={styles.bold}>Datos técnicos:</Text> un identificador de dispositivo para
         notificaciones push (solo si las activas).
@@ -37,7 +37,7 @@ export default function PrivacyPolicy() {
         Tratamos tus datos para: ofrecerte el servicio de entrenamiento y seguimiento con tu coach
         (o gestionar tu propio plan si eres atleta individual); mostrarte tu progreso y estadísticas;
         gestionar tu cuenta y la relación con tu entrenador; enviarte notificaciones relacionadas con
-        tu entrenamiento, check-ins y avisos de pago (solo si las activas); y gestionar el cobro de la
+        tu entrenamiento y avisos de pago (solo si las activas); y gestionar el cobro de la
         cuota de tu entrenador. No usamos tus datos para publicidad ni para elaborar perfiles
         comerciales.
       </Section>

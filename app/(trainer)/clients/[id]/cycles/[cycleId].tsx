@@ -12,6 +12,7 @@ import { EmptyState } from '../../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../../components/LoadingScreen';
 import { PlanCalendar } from '../../../../../components/PlanCalendar';
 import { ProgressBar } from '../../../../../components/ProgressBar';
+import { ProgressMatrix } from '../../../../../components/ProgressMatrix';
 import { ScreenContainer } from '../../../../../components/ScreenContainer';
 import { StatTile } from '../../../../../components/StatTile';
 import { showToast } from '../../../../../components/Toast';
@@ -21,17 +22,23 @@ import { deleteCycles, getCyclesForClient } from '../../../../../lib/firestore/c
 import { savePlanAsTemplate } from '../../../../../lib/firestore/planTemplates';
 import { TextField } from '../../../../../components/TextField';
 import { getExerciseLibrary } from '../../../../../lib/firestore/exercises';
+import { getUserProfile } from '../../../../../lib/firestore/users';
+import { getWeightLogsForClient } from '../../../../../lib/firestore/weightLogs';
 import { getActiveRoutineForClient } from '../../../../../lib/firestore/routines';
 import { getWorkoutLogsForClient } from '../../../../../lib/firestore/workoutLogs';
 import { computeCycleStats } from '../../../../../lib/cycleStats';
 import { descendantIds } from '../../../../../lib/cyclePlan';
 import { buildBlockView } from '../../../../../lib/blockView';
+import { buildClientReportHtml } from '../../../../../lib/report';
+import { printReportHtml } from '../../../../../lib/printReport';
 import { Dialogo } from '../../../../../components/Dialogo';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
   type Routine,
   type TrainingCycle,
+  type UserProfile,
+  type WeightLog,
   type WorkoutLog,
 } from '../../../../../lib/types';
 
@@ -45,6 +52,16 @@ export default function CycleDashboardScreen() {
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
+  // Para la tabla de progreso y el informe, que antes vivían en una pantalla
+  // aparte ("Progreso total") y ahora se miran aquí, dentro del ciclo.
+  const [client, setClient] = useState<UserProfile | null>(null);
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
+  const [planExercises, setPlanExercises] = useState<{ id: string; name: string }[]>([]);
+  const [vista, setVista] = useState<{ weeks: number; exerciseIds: string[] }>({
+    weeks: 8,
+    exerciseIds: [],
+  });
+  const [exportando, setExportando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -55,11 +72,13 @@ export default function CycleDashboardScreen() {
 
   const load = useCallback(async () => {
     if (!profile || !id || !cycleId) return;
-    const [cyclesData, logsData, rutina, biblioteca] = await Promise.all([
+    const [cyclesData, logsData, rutina, biblioteca, ficha, pesos] = await Promise.all([
       getCyclesForClient(profile.uid, id),
       getWorkoutLogsForClient(id, profile.uid),
       getActiveRoutineForClient(id, profile.uid).catch(() => null),
       getExerciseLibrary(profile.uid).catch(() => []),
+      getUserProfile(id).catch(() => null),
+      getWeightLogsForClient(id, profile.uid).catch(() => []),
     ]);
     setCycles(cyclesData);
     setCycle(cyclesData.find((c) => c.id === cycleId) ?? null);
@@ -67,6 +86,17 @@ export default function CycleDashboardScreen() {
     setRoutine(rutina);
     setMuscleByExercise(Object.fromEntries(biblioteca.map((e) => [e.id, e.muscleGroup])));
     setMeasureByExercise(Object.fromEntries(biblioteca.map((e) => [e.id, e.measure ?? 'reps'])));
+    setClient(ficha);
+    setWeightLogs(pesos);
+    // Ejercicios del plan activo, sin repetir: se pueden añadir a la tabla
+    // aunque el alumno todavía no los haya registrado nunca.
+    const vistos = new Map<string, string>();
+    for (const day of rutina?.days ?? []) {
+      for (const ex of day.exercises) {
+        if (!vistos.has(ex.exerciseId)) vistos.set(ex.exerciseId, ex.name);
+      }
+    }
+    setPlanExercises([...vistos.entries()].map(([exId, name]) => ({ id: exId, name })));
     setLoading(false);
   }, [profile, id, cycleId]);
 
@@ -89,6 +119,31 @@ export default function CycleDashboardScreen() {
       showToast('No se pudo guardar la plantilla');
     } finally {
       setTplSaving(false);
+    }
+  };
+
+  const exportarPdf = async () => {
+    if (!client) return;
+    setExportando(true);
+    try {
+      await printReportHtml(
+        buildClientReportHtml({
+          client,
+          routine,
+          weightLogs,
+          workoutLogs: logs,
+          muscleByExercise,
+          measureByExercise,
+          exerciseIds: vista.exerciseIds,
+          weeks: vista.weeks,
+          coachName: profile?.name,
+        }),
+        `informe-${client.name}`
+      );
+    } catch {
+      showToast('No se pudo exportar el PDF');
+    } finally {
+      setExportando(false);
     }
   };
 
@@ -180,7 +235,6 @@ export default function CycleDashboardScreen() {
             subtitle={`${CYCLE_LEVEL_LABEL[cycle.level]} · ${stats.sessionsDone} entreno${
               stats.sessionsDone === 1 ? '' : 's'
             }`}
-            onPressDetail={() => router.push(`/(trainer)/clients/${id}/overview`)}
           />
         </Card>
       ) : null}
@@ -265,6 +319,38 @@ export default function CycleDashboardScreen() {
           })}
         </Card>
       ) : null}
+
+      {/* La mejor serie de cada ejercicio, semana a semana. Estaba en una
+          pantalla suya ("Progreso total"), a la que había que ir por otro
+          camino: se miraba el bloque en un sitio y si el alumno mejoraba en
+          otro. Vive aquí porque es la misma pregunta —cómo va este ciclo— y
+          porque el informe sale con lo que se esté viendo. */}
+      <Card style={styles.section}>
+        <Text style={styles.sectionLabel}>Progreso por ejercicio</Text>
+        <Text style={styles.mutedText}>
+          Todo su historial, no solo este ciclo. Elige qué ejercicios seguir: es la misma tabla
+          que ve tu alumno.
+        </Text>
+        <ProgressMatrix
+          logs={logs}
+          clientId={String(id)}
+          ownerId={profile?.uid}
+          editable
+          planExercises={planExercises}
+          onViewChange={setVista}
+        />
+        <Button
+          title="Exportar a PDF"
+          variant="secondary"
+          onPress={exportarPdf}
+          loading={exportando}
+          disabled={!client}
+          style={{ marginTop: spacing.lg }}
+        />
+        <Text style={styles.exportHint}>
+          Sale con las semanas y los ejercicios que tengas puestos ahora mismo.
+        </Text>
+      </Card>
 
       {cycle.goal ? (
         <Card style={styles.section}>
@@ -458,6 +544,12 @@ const styles = StyleSheet.create({
   goalText: { ...typography.body, color: colors.text },
   notesText: { ...typography.body, color: colors.textMuted, lineHeight: 21 },
   mutedText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
+  exportHint: {
+    ...typography.small,
+    color: colors.textFaint,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
   logRow: {
     flexDirection: 'row',
     alignItems: 'center',

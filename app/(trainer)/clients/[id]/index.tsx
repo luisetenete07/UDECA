@@ -21,7 +21,6 @@ import { showToast } from '../../../../components/Toast';
 import { ConsistencyMap } from '../../../../components/ConsistencyMap';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
-import { getCheckInsForClient } from '../../../../lib/firestore/checkins';
 import { getExerciseLibrary } from '../../../../lib/firestore/exercises';
 import { billingAnchorOf, nextBillingDate } from '../../../../lib/billing';
 import {
@@ -38,8 +37,6 @@ import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNotes';
 import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
-import { bestMarks } from '../../../../lib/report';
-import { shareReportImage } from '../../../../lib/brandCards';
 import {
   exerciseProgression,
   listExercisesInLogs,
@@ -65,10 +62,9 @@ import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
 import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
-import { diaMes, fechaCorta, fechaNumerica, mesLargo } from '../../../../lib/fechas';
+import { diaMes, fechaCorta, fechaNumerica } from '../../../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
 import {
-  CHECKIN_FIELDS,
   CLIENT_STATUSES,
   CLIENT_STATUS_LABEL,
   PAYMENT_STATUSES,
@@ -82,7 +78,6 @@ import {
   type Habit,
   type HabitLog,
   type UserProfile,
-  type WeeklyCheckIn,
   type WeightLog,
   type WorkoutLog,
 } from '../../../../lib/types';
@@ -113,7 +108,6 @@ export default function ClientDetailScreen() {
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
-  const [checkIns, setCheckIns] = useState<WeeklyCheckIn[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
   const [newHabit, setNewHabit] = useState('');
@@ -122,7 +116,6 @@ export default function ClientDetailScreen() {
   const [courses, setCourses] = useState<import('../../../../lib/types').Course[]>([]);
   const [courseSeen, setCourseSeen] = useState<LessonsSeen>({});
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [sharingCard, setSharingCard] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [feeInput, setFeeInput] = useState('');
@@ -147,7 +140,7 @@ export default function ClientDetailScreen() {
       const uid = profile.uid;
       (async () => {
         try {
-        const [clientData, routineData, weightData, workoutData, planData, photoData, checkInData, habitData, habitLogData, noteData, exerciseData] =
+        const [clientData, routineData, weightData, workoutData, planData, photoData, habitData, habitLogData, noteData, exerciseData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id, uid),
@@ -155,7 +148,6 @@ export default function ClientDetailScreen() {
             getWorkoutLogsForClient(id, uid),
             getActiveNutritionPlanForClient(id, uid),
             getProgressPhotosForClient(id, uid),
-            getCheckInsForClient(id, uid),
             getHabitsForClient(id, uid),
             getHabitLogsForClient(id, uid),
             getCoachNote(id),
@@ -180,7 +172,6 @@ export default function ClientDetailScreen() {
         setWorkoutLogs(workoutData);
         setNutritionPlan(planData);
         setPhotos(photoData);
-        setCheckIns(checkInData);
         setHabits(habitData);
         setHabitLogs(habitLogData);
         // Los cursos van detrás y sin bloquear: la ficha se abre para mirar
@@ -428,40 +419,6 @@ export default function ClientDetailScreen() {
   );
   const isoOther = Math.max(0, isoTotals.total - isoTotals.push - isoTotals.pull);
 
-  // Resumen de marca en PNG, para mandarlo por WhatsApp de un vistazo.
-  const handleShareReportCard = async () => {
-    if (!client) return;
-    setSharingCard(true);
-    try {
-      const push = bestMarks(workoutLogs, 'Empuje', muscleByExercise, measureByExercise);
-      const pull = bestMarks(workoutLogs, 'Tirón', muscleByExercise, measureByExercise);
-      const daysSet = new Set(workoutLogs.map((l) => new Date(l.date).toDateString()));
-      const totalMin = workoutLogs.reduce((acc, l) => acc + (l.durationMin ?? 0), 0);
-      const weightChange =
-        weightLogs.length >= 2
-          ? Math.round(
-              (weightLogs[weightLogs.length - 1].weightKg - weightLogs[0].weightKg) * 10
-            ) / 10
-          : undefined;
-      const result = await shareReportImage({
-        clientName: client.name,
-        totalWorkouts: workoutLogs.length,
-        daysTrained: daysSet.size,
-        totalHours: Math.round((totalMin / 60) * 10) / 10,
-        bestPushIso: push.secs ? `${push.secs.name}: ${push.secs.value}s` : undefined,
-        bestPullIso: pull.secs ? `${pull.secs.name}: ${pull.secs.value}s` : undefined,
-        bestPushReps: push.reps ? `${push.reps.name}: ${push.reps.value} reps` : undefined,
-        bestPullReps: pull.reps ? `${pull.reps.name}: ${pull.reps.value} reps` : undefined,
-        weightChangeKg: weightChange,
-        periodLabel: mesLargo(Date.now()),
-      });
-      if (result === 'downloaded') showToast('Resumen descargado');
-      if (!result) showToast('No se pudo generar la imagen');
-    } finally {
-      setSharingCard(false);
-    }
-  };
-
   return (
     <ScreenContainer>
       <Stack.Screen options={{ headerLeft: backToClients }} />
@@ -650,6 +607,75 @@ export default function ClientDetailScreen() {
         ) : null}
       </Card>
 
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Rutina asignada</Text>
+        {activeRoutine ? (
+          <>
+            <Text style={styles.routineName}>{activeRoutine.name}</Text>
+            <Text style={styles.routineMeta}>
+              {activeRoutine.days.length}{' '}
+              {activeRoutine.days.length === 1 ? 'día' : 'días'} de entrenamiento
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.mutedText}>Este cliente no tiene una rutina activa.</Text>
+        )}
+        <Button
+          title={activeRoutine ? 'Editar rutina' : 'Crear rutina'}
+          variant="secondary"
+          onPress={() => router.push(`/(trainer)/clients/${id}/routine`)}
+          style={{ marginTop: spacing.md }}
+        />
+
+        {/* La planificación por ciclos, aquí dentro. Era una tarjeta suya con
+            un título, un párrafo y una flecha: el sitio de la temporada es
+            junto a la rutina que se entrena en ella, no en un cajón aparte. */}
+        <Pressable
+          style={styles.pausaFila}
+          onPress={() => router.push(`/(trainer)/clients/${id}/planning`)}
+        >
+          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.navTitle}>Planificación por ciclos</Text>
+            <Text style={styles.navHint}>
+              La temporada en bloques y semanas, su cumplimiento y el progreso ejercicio a
+              ejercicio.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </Pressable>
+
+        {/* Cambio de urgencia: unos días sin entrenar sin tocar la rutina.
+            Va dentro de esta tarjeta porque es lo que se hace cuando la rutina
+            asignada no encaja con la semana que tiene el alumno delante. */}
+        <Pressable style={styles.pausaFila} onPress={() => setPausaAbierta(true)}>
+          <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.navTitle}>
+              {pausaDelCliente ? 'Plan en pausa' : 'Pausar el plan unos días'}
+            </Text>
+            <Text style={styles.navHint}>
+              {pausaDelCliente
+                ? `${textoRango(pausaDelCliente)}${
+                    pausaDelCliente.motivo ? ` · ${pausaDelCliente.motivo}` : ''
+                  }${pausaDelCliente.porQuien === 'alumno' ? ' · la puso el alumno' : ''}`
+                : 'Lesión, viaje o una semana imposible: no se le pide nada, no pierde la racha y el plan le espera donde lo dejó.'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </Pressable>
+      </Card>
+
+      <PausaPlanSheet
+        visible={pausaAbierta}
+        onClose={() => setPausaAbierta(false)}
+        pausas={client?.planPauses}
+        activa={pausaDelCliente}
+        porQuien="coach"
+        guardando={guardandoPausa}
+        onGuardar={guardarPausa}
+      />
+
       {client.goal || client.targetWeightKg ? (
         <Card style={styles.section}>
           {client.goal ? (
@@ -722,86 +748,6 @@ export default function ClientDetailScreen() {
         />
         {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
       </CollapsibleCard>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Rutina asignada</Text>
-        {activeRoutine ? (
-          <>
-            <Text style={styles.routineName}>{activeRoutine.name}</Text>
-            <Text style={styles.routineMeta}>
-              {activeRoutine.days.length}{' '}
-              {activeRoutine.days.length === 1 ? 'día' : 'días'} de entrenamiento
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.mutedText}>Este cliente no tiene una rutina activa.</Text>
-        )}
-        <Button
-          title={activeRoutine ? 'Editar rutina' : 'Crear rutina'}
-          variant="secondary"
-          onPress={() => router.push(`/(trainer)/clients/${id}/routine`)}
-          style={{ marginTop: spacing.md }}
-        />
-
-        {/* Cambio de urgencia: unos días sin entrenar sin tocar la rutina.
-            Va dentro de esta tarjeta porque es lo que se hace cuando la rutina
-            asignada no encaja con la semana que tiene el alumno delante. */}
-        <Pressable style={styles.pausaFila} onPress={() => setPausaAbierta(true)}>
-          <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.navTitle}>
-              {pausaDelCliente ? 'Plan en pausa' : 'Pausar el plan unos días'}
-            </Text>
-            <Text style={styles.navHint}>
-              {pausaDelCliente
-                ? `${textoRango(pausaDelCliente)}${
-                    pausaDelCliente.motivo ? ` · ${pausaDelCliente.motivo}` : ''
-                  }${pausaDelCliente.porQuien === 'alumno' ? ' · la puso el alumno' : ''}`
-                : 'Lesión, viaje o una semana imposible: no se le pide nada, no pierde la racha y el plan le espera donde lo dejó.'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-        </Pressable>
-      </Card>
-
-      <PausaPlanSheet
-        visible={pausaAbierta}
-        onClose={() => setPausaAbierta(false)}
-        pausas={client?.planPauses}
-        activa={pausaDelCliente}
-        porQuien="coach"
-        guardando={guardandoPausa}
-        onGuardar={guardarPausa}
-      />
-
-      {/* Dos destinos que solo eran título, párrafo y botón. Una tarjeta
-          entera para "pulsa aquí" ocupa lo mismo que una con datos y no dice
-          nada; juntas caben en el sitio de una y se llega igual de rápido. */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Seguimiento</Text>
-        <Pressable
-          style={styles.navRow}
-          onPress={() => router.push(`/(trainer)/clients/${id}/overview`)}
-        >
-          <Ionicons name="trending-up-outline" size={18} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.navTitle}>Progreso total</Text>
-            <Text style={styles.navHint}>La mejor serie de cada ejercicio, semana a semana.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-        </Pressable>
-        <Pressable
-          style={[styles.navRow, styles.navRowLast]}
-          onPress={() => router.push(`/(trainer)/clients/${id}/planning`)}
-        >
-          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.navTitle}>Planificación por ciclos</Text>
-            <Text style={styles.navHint}>La temporada en bloques y semanas, y su cumplimiento.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-        </Pressable>
-      </Card>
 
       <CollapsibleCard
         id="alumno-rir"
@@ -1051,36 +997,6 @@ export default function ClientDetailScreen() {
       </CollapsibleCard>
 
       <CollapsibleCard
-        id="alumno-checkins"
-        icon="clipboard-outline"
-        title="Check-ins semanales"
-        hint={checkIns.length > 0 ? `${checkIns.length}` : 'Ninguno'}
-        defaultOpen={false}
-      >
-        {checkIns.length === 0 ? (
-          <Text style={styles.mutedText}>Todavía no ha enviado ningún check-in.</Text>
-        ) : (
-          checkIns.slice(0, 4).map((c) => (
-            <View key={c.id} style={styles.checkInRow}>
-              <Text style={styles.checkInDate}>
-                Semana del{' '}
-                {diaMes(c.weekStart)}
-              </Text>
-              <View style={styles.checkInScores}>
-                {CHECKIN_FIELDS.map((f) => (
-                  <View key={f.key} style={styles.checkInScore}>
-                    <Text style={styles.checkInScoreValue}>{c[f.key]}</Text>
-                    <Text style={styles.checkInScoreLabel}>{f.label.split(' ')[0]}</Text>
-                  </View>
-                ))}
-              </View>
-              {c.notes ? <Text style={styles.checkInNotes}>“{c.notes}”</Text> : null}
-            </View>
-          ))
-        )}
-      </CollapsibleCard>
-
-      <CollapsibleCard
         id="alumno-historial"
         icon="time-outline"
         title="Historial de entrenamientos"
@@ -1110,19 +1026,12 @@ export default function ClientDetailScreen() {
         )}
       </CollapsibleCard>
 
-      <Button
-        title="Compartir resumen (imagen)"
-        variant="secondary"
-        onPress={handleShareReportCard}
-        loading={sharingCard}
-        style={{ marginBottom: spacing.md }}
-      />
-
       <CollapsibleCard
         id="alumno-gestion"
         icon="person-remove-outline"
         title="Gestión del alumno"
         defaultOpen={false}
+        style={styles.ultimaTarjeta}
       >
         <Text style={styles.mutedText}>
           Sácalo de tu grupo para que deje de aparecer en tus clientes. No se
@@ -1155,15 +1064,9 @@ export default function ClientDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    paddingVertical: spacing.md - 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  navRowLast: { borderBottomWidth: 0, paddingBottom: 0 },
+  // La última tarjeta se pegaba al borde de abajo: el botón de sacar del grupo
+  // quedaba a ras del final de la pantalla, sin aire para pulsarlo tranquilo.
+  ultimaTarjeta: { marginBottom: spacing.xl },
   pausaFila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1342,35 +1245,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.sm,
     marginTop: spacing.md,
-  },
-  checkInRow: {
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  checkInDate: {
-    ...typography.small,
-    color: colors.text,
-    fontFamily: fonts.semiBold,
-    marginBottom: spacing.xs,
-  },
-  checkInScores: { flexDirection: 'row', gap: spacing.sm },
-  checkInScore: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  checkInScoreValue: { ...typography.h3, color: colors.primaryBright },
-  checkInScoreLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fonts.medium },
-  checkInNotes: {
-    ...typography.small,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    marginTop: spacing.xs,
   },
   photoStrip: { marginTop: spacing.xs },
   photoItem: { marginRight: spacing.sm, alignItems: 'center' },

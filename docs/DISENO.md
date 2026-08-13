@@ -84,7 +84,6 @@ Antes de montar una nueva, mirar si ya está:
 | `QuickSheet` | Acciones rápidas al mantener pulsado |
 | `CollapsibleCard` | Tarjeta que se pliega y recuerda cómo la dejaste |
 | `MacroSum` | Lo que suman unos macros, mientras se escriben |
-| `ClientPulse` | Quién ha entrenado y quién no, por forma y color |
 | `DashboardSkeleton` | La forma de lo que viene, mientras carga |
 | `TextField` | Campo de texto. El borde **entra** al enfocar |
 | `ProgressCard` | El carné: foco, identidad dentro y una cifra cada vez |

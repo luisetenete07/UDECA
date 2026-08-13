@@ -296,7 +296,6 @@ firestore.rules            Reglas de seguridad de Firestore
 | `socialStats`         | Métricas públicas por miembro para el ranking social (no sensibles) |
 | `courses`             | Cursos en vídeo (secciones y lecciones); publicados = visibles para alumnos |
 | `progressPhotos`      | Fotos de progreso (frente/perfil/espalda), privadas alumno+entrenador |
-| `checkIns`            | Check-ins semanales del alumno (energía, sueño, adherencia, sensaciones) |
 | `announcements`       | Anuncios del entrenador para su grupo                            |
 | `habits`              | Hábitos diarios asignados por el entrenador a cada alumno         |
 | `habitLogs`           | Registro diario de hábitos cumplidos (creado por el alumno)       |

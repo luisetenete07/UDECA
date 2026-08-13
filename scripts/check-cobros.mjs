@@ -9,7 +9,7 @@
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-cobros.mjs
  */
-import { alumnosInactivos, resumenDeCobros } from '../lib/cobros.ts';
+import { resumenDeCobros } from '../lib/cobros.ts';
 
 let fallos = 0;
 function comprueba(nombre, condicion, detalle = '') {
@@ -136,30 +136,6 @@ console.log('\nEstado y fecha responden a preguntas distintas');
   const r = resumenDeCobros(clientes, [], AHORA);
   comprueba('no se le reclama', r.aReclamar.length === 0);
   comprueba('pero la fecha pasada se ve', r.vencidos === 1);
-}
-
-console.log('\nQuién lleva sin entrenar');
-{
-  const clientes = [alumno('constante'), alumno('flojea'), alumno('nunca')];
-  const logs = [
-    { clientId: 'constante', date: AHORA - 2 * DIA },
-    { clientId: 'flojea', date: AHORA - 12 * DIA },
-    { clientId: 'constante', date: AHORA - 30 * DIA },
-  ];
-  const inactivos = alumnosInactivos(clientes, logs, 7, AHORA).map((c) => c.uid);
-  comprueba('el que entrenó anteayer no', !inactivos.includes('constante'));
-  comprueba('el de hace doce días sí', inactivos.includes('flojea'));
-  comprueba(
-    'el que NUNCA ha entrenado también: es al que más falta le hace',
-    inactivos.includes('nunca')
-  );
-  comprueba('son dos', inactivos.length === 2, inactivos.join());
-  comprueba(
-    'manda la sesión más reciente, no la primera que aparece',
-    !alumnosInactivos(clientes, logs, 7, AHORA).some((c) => c.uid === 'constante')
-  );
-  comprueba('justo en el límite todavía no es inactivo',
-    !alumnosInactivos([alumno('x')], [{ clientId: 'x', date: AHORA - 7 * DIA }], 7, AHORA).length);
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

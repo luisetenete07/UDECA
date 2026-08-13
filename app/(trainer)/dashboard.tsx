@@ -1,4 +1,4 @@
-import { alumnosInactivos, resumenDeCobros } from '../../lib/cobros';
+import { resumenDeCobros } from '../../lib/cobros';
 import { diaMes, fechaNumerica, inicioDelDia } from '../../lib/fechas';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -14,8 +14,6 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
-import { ClientPulse, pulsoDeAlumnos } from '../../components/ClientPulse';
-import { destacados, tendenciaDeAlumnos } from '../../lib/coachInsights';
 import { getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { CountUp } from '../../components/CountUp';
@@ -45,13 +43,6 @@ import {
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
 import { confirmar } from '../../lib/confirmar';
-import { getCoursesForTrainer } from '../../lib/firestore/courses';
-import { getCourseProgressMany } from '../../lib/firestore/courseProgress';
-import {
-  resumenDeGrupo,
-  resumenPorAlumno,
-  type LessonsSeen,
-} from '../../lib/courseProgress';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
@@ -67,7 +58,6 @@ import {
   type WorkoutLog,
 } from '../../lib/types';
 
-const INACTIVE_DAYS_THRESHOLD = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Suma meses naturales a un timestamp (para la próxima renovación). */
 const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
@@ -112,11 +102,6 @@ export default function TrainerDashboard() {
   const [savingPay, setSavingPay] = useState(false);
   const [confirmingPayId, setConfirmingPayId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  // Los cursos van por su cuenta y DESPUÉS: el panel tiene que pintarse en un
-  // parpadeo, y esto es una consulta más una lectura por alumno. Si tardan,
-  // que tarde la tarjeta de cursos, no el panel entero.
-  const [courses, setCourses] = useState<import('../../lib/types').Course[]>([]);
-  const [courseSeen, setCourseSeen] = useState<Record<string, LessonsSeen>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -168,37 +153,6 @@ export default function TrainerDashboard() {
     }, [profile])
   );
 
-  // El avance en cursos, en su propio viaje y detrás del panel: son una
-  // consulta de cursos más una lectura por alumno, y ninguna de las dos puede
-  // retrasar lo que el entrenador viene a ver.
-  useFocusEffect(
-    useCallback(() => {
-      if (!profile) return;
-      let cancelado = false;
-      (async () => {
-        try {
-          const cs = await getCoursesForTrainer(profile.uid);
-          if (cancelado) return;
-          setCourses(cs);
-          // Sin cursos publicados no hay nada que mirar y nos ahorramos una
-          // lectura por alumno cada vez que se abre el panel.
-          if (!cs.some((c) => c.published)) return;
-          const ids = clients.map((c) => c.uid);
-          if (ids.length === 0) return;
-          const seen = await getCourseProgressMany(ids);
-          if (!cancelado) setCourseSeen(seen);
-        } catch {
-          // Que falle el avance de cursos no puede tumbar el panel.
-        }
-      })();
-      return () => {
-        cancelado = true;
-      };
-      // Se rehace cuando cambia la lista de alumnos, no en cada repintado.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [profile, clients.map((c) => c.uid).join(',')])
-  );
-
   // Alta/baja de alumnos en vivo: al aceptar a uno nuevo aparece aquí al
   // instante, sin refrescar el panel. Solo mientras el panel está delante.
   useFocusEffect(
@@ -227,10 +181,8 @@ export default function TrainerDashboard() {
   }
 
   const now = Date.now();
-  const inactiveClients = alumnosInactivos(clients, logs, INACTIVE_DAYS_THRESHOLD, now);
 
   const wk = weekComparison(logs);
-  const pulso = pulsoDeAlumnos(clients, logs);
   // Tareas de hoy: las del día sin terminar. Estaban solo en la agenda, y una
   // tarea que hay que ir a buscar es una tarea que se olvida.
   const hoyCero = inicioDelDia(now);
@@ -238,12 +190,6 @@ export default function TrainerDashboard() {
     .filter((t) => !t.done && t.scope === 'day' && (t.dueDate ?? hoyCero) <= hoyCero)
     .sort((a, b) => Number(b.flagged ?? false) - Number(a.flagged ?? false))
     .slice(0, 4);
-  const tendencias = destacados(tendenciaDeAlumnos(clients, logs));
-  // Avance en cursos del grupo. Solo cuentan los publicados: un borrador no lo
-  // ha podido ver nadie y contarlo dejaría a todo el mundo en rojo.
-  const cursosPublicados = courses.filter((c) => c.published);
-  const avanceAlumnos = resumenPorAlumno(cursosPublicados, clients, courseSeen);
-  const avanceGrupo = resumenDeGrupo(cursosPublicados, avanceAlumnos);
   const byId = (id: string) => clients.find((c) => c.uid === id);
   // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
   const trainedToday = new Set(
@@ -701,147 +647,7 @@ export default function TrainerDashboard() {
               </Text>
             </View>
           </View>
-
-          {/* Lo único accionable del bloque: a quién hay que escribirle. Antes
-              era una cifra suelta en un cuadro que no llevaba a ninguna parte. */}
-          {inactiveClients.length > 0 ? (
-            <Pressable
-              style={styles.pulseAction}
-              onPress={() => router.push('/(trainer)/clients')}
-            >
-              <Ionicons name="alert-circle-outline" size={16} color={colors.warning} />
-              <Text style={styles.pulseActionText}>
-                {inactiveClients.length} sin entrenar hace más de una semana
-              </Text>
-              <Ionicons name="chevron-forward" size={15} color={colors.textFaint} />
-            </Pressable>
-          ) : null}
-
-          {/* Las caras, ordenadas por quién necesita algo primero. La pregunta
-              "quién ha entrenado y quién no" se contestaba entre una cifra, una
-              lista de actividad y la ficha de cada alumno: tres sitios para una
-              pregunta de tres segundos. */}
-          <View style={styles.pulseStrip}>
-            <ClientPulse
-              alumnos={pulso}
-              onPress={(uid) => router.push(`/(trainer)/clients/${uid}`)}
-            />
-          </View>
         </Card>
-        </FadeIn>
-      ) : null}
-
-      {/* Quién mejora y quién empeora. Es la pregunta que justifica el trabajo
-          del entrenador y la única de las suyas que no se podía contestar sin
-          entrar en cada ficha: con cinco alumnos son cinco viajes, con veinte
-          no se hace nunca. */}
-      {tendencias.bajan.length > 0 || tendencias.suben.length > 0 ? (
-        <FadeIn delay={105}>
-          <Card style={styles.section}>
-            <View style={styles.titleRow}>
-              <Ionicons name="pulse-outline" size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Cómo van</Text>
-            </View>
-            <Text style={styles.trendPeriod}>Estas dos semanas frente a las dos anteriores</Text>
-
-            {tendencias.bajan.map((a) => (
-              <PressableScale
-                key={a.uid}
-                style={styles.trendRow}
-                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
-              >
-                <Ionicons name="trending-down" size={17} color={colors.warning} />
-                <Text style={styles.trendName} numberOfLines={1}>
-                  {a.name}
-                </Text>
-                <Text style={[styles.trendDelta, { color: colors.warning }]}>
-                  {Math.round(a.cambio * 100)} %
-                </Text>
-                <Text style={styles.trendDetail}>
-                  {a.seriesAntes} a {a.seriesAhora} series
-                </Text>
-              </PressableScale>
-            ))}
-
-            {tendencias.suben.slice(0, 3).map((a) => (
-              <PressableScale
-                key={a.uid}
-                style={styles.trendRow}
-                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
-              >
-                <Ionicons name="trending-up" size={17} color={colors.success} />
-                <Text style={styles.trendName} numberOfLines={1}>
-                  {a.name}
-                </Text>
-                <Text style={[styles.trendDelta, { color: colors.success }]}>
-                  +{Math.round(a.cambio * 100)} %
-                </Text>
-                <Text style={styles.trendDetail}>
-                  {a.seriesAntes} a {a.seriesAhora} series
-                </Text>
-              </PressableScale>
-            ))}
-          </Card>
-        </FadeIn>
-      ) : null}
-
-      {/* Cursos: la única pregunta del panel que no se podía contestar. Un
-          entrenador publica un curso y no tenía forma de saber si alguien lo
-          había abierto — y sin eso, grabar el siguiente es una apuesta.
-
-          La tarjeta solo aparece si hay algo publicado: a quien no da cursos
-          no se le enseña un hueco vacío recordándoselo. */}
-      {avanceGrupo.leccionesPublicadas > 0 && avanceGrupo.alumnos > 0 ? (
-        <FadeIn delay={170}>
-          <Card style={styles.section}>
-            <View style={styles.titleRow}>
-              <Ionicons name="school-outline" size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Cursos</Text>
-            </View>
-
-            <View style={styles.cursoTop}>
-              <ProgressRing
-                size={72}
-                thickness={6}
-                progress={avanceGrupo.media}
-                value={`${Math.round(avanceGrupo.media * 100)}%`}
-                label="grupo"
-                celebrate={false}
-              />
-              <View style={{ flex: 1, gap: 3 }}>
-                <Text style={styles.cursoBig}>
-                  {avanceGrupo.sinEmpezar === 0
-                    ? 'Todos han empezado'
-                    : `${avanceGrupo.sinEmpezar} sin empezar`}
-                </Text>
-                <Text style={styles.cursoMeta}>
-                  {avanceGrupo.terminado > 0
-                    ? `${avanceGrupo.terminado} ${avanceGrupo.terminado === 1 ? 'lo ha terminado' : 'lo han terminado'} · `
-                    : ''}
-                  {avanceGrupo.leccionesPublicadas}{' '}
-                  {avanceGrupo.leccionesPublicadas === 1 ? 'lección' : 'lecciones'} publicadas
-                </Text>
-              </View>
-            </View>
-
-            {/* Quien empezó y se quedó a medias: es a quien un mensaje rescata.
-                Quien no ha empezado ya sale contado arriba. */}
-            {avanceGrupo.rezagados.map((a) => (
-              <PressableScale
-                key={a.uid}
-                style={styles.cursoFila}
-                onPress={() => router.push(`/(trainer)/clients/${a.uid}`)}
-              >
-                <Text style={styles.cursoNombre} numberOfLines={1}>
-                  {a.name}
-                </Text>
-                <View style={styles.cursoBarra}>
-                  <View style={[styles.cursoBarraFill, { width: `${a.ratio * 100}%` }]} />
-                </View>
-                <Text style={styles.cursoPct}>{Math.round(a.ratio * 100)} %</Text>
-              </PressableScale>
-            ))}
-          </Card>
         </FadeIn>
       ) : null}
 
@@ -1235,7 +1041,6 @@ export default function TrainerDashboard() {
 
 const styles = StyleSheet.create({
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  pulseStrip: { marginTop: spacing.md },
   taskRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1243,32 +1048,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-  },
-  cursoTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  cursoBig: { ...typography.h3, color: colors.text },
-  cursoMeta: { ...typography.small, color: colors.textMuted },
-  cursoFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  cursoNombre: { ...typography.small, color: colors.text, fontFamily: fonts.medium, width: 96 },
-  cursoBarra: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.surfaceAlt,
-    overflow: 'hidden',
-  },
-  cursoBarraFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
-  cursoPct: {
-    ...typography.small,
-    color: colors.textMuted,
-    fontFamily: fonts.semiBold,
-    ...tabularNums,
-    width: 42,
-    textAlign: 'right',
   },
   taskCheck: {
     width: 19,
@@ -1278,28 +1057,6 @@ const styles = StyleSheet.create({
     borderColor: colors.borderStrong,
   },
   taskTitle: { ...typography.body, color: colors.text, flex: 1 },
-  trendPeriod: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm },
-  trendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm + 2,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  trendName: { ...typography.body, color: colors.text, flex: 1 },
-  trendDelta: { ...typography.body, fontFamily: fonts.semiBold, ...tabularNums },
-  trendDetail: { ...typography.small, color: colors.textFaint, fontSize: 11, width: 96, textAlign: 'right' },
-  pulseAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  pulseActionText: { ...typography.small, color: colors.warning, flex: 1 },
   pulseBig: { ...typography.h2, color: colors.text, marginTop: 2, marginBottom: 2 },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   stepRow: {

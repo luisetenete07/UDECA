@@ -416,11 +416,6 @@ export default function ClientsScreen() {
               onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}/planning`),
             },
             {
-              icono: 'trending-up-outline',
-              texto: 'Progreso total',
-              onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}/overview`),
-            },
-            {
               icono: 'nutrition-outline',
               texto: 'Plan nutricional',
               onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}/nutrition`),

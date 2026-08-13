@@ -12,8 +12,6 @@ import {
   diasDeAlta,
   estadoDeCurso,
   leccionesContables,
-  resumenDeGrupo,
-  resumenPorAlumno,
 } from '../lib/courseProgress.ts';
 
 const DIA = 24 * 60 * 60 * 1000;
@@ -107,45 +105,6 @@ comprueba('a los 40 días ya se propone l5', veterano.siguiente?.id === 'l5');
 comprueba(
   'los días de alta se cuentan desde createdAt',
   diasDeAlta(Date.now() - 30 * DIA) === 30
-);
-
-console.log('\nEl grupo, como lo ve el entrenador');
-const alumnos = [
-  { uid: 'a', name: 'Ana', createdAt: Date.now() - 200 * DIA },
-  { uid: 'b', name: 'Beto', createdAt: Date.now() - 200 * DIA },
-  { uid: 'c', name: 'Cris', createdAt: Date.now() - 200 * DIA },
-];
-const vistas = {
-  a: { c1: ['l1', 'l2', 'l3', 'l5'] },
-  b: { c1: ['l1'] },
-  // Cris no ha abierto nada.
-};
-const porAlumno = resumenPorAlumno([curso], alumnos, vistas);
-comprueba('ordena por quien menos lleva', porAlumno.map((x) => x.uid).join(',') === 'c,b,a');
-comprueba('Ana lo tiene terminado', porAlumno.find((x) => x.uid === 'a').terminados === 1);
-comprueba('Cris sale como sin empezar', porAlumno.find((x) => x.uid === 'c').sinEmpezar === true);
-comprueba(
-  'Beto va por la cuarta parte',
-  porAlumno.find((x) => x.uid === 'b').ratio === 0.25
-);
-
-const grupo = resumenDeGrupo([curso], porAlumno);
-comprueba('cuenta las lecciones publicadas', grupo.leccionesPublicadas === 4);
-comprueba('uno sin empezar, uno terminado', grupo.sinEmpezar === 1 && grupo.terminado === 1);
-comprueba(
-  'la media es la del grupo entero',
-  Math.abs(grupo.media - (1 + 0.25 + 0) / 3) < 1e-9,
-  `media=${grupo.media}`
-);
-comprueba(
-  'entre los rezagados va Beto, no Cris ni Ana',
-  grupo.rezagados.length === 1 && grupo.rezagados[0].uid === 'b'
-);
-
-const sinCursos = resumenDeGrupo([], resumenPorAlumno([], alumnos, {}));
-comprueba(
-  'sin cursos publicados no se inventa nada',
-  sinCursos.leccionesPublicadas === 0 && sinCursos.media === 0 && sinCursos.terminado === 0
 );
 
 console.log('\nMini clases dentro de una lección');

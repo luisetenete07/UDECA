@@ -37,7 +37,7 @@ export const ULTIMA_HORA = 22;
  *
  * iOS no admite más de 64 notificaciones locales pendientes y descarta las que
  * sobran sin decir nada. Con este tope caben estas y las demás (el descanso,
- * el check-in, el recordatorio diario) sin pisarse.
+ * el recordatorio diario) sin pisarse.
  */
 export const TOPE_AVISOS = 24;
 

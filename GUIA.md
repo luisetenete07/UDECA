@@ -48,8 +48,7 @@ enlace de vídeo.
 
 ## Manual del alumno
 
-**Inicio** — Anuncios del coach, check-in semanal (1 minuto), hábitos de
-hoy para marcar, "**Hoy toca**" según la planificación semanal, racha y
+**Inicio** — Anuncios del coach, hábitos de hoy para marcar, "**Hoy toca**" según la planificación semanal, racha y
 objetivo semanal.
 
 **Entreno** — El día de hoy viene preseleccionado. Al marcar cada serie

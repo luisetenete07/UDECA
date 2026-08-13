@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -26,6 +36,7 @@ export function CollapsibleCard({
   hint,
   children,
   defaultOpen = true,
+  style,
 }: {
   /** Identificador estable: es la clave con la que se recuerda. */
   id: string;
@@ -35,6 +46,8 @@ export function CollapsibleCard({
   hint?: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  /** Para separarla de lo que venga después (o del final de la pantalla). */
+  style?: StyleProp<ViewStyle>;
 }) {
   const [abierto, setAbierto] = useState(defaultOpen);
   const [listo, setListo] = useState(false);
@@ -73,7 +86,7 @@ export function CollapsibleCard({
   const visible = listo ? abierto : defaultOpen;
 
   return (
-    <Card>
+    <Card style={style}>
       <Pressable onPress={alternar} style={styles.cabecera} hitSlop={6}>
         <Ionicons name={icon} size={16} color={colors.primary} />
         <Text style={styles.titulo}>{title}</Text>

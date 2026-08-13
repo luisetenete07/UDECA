@@ -23,9 +23,7 @@ import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { pickAvatar } from '../../lib/image';
 import {
   cancelarAvisosOlvido,
-  cancelCheckinReminder,
   cancelWorkoutReminder,
-  scheduleCheckinReminder,
   scheduleWorkoutReminder,
 } from '../../lib/notifications';
 import { diaLargo } from '../../lib/fechas';
@@ -68,7 +66,6 @@ export default function ClientProfileScreen() {
   const [reminderOn, setReminderOn] = useState(Boolean(profile?.reminderEnabled));
   const [reminderHour, setReminderHour] = useState(profile?.reminderHour ?? 18);
   const [reminderMinute, setReminderMinute] = useState(profile?.reminderMinute ?? 0);
-  const [checkinOn, setCheckinOn] = useState(Boolean(profile?.checkinReminderEnabled));
 
   const [missedOn, setMissedOn] = useState(Boolean(profile?.missedWorkoutRemindersEnabled));
 
@@ -116,20 +113,6 @@ export default function ClientProfileScreen() {
     await refreshProfile();
   };
 
-  const toggleCheckinReminder = async () => {
-    if (!profile) return;
-    const next = !checkinOn;
-    setCheckinOn(next);
-    if (next) {
-      const ok = await scheduleCheckinReminder();
-      await updateUserProfile(profile.uid, {
-        checkinReminderEnabled: Platform.OS === 'web' ? true : ok,
-      });
-    } else {
-      await cancelCheckinReminder();
-      await updateUserProfile(profile.uid, { checkinReminderEnabled: false });
-    }
-  };
 
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -509,26 +492,6 @@ export default function ClientProfileScreen() {
           Los días que te toca entrenar y no has registrado la sesión, te aviso
           cada hora desde las {two(reminderHour)}:{two(reminderMinute)} hasta las
           22:00. En cuanto la registres, paran.
-          {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
-        </Text>
-      </Card>
-
-      <Card style={styles.section}>
-        <View style={styles.reminderTopRow}>
-          <View style={styles.reminderHeader}>
-            <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Recordatorio de check-in</Text>
-          </View>
-          <Pressable
-            onPress={toggleCheckinReminder}
-            style={[styles.switch, checkinOn && styles.switchOn]}
-            hitSlop={6}
-          >
-            <View style={[styles.switchKnob, checkinOn && styles.switchKnobOn]} />
-          </Pressable>
-        </View>
-        <Text style={styles.reminderHint}>
-          Aviso los domingos por la tarde para enviar tu check-in semanal.
           {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
         </Text>
       </Card>

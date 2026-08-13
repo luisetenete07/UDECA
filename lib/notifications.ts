@@ -168,52 +168,6 @@ export async function cancelWorkoutReminder(): Promise<void> {
   }
 }
 
-const CHECKIN_REMINDER_ID = 'weekly-checkin-reminder';
-
-/**
- * Recordatorio semanal para hacer el check-in (domingos a las 19:00). Ayuda a
- * mantener la comunicación coach-alumno. En web no está soportado.
- */
-export async function scheduleCheckinReminder(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
-  try {
-    const existing = await Notifications.getPermissionsAsync();
-    let granted = existing.status === 'granted';
-    if (!granted) {
-      const req = await Notifications.requestPermissionsAsync();
-      granted = req.status === 'granted';
-    }
-    if (!granted) return false;
-
-    await cancelCheckinReminder();
-    await Notifications.scheduleNotificationAsync({
-      identifier: CHECKIN_REMINDER_ID,
-      content: {
-        title: 'Check-in semanal',
-        body: 'Cuéntale a tu entrenador cómo ha ido la semana: energía, sueño y sensaciones.',
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-        weekday: 1, // 1 = domingo
-        hour: 19,
-        minute: 0,
-      },
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function cancelCheckinReminder(): Promise<void> {
-  if (Platform.OS === 'web') return;
-  try {
-    await Notifications.cancelScheduledNotificationAsync(CHECKIN_REMINDER_ID);
-  } catch {
-    // Si no existía, no pasa nada.
-  }
-}
-
 const OLVIDO_PREFIJO = 'entreno-olvidado-';
 
 /**
