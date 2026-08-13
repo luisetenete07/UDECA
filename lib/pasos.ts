@@ -129,3 +129,54 @@ export function textoDePasos(p: ProgresoDePasos): string {
   if (p.cumplido) return 'Objetivo del día cumplido. Todo lo que venga es de más.';
   return `Te quedan ${conMiles(p.quedan)} pasos para el objetivo.`;
 }
+
+/**
+ * El balance del día: lo que puedes comer, lo que has comido y lo que queda.
+ *
+ * Los pasos SUMAN al presupuesto en vez de restarse de lo comido. Es la misma
+ * resta, pero dicha al derecho: "hoy tienes 2.320" se entiende; "has comido
+ * 1.450 menos 320" no lo entiende nadie a las once de la noche con hambre.
+ *
+ * `restantes` puede salir negativo a propósito. Enseñar un cero cuando alguien
+ * se ha pasado 600 kcal es esconder justo el dato por el que ha entrado.
+ */
+export interface BalanceDelDia {
+  /** Las del plan, sin tocar. */
+  objetivo: number;
+  /** Las que ha ganado andando (0 si no hay peso con el que estimarlo). */
+  ganadas: number;
+  /** Objetivo + ganadas: el presupuesto de hoy. */
+  disponibles: number;
+  consumidas: number;
+  /** Negativo si se ha pasado. */
+  restantes: number;
+  pasado: boolean;
+}
+
+export function balanceDelDia(
+  objetivo: number,
+  consumidas: number,
+  ganadas = 0
+): BalanceDelDia {
+  const obj = Math.max(0, Math.round(objetivo));
+  const gan = Math.max(0, Math.round(ganadas));
+  const com = Math.max(0, Math.round(consumidas));
+  const disponibles = obj + gan;
+  const restantes = disponibles - com;
+  return {
+    objetivo: obj,
+    ganadas: gan,
+    disponibles,
+    consumidas: com,
+    restantes,
+    pasado: restantes < 0,
+  };
+}
+
+/** La línea de debajo de la cifra grande. Dice de dónde sale el presupuesto. */
+export function textoDelBalance(b: BalanceDelDia): string {
+  const base = `${conMiles(b.consumidas)} / ${conMiles(b.disponibles)} kcal`;
+  return b.ganadas > 0
+    ? `${base} · ${conMiles(b.objetivo)} del plan + ${conMiles(b.ganadas)} por andar`
+    : base;
+}

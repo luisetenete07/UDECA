@@ -8,7 +8,7 @@
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-carne.mjs
  */
-import { datosDelCarne, tipoDeCarne } from '../lib/carne.ts';
+import { datosDelCarne, rotuloDelRol, tipoDeCarne } from '../lib/carne.ts';
 
 let fallos = 0;
 function comprueba(nombre, condicion, detalle = '') {
@@ -97,6 +97,21 @@ console.log('\nEl número de fundador solo se enseña encendido');
 
   comprueba('quien no es fundador, sin número', datosDelCarne(perfil()).fundador === undefined);
   comprueba('un número de cero no cuenta', datosDelCarne(perfil({ founderNumber: 0 })).fundador === undefined);
+}
+
+console.log('\nEl rótulo de arriba a la izquierda dice qué eres');
+{
+  // Ponía "Entrenador" a todo el mundo: un alumno abría la app y lo primero
+  // que leía era un cargo que no es el suyo.
+  comprueba('el entrenador, Entrenador', rotuloDelRol({ role: 'trainer' }) === 'Entrenador',
+    rotuloDelRol({ role: 'trainer' }));
+  comprueba('el atleta, Atleta', rotuloDelRol({ role: 'athlete' }) === 'Atleta',
+    rotuloDelRol({ role: 'athlete' }));
+  comprueba('el alumno, Alumno', rotuloDelRol({ role: 'client' }) === 'Alumno',
+    rotuloDelRol({ role: 'client' }));
+  comprueba('sin perfil no dice Entrenador', rotuloDelRol(null) !== 'Entrenador',
+    rotuloDelRol(null));
+  comprueba('y nunca se queda vacío', rotuloDelRol(null).length > 0 && rotuloDelRol(undefined).length > 0);
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

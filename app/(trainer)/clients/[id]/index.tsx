@@ -8,6 +8,7 @@ import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';
 import { DashboardSkeleton } from '../../../../components/Skeleton';
 import { confirmar } from '../../../../lib/confirmar';
+import { hayObjetivos, objetivosDe, objetivosVisibles } from '../../../../lib/objetivos';
 import { getCoursesForTrainer } from '../../../../lib/firestore/courses';
 import { getCourseProgress } from '../../../../lib/firestore/courseProgress';
 import {
@@ -409,6 +410,7 @@ export default function ClientDetailScreen() {
   const pausaDelCliente = pausaActiva(client.planPauses);
 
   const weekly = weeklyVolume(workoutLogs, muscleByExercise);
+  const metas = objetivosDe(client);
   const isoTotals = weekly.reduce(
     (acc, w) => ({
       push: acc.push + w.isoPushSeconds,
@@ -676,16 +678,21 @@ export default function ClientDetailScreen() {
         onGuardar={guardarPausa}
       />
 
-      {client.goal || client.targetWeightKg ? (
+      {hayObjetivos(metas) || client.targetWeightKg ? (
         <Card style={styles.section}>
-          {client.goal ? (
+          {hayObjetivos(metas) ? (
             <>
-              <Text style={styles.miniLabel}>Objetivo</Text>
-              <Text style={styles.miniValue}>{client.goal}</Text>
+              <Text style={styles.miniLabel}>Sus objetivos</Text>
+              {objetivosVisibles(metas).map((o) => (
+                <View key={o.etiqueta} style={styles.objetivoFila}>
+                  <Text style={styles.objetivoPlazo}>{o.etiqueta}</Text>
+                  <Text style={styles.objetivoTexto}>{o.texto}</Text>
+                </View>
+              ))}
             </>
           ) : null}
           {client.targetWeightKg ? (
-            <Text style={[styles.miniValue, { marginTop: client.goal ? spacing.sm : 0 }]}>
+            <Text style={[styles.miniValue, { marginTop: hayObjetivos(metas) ? spacing.md : 0 }]}>
               Peso objetivo: {client.targetWeightKg} kg
             </Text>
           ) : null}
@@ -1192,6 +1199,14 @@ const styles = StyleSheet.create({
   payChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
   payChipTextActive: { color: colors.white },
   miniLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
+  objetivoFila: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  objetivoPlazo: { ...typography.small, color: colors.textFaint, fontSize: 11, width: 78, paddingTop: 2 },
+  objetivoTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },

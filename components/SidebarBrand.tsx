@@ -1,5 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '../lib/auth-context';
+import { rotuloDelRol } from '../lib/carne';
 import { colors, fonts, spacing } from '../lib/theme';
 
 /** Alto reservado para la marca en la cabecera de la barra lateral. */
@@ -15,8 +17,14 @@ export const BRAND_HEIGHT = 96;
  *
  * No es decoración: una columna de navegación que arranca directamente con
  * "Inicio" se siente como un menú suelto, no como un producto.
+ *
+ * Debajo de la marca va lo que ERES, no lo que es la app: "Entrenador",
+ * "Atleta" o "Alumno" según la cuenta. Estaba escrito a fuego como
+ * "Entrenador" para todos, así que un alumno abría UDECA y lo primero que leía
+ * arriba a la izquierda era un cargo que no es el suyo.
  */
 export function SidebarBrand() {
+  const { profile } = useAuth();
   return (
     <View style={styles.fill} pointerEvents="none">
       <View style={styles.row}>
@@ -27,7 +35,7 @@ export function SidebarBrand() {
         />
         <View>
           <Text style={styles.mark}>UDECA</Text>
-          <Text style={styles.sub}>Entrenador</Text>
+          <Text style={styles.sub}>{rotuloDelRol(profile)}</Text>
         </View>
       </View>
       <View style={styles.rule} />

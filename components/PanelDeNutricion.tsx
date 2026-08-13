@@ -27,6 +27,9 @@ import { MacroCalculator } from './MacroCalculator';
 import { ContadorDePasos } from './ContadorDePasos';
 import { BloqueDePeso } from './BloqueDePeso';
 import { getWeightLogsForClient } from '../lib/firestore/weightLogs';
+import { getStepLogsForClient, type StepLog } from '../lib/firestore/steps';
+import { balanceDelDia, caloriasDePasos, pasosDeHoy, textoDelBalance } from '../lib/pasos';
+import { conMiles } from '../lib/texto';
 import type { WeightLog } from '../lib/types';
 import { confirmar } from '../lib/confirmar';
 import { Sheet } from './Sheet';
@@ -77,6 +80,9 @@ export function PanelDeNutricion() {
   // que levantas, sube y baja por lo que comes. Y de paso es lo que permite
   // estimar el gasto de andar sin inventarse un peso medio.
   const [pesos, setPesos] = useState<WeightLog[]>([]);
+  // Los pasos viven aquí porque son parte del presupuesto de calorías del día,
+  // no una sección aparte: andar 12.000 pasos cambia lo que se puede cenar.
+  const [pasos, setPasos] = useState<StepLog[]>([]);
 
   // El último peso apuntado, que es lo que necesita el contador de pasos para
   // estimar las calorías del día. Sin él no se estima nada, en vez de tirar de
@@ -85,18 +91,20 @@ export function PanelDeNutricion() {
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [planData, mealData, photoData, bookData, pesoData] = await Promise.all([
+    const [planData, mealData, photoData, bookData, pesoData, pasoData] = await Promise.all([
       getActiveNutritionPlanForClient(profile.uid),
       getMealLogsForClient(profile.uid),
       getProgressPhotosForClient(profile.uid),
       profile.trainerId ? getMealBooksForTrainer(profile.trainerId).catch(() => []) : Promise.resolve([]),
       getWeightLogsForClient(profile.uid).catch(() => []),
+      getStepLogsForClient(profile.uid).catch(() => [] as StepLog[]),
     ]);
     setPlan(planData);
     setMeals(mealData);
     setPhotos(photoData);
     setBooks(bookData);
     setPesos(pesoData);
+    setPasos(pasoData);
     setLoading(false);
   }, [profile]);
 
@@ -140,6 +148,12 @@ export function PanelDeNutricion() {
         }
       : null;
   const mealTrainerId = plan?.trainerId ?? profile?.trainerId ?? '';
+
+  // El presupuesto de hoy: lo del plan más lo que se ha ganado andando (ver
+  // lib/pasos.ts). Se calcula aquí y no dentro de la tarjeta porque la cifra
+  // grande y la rejilla de macros tienen que contar lo mismo.
+  const kcalDeLosPasos = caloriasDePasos(pasosDeHoy(pasos)?.steps ?? 0, ultimoPeso);
+  const balance = balanceDelDia(targets?.dailyCalories ?? 0, totals.calories, kcalDeLosPasos);
 
   const handleSaveMacros = async (result: {
     dailyCalories: number;
@@ -242,11 +256,6 @@ export function PanelDeNutricion() {
           ejercicios, que es justo lo que no la explica. */}
       <BloqueDePeso profile={profile} logs={pesos} onCambio={load} />
 
-      {/* Los pasos van aquí y no en Progreso: no son entrenamiento, son el
-          gasto del resto del día, y es al lado de las calorías donde esa cifra
-          significa algo. */}
-      {profile ? <ContadorDePasos profile={profile} pesoKg={ultimoPeso} /> : null}
-
       {!targets ? (
         <Card style={styles.section}>
           <EmptyState
@@ -264,19 +273,23 @@ export function PanelDeNutricion() {
               <Text style={styles.planName}>{targets.name}</Text>
             </View>
 
+            {/* Lo que queda por comer HOY, contando lo que se ha ganado
+                andando. Los pasos suman al presupuesto en vez de restarse de
+                lo comido: es la misma resta dicha al derecho, y así se
+                entiende sin pensar. */}
             <View style={styles.calSummary}>
-              <Text style={styles.calBig}>{Math.max(0, targets.dailyCalories - totals.calories)}</Text>
+              <Text style={[styles.calBig, balance.pasado && { color: colors.danger }]}>
+                {conMiles(Math.abs(balance.restantes))}
+              </Text>
               <Text style={styles.calUnit}>
-                {totals.calories > targets.dailyCalories ? 'kcal de más' : 'kcal restantes'}
+                {balance.pasado ? 'kcal de más' : 'kcal restantes'}
               </Text>
-              <Text style={styles.calSub}>
-                {totals.calories} / {targets.dailyCalories} kcal consumidas
-              </Text>
+              <Text style={styles.calSub}>{textoDelBalance(balance)}</Text>
             </View>
 
             {/* Macros en rejilla 2x2: nunca se recortan en móvil. */}
             <View style={styles.macroGrid}>
-              <MacroTile label="Calorías" consumed={totals.calories} target={targets.dailyCalories} unit="kcal" />
+              <MacroTile label="Calorías" consumed={totals.calories} target={balance.disponibles} unit="kcal" />
               <MacroTile label="Proteína" consumed={totals.proteinG} target={targets.proteinG} unit="g" />
               <MacroTile label="Carbohidratos" consumed={totals.carbsG} target={targets.carbsG} unit="g" />
               <MacroTile label="Grasas" consumed={totals.fatG} target={targets.fatG} unit="g" />
@@ -287,6 +300,54 @@ export function PanelDeNutricion() {
                 <Ionicons name="calculator-outline" size={14} color={colors.primary} />
                 <Text style={styles.recalcText}>Recalcular mis macros</Text>
               </Pressable>
+            ) : null}
+
+            {/* Las comidas, DENTRO del conteo y no en una tarjeta debajo. Eran
+                dos tarjetas para una sola cosa: cuánto llevas hoy y de qué.
+                Apuntar una comida cambia la cifra de arriba, así que estar
+                separadas obligaba a mirar en dos sitios el mismo número. */}
+            <View style={styles.bloqueComidas}>
+              <View style={styles.hoyHeader}>
+                <Text style={styles.subtitulo}>Comidas de hoy</Text>
+                {todayMeals.length > 0 ? (
+                  <Text style={styles.mealCount}>
+                    {todayMeals.length} · {conMiles(totals.calories)} kcal
+                  </Text>
+                ) : null}
+              </View>
+              {todayMeals.length === 0 ? (
+                <Text style={styles.mutedText}>Todavía no has registrado comidas hoy.</Text>
+              ) : (
+                todayMeals.map((meal) => (
+                  <View key={meal.id} style={styles.mealRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.mealName}>{meal.name}</Text>
+                      <Text style={styles.mealMacros}>
+                        P{meal.proteinG} · C{meal.carbsG} · G{meal.fatG}
+                      </Text>
+                    </View>
+                    <Text style={styles.mealKcal}>{meal.calories} kcal</Text>
+                  </View>
+                ))
+              )}
+              <Button
+                title="+ Añadir comida"
+                variant="secondary"
+                onPress={() => setFormOpen(true)}
+                style={{ marginTop: spacing.md }}
+              />
+            </View>
+
+            {/* Y los pasos, en la misma tarjeta: son la otra mitad de la cifra
+                de arriba. Ver el número que suma justo debajo del número al
+                que suma es lo que hace que andar deje de ser un adorno. */}
+            {profile ? (
+              <ContadorDePasos
+                profile={profile}
+                pesoKg={ultimoPeso}
+                registros={pasos}
+                onCambio={load}
+              />
             ) : null}
           </Card>
 
@@ -336,37 +397,6 @@ export function PanelDeNutricion() {
             <Button title="Añadir comida" onPress={handleAddMeal} loading={saving} />
           </Sheet>
 
-          <Card style={styles.section}>
-            <View style={styles.hoyHeader}>
-              <Text style={styles.sectionTitle}>Comidas de hoy</Text>
-              {todayMeals.length > 0 ? (
-                <Text style={styles.mealCount}>
-                  {todayMeals.length} · {totals.calories} kcal
-                </Text>
-              ) : null}
-            </View>
-            {todayMeals.length === 0 ? (
-              <Text style={styles.mutedText}>Todavía no has registrado comidas hoy.</Text>
-            ) : (
-              todayMeals.map((meal) => (
-                <View key={meal.id} style={styles.mealRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.mealName}>{meal.name}</Text>
-                    <Text style={styles.mealMacros}>
-                      P{meal.proteinG} · C{meal.carbsG} · G{meal.fatG}
-                    </Text>
-                  </View>
-                  <Text style={styles.mealKcal}>{meal.calories} kcal</Text>
-                </View>
-              ))
-            )}
-            <Button
-              title="+ Añadir comida"
-              variant="secondary"
-              onPress={() => setFormOpen(true)}
-              style={{ marginTop: spacing.md }}
-            />
-          </Card>
         </>
       )}
 
@@ -495,10 +525,10 @@ function MacroTile({
       </Text>
       <Text style={styles.macroValue}>
         <Text style={[styles.macroConsumed, over && { color: colors.danger }]}>
-          {Math.round(consumed)}
+          {conMiles(Math.round(consumed))}
         </Text>
         <Text style={styles.macroTarget}>
-          {' '}/ {Math.round(target)} {unit}
+          {' '}/ {conMiles(Math.round(target))} {unit}
         </Text>
       </Text>
       <View style={styles.macroTrack}>
@@ -517,6 +547,16 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.lg },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  subtitulo: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  // Las secciones de dentro de la tarjeta de hoy se separan con una línea, no
+  // con hueco: así se lee como una sola tarjeta con partes y no como tres
+  // tarjetas metidas a la fuerza en una.
+  bloqueComidas: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   hint: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm, lineHeight: 18 },
   hoyHeader: {
     flexDirection: 'row',

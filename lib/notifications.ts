@@ -125,40 +125,14 @@ export async function cancelRestEndNotification(): Promise<void> {
 const WORKOUT_REMINDER_ID = 'daily-workout-reminder';
 
 /**
- * Programa (o reprograma) un recordatorio diario de entrenamiento a la hora
- * indicada. Cancela primero el anterior para no acumular duplicados.
- * Devuelve true si quedó programado. En web no está soportado.
+ * Apaga el aviso diario a hora fija.
+ *
+ * Programarlo ya no se puede: avisaba todos los días a la misma hora
+ * entrenara uno o no, y quien había entrenado a las siete recibía a las siete
+ * y media un recordatorio para hacer lo que acababa de hacer. Lo que queda es
+ * cancelarlo, para los móviles que aún lo tengan puesto de antes: sin esto
+ * seguiría sonando cada día sin ningún interruptor en la app que lo callara.
  */
-export async function scheduleWorkoutReminder(hour: number, minute: number): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
-  try {
-    const existing = await Notifications.getPermissionsAsync();
-    let granted = existing.status === 'granted';
-    if (!granted) {
-      const req = await Notifications.requestPermissionsAsync();
-      granted = req.status === 'granted';
-    }
-    if (!granted) return false;
-
-    await cancelWorkoutReminder();
-    await Notifications.scheduleNotificationAsync({
-      identifier: WORKOUT_REMINDER_ID,
-      content: {
-        title: 'Hora de entrenar',
-        body: 'Tu sesión de hoy te espera. ¡Vamos a por ella!',
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour,
-        minute,
-      },
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function cancelWorkoutReminder(): Promise<void> {
   if (Platform.OS === 'web') return;
   try {

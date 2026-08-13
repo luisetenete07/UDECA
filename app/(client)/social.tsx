@@ -18,6 +18,8 @@ import {
 } from '../../lib/firestore/social';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { monthKeyOf } from '../../lib/stats';
+import { getUserProfile } from '../../lib/firestore/users';
+import { tituloDeComunidad } from '../../lib/comunidad';
 import { isOnline } from '../../lib/presence';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import type { SocialStats } from '../../lib/types';
@@ -33,6 +35,10 @@ const PUESTOS = [colors.primaryBright, colors.textMuted, colors.textFaint];
 export default function SocialScreen() {
   const { profile } = useAuth();
   const [members, setMembers] = useState<SocialStats[]>([]);
+  // El nombre del entrenador: la comunidad es SUYA, no de UDECA. Un alumno de
+  // Luis entrena con Luis; que el rótulo dijera "Comunidad UDECA" le ponía por
+  // delante una marca con la que él no ha hablado nunca.
+  const [nombreDelCoach, setNombreDelCoach] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -68,6 +74,22 @@ export default function SocialScreen() {
       load();
     }, [load])
   );
+
+  // Se pide una vez y aguanta: el nombre del entrenador no cambia mientras se
+  // mira la pantalla. Si falla, el rótulo se queda genérico y no pasa nada.
+  useEffect(() => {
+    const id = profile?.trainerId;
+    if (!id) return;
+    let vivo = true;
+    getUserProfile(id)
+      .then((p) => {
+        if (vivo) setNombreDelCoach(p?.name?.trim() ?? '');
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [profile?.trainerId]);
 
   // Ranking en vivo: cualquier cambio en el grupo (una racha, un entreno nuevo,
   // un alumno que acaba de entrar) se refleja sin salir ni refrescar.
@@ -155,7 +177,7 @@ export default function SocialScreen() {
 
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={onRefresh}>
-      <Text style={styles.title}>Comunidad UDECA</Text>
+      <Text style={styles.title}>{tituloDeComunidad(nombreDelCoach)}</Text>
       <Text style={styles.subtitle}>El ranking de constancia de tu coaching</Text>
 
       {/* Tres cifras en una fila, con rótulos de una palabra. "Mejor racha
@@ -276,10 +298,13 @@ export default function SocialScreen() {
       ) : (
         members.map((member, index) => {
           const isMe = member.uid === profile.uid;
-          // Los tres primeros ya están en el podio, arriba. Repetirlos aquí
-          // era contar lo mismo dos veces seguidas... salvo que uno de ellos
-          // seas tú: tu fila sale siempre, porque es la que se viene a ver.
-          if (index < 3 && !isMe) return null;
+          // La lista los lleva a TODOS, del primero al último. Antes se
+          // saltaban los tres del podio para no repetirlos, y el efecto era
+          // que el segundo y el tercero desaparecían de la clasificación: no
+          // estaban en la lista, y en el podio se ven como adorno, no como
+          // puesto. Una clasificación a la que le faltan puestos no es una
+          // clasificación, y justo a quien más cerca está de ganar es a quien
+          // se le borraba.
           return (
             <Card key={member.uid} style={[styles.row, isMe && styles.rowMe]}>
               <View style={styles.rankWrap}>

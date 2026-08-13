@@ -9,12 +9,14 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-pasos.mjs
  */
 import {
+  balanceDelDia,
   caloriasDePasos,
   mediaSemanal,
   OBJETIVO_POR_DEFECTO,
   pasosAGuardar,
   pasosDeHoy,
   progresoDePasos,
+  textoDelBalance,
   textoDePasos,
   ultimosSieteDias,
 } from '../lib/pasos.ts';
@@ -98,6 +100,36 @@ console.log('\nLo que se le dice');
   comprueba('a medias, lo que queda', /4.000 pasos/.test(textoDePasos(progresoDePasos(4000, 8000))));
   comprueba('cumplido, lo dice y para', /cumplido/i.test(textoDePasos(progresoDePasos(8000, 8000))));
   comprueba('y no riñe por pasarse', !/demasiado|exceso/i.test(textoDePasos(progresoDePasos(30000, 8000))));
+}
+
+console.log('\nEl presupuesto de calorías del día');
+{
+  // Los pasos SUMAN al presupuesto. Es la misma resta que descontarlos de lo
+  // comido, pero al derecho: "hoy tienes 2.320" se entiende y "has comido
+  // 1.450 menos 320" no.
+  const b = balanceDelDia(2000, 1450, 320);
+  comprueba('el presupuesto es el plan más lo andado', b.disponibles === 2320, String(b.disponibles));
+  comprueba('quedan las que quedan', b.restantes === 870, String(b.restantes));
+  comprueba('y no se ha pasado', b.pasado === false);
+
+  // Enseñar un cero a quien se ha pasado 600 kcal es esconder justo el dato
+  // por el que ha entrado en la pantalla.
+  const p = balanceDelDia(2000, 2600, 0);
+  comprueba('pasarse sale en negativo, no en cero', p.restantes === -600, String(p.restantes));
+  comprueba('y se marca como pasado', p.pasado === true);
+
+  comprueba('sin andar, el presupuesto es el del plan', balanceDelDia(2000, 0).disponibles === 2000);
+  comprueba('nada negativo entra', balanceDelDia(-5, -5, -5).disponibles === 0);
+  comprueba('sin plan no se inventa nada', balanceDelDia(0, 0, 0).disponibles === 0);
+}
+
+console.log('\nDe dónde sale el presupuesto');
+{
+  const conPasos = textoDelBalance(balanceDelDia(2000, 1450, 320));
+  comprueba('dice lo comido y lo disponible', /1.450/.test(conPasos) && /2.320/.test(conPasos), conPasos);
+  comprueba('y de dónde salen las de más', /por andar/.test(conPasos), conPasos);
+  const sinPasos = textoDelBalance(balanceDelDia(2000, 1450, 0));
+  comprueba('sin pasos no habla de andar', !/andar/.test(sinPasos), sinPasos);
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

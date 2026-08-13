@@ -118,3 +118,20 @@ export function datosDelCarne(
     fundador: insignia.activa && insignia.numero ? numeroFundador(insignia.numero) : undefined,
   };
 }
+
+/**
+ * Qué eres, para el rótulo de la marca.
+ *
+ * Arriba a la izquierda del todo, bajo "UDECA", ponía "Entrenador" a todo el
+ * mundo: un alumno abría la app y lo primero que leía era que era entrenador.
+ * No es un detalle de estilo —es la primera frase que dice la app sobre quien
+ * la usa, y estaba equivocada para dos de cada tres cuentas.
+ *
+ * Se apoya en el mismo mapa que el carné para que las dos cosas no se separen
+ * nunca: si un día hay un rol más, sale bien en los dos sitios a la vez.
+ */
+export function rotuloDelRol(p: Pick<UserProfile, 'role'> | null | undefined): string {
+  const t = TIPOS[tipoDeCarne(p)].titulo;
+  // "ENTRENADOR" a secas grita; aquí va como nombre propio, no como sello.
+  return t.charAt(0) + t.slice(1).toLowerCase();
+}

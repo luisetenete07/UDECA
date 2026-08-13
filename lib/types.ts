@@ -100,8 +100,18 @@ export interface UserProfile {
    *
    * Puede que sigan escritos en cuentas viejas. No los lee nadie.
    */
-  /** Solo en clientes: objetivo principal del cliente. */
+  /**
+   * Solo en clientes: el objetivo principal, de cuando había uno solo.
+   * Lo lee `lib/objetivos.ts` para no perder lo que ya estaba escrito; lo
+   * nuevo se guarda en los tres de abajo.
+   */
   goal?: string;
+  /** Objetivo a corto plazo (una línea). */
+  goalShort?: string;
+  /** Objetivo a medio plazo (una línea). */
+  goalMid?: string;
+  /** Objetivo a largo plazo (una línea). */
+  goalLong?: string;
   /** Avatar del usuario como data URL (base64) o URL remota. */
   photoURL?: string;
   /** Breve biografía / presentación del alumno. */

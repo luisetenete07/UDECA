@@ -28,7 +28,8 @@ import {
 } from '../../lib/firestore/habits';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { quoteOfTheDay } from '../../lib/quotes';
+import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
+import { hayObjetivos, objetivosDe, objetivosVisibles } from '../../lib/objetivos';
 import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
@@ -269,6 +270,7 @@ export default function ClientDashboard() {
     }
   };
 
+  const objetivos = objetivosDe(profile);
   const targetSessions = routine?.days.length ?? 0;
   const weekProgress = targetSessions > 0 ? Math.min(sessions / targetSessions, 1) : 0;
 
@@ -566,6 +568,12 @@ export default function ClientDashboard() {
       </Pressable>
       </FadeIn>
 
+      {/* Justo debajo de lo de hoy: quien abre la app y ve "0 series" muchas
+          veces no es que no entrenara, es que entrenó sin el móvil. Aquí lo
+          arregla en dos toques, antes de darse por perdido el día de ayer. */}
+      <FadeIn delay={40}>
+        <RegistrarOtroDia />
+      </FadeIn>
 
       {/* Atleta: acceso a gestionar su propio plan de entreno. */}
       {profile?.role === 'athlete' ? (
@@ -820,18 +828,23 @@ export default function ClientDashboard() {
         </Card>
       ) : null}
 
-      {profile?.goal ? (
+      {/* Los tres objetivos, uno por línea y en el orden en que se viven:
+          esta semana, este trimestre, algún día. Pequeño a propósito —cierra
+          la pantalla, no la abre— pero de un vistazo se ve si lo de hoy lleva
+          a lo de dentro de tres años. */}
+      {hayObjetivos(objetivos) ? (
         <Card style={styles.section}>
-          <Text style={styles.sectionLabel}>Mi objetivo</Text>
-          <Text style={styles.goalText}>{profile.goal}</Text>
+          <Text style={styles.sectionLabel}>Mis objetivos</Text>
+          {objetivosVisibles(objetivos).map((o) => (
+            <View key={o.etiqueta} style={styles.objetivoFila}>
+              <Text style={styles.objetivoPlazo}>{o.etiqueta}</Text>
+              <Text style={styles.objetivoTexto} numberOfLines={2}>
+                {o.texto}
+              </Text>
+            </View>
+          ))}
         </Card>
       ) : null}
-      {/* La frase cierra la pantalla. Está para acompañar, no para informar:
-          arriba estorbaba a lo único que hay que decidir cada día. */}
-      <View style={styles.quoteWrap}>
-        <View style={styles.quoteRule} />
-        <Text style={styles.quoteText}>{quoteOfTheDay()}</Text>
-      </View>
     </ScreenContainer>
   );
 }
@@ -888,13 +901,6 @@ const styles = StyleSheet.create({
   payReported: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
   payReportedText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },
-  quoteWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-    paddingRight: spacing.md,
-  },
   myPlanEntry: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -918,14 +924,6 @@ const styles = StyleSheet.create({
   },
   myPlanTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   myPlanSub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
-  quoteRule: { width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: colors.primary },
-  quoteText: {
-    ...typography.body,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    flex: 1,
-    lineHeight: 21,
-  },
   streakInline: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   streakInlineText: {
     ...typography.small,
@@ -1058,7 +1056,22 @@ const styles = StyleSheet.create({
   legendPlanned: { backgroundColor: colors.surfaceAlt, borderColor: colors.hairline },
   legendTodayDot: { backgroundColor: colors.surfaceAlt, borderColor: colors.primaryBright, borderWidth: 2 },
   legendText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
-  goalText: { ...typography.body, color: colors.text, marginTop: spacing.xs },
+  objetivoFila: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  // El plazo, a un ancho fijo: así las tres líneas quedan alineadas y se leen
+  // como una tabla de tres filas y no como tres frases sueltas.
+  objetivoPlazo: {
+    ...typography.small,
+    color: colors.textFaint,
+    fontSize: 11,
+    width: 78,
+    paddingTop: 2,
+  },
+  objetivoTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   habitRow: {
     flexDirection: 'row',
     alignItems: 'center',

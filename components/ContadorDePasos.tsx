@@ -1,12 +1,10 @@
-import React, { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import React, { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from './Card';
 import { ProgressRing } from './ProgressRing';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
-import { getStepLogsForClient, setStepLog, type StepLog } from '../lib/firestore/steps';
+import { setStepLog, type StepLog } from '../lib/firestore/steps';
 import { inicioDelDia } from '../lib/fechas';
 import { conMiles } from '../lib/texto';
 import {
@@ -25,12 +23,22 @@ import type { UserProfile } from '../lib/types';
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 /**
- * Los pasos del día, en Nutrición.
+ * Los pasos del día, DENTRO de la tarjeta de hoy.
  *
  * Aquí y no en Progreso a propósito: los pasos no son entrenamiento, son el
  * gasto del resto del día, y es al lado de las calorías donde esa cifra
  * significa algo. Alguien que entrena cuatro horas a la semana y pasa las
  * otras ciento sesenta y cuatro sentado no tiene un problema de entrenamiento.
+ *
+ * Ya no es una tarjeta suya: eran tres tarjetas seguidas —peso, pasos,
+ * macros— contando la misma historia por partes. Ahora los pasos suman a las
+ * calorías del día en la misma cifra grande, que es lo único que se hace con
+ * ellos.
+ *
+ * Quién guarda los registros: el padre. Los necesita para calcular el
+ * presupuesto de calorías, y tenerlos cargados dos veces —aquí y allí— era
+ * pedirle dos veces lo mismo a Firestore y arriesgarse a que las dos copias
+ * no dijeran lo mismo.
  *
  * La cifra puede venir del contador del propio teléfono o escribirse a mano.
  * Lo segundo no es el plan B de lo primero: mucha gente lleva reloj, y un
@@ -39,25 +47,20 @@ const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 export function ContadorDePasos({
   profile,
   pesoKg,
+  registros,
+  onCambio,
 }: {
   profile: UserProfile;
   /** Último peso registrado, para estimar el gasto. Sin él no se estima nada. */
   pesoKg?: number;
+  registros: StepLog[];
+  /** Se llama tras guardar, para que el padre recargue y recalcule el día. */
+  onCambio: () => void | Promise<void>;
 }) {
-  const [registros, setRegistros] = useState<StepLog[]>([]);
   const [aMano, setAMano] = useState('');
   const [leyendo, setLeyendo] = useState(false);
 
-  const cargar = useCallback(async () => {
-    const datos = await getStepLogsForClient(profile.uid).catch(() => [] as StepLog[]);
-    setRegistros(datos);
-  }, [profile.uid]);
-
-  useFocusEffect(
-    useCallback(() => {
-      cargar();
-    }, [cargar])
-  );
+  const cargar = onCambio;
 
   const hoy = pasosDeHoy(registros);
   const objetivo = profile.stepGoal ?? OBJETIVO_POR_DEFECTO;
@@ -140,7 +143,7 @@ export function ContadorDePasos({
   const maximo = Math.max(objetivo, ...semana.map((d) => d.steps), 1);
 
   return (
-    <Card style={styles.tarjeta}>
+    <View style={styles.bloque}>
       <Text style={styles.titulo}>Pasos de hoy</Text>
 
       <View style={styles.cabecera}>
@@ -211,12 +214,17 @@ export function ContadorDePasos({
       {hoy?.source === 'mano' ? (
         <Text style={styles.origen}>Los de hoy los has escrito tú.</Text>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tarjeta: { marginBottom: spacing.md },
+  bloque: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   titulo: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   texto: { ...typography.small, color: colors.textMuted, lineHeight: 18 },

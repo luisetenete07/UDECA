@@ -39,6 +39,7 @@ import { esfuerzoDePct, pctCombinado, textoIntensidad } from '../../lib/intensid
 import { RirPicker } from '../../components/RirPicker';
 import { anclaConPausas, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
+import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
 import {
@@ -1164,13 +1165,6 @@ export default function WorkoutScreen() {
   // Lo que se toca una vez al mes vive detrás del punto de la cabecera, no
   // ocupando dos filas encima de la primera serie.
   const accionesSesion: AccionRapida[] = [
-    // Entrenó sin el móvil delante y viene a apuntarlo. Va aquí porque es
-    // justo donde se da cuenta: al abrir Entreno y ver que ayer está vacío.
-    {
-      icono: 'create-outline' as const,
-      texto: 'Registrar un entreno de otro día',
-      onPress: () => router.push('/(client)/registrar'),
-    },
     // El atleta se autoentrena: si hoy también hace remo, lo mete y ya.
     ...(esAtleta && !showCompleted && !esModoGtg && day && !day.isRest
       ? ([
@@ -1569,6 +1563,11 @@ export default function WorkoutScreen() {
           </View>
         </FadeIn>
       ) : null}
+
+      {/* Apuntar un entreno de otro día, a la vista y no en el menú de los tres
+          puntos: es aquí donde uno se da cuenta de que ayer no lo apuntó. Con
+          la sesión en marcha desaparece —lo que toca entonces es entrenar. */}
+      {!inProgress ? <RegistrarOtroDia compacto /> : null}
 
       <Modal
         visible={exitConfirmOpen}

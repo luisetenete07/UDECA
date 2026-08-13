@@ -15,16 +15,19 @@ import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/
 import type { UserProfile, WeightLog } from '../lib/types';
 
 /**
- * El peso: cuánto pesa, cómo va y apuntar el de hoy.
+ * El peso: cuánto pesa, cómo va, cómo ha ido y apuntar el de hoy. TODO en una
+ * tarjeta.
  *
- * Vive aquí y no dentro de una pantalla porque se enseña en dos sitios —en
- * Nutrición, que es donde el peso significa algo, y en Progreso, que es donde
- * se va a mirar la evolución— y un formulario copiado en dos sitios acaba
- * siendo dos formularios distintos.
+ * Eran tres: "Mi peso" con la cifra y el formulario, "Evolución" con la
+ * gráfica, e "Historial" con la lista de registros. Tres tarjetas para una
+ * cifra, y las tres decían lo mismo con distinta forma: el número de hoy, el
+ * número de hoy dibujado y el número de hoy en una fila. La lista, además, era
+ * la más larga y la que menos aportaba —quien se pesa a diario tiene ahí
+ * trescientas filas que no va a leer nunca—, así que se ha ido entera.
  *
- * Lo primero que se ve es la cifra grande con lo que ha cambiado esta semana y
- * este mes. Eso es lo que alguien viene a mirar; la gráfica y el historial son
- * para después.
+ * Lo único que hacía falta de la lista era poder deshacer un peso mal escrito:
+ * un 667 en vez de 67 estropea la gráfica para siempre. Eso se queda, pero
+ * como una línea bajo la cifra, no como una sección.
  */
 export function BloqueDePeso({
   profile,
@@ -43,7 +46,6 @@ export function BloqueDePeso({
   const [notas, setNotas] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
-  const [verTodo, setVerTodo] = useState(false);
 
   const resumen = resumenDePeso(logs, profile?.targetWeightKg);
   const delObjetivo = textoDelObjetivo(resumen, profile?.targetWeightKg);
@@ -87,11 +89,10 @@ export function BloqueDePeso({
     }
   };
 
-  // El historial entero, del revés (lo último arriba). Se enseñan unos pocos:
-  // con un año apuntándose, la lista completa empuja todo lo demás fuera de
-  // la pantalla y nadie baja hasta el final.
-  const historial = [...logs].sort((a, b) => b.date - a.date);
-  const visibles = verTodo ? historial : historial.slice(0, 6);
+  // El último apuntado, que es el único que se puede deshacer. Deshacer el de
+  // hace tres semanas no lo pide nadie; deshacer el que acabas de escribir mal,
+  // todo el mundo.
+  const ultimo = [...logs].sort((a, b) => b.date - a.date)[0];
 
   return (
     <>
@@ -124,6 +125,14 @@ export function BloqueDePeso({
                 <Text style={styles.objetivoTexto}>{delObjetivo}</Text>
               </View>
             ) : null}
+
+            {/* La gráfica, aquí mismo y no en una tarjeta aparte: la cifra sin
+                la línea no dice nada, y la línea sin la cifra tampoco. */}
+            {logs.length > 1 ? (
+              <View style={styles.grafica}>
+                <WeightChart logs={logs} />
+              </View>
+            ) : null}
           </>
         )}
 
@@ -145,34 +154,17 @@ export function BloqueDePeso({
           style={{ marginBottom: 0 }}
         />
         {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        {/* La red de seguridad de escribir un número mal. */}
+        {ultimo ? (
+          <Pressable onPress={() => borrar(ultimo.id)} style={styles.deshacer} hitSlop={8}>
+            <Ionicons name="arrow-undo-outline" size={13} color={colors.textFaint} />
+            <Text style={styles.deshacerTexto}>
+              Borrar el último ({kgCorto(ultimo.weightKg)} kg, {fechaNumerica(ultimo.date)})
+            </Text>
+          </Pressable>
+        ) : null}
       </Card>
-
-      {logs.length > 1 ? (
-        <Card style={styles.tarjeta}>
-          <Text style={styles.subtitulo}>Evolución</Text>
-          <WeightChart logs={logs} />
-        </Card>
-      ) : null}
-
-      {historial.length > 0 ? (
-        <Card style={styles.tarjeta}>
-          <Text style={styles.subtitulo}>Historial</Text>
-          {visibles.map((log) => (
-            <View key={log.id} style={styles.fila}>
-              <Text style={styles.filaPeso}>{kgCorto(log.weightKg)} kg</Text>
-              <Text style={styles.filaFecha}>{fechaNumerica(log.date)}</Text>
-              <Pressable onPress={() => borrar(log.id)} hitSlop={8}>
-                <Ionicons name="trash-outline" size={16} color={colors.textFaint} />
-              </Pressable>
-            </View>
-          ))}
-          {historial.length > visibles.length ? (
-            <Pressable onPress={() => setVerTodo(true)} style={styles.mas} hitSlop={6}>
-              <Text style={styles.masTexto}>Ver los {historial.length} registros</Text>
-            </Pressable>
-          ) : null}
-        </Card>
-      ) : null}
     </>
   );
 }
@@ -193,7 +185,7 @@ function Cambio({ etiqueta, kg }: { etiqueta: string; kg?: number }) {
 const styles = StyleSheet.create({
   tarjeta: { marginBottom: spacing.md },
   titulo: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  subtitulo: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  grafica: { marginTop: spacing.lg },
   cifraFila: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   cifra: { ...typography.h1, color: colors.text, fontSize: 40, ...tabularNums },
   unidad: { ...typography.body, color: colors.textMuted },
@@ -226,16 +218,12 @@ const styles = StyleSheet.create({
   },
   boton: { minWidth: 104 },
   error: { ...typography.small, color: colors.danger, marginTop: spacing.sm },
-  fila: {
+  deshacer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.hairline,
+    gap: 5,
+    alignSelf: 'flex-start',
+    paddingTop: spacing.md,
   },
-  filaPeso: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, ...tabularNums },
-  filaFecha: { ...typography.small, color: colors.textMuted, flex: 1 },
-  mas: { paddingTop: spacing.md, alignItems: 'center' },
-  masTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  deshacerTexto: { ...typography.small, color: colors.textFaint, fontSize: 11 },
 });

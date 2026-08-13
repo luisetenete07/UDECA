@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,6 @@ import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
-import { PausaPlanSheet } from '../../components/PausaPlanSheet';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -24,10 +23,14 @@ import { pickAvatar } from '../../lib/image';
 import {
   cancelarAvisosOlvido,
   cancelWorkoutReminder,
-  scheduleWorkoutReminder,
 } from '../../lib/notifications';
-import { diaLargo } from '../../lib/fechas';
-import { pausaActiva, type PausaPlan } from '../../lib/pausa';
+import {
+  MAX_OBJETIVO,
+  objetivosDe,
+  objetivosParaGuardar,
+  PLAZOS,
+  type Objetivos,
+} from '../../lib/objetivos';
 import {
   computeAchievements,
   type Achievement,
@@ -36,15 +39,17 @@ import { Chip, ChipRow } from '../../components/Chip';
 import { colors, fieldLabel, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import { EXPERIENCE_LEVELS, type ExperienceLevel } from '../../lib/types';
 
-const REMINDER_PRESETS = [
-  { h: 7, m: 0 },
-  { h: 9, m: 0 },
-  { h: 18, m: 0 },
-  { h: 20, m: 30 },
-];
-const clampHour = (h: number) => ((h % 24) + 24) % 24;
-const clampMin = (m: number) => ((m % 60) + 60) % 60;
 const two = (n: number) => String(n).padStart(2, '0');
+/**
+ * A qué hora empiezan los avisos de "se te ha olvidado".
+ *
+ * Antes salía del reloj del recordatorio diario, que ya no existe. Se respeta
+ * la hora que cada uno tuviera puesta —quien la eligió en su día la sigue
+ * teniendo— y para el resto, las seis de la tarde: ni tan pronto que avise a
+ * quien entrena por la mañana antes de entrenar, ni tan tarde que solo sirva
+ * para dar la noche.
+ */
+const HORA_POR_DEFECTO = 18;
 
 export default function ClientProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
@@ -54,7 +59,9 @@ export default function ClientProfileScreen() {
   const [name, setName] = useState(profile?.name ?? '');
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
-  const [goal, setGoal] = useState(profile?.goal ?? '');
+  // Los tres objetivos (ver lib/objetivos.ts). El antiguo, si lo había, entra
+  // ya colocado en el de corto plazo.
+  const [objetivos, setObjetivos] = useState<Objetivos>(() => objetivosDe(profile));
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [level, setLevel] = useState<ExperienceLevel | undefined>(profile?.level);
   const [targetWeight, setTargetWeight] = useState(
@@ -63,40 +70,10 @@ export default function ClientProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [reminderOn, setReminderOn] = useState(Boolean(profile?.reminderEnabled));
-  const [reminderHour, setReminderHour] = useState(profile?.reminderHour ?? 18);
-  const [reminderMinute, setReminderMinute] = useState(profile?.reminderMinute ?? 0);
+  const reminderHour = profile?.reminderHour ?? HORA_POR_DEFECTO;
+  const reminderMinute = profile?.reminderMinute ?? 0;
 
   const [missedOn, setMissedOn] = useState(Boolean(profile?.missedWorkoutRemindersEnabled));
-
-  const [pausaAbierta, setPausaAbierta] = useState(false);
-  const [guardandoPausa, setGuardandoPausa] = useState(false);
-  const enPausa = pausaActiva(profile?.planPauses);
-
-  /**
-   * El alumno se pausa el plan él mismo.
-   *
-   * No hace falta pedir permiso al entrenador: el que sabe que está malo o que
-   * se va de viaje es él, y la alternativa —callarse y fallar días— es peor
-   * para los dos. El coach lo ve en la ficha, y al terminarse la pausa quedan
-   * los días guardados por si quiere hablarlo.
-   */
-  const guardarPausa = async (pausas: PausaPlan[]) => {
-    if (!profile) return;
-    setGuardandoPausa(true);
-    try {
-      await updateUserProfile(profile.uid, { planPauses: pausas });
-      await refreshProfile();
-      // Los avisos de olvido hablan de días que ahora pueden estar en pausa.
-      // Se vuelven a poner enteros al abrir el panel, ya sin esos días.
-      await cancelarAvisosOlvido();
-      setPausaAbierta(false);
-    } catch {
-      showToast('No se ha podido guardar la pausa');
-    } finally {
-      setGuardandoPausa(false);
-    }
-  };
 
   /**
    * Insistir cada hora es mucho ruido, así que se pide expresamente y se puede
@@ -116,6 +93,17 @@ export default function ClientProfileScreen() {
 
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // El aviso diario a hora fija se ha quitado del producto. Quien lo tuviera
+  // programado en su móvil seguiría oyéndolo cada día sin ningún interruptor
+  // en la app para callarlo, así que se cancela al abrir el perfil.
+  useEffect(() => {
+    if (!profile?.reminderEnabled) return;
+    (async () => {
+      await cancelWorkoutReminder().catch(() => {});
+      await updateUserProfile(profile.uid, { reminderEnabled: false }).catch(() => {});
+    })();
+  }, [profile?.reminderEnabled, profile?.uid]);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -174,7 +162,7 @@ export default function ClientProfileScreen() {
     setSaving(true);
     try {
       await updateUserProfile(profile.uid, {
-        goal: goal.trim(),
+        ...objetivosParaGuardar(objetivos),
         bio: bio.trim(),
         level,
         targetWeightKg: targetWeight ? Number(targetWeight.replace(',', '.')) : undefined,
@@ -185,50 +173,6 @@ export default function ClientProfileScreen() {
     } finally {
       setSaving(false);
     }
-  };
-
-  // Aplica el recordatorio: programa (o cancela) el aviso diario y guarda la
-  // preferencia. Se llama al activar/desactivar o al cambiar la hora.
-  const applyReminder = async (on: boolean, hour: number, minute: number) => {
-    if (!profile) return;
-    if (!on) {
-      await cancelWorkoutReminder();
-      await updateUserProfile(profile.uid, { reminderEnabled: false });
-      return;
-    }
-    const ok = await scheduleWorkoutReminder(hour, minute);
-    // En web la programación local no está soportada; guardamos la preferencia
-    // igualmente para que quede reflejada y funcione en la app de móvil.
-    await updateUserProfile(profile.uid, {
-      reminderEnabled: Platform.OS === 'web' ? true : ok,
-      reminderHour: hour,
-      reminderMinute: minute,
-    });
-  };
-
-  const toggleReminder = async () => {
-    const next = !reminderOn;
-    setReminderOn(next);
-    await applyReminder(next, reminderHour, reminderMinute);
-  };
-
-  const changeHour = async (delta: number) => {
-    const h = clampHour(reminderHour + delta);
-    setReminderHour(h);
-    if (reminderOn) await applyReminder(true, h, reminderMinute);
-  };
-
-  const changeMinute = async (delta: number) => {
-    const m = clampMin(reminderMinute + delta);
-    setReminderMinute(m);
-    if (reminderOn) await applyReminder(true, reminderHour, m);
-  };
-
-  const setPreset = async (h: number, m: number) => {
-    setReminderHour(h);
-    setReminderMinute(m);
-    setReminderOn(true);
-    await applyReminder(true, h, m);
   };
 
   if (loading) return <LoadingScreen />;
@@ -344,12 +288,22 @@ export default function ClientProfileScreen() {
         hint={profile?.level ?? undefined}
         defaultOpen={false}
       >
-        <TextField
-          label="Objetivo principal"
-          value={goal}
-          onChangeText={setGoal}
-          placeholder="Ej. Conseguir mi primera dominada"
-        />
+        {/* Tres líneas, no tres párrafos: cada plazo cabe de un vistazo y se
+            ve de golpe si el de largo tiene algo que ver con el de esta
+            semana. */}
+        <Text style={styles.fieldLabel}>Mis objetivos</Text>
+        {PLAZOS.map((p) => (
+          <TextField
+            key={p.clave}
+            label={p.etiqueta}
+            value={objetivos[p.clave]}
+            onChangeText={(v) =>
+              setObjetivos((prev) => ({ ...prev, [p.clave]: v.slice(0, MAX_OBJETIVO) }))
+            }
+            placeholder={p.ejemplo}
+            maxLength={MAX_OBJETIVO}
+          />
+        ))}
         <TextField
           label="Bio"
           value={bio}
@@ -378,102 +332,12 @@ export default function ClientProfileScreen() {
         <Button title="Guardar cambios" onPress={handleSave} loading={saving} />
       </CollapsibleCard>
 
-      {/* Pausar el plan: unos días sin entrenar que no rompen la racha ni
-          descolocan el ciclo. Va antes de los recordatorios porque cuando hace
-          falta, hace falta ya. */}
-      <Card style={styles.section}>
-        <View style={styles.reminderTopRow}>
-          <View style={styles.reminderHeader}>
-            <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Pausar el plan</Text>
-          </View>
-          <Pressable onPress={() => setPausaAbierta(true)} hitSlop={6}>
-            <Text style={styles.pausaAccion}>{enPausa ? 'Ver' : 'Elegir días'}</Text>
-          </Pressable>
-        </View>
-        <Text style={styles.reminderHint}>
-          {enPausa
-            ? `En pausa hasta el ${diaLargo(enPausa.hasta)}${
-                enPausa.porQuien === 'coach' ? ', puesta por tu entrenador' : ''
-              }. Estos días no rompen tu racha y el plan te espera donde lo dejaste.`
-            : 'Si te lesionas, te vas de viaje o tienes una semana imposible: marca los días y el plan se congela. Al volver sigue justo donde lo dejaste.'}
-        </Text>
-      </Card>
-
-      <PausaPlanSheet
-        visible={pausaAbierta}
-        onClose={() => setPausaAbierta(false)}
-        pausas={profile?.planPauses}
-        activa={enPausa}
-        porQuien="alumno"
-        guardando={guardandoPausa}
-        onGuardar={guardarPausa}
-      />
-
-      <Card style={styles.section}>
-        <View style={styles.reminderTopRow}>
-          <View style={styles.reminderHeader}>
-            <Ionicons name="alarm-outline" size={18} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Recordatorio de entreno</Text>
-          </View>
-          <Pressable
-            onPress={toggleReminder}
-            style={[styles.switch, reminderOn && styles.switchOn]}
-            hitSlop={6}
-          >
-            <View style={[styles.switchKnob, reminderOn && styles.switchKnobOn]} />
-          </Pressable>
-        </View>
-        <Text style={styles.reminderHint}>
-          {reminderOn
-            ? `Te avisaremos cada día a las ${two(reminderHour)}:${two(reminderMinute)}.`
-            : 'Actívalo y elige la hora que quieras para tu aviso diario.'}
-          {Platform.OS === 'web' ? ' (Los avisos suenan en la app de móvil.)' : ''}
-        </Text>
-
-        {reminderOn ? (
-          <>
-            <View style={styles.clockRow}>
-              <View style={styles.clockGroup}>
-                <Pressable onPress={() => changeHour(1)} style={styles.clockBtn} hitSlop={6}>
-                  <Ionicons name="chevron-up" size={20} color={colors.text} />
-                </Pressable>
-                <Text style={styles.clockValue}>{two(reminderHour)}</Text>
-                <Pressable onPress={() => changeHour(-1)} style={styles.clockBtn} hitSlop={6}>
-                  <Ionicons name="chevron-down" size={20} color={colors.text} />
-                </Pressable>
-                <Text style={styles.clockUnit}>hora</Text>
-              </View>
-              <Text style={styles.clockColon}>:</Text>
-              <View style={styles.clockGroup}>
-                <Pressable onPress={() => changeMinute(5)} style={styles.clockBtn} hitSlop={6}>
-                  <Ionicons name="chevron-up" size={20} color={colors.text} />
-                </Pressable>
-                <Text style={styles.clockValue}>{two(reminderMinute)}</Text>
-                <Pressable onPress={() => changeMinute(-5)} style={styles.clockBtn} hitSlop={6}>
-                  <Ionicons name="chevron-down" size={20} color={colors.text} />
-                </Pressable>
-                <Text style={styles.clockUnit}>min</Text>
-              </View>
-            </View>
-
-            <Text style={styles.presetLabel}>Atajos</Text>
-            <ChipRow>
-              {REMINDER_PRESETS.map((p) => (
-                <Chip
-                  key={`${p.h}:${p.m}`}
-                  texto={`${two(p.h)}:${two(p.m)}`}
-                  activo={reminderHour === p.h && reminderMinute === p.m}
-                  onPress={() => setPreset(p.h, p.m)}
-                />
-              ))}
-            </ChipRow>
-          </>
-        ) : null}
-      </Card>
-
-      {/* Va justo debajo del recordatorio diario porque depende de él: el
-          primer aviso sale a esa misma hora. */}
+      {/* El único aviso que queda. El "recordatorio de entreno" a una hora
+          fija se ha ido: avisaba todos los días a la misma hora entrenara uno
+          o no, y quien ya había entrenado a las siete recibía a las siete y
+          media un aviso para hacer lo que acababa de hacer. Este solo suena
+          los días que TOCA entrenar y aún no hay sesión, y calla en cuanto la
+          hay. */}
       <Card style={styles.section}>
         <View style={styles.reminderTopRow}>
           <View style={styles.reminderHeader}>
@@ -584,7 +448,6 @@ const styles = StyleSheet.create({
   reminderTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reminderHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   reminderHint: { ...typography.small, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.md },
-  pausaAccion: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   switch: {
     width: 48,
     height: 28,
@@ -604,39 +467,5 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   switchKnobOn: { backgroundColor: colors.onPrimary, alignSelf: 'flex-end' },
-  clockRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  clockGroup: { alignItems: 'center' },
-  clockBtn: {
-    width: 44,
-    height: 34,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clockValue: {
-    ...typography.h1,
-    color: colors.text,
-    fontFamily: fonts.heading,
-    marginVertical: 6,
-    minWidth: 52,
-    textAlign: 'center',
-  },
-  clockUnit: { ...typography.small, color: colors.textFaint, fontSize: 11, marginTop: 2 },
-  clockColon: { ...typography.h1, color: colors.textMuted, marginBottom: 18 },
-  presetLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-  },
   signOut: { marginTop: spacing.sm, marginBottom: spacing.xl },
 });
