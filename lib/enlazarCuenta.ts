@@ -149,5 +149,17 @@ export function mensajeDeEntrada(e: unknown): string {
   if (codigo.includes('email-already-in-use')) return 'Ese correo ya está en otra cuenta.';
   if (codigo.includes('weak-password')) return 'La contraseña necesita al menos 6 caracteres.';
   if (codigo.includes('invalid-email')) return 'Ese correo no parece válido.';
-  return e instanceof Error && e.message ? e.message : 'No se ha podido entrar.';
+  if (codigo.includes('popup-blocked')) {
+    return 'Tu navegador ha bloqueado la ventana de acceso. Permítela y vuelve a probar.';
+  }
+  if (codigo.includes('unauthorized-domain')) {
+    return 'Este sitio no está autorizado para entrar. Avisa a UDECA.';
+  }
+  if (codigo.includes('operation-not-allowed')) {
+    return 'Esa forma de entrar no está disponible ahora mismo. Prueba con la otra.';
+  }
+  // Cualquier otra cosa se dice en cristiano. El texto que trae Firebase
+  // ("Firebase: Error (auth/internal-error).") no le sirve a nadie que esté
+  // intentando entrar en una app de entrenamiento, y encima da mala espina.
+  return 'No se ha podido entrar. Inténtalo otra vez en un momento.';
 }
