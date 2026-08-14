@@ -1,3 +1,4 @@
+import { inicioDelDia } from './fechas';
 /**
  * Fechas de cobro de las cuotas de los alumnos.
  *
@@ -75,4 +76,74 @@ export function periodsOwed(nextDate: number, now: number = Date.now()): number 
     cursor = addMonthsExact(cursor, 1);
   }
   return owed;
+}
+
+/**
+ * Un cobro ÚNICO: se paga de golpe y el acceso llega hasta una fecha.
+ *
+ * El caso real: un alumno paga 180 € por seis meses el primer día. Con lo que
+ * había —cuota mensual y "añadir N días"— eso se apañaba a mano: calcular los
+ * días, escribirlos, y luego acordarse de que ese importe no era la cuota. El
+ * resultado era que el ingreso quedaba mal apuntado (o se apuntaba seis veces,
+ * o ninguna) justo en el pago más grande del año.
+ *
+ * Aquí se dice lo que de verdad pasó: hasta cuándo tiene acceso y cuánto pagó.
+ */
+export interface CobroUnico {
+  /** Fecha (00:00) hasta la que queda pagado. */
+  hasta: number;
+  /** Importe del pago, en euros. */
+  importe: number;
+}
+
+export type ErrorDeCobroUnico = 'fecha' | 'pasada' | 'importe';
+
+/**
+ * Comprueba lo que ha escrito el entrenador.
+ *
+ * Una fecha PASADA se rechaza en vez de aceptarse: dejaría al alumno con el
+ * pago apuntado y el acceso vencido el mismo día, y el aviso de impago le
+ * saltaría a él, que acaba de pagar.
+ */
+export function validaCobroUnico(
+  hasta: number | undefined,
+  importe: number | undefined,
+  ahora: number = Date.now()
+): { ok: true; cobro: CobroUnico } | { ok: false; error: ErrorDeCobroUnico } {
+  if (!hasta || !Number.isFinite(hasta)) return { ok: false, error: 'fecha' };
+  const fin = inicioDelDia(hasta);
+  if (fin <= inicioDelDia(ahora)) return { ok: false, error: 'pasada' };
+  if (!importe || !Number.isFinite(importe) || importe <= 0) {
+    return { ok: false, error: 'importe' };
+  }
+  return { ok: true, cobro: { hasta: fin, importe: Math.round(importe * 100) / 100 } };
+}
+
+/** Qué decirle cuando lo ha escrito mal. */
+export function mensajeDeCobroUnico(error: ErrorDeCobroUnico): string {
+  if (error === 'fecha') return 'Elige hasta qué día queda pagado.';
+  if (error === 'pasada') return 'Esa fecha ya ha pasado: elige una futura.';
+  return 'Escribe cuánto ha pagado.';
+}
+
+/** Una fecha escrita como DD/MM/AAAA, en número. Nada si no vale. */
+export function fechaDeTexto(texto: string): number | undefined {
+  const m = /^\s*(\d{1,2})[/-](\d{1,2})[/-](\d{4})\s*$/.exec(String(texto ?? ''));
+  if (!m) return undefined;
+  const [, d, mes, a] = m.map(Number);
+  if (mes < 1 || mes > 12 || d < 1 || d > 31) return undefined;
+  const fecha = new Date(a, mes - 1, d, 0, 0, 0, 0);
+  // El 31 de febrero existe para `Date` y sale como 3 de marzo: si los
+  // componentes no vuelven iguales, la fecha no era real.
+  if (fecha.getDate() !== d || fecha.getMonth() !== mes - 1 || fecha.getFullYear() !== a) {
+    return undefined;
+  }
+  return fecha.getTime();
+}
+
+/** Un importe escrito a mano ("180", "180,50"), en número. */
+export function importeDeTexto(texto: string): number | undefined {
+  const n = Number(String(texto ?? '').replace(',', '.').replace(/[^0-9.]/g, ''));
+  if (!Number.isFinite(n) || n <= 0 || n > 100000) return undefined;
+  return n;
 }

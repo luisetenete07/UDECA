@@ -6,24 +6,30 @@ import { colors, fonts, spacing } from '../lib/theme';
 import { WEEKDAY_LABELS } from '../lib/types';
 
 /**
- * Mapa de constancia: cuadrícula de las últimas `weeks` semanas (columnas)
- * por día de la semana (filas). Punto dorado = día entrenado. El clásico
- * "calendario de contribuciones" aplicado al entrenamiento.
+ * Mapa de constancia: cuadrícula de semanas (columnas) por día de la semana
+ * (filas). Punto dorado = día entrenado. El clásico "calendario de
+ * contribuciones" aplicado al entrenamiento.
+ *
+ * El periodo se lo dice quien lo usa (`desde`), que normalmente es el bloque
+ * en curso: ver lib/constancia.ts. Antes eran doce semanas fijas, y quedaba
+ * pegado a un reparto que hablaba de seis: dos periodos distintos en la misma
+ * pantalla que nadie compara mentalmente.
  */
 export function ConsistencyMap({
   days,
   weeks = 12,
+  desde,
 }: {
   /** Días entrenados como timestamps a medianoche (ver trainingDays). */
   days: Set<number>;
   weeks?: number;
+  /** Lunes de la primera semana. Sin él, las `weeks` últimas hasta hoy. */
+  desde?: number;
 }) {
-  const currentWeekStart = inicioDeLaSemana(Date.now());
   const todayTs = inicioDelDia(Date.now());
+  const primera = desde ?? masDias(inicioDeLaSemana(Date.now()), -7 * (weeks - 1));
 
-  const weekStarts = Array.from({ length: weeks }, (_, i) =>
-    masDias(currentWeekStart, -7 * (weeks - 1 - i))
-  );
+  const weekStarts = Array.from({ length: weeks }, (_, i) => masDias(primera, 7 * i));
 
   return (
     <View style={styles.wrap}>

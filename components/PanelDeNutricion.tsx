@@ -256,18 +256,24 @@ export function PanelDeNutricion() {
           ejercicios, que es justo lo que no la explica. */}
       <BloqueDePeso profile={profile} logs={pesos} onCambio={load} />
 
-      {!targets ? (
-        <Card style={styles.section}>
-          <EmptyState
-            icon="restaurant-outline"
-            title="Aún no tienes objetivos"
-            subtitle="Calcula tus calorías y macros en 30 segundos, o espera a que tu entrenador te asigne un plan."
-          />
-          <Button title="Calcular mis macros" onPress={() => setCalcOpen(true)} />
-        </Card>
-      ) : (
-        <>
-          <Card accent style={styles.section}>
+      {/* La tarjeta de HOY se pinta SIEMPRE, con macros o sin ellos.
+          Estaba metida entera dentro del "si tiene objetivos", y el efecto era
+          que a quien no había calculado sus macros se le escondían también las
+          comidas y —peor— los pasos que le pide su entrenador. Andar no
+          depende de haber hecho una calculadora. */}
+      <Card accent style={styles.section}>
+        {!targets ? (
+          <>
+            <Text style={styles.sectionTitle}>Hoy</Text>
+            <EmptyState
+              icon="restaurant-outline"
+              title="Aún no tienes objetivos"
+              subtitle="Calcula tus calorías y macros en 30 segundos, o espera a que tu entrenador te asigne un plan."
+            />
+            <Button title="Calcular mis macros" onPress={() => setCalcOpen(true)} />
+          </>
+        ) : (
+          <>
             <View style={styles.hoyHeader}>
               <Text style={styles.sectionTitle}>Hoy</Text>
               <Text style={styles.planName}>{targets.name}</Text>
@@ -295,13 +301,31 @@ export function PanelDeNutricion() {
               <MacroTile label="Grasas" consumed={totals.fatG} target={targets.fatG} unit="g" />
             </View>
 
-            {!targets.fromCoach ? (
-              <Pressable onPress={() => setCalcOpen(true)} style={styles.recalcBtn} hitSlop={6}>
-                <Ionicons name="calculator-outline" size={14} color={colors.primary} />
-                <Text style={styles.recalcText}>Recalcular mis macros</Text>
-              </Pressable>
+            {/* Rehacer el cálculo, SIEMPRE, aunque el plan lo haya puesto el
+                coach. Un cuerpo de hace seis meses y diez kilos no es el
+                mismo, y hasta ahora quien tenía plan de entrenador no tenía
+                forma de volver a la calculadora ni para mirar. Lo que calcule
+                se guarda en SU ficha; mientras el coach tenga plan activo,
+                manda el del coach. */}
+            <Pressable onPress={() => setCalcOpen(true)} style={styles.recalcBtn} hitSlop={6}>
+              <Ionicons name="calculator-outline" size={14} color={colors.primary} />
+              <Text style={styles.recalcText}>
+                {targets.fromCoach ? 'Rehacer mi ficha nutricional' : 'Recalcular mis macros'}
+              </Text>
+            </Pressable>
+            {targets.fromCoach ? (
+              <Text style={styles.recalcPista}>
+                Mientras tu entrenador tenga un plan activo, manda el suyo.
+              </Text>
             ) : null}
+          </>
+        )}
 
+        {/* Las comidas y los pasos van fuera del "si tiene objetivos": se
+            apuntan igual, con plan o sin él, y son la otra mitad de lo que
+            pasa hoy. */}
+        {targets ? (
+          <>
             {/* Las comidas, DENTRO del conteo y no en una tarjeta debajo. Eran
                 dos tarjetas para una sola cosa: cuánto llevas hoy y de qué.
                 Apuntar una comida cambia la cifra de arriba, así que estar
@@ -338,18 +362,24 @@ export function PanelDeNutricion() {
               />
             </View>
 
-            {/* Y los pasos, en la misma tarjeta: son la otra mitad de la cifra
-                de arriba. Ver el número que suma justo debajo del número al
-                que suma es lo que hace que andar deje de ser un adorno. */}
-            {profile ? (
-              <ContadorDePasos
-                profile={profile}
-                pesoKg={ultimoPeso}
-                registros={pasos}
-                onCambio={load}
-              />
-            ) : null}
-          </Card>
+          </>
+        ) : null}
+
+        {/* Y los pasos, en la misma tarjeta: son la otra mitad de la cifra de
+            arriba. Ver el número que suma justo debajo del número al que suma
+            es lo que hace que andar deje de ser un adorno. Se enseñan aunque
+            no haya macros: el objetivo de pasos lo pone el ENTRENADOR, y
+            escondérselo a quien no ha hecho la calculadora es esconderle lo
+            que su coach le ha pedido. */}
+        {profile ? (
+          <ContadorDePasos
+            profile={profile}
+            pesoKg={ultimoPeso}
+            registros={pasos}
+            onCambio={load}
+          />
+        ) : null}
+      </Card>
 
           {/* El formulario vivía siempre abierto: cinco campos vacíos ocupando
               media pantalla cada vez que entrabas, y las comidas del día
@@ -396,9 +426,6 @@ export function PanelDeNutricion() {
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <Button title="Añadir comida" onPress={handleAddMeal} loading={saving} />
           </Sheet>
-
-        </>
-      )}
 
       {/* Libretas de comida del coach: recetas y platos por foto, dentro de la app. */}
       {books.length > 0 ? (
@@ -548,6 +575,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   subtitulo: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  recalcPista: { ...typography.small, color: colors.textFaint, fontSize: 11, marginTop: 2 },
   // Las secciones de dentro de la tarjeta de hoy se separan con una línea, no
   // con hueco: así se lee como una sola tarjeta con partes y no como tres
   // tarjetas metidas a la fuerza en una.

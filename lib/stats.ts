@@ -477,9 +477,19 @@ export function exerciseRecord(
  */
 export function detectNewPRs(
   history: WorkoutLog[],
-  session: LoggedExercise[]
+  session: LoggedExercise[],
+  /**
+   * Las mejores marcas ya calculadas, si quien llama las lleva al día.
+   *
+   * Existe para poder recorrer un historial entero sesión a sesión sin
+   * recalcularlo todo en cada paso (ver lib/marcas.ts). Lo importante es que
+   * la REGLA de qué es un récord siga viviendo aquí y en un solo sitio: el día
+   * que el ranking cuente como récord algo que la app no celebró —o al revés—
+   * nadie entiende su propia clasificación.
+   */
+  bestsPrecalculados?: Record<string, ExerciseBest>
 ): PersonalRecord[] {
-  const bests = bestsByExercise(history);
+  const bests = bestsPrecalculados ?? bestsByExercise(history);
   const prs: PersonalRecord[] = [];
 
   for (const ex of session) {

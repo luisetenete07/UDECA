@@ -16,20 +16,20 @@ import { colors, fonts, radius, spacing, typography } from '../lib/theme';
  *
  * Estaba escondida en dos sitios malos: una fila gris dentro de una pestaña de
  * Progreso, y el menú de los tres puntos de la sesión. Los dos son sitios a los
- * que se va a buscar otra cosa. Ahora está donde se cae en la cuenta: al abrir
- * la app y al abrir Entreno.
+ * que se va a buscar otra cosa. Ahora está en Entreno, que es donde se cae en
+ * la cuenta: se abre la sesión de hoy y se ve el hueco de ayer.
  *
  * Se pinta con el color de marca y no como un enlace de texto a propósito. No
  * es un ajuste: es una acción, y compite con el impulso de dejarlo para luego,
  * que es como se pierde.
  */
-export function RegistrarOtroDia({ compacto = false }: { compacto?: boolean }) {
+export function RegistrarOtroDia() {
   const router = useRouter();
   return (
     <PressableScale
       haptic
       onPress={() => router.push('/(client)/registrar')}
-      style={[styles.caja, compacto && styles.compacta]}
+      style={styles.caja}
       accessibilityRole="button"
       accessibilityLabel="Registrar un entreno de otro día"
     >
@@ -38,12 +38,10 @@ export function RegistrarOtroDia({ compacto = false }: { compacto?: boolean }) {
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.titulo}>Registrar un entreno de otro día</Text>
-        {compacto ? null : (
-          <Text style={styles.pie}>
-            ¿Entrenaste sin el móvil delante? Apúntalo con su fecha y cuenta igual: para tu
-            racha, para tu progreso y para tu entrenador.
-          </Text>
-        )}
+        <Text style={styles.pie}>
+          ¿Entrenaste sin el móvil delante? Apúntalo con su fecha y cuenta igual: para tu racha,
+          para tu progreso y para tu entrenador.
+        </Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.primary} />
     </PressableScale>
@@ -62,7 +60,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
     marginBottom: spacing.md,
   },
-  compacta: { paddingVertical: spacing.sm + 2 },
   icono: {
     width: 36,
     height: 36,

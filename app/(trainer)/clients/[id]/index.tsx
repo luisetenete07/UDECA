@@ -9,6 +9,13 @@ import { EmptyState } from '../../../../components/EmptyState';
 import { DashboardSkeleton } from '../../../../components/Skeleton';
 import { confirmar } from '../../../../lib/confirmar';
 import { hayObjetivos, objetivosDe, objetivosVisibles } from '../../../../lib/objetivos';
+import {
+  objetivoDeTexto,
+  OBJETIVO_MAXIMO,
+  OBJETIVO_MINIMO,
+  OBJETIVO_POR_DEFECTO,
+} from '../../../../lib/pasos';
+import { conMiles } from '../../../../lib/texto';
 import { getCoursesForTrainer } from '../../../../lib/firestore/courses';
 import { getCourseProgress } from '../../../../lib/firestore/courseProgress';
 import {
@@ -23,7 +30,14 @@ import { ConsistencyMap } from '../../../../components/ConsistencyMap';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getExerciseLibrary } from '../../../../lib/firestore/exercises';
-import { billingAnchorOf, nextBillingDate } from '../../../../lib/billing';
+import {
+  billingAnchorOf,
+  fechaDeTexto,
+  importeDeTexto,
+  mensajeDeCobroUnico,
+  nextBillingDate,
+  validaCobroUnico,
+} from '../../../../lib/billing';
 import {
   createHabit,
   deleteHabit,
@@ -53,6 +67,7 @@ import {
   setClientPaymentLink,
   setClientPlanPauses,
   setClientTrackRir,
+  setClientStepGoal,
   setClientVip,
   updateClientBilling,
   updateClientPaymentStatus,
@@ -119,6 +134,11 @@ export default function ClientDetailScreen() {
   const [courseSeen, setCourseSeen] = useState<LessonsSeen>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Los pasos al día que le pide su entrenador (ver lib/pasos.ts).
+  const [pasosInput, setPasosInput] = useState('');
+  const [savingPasos, setSavingPasos] = useState(false);
+  const [pasosSaved, setPasosSaved] = useState(false);
+  const [pasosError, setPasosError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   const [feeInput, setFeeInput] = useState('');
   // El enlace con el que paga ESTE alumno. Va por alumno y no por entrenador
@@ -128,6 +148,12 @@ export default function ClientDetailScreen() {
   const [savingLink, setSavingLink] = useState(false);
   const [linkSaved, setLinkSaved] = useState(false);
   const [extendDaysInput, setExtendDaysInput] = useState('');
+  // Pago único: una fecha de fin y un importe (ver lib/billing.ts).
+  const [unicoAbierto, setUnicoAbierto] = useState(false);
+  const [unicoFecha, setUnicoFecha] = useState('');
+  const [unicoImporte, setUnicoImporte] = useState('');
+  const [unicoError, setUnicoError] = useState<string | null>(null);
+  const [savingUnico, setSavingUnico] = useState(false);
   const [remindingPayment, setRemindingPayment] = useState(false);
   const [paymentReminderSent, setPaymentReminderSent] = useState(false);
   const [coachNote, setCoachNote] = useState('');
@@ -164,6 +190,7 @@ export default function ClientDetailScreen() {
           Object.fromEntries(exerciseData.map((e) => [e.id, e.measure ?? 'reps']))
         );
         setCoachNote(noteData);
+        setPasosInput(clientData?.stepGoal ? String(clientData.stepGoal) : '');
         setFeeInput(clientData?.monthlyFeeEur ? String(clientData.monthlyFeeEur) : '');
         // Si el alumno aún no tiene enlace propio y el entrenador guardaba el
         // común de antes, se ofrece ya escrito: un toque en guardar y queda
@@ -314,6 +341,33 @@ export default function ClientDetailScreen() {
     showToast('Pago registrado · próxima renovación en 1 mes');
   };
 
+  /**
+   * Guarda los pasos al día. Vacío = quitar el objetivo y volver al de la app;
+   * no es lo mismo que escribir 10.000 a mano, porque el día que cambie el que
+   * trae UDECA este alumno se quedaría con el viejo escrito a fuego.
+   */
+  const handleSaveStepGoal = async () => {
+    if (!id) return;
+    const limpio = pasosInput.trim();
+    const meta = limpio ? objetivoDeTexto(limpio) : undefined;
+    if (limpio && meta === undefined) {
+      setPasosError(`Escribe entre ${conMiles(OBJETIVO_MINIMO)} y ${conMiles(OBJETIVO_MAXIMO)} pasos.`);
+      return;
+    }
+    setPasosError(null);
+    setSavingPasos(true);
+    try {
+      await setClientStepGoal(id, meta);
+      setClient((prev) => (prev ? { ...prev, stepGoal: meta } : prev));
+      setPasosSaved(true);
+      setTimeout(() => setPasosSaved(false), 2500);
+    } catch {
+      setPasosError('No se pudo guardar.');
+    } finally {
+      setSavingPasos(false);
+    }
+  };
+
   const handleSaveNote = async () => {
     if (!id || !profile) return;
     await saveCoachNote(profile.uid, id, coachNote.trim());
@@ -335,6 +389,50 @@ export default function ClientDetailScreen() {
     setExtendDaysInput('');
     await updateClientBilling(id, { nextPaymentDate });
     showToast(`+${days} días · próximo pago ${fechaCorta(nextPaymentDate)}`);
+  };
+
+  /**
+   * Registra un pago único: deja pagado hasta una fecha y apunta el importe
+   * como ingreso, entero y una sola vez.
+   *
+   * No se toca la cuota mensual a propósito: sigue siendo la que es, y el día
+   * que se acabe lo pagado el entrenador decide si renueva igual o de otra
+   * forma. Cambiársela aquí sería decidir por él.
+   */
+  const handleCobroUnico = async () => {
+    if (!id || !client || !profile) return;
+    const v = validaCobroUnico(fechaDeTexto(unicoFecha), importeDeTexto(unicoImporte));
+    if (!v.ok) {
+      setUnicoError(mensajeDeCobroUnico(v.error));
+      return;
+    }
+    setUnicoError(null);
+    setSavingUnico(true);
+    try {
+      const billingAnchorDay = billingAnchorOf(v.cobro.hasta);
+      setClient({
+        ...client,
+        paymentStatus: 'paid',
+        nextPaymentDate: v.cobro.hasta,
+        billingAnchorDay,
+        paymentReportedAt: undefined,
+      });
+      await registerClientPayment(id, v.cobro.hasta, billingAnchorDay);
+      await createPayment({
+        trainerId: profile.uid,
+        clientId: id,
+        amountEur: v.cobro.importe,
+        date: Date.now(),
+      });
+      setUnicoFecha('');
+      setUnicoImporte('');
+      setUnicoAbierto(false);
+      showToast(`${v.cobro.importe} € · pagado hasta ${fechaCorta(v.cobro.hasta)}`);
+    } catch {
+      setUnicoError('No se pudo registrar el pago.');
+    } finally {
+      setSavingUnico(false);
+    }
   };
 
   const handleClearNextPayment = async () => {
@@ -591,6 +689,54 @@ export default function ClientDetailScreen() {
             style={{ flex: 1 }}
           />
         </View>
+
+        {/* Pago único: 180 € por seis meses el primer día, por ejemplo. Antes
+            se apañaba con "añadir días" y luego había que acordarse de que ese
+            importe no era la cuota, así que el ingreso más grande del año era
+            justo el peor apuntado. */}
+        <Pressable onPress={() => setUnicoAbierto((v) => !v)} style={styles.unicoCabecera} hitSlop={6}>
+          <Ionicons
+            name={unicoAbierto ? 'chevron-down' : 'chevron-forward'}
+            size={15}
+            color={colors.primary}
+          />
+          <Text style={styles.unicoTitulo}>Pago único hasta una fecha</Text>
+        </Pressable>
+        {unicoAbierto ? (
+          <View style={styles.unicoCaja}>
+            <Text style={styles.payHint}>
+              Paga de una vez y queda cubierto hasta el día que pongas. El importe entra en tus
+              ingresos tal cual, sin partirlo en cuotas.
+            </Text>
+            <View style={styles.payBtnRow}>
+              <TextField
+                value={unicoFecha}
+                onChangeText={setUnicoFecha}
+                placeholder="Hasta (13/02/2027)"
+                autoCapitalize="none"
+                autoCorrect={false}
+                containerStyle={{ flex: 1, marginBottom: 0 }}
+                style={{ marginBottom: 0 }}
+              />
+              <TextField
+                value={unicoImporte}
+                onChangeText={setUnicoImporte}
+                placeholder="180 €"
+                keyboardType="decimal-pad"
+                containerStyle={styles.daysField}
+                style={{ marginBottom: 0 }}
+              />
+            </View>
+            {unicoError ? <Text style={styles.confirmText}>{unicoError}</Text> : null}
+            <Button
+              title="Registrar pago único"
+              variant="secondary"
+              onPress={handleCobroUnico}
+              loading={savingUnico}
+              style={{ marginTop: spacing.sm }}
+            />
+          </View>
+        ) : null}
         {client.nextPaymentDate ? (
           <Pressable onPress={handleClearNextPayment} style={styles.quitarFecha} hitSlop={8}>
             <Ionicons name="close-circle-outline" size={14} color={colors.textFaint} />
@@ -792,6 +938,42 @@ export default function ClientDetailScreen() {
             thumbColor={colors.white}
           />
         </View>
+      </CollapsibleCard>
+
+      {/* Los pasos al día que le pide. Va junto a lo demás que decide el
+          entrenador sobre este alumno, no en un ajuste general: no es lo mismo
+          un repartidor que alguien que pasa ocho horas sentado. */}
+      <CollapsibleCard
+        id="alumno-pasos"
+        icon="walk-outline"
+        title="Pasos al día"
+        hint={client?.stepGoal ? conMiles(client.stepGoal) : `${conMiles(OBJETIVO_POR_DEFECTO)} (por defecto)`}
+        defaultOpen={false}
+      >
+        <Text style={styles.mutedText}>
+          Los que le pides cada día. Los ve en su pestaña de nutrición, y lo que ande le suma
+          calorías al plan del día. Si lo dejas vacío, se le piden{' '}
+          {conMiles(OBJETIVO_POR_DEFECTO)}.
+        </Text>
+        <View style={styles.pasosFila}>
+          <TextField
+            value={pasosInput}
+            onChangeText={setPasosInput}
+            placeholder={String(OBJETIVO_POR_DEFECTO)}
+            keyboardType="number-pad"
+            containerStyle={{ flex: 1, marginBottom: 0 }}
+            style={{ marginBottom: 0 }}
+          />
+          <Button
+            title="Guardar"
+            variant="secondary"
+            onPress={handleSaveStepGoal}
+            loading={savingPasos}
+            style={{ minWidth: 110 }}
+          />
+        </View>
+        {pasosError ? <Text style={styles.confirmText}>{pasosError}</Text> : null}
+        {pasosSaved ? <Text style={styles.confirmSavedText}>Objetivo guardado</Text> : null}
       </CollapsibleCard>
 
       <CollapsibleCard
@@ -1244,6 +1426,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   objetivoPlazo: { ...typography.small, color: colors.textFaint, fontSize: 11, width: 78, paddingTop: 2 },
+  pasosFila: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.md },
+  unicoCabecera: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  unicoTitulo: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  unicoCaja: { marginTop: spacing.xs },
   objetivoTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },

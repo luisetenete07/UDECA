@@ -163,7 +163,10 @@ service cloud.firestore {
               // decide el entrenador, que es quien le cobra el plan que las
               // incluye. Si pudiera ponérselo el alumno, "VIP" sería una
               // casilla y no un plan.
-              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses', 'paymentLink', 'vip'])
+              // `stepGoal`: los pasos al día que le pide su entrenador. No es
+              // lo mismo un repartidor que alguien ocho horas sentado, y una
+              // cifra igual para los dos no la cumple ninguno.
+              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses', 'paymentLink', 'vip', 'stepGoal'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)

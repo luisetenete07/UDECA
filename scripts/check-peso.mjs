@@ -97,9 +97,16 @@ console.log('\nEl objetivo');
   comprueba('y que aún no está', !bajando.enObjetivo);
   comprueba('lo cuenta en una frase', /3,0 kg/.test(textoDelObjetivo(bajando, 75) ?? ''),
     String(textoDelObjetivo(bajando, 75)));
+  // "Te faltan 3 kg" pesando 78 con objetivo 75 se lee como que hay que
+  // ganarlos, que es lo contrario de lo que quiere esa persona. El verbo lo
+  // resuelve sin gastar una línea.
+  comprueba('y dice si hay que PERDERLOS', /faltan perder/.test(textoDelObjetivo(bajando, 75) ?? ''),
+    String(textoDelObjetivo(bajando, 75)));
 
   const subiendo = resumenDePeso([log(0, 70)], 75, AHORA);
   comprueba('subir de peso también es un objetivo', subiendo.aObjetivo === 5);
+  comprueba('y ahí dice GANAR', /faltan ganar/.test(textoDelObjetivo(subiendo, 75) ?? ''),
+    String(textoDelObjetivo(subiendo, 75)));
 
   // Medio kilo de margen: el peso baila eso entre la mañana y la noche.
   const casi = resumenDePeso([log(0, 75.3)], 75, AHORA);

@@ -21,8 +21,32 @@ import { conMiles } from './texto';
  *   para quien lleva un reloj o usa otra app.
  */
 
-/** Pasos al día por omisión. Es la cifra que recomienda la OMS, redondeada. */
-export const OBJETIVO_POR_DEFECTO = 8000;
+/**
+ * Pasos al día cuando nadie ha elegido.
+ *
+ * Lo normal es que lo ponga el ENTRENADOR en la ficha de cada alumno: no es lo
+ * mismo el que trabaja de repartidor que el que está ocho horas sentado, y una
+ * cifra igual para los dos no la cumple ninguno de los dos por motivos
+ * distintos. Esta es la que se usa mientras no lo haya decidido.
+ */
+export const OBJETIVO_POR_DEFECTO = 10000;
+
+/** Lo que se puede pedir sin que sea un disparate: de 1.000 a 40.000. */
+export const OBJETIVO_MINIMO = 1000;
+export const OBJETIVO_MAXIMO = 40000;
+
+/**
+ * El objetivo escrito a mano, en número, o nada si no vale.
+ *
+ * Nada, y no la cifra por omisión: quien borra el campo está quitando el
+ * objetivo que puso, y devolverle 10.000 sería no dejarle deshacerlo.
+ */
+export function objetivoDeTexto(texto: string): number | undefined {
+  const n = Number.parseInt(String(texto ?? '').replace(/[^0-9]/g, ''), 10);
+  if (!Number.isFinite(n)) return undefined;
+  if (n < OBJETIVO_MINIMO || n > OBJETIVO_MAXIMO) return undefined;
+  return n;
+}
 
 /** De dónde vino la cifra. Importa para saber si se puede pisar. */
 export type OrigenDePasos = 'telefono' | 'mano';

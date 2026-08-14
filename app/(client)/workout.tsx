@@ -1571,7 +1571,7 @@ export default function WorkoutScreen() {
       {/* Apuntar un entreno de otro día, a la vista y no en el menú de los tres
           puntos: es aquí donde uno se da cuenta de que ayer no lo apuntó. Con
           la sesión en marcha desaparece —lo que toca entonces es entrenar. */}
-      {!inProgress ? <RegistrarOtroDia compacto /> : null}
+      {!inProgress ? <RegistrarOtroDia /> : null}
 
       {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app:
           mismas protecciones que en los cursos (ni compartir, ni salirse, ni

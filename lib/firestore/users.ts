@@ -228,6 +228,19 @@ export async function setClientVip(clientId: string, vip: boolean) {
 }
 
 /**
+ * Los pasos al día que su entrenador le pide (ver lib/pasos.ts).
+ *
+ * Sin valor se BORRA el campo, y no se guarda un 10.000: guardarlo sería
+ * convertir el valor por omisión en una decisión suya, y el día que cambie el
+ * que trae la app este alumno se quedaría con el viejo escrito a fuego.
+ */
+export async function setClientStepGoal(clientId: string, stepGoal: number | undefined) {
+  await updateDoc(doc(db, 'users', clientId), {
+    stepGoal: stepGoal === undefined ? deleteField() : stepGoal,
+  });
+}
+
+/**
  * Suelta la medida de un grupo de ejercicios (ver lib/medidaDeGrupo.ts).
  *
  * Va aparte de `updateUserProfile` porque ese escribe con `merge: true`, y un

@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { sendPasswordResetEmail, type AuthCredential } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
+import { PressableScale } from '../../components/PressableScale';
 import { BotonApple } from '../../components/BotonApple';
 import { BotonGoogle, Separador } from '../../components/BotonGoogle';
 import { Button } from '../../components/Button';
@@ -27,6 +28,7 @@ import { auth } from '../../lib/firebase';
 import {
   forgetAccount,
   getRememberedAccounts,
+  NOMBRE_DEL_PROVEEDOR,
   type RememberedAccount,
 } from '../../lib/rememberedAccounts';
 import { colors, fieldLabel, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
@@ -65,6 +67,20 @@ export default function LoginScreen() {
     getRememberedAccounts().then(setAccounts);
   }, []);
 
+  /**
+   * Las que se pueden pulsar de verdad.
+   *
+   * Una cuenta guardada de cuando se entraba con contraseña no tiene proveedor,
+   * y su botón no llevaría a ninguna parte. Y si el proveedor no está
+   * disponible en este dispositivo (Apple fuera de iPhone y del navegador),
+   * tampoco. Enseñar un atajo que no funciona es peor que no enseñarlo.
+   */
+  const utilizables = accounts.filter(
+    (a) =>
+      (a.provider === 'google' && google.disponible) ||
+      (a.provider === 'apple' && apple.disponible)
+  );
+
   const olvidar = async (acc: RememberedAccount) => {
     await forgetAccount(acc.email);
     setAccounts(await getRememberedAccounts());
@@ -75,11 +91,15 @@ export default function LoginScreen() {
    * a su sitio sola; si no, cae en la pantalla que pregunta el rol (ver
    * app/(auth)/completar.tsx). Aquí no hay que decidir nada de eso.
    */
-  const entrarCon = async (proveedor: { entrar: () => Promise<unknown> }, cual: string) => {
+  const entrarCon = async (
+    proveedor: { entrar: (pista?: string) => Promise<unknown> },
+    cual: string,
+    pista?: string
+  ) => {
     setError(null);
     setInfo(null);
     try {
-      await proveedor.entrar();
+      await proveedor.entrar(pista);
       void track('login_ok');
     } catch (e) {
       if (esCuentaConOtroMetodo(e)) {
@@ -176,33 +196,53 @@ export default function LoginScreen() {
       </View>
 
       <Card accent style={styles.formCard}>
-        {/* Las cuentas guardadas ya no son botones de entrar —ahora se entra
-            por Google o Apple, que eligen ellos la cuenta—, pero siguen aquí
-            como recordatorio de con cuál entraste en este móvil. */}
-        {accounts.length > 0 ? (
+        {/* Tus cuentas: un toque y dentro.
+
+            Antes esto era una lista informativa con el CORREO de cada una y un
+            rótulo de "ya has entrado aquí con". Dos cosas mal: el correo no
+            ayuda a nadie a reconocerse —uno sabe cuál es su cara— y sí se lo
+            enseña a quien mire el móvil por encima del hombro; y encima no se
+            podía pulsar, así que había que ir igualmente al botón de abajo.
+            Ahora cada cuenta ES el botón, y va directa a esa cuenta de Google o
+            de Apple sin pasar por el "elige una". */}
+        {utilizables.length > 0 ? (
           <>
-            <Text style={styles.pickTitle}>Ya has entrado aquí con</Text>
-            {accounts.map((acc) => (
-              <View key={acc.email} style={styles.accRow}>
-                <Avatar name={acc.name} photoURL={acc.photoURL} size={40} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.accName} numberOfLines={1}>
-                    {acc.name}
-                  </Text>
-                  <Text style={styles.accMeta} numberOfLines={1}>
-                    {acc.role === 'trainer'
-                      ? 'Entrenador'
-                      : acc.role === 'athlete'
-                        ? 'Atleta'
-                        : 'Alumno'}{' '}
-                    · {acc.email}
-                  </Text>
+            <Text style={styles.pickTitle}>Entrar como</Text>
+            {utilizables.map((acc) => {
+              const suyo = acc.provider === 'apple' ? apple : google;
+              return (
+                <View key={acc.email} style={styles.accRow}>
+                  <PressableScale
+                    haptic
+                    style={styles.accBoton}
+                    onPress={() =>
+                      entrarCon(suyo, NOMBRE_DEL_PROVEEDOR[acc.provider], acc.email)
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Entrar como ${acc.name}`}
+                  >
+                    <Avatar name={acc.name} photoURL={acc.photoURL} size={40} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.accName} numberOfLines={1}>
+                        {acc.name}
+                      </Text>
+                      <Text style={styles.accMeta} numberOfLines={1}>
+                        {acc.role === 'trainer'
+                          ? 'Entrenador'
+                          : acc.role === 'athlete'
+                            ? 'Atleta'
+                            : 'Alumno'}{' '}
+                        · {NOMBRE_DEL_PROVEEDOR[acc.provider]}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                  </PressableScale>
+                  <Pressable onPress={() => olvidar(acc)} hitSlop={10} style={styles.accRemove}>
+                    <Ionicons name="close" size={16} color={colors.textFaint} />
+                  </Pressable>
                 </View>
-                <Pressable onPress={() => olvidar(acc)} hitSlop={10} style={styles.accRemove}>
-                  <Ionicons name="close" size={16} color={colors.textFaint} />
-                </Pressable>
-              </View>
-            ))}
+              );
+            })}
             <Separador />
           </>
         ) : null}
@@ -212,7 +252,7 @@ export default function LoginScreen() {
 
         {google.disponible ? (
           <BotonGoogle
-            texto={t('Continuar con Google')}
+            texto={utilizables.length > 0 ? 'Usar otra cuenta de Google' : t('Continuar con Google')}
             cargando={google.entrando}
             onPress={() => entrarCon(google, 'Google')}
           />
@@ -221,7 +261,7 @@ export default function LoginScreen() {
         {apple.disponible ? (
           <View style={google.disponible ? styles.hueco : undefined}>
             <BotonApple
-              texto={t('Continuar con Apple')}
+              texto={utilizables.length > 0 ? 'Usar otra cuenta de Apple' : t('Continuar con Apple')}
               cargando={apple.entrando}
               onPress={() => entrarCon(apple, 'Apple')}
             />
@@ -272,10 +312,15 @@ const styles = StyleSheet.create({
   accRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  accBoton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md - 2,
   },
   accName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   accMeta: { ...typography.small, color: colors.textMuted, marginTop: 1 },

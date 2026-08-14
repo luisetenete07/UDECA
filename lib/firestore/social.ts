@@ -11,6 +11,7 @@ import {
   type QuerySnapshot,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { marcasDelMes, marcasDelMesPasado } from '../marcas';
 import {
   bestStreakInMonth,
   currentStreak,
@@ -52,6 +53,10 @@ export async function syncMySocialStats(
     streakThisMonth: currentStreak(workoutLogs, undefined, monthStartOf(now)),
     workoutsThisMonth: workoutsInMonth(workoutLogs, now),
     lastMonthStreak: bestStreakInMonth(workoutLogs, lastMonthRef),
+    // Lo que ordena la clasificación: cuántas veces se ha superado a sí mismo
+    // (ver lib/marcas.ts). La racha de días premiaba aparecer, no mejorar.
+    prsThisMonth: marcasDelMes(workoutLogs, now),
+    lastMonthPrs: marcasDelMesPasado(workoutLogs, now),
     monthKey: monthKeyOf(now),
     weekKey: weekKeyOf(now),
     // Nuevo récord de esta sesión; si no lo hay, merge conserva el anterior.
@@ -127,21 +132,31 @@ function mapLeaderboard(snap: QuerySnapshot<DocumentData>): SocialStats[] {
         streakThisMonth: fresh ? s.streakThisMonth ?? 0 : 0,
         workoutsThisMonth: fresh ? s.workoutsThisMonth ?? 0 : 0,
         lastMonthStreak: s.lastMonthStreak ?? 0,
+        prsThisMonth: fresh ? s.prsThisMonth ?? 0 : 0,
+        lastMonthPrs: s.lastMonthPrs ?? 0,
       } as SocialStats;
     })
     .sort(compareLeaderboard);
 }
 
 /**
- * Orden del ranking: racha → sesiones de la semana → entrenos totales, y por
- * nombre para desempatar (orden estable). Los campos que aún no se hayan
- * sincronizado (p. ej. un alumno que abrió la app pero no ha entrenado, cuyo
- * doc solo tiene la presencia) cuentan como 0, de modo que quien no ha
- * entrenado nunca queda por encima de quien sí lo ha hecho.
+ * Orden del ranking: MARCAS SUPERADAS este mes → entrenos del mes → sesiones de
+ * la semana, y por nombre para desempatar (orden estable).
+ *
+ * Ganaba quien más días seguidos aparecía. Eso premia presentarse, no mejorar:
+ * quien hace lo mismo treinta días gana a quien entrena cuatro veces por
+ * semana y sube en todo. Y como la racha se rompe sola con una gripe, a mitad
+ * de mes media clase sabía que ya no podía ganar y dejaba de mirar.
+ *
+ * Los entrenos del mes quedan de desempate porque, a igualdad de marcas, ha
+ * trabajado más quien más ha entrenado.
+ *
+ * Los campos sin sincronizar cuentan como 0, de modo que quien no ha entrenado
+ * nunca queda por encima de quien sí.
  */
 export function compareLeaderboard(a: SocialStats, b: SocialStats): number {
   return (
-    (b.streakThisMonth ?? b.currentStreak ?? 0) - (a.streakThisMonth ?? a.currentStreak ?? 0) ||
+    (b.prsThisMonth ?? 0) - (a.prsThisMonth ?? 0) ||
     (b.workoutsThisMonth ?? 0) - (a.workoutsThisMonth ?? 0) ||
     (b.sessionsThisWeek ?? 0) - (a.sessionsThisWeek ?? 0) ||
     (a.name ?? '').localeCompare(b.name ?? '')

@@ -28,7 +28,6 @@ import {
 } from '../../lib/firestore/habits';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { hayObjetivos, objetivosDe, objetivosVisibles } from '../../lib/objetivos';
 import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
@@ -566,13 +565,6 @@ export default function ClientDashboard() {
           })()}
         </LinearGradient>
       </Pressable>
-      </FadeIn>
-
-      {/* Justo debajo de lo de hoy: quien abre la app y ve "0 series" muchas
-          veces no es que no entrenara, es que entrenó sin el móvil. Aquí lo
-          arregla en dos toques, antes de darse por perdido el día de ayer. */}
-      <FadeIn delay={40}>
-        <RegistrarOtroDia />
       </FadeIn>
 
       {/* Atleta: acceso a gestionar su propio plan de entreno. */}

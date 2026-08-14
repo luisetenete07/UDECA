@@ -30,6 +30,7 @@ import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
 import { ProgressMatrix } from '../../components/ProgressMatrix';
 import { BlockOverview } from '../../components/BlockOverview';
+import { resumenDeConstancia, ventanaDeConstancia } from '../../lib/constancia';
 import { buildBlockView } from '../../lib/blockView';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
@@ -45,7 +46,7 @@ import { Dialogo } from '../../components/Dialogo';
 import { Segmented } from '../../components/Segmented';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { Chip, ChipRow } from '../../components/Chip';
-import { fonts, colors, radius, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   setMarks,
   type Routine,
@@ -366,6 +367,15 @@ export default function ProgressScreen() {
     return enCurso.find((c) => c.level === 'meso') ?? enCurso.find((c) => c.level === 'macro') ?? null;
   }, [cycles]);
 
+  // El periodo del que hablan las DOS mitades de la tarjeta: el bloque en
+  // curso, o las últimas cuatro semanas si no hay (ver lib/constancia.ts).
+  const ventana = useMemo(() => ventanaDeConstancia(bloqueActual), [bloqueActual]);
+  const diasEntrenados = useMemo(() => trainingDays(workoutLogs), [workoutLogs]);
+  const constancia = useMemo(
+    () => resumenDeConstancia(diasEntrenados, ventana),
+    [diasEntrenados, ventana]
+  );
+
   if (loading) {
     return (
       <ScreenContainer>
@@ -431,8 +441,12 @@ export default function ProgressScreen() {
           </Card>
         ) : (
           <>
-            {/* El reparto del bloque va primero: es lo que dice si el plan está
-                equilibrado. El detalle por ejercicio viene después. */}
+            {/* Cómo se reparte el trabajo del bloque y qué días has entrenado
+                EN ESE bloque, en la misma tarjeta. Eran dos, y la segunda
+                hablaba de doce semanas mientras la primera hablaba de seis:
+                dos periodos pegados que nadie compara mentalmente, así que la
+                cuadrícula se miraba como un adorno. Ahora la segunda mitad
+                explica la primera. */}
             <Card style={styles.section}>
               <BlockOverview
                 view={buildBlockView({
@@ -443,15 +457,24 @@ export default function ProgressScreen() {
                   muscleByExercise,
                   measureByExercise,
                 })}
-                title={bloqueActual ? bloqueActual.name : 'Últimas 4 semanas'}
-                subtitle={bloqueActual ? 'Tu bloque en curso' : 'Cómo se te reparte el trabajo'}
+                title={ventana.titulo}
+                subtitle={ventana.hayBloque ? 'Tu bloque en curso' : 'Cómo se te reparte el trabajo'}
               />
-            </Card>
 
-            <Card style={styles.section}>
-              <Text style={styles.sectionTitle}>Constancia (12 semanas)</Text>
-              <Text style={styles.photoHint}>Cada punto dorado es un día entrenado.</Text>
-              <ConsistencyMap days={trainingDays(workoutLogs)} />
+              <View style={styles.constancia}>
+                <View style={styles.constanciaFila}>
+                  <Text style={styles.constanciaTitulo}>Días que has entrenado</Text>
+                  <Text style={styles.constanciaCifra}>
+                    {Math.round(constancia.ratio * 100)} %
+                  </Text>
+                </View>
+                <Text style={styles.photoHint}>{constancia.texto}</Text>
+                <ConsistencyMap
+                  days={diasEntrenados}
+                  weeks={ventana.semanas}
+                  desde={ventana.desde}
+                />
+              </View>
             </Card>
 
             {/* Una tarjeta entera con un botón grande partía en dos lo que se
@@ -660,24 +683,6 @@ export default function ProgressScreen() {
               </Card>
               </FadeIn>
             ))}
-
-            <CollapsibleCard
-              id="progreso-volumen"
-              icon="barbell-outline"
-              title="Volumen semanal (kg)"
-              defaultOpen={false}
-            >
-              <LineChart
-                points={weeklyActivity(workoutLogs).map((w) => ({
-                  date: w.weekStart,
-                  value: w.volumeKg,
-                }))}
-                unit="kg"
-                // Más volumen es mejor: sin esto el "+" salía en color de aviso.
-                lowerIsBetter={false}
-                emptyMessage="Registra entrenamientos con peso para ver tu volumen semanal."
-              />
-            </CollapsibleCard>
 
             <CollapsibleCard
               id="progreso-series"
@@ -991,6 +996,20 @@ const styles = StyleSheet.create({
   fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   section: { marginBottom: spacing.md },
+  constancia: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  constanciaFila: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  constanciaTitulo: { ...typography.h3, color: colors.text },
+  constanciaCifra: { ...typography.h3, color: colors.primaryBright, ...tabularNums },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   logRow: {
     flexDirection: 'row',

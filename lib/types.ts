@@ -984,6 +984,14 @@ export interface SocialStats {
   workoutsThisMonth?: number;
   /** Mejor racha lograda el MES ANTERIOR (para el podio del cambio de mes). */
   lastMonthStreak?: number;
+  /**
+   * Marcas superadas ESTE mes: es lo que ordena la clasificación (ver
+   * lib/marcas.ts). Sustituye a la racha de días, que premiaba aparecer en vez
+   * de mejorar y se rompía sola con una gripe.
+   */
+  prsThisMonth?: number;
+  /** Marcas superadas el MES ANTERIOR, para el podio del cambio de mes. */
+  lastMonthPrs?: number;
   /** Clave "YYYY-MM" del mes en que se sincronizaron las métricas mensuales. */
   monthKey?: string;
   /**

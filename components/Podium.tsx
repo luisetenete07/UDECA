@@ -24,14 +24,23 @@ export interface PuestoPodio {
   photoURL?: string | null;
   /** La cifra por la que se compite. */
   valor: number;
-  /** "días", "entrenos". */
+  /** "marcas", "entrenos". */
   unidad: string;
 }
 
 /** Orden en pantalla: segundo, primero, tercero. Como un podio. */
 const COLOCACION = [1, 0, 2];
 
-export function Podium({ puestos, yo }: { puestos: PuestoPodio[]; yo?: string }) {
+export function Podium({
+  puestos,
+  yo,
+  icono = 'trending-up',
+}: {
+  puestos: PuestoPodio[];
+  yo?: string;
+  /** El icono de la cifra. Por omisión, el de mejorar. */
+  icono?: React.ComponentProps<typeof Ionicons>['name'];
+}) {
   if (puestos.length === 0) return null;
 
   return (
@@ -58,7 +67,7 @@ export function Podium({ puestos, yo }: { puestos: PuestoPodio[]; yo?: string })
               </Text>
               <View style={styles.cifraFila}>
                 <Ionicons
-                  name="flame"
+                  name={icono}
                   size={primero ? 13 : 11}
                   color={primero ? colors.primaryBright : colors.primary}
                 />

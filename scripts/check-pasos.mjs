@@ -11,6 +11,9 @@
 import {
   balanceDelDia,
   caloriasDePasos,
+  objetivoDeTexto,
+  OBJETIVO_MAXIMO,
+  OBJETIVO_MINIMO,
   mediaSemanal,
   OBJETIVO_POR_DEFECTO,
   pasosAGuardar,
@@ -100,6 +103,23 @@ console.log('\nLo que se le dice');
   comprueba('a medias, lo que queda', /4.000 pasos/.test(textoDePasos(progresoDePasos(4000, 8000))));
   comprueba('cumplido, lo dice y para', /cumplido/i.test(textoDePasos(progresoDePasos(8000, 8000))));
   comprueba('y no riñe por pasarse', !/demasiado|exceso/i.test(textoDePasos(progresoDePasos(30000, 8000))));
+}
+
+console.log('\nEl objetivo lo pone el entrenador');
+{
+  // Sin que nadie lo elija, 10.000. No es un detalle: es la cifra que ve todo
+  // alumno cuyo coach aún no ha entrado en su ficha.
+  comprueba('por omisión son 10.000', OBJETIVO_POR_DEFECTO === 10000, String(OBJETIVO_POR_DEFECTO));
+  comprueba('se lee un número escrito a mano', objetivoDeTexto('12000') === 12000);
+  comprueba('con puntos también', objetivoDeTexto('12.000') === 12000, String(objetivoDeTexto('12.000')));
+  // Borrar el campo es quitar el objetivo. Devolver 10.000 sería no dejarle
+  // deshacer lo que puso.
+  comprueba('vacío no es 10.000, es nada', objetivoDeTexto('') === undefined);
+  comprueba('ni letras', objetivoDeTexto('muchos') === undefined);
+  comprueba('un disparate no entra', objetivoDeTexto('999999') === undefined);
+  comprueba('ni una cifra ridícula', objetivoDeTexto('12') === undefined);
+  comprueba('los topes sí', objetivoDeTexto(String(OBJETIVO_MINIMO)) === OBJETIVO_MINIMO
+    && objetivoDeTexto(String(OBJETIVO_MAXIMO)) === OBJETIVO_MAXIMO);
 }
 
 console.log('\nEl presupuesto de calorías del día');

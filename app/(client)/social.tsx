@@ -18,6 +18,7 @@ import {
 } from '../../lib/firestore/social';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { monthKeyOf } from '../../lib/stats';
+import { marcasCortas, textoDeMarcas } from '../../lib/marcas';
 import { getUserProfile } from '../../lib/firestore/users';
 import { tituloDeComunidad } from '../../lib/comunidad';
 import { isOnline } from '../../lib/presence';
@@ -91,7 +92,7 @@ export default function SocialScreen() {
     };
   }, [profile?.trainerId]);
 
-  // Ranking en vivo: cualquier cambio en el grupo (una racha, un entreno nuevo,
+  // Ranking en vivo: cualquier cambio en el grupo (una marca, un entreno nuevo,
   // un alumno que acaba de entrar) se refleja sin salir ni refrescar.
   //
   // La escucha vive solo mientras ESTA pantalla está en primer plano. Es
@@ -134,11 +135,11 @@ export default function SocialScreen() {
     );
   }
 
-  const topStreak = members.reduce((m, s) => Math.max(m, s.streakThisMonth ?? s.currentStreak), 0);
+  const topMarcas = members.reduce((m, s) => Math.max(m, s.prsThisMonth ?? 0), 0);
   const totalSessions = members.reduce((sum, s) => sum + s.sessionsThisWeek, 0);
 
   // Podio del cambio de mes: los primeros 5 días del mes mostramos, de forma
-  // discreta, el top 3 por mejor racha del MES ANTERIOR. Solo cuentan miembros
+  // discreta, el top 3 por MARCAS SUPERADAS el MES ANTERIOR. Solo cuentan miembros
   // cuyas métricas se sincronizaron ya este mes (monthKey al día).
   const now = new Date();
   const showPodium = now.getDate() <= 5;
@@ -150,9 +151,9 @@ export default function SocialScreen() {
   /**
    * Los tres del mes pasado.
    *
-   * Solo entran quienes ENTRENARON (racha > 0) y tienen la ficha al día: la
-   * racha del mes anterior se recalcula al abrir la app, así que la de alguien
-   * que lleva meses sin entrar sería de otro mes distinto.
+   * Solo entran quienes SUPERARON alguna marca y tienen la ficha al día: lo
+   * del mes anterior se recalcula al abrir la app, así que lo de alguien que
+   * lleva meses sin entrar sería de otro mes distinto.
    *
    * Los desempates importan cuando dos hacen los mismos días: primero quien
    * más entrenó, y si sigue el empate, por nombre, que al menos es estable y
@@ -160,10 +161,10 @@ export default function SocialScreen() {
    */
   const podium = showPodium
     ? members
-        .filter((m) => m.monthKey === thisMonthKey && (m.lastMonthStreak ?? 0) > 0)
+        .filter((m) => m.monthKey === thisMonthKey && (m.lastMonthPrs ?? 0) > 0)
         .sort(
           (a, b) =>
-            (b.lastMonthStreak ?? 0) - (a.lastMonthStreak ?? 0) ||
+            (b.lastMonthPrs ?? 0) - (a.lastMonthPrs ?? 0) ||
             (b.totalWorkouts ?? 0) - (a.totalWorkouts ?? 0) ||
             (a.name ?? '').localeCompare(b.name ?? '')
         )
@@ -178,11 +179,11 @@ export default function SocialScreen() {
   return (
     <ScreenContainer refreshing={refreshing} onRefresh={onRefresh}>
       <Text style={styles.title}>{tituloDeComunidad(nombreDelCoach)}</Text>
-      <Text style={styles.subtitle}>El ranking de constancia de tu coaching</Text>
+      <Text style={styles.subtitle}>Quién más se supera a sí mismo en tu coaching</Text>
 
-      {/* Tres cifras en una fila, con rótulos de una palabra. "Mejor racha
-          (mes)" se partía en tres líneas y hacía la tarjeta el doble de alta
-          para decir lo mismo. */}
+      {/* Tres cifras en una fila, con rótulos de una palabra: se partían en
+          tres líneas y hacían la tarjeta el doble de alta para decir lo
+          mismo. */}
       <View style={styles.summaryRow}>
         <Card style={styles.summaryCard}>
           <Ionicons name="people" size={16} color={colors.primary} />
@@ -192,10 +193,10 @@ export default function SocialScreen() {
           </Text>
         </Card>
         <Card style={styles.summaryCard}>
-          <Ionicons name="flame" size={16} color={colors.primary} />
-          <Text style={styles.summaryValue}>{topStreak}</Text>
+          <Ionicons name="trending-up" size={16} color={colors.primary} />
+          <Text style={styles.summaryValue}>{topMarcas}</Text>
           <Text style={styles.summaryLabel} numberOfLines={1}>
-            Racha
+            Marcas
           </Text>
         </Card>
         <Card style={styles.summaryCard}>
@@ -211,7 +212,7 @@ export default function SocialScreen() {
         <View style={styles.podium}>
           <View style={styles.podiumHeader}>
             <Ionicons name="trophy" size={15} color={colors.primary} />
-            <Text style={styles.podiumTitle}>Mejor racha de {lastMonthName}</Text>
+            <Text style={styles.podiumTitle}>Quién más se superó en {lastMonthName}</Text>
           </View>
           {/* Las tres plazas, siempre. Cuando falta alguien se dice por qué en
               vez de enseñar un podio de dos y dejar la duda. */}
@@ -227,9 +228,7 @@ export default function SocialScreen() {
                   {m ? m.name.split(' ')[0] : 'Plaza libre'}
                 </Text>
                 <Text style={[styles.podiumDias, !m && styles.podiumVacio]}>
-                  {m
-                    ? `${m.lastMonthStreak} ${m.lastMonthStreak === 1 ? 'día' : 'días'}`
-                    : '—'}
+                  {m ? marcasCortas(m.lastMonthPrs ?? 0) : '—'}
                 </Text>
               </View>
             );
@@ -273,7 +272,10 @@ export default function SocialScreen() {
         );
       })()}
 
-      <Text style={styles.sectionTitle}>Ranking de racha · este mes</Text>
+      {/* Se clasifica por MARCAS SUPERADAS, no por días seguidos: lo que se
+          premia es mejorar, no aparecer. Y una gripe ya no te deja fuera del
+          mes a mitad de mes. */}
+      <Text style={styles.sectionTitle}>Quién más se supera · este mes</Text>
 
       {/* Los tres primeros, por tamaño. Una clasificación se lee entera en el
           primer segundo o no se lee, y en una lista de tarjetas iguales el
@@ -284,8 +286,8 @@ export default function SocialScreen() {
           uid: m.uid,
           name: m.name,
           photoURL: m.photoURL,
-          valor: m.streakThisMonth ?? m.currentStreak ?? 0,
-          unidad: 'días',
+          valor: m.prsThisMonth ?? 0,
+          unidad: 'marcas',
         }))}
       />
 
@@ -327,18 +329,16 @@ export default function SocialScreen() {
                   ) : null}
                 </View>
                 <Text style={styles.meta}>
-                  {member.workoutsThisMonth ?? 0} entrenos este mes · {member.sessionsThisWeek} esta
-                  semana
+                  {textoDeMarcas(member.prsThisMonth ?? 0)} · {member.workoutsThisMonth ?? 0}{' '}
+                  entrenos este mes
                 </Text>
               </View>
               <View style={styles.streakWrap}>
                 <View style={styles.streakBadge}>
-                  <Ionicons name="flame" size={14} color={colors.primary} />
-                  <Text style={styles.streakValue}>
-                    {member.streakThisMonth ?? member.currentStreak}
-                  </Text>
+                  <Ionicons name="trending-up" size={14} color={colors.primary} />
+                  <Text style={styles.streakValue}>{member.prsThisMonth ?? 0}</Text>
                 </View>
-                <Text style={styles.streakLabel}>días</Text>
+                <Text style={styles.streakLabel}>marcas</Text>
               </View>
             </Card>
           );

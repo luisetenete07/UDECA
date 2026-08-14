@@ -388,10 +388,10 @@ const semanaActual = (() => {
   d.setDate(d.getDate() - dia + 1);
   return String(d.getTime());
 })();
-for (const [uid, name, email, semana, racha, mesPasado, total] of [
-  [cli, 'Marcos Ruiz', 'alumno@demo.test', 4, 12, 18, 96],
-  [cli2, 'Ana Gil', 'alumno2@demo.test', 3, 5, 21, 61],
-  [cli3, 'Iker Sanz', 'alumno3@demo.test', 2, 3, 9, 24],
+for (const [uid, name, email, semana, racha, mesPasado, total, marcas, marcasPasado] of [
+  [cli, 'Marcos Ruiz', 'alumno@demo.test', 4, 12, 18, 96, 28, 19],
+  [cli2, 'Ana Gil', 'alumno2@demo.test', 3, 5, 21, 61, 14, 22],
+  [cli3, 'Iker Sanz', 'alumno3@demo.test', 2, 3, 9, 24, 6, 8],
 ]) {
   await como(email);
   await setDoc(doc(db, 'socialStats', uid), {
@@ -399,6 +399,8 @@ for (const [uid, name, email, semana, racha, mesPasado, total] of [
     sessionsThisWeek: semana, currentStreak: racha, streakThisMonth: racha,
     workoutsThisMonth: semana * 4, totalWorkouts: total,
     lastMonthStreak: mesPasado,
+    // Lo que ordena la clasificación hoy: marcas superadas (ver lib/marcas.ts).
+    prsThisMonth: marcas, lastMonthPrs: marcasPasado,
     monthKey: mesActual, weekKey: semanaActual, updatedAt: now,
   });
 }

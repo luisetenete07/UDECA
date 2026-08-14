@@ -73,10 +73,14 @@ export interface EstadoGoogle {
   /**
    * Abre Google y deja la sesión de Firebase iniciada.
    *
+   * Con `pista` (un correo) se le dice a Google con qué cuenta va la cosa y se
+   * salta el "elige una cuenta": es lo que hace que tocar tu cara en la
+   * pantalla de entrar sea UN toque y no tres. Sin ella, Google pregunta.
+   *
    * Devuelve la credencial, o `null` si la persona cerró la ventana sin
    * elegir cuenta —que no es un error y no debe enseñar ninguno—.
    */
-  entrar: () => Promise<UserCredential | null>;
+  entrar: (pista?: string) => Promise<UserCredential | null>;
 }
 
 /**
@@ -85,14 +89,17 @@ export interface EstadoGoogle {
 function useGoogleWeb(): EstadoGoogle {
   const [entrando, setEntrando] = useState(false);
 
-  const entrar = async (): Promise<UserCredential | null> => {
+  const entrar = async (pista?: string): Promise<UserCredential | null> => {
     setEntrando(true);
     try {
       const provider = new GoogleAuthProvider();
-      // Que pregunte siempre qué cuenta: mucha gente tiene la personal y la del
-      // trabajo, y entrar con la equivocada sin haber podido elegir crea una
-      // cuenta duplicada que luego hay que deshacer a mano.
-      provider.setCustomParameters({ prompt: 'select_account' });
+      // Con pista, directo a esa cuenta: es alguien que ya ha entrado aquí y
+      // ha tocado su propia cara. Sin pista, que pregunte: mucha gente tiene
+      // la personal y la del trabajo, y entrar con la equivocada sin poder
+      // elegir crea una cuenta duplicada que luego hay que deshacer a mano.
+      provider.setCustomParameters(
+        pista ? { login_hint: pista } : { prompt: 'select_account' }
+      );
       return await signInWithPopup(auth, provider);
     } catch (e) {
       const codigo = (e as { code?: string })?.code ?? '';
@@ -116,10 +123,22 @@ function useGoogleWeb(): EstadoGoogle {
  */
 function useGoogleNativo(): EstadoGoogle {
   const [entrando, setEntrando] = useState(false);
+  /**
+   * La cuenta con la que se quiere entrar, si se ha tocado una guardada.
+   *
+   * Va en el estado y no en una variable suelta porque la PETICIÓN de Google
+   * se construye a partir de esta configuración: al cambiar la pista, el hook
+   * la reconstruye con `login_hint` dentro. Por eso `entrar` no abre Google en
+   * el acto cuando hay pista nueva: espera a tener la petición buena (ver
+   * abajo). Abrirla antes usaría la anterior, sin pista, y el atajo no
+   * serviría de nada.
+   */
+  const [pista, setPista] = useState<string | undefined>(undefined);
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: IDS_DE_GOOGLE.web,
     iosClientId: IDS_DE_GOOGLE.ios,
     androidClientId: IDS_DE_GOOGLE.android,
+    extraParams: pista ? { login_hint: pista } : undefined,
   });
 
   // La respuesta de Google llega por aquí, y no como valor de retorno de
@@ -148,7 +167,25 @@ function useGoogleNativo(): EstadoGoogle {
     );
   }, [response, pendiente]);
 
-  const entrar = () =>
+  /**
+   * Abrir Google, cuando la petición ya lleva la pista puesta.
+   *
+   * `porAbrir` guarda el "quiero abrir" hasta que la petición se reconstruye
+   * con el `login_hint` nuevo. Sin esta espera, el primer toque abriría Google
+   * con la petición vieja —sin pista— y el atajo no ahorraría nada justo la
+   * primera vez, que es cuando importa.
+   */
+  const [porAbrir, setPorAbrir] = useState<((e?: unknown) => void) | null>(null);
+  useEffect(() => {
+    if (!porAbrir || !request) return;
+    setPorAbrir(null);
+    promptAsync().catch(porAbrir);
+    // `promptAsync` cambia de identidad en cada render; añadirlo aquí abriría
+    // Google dos veces.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [porAbrir, request]);
+
+  const entrar = (nuevaPista?: string) =>
     new Promise<UserCredential | null>((ok, mal) => {
       setEntrando(true);
       const cerrar = (v: UserCredential | null) => {
@@ -160,7 +197,8 @@ function useGoogleNativo(): EstadoGoogle {
         mal(e);
       };
       setPendiente({ ok: cerrar, mal: fallar });
-      promptAsync().catch(fallar);
+      setPista(nuevaPista);
+      setPorAbrir(() => fallar);
     });
 
   return { disponible: !!request, entrando, entrar };

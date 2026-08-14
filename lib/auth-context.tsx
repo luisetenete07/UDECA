@@ -16,7 +16,7 @@ import { auth, db, isFirebaseConfigured } from './firebase';
 import { getInviteCodeInfo, registerTrainerInviteCode } from './firestore/users';
 import { sendJoinRequest } from './firestore/joinRequests';
 import { registerForPushNotificationsAsync } from './notifications';
-import { forgetAccount, rememberAccount } from './rememberedAccounts';
+import { forgetAccount, proveedorDe, rememberAccount } from './rememberedAccounts';
 import { clearCache } from './screenCache';
 import { trialUntil } from './subscription';
 import { aplicarIdiomaDelPerfil } from './idioma';
@@ -127,7 +127,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Recuerda la cuenta en cuanto hay sesión (aunque el perfil tarde o
         // falle en cargar): así el selector de acceso nunca la pierde.
         if (user.email) {
-          rememberAccount({ email: user.email, name: user.displayName || undefined });
+          // Con QUÉ entró, para que la pantalla de acceso sepa a quién llamar
+          // al tocar su cara: Google o Apple.
+          rememberAccount({
+            email: user.email,
+            name: user.displayName || undefined,
+            provider: proveedorDe(user.providerData[0]?.providerId),
+          });
         }
         await loadProfile(user.uid);
         // No bloquea el arranque: si falla (sin proyecto EAS, web, etc.) se ignora.
