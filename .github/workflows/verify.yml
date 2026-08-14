@@ -26,6 +26,9 @@ env:
   EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: udeca-luistenafit.firebasestorage.app
   EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "1042172841881"
   EXPO_PUBLIC_FIREBASE_APP_ID: 1:1042172841881:web:91985251ac5b7db1884d08
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 1042172841881-3ebv4ukkfjnq6h07grfgfbkf04tav68b.apps.googleusercontent.com
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: 1042172841881-2f60tbda3lie7sukh1m2sbhhqhlatcv1.apps.googleusercontent.com
+  EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: 1042172841881-pr0olij1et4olpao5mfto9crv7sq8mcd.apps.googleusercontent.com
 
 jobs:
   verify:
@@ -50,6 +53,30 @@ jobs:
       # lo que provocó el rechazo de Apple de julio; ahora lo caza CI.
       - name: Módulos nativos declarados
         run: node scripts/check-native-deps.mjs
+
+      # Las comprobaciones de lib/: cuarenta y siete guiones que verifican las
+      # reglas del producto (cobros, rachas, marcas, traducciones, permisos...)
+      # sin abrir un navegador. Se ejecutaban a mano, que es como no
+      # ejecutarlas: aquí ya no se pueden olvidar.
+      #
+      # Fuera check-rules: necesita el emulador de Firebase levantado.
+      - name: Comprobaciones del producto
+        run: |
+          fallos=0
+          for f in scripts/check-*.mjs; do
+            case "$f" in
+              scripts/check-rules.mjs) continue ;;
+              scripts/check-permisos.mjs) orden="node $f" ;;
+              *) orden="node --experimental-strip-types --import ./scripts/_ts-hook.mjs $f" ;;
+            esac
+            if ! $orden > /tmp/salida.txt 2>&1; then
+              echo "::error::$f"
+              tail -20 /tmp/salida.txt
+              fallos=$((fallos + 1))
+            fi
+          done
+          echo "Guiones con fallos: $fallos"
+          test "$fallos" -eq 0
 
       - name: Empaquetado web
         run: npx expo export --platform web --clear

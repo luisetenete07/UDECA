@@ -15,7 +15,10 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSMotionUsageDescription": "Para contar los pasos que das cada día y sumarlos a tu plan de nutrición, sin que tengas que apuntarlos a mano."
+      }
     },
     "android": {
       "package": "entrenadores.app",
@@ -38,7 +41,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Permite a la app acceder a tus fotos para subir imágenes de perfil y ejercicios."
+          "photosPermission": "Para elegir tu foto de perfil, subir tus fotos de progreso y, si eres entrenador, las fotos de tus libretas de comida.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       [
@@ -51,7 +56,8 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Permite a UDECA escribir tus cobros, tus bloques y tus tareas en tu calendario."
+          "calendarPermission": "Para escribir en tu calendario tus cobros, tus bloques de entrenamiento y tus tareas. Solo escribe lo que tú le pidas.",
+          "remindersPermission": false
         }
       ]
     ],
@@ -62,6 +68,10 @@
       "eas": {
         "projectId": "c649314b-a914-41df-9930-563ad5a17953"
       }
+    },
+    "locales": {
+      "es": "./locales/es.json",
+      "en": "./locales/en.json"
     }
   }
 }

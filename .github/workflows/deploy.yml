@@ -40,6 +40,13 @@ env:
   EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: udeca-luistenafit.firebasestorage.app
   EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "1042172841881"
   EXPO_PUBLIC_FIREBASE_APP_ID: 1:1042172841881:web:91985251ac5b7db1884d08
+  # Los identificadores de cliente de Google. Sin ellos la web compila igual y
+  # se despliega igual, pero el botón de "Continuar con Google" no funciona: es
+  # decir, nadie puede entrar. Son públicos por diseño (viajan dentro del
+  # JavaScript de la app); lo que protege la cuenta es el dominio autorizado.
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 1042172841881-3ebv4ukkfjnq6h07grfgfbkf04tav68b.apps.googleusercontent.com
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: 1042172841881-2f60tbda3lie7sukh1m2sbhhqhlatcv1.apps.googleusercontent.com
+  EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: 1042172841881-pr0olij1et4olpao5mfto9crv7sq8mcd.apps.googleusercontent.com
 
 jobs:
   build-and-deploy:
