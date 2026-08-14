@@ -1,6 +1,7 @@
 import { inicioDeLaSemana, inicioDelDia, mesCorto } from '../lib/fechas';
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import type { TrainingCycle, WorkoutLog } from '../lib/types';
 import { isLogInCycle } from '../lib/cycleStats';
 import { fonts, colors, radius, spacing, typography } from '../lib/theme';

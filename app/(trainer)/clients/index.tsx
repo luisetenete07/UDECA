@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { frase } from '../../../lib/idioma';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../components/Avatar';
 import { FadeIn } from '../../../components/FadeIn';
@@ -59,8 +61,8 @@ function activityInfo(last?: number): { label: string; color: string } {
   const days = Math.round((inicioDelDia(Date.now()) - inicioDelDia(last)) / DAY_MS);
   if (days <= 0) return { label: 'Hoy', color: colors.success };
   if (days === 1) return { label: 'Ayer', color: colors.success };
-  if (days < 7) return { label: `Hace ${days} días`, color: '#C9902B' };
-  return { label: `${days} días parado`, color: colors.danger };
+  if (days < 7) return { label: frase`Hace ${days} días`, color: '#C9902B' };
+  return { label: frase`${days} días parado`, color: colors.danger };
 }
 
 /**
@@ -177,7 +179,7 @@ export default function ClientsScreen() {
         },
         // Si la escucha se cae (permisos, red), hay que enterarse: en silencio
         // parecería que "no llegan alumnos nuevos" sin motivo aparente.
-        (e) => showToast(`Lista en vivo no disponible: ${e.message}`)
+        (e) => showToast(frase`Lista en vivo no disponible: ${e.message}`)
       );
     }, [profile, cacheKey])
   );
@@ -388,7 +390,7 @@ export default function ClientsScreen() {
                 onPress={() => setRapidas(client)}
                 hitSlop={10}
                 style={styles.masBtn}
-                accessibilityLabel={`Acciones de ${client.name}`}
+                accessibilityLabel={frase`Acciones de ${client.name}`}
               >
                 <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
               </Pressable>

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
+import { t } from '../lib/idioma';
 import { colors, fonts, radius, shadows, spacing } from '../lib/theme';
 
 type Listener = (message: string) => void;
@@ -11,8 +13,18 @@ let listener: Listener | null = null;
  * Llama a showToast(mensaje) desde cualquier pantalla; el ToastHost montado
  * en el layout raíz lo muestra 2,2 s y desaparece solo.
  */
+/**
+ * Un aviso, ya en el idioma de quien lo lee.
+ *
+ * Se traduce AQUÍ y no en cada llamada porque hay más de cien `showToast` por
+ * la app: envolverlos uno a uno significa que el próximo se escriba sin
+ * envolver y salga en español para siempre sin que nadie lo note.
+ *
+ * Lo que no esté en el diccionario sale tal cual, así que un aviso que lleve
+ * dentro el nombre de alguien nunca se estropea.
+ */
 export function showToast(message: string) {
-  listener?.(message);
+  listener?.(t(message));
 }
 
 export function ToastHost() {

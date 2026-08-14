@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { frase } from '../../../lib/idioma';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { quitarMedidaDeGrupo, updateUserProfile } from '../../../lib/firestore/users';
@@ -190,7 +192,7 @@ export default function ExerciseEditorScreen() {
   const [aplicandoGrupo, setAplicandoGrupo] = useState(false);
   const [cuantosEnGrupo, setCuantosEnGrupo] = useState(0);
   const cuantosEnGrupoTexto =
-    cuantosEnGrupo === 1 ? 'el ejercicio' : `los ${cuantosEnGrupo} ejercicios`;
+    cuantosEnGrupo === 1 ? 'el ejercicio' : frase`los ${cuantosEnGrupo} ejercicios`;
 
   // Cuántos ejercicios hay ya en este grupo, para poder decir a cuántos afecta
   // un cambio antes de hacerlo.
@@ -243,7 +245,7 @@ export default function ExerciseEditorScreen() {
       showToast(
         pendientes.length > 0
           ? `${MEASURE_LABEL[nueva]} en todo «${subgroup}» (${pendientes.length} actualizados)`
-          : `«${subgroup}» se mide en ${MEASURE_LABEL[nueva].toLowerCase()}`
+          : frase`«${subgroup}» se mide en ${MEASURE_LABEL[nueva].toLowerCase()}`
       );
     } catch {
       showToast('No se pudo aplicar la medida al grupo');
@@ -259,7 +261,7 @@ export default function ExerciseEditorScreen() {
     try {
       await quitarMedidaDeGrupo(profile.uid, claveGrupo(muscleGroup, subgroup));
       await refreshProfile();
-      showToast(`«${subgroup}» ya no impone medida`);
+      showToast(frase`«${subgroup}» ya no impone medida`);
     } catch {
       showToast('No se pudo soltar la medida del grupo');
     } finally {
@@ -421,7 +423,7 @@ export default function ExerciseEditorScreen() {
         <TextInput
           value={newSub}
           onChangeText={setNewSub}
-          placeholder={`Nuevo subgrupo de ${muscleGroup}…`}
+          placeholder={frase`Nuevo subgrupo de ${muscleGroup}…`}
           placeholderTextColor={colors.textFaint}
           style={styles.addCatInput}
           onSubmitEditing={addSubgroup}
@@ -435,7 +437,7 @@ export default function ExerciseEditorScreen() {
 
       <View style={styles.catHeader}>
         <Text style={[styles.label, { flexShrink: 1 }]}>
-          {subgroup ? `Se mide en · grupo «${subgroup}»` : 'Se mide en'}
+          {subgroup ? frase`Se mide en · grupo «${subgroup}»` : 'Se mide en'}
         </Text>
         {medidaGrupo ? (
           <Pressable onPress={soltarMedidaDelGrupo} hitSlop={6}>
@@ -449,8 +451,8 @@ export default function ExerciseEditorScreen() {
       <Text style={styles.measureHint}>
         {subgroup
           ? medidaGrupo
-            ? `Lo que elijas aquí vale para ${cuantosEnGrupoTexto} de este grupo y para los que añadas después. No hay que ponerlo uno a uno.`
-            : `Elige una y se aplicará a ${cuantosEnGrupoTexto} de «${subgroup}» y a todos los que metas ahí a partir de ahora.`
+            ? frase`Lo que elijas aquí vale para ${cuantosEnGrupoTexto} de este grupo y para los que añadas después. No hay que ponerlo uno a uno.`
+            : frase`Elige una y se aplicará a ${cuantosEnGrupoTexto} de «${subgroup}» y a todos los que metas ahí a partir de ahora.`
           : 'Solo para este ejercicio. Si lo metes en un grupo, la medida la decide el grupo.'}
       </Text>
       {/* Lista vertical y no una fila de botones: con cinco opciones, cada
@@ -524,7 +526,7 @@ export default function ExerciseEditorScreen() {
         visible={!!renameSub}
         onClose={() => setRenameSub(null)}
         titulo="Renombrar subgrupo"
-        texto={`Se actualizarán también los ejercicios que ya están en «${renameSub ?? ''}».`}
+        texto={frase`Se actualizarán también los ejercicios que ya están en «${renameSub ?? ''}».`}
       >
         <TextInput
           value={renameText}

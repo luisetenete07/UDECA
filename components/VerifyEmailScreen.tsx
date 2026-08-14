@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from './Texto';
 import { Button } from './Button';
 import { GateScreen, GateText } from './GateScreen';
 import { showToast } from './Toast';

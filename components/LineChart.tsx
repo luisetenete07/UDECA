@@ -1,6 +1,7 @@
 import React from 'react';
 import { diaMes } from '../lib/fechas';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { colors, fonts, spacing, typography } from '../lib/theme';
 

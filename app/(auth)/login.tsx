@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { sendPasswordResetEmail, type AuthCredential } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
@@ -13,7 +14,7 @@ import { Card } from '../../components/Card';
 import { Logo } from '../../components/Logo';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { emailFieldProps, TextField } from '../../components/TextField';
-import { useT } from '../../lib/idioma';
+import { t, useT, frase  } from '../../lib/idioma';
 import { useAppleSignIn } from '../../lib/appleAuth';
 import { useGoogleSignIn } from '../../lib/googleAuth';
 import {
@@ -106,7 +107,7 @@ export default function LoginScreen() {
         setRescate({ email: correoDelError(e), credencial: credencialDelError(e) });
         return;
       }
-      setError(mensajeDeEntrada(e) || `No se ha podido entrar con ${cual}. Inténtalo otra vez.`);
+      setError(mensajeDeEntrada(e) || frase`No se ha podido entrar con ${cual}. Inténtalo otra vez.`);
     }
   };
 

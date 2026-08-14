@@ -1,6 +1,7 @@
 import { diaMes, inicioDeLaSemana } from '../lib/fechas';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
 import { EmptyState } from './EmptyState';

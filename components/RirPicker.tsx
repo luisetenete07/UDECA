@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 

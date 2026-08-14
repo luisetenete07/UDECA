@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { PressableScale } from './PressableScale';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';

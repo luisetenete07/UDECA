@@ -2,16 +2,10 @@ import { unido } from '../../lib/texto';
 import { inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../../components/Texto';
+import { t, frase } from '../../lib/idioma';
+import { esLaPalabra } from '../../lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -250,12 +244,12 @@ export default function ProgressScreen() {
     const parts = [
       `Sesión completada en UDECA: ${log.dayName ?? log.routineName ?? ''}`.trim(),
       log.durationMin ? `${log.durationMin} min` : null,
-      `${t.sets} series`,
+      frase`${t.sets} series`,
       t.reps > 0 ? `${t.reps} reps` : null,
       t.seconds > 0 ? `${t.seconds}s isométrico` : null,
-      t.volumeKg > 0 ? `${t.volumeKg} kg de volumen` : null,
+      t.volumeKg > 0 ? frase`${t.volumeKg} kg de volumen` : null,
     ].filter(Boolean);
-    const message = `${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    const message = frase`${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
     try {
       await Share.share({ message });
     } catch {
@@ -275,7 +269,7 @@ export default function ProgressScreen() {
   };
 
   const doDeleteWorkout = async () => {
-    if (!deleteId || confirmWord.trim().toUpperCase() !== 'CONFIRMAR') return;
+    if (!deleteId || !esLaPalabra(confirmWord, 'CONFIRMAR')) return;
     const id = deleteId;
     setDeleting(true);
     try {
@@ -571,7 +565,7 @@ export default function ProgressScreen() {
                   const open = expandedSessions[s.id];
                   const d = new Date(s.date);
                   const meta = unido(
-                    `${t.sets} series`,
+                    frase`${t.sets} series`,
                     t.reps > 0 && `${t.reps} reps`,
                     t.seconds > 0 && `${t.seconds}s`,
                     t.volumeKg > 0 && `${t.volumeKg.toLocaleString('es-ES')} kg`
@@ -723,7 +717,7 @@ export default function ProgressScreen() {
                       }))}
                       unit="series"
                       lowerIsBetter={false}
-                      emptyMessage={`Aún no hay series de ${g} registradas.`}
+                      emptyMessage={frase`Aún no hay series de ${g} registradas.`}
                     />
                   </View>
                 ))
@@ -869,12 +863,12 @@ export default function ProgressScreen() {
         accion="Borrar entrenamiento"
         onAccion={doDeleteWorkout}
         cargando={deleting}
-        desactivado={confirmWord.trim().toUpperCase() !== 'CONFIRMAR'}
+        desactivado={!esLaPalabra(confirmWord, 'CONFIRMAR')}
       >
         <TextInput
           value={confirmWord}
           onChangeText={setConfirmWord}
-          placeholder="CONFIRMAR"
+          placeholder={t('CONFIRMAR')}
           placeholderTextColor={colors.textFaint}
           autoCapitalize="characters"
           autoCorrect={false}

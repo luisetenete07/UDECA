@@ -1,8 +1,10 @@
 import { resumenDeCobros } from '../../lib/cobros';
+import { frase } from '../../lib/idioma';
 import { diaMes, fechaNumerica, inicioDelDia } from '../../lib/fechas';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
@@ -159,7 +161,7 @@ export default function TrainerDashboard() {
     useCallback(() => {
       if (!profile) return;
       return subscribeClientsForTrainer(profile.uid, setClients, (e) =>
-        showToast(`Alumnos en vivo no disponible: ${e.message}`)
+        showToast(frase`Alumnos en vivo no disponible: ${e.message}`)
       );
     }, [profile])
   );
@@ -204,7 +206,7 @@ export default function TrainerDashboard() {
     // una respuesta que va a ser que no.
     if (trainerAtFreeLimit(profile)) {
       showToast(
-        `Tu alta incluye ${FREE_CLIENT_LIMIT} alumnos. Activa la suscripción anual para aceptar a más.`
+        frase`Tu alta incluye ${FREE_CLIENT_LIMIT} alumnos. Activa la suscripción anual para aceptar a más.`
       );
       return;
     }
@@ -233,7 +235,7 @@ export default function TrainerDashboard() {
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       if (profile) setClients(await getClientsForTrainer(profile.uid));
       notifyUser(req.clientId, 'Solicitud aceptada', 'Tu entrenador te ha aceptado en su grupo. ¡A entrenar!').catch(() => {});
-      showToast(`${req.name.split(' ')[0]} ya está en tu grupo`);
+      showToast(frase`${req.name.split(' ')[0]} ya está en tu grupo`);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo aprobar');
     } finally {
@@ -269,7 +271,7 @@ export default function TrainerDashboard() {
           notifyUser(
             c.uid,
             'Recordatorio de pago',
-            `Hola ${c.name.split(' ')[0]}, tienes un pago pendiente de tu suscripción. ¡Gracias!`
+            frase`Hola ${c.name.split(' ')[0]}, tienes un pago pendiente de tu suscripción. ¡Gracias!`
           )
         )
       );
@@ -370,8 +372,8 @@ export default function TrainerDashboard() {
       const pendientes = periodsOwed(nextPaymentDate);
       showToast(
         pendientes > 0
-          ? `Cobro confirmado · a ${c.name.split(' ')[0]} le faltan ${pendientes} mensualidad(es)`
-          : `Cobro de ${c.name.split(' ')[0]} confirmado`
+          ? frase`Cobro confirmado · a ${c.name.split(' ')[0]} le faltan ${pendientes} mensualidad(es)`
+          : frase`Cobro de ${c.name.split(' ')[0]} confirmado`
       );
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo confirmar');
@@ -635,14 +637,14 @@ export default function TrainerDashboard() {
               <Text style={styles.pulseBig}>
                 {wk.activeClients === clients.length
                   ? 'Han entrenado todos'
-                  : `${clients.length - wk.activeClients} sin entrenar`}
+                  : frase`${clients.length - wk.activeClients} sin entrenar`}
               </Text>
               <Text style={styles.subtleHint}>
                 {wk.thisWeek} entreno{wk.thisWeek === 1 ? '' : 's'} en total
                 {wk.lastWeek > 0
                   ? wk.thisWeek >= wk.lastWeek
-                    ? ` · ${wk.thisWeek - wk.lastWeek} más que la semana pasada`
-                    : ` · ${wk.lastWeek - wk.thisWeek} menos que la semana pasada`
+                    ? frase` · ${wk.thisWeek - wk.lastWeek} más que la semana pasada`
+                    : frase` · ${wk.lastWeek - wk.thisWeek} menos que la semana pasada`
                   : ''}
               </Text>
             </View>
@@ -873,7 +875,7 @@ export default function TrainerDashboard() {
       <Sheet
         visible={payListOpen}
         onClose={() => setPayListOpen(false)}
-        titulo={`Pagos pendientes (${cobros.aReclamar.length})`}
+        titulo={frase`Pagos pendientes (${cobros.aReclamar.length})`}
       >
             {cobros.aReclamar.length === 0 ? (
               <Text style={styles.mutedText}>No hay pagos pendientes.</Text>
@@ -1001,7 +1003,7 @@ export default function TrainerDashboard() {
       <Sheet
         visible={upcomingOpen}
         onClose={() => setUpcomingOpen(false)}
-        titulo={`Previsto 30 días (${cobros.previsto30} €)`}
+        titulo={frase`Previsto 30 días (${cobros.previsto30} €)`}
       >
             {cobros.renuevanEn30.length === 0 ? (
               <Text style={styles.mutedText}>No hay renovaciones previstas en 30 días.</Text>

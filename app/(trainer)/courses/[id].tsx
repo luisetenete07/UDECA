@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';

@@ -1,6 +1,7 @@
 import { inicioDeLaSemana, inicioDelDia, masDias } from '../lib/fechas';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 
 import { colors, fonts, spacing } from '../lib/theme';
 import { WEEKDAY_LABELS } from '../lib/types';

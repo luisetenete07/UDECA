@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
+import { frase } from '../../../lib/idioma';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
@@ -102,7 +104,7 @@ export default function ClientCoursesScreen() {
                     <Text style={styles.courseMeta}>
                       {estado.terminado
                         ? 'Completado'
-                        : `${estado.hechas} de ${estado.total} lecciones`}
+                        : frase`${estado.hechas} de ${estado.total} lecciones`}
                     </Text>
                     {/* Qué toca ahora. `estadoDeCurso` ya lo sabía y esta
                         pantalla no lo usaba: para retomar un curso había que

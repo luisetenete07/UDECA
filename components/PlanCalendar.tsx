@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from './ProgressBar';
-import { bandasDelPlan, planCalendar, planSummary, type CalendarWeek } from '../lib/cyclePlan';
+import { bandasDelPlan, planCalendar, planSummary, type CalendarWeek, nombreDeCiclo } from '../lib/cyclePlan';
 import { diaMes } from '../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { TrainingCycle, WorkoutLog } from '../lib/types';
@@ -48,11 +50,11 @@ export function PlanCalendar({
       <View style={styles.head}>
         <View style={{ flex: 1 }}>
           <Text style={styles.weekBig}>
-            {resumen.week > 0 ? `Semana ${resumen.week}` : 'Sin empezar'}
+            {resumen.week > 0 ? frase`Semana ${resumen.week}` : 'Sin empezar'}
             {resumen.totalWeeks ? <Text style={styles.weekOf}> de {resumen.totalWeeks}</Text> : null}
           </Text>
           <Text style={styles.headHint} numberOfLines={1}>
-            {resumen.block ? resumen.block.name : root.name}
+            {nombreDeCiclo(resumen.block ? resumen.block.name : root.name)}
             {resumen.isDeload ? ' · semana de descarga' : ''}
           </Text>
         </View>
@@ -174,7 +176,7 @@ export function PlanCalendar({
             {nuevoBloque && w.block ? (
               <View style={styles.blockHead}>
                 <Text style={styles.blockName} numberOfLines={1}>
-                  {w.block.name}
+                  {nombreDeCiclo(w.block.name)}
                 </Text>
                 <Text style={styles.blockWeeks}>
                   {w.blockWeeks} sem{w.blockWeeks === 1 ? '' : 's'}

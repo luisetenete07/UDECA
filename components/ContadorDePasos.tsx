@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressRing } from './ProgressRing';
 import { TextField } from './TextField';
@@ -152,7 +154,7 @@ export function ContadorDePasos({
           thickness={7}
           progress={p.ratio}
           value={conMiles(p.pasos)}
-          label={`de ${conMiles(p.objetivo)}`}
+          label={frase`de ${conMiles(p.objetivo)}`}
         />
         <View style={{ flex: 1 }}>
           <Text style={styles.texto}>{textoDePasos(p)}</Text>

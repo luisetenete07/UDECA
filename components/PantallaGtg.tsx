@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { Card } from './Card';
@@ -60,7 +62,7 @@ export function PantallaGtg({
             thickness={7}
             progress={p.ratio}
             value={`${p.hechas}`}
-            label={`de ${p.objetivo}`}
+            label={frase`de ${p.objetivo}`}
           />
           <View style={{ flex: 1 }}>
             <Text style={styles.titulo}>Series de hoy</Text>

@@ -17,6 +17,13 @@ import {
   TOPE_AVISOS,
   ULTIMA_HORA,
 } from '../lib/olvido.ts';
+import { setIdioma } from '../lib/idioma.ts';
+
+// Fuera de la app el idioma sale del sistema, y el de este entorno es inglés:
+// sin fijarlo estas comprobaciones leerían el texto en inglés y el resultado
+// dependería de dónde se ejecuten.
+setIdioma('es');
+
 
 const DIA = 24 * 60 * 60 * 1000;
 let fallos = 0;

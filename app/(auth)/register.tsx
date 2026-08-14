@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { frase } from '../../lib/idioma';
 import { Link } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BotonApple } from '../../components/BotonApple';
@@ -40,12 +42,12 @@ const TIPOS: { titulo: string; icono: keyof typeof Ionicons.glyphMap; texto: str
   {
     titulo: 'Atleta',
     icono: 'barbell-outline',
-    texto: `Entrenas por tu cuenta. Empiezas con ${TRIAL_DAYS} días con todo abierto.`,
+    texto: frase`Entrenas por tu cuenta. Empiezas con ${TRIAL_DAYS} días con todo abierto.`,
   },
   {
     titulo: 'Entrenador',
     icono: 'people-outline',
-    texto: `Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos.`,
+    texto: frase`Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos.`,
   },
 ];
 
@@ -64,7 +66,7 @@ export default function RegisterScreen() {
     try {
       await proveedor.entrar();
     } catch (e) {
-      setError(mensajeDeEntrada(e) || `No se ha podido entrar con ${cual}. Inténtalo otra vez.`);
+      setError(mensajeDeEntrada(e) || frase`No se ha podido entrar con ${cual}. Inténtalo otra vez.`);
     }
   };
 

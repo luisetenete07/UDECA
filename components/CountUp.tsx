@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Text, type StyleProp, type TextStyle } from 'react-native';
+import { Animated, Easing, type StyleProp, type TextStyle } from 'react-native';
+import { Text } from './Texto';
 import { conMiles } from '../lib/texto';
 
 /**

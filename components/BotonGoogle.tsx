@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import Svg, { Path } from 'react-native-svg';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 

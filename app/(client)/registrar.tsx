@@ -1,6 +1,8 @@
+import { t, frase } from '../../lib/idioma';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { Button } from '../../components/Button';
@@ -179,7 +181,7 @@ export default function RegistrarScreen() {
         notifyUser(
           routine.trainerId,
           'Entreno registrado',
-          `${profile.name.split(' ')[0]} ha registrado ${diaPlan.name} del ${diaYMes(dia)}.`
+          frase`${profile.name.split(' ')[0]} ha registrado ${diaPlan.name} del ${diaYMes(dia)}.`
         ).catch(() => {});
       }
       showToast('Entreno registrado');
@@ -231,7 +233,7 @@ export default function RegistrarScreen() {
 
   return (
     <ScreenContainer>
-      <Stack.Screen options={{ title: 'Registrar entreno' }} />
+      <Stack.Screen options={{ title: t('Registrar entreno') }} />
       <Pressable onPress={() => router.back()} style={styles.volver} hitSlop={8}>
         <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
         <Text style={styles.volverTexto}>Volver</Text>
@@ -285,7 +287,7 @@ export default function RegistrarScreen() {
               <View style={styles.aviso}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.warning} />
                 <Text style={styles.avisoTexto}>
-                  Ese día ya tienes {yaHay.length === 1 ? 'un entreno' : `${yaHay.length} entrenos`}
+                  Ese día ya tienes {yaHay.length === 1 ? 'un entreno' : frase`${yaHay.length} entrenos`}
                   {yaHay[0].dayName ? ` (${yaHay.map((l) => l.dayName).join(', ')})` : ''}. Si lo
                   registras otra vez, saldrán los dos.
                 </Text>
@@ -386,7 +388,7 @@ export default function RegistrarScreen() {
           </Card>
 
           <Button
-            title={`Registrar el entreno del ${esMismoDia(dia, Date.now()) ? 'día de hoy' : diaYMes(dia)}`}
+            title={frase`Registrar el entreno del ${esMismoDia(dia, Date.now()) ? t('día de hoy') : diaYMes(dia)}`}
             onPress={guardar}
             loading={guardando}
             disabled={!hayAlgoQueGuardar(log)}

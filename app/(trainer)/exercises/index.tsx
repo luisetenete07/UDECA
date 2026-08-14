@@ -1,16 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { frase } from '../../../lib/idioma';
 import { useFocusEffect, useRouter } from 'expo-router';
-import {
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { FadeIn } from '../../../components/FadeIn';
@@ -268,7 +260,7 @@ export default function ExercisesScreen() {
           })
         )
       );
-      showToast(`${missingPack.length} ejercicios añadidos a tu biblioteca`);
+      showToast(frase`${missingPack.length} ejercicios añadidos a tu biblioteca`);
       await load();
     } finally {
       setImporting(false);
@@ -573,7 +565,7 @@ export default function ExercisesScreen() {
             ? [
                 {
                   icono: 'cube-outline' as const,
-                  texto: `Añadir el pack UDECA (${missingPack.length} ejercicios)`,
+                  texto: frase`Añadir el pack UDECA (${missingPack.length} ejercicios)`,
                   onPress: () => {
                     setMenuOpen(false);
                     handleImportPack();
@@ -910,7 +902,7 @@ export default function ExercisesScreen() {
         visible={!!renameSub}
         onClose={() => setRenameSub(null)}
         titulo="Renombrar subgrupo"
-        texto={`Se actualizarán también los ejercicios que ya están en «${renameSub?.from ?? ''}».`}
+        texto={frase`Se actualizarán también los ejercicios que ya están en «${renameSub?.from ?? ''}».`}
       >
         <TextInput
           value={renameText}
@@ -957,7 +949,7 @@ export default function ExercisesScreen() {
         texto={`Esto borrará tus ${exercises.length} ${
           exercises.length === 1 ? 'ejercicio' : 'ejercicios'
         } y los reemplazará por los ${pendingImport?.length ?? 0} de la plantilla importada. No se puede deshacer.`}
-        accion={`Sustituir por ${pendingImport?.length ?? 0} ejercicios`}
+        accion={frase`Sustituir por ${pendingImport?.length ?? 0} ejercicios`}
         onAccion={confirmReplace}
         cargando={replacing}
       />

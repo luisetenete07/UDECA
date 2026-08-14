@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
+import { t, frase  } from '../../../../lib/idioma';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Text } from '../../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../../components/Avatar';
 import { Button } from '../../../../components/Button';
@@ -266,7 +268,7 @@ export default function ClientDetailScreen() {
 
   const handleDeleteHabit = async (habitId: string) => {
     const h = habits.find((x) => x.id === habitId);
-    if (!(await confirmar(`¿Quitar "${h?.name ?? 'este hábito'}" de sus hábitos?`))) return;
+    if (!(await confirmar(frase`¿Quitar "${h?.name ?? t('este hábito')}" de sus hábitos?`))) return;
     setHabits((prev) => prev.filter((x) => x.id !== habitId));
     await deleteHabit(habitId);
   };
@@ -351,7 +353,7 @@ export default function ClientDetailScreen() {
     const limpio = pasosInput.trim();
     const meta = limpio ? objetivoDeTexto(limpio) : undefined;
     if (limpio && meta === undefined) {
-      setPasosError(`Escribe entre ${conMiles(OBJETIVO_MINIMO)} y ${conMiles(OBJETIVO_MAXIMO)} pasos.`);
+      setPasosError(frase`Escribe entre ${conMiles(OBJETIVO_MINIMO)} y ${conMiles(OBJETIVO_MAXIMO)} pasos.`);
       return;
     }
     setPasosError(null);
@@ -388,7 +390,7 @@ export default function ClientDetailScreen() {
     setClient({ ...client, nextPaymentDate });
     setExtendDaysInput('');
     await updateClientBilling(id, { nextPaymentDate });
-    showToast(`+${days} días · próximo pago ${fechaCorta(nextPaymentDate)}`);
+    showToast(frase`+${days} días · próximo pago ${fechaCorta(nextPaymentDate)}`);
   };
 
   /**
@@ -427,7 +429,7 @@ export default function ClientDetailScreen() {
       setUnicoFecha('');
       setUnicoImporte('');
       setUnicoAbierto(false);
-      showToast(`${v.cobro.importe} € · pagado hasta ${fechaCorta(v.cobro.hasta)}`);
+      showToast(frase`${v.cobro.importe} € · pagado hasta ${fechaCorta(v.cobro.hasta)}`);
     } catch {
       setUnicoError('No se pudo registrar el pago.');
     } finally {
@@ -449,7 +451,7 @@ export default function ClientDetailScreen() {
       await notifyUser(
         id,
         'Recordatorio de pago',
-        `Hola ${client.name.split(' ')[0]}, tienes un pago pendiente de tu suscripción. ¡Gracias!`
+        frase`Hola ${client.name.split(' ')[0]}, tienes un pago pendiente de tu suscripción. ¡Gracias!`
       );
       setPaymentReminderSent(true);
       showToast('Recordatorio de pago enviado');
@@ -947,7 +949,7 @@ export default function ClientDetailScreen() {
         id="alumno-pasos"
         icon="walk-outline"
         title="Pasos al día"
-        hint={client?.stepGoal ? conMiles(client.stepGoal) : `${conMiles(OBJETIVO_POR_DEFECTO)} (por defecto)`}
+        hint={client?.stepGoal ? conMiles(client.stepGoal) : frase`${conMiles(OBJETIVO_POR_DEFECTO)} (por defecto)`}
         defaultOpen={false}
       >
         <Text style={styles.mutedText}>

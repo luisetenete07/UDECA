@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { t } from './idioma';
 import { getUserProfile } from './firestore/users';
 import { DIAS_VISTA, diasPendientes, horasDeAviso, textoDeAviso, TOPE_AVISOS } from './olvido';
 import type { PausaPlan } from './pausa';
@@ -99,8 +100,8 @@ export async function scheduleRestEndNotification(seconds: number): Promise<void
     await Notifications.scheduleNotificationAsync({
       identifier: REST_END_ID,
       content: {
-        title: '¡Descanso terminado!',
-        body: 'A por la siguiente serie.',
+        title: t('¡Descanso terminado!'),
+        body: t('A por la siguiente serie.'),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -192,7 +193,7 @@ export async function programarAvisosOlvido(
         const { titulo, cuerpo } = textoDeAviso(puestos, nombre);
         await Notifications.scheduleNotificationAsync({
           identifier: `${OLVIDO_PREFIJO}${cuando}`,
-          content: { title: titulo, body: cuerpo },
+          content: { title: t(titulo), body: t(cuerpo) },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
             date: new Date(cuando),

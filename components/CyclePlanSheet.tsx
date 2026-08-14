@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { frase } from '../lib/idioma';
 import { diaMes, inicioDeLaSemana } from '../lib/fechas';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { DateField, startOfToday } from './DateField';
@@ -106,8 +108,8 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
         : await createCyclePlan(trainerId, clientId, draft);
       showToast(
         plantillaPropia
-          ? `Plantilla aplicada · ${templateWeeks(plantillaPropia)} semanas`
-          : `Plan creado · ${semanas} semanas`
+          ? frase`Plantilla aplicada · ${templateWeeks(plantillaPropia)} semanas`
+          : frase`Plan creado · ${semanas} semanas`
       );
       onSaved(macroId);
       onClose();
@@ -151,7 +153,7 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
                 <Text style={styles.tplHint}>
                   {templateWeeks(t)} semanas · {t.blocks.length} bloque
                   {t.blocks.length === 1 ? '' : 's'}
-                  {templateSessions(t) > 0 ? ` · ${templateSessions(t)} entrenos` : ''}
+                  {templateSessions(t) > 0 ? frase` · ${templateSessions(t)} entrenos` : ''}
                   {t.blocks.some((b) => b.weeks.some((w) => w.weekPlan?.length))
                     ? ' · con los números'
                     : ''}
@@ -296,8 +298,8 @@ export function CyclePlanSheet({ visible, trainerId, clientId, onClose, onSaved 
         </Text>
         <Text style={styles.resumenText}>
           {plantillaPropia
-            ? `${plantillaPropia.name} · desde el ${diaMes(inicio)}`
-            : `Del ${diaMes(inicio)} al ${diaMes(fin)} · ${entrenos} entrenos previstos`}
+            ? frase`${plantillaPropia.name} · desde el ${diaMes(inicio)}`
+            : frase`Del ${diaMes(inicio)} al ${diaMes(fin)} · ${entrenos} entrenos previstos`}
         </Text>
       </View>
 

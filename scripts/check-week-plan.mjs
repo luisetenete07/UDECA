@@ -14,6 +14,13 @@ import {
   weekPlanDraft,
   weekSetsByGroup,
 } from '../lib/weekPlan.ts';
+import { setIdioma } from '../lib/idioma.ts';
+
+// Fuera de la app el idioma sale del sistema, y el de este entorno es inglés:
+// sin fijarlo estas comprobaciones leerían el texto en inglés y el resultado
+// dependería de dónde se ejecuten.
+setIdioma('es');
+
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEK = 7 * DAY;

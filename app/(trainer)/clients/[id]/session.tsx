@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { diaLargo } from '../../../../lib/fechas';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../../components/Card';
 import { EmptyState } from '../../../../components/EmptyState';

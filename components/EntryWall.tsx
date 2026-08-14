@@ -1,5 +1,7 @@
 import React from 'react';
-import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { AppState, Linking, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Button } from './Button';
 import { GateScreen, GateText } from './GateScreen';
 import { showToast } from './Toast';
@@ -49,7 +51,7 @@ export function EntryWall() {
     const destino =
       url ??
       `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Alta en UDECA')}&body=${encodeURIComponent(
-        `Hola, quiero activar mi cuenta de UDECA. Mi correo es: ${profile?.email ?? ''}`
+        frase`Hola, quiero activar mi cuenta de UDECA. Mi correo es: ${profile?.email ?? ''}`
       )}`;
     Linking.openURL(destino).catch(() => {});
   };
@@ -135,8 +137,8 @@ export function EntryWall() {
               dice qué se lleva quien la haga. */}
           <GateText>
             {esAtleta
-              ? `Con el alta empiezan tus ${TRIAL_DAYS} días con todo abierto. Después decides si sigues.`
-              : `El alta incluye ${FREE_CLIENT_LIMIT} alumnos con su propia cuenta. Si tu grupo crece, entonces hablamos.`}
+              ? frase`Con el alta empiezan tus ${TRIAL_DAYS} días con todo abierto. Después decides si sigues.`
+              : frase`El alta incluye ${FREE_CLIENT_LIMIT} alumnos con su propia cuenta. Si tu grupo crece, entonces hablamos.`}
           </GateText>
           <Button
             title={url ? 'Activar mi cuenta en la web' : 'Contactar para activar'}

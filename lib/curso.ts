@@ -1,4 +1,5 @@
 import { nuevoId } from './ids';
+import { t, frase  } from './idioma';
 import type { Course, CourseSection, Lesson, MiniClase } from './types';
 
 /**
@@ -181,8 +182,8 @@ export function cabeElCurso(curso: Pick<Course, 'sections'> & Partial<Course>): 
     cabe: false,
     peso,
     aviso:
-      `El curso pesa demasiado para guardarse (${Math.round(peso / 1024)} KB de ` +
+      frase`El curso pesa demasiado para guardarse (${Math.round(peso / 1024)} KB de ` +
       `${Math.round(TOPE_SEGURO / 1024)} como mucho). Lleva ${fotos} ` +
-      `${fotos === 1 ? 'imagen' : 'imágenes'}: quita alguna miniatura y vuelve a guardar.`,
+      frase`${t(fotos === 1 ? 'imagen' : 'imágenes')}: quita alguna miniatura y vuelve a guardar.`,
   };
 }

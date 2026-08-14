@@ -1,7 +1,9 @@
 import { inicioDeLaSemana } from '../../lib/fechas';
+import { frase } from '../../lib/idioma';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Redirect, useFocusEffect } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Podium } from '../../components/Podium';
@@ -111,7 +113,7 @@ export default function SocialScreen() {
         },
         (e) => {
           setLoading(false);
-          showToast(`Comunidad en vivo no disponible: ${e.message}`);
+          showToast(frase`Comunidad en vivo no disponible: ${e.message}`);
         }
       );
     }, [profile?.trainerId, withMine])

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { t, frase  } from '../../lib/idioma';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Alert, Linking, Modal, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Modal, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
@@ -181,7 +183,7 @@ export default function TrainerProfileScreen() {
   const revokeCoach = async (coach: UserProfile) => {
     if (
       !(await confirmAdmin(
-        `¿Quitar la suscripción de ${coach.name}? Verá el muro de pago hasta reactivarla.`
+        frase`¿Quitar la suscripción de ${coach.name}? Verá el muro de pago hasta reactivarla.`
       ))
     )
       return;
@@ -207,7 +209,7 @@ export default function TrainerProfileScreen() {
   const deleteCoach = async (coach: UserProfile) => {
     if (
       !(await confirmAdmin(
-        `¿ELIMINAR la cuenta de ${coach.name} (${coach.email})? Perderá el acceso y desaparecerá de la plataforma. Esta acción no se puede deshacer.`
+        frase`¿ELIMINAR la cuenta de ${coach.name} (${coach.email})? Perderá el acceso y desaparecerá de la plataforma. Esta acción no se puede deshacer.`
       ))
     )
       return;
@@ -241,7 +243,7 @@ export default function TrainerProfileScreen() {
             : c
         )
       );
-      showToast(`${coach.name.split(' ')[0]}: activo hasta ${fechaCorta(until)}`);
+      showToast(frase`${coach.name.split(' ')[0]}: activo hasta ${fechaCorta(until)}`);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo actualizar');
     } finally {
@@ -289,7 +291,7 @@ export default function TrainerProfileScreen() {
       // La app vive en app.udeca.app; www.udeca.app es la web de presentación.
       // Al alumno hay que mandarlo donde puede registrarse, no al escaparate.
       `1) Entra en app.udeca.app (o busca "UDECA" en Google Play).\n` +
-      `2) Regístrate como alumno con mi código: ${profile.inviteCode}\n\n` +
+      frase`2) Regístrate como alumno con mi código: ${profile.inviteCode}\n\n` +
       `¡Nos vemos dentro!`;
     if (Platform.OS === 'web') {
       // Usa el diálogo nativo de compartir del navegador si existe; si no, copia.
@@ -472,7 +474,7 @@ export default function TrainerProfileScreen() {
         onClose={() => setDeleteTarget(null)}
         icono="trash-outline"
         titulo="¿Quitar de la clasificación?"
-        texto={`Se eliminará a ${deleteTarget?.name ?? ''} de la tabla. Sus entrenos e historial no se tocan. Si sigue usando la app y entrena, volverá a aparecer.`}
+        texto={frase`Se eliminará a ${deleteTarget?.name ?? ''} de la tabla. Sus entrenos e historial no se tocan. Si sigue usando la app y entrena, volverá a aparecer.`}
         accion="Eliminar"
         onAccion={confirmDeleteEntry}
       />
@@ -523,7 +525,7 @@ export default function TrainerProfileScreen() {
                 {[7, 30, 60].map((d) => (
                   <Chip
                     key={d}
-                    texto={`${d} días`}
+                    texto={frase`${d} días`}
                     activo={funnelDays === d}
                     onPress={() => openFunnel(d)}
                   />
@@ -660,9 +662,9 @@ export default function TrainerProfileScreen() {
                   : s.legacy
                   ? 'Fundador'
                   : s.active
-                    ? `${s.trial ? 'De prueba' : 'Activo'} · hasta ${c.subscriptionUntil ? fechaCorta(c.subscriptionUntil) : '—'}`
+                    ? frase`${t(s.trial ? 'De prueba' : 'Activo')} · hasta ${c.subscriptionUntil ? fechaCorta(c.subscriptionUntil) : '—'}`
                     : c.subscriptionUntil
-                      ? `CADUCADO · desde ${fechaCorta(c.subscriptionUntil)}`
+                      ? frase`CADUCADO · desde ${fechaCorta(c.subscriptionUntil)}`
                       : 'SIN ACTIVAR';
               return (
                 <View key={c.uid} style={styles.coachCard}>

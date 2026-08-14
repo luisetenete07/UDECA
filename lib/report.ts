@@ -1,4 +1,5 @@
 import { diaMes, fechaLegible, inicioDeLaSemana, masDias, mayusculaInicial } from './fechas';
+import { frase } from './idioma';
 import { setsByMuscleGroup, weeklyExerciseMatrix, workoutsByMonth, type MatrixCell, type MatrixRow } from './stats';
 import { UDECA_LOGO_DATA_URI } from './udecaLogo';
 import type { Routine, UserProfile, WeightLog, WorkoutLog } from './types';
@@ -546,7 +547,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
               <h2>Semana a semana</h2>
               ${tablaSemanas}
               <p class="note">La mejor serie de cada semana. ${ARROW.up} mejora sobre la semana anterior con datos, ${ARROW.down} baja. La segunda línea es la serie de más repeticiones cuando no es la misma que la más pesada.${
-                desdeCol > 0 ? ` Se muestran las últimas ${MAX_WEEK_COLS} semanas del periodo.` : ''
+                desdeCol > 0 ? frase` Se muestran las últimas ${MAX_WEEK_COLS} semanas del periodo.` : ''
               }</p>
              </section>`
           : ''

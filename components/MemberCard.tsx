@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
+import { t, frase  } from '../lib/idioma';
 import { useFocusEffect } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressCard, type DatoTarjeta } from './ProgressCard';
 import { useAuth } from '../lib/auth-context';
@@ -169,8 +171,8 @@ export function MemberCard() {
       {insignia.diasParaApagarse !== null ? (
         <Text style={styles.aviso}>
           {insignia.diasParaApagarse === 0
-            ? `Hoy pierdes la insignia de fundador. El ${numeroFundador(insignia.numero!)} sigue siendo tuyo: vuelve y se enciende otra vez.`
-            : `Tu insignia de fundador se apaga en ${insignia.diasParaApagarse} ${insignia.diasParaApagarse === 1 ? 'día' : 'días'}. El número no lo pierdes: al renovar vuelve a encenderse.`}
+            ? frase`Hoy pierdes la insignia de fundador. El ${numeroFundador(insignia.numero!)} sigue siendo tuyo: vuelve y se enciende otra vez.`
+            : frase`Tu insignia de fundador se apaga en ${insignia.diasParaApagarse} ${t(insignia.diasParaApagarse === 1 ? 'día' : 'días')}. El número no lo pierdes: al renovar vuelve a encenderse.`}
         </Text>
       ) : (
         <Text style={styles.ayuda}>Arrástrala para girarla</Text>

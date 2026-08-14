@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from './Texto';
 import { Button } from './Button';
 import { GateScreen } from './GateScreen';
 import { TextField } from './TextField';

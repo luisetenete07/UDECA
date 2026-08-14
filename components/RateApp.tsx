@@ -1,5 +1,6 @@
 import React from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';

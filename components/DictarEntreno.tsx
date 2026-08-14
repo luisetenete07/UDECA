@@ -1,14 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { frase } from '../lib/idioma';
+import { Animated, Easing, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { Sheet } from './Sheet';
@@ -263,7 +256,7 @@ export function DictarEntreno({
                 ? 'hoy'
                 : dictado.haceDias === 1
                   ? 'ayer'
-                  : `hace ${dictado.haceDias} días`}
+                  : frase`hace ${dictado.haceDias} días`}
             </Text>
           ) : null}
 
@@ -280,7 +273,7 @@ export function DictarEntreno({
           ) : null}
 
           <Text style={styles.pista}>
-            {series === 1 ? '1 serie' : `${series} series`} en{' '}
+            {series === 1 ? '1 serie' : frase`${series} series`} en{' '}
             {dictado.ejercicios.length === 1
               ? '1 ejercicio'
               : `${dictado.ejercicios.length} ejercicios`}

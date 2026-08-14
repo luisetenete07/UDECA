@@ -13,6 +13,12 @@ import {
   tarjetaDeEntrenador,
   textoDesde,
 } from '../lib/cardStats.ts';
+import { setIdioma } from '../lib/idioma.ts';
+
+// Fuera de la app el idioma sale del sistema, y el de este entorno es inglés:
+// sin fijarlo, las fechas de estas comprobaciones saldrían en inglés y el
+// resultado dependería de dónde se ejecuten.
+setIdioma('es');
 
 const DIA = 24 * 60 * 60 * 1000;
 const MES = 30.4 * DIA;

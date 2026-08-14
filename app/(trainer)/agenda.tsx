@@ -1,18 +1,10 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { nombreDeCiclo } from '../../lib/cyclePlan';
+import { frase } from '../../lib/idioma';
 import { diaLargo, inicioDelDia, mesLargo } from '../../lib/fechas';
 import { useFocusEffect, useRouter } from 'expo-router';
-import {
-  LayoutAnimation,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  UIManager,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { LayoutAnimation, Modal, Platform, Pressable, StyleSheet, TextInput, UIManager, useWindowDimensions, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LoadingScreen } from '../../components/LoadingScreen';
@@ -150,12 +142,12 @@ export default function CoachCalendarScreen() {
         goals.length > 0
           ? goals.reduce((s, g) => s + (g.progress ?? (g.done ? 100 : 0)), 0) / goals.length
           : 0;
-      return { progress: avg / 100, text: `${Math.round(avg)}% de media`, total: goals.length };
+      return { progress: avg / 100, text: frase`${Math.round(avg)}% de media`, total: goals.length };
     }
     const total = inScope.length;
     return {
       progress: total > 0 ? done.length / total : 0,
-      text: total > 0 ? `${done.length} de ${total} hechas` : 'Sin tareas',
+      text: total > 0 ? frase`${done.length} de ${total} hechas` : 'Sin tareas',
       total,
     };
   }, [scope, inScope, done]);
@@ -253,7 +245,7 @@ export default function CoachCalendarScreen() {
         add({
           day: inicioDelDia(cy.startDate),
           type: 'cycle-start',
-          title: `Empieza ${cy.name}`,
+          title: frase`Empieza ${nombreDeCiclo(cy.name)}`,
           subtitle: `${CYCLE_LEVEL_LABEL[cy.level]} · ${who}`,
           onPress: () => router.push(`/(trainer)/clients/${cy.clientId}/cycles/${cy.id}`),
         });
@@ -261,7 +253,7 @@ export default function CoachCalendarScreen() {
         add({
           day: inicioDelDia(cy.endDate),
           type: 'cycle-end',
-          title: `Termina ${cy.name}`,
+          title: frase`Termina ${nombreDeCiclo(cy.name)}`,
           subtitle: `${CYCLE_LEVEL_LABEL[cy.level]} · ${who}`,
           onPress: () => router.push(`/(trainer)/clients/${cy.clientId}/cycles/${cy.id}`),
         });
@@ -427,7 +419,7 @@ export default function CoachCalendarScreen() {
               <Text style={styles.proximoEtiqueta}>Nada este día · lo siguiente</Text>
               <Text style={styles.proximoTexto} numberOfLines={1}>
                 {proximo.evento.title}
-                {proximo.cuantos > 1 ? ` y ${proximo.cuantos - 1} más` : ''}
+                {proximo.cuantos > 1 ? frase` y ${proximo.cuantos - 1} más` : ''}
               </Text>
               <Text style={styles.proximoCuando}>{diaLargo(proximo.dia)}</Text>
             </View>

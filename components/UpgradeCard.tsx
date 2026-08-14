@@ -1,5 +1,7 @@
 import React from 'react';
-import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Linking, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card } from './Card';
@@ -93,7 +95,7 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         'Informes en PDF y récords guardados para siempre',
       ]
     : [
-        `Alumnos ilimitados (tu alta incluye ${plazas})`,
+        frase`Alumnos ilimitados (tu alta incluye ${plazas})`,
         'Cobros, avisos de impago y control de cuotas',
         'Informes de progreso con tu marca',
       ];
@@ -102,8 +104,8 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
   const tituloCoach = lleno
     ? plazas === 0
       ? 'Esta cuenta no incluye alumnos'
-      : `Has llenado tus ${plazas} plazas`
-    : `Tu alta incluye ${plazas} alumnos`;
+      : frase`Has llenado tus ${plazas} plazas`
+    : frase`Tu alta incluye ${plazas} alumnos`;
   /**
    * El texto dice DOS cosas que no pueden faltar: lo que ya tiene pagado para
    * siempre, y que a partir de la plaza siguiente el plan deja de ser opcional.
@@ -113,8 +115,8 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
   const textoCoach = lleno
     ? plazas === 0
       ? 'El alta de tu tarjeta ya se usó en otra cuenta de entrenador, así que esta entra sin plazas. Con el plan tienes alumnos ilimitados.'
-      : `Para aceptar al alumno ${plazas + 1} hace falta el plan. Los ${plazas} que ya tienes siguen contigo pagues o no.`
-    : `Ya llevas ${usados} de ${plazas}, y son tuyos para siempre. Del alumno ${plazas + 1} en adelante hace falta el plan, y el grupo deja de tener tope.`;
+      : frase`Para aceptar al alumno ${plazas + 1} hace falta el plan. Los ${plazas} que ya tienes siguen contigo pagues o no.`
+    : frase`Ya llevas ${usados} de ${plazas}, y son tuyos para siempre. Del alumno ${plazas + 1} en adelante hace falta el plan, y el grupo deja de tener tope.`;
 
   const abrir = () => {
     void track('checkout_start');
@@ -135,7 +137,7 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
             <Text style={styles.breveTexto}>
               {esAtleta
                 ? diasRestantes !== null
-                  ? `Te quedan ${diasRestantes} días de prueba. Si ya lo tienes claro, pasa al plan completo y olvídate del contador.`
+                  ? frase`Te quedan ${diasRestantes} días de prueba. Si ya lo tienes claro, pasa al plan completo y olvídate del contador.`
                   : 'Pasa al plan completo cuando quieras.'
                 : textoCoach}
             </Text>
@@ -208,7 +210,7 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
             <Text style={styles.plazasTitulo}>
               {plazas === 0
                 ? 'Tu alta no incluye alumnos'
-                : `Tu alta incluye ${plazas} alumnos`}
+                : frase`Tu alta incluye ${plazas} alumnos`}
             </Text>
             {plazas > 0 ? (
               <Text style={[styles.plazasCuenta, lleno && { color: colors.warning }]}>
@@ -230,8 +232,8 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
             {plazas === 0
               ? 'El alta de tu tarjeta ya se usó en otra cuenta de entrenador.'
               : lleno
-                ? `Están todas ocupadas. Los ${plazas} que ya tienes siguen contigo pagues o no; para aceptar al ${plazas + 1} hace falta el plan.`
-                : `Son tuyas para siempre, sin caducidad. Del alumno ${plazas + 1} en adelante hace falta el plan.`}
+                ? frase`Están todas ocupadas. Los ${plazas} que ya tienes siguen contigo pagues o no; para aceptar al ${plazas + 1} hace falta el plan.`
+                : frase`Son tuyas para siempre, sin caducidad. Del alumno ${plazas + 1} en adelante hace falta el plan.`}
           </Text>
         </View>
       ) : null}

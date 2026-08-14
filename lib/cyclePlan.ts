@@ -1,4 +1,5 @@
 import { inicioDeLaSemana, inicioDelDia } from './fechas';
+import { t, frase  } from './idioma';
 import type { CycleLevel, TrainingCycle, WeekPlanEntry, WorkoutLog } from './types';
 
 /**
@@ -92,6 +93,23 @@ export const PLAN_TEMPLATES: { id: string; label: string; hint: string; blocks: 
     ],
   },
 ];
+
+/**
+ * El nombre visible de un ciclo.
+ *
+ * Los bloques y las semanas se guardan con el nombre que les pone la app
+ * ("Semana 3", "Semana 4 · descarga"), y ese nombre es del entrenador: puede
+ * renombrarlos cuando quiera. Por eso se guarda en español y se traduce AQUÍ,
+ * al pintarlo: traducirlo al crearlo dejaría inglés metido en los datos de un
+ * alumno que mañana vuelve al español, y encima no arreglaría los planes que
+ * ya existen.
+ */
+export function nombreDeCiclo(nombre: string | undefined): string {
+  const n = (nombre ?? '').trim();
+  const m = /^Semana\s+(\d+)(\s*·\s*descarga)?$/i.exec(n);
+  if (!m) return n;
+  return m[2] ? frase`Semana ${Number(m[1])} · descarga` : frase`Semana ${Number(m[1])}`;
+}
 
 export function totalWeeks(draft: PlanDraft): number {
   return draft.blocks.reduce((n, b) => n + Math.max(1, b.weeks), 0);

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../../lib/idioma';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -33,13 +35,13 @@ const OPCIONES: { valor: UserRole; titulo: string; icono: keyof typeof Ionicons.
     valor: 'athlete',
     titulo: 'Atleta',
     icono: 'barbell-outline',
-    texto: `Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición. Empiezas con ${TRIAL_DAYS} días con todo abierto.`,
+    texto: frase`Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición. Empiezas con ${TRIAL_DAYS} días con todo abierto.`,
   },
   {
     valor: 'trainer',
     titulo: 'Entrenador',
     icono: 'people-outline',
-    texto: `Tus alumnos, tus cobros y tu negocio. El plan de entrada incluye ${FREE_CLIENT_LIMIT} alumnos.`,
+    texto: frase`Tus alumnos, tus cobros y tu negocio. El plan de entrada incluye ${FREE_CLIENT_LIMIT} alumnos.`,
   },
 ];
 

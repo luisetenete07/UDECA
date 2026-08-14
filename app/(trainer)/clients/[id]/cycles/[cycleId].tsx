@@ -1,7 +1,9 @@
+import { t, frase } from '../../../../../lib/idioma';
 import React, { useCallback, useState } from 'react';
 import { diaMes, diaSemanaCorto } from '../../../../../lib/fechas';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../../../components/Button';
 import { Card } from '../../../../../components/Card';
@@ -27,7 +29,7 @@ import { getWeightLogsForClient } from '../../../../../lib/firestore/weightLogs'
 import { getActiveRoutineForClient } from '../../../../../lib/firestore/routines';
 import { getWorkoutLogsForClient } from '../../../../../lib/firestore/workoutLogs';
 import { computeCycleStats } from '../../../../../lib/cycleStats';
-import { descendantIds } from '../../../../../lib/cyclePlan';
+import { descendantIds, nombreDeCiclo } from '../../../../../lib/cyclePlan';
 import { buildBlockView } from '../../../../../lib/blockView';
 import { buildClientReportHtml } from '../../../../../lib/report';
 import { printReportHtml } from '../../../../../lib/printReport';
@@ -162,7 +164,7 @@ export default function CycleDashboardScreen() {
   if (!cycle)
     return (
       <>
-        <Stack.Screen options={{ title: 'Ciclo' }} />
+        <Stack.Screen options={{ title: t('Ciclo') }} />
         <EmptyState title="Ciclo no encontrado" />
       </>
     );
@@ -185,7 +187,7 @@ export default function CycleDashboardScreen() {
         >
           <Ionicons name="chevron-back" size={14} color={colors.textMuted} />
           <Text style={styles.breadcrumbText} numberOfLines={1}>
-            {padre.name}
+            {nombreDeCiclo(padre.name)}
           </Text>
         </Pressable>
       ) : null}
@@ -202,13 +204,13 @@ export default function CycleDashboardScreen() {
           </View>
         ) : null}
       </View>
-      <Text style={styles.name}>{cycle.name}</Text>
+      <Text style={styles.name}>{nombreDeCiclo(cycle.name)}</Text>
       <Text style={styles.dates}>
         {cycle.startDate ? diaMes(cycle.startDate) : 'Sin inicio'}
         {cycle.endDate ? ` – ${diaMes(cycle.endDate)}` : cycle.startDate ? ' · abierto' : ''}
         {stats.durationDays ? ` · ${Math.round(stats.durationDays / 7)} sem` : ''}
         {stats.daysElapsed != null && stats.status === 'active'
-          ? ` · lleva ${stats.daysElapsed} días`
+          ? frase` · lleva ${stats.daysElapsed} días`
           : ''}
       </Text>
 
@@ -231,7 +233,7 @@ export default function CycleDashboardScreen() {
               muscleByExercise,
               measureByExercise,
             })}
-            title={cycle.name}
+            title={nombreDeCiclo(cycle.name)}
             subtitle={`${CYCLE_LEVEL_LABEL[cycle.level]} · ${stats.sessionsDone} entreno${
               stats.sessionsDone === 1 ? '' : 's'
             }`}
@@ -419,7 +421,7 @@ export default function CycleDashboardScreen() {
           <Text style={styles.sectionLabel}>Programación de la semana</Text>
           <Text style={styles.mutedText}>
             {(cycle.weekPlan ?? []).length > 0
-              ? `${(cycle.weekPlan ?? []).length} ejercicios con números propios esta semana. Tu alumno los ve en su entreno.`
+              ? frase`${(cycle.weekPlan ?? []).length} ejercicios con números propios esta semana. Tu alumno los ve en su entreno.`
               : 'Esta semana se hace la rutina tal cual. Prográmala si quieres subir series, repeticiones o apretar el RIR.'}
           </Text>
           <Button
@@ -496,7 +498,7 @@ export default function CycleDashboardScreen() {
         titulo={cuelgan.length > 0 ? '¿Eliminar el plan entero?' : '¿Eliminar este ciclo?'}
         texto={`${
           cuelgan.length > 0
-            ? `Se borran también los ${cuelgan.length} ciclos que cuelgan de él (bloques y semanas). `
+            ? frase`Se borran también los ${cuelgan.length} ciclos que cuelgan de él (bloques y semanas). `
             : 'Se borra solo el ciclo. '
         }Los entrenos del alumno y su historial no se tocan.`}
         accion="Eliminar"

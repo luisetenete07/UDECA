@@ -1,16 +1,8 @@
 import React, { useCallback, useState } from 'react';
+import { frase } from '../../../lib/idioma';
 import { useFocusEffect } from 'expo-router';
-import {
-  Alert,
-  Image,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -129,7 +121,7 @@ export default function MealBooksScreen() {
 
   const handleAddPhoto = async (book: MealBook) => {
     if (book.photos.length >= MAX_PHOTOS) {
-      showToast(`Máximo ${MAX_PHOTOS} fotos por libreta. Crea otra libreta.`);
+      showToast(frase`Máximo ${MAX_PHOTOS} fotos por libreta. Crea otra libreta.`);
       return;
     }
     setBusyBook(book.id);
@@ -161,7 +153,7 @@ export default function MealBooksScreen() {
   };
 
   const handleDeleteBook = async (book: MealBook) => {
-    if (!(await confirmar(`¿Borrar la libreta "${book.title}"? Tus alumnos dejarán de verla.`)))
+    if (!(await confirmar(frase`¿Borrar la libreta "${book.title}"? Tus alumnos dejarán de verla.`)))
       return;
     setBooks((prev) => prev.filter((b) => b.id !== book.id));
     try {

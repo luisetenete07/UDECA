@@ -1,4 +1,5 @@
 import { desdeCuando } from './cardStats';
+import { frase } from './idioma';
 import { estadoInsignia, numeroFundador } from './fundador';
 import type { UserProfile } from './types';
 
@@ -114,7 +115,7 @@ export function datosDelCarne(
     // Dentro de la app va bajo una placa que ya dice de qué es la fecha. Aquí
     // la tarjeta viaja sola: un "Abril de 2026" suelto no dice desde cuándo
     // qué.
-    desde: desdeCuando(p.createdAt) ? `Miembro desde ${desdeCuando(p.createdAt)}` : undefined,
+    desde: desdeCuando(p.createdAt) ? frase`Miembro desde ${desdeCuando(p.createdAt)}` : undefined,
     fundador: insignia.activa && insignia.numero ? numeroFundador(insignia.numero) : undefined,
   };
 }

@@ -17,7 +17,7 @@ import { clientIsLocked, hasPlatformAccess, needsEntryPayment } from '../../lib/
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { useTabScreenOptions } from '../../lib/navTheme';
-import { useT } from '../../lib/idioma';
+import { t, useT  } from '../../lib/idioma';
 
 const onboardingKey = (uid: string) => `udeca-onboarding-${uid}`;
 

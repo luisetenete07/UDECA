@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { Text } from './Texto';
 import { Card } from './Card';
 import { Segmented } from './Segmented';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
 import { updateUserProfile } from '../lib/firestore/users';
-import { setIdioma, useIdioma, useT } from '../lib/idioma';
+import { t, setIdioma, useIdioma, useT  } from '../lib/idioma';
 import { IDIOMAS, type Idioma } from '../lib/i18n';
 import { colors, spacing, typography } from '../lib/theme';
 
@@ -45,9 +46,10 @@ export function SelectorDeIdioma() {
       <Text style={styles.titulo}>{t('Idioma')}</Text>
       <Segmented opciones={IDIOMAS} valor={idioma} onChange={cambiar} />
       <Text style={styles.pista}>
-        {idioma === 'en'
-          ? 'Some parts of the app are still in Spanish. They will be translated soon.'
-          : 'La app está en español. En inglés hay partes que todavía no lo están.'}
+        {/* Lo que NO se traduce es lo que escribís vosotros: el nombre de un
+            ejercicio, el título de un curso, una nota. Decirlo evita la
+            sensación de que la traducción se ha dejado cosas a medias. */}
+        Tus ejercicios, tus rutinas y tus notas se quedan como las escribiste.
       </Text>
     </Card>
   );

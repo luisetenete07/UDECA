@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { MarcaDeAgua } from './MarcaDeAgua';
 import { VideoPlayer } from './VideoPlayer';

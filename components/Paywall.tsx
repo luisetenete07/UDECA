@@ -1,5 +1,7 @@
 import React from 'react';
-import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { AppState, Linking, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { GateScreen, GateText } from './GateScreen';
@@ -71,7 +73,7 @@ export function Paywall() {
           return true;
         }
         if (!silent) {
-          showToast(result.reason ? `Aún no: ${result.reason}` : 'Aún no consta el pago');
+          showToast(result.reason ? frase`Aún no: ${result.reason}` : 'Aún no consta el pago');
         }
         return false;
       } finally {
@@ -132,7 +134,7 @@ export function Paywall() {
       ? 'Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.'
       : plazas === 0
         ? 'Esta cuenta no incluye alumnos: el alta de su tarjeta ya se usó en otra cuenta de entrenador. Con la suscripción anual tienes alumnos ilimitados. Tus datos están a salvo y te esperan.'
-        : `Tu grupo ha superado los ${plazas} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`;
+        : frase`Tu grupo ha superado los ${plazas} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`;
 
   return (
     <GateScreen
@@ -142,7 +144,7 @@ export function Paywall() {
       nota={
         CAN_LINK_TO_PAYMENT
           ? 'Se abre la web para activarla. Al volver, tu cuenta se enciende sola en unos segundos; si tardara, pulsa "Ya he pagado · Actualizar".'
-          : `¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`
+          : frase`¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`
       }
       onSalir={signOut}
     >

@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from './Button';
@@ -76,7 +78,7 @@ export function ConectarCalendario({
         if (resultado.ok) {
           showToast(
             resultado.creados > 0
-              ? `${resultado.creados} en tu calendario${resultado.actualizados > 0 ? ` · ${resultado.actualizados} al día` : ''}`
+              ? frase`${resultado.creados} en tu calendario${resultado.actualizados > 0 ? ` · ${resultado.actualizados} al día` : ''}`
               : 'Tu calendario ya estaba al día'
           );
         } else {

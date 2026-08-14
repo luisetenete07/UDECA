@@ -1,5 +1,7 @@
 import React from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { CAN_LINK_TO_PAYMENT, subscriptionCheckoutUrl, subscriptionState } from '../lib/subscription';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
@@ -30,7 +32,7 @@ export function TrialBanner({ profile }: { profile: UserProfile | null }) {
       />
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>
-          {days <= 1 ? 'Último día de prueba' : `Te quedan ${days} días de prueba`}
+          {days <= 1 ? 'Último día de prueba' : frase`Te quedan ${days} días de prueba`}
         </Text>
         <Text style={styles.subtitle}>
           {url

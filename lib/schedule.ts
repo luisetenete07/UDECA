@@ -1,4 +1,5 @@
 import { diasEntre } from './fechas';
+import { frase } from './idioma';
 import { weekdayOf, type Routine, type RoutineDay } from './types';
 
 /** Nombres heredados del modo "Sensaciones" que ya no queremos mostrar. */
@@ -14,6 +15,22 @@ export function flexLabel(label?: string, fallback = 'Sensaciones'): string {
   if (!t) return fallback;
   if (LEGACY_FLEX_LABELS.includes(t.toLowerCase())) return 'Sensaciones';
   return t;
+}
+
+/**
+ * El nombre visible de un día del plan.
+ *
+ * Los días se crean con el nombre "Día 3" GUARDADO en los datos, y eso está
+ * bien: es lo que el entrenador puede renombrar a "Empuje" cuando quiera. Lo
+ * que no vale es enseñarlo tal cual en inglés —un alumno inglés vería "Día 3"
+ * dentro de su propio plan—, así que el nombre por defecto se reconoce y se
+ * traduce, y cualquier nombre que haya escrito una persona se respeta.
+ */
+export function nombreDelDia(nombre: string | undefined, indice: number): string {
+  const n = (nombre ?? '').trim();
+  const puesto = /^d[ií]a\s+(\d+)$/i.exec(n);
+  if (puesto) return frase`Día ${Number(puesto[1])}`;
+  return n || frase`Día ${indice + 1}`;
 }
 
 export interface TodaySession {
@@ -95,7 +112,7 @@ export function resolveSessionFor(
       day: day && !day.isRest ? day : null,
       isRest: Boolean(day?.isRest),
       optionalRest: Boolean(day?.optionalRest),
-      cycleLabel: `Día ${idx + 1} de ${routine.days.length}`,
+      cycleLabel: frase`Día ${idx + 1} de ${routine.days.length}`,
       cycleIndex: idx,
     };
   }

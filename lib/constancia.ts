@@ -1,4 +1,5 @@
 import { inicioDeLaSemana, inicioDelDia, masDias } from './fechas';
+import { t, frase  } from './idioma';
 import type { TrainingCycle } from './types';
 
 /**
@@ -56,7 +57,7 @@ export function ventanaDeConstancia(
       desde: masDias(inicioDeLaSemana(hoy), -7 * (SEMANAS_SIN_BLOQUE - 1)),
       hasta: hoy,
       semanas: SEMANAS_SIN_BLOQUE,
-      titulo: `Últimas ${SEMANAS_SIN_BLOQUE} semanas`,
+      titulo: frase`Últimas ${SEMANAS_SIN_BLOQUE} semanas`,
       hayBloque: false,
     };
   }
@@ -117,14 +118,14 @@ export function resumenDeConstancia(
   }
 
   const ratio = transcurridos > 0 ? entrenados / transcurridos : 0;
-  const cuantos = `${entrenados} ${entrenados === 1 ? 'día entrenado' : 'días entrenados'} de ${transcurridos}`;
+  const cuantos = frase`${entrenados} ${t(entrenados === 1 ? 'día entrenado' : 'días entrenados')} de ${transcurridos}`;
   const texto =
     entrenados === 0
       ? ventana.hayBloque
         ? 'Aún no has entrenado en este bloque.'
         : 'Aún no has entrenado estas semanas.'
       : sinEntrenar >= 3
-        ? `${cuantos} · llevas ${sinEntrenar} días sin entrenar`
+        ? frase`${cuantos} · llevas ${sinEntrenar} días sin entrenar`
         : cuantos;
 
   return { entrenados, transcurridos, ratio, sinEntrenar, texto };

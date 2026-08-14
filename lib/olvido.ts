@@ -1,4 +1,5 @@
 import { inicioDelDia } from './fechas';
+import { frase } from './idioma';
 import { cubre, type PausaPlan } from './pausa';
 import { resolveSessionFor } from './schedule';
 import type { Routine } from './types';
@@ -121,19 +122,19 @@ export function textoDeAviso(i: number, nombreDelDia: string): { titulo: string;
   const textos = [
     {
       titulo: 'Te falta subir el entreno',
-      cuerpo: `Hoy tocaba ${nombreDelDia}. Si ya lo has hecho, regístralo y queda guardado.`,
+      cuerpo: frase`Hoy tocaba ${nombreDelDia}. Si ya lo has hecho, regístralo y queda guardado.`,
     },
     {
-      titulo: `${nombreDelDia} sigue sin registrar`,
+      titulo: frase`${nombreDelDia} sigue sin registrar`,
       cuerpo: 'Un minuto ahora y tu progreso queda completo.',
     },
     {
       titulo: '¿Lo dejamos hecho?',
-      cuerpo: `Solo falta apuntar ${nombreDelDia}. Tu racha cuenta lo que registras.`,
+      cuerpo: frase`Solo falta apuntar ${nombreDelDia}. Tu racha cuenta lo que registras.`,
     },
     {
       titulo: 'Aún estás a tiempo',
-      cuerpo: `${nombreDelDia} de hoy todavía se puede registrar.`,
+      cuerpo: frase`${nombreDelDia} de hoy todavía se puede registrar.`,
     },
   ];
   return textos[i % textos.length];

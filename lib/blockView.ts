@@ -1,4 +1,5 @@
 import { diaMes, inicioDeLaSemana, inicioDelDia } from './fechas';
+import { frase } from './idioma';
 import { effectiveLoadKg, loadLabel } from './stats';
 import { planCalendar } from './cyclePlan';
 import { weekSetsByGroup } from './weekPlan';
@@ -222,7 +223,7 @@ function mejorProgreso(
   return {
     id: 'progreso',
     tone: 'good',
-    title: `${mejor.nombre}: de ${formatMarca(mejor.de)} a ${formatMarca(mejor.a)}`,
+    title: frase`${mejor.nombre}: de ${formatMarca(mejor.de)} a ${formatMarca(mejor.a)}`,
     detail: 'Es la mejor progresión del bloque.',
   };
 }
@@ -447,7 +448,7 @@ function avisos(
       id: 'cero',
       tone: 'bad',
       title: `${lista}${resto > 0 ? ` y ${resto} más` : ''}: 0 series`,
-      detail: `Estaban previstas ${previstas} en el bloque y no ha hecho ninguna.`,
+      detail: frase`Estaban previstas ${previstas} en el bloque y no ha hecho ninguna.`,
     });
   }
 
@@ -480,8 +481,8 @@ function avisos(
       malos.push({
         id: 'desequilibrio',
         tone: 'warn',
-        title: `El plan pide mucho más ${mas.toLowerCase()} que ${menos}`,
-        detail: `${Math.max(planEmpuje, planTiron)} series previstas contra ${Math.min(planEmpuje, planTiron)}.`,
+        title: frase`El plan pide mucho más ${mas.toLowerCase()} que ${menos}`,
+        detail: frase`${Math.max(planEmpuje, planTiron)} series previstas contra ${Math.min(planEmpuje, planTiron)}.`,
       });
     } else if (!hayPlan && mayor >= 12 && menor > 0 && ratioHecho >= 1.6) {
       const mas = hechoEmpuje > hechoTiron ? 'Empuje' : 'Tirón';
@@ -489,8 +490,8 @@ function avisos(
       malos.push({
         id: 'desequilibrio',
         tone: 'warn',
-        title: `${mas} muy por encima del ${menos}`,
-        detail: `${mayor} series contra ${menor} en todo el bloque.`,
+        title: frase`${mas} muy por encima del ${menos}`,
+        detail: frase`${mayor} series contra ${menor} en todo el bloque.`,
       });
     } else if (hayPlan && !semanaCaida && mayor >= 12 && ratioHecho >= 1.6) {
       // El plan estaba bien; lo que falla es que un día no se hace.
@@ -498,8 +499,8 @@ function avisos(
       malos.push({
         id: 'se-salta',
         tone: 'warn',
-        title: `Se salta el ${flojo}`,
-        detail: `El plan está equilibrado, pero ha hecho ${mayor} series contra ${menor}.`,
+        title: frase`Se salta el ${flojo}`,
+        detail: frase`El plan está equilibrado, pero ha hecho ${mayor} series contra ${menor}.`,
       });
     }
   }
@@ -514,7 +515,7 @@ function avisos(
         id: `descarga-${i}`,
         tone: 'warn',
         title: 'La descarga no descargó',
-        detail: `${semanas[i].label}: ${ahora} series, y la semana anterior ${antes}.`,
+        detail: frase`${semanas[i].label}: ${ahora} series, y la semana anterior ${antes}.`,
       });
     }
   }
@@ -524,7 +525,7 @@ function avisos(
     malos.push({
       id: 'semana-caida',
       tone: 'warn',
-      title: `${semanaCaida.label}: ${semanaCaida.sessionsDone} de ${semanaCaida.sessionsPlanned} entrenos`,
+      title: frase`${semanaCaida.label}: ${semanaCaida.sessionsDone} de ${semanaCaida.sessionsPlanned} entrenos`,
       detail: 'Esa semana se cayó; el resto del bloque va aparte.',
     });
   }

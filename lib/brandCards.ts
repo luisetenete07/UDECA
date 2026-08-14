@@ -20,6 +20,7 @@ import {
   CARD_SCRIPT,
   type CardData,
   type CardKind,
+  type CardTextos,
   type MemberCardData,
   type RecordCardData,
   type ReportCardData,
@@ -27,6 +28,8 @@ import {
 } from './cardEngine';
 import { canRenderCardNatively, renderCardBase64 } from '../components/CardRendererHost';
 import { UDECA_LOGO_DATA_URI } from './udecaLogo';
+import { getIdioma } from './idioma';
+import { t } from './idioma';
 
 export type { MemberCardData, RecordCardData, ReportCardData, SessionCardData };
 
@@ -38,8 +41,45 @@ type DrawCard = (
   canvas: HTMLCanvasElement,
   kind: CardKind,
   data: CardData,
-  logoUri: string
+  logoUri: string,
+  textos: CardTextos
 ) => Promise<HTMLCanvasElement>;
+
+/**
+ * Los rótulos de la tarjeta en el idioma de quien la comparte.
+ *
+ * Se resuelven aquí, justo antes de dibujar, porque el dibujo ocurre fuera de
+ * la app —en un WebView o en un `new Function`— y ahí dentro no hay idioma que
+ * consultar. Que se calculen en cada compartición es lo correcto: alguien
+ * puede cambiar de idioma entre una tarjeta y la siguiente.
+ */
+function textosDeLaTarjeta(): CardTextos {
+  return {
+    sesionCompletada: t('SESIÓN COMPLETADA'),
+    duracion: t('Duración'),
+    series: t('Series'),
+    repeticiones: t('Repeticiones'),
+    isometricos: t('Isométricos'),
+    volumen: t('Volumen'),
+    nuevoRecord: t('NUEVO RÉCORD PERSONAL'),
+    records: t('RÉCORDS PERSONALES'),
+    racha: t('Racha de {0} días'),
+    informe: t('INFORME DE PROGRESO'),
+    entrenos: t('Entrenos'),
+    diasEntrenados: t('Días entrenados'),
+    horas: t('Horas'),
+    pesoCorporal: t('Peso corporal'),
+    mejoresMarcas: t('MEJORES MARCAS'),
+    isoEmpuje: t('Isométrico empuje'),
+    isoTiron: t('Isométrico tirón'),
+    empuje: t('Empuje'),
+    tiron: t('Tirón'),
+    sinMarcas: t('Aún sin marcas registradas'),
+    fundador: t('FUNDADOR'),
+    numeroNoSeReasigna: t('Miembro fundador · el número no se reasigna'),
+    locale: getIdioma() === 'en' ? 'en-GB' : 'es-ES',
+  };
+}
 
 let drawCard: DrawCard | null = null;
 
@@ -64,7 +104,7 @@ async function shareOnWeb(
 ): Promise<ShareResult> {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
-  await getDrawCard()(canvas, kind, data, UDECA_LOGO_DATA_URI);
+  await getDrawCard()(canvas, kind, data, UDECA_LOGO_DATA_URI, textosDeLaTarjeta());
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob((b) => resolve(b), 'image/png')
   );
@@ -103,7 +143,7 @@ async function shareOnNative(
   if (!canRenderCardNatively()) return null;
   if (!(await Sharing.isAvailableAsync())) return null;
 
-  const base64 = await renderCardBase64(buildCardHtml(kind, data, UDECA_LOGO_DATA_URI));
+  const base64 = await renderCardBase64(buildCardHtml(kind, data, UDECA_LOGO_DATA_URI, textosDeLaTarjeta()));
   // La caché es el sitio correcto: es un archivo desechable que el sistema
   // puede limpiar cuando quiera, y basta con que exista mientras se comparte.
   const target = new File(Paths.cache, filename);

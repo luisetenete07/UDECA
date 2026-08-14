@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, tabularNums } from '../lib/theme';

@@ -1,5 +1,6 @@
 import type { DatoTarjeta } from '../components/ProgressCard';
-import { mayusculaInicial, mesLargo } from './fechas';
+import { frase, t } from './idioma';
+import { localeActual, mayusculaInicial, mesLargo } from './fechas';
 import { numeroFundador } from './fundador';
 
 /**
@@ -58,11 +59,11 @@ export function tarjetaDeEntrenador(
 ): DatoTarjeta[] {
   const out: DatoTarjeta[] = [];
   if (conFundador && d.founderNumber && d.founderNumber > 0) {
-    out.push({ etiqueta: 'Miembro fundador', valor: numeroFundador(d.founderNumber) });
+    out.push({ etiqueta: t('Miembro fundador'), valor: numeroFundador(d.founderNumber) });
   }
   if (d.alumnos > 0) {
     out.push({
-      etiqueta: d.alumnos === 1 ? 'Alumno a tu cargo' : 'Alumnos a tu cargo',
+      etiqueta: t(d.alumnos === 1 ? 'Alumno a tu cargo' : 'Alumnos a tu cargo'),
       valor: String(d.alumnos),
     });
   }
@@ -70,15 +71,15 @@ export function tarjetaDeEntrenador(
   // la primera semana de cualquiera.
   if (d.entrenosDirigidos >= 10) {
     out.push({
-      etiqueta: 'Entrenos dirigidos',
-      valor: d.entrenosDirigidos.toLocaleString('es-ES'),
+      etiqueta: t('Entrenos dirigidos'),
+      valor: d.entrenosDirigidos.toLocaleString(localeActual()),
     });
   }
   const meses = mesesDesde(d.createdAt, ahora);
   if (meses >= 1) {
-    out.push({ etiqueta: 'En UDECA', valor: `${meses} ${meses === 1 ? 'mes' : 'meses'}` });
+    out.push({ etiqueta: t('En UDECA'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
   }
-  return out.length > 0 ? out : [{ etiqueta: 'Entrenador', valor: 'UDECA' }];
+  return out.length > 0 ? out : [{ etiqueta: t('Entrenador'), valor: 'UDECA' }];
 }
 
 export interface DatosAtleta {
@@ -101,28 +102,28 @@ export function tarjetaDeAtleta(
 ): DatoTarjeta[] {
   const out: DatoTarjeta[] = [];
   if (conFundador && d.founderNumber && d.founderNumber > 0) {
-    out.push({ etiqueta: 'Miembro fundador', valor: numeroFundador(d.founderNumber) });
+    out.push({ etiqueta: t('Miembro fundador'), valor: numeroFundador(d.founderNumber) });
   }
   if (d.entrenos > 0) {
     out.push({
-      etiqueta: d.entrenos === 1 ? 'Entrenamiento' : 'Entrenamientos',
-      valor: d.entrenos.toLocaleString('es-ES'),
+      etiqueta: t(d.entrenos === 1 ? 'Entrenamiento' : 'Entrenamientos'),
+      valor: d.entrenos.toLocaleString(localeActual()),
     });
   }
   // Un día de racha no es una racha. A partir de tres ya es una decisión.
   if (d.racha >= 3) {
-    out.push({ etiqueta: 'Días seguidos', valor: String(d.racha) });
+    out.push({ etiqueta: t('Días seguidos'), valor: String(d.racha) });
   }
   // El puesto solo cuenta si hay contra quién: en un grupo de dos, ser
   // segundo es ser el último y enseñarlo no le hace ilusión a nadie.
   if (d.puesto && d.deCuantos && d.deCuantos >= 3) {
-    out.push({ etiqueta: `De ${d.deCuantos} en tu grupo`, valor: `Nº ${d.puesto}` });
+    out.push({ etiqueta: frase`De ${d.deCuantos} en tu grupo`, valor: `Nº ${d.puesto}` });
   }
   const meses = mesesDesde(d.createdAt, ahora);
   if (meses >= 1) {
-    out.push({ etiqueta: 'En UDECA', valor: `${meses} ${meses === 1 ? 'mes' : 'meses'}` });
+    out.push({ etiqueta: t('En UDECA'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
   }
-  return out.length > 0 ? out : [{ etiqueta: 'Empieza hoy', valor: 'Tu primer entreno' }];
+  return out.length > 0 ? out : [{ etiqueta: t('Empieza hoy'), valor: t('Tu primer entreno') }];
 }
 
 function mesesDesde(createdAt: number | undefined, ahora: number): number {

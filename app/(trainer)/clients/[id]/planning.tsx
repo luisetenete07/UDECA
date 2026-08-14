@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../../../components/Card';
 import { CyclePlanSheet } from '../../../../components/CyclePlanSheet';
@@ -14,7 +15,7 @@ import { useAuth } from '../../../../lib/auth-context';
 import { getCyclesForClient } from '../../../../lib/firestore/cycles';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { computeCycleStats } from '../../../../lib/cycleStats';
-import { buildCycleTree } from '../../../../lib/cyclePlan';
+import { buildCycleTree, nombreDeCiclo } from '../../../../lib/cyclePlan';
 import { diaMes } from '../../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../../lib/theme';
 import {
@@ -97,7 +98,7 @@ export default function PlanningScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.planLevel}>{CYCLE_LEVEL_LABEL[cycle.level]}</Text>
               <Text style={styles.planName} numberOfLines={1}>
-                {cycle.name}
+                {nombreDeCiclo(cycle.name)}
               </Text>
               <Text style={styles.planDates}>
                 {cycle.startDate ? diaMes(cycle.startDate) : 'Sin inicio'}
@@ -129,7 +130,7 @@ export default function PlanningScreen() {
                 <Card style={styles.cycleCard}>
                   <View style={styles.cycleHead}>
                     <Text style={styles.cycleName} numberOfLines={1}>
-                      {cycle.name}
+                      {nombreDeCiclo(cycle.name)}
                     </Text>
                     <View style={styles.statusPill}>
                       <View

@@ -1,15 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Easing,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  type StyleProp,
-  type TextInputProps,
-  type ViewStyle,
-} from 'react-native';
+import { Animated, Easing, StyleSheet, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import { Text } from './Texto';
+import { t } from '../lib/idioma';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../lib/theme';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
@@ -45,6 +37,7 @@ export function TextField({
   containerStyle,
   onFocus,
   onBlur,
+  placeholder,
   ref,
   ...rest
 }: TextFieldProps) {
@@ -75,6 +68,9 @@ export function TextField({
     <View style={[styles.container, containerStyle]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <AnimatedTextInput
+        // El texto de ayuda no pasa por <Text>: es una prop del campo nativo,
+        // así que se traduce aquí, en el único sitio por el que pasan todos.
+        placeholder={placeholder === undefined ? undefined : t(placeholder)}
         placeholderTextColor={colors.textFaint}
         style={[
           styles.input,

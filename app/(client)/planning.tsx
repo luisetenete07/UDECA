@@ -1,6 +1,8 @@
+import { t, frase } from '../../lib/idioma';
 import React, { useCallback, useState } from 'react';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '../../components/Card';
 import { CyclePlanSheet } from '../../components/CyclePlanSheet';
@@ -12,7 +14,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { useAuth } from '../../lib/auth-context';
 import { getCyclesForClient } from '../../lib/firestore/cycles';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { buildCycleTree } from '../../lib/cyclePlan';
+import { buildCycleTree, nombreDeCiclo } from '../../lib/cyclePlan';
 import { diaMes } from '../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import { CYCLE_LEVEL_LABEL, type TrainingCycle, type WorkoutLog } from '../../lib/types';
@@ -72,7 +74,7 @@ export default function PlanningScreen() {
 
   return (
     <ScreenContainer>
-      <Stack.Screen options={{ title: 'Mi temporada' }} />
+      <Stack.Screen options={{ title: t('Mi temporada') }} />
       <Pressable onPress={() => router.back()} style={styles.volver} hitSlop={8}>
         <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
         <Text style={styles.volverTexto}>Volver</Text>
@@ -106,7 +108,7 @@ export default function PlanningScreen() {
           <View style={styles.cabeceraPlan}>
             <Text style={styles.nivel}>{CYCLE_LEVEL_LABEL[cycle.level]}</Text>
             <Text style={styles.nombrePlan} numberOfLines={1}>
-              {cycle.name}
+              {nombreDeCiclo(cycle.name)}
             </Text>
             <Text style={styles.fechasPlan}>
               {cycle.startDate ? diaMes(cycle.startDate) : 'Sin inicio'}
@@ -125,12 +127,12 @@ export default function PlanningScreen() {
           {sueltos.map(({ cycle }) => (
             <Card key={cycle.id} style={styles.tarjetaSuelto}>
               <Text style={styles.nombrePlan} numberOfLines={1}>
-                {cycle.name}
+                {nombreDeCiclo(cycle.name)}
               </Text>
               <Text style={styles.fechasPlan}>
                 {CYCLE_LEVEL_LABEL[cycle.level]}
                 {cycle.isDeload ? ' · descarga' : ''}
-                {cycle.startDate ? ` · desde el ${diaMes(cycle.startDate)}` : ''}
+                {cycle.startDate ? frase` · desde el ${diaMes(cycle.startDate)}` : ''}
               </Text>
             </Card>
           ))}

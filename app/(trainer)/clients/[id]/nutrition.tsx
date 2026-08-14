@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { frase } from '../../../../lib/idioma';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../../../../components/Texto';
 import { Button } from '../../../../components/Button';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { MacroSum } from '../../../../components/MacroSum';
@@ -100,7 +102,7 @@ export default function NutritionEditorScreen() {
       notifyUser(
         clientId,
         planId ? 'Plan nutricional actualizado' : 'Nuevo plan nutricional',
-        `Tu entrenador ha actualizado tu plan: ${name}`
+        frase`Tu entrenador ha actualizado tu plan: ${name}`
       );
       router.back();
     } catch (e) {
@@ -116,7 +118,7 @@ export default function NutritionEditorScreen() {
     <ScreenContainer>
       <ScreenHeader
         title="Plan nutricional"
-        subtitle={clientName ? `Para ${clientName}` : undefined}
+        subtitle={clientName ? frase`Para ${clientName}` : undefined}
       />
 
       <TextField label="Nombre del plan" value={name} onChangeText={setName} />

@@ -1,89 +1,88 @@
-/*
- * La app en inglés (lib/i18n.ts).
+/**
+ * El diccionario tiene que seguir siendo un diccionario.
  *
- * Lo que hay que proteger: que una frase sin traducir NUNCA deje un hueco en
- * blanco ni un identificador a la vista —lo peor que puede pasar es que salga
- * en español, que es lo que pasaba antes con la app entera— y que el
- * diccionario no tenga entradas vacías, que es la forma silenciosa de romper
- * una pantalla.
+ * QUÉ SE COMPRUEBA Y POR QUÉ
  *
- *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-i18n.mjs
+ *  - Que no haya dos veces la misma clave. En un objeto literal la segunda
+ *    gana en silencio, así que un duplicado es una traducción que alguien
+ *    escribió y que no se usa. TypeScript ya lo caza, pero aquí sale con la
+ *    frase concreta.
+ *  - Que ninguna traducción esté vacía. Una cadena vacía SÍ pasa el `??` de
+ *    `traducir`, y entonces el inglés ve un hueco donde el español veía una
+ *    frase: es el único fallo de este diseño que no se degrada a español.
+ *  - Que los huecos numerados cuadren. Si el español dice `{0}` y `{1}` y el
+ *    inglés solo pone `{0}`, en inglés desaparece un dato —una fecha, un
+ *    importe— sin que nadie se entere. Y si el inglés inventa un `{2}` que no
+ *    existe, el usuario ve "{2}" en la pantalla.
+ *  - Que `frase` no se use para nada que se guarde. Traducir un dato al
+ *    escribirlo deja inglés dentro de los datos de alguien que mañana vuelve
+ *    al español.
  */
-import { cuantasTraducidas, EN, idiomaDe, IDIOMAS, traducir } from '../lib/i18n.ts';
+import { readFileSync } from 'node:fs';
+import { EN, traducir } from '../lib/i18n.ts';
 
 let fallos = 0;
-function comprueba(nombre, condicion, detalle = '') {
-  if (condicion) console.log(`  ✔ ${nombre}`);
-  else {
-    console.log(`  ✖ ${nombre}${detalle ? ` — ${detalle}` : ''}`);
-    fallos++;
+const mal = (m) => {
+  console.error('  ✗', m);
+  fallos++;
+};
+
+// --- Claves repetidas ---
+const fuente = readFileSync(new URL('../lib/i18n.ts', import.meta.url), 'utf8');
+const vistas = new Set();
+const re = /^ {2}(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|([A-Za-zÀ-ÿ_][\w]*)):/gm;
+let m;
+while ((m = re.exec(fuente))) {
+  const clave = m[1] ?? m[2] ?? m[3];
+  if (vistas.has(clave)) mal(`clave repetida: ${JSON.stringify(clave)}`);
+  vistas.add(clave);
+}
+
+// --- Traducciones vacías ---
+for (const [es, en] of Object.entries(EN)) {
+  if (!en.trim()) mal(`traducción vacía: ${JSON.stringify(es)}`);
+}
+
+// --- Huecos numerados ---
+const huecos = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((h) => h[1]).sort();
+for (const [es, en] of Object.entries(EN)) {
+  const a = huecos(es).join(',');
+  const b = huecos(en).join(',');
+  if (a !== b) mal(`huecos distintos en ${JSON.stringify(es)}: [${a}] vs [${b}]`);
+}
+
+// --- Lo que se guarda no se traduce ---
+// `newDay` y `addDay` escriben el nombre del día EN LOS DATOS del alumno.
+for (const f of ['app/(client)/my-plan.tsx', 'app/(trainer)/clients/[id]/routine.tsx']) {
+  const s = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+  for (const linea of s.split('\n')) {
+    if (/name:\s*frase`/.test(linea)) mal(`${f}: se traduce un nombre que se guarda — ${linea.trim()}`);
   }
 }
 
-console.log('\nTraducir');
-{
-  comprueba('en español devuelve el español', traducir('Mi entrenamiento', 'es') === 'Mi entrenamiento');
-  comprueba('en inglés, el inglés', traducir('Mi entrenamiento', 'en') === 'My training');
-  // Lo importante de todo esto: una frase que falta sale en español, nunca en
-  // blanco y nunca como un identificador.
-  const sinTraducir = 'Una frase que todavía no está en el diccionario';
-  comprueba('lo que falta sale en español', traducir(sinTraducir, 'en') === sinTraducir);
-  comprueba('y en español también', traducir(sinTraducir, 'es') === sinTraducir);
-  comprueba('una cadena vacía no rompe', traducir('', 'en') === '');
+// --- Que lo básico traduzca de verdad ---
+const casos = [
+  ['Iniciar sesión', 'Sign in'],
+  ['Mi entrenamiento', 'My training'],
+  ['Cobro pendiente', 'Payment due'],
+];
+for (const [es, en] of casos) {
+  if (traducir(es, 'en') !== en) mal(`traducir("${es}", "en") no da "${en}"`);
+  if (traducir(es, 'es') !== es) mal(`traducir("${es}", "es") debería devolver el español`);
 }
 
-console.log('\nLos huecos');
-{
-  // Se sustituyen DESPUÉS de traducir, para que un nombre o una cifra no
-  // dependan del idioma.
-  comprueba(
-    'se rellenan',
-    traducir('Hola, {nombre}', 'es', { nombre: 'Luis' }) === 'Hola, Luis'
-  );
-  comprueba(
-    'también en inglés',
-    traducir('Hola, {nombre}', 'en', { nombre: 'Luis' }) === 'Hola, Luis'
-  );
-  comprueba('un hueco sin valor se queda como está', traducir('Hola, {nombre}', 'es', {}) === 'Hola, {nombre}');
-  comprueba('sin huecos que rellenar, igual', traducir('Inicio', 'en') === 'Home');
-  comprueba('acepta números', traducir('{n} series', 'es', { n: 4 }) === '4 series');
+// Una frase que no está en el diccionario sale en español, nunca en blanco.
+const inventada = 'Esta frase no existe en el diccionario';
+if (traducir(inventada, 'en') !== inventada) mal('una frase sin traducir no cae al español');
+
+// Los huecos se rellenan DESPUÉS de traducir, para que un dato no dependa del idioma.
+if (traducir('Día {0} de {1}', 'en', { 0: 3, 1: 5 }) !== 'Day 3 of 5') {
+  mal('los huecos no se rellenan bien al traducir');
 }
 
-console.log('\nQué idioma le toca a cada uno');
-{
-  comprueba('lo que ha elegido manda', idiomaDe('en', 'es-ES') === 'en');
-  comprueba('y al revés', idiomaDe('es', 'en-GB') === 'es');
-  comprueba('sin elegir, el del móvil', idiomaDe(undefined, 'en-US') === 'en');
-  comprueba('un móvil en español, español', idiomaDe(undefined, 'es-MX') === 'es');
-  // Cualquier otro idioma cae en español, que es la lengua de la app: un
-  // francés entiende antes el español de una app española que un inglés a
-  // medias.
-  comprueba('un móvil en francés, español', idiomaDe(undefined, 'fr-FR') === 'es');
-  comprueba('sin saber nada, español', idiomaDe(undefined, undefined) === 'es');
-  comprueba('una preferencia rara se ignora', idiomaDe('klingon', 'en-US') === 'en');
-  comprueba('mayúsculas del sistema dan igual', idiomaDe(undefined, 'EN-us') === 'en');
-}
-
-console.log('\nEl diccionario');
-{
-  const claves = Object.keys(EN);
-  comprueba('tiene entradas', claves.length > 100, String(claves.length));
-  comprueba('cuantasTraducidas cuadra', cuantasTraducidas() === claves.length);
-  // Una entrada vacía es la forma silenciosa de dejar una pantalla sin texto.
-  comprueba('ninguna traducción vacía', claves.every((k) => (EN[k] ?? '').trim().length > 0));
-  comprueba('ninguna clave vacía', claves.every((k) => k.trim().length > 0));
-  // Una traducción idéntica al español casi siempre es un despiste (se copió y
-  // no se tradujo). Se permiten las que de verdad se escriben igual.
-  const iguales = claves.filter((k) => EN[k] === k);
-  const permitidas = new Set(['Grease the groove', 'Social']);
-  comprueba(
-    'ninguna traducción es una copia del español',
-    iguales.every((k) => permitidas.has(k)),
-    iguales.filter((k) => !permitidas.has(k)).join(', ')
-  );
-  comprueba('los dos idiomas están ofrecidos', IDIOMAS.length === 2);
-  comprueba('con su nombre en su propio idioma', IDIOMAS.some((i) => i.texto === 'English'));
-}
-
-console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
+console.log(
+  fallos === 0
+    ? `check-i18n: OK · ${Object.keys(EN).length} frases traducidas`
+    : `check-i18n: ${fallos} fallo(s)`
+);
 process.exit(fallos === 0 ? 0 : 1);

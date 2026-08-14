@@ -1,7 +1,9 @@
 import { diaMes, inicioDelDia } from '../../../../lib/fechas';
+import { t, frase  } from '../../../../lib/idioma';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
@@ -36,7 +38,7 @@ import {
 } from '../../../../lib/firestore/routineTemplates';
 import { getClientsForTrainer, getUserProfile } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
-import { flexLabel } from '../../../../lib/schedule';
+import { flexLabel, nombreDelDia } from '../../../../lib/schedule';
 import { SERIES_POR_DEFECTO } from '../../../../lib/gtg';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
@@ -195,7 +197,7 @@ export default function RoutineEditorScreen() {
     setDays(draft);
     setExpandedDays(draft.length > 0 ? { [draft[0].id]: true } : {});
     showToast(
-      `Borrador generado (nivel ${clientLevel ?? 'Intermedio'}) · revísalo y ajusta`
+      frase`Borrador generado (nivel ${t(clientLevel ?? 'Intermedio')}) · revísalo y ajusta`
     );
   };
 
@@ -700,7 +702,7 @@ export default function RoutineEditorScreen() {
       notifyUser(
         clientId,
         routineId ? 'Rutina actualizada' : 'Nueva rutina asignada',
-        `Tu entrenador ha actualizado tu plan: ${name}`
+        frase`Tu entrenador ha actualizado tu plan: ${name}`
       );
       showToast('Rutina guardada');
       router.back();
@@ -887,17 +889,17 @@ export default function RoutineEditorScreen() {
         const exCount = day.exercises.length;
         const summaryParts: string[] = [];
         if (schedule === 'cycle') {
-          if (day.optionalRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso opcional');
-          else if (day.isRest) summaryParts.push(`Día ${dayIndex + 1}`, 'Descanso');
-          else summaryParts.push(`Día ${dayIndex + 1}`, `Intensidad ${day.intensity ?? 5}`);
+          if (day.optionalRest) summaryParts.push(frase`Día ${dayIndex + 1}`, 'Descanso opcional');
+          else if (day.isRest) summaryParts.push(frase`Día ${dayIndex + 1}`, 'Descanso');
+          else summaryParts.push(frase`Día ${dayIndex + 1}`, `Intensidad ${day.intensity ?? 5}`);
         } else if (schedule === 'gtg') {
           summaryParts.push(
-            dayIndex === 0 ? `${seriesAlDia() ?? SERIES_POR_DEFECTO} series al día` : 'No se usa'
+            dayIndex === 0 ? frase`${seriesAlDia() ?? SERIES_POR_DEFECTO} series al día` : 'No se usa'
           );
         } else if (schedule === 'flex') {
           if (day.isRest) summaryParts.push('Descanso');
           else if (day.gtg) {
-            summaryParts.push(`Todo el día · ${day.gtgSetsPerDay ?? SERIES_POR_DEFECTO} series`);
+            summaryParts.push(frase`Todo el día · ${day.gtgSetsPerDay ?? SERIES_POR_DEFECTO} series`);
           }
           else if (day.intensityPct) {
             summaryParts.push(`${day.intensityPct} %`);
@@ -912,7 +914,7 @@ export default function RoutineEditorScreen() {
           summaryParts.push(`${exCount} ${exCount === 1 ? 'ejercicio' : 'ejercicios'}`);
           // Series totales del día (suma de las series de todos sus ejercicios).
           const totalSets = day.exercises.reduce((acc, e) => acc + (e.sets || 0), 0);
-          if (totalSets > 0) summaryParts.push(`${totalSets} series`);
+          if (totalSets > 0) summaryParts.push(frase`${totalSets} series`);
         }
         return (
         <Card style={[styles.dayCard, diaArrastrando && styles.dayCardDragging]}>
@@ -922,7 +924,7 @@ export default function RoutineEditorScreen() {
               onPress={() => toggleDayExpanded(day.id)}
             >
               <Text style={styles.dayTitle} numberOfLines={1}>
-                {day.name || `Día ${dayIndex + 1}`}
+                {nombreDelDia(day.name, dayIndex)}
               </Text>
               {/* Dos líneas: en una sola, "3 ejercicios · 14 series" se cortaba
                   justo donde estaba la información que se venía a buscar. */}
@@ -1043,7 +1045,7 @@ export default function RoutineEditorScreen() {
                 {day.gtg ? (
                   <TextField
                     keyboardType="number-pad"
-                    placeholder={`${SERIES_POR_DEFECTO} series al día`}
+                    placeholder={frase`${SERIES_POR_DEFECTO} series al día`}
                     value={day.gtgSetsPerDay ? String(day.gtgSetsPerDay) : ''}
                     onChangeText={(v) => updateDayGtgSets(day.id, v)}
                     containerStyle={styles.gtgCampo}
@@ -1595,7 +1597,7 @@ export default function RoutineEditorScreen() {
                   <View key={d.id} style={styles.moveDayRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.pickerRowText}>
-                        {d.name || `Día ${i + 1}`}
+                        {nombreDelDia(d.name, i)}
                         {isSource ? '  · actual' : ''}
                       </Text>
                       <Text style={styles.pickerRowMuscle}>

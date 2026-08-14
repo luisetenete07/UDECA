@@ -1,4 +1,5 @@
 import { esMismoDia } from './fechas';
+import { frase } from './idioma';
 import type { LoggedExercise, Routine, RoutineDay, WorkoutLog } from './types';
 
 /**
@@ -175,8 +176,8 @@ export function sinLaUltimaSerie(ejercicios: LoggedExercise[]): LoggedExercise[]
  */
 export function textoDelDia(p: ProgresoGtg): string {
   if (p.objetivo === 0) return '';
-  if (p.hechas === 0) return `Hoy: ${p.objetivo} series repartidas. Ninguna al fallo.`;
+  if (p.hechas === 0) return frase`Hoy: ${p.objetivo} series repartidas. Ninguna al fallo.`;
   if (p.completo) return 'Objetivo del día hecho. Descansa y mañana otra vez.';
   if (p.quedan === 1) return 'Queda una. Que salga tan fácil como la primera.';
-  return `Llevas ${p.hechas}. Quedan ${p.quedan}, sin prisa y sin apretar.`;
+  return frase`Llevas ${p.hechas}. Quedan ${p.quedan}, sin prisa y sin apretar.`;
 }

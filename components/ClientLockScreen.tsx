@@ -1,5 +1,7 @@
 import React from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { t, frase  } from '../lib/idioma';
+import { Linking, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { GateScreen } from './GateScreen';
@@ -68,7 +70,7 @@ export function ClientLockScreen() {
         notifyUser(
           profile.trainerId,
           'Pago declarado',
-          `${profile.name?.split(' ')[0] ?? 'Un alumno'} dice que ya ha pagado su cuota. Revísalo y confírmalo.`
+          frase`${profile.name?.split(' ')[0] ?? t('Un alumno')} dice que ya ha pagado su cuota. Revísalo y confírmalo.`
         ).catch(() => {});
       }
       await refreshProfile();
@@ -86,7 +88,7 @@ export function ClientLockScreen() {
       titulo="Tu acceso está en pausa"
       texto={
         trainerName
-          ? `Tienes pendiente la cuota con ${trainerName}. En cuanto se resuelva, sigues justo donde lo dejaste.`
+          ? frase`Tienes pendiente la cuota con ${trainerName}. En cuanto se resuelva, sigues justo donde lo dejaste.`
           : 'Tienes la cuota pendiente. En cuanto se resuelva, sigues justo donde lo dejaste.'
       }
       nota="Si has pagado por otra vía, avisa a tu entrenador y recuperas el acceso mientras lo confirma."

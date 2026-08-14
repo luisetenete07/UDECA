@@ -22,6 +22,13 @@ import {
   sinMini,
   TOPE_SEGURO,
 } from '../lib/curso.ts';
+import { setIdioma } from '../lib/idioma.ts';
+
+// Fuera de la app el idioma sale del sistema, y el de este entorno es inglés:
+// sin fijarlo estas comprobaciones leerían el texto en inglés y el resultado
+// dependería de dónde se ejecuten.
+setIdioma('es');
+
 
 let fallos = 0;
 function comprueba(nombre, condicion, detalle = '') {

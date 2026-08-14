@@ -1,5 +1,14 @@
+import { getIdioma } from './idioma';
+
 /**
- * Fechas escritas como se escriben en español.
+ * Fechas escritas como se escriben en el idioma de quien las lee.
+ *
+ * El idioma se pregunta AQUÍ, en cada llamada, y no se le pasa por parámetro a
+ * las veinte funciones de este fichero. Es a propósito: hay ciento y pico
+ * sitios que llaman a estas funciones, y si el idioma fuera un argumento
+ * bastaría con que a uno se le olvidara para que esa pantalla se quedara en
+ * español para siempre sin que nadie lo notara. Preguntándolo aquí, no hay
+ * forma de olvidarse.
  *
  * `textTransform: 'capitalize'` pone mayúscula en CADA palabra, y en inglés eso
  * casi siempre acierta. En español no: deja "Agosto De 2026" y "Miércoles, 5 De
@@ -10,7 +19,21 @@
  * días de la semana son nombres comunes.
  */
 
-/** Mayúscula solo en la primera letra; el resto se queda como está. */
+/**
+ * El locale que toca. En inglés, el británico: la app es europea y "13/08" se
+ * lee como el 13 de agosto, no como un mes 13 que no existe.
+ */
+export function localeActual(): string {
+  return getIdioma() === 'en' ? 'en-GB' : 'es-ES';
+}
+
+/**
+ * Mayúscula solo en la primera letra; el resto se queda como está.
+ *
+ * En inglés los meses y los días ya vienen en mayúscula del propio sistema, así
+ * que esto no les hace nada. En español sí hace falta: son nombres comunes y
+ * `toLocaleDateString` los devuelve en minúscula.
+ */
 export function mayusculaInicial(texto: string): string {
   if (!texto) return texto;
   return texto.charAt(0).toUpperCase() + texto.slice(1);
@@ -19,14 +42,14 @@ export function mayusculaInicial(texto: string): string {
 /** "agosto de 2026" -> "Agosto de 2026" */
 export function mesLargo(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
-  return mayusculaInicial(d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }));
+  return mayusculaInicial(d.toLocaleDateString(localeActual(), { month: 'long', year: 'numeric' }));
 }
 
 /** "miércoles, 5 de agosto" -> "Miércoles, 5 de agosto" */
 export function diaLargo(ts: number | Date, conAno = false): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
   return mayusculaInicial(
-    d.toLocaleDateString('es-ES', {
+    d.toLocaleDateString(localeActual(), {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -38,7 +61,7 @@ export function diaLargo(ts: number | Date, conAno = false): string {
 /** "05 ago 2026". La que se usa para fechas sueltas dentro de una ficha. */
 export function fechaCorta(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
-  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(localeActual(), { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 /**
@@ -48,7 +71,7 @@ export function fechaCorta(ts: number | Date): string {
  */
 export function diaMes(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
-  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString(localeActual(), { day: 'numeric', month: 'short' });
 }
 
 /**
@@ -58,7 +81,7 @@ export function diaMes(ts: number | Date): string {
  */
 export function fechaLegible(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
-  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString(localeActual(), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 /**
@@ -67,25 +90,25 @@ export function fechaLegible(ts: number | Date): string {
  */
 export function fechaNumerica(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
-  return d.toLocaleDateString('es-ES');
+  return d.toLocaleDateString(localeActual());
 }
 
 /** "5 de agosto". El día dicho como se dice en voz alta, sin año ni semana. */
 export function diaYMes(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
-  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+  return d.toLocaleDateString(localeActual(), { day: 'numeric', month: 'long' });
 }
 
 /** "ago". Para los ejes de las gráficas, donde solo cabe el mes. */
 export function mesCorto(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
-  return d.toLocaleDateString('es-ES', { month: 'short' });
+  return d.toLocaleDateString(localeActual(), { month: 'short' });
 }
 
 /** "agosto", el mes a secas. Para meterlo en una frase que ya trae el día. */
 export function nombreDelMes(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
-  return d.toLocaleDateString('es-ES', { month: 'long' });
+  return d.toLocaleDateString(localeActual(), { month: 'long' });
 }
 
 /**
@@ -97,7 +120,7 @@ export function nombreDelMes(ts: number | Date): string {
 export function diaSemanaCorto(ts: number | Date): string {
   const d = typeof ts === 'number' ? new Date(ts) : ts;
   return mayusculaInicial(
-    d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
+    d.toLocaleDateString(localeActual(), { weekday: 'short', day: 'numeric', month: 'short' })
   );
 }
 

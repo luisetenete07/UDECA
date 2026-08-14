@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, typography } from '../lib/theme';
 import { miniaturaDelEnlace, parseVimeoUrl, urlDeOEmbedVimeo } from '../lib/video';

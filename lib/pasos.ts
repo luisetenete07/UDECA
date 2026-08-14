@@ -1,4 +1,5 @@
 import { esMismoDia, inicioDelDia, masDias } from './fechas';
+import { frase } from './idioma';
 import { conMiles } from './texto';
 
 /**
@@ -149,9 +150,9 @@ export function pasosAGuardar(
 
 /** La frase que acompaña al anillo. Ni felicita de más ni riñe. */
 export function textoDePasos(p: ProgresoDePasos): string {
-  if (p.pasos === 0) return `Hoy aún no has andado. El objetivo son ${conMiles(p.objetivo)} pasos.`;
+  if (p.pasos === 0) return frase`Hoy aún no has andado. El objetivo son ${conMiles(p.objetivo)} pasos.`;
   if (p.cumplido) return 'Objetivo del día cumplido. Todo lo que venga es de más.';
-  return `Te quedan ${conMiles(p.quedan)} pasos para el objetivo.`;
+  return frase`Te quedan ${conMiles(p.quedan)} pasos para el objetivo.`;
 }
 
 /**
@@ -201,6 +202,6 @@ export function balanceDelDia(
 export function textoDelBalance(b: BalanceDelDia): string {
   const base = `${conMiles(b.consumidas)} / ${conMiles(b.disponibles)} kcal`;
   return b.ganadas > 0
-    ? `${base} · ${conMiles(b.objetivo)} del plan + ${conMiles(b.ganadas)} por andar`
+    ? frase`${base} · ${conMiles(b.objetivo)} del plan + ${conMiles(b.ganadas)} por andar`
     : base;
 }

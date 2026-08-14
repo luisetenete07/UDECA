@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Redirect } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '../components/Texto';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { useAuth } from '../lib/auth-context';
 import { hasSeenIntro } from '../lib/intro';

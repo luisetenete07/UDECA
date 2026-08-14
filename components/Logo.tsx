@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { colors, fonts, shadows, spacing } from '../lib/theme';
 
 export function Logo({ compact }: { compact?: boolean }) {

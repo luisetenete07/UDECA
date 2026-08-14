@@ -1,16 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { frase } from '../../../lib/idioma';
 import { useLocalSearchParams } from 'expo-router';
-import {
-  Image,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -251,7 +243,7 @@ export default function ClientCourseDetailScreen() {
                         }
                         onAbrir={() => {
                           if (locked) {
-                            showToast(`Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`);
+                            showToast(frase`Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`);
                             return;
                           }
                           if (abrible) setActiveLessonId(lesson.id);
@@ -276,7 +268,7 @@ export default function ClientCourseDetailScreen() {
                           onAbrir={() => {
                             if (locked) {
                               showToast(
-                                `Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`
+                                frase`Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`
                               );
                               return;
                             }

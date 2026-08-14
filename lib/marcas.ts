@@ -1,4 +1,5 @@
 import { bestsByExercise, detectNewPRs, type ExerciseBest } from './stats';
+import { frase } from './idioma';
 import type { WorkoutLog } from './types';
 
 /**
@@ -112,7 +113,7 @@ export function marcasDelMesPasado(logs: WorkoutLog[], ahora = Date.now()): numb
 export function textoDeMarcas(n: number): string {
   if (n <= 0) return 'Sin marcas nuevas';
   if (n === 1) return 'Superado 1 vez';
-  return `Superado x${n} veces`;
+  return frase`Superado x${n} veces`;
 }
 
 /** La versión corta, para la fila del ranking. */

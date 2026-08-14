@@ -1,6 +1,8 @@
 import React from 'react';
+import { frase } from '../lib/idioma';
 import { diaMes } from '../lib/fechas';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
 import { LineChart } from './LineChart';
@@ -20,10 +22,10 @@ function hace(fecha: number): string {
   const dias = Math.floor((Date.now() - fecha) / DIA_MS);
   if (dias <= 0) return 'hoy';
   if (dias === 1) return 'ayer';
-  if (dias < 14) return `hace ${dias} días`;
+  if (dias < 14) return frase`hace ${dias} días`;
   const semanas = Math.round(dias / 7);
-  if (semanas < 9) return `hace ${semanas} semanas`;
-  return `hace ${Math.round(dias / 30)} meses`;
+  if (semanas < 9) return frase`hace ${semanas} semanas`;
+  return frase`hace ${Math.round(dias / 30)} meses`;
 }
 
 interface Props {
@@ -245,7 +247,7 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
               color={colors.primary}
             />
             <Text style={styles.masTexto}>
-              {verTodas ? 'Ver menos' : `Ver los ${sesiones.length} días`}
+              {verTodas ? 'Ver menos' : frase`Ver los ${sesiones.length} días`}
             </Text>
           </Pressable>
         ) : null}

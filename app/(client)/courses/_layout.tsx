@@ -1,3 +1,4 @@
+import { t } from '../../../lib/idioma';
 import React from 'react';
 import { Stack } from 'expo-router';
 import { stackScreenOptions } from '../../../lib/navTheme';
@@ -8,7 +9,7 @@ export default function ClientCoursesLayout() {
       screenOptions={stackScreenOptions}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="[id]" options={{ title: 'Curso' }} />
+      <Stack.Screen name="[id]" options={{ title: t('Curso') }} />
     </Stack>
   );
 }

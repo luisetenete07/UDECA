@@ -23,6 +23,12 @@ import {
   mesLargo,
 } from '../lib/fechas.ts';
 import { minutosSegundos, segundosDeTexto } from '../lib/duracion.ts';
+import { setIdioma } from '../lib/idioma.ts';
+
+// Fuera de la app el idioma sale del sistema, y el de este entorno es inglés:
+// sin fijarlo, las fechas de estas comprobaciones saldrían en inglés y el
+// resultado dependería de dónde se ejecuten.
+setIdioma('es');
 
 let fallos = 0;
 function comprueba(nombre, condicion, detalle = '') {

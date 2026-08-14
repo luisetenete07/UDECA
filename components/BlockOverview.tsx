@@ -1,5 +1,7 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
@@ -267,8 +269,8 @@ export function BlockOverview({
 
       <Text style={styles.footNote}>
         {hasPlan
-          ? `Series hechas de previstas · ${totalDone} de ${totalPlanned} hasta hoy`
-          : `Series hechas · ${totalDone} en el bloque. La rutina va a sensaciones, así que no hay previsión que comparar.`}
+          ? frase`Series hechas de previstas · ${totalDone} de ${totalPlanned} hasta hoy`
+          : frase`Series hechas · ${totalDone} en el bloque. La rutina va a sensaciones, así que no hay previsión que comparar.`}
       </Text>
 
       {onPressDetail ? (

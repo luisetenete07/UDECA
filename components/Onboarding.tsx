@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { frase, t } from '../lib/idioma';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
@@ -72,7 +74,7 @@ export function Onboarding({
       ? [
           {
             icon: 'flame',
-            title: `Bienvenido a UDECA${name ? `, ${name.split(' ')[0]}` : ''}`,
+            title: name ? frase`Bienvenido a UDECA, ${name.split(' ')[0]}` : t('Bienvenido a UDECA'),
             lines: [
               'Aquí diriges tú: crea tu plan, registra tu progreso y controla tu nutrición, todo en un mismo sitio.',
               'Este es tu campo base. Vamos a verlo en 20 segundos.',
@@ -106,7 +108,7 @@ export function Onboarding({
       : [
           {
             icon: 'flame',
-            title: `Bienvenido a UDECA${name ? `, ${name.split(' ')[0]}` : ''}`,
+            title: name ? frase`Bienvenido a UDECA, ${name.split(' ')[0]}` : t('Bienvenido a UDECA'),
             lines: [
               'Tu entrenador te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.',
               'Este es tu campo base. Vamos a verlo en 20 segundos.',

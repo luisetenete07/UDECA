@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { TextField } from './TextField';
@@ -126,11 +128,11 @@ export function WeekPlanSheet({
         );
         extra =
           sinSemana.length > 0
-            ? ` · ${aplicados} alumno${aplicados === 1 ? '' : 's'} más (${sinSemana.length} sin esa semana)`
-            : ` · y ${aplicados} alumno${aplicados === 1 ? '' : 's'} más`;
+            ? frase` · ${aplicados} alumno${aplicados === 1 ? '' : 's'} más (${sinSemana.length} sin esa semana)`
+            : frase` · y ${aplicados} alumno${aplicados === 1 ? '' : 's'} más`;
       }
 
-      showToast(`Semana programada${extra}`);
+      showToast(frase`Semana programada${extra}`);
       onSaved();
       onClose();
     } catch {
@@ -176,7 +178,7 @@ export function WeekPlanSheet({
             <Pressable onPress={traerAnterior} style={[styles.copyBtn, { flex: 1 }]}>
               <Ionicons name="copy-outline" size={15} color={colors.primary} />
               <Text style={styles.copyText} numberOfLines={1}>
-                {previa ? `Traer de ${previa.name}` : 'Traer de la rutina'}
+                {previa ? frase`Traer de ${previa.name}` : 'Traer de la rutina'}
               </Text>
             </Pressable>
             <Pressable onPress={sugerir} style={[styles.copyBtn, { flex: 1 }]}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, PanResponder, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, PanResponder, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, {
   Defs,

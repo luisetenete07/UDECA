@@ -1,7 +1,9 @@
+import { t, frase } from '../../lib/idioma';
 import { diaMes, inicioDelDia } from '../../lib/fechas';
 import React, { useCallback, useState } from 'react';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -23,7 +25,7 @@ import {
   setActiveRoutine,
   updateRoutine,
 } from '../../lib/firestore/routines';
-import { flexLabel } from '../../lib/schedule';
+import { flexLabel, nombreDelDia } from '../../lib/schedule';
 import { SERIES_POR_DEFECTO } from '../../lib/gtg';
 import { minutosSegundos, segundosDeTexto } from '../../lib/duracion';
 import { idDeEjercicioPropio as slug, nuevoId } from '../../lib/ids';
@@ -266,7 +268,7 @@ export default function MyPlanScreen() {
 
   return (
     <ScreenContainer>
-      <Stack.Screen options={{ title: 'Mi plan' }} />
+      <Stack.Screen options={{ title: t('Mi plan') }} />
       <Text style={styles.title}>Mi plan</Text>
       <Text style={styles.subtitle}>
         Diseña tu entrenamiento con el método que prefieras. Tú lo creas, tú lo ajustas.
@@ -386,7 +388,7 @@ export default function MyPlanScreen() {
             <View style={styles.dayHead}>
               <Pressable style={styles.dayHeadMain} onPress={() => toggleDay(day.id, di === 0)}>
                 <Text style={styles.dayTitle} numberOfLines={1}>
-                  {day.name || `Día ${di + 1}`}
+                  {nombreDelDia(day.name, di)}
                 </Text>
                 <Text style={styles.daySummary}>{summary}</Text>
               </Pressable>
@@ -502,7 +504,7 @@ export default function MyPlanScreen() {
                     {day.gtg ? (
                       <TextField
                         keyboardType="number-pad"
-                        placeholder={`${SERIES_POR_DEFECTO} series al día`}
+                        placeholder={frase`${SERIES_POR_DEFECTO} series al día`}
                         value={day.gtgSetsPerDay ? String(day.gtgSetsPerDay) : ''}
                         onChangeText={(v) => {
                           const n = Number.parseInt(v, 10);

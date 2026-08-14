@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { frase } from '../../lib/idioma';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
@@ -228,7 +230,7 @@ export default function ClientProfileScreen() {
         id="alumno-logros"
         icon="ribbon-outline"
         title="Logros"
-        hint={`${unlockedCount} de ${achievements.length}`}
+        hint={frase`${unlockedCount} de ${achievements.length}`}
         defaultOpen={false}
       >
         <View style={styles.badgeGrid}>

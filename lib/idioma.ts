@@ -75,3 +75,34 @@ export function useT(): (texto: string, partes?: Record<string, string | number>
 export function t(texto: string, partes?: Record<string, string | number>): string {
   return traducir(texto, actual, partes);
 }
+
+/**
+ * Una frase con datos dentro: frase`Día ${n} de ${total}`.
+ *
+ * EL PROBLEMA QUE RESUELVE. La clave del diccionario es la frase en español,
+ * pero "Día 3 de 5" no es una frase: es una de las mil que salen de esa
+ * plantilla, y ninguna va a estar en el diccionario. Sin esto, todo el texto
+ * que lleva un número dentro —las cuotas, las rachas, los días de prueba, los
+ * avisos del bloque— se quedaría en español para siempre.
+ *
+ * CÓMO. La plantilla se reconstruye con huecos numerados, y ESA es la clave:
+ * frase`Día ${n} de ${total}` busca "Día {0} de {1}". Los datos se meten
+ * DESPUÉS de traducir, así que un nombre o una cifra nunca dependen del idioma
+ * ni pueden salir traducidos por accidente.
+ *
+ * En español devuelve exactamente lo que se lee en el código, y si a la frase
+ * le falta traducción, también: lo peor que pasa es que salga en español.
+ *
+ * Solo para texto que se ENSEÑA. Lo que se guarda (el nombre de un día del
+ * plan, por ejemplo) se queda como está: si se tradujera al escribirlo, el
+ * alumno vería inglés dentro de sus datos aunque volviera al español.
+ */
+export function frase(trozos: TemplateStringsArray, ...valores: unknown[]): string {
+  let clave = trozos[0];
+  const partes: Record<string, string> = {};
+  for (let i = 1; i < trozos.length; i++) {
+    partes[String(i - 1)] = String(valores[i - 1]);
+    clave += `{${i - 1}}` + trozos[i];
+  }
+  return traducir(clave, actual, partes);
+}

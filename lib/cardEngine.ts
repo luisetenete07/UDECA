@@ -15,6 +15,41 @@
 
 export type CardKind = 'session' | 'record' | 'report' | 'member';
 
+/**
+ * Los rótulos de la tarjeta, ya traducidos.
+ *
+ * El dibujo corre dentro de un WebView (o de un `new Function` en web), donde
+ * no llega nada de la app: ni el idioma, ni `t()`. Así que los textos se
+ * traducen AQUÍ, del lado de la app, y viajan con los datos. Es también la
+ * razón de que sean claves cortas y no frases: lo que cruza es el resultado,
+ * no la decisión.
+ */
+export interface CardTextos {
+  sesionCompletada: string;
+  duracion: string;
+  series: string;
+  repeticiones: string;
+  isometricos: string;
+  volumen: string;
+  nuevoRecord: string;
+  records: string;
+  racha: string;
+  informe: string;
+  entrenos: string;
+  diasEntrenados: string;
+  horas: string;
+  pesoCorporal: string;
+  mejoresMarcas: string;
+  isoEmpuje: string;
+  isoTiron: string;
+  empuje: string;
+  tiron: string;
+  sinMarcas: string;
+  fundador: string;
+  numeroNoSeReasigna: string;
+  locale: string;
+}
+
 export interface SessionCardData {
   routineName: string;
   dayName?: string;
@@ -83,6 +118,8 @@ var TEXT = '#FFFFFF';
 var MUTED = '#ADADAD';
 var FAINT = '#666666';
 var DISPLAY = 'Georgia, "Times New Roman", serif';
+// Los rótulos, ya traducidos por la app: aquí dentro no hay idioma que mirar.
+var T = {};
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -163,8 +200,8 @@ function drawStat(ctx, x, y, w, h, value, label) {
 }
 
 function formatSessionDate(ts) {
-  var wd = new Date(ts).toLocaleDateString('es-ES', { weekday: 'long' });
-  var dmy = new Date(ts).toLocaleDateString('es-ES', {
+  var wd = new Date(ts).toLocaleDateString(T.locale, { weekday: 'long' });
+  var dmy = new Date(ts).toLocaleDateString(T.locale, {
     day: '2-digit', month: '2-digit', year: 'numeric'
   });
   return wd.charAt(0).toUpperCase() + wd.slice(1) + ' ' + dmy;
@@ -173,7 +210,7 @@ function formatSessionDate(ts) {
 function drawSession(ctx, data) {
   ctx.fillStyle = TEXT;
   ctx.font = '600 62px ' + DISPLAY;
-  ctx.fillText('SESIÓN COMPLETADA', W / 2, 362);
+  ctx.fillText(T.sesionCompletada, W / 2, 362);
   ctx.fillStyle = GOLD_SOFT;
   ctx.font = '700 38px sans-serif';
   var sub = data.routineName + (data.dayName ? ' · ' + data.dayName : '');
@@ -182,11 +219,11 @@ function drawSession(ctx, data) {
   // Rejilla 2×2. Series, repeticiones e ISOMÉTRICOS se muestran siempre
   // (aunque valgan 0): la tarjeta debe tener siempre el mismo bloque.
   var stats = [];
-  if (data.durationMin > 0) stats.push([data.durationMin + ' min', 'Duración']);
-  stats.push([String(data.sets), 'Series']);
-  stats.push([String(data.reps), 'Repeticiones']);
-  stats.push([data.seconds + ' s', 'Isométricos']);
-  if (data.volumeKg > 0) stats.push([data.volumeKg.toLocaleString('es-ES') + ' kg', 'Volumen']);
+  if (data.durationMin > 0) stats.push([data.durationMin + ' min', T.duracion]);
+  stats.push([String(data.sets), T.series]);
+  stats.push([String(data.reps), T.repeticiones]);
+  stats.push([data.seconds + ' s', T.isometricos]);
+  if (data.volumeKg > 0) stats.push([data.volumeKg.toLocaleString(T.locale) + ' kg', T.volumen]);
   var shown = stats.slice(0, 4);
 
   var bw = 440, bh = 210, gap = 40;
@@ -198,13 +235,13 @@ function drawSession(ctx, data) {
   var extras = [];
   if (data.prCount > 0) {
     extras.push({
-      text: data.prCount === 1 ? 'NUEVO RÉCORD PERSONAL' : data.prCount + ' RÉCORDS PERSONALES',
+      text: data.prCount === 1 ? T.nuevoRecord : data.prCount + ' ' + T.records,
       color: GOLD_SOFT, font: '800 40px sans-serif', gapBefore: 70
     });
   }
   if (data.streak > 1) {
     extras.push({
-      text: 'Racha de ' + data.streak + ' días',
+      text: T.racha.replace('{0}', data.streak),
       color: '#ECEDEF', font: '600 36px sans-serif',
       gapBefore: extras.length > 0 ? 56 : 70
     });
@@ -277,7 +314,7 @@ function drawRecord(ctx, data, logo) {
   ctx.fillText('PR', W / 2, 443);
   ctx.fillStyle = TEXT;
   ctx.font = '900 64px sans-serif';
-  ctx.fillText('NUEVO RÉCORD PERSONAL', W / 2, 590);
+  ctx.fillText(T.nuevoRecord, W / 2, 590);
 
   var prs = (data.prs || []).slice(0, 3);
   var compact = prs.length > 1;
@@ -294,14 +331,14 @@ function drawRecord(ctx, data, logo) {
   if (data.streak && data.streak > 1) {
     ctx.fillStyle = '#ECEDEF';
     ctx.font = '600 40px sans-serif';
-    ctx.fillText('Racha de ' + data.streak + ' días', W / 2, 1170);
+    ctx.fillText(T.racha.replace('{0}', data.streak), W / 2, 1170);
   }
 }
 
 function drawReport(ctx, data) {
   ctx.fillStyle = TEXT;
   ctx.font = '600 56px ' + DISPLAY;
-  ctx.fillText('INFORME DE PROGRESO', W / 2, 350);
+  ctx.fillText(T.informe, W / 2, 350);
   ctx.fillStyle = GOLD_SOFT;
   ctx.font = '700 40px sans-serif';
   ctx.fillText(fit(ctx, data.clientName.toUpperCase(), W - 200), W / 2, 414);
@@ -313,27 +350,27 @@ function drawReport(ctx, data) {
   var bw = 440, bh = 190, gap = 36;
   var x0 = (W - (2 * bw + gap)) / 2;
   var y = 510;
-  drawStat(ctx, x0, y, bw, bh, String(data.totalWorkouts), 'Entrenos');
-  drawStat(ctx, x0 + bw + gap, y, bw, bh, String(data.daysTrained), 'Días entrenados');
+  drawStat(ctx, x0, y, bw, bh, String(data.totalWorkouts), T.entrenos);
+  drawStat(ctx, x0 + bw + gap, y, bw, bh, String(data.daysTrained), T.diasEntrenados);
   y += bh + gap;
-  drawStat(ctx, x0, y, bw, bh, data.totalHours.toLocaleString('es-ES') + ' h', 'Horas');
+  drawStat(ctx, x0, y, bw, bh, data.totalHours.toLocaleString(T.locale) + ' h', T.horas);
   var wc = '—';
   if (data.weightChangeKg !== undefined && data.weightChangeKg !== null) {
-    wc = (data.weightChangeKg >= 0 ? '+' : '') + data.weightChangeKg.toLocaleString('es-ES') + ' kg';
+    wc = (data.weightChangeKg >= 0 ? '+' : '') + data.weightChangeKg.toLocaleString(T.locale) + ' kg';
   }
-  drawStat(ctx, x0 + bw + gap, y, bw, bh, wc, 'Peso corporal');
+  drawStat(ctx, x0 + bw + gap, y, bw, bh, wc, T.pesoCorporal);
   y += bh + gap + 40;
 
   ctx.fillStyle = GOLD;
   ctx.font = '800 32px sans-serif';
-  ctx.fillText('MEJORES MARCAS', W / 2, y);
+  ctx.fillText(T.mejoresMarcas, W / 2, y);
   y += 56;
   var lines = [];
-  if (data.bestPushIso) lines.push('Isométrico empuje · ' + data.bestPushIso);
-  if (data.bestPullIso) lines.push('Isométrico tirón · ' + data.bestPullIso);
-  if (data.bestPushReps) lines.push('Empuje · ' + data.bestPushReps);
-  if (data.bestPullReps) lines.push('Tirón · ' + data.bestPullReps);
-  if (lines.length === 0) lines.push('Aún sin marcas registradas');
+  if (data.bestPushIso) lines.push(T.isoEmpuje + ' · ' + data.bestPushIso);
+  if (data.bestPullIso) lines.push(T.isoTiron + ' · ' + data.bestPullIso);
+  if (data.bestPushReps) lines.push(T.empuje + ' · ' + data.bestPushReps);
+  if (data.bestPullReps) lines.push(T.tiron + ' · ' + data.bestPullReps);
+  if (lines.length === 0) lines.push(T.sinMarcas);
   ctx.fillStyle = '#ECEDEF';
   ctx.font = '600 34px sans-serif';
   for (var i = 0; i < Math.min(lines.length, 4); i++) {
@@ -403,7 +440,7 @@ function drawMember(ctx, data, logo) {
     // un sello con el texto rozando el borde parece mal impreso, no antiguo.
     ctx.fillStyle = MUTED;
     ctx.font = '700 26px sans-serif';
-    ctx.fillText('F U N D A D O R', W / 2, cy + 172);
+    ctx.fillText(espaciado(T.fundador), W / 2, cy + 172);
   } else {
     ctx.font = '900 76px sans-serif';
     ctx.fillText(data.monograma || 'UD', W / 2, cy + 26);
@@ -450,7 +487,7 @@ function drawMember(ctx, data, logo) {
   if (esFundador) {
     ctx.fillStyle = GOLD_SOFT;
     ctx.font = '600 28px sans-serif';
-    ctx.fillText('Miembro fundador · el número no se reasigna', W / 2, 1104);
+    ctx.fillText(T.numeroNoSeReasigna, W / 2, 1104);
   }
 }
 
@@ -486,7 +523,8 @@ function espaciado(t) {
   return String(t || '').split('').join(' ');
 }
 
-function udecaDrawCard(canvas, kind, data, logoUri) {
+function udecaDrawCard(canvas, kind, data, logoUri, textos) {
+  T = textos || {};
   canvas.width = W;
   canvas.height = H;
   var ctx = canvas.getContext('2d');
@@ -508,8 +546,13 @@ function udecaDrawCard(canvas, kind, data, logoUri) {
 `;
 
 /** Documento HTML autónomo que pinta la tarjeta y devuelve el PNG en base64. */
-export function buildCardHtml(kind: CardKind, data: CardData, logoUri: string): string {
-  const payload = JSON.stringify({ kind, data, logoUri });
+export function buildCardHtml(
+  kind: CardKind,
+  data: CardData,
+  logoUri: string,
+  textos: CardTextos
+): string {
+  const payload = JSON.stringify({ kind, data, logoUri, textos });
   return `<!DOCTYPE html><html><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>html,body{margin:0;background:#000}canvas{display:none}</style></head>
@@ -521,7 +564,7 @@ ${CARD_SCRIPT}
   };
   try {
     var p = ${payload};
-    udecaDrawCard(document.getElementById('c'), p.kind, p.data, p.logoUri)
+    udecaDrawCard(document.getElementById('c'), p.kind, p.data, p.logoUri, p.textos)
       .then(function (canvas) { post(canvas.toDataURL('image/png')); })
       .catch(function (e) { post('ERROR:' + e.message); });
   } catch (e) {

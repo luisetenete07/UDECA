@@ -1,5 +1,8 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Texto';
+import { t } from '../lib/idioma';
+import { esLaPalabra } from '../lib/i18n';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -236,7 +239,7 @@ export default function AccountDeletionScreen() {
             </Text>
             <Text style={styles.palabraClave}>{PALABRA}</Text>
             <TextField
-              placeholder={PALABRA}
+              placeholder={t(PALABRA)}
               value={palabra}
               onChangeText={setPalabra}
               autoCapitalize="characters"
@@ -259,7 +262,7 @@ export default function AccountDeletionScreen() {
             <Button
               title="Continuar"
               variant="danger"
-              disabled={palabra.trim().toUpperCase() !== PALABRA}
+              disabled={!esLaPalabra(palabra, PALABRA)}
               onPress={() => setPaso(4)}
             />
             <Button title="Volver atrás" variant="ghost" onPress={() => setPaso(2)} />

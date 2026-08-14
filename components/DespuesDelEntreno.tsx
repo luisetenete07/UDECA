@@ -1,5 +1,7 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { Card } from './Card';
@@ -94,8 +96,8 @@ function textoDeRacha(dias: number): string {
   if (hito === 7) return 'Una semana seguida entrenando.';
   if (hito === 30) return '¡Un mes entero de racha!';
   if (hito === 365) return 'Un año. Trescientos sesenta y cinco días.';
-  if (hito) return `¡${hito} días de racha!`;
-  return `Racha de ${dias} días. Sigue así.`;
+  if (hito) return frase`¡${hito} días de racha!`;
+  return frase`Racha de ${dias} días. Sigue así.`;
 }
 
 export function ResumenEntreno({

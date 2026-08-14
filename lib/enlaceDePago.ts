@@ -1,4 +1,5 @@
 import type { UserProfile } from './types';
+import { frase } from './idioma';
 
 /**
  * El enlace de cobro, uno por alumno.
@@ -79,7 +80,7 @@ export function pistaDelEnlace(link: string | undefined, cuota?: number): string
   const t = (link ?? '').trim();
   if (!t) {
     return cuota
-      ? `Sin enlace, ${cuota} € se cobran por fuera y se confirman a mano. Con enlace, tu alumno paga de un toque.`
+      ? frase`Sin enlace, ${cuota} € se cobran por fuera y se confirman a mano. Con enlace, tu alumno paga de un toque.`
       : 'Pega aquí el enlace con el que paga ESTE alumno. Cada uno puede tener el suyo, con su precio.';
   }
   if (!enlaceValido(t)) return 'Eso no parece una dirección. Tiene que empezar por https://';

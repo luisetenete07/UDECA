@@ -9,6 +9,7 @@ import {
   type WorkoutLog,
 } from './types';
 import { diasEntre, inicioDeLaSemana, inicioDelDia, masDias, mesLargo } from './fechas';
+import { frase } from './idioma';
 
 /**
  * Convierte a número tolerando la coma decimal española (66,4 → 66.4). Sin
@@ -377,7 +378,7 @@ export function effectiveLoadKg(
 
 /** Cómo se dice una carga: "15 kg" si es lastre, "15 kg de goma" si asiste. */
 export function loadLabel(kg: number): string {
-  return kg < 0 ? `${Math.abs(kg)} kg de goma` : `${kg} kg`;
+  return kg < 0 ? frase`${Math.abs(kg)} kg de goma` : `${kg} kg`;
 }
 
 export interface ExerciseBest {

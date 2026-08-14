@@ -1,4 +1,5 @@
 import { masDias } from './fechas';
+import { frase } from './idioma';
 import type { WeightLog } from './types';
 
 /**
@@ -139,13 +140,13 @@ export function conSigno(kg: number): string {
  */
 export function textoDelObjetivo(r: ResumenDePeso, objetivo?: number): string | null {
   if (!objetivo || r.actual === undefined || r.aObjetivo === undefined) return null;
-  if (r.enObjetivo) return `Estás en tu objetivo de ${objetivo} kg.`;
+  if (r.enObjetivo) return frase`Estás en tu objetivo de ${objetivo} kg.`;
   const cuantos = Math.abs(r.aObjetivo).toFixed(1).replace('.', ',');
   // Se dice el VERBO, no solo el número. "Te faltan 3,4 kg" pesando 68 con
   // objetivo 64 se lee, a la velocidad a la que se lee esto, como que hay que
   // ganarlos: es la frase que uno espera cuando está intentando subir. Decir
   // "perder" o "ganar" quita esa duda sin gastar una línea más.
   return r.aObjetivo < 0
-    ? `Te faltan perder ${cuantos} kg para tu objetivo de ${objetivo} kg.`
-    : `Te faltan ganar ${cuantos} kg para tu objetivo de ${objetivo} kg.`;
+    ? frase`Te faltan perder ${cuantos} kg para tu objetivo de ${objetivo} kg.`
+    : frase`Te faltan ganar ${cuantos} kg para tu objetivo de ${objetivo} kg.`;
 }

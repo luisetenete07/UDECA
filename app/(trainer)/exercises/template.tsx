@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { frase } from '../../../lib/idioma';
 import { Redirect, useFocusEffect } from 'expo-router';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
@@ -230,7 +232,7 @@ export default function TemplateExercisesScreen() {
         });
       }
       await load();
-      showToast(`${missing.length} ejercicios añadidos desde tu cuenta`);
+      showToast(frase`${missing.length} ejercicios añadidos desde tu cuenta`);
     } catch {
       showToast('No se pudieron añadir');
     } finally {

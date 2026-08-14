@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { t, frase  } from '../../lib/idioma';
 import { diaLargo, diaMes, diaYMes, esHoy, inicioDelDia } from '../../lib/fechas';
 import { unido } from '../../lib/texto';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,7 +44,7 @@ import { clientDaysUntilLock } from '../../lib/subscription';
 import { notifyUser } from '../../lib/notifications';
 import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
-import { planCalendar, planSummary } from '../../lib/cyclePlan';
+import { nombreDeCiclo, planCalendar, planSummary } from '../../lib/cyclePlan';
 import { getCycleAnchor } from '../../lib/cycleAnchor';
 import { anclaConPausas, diasDePausa, diasQueQuedan, pausaActiva } from '../../lib/pausa';
 import { cancelarAvisosOlvido, programarAvisosOlvido } from '../../lib/notifications';
@@ -300,7 +302,7 @@ export default function ClientDashboard() {
         notifyUser(
           profile.trainerId,
           'Pago declarado',
-          `${profile.name?.split(' ')[0] ?? 'Un alumno'} dice que ya ha pagado su cuota. Revísalo y confírmalo.`
+          frase`${profile.name?.split(' ')[0] ?? t('Un alumno')} dice que ya ha pagado su cuota. Revísalo y confírmalo.`
         ).catch(() => {});
       }
       await refreshProfile();
@@ -332,11 +334,13 @@ export default function ClientDashboard() {
             ? ''
             : restan === 0
               ? ' Tu acceso queda en pausa hasta que se resuelva.'
-              : ` Te ${restan === 1 ? 'queda 1 día' : `quedan ${restan} días`} antes de que el acceso se pause.`;
+              : restan === 1
+                ? t(' Te queda 1 día antes de que el acceso se pause.')
+                : frase` Te quedan ${restan} días antes de que el acceso se pause.`;
         return {
           bad: true,
           title: 'Cobro pendiente',
-          text: `Tu cuota de ${fee} venció el ${fmt(due)}.${cola}`,
+          text: frase`Tu cuota de ${fee} venció el ${fmt(due)}.${cola}`,
         };
       }
       if (days <= 5)
@@ -345,8 +349,10 @@ export default function ClientDashboard() {
           title: 'Cobro próximo',
           text:
             days === 0
-              ? `Hoy vence tu cuota de ${fee}. Ponte al día con tu entrenador.`
-              : `Tu cuota de ${fee} vence ${days === 1 ? 'mañana' : `en ${days} días`} (${fmt(due)}).`,
+              ? frase`Hoy vence tu cuota de ${fee}. Ponte al día con tu entrenador.`
+              : days === 1
+                ? frase`Tu cuota de ${fee} vence mañana (${fmt(due)}).`
+                : frase`Tu cuota de ${fee} vence en ${days} días (${fmt(due)}).`,
         };
       return null;
     }
@@ -355,13 +361,13 @@ export default function ClientDashboard() {
       return {
         bad: true,
         title: 'Cobro pendiente',
-        text: `Tienes un pago pendiente de ${fee}. Renueva con tu entrenador.`,
+        text: frase`Tienes un pago pendiente de ${fee}. Renueva con tu entrenador.`,
       };
     if (status === 'pending')
       return {
         bad: false,
         title: 'Cobro próximo',
-        text: `Tu entrenador espera el pago de ${fee}. Ponte al día cuando puedas.`,
+        text: frase`Tu entrenador espera el pago de ${fee}. Ponte al día cuando puedas.`,
       };
     return null;
   })();
@@ -635,13 +641,13 @@ export default function ClientDashboard() {
               <View style={styles.cycleCard}>
                 <View style={styles.cycleTop}>
                   <Text style={styles.cycleLevel} numberOfLines={1}>
-                    {bloque ? bloque.name : CYCLE_LEVEL_LABEL[activeCyc.level]}
+                    {bloque ? nombreDeCiclo(bloque.name) : CYCLE_LEVEL_LABEL[activeCyc.level]}
                   </Text>
                   <View style={styles.cycleWeekBadge}>
                     <Ionicons name="calendar-outline" size={12} color={colors.primaryBright} />
                     <Text style={styles.cycleWeekText}>
                       Semana {wk.week}
-                      {wk.totalWeeks ? ` de ${wk.totalWeeks}` : ''}
+                      {wk.totalWeeks ? frase` de ${wk.totalWeeks}` : ''}
                     </Text>
                   </View>
                   {activeCyc.isDeload ? (
@@ -649,8 +655,8 @@ export default function ClientDashboard() {
                   ) : null}
                 </View>
                 <Text style={styles.cycleName}>
-                  {raiz && raiz !== bloque ? `${raiz.name} · ` : ''}
-                  {activeCyc.name}
+                  {raiz && raiz !== bloque ? `${nombreDeCiclo(raiz.name)} · ` : ''}
+                  {nombreDeCiclo(activeCyc.name)}
                 </Text>
                 {cs.pctComplete != null ? (
                   <View style={{ marginTop: spacing.sm }}>
@@ -662,7 +668,7 @@ export default function ClientDashboard() {
                   {activeCyc.targetSessions ? `/${activeCyc.targetSessions}` : ''} sesiones
                   {cs.pctComplete != null ? ` · ${Math.round(cs.pctComplete * 100)}%` : ''}
                   {activeCyc.endDate
-                    ? ` · hasta ${diaMes(activeCyc.endDate)}`
+                    ? frase` · hasta ${diaMes(activeCyc.endDate)}`
                     : ''}
                 </Text>
                 {activeCyc.goal || bloque?.goal || raiz?.goal ? (
@@ -695,14 +701,14 @@ export default function ClientDashboard() {
               <Text style={styles.weekBig}>
                 {sessions >= targetSessions
                   ? 'Semana cerrada'
-                  : `${targetSessions - sessions} para cerrarla`}
+                  : frase`${targetSessions - sessions} para cerrarla`}
               </Text>
               {streak > 0 ? (
                 <View style={styles.streakInline}>
                   <Ionicons name="flame" size={14} color={colors.primaryBright} />
                   <CountUp
                     value={streak}
-                    suffix={` día${streak === 1 ? '' : 's'} de racha`}
+                    suffix={frase` día${streak === 1 ? '' : 's'} de racha`}
                     style={styles.streakInlineText}
                   />
                 </View>
@@ -710,7 +716,7 @@ export default function ClientDashboard() {
                 <Text style={styles.weekHint}>
                   {sessions >= targetSessions
                     ? 'Objetivo cumplido. Lo que venga es de propina.'
-                    : `Llevas ${sessions} de ${targetSessions} sesiones.`}
+                    : frase`Llevas ${sessions} de ${targetSessions} sesiones.`}
                 </Text>
               )}
             </View>

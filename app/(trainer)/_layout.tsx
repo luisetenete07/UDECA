@@ -7,7 +7,7 @@ import { EntryWall } from '../../components/EntryWall';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { useTabScreenOptions } from '../../lib/navTheme';
-import { useT } from '../../lib/idioma';
+import { t, useT  } from '../../lib/idioma';
 import { hasPlatformAccess, needsEntryPayment } from '../../lib/subscription';
 
 export default function TrainerLayout() {

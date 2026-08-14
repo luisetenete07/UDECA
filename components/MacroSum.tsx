@@ -1,5 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Texto';
 import { CountUp } from './CountUp';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 
@@ -79,8 +81,8 @@ export function MacroSum({
       {calorias > 0 && !cuadra ? (
         <Text style={styles.aviso}>
           {diferencia > 0
-            ? `${Math.round(diferencia)} kcal por encima de las ${calorias.toLocaleString('es-ES')} que has puesto arriba.`
-            : `${Math.round(-diferencia)} kcal por debajo de las ${calorias.toLocaleString('es-ES')} que has puesto arriba.`}
+            ? frase`${Math.round(diferencia)} kcal por encima de las ${calorias.toLocaleString('es-ES')} que has puesto arriba.`
+            : frase`${Math.round(-diferencia)} kcal por debajo de las ${calorias.toLocaleString('es-ES')} que has puesto arriba.`}
         </Text>
       ) : null}
     </View>

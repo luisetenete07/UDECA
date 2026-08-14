@@ -1,19 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { t, frase  } from '../../lib/idioma';
 import { diaLargo, diaSemanaCorto, esMismoDia, inicioDelDia, masDias } from '../../lib/fechas';
 import { unido } from '../../lib/texto';
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import {
-  AppState,
-  Linking,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { AppState, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -275,7 +266,7 @@ export default function WorkoutScreen() {
       (async () => {
         // Sube entrenos que quedaron pendientes por falta de conexión.
         const uploaded = await flushPendingWorkouts().catch(() => 0);
-        if (uploaded > 0) showToast(`${uploaded} entreno(s) pendiente(s) subido(s) ✓`);
+        if (uploaded > 0) showToast(frase`${uploaded} entreno(s) pendiente(s) subido(s) ✓`);
         const [data, logs, ciclos] = await Promise.all([
           getActiveRoutineForClient(profile.uid),
           getWorkoutLogsForClient(profile.uid),
@@ -834,7 +825,7 @@ export default function WorkoutScreen() {
     setSelectedDayId(routine.days[index].id);
     setViewIndex(0);
     setDayPickerOpen(false);
-    showToast(`Hoy es el Día ${index + 1}`);
+    showToast(frase`Hoy es el Día ${index + 1}`);
   };
 
   const isOptionalRestToday = routine?.schedule === 'cycle' && todaySession.optionalRest;
@@ -866,18 +857,18 @@ export default function WorkoutScreen() {
     const parts = [
       `Sesión completada en UDECA: ${day?.name ?? routine.name}`,
       summary.durationMin > 0 ? `${summary.durationMin} min` : null,
-      `${summary.sets} series`,
+      frase`${summary.sets} series`,
       summary.reps > 0 ? `${summary.reps} reps` : null,
       summary.seconds > 0 ? `${summary.seconds}s isométrico` : null,
-      summary.volumeKg > 0 ? `${summary.volumeKg} kg de volumen` : null,
+      summary.volumeKg > 0 ? frase`${summary.volumeKg} kg de volumen` : null,
       summary.prs.length > 0
         ? `${summary.prs.length} récord${summary.prs.length > 1 ? 's' : ''} personal${
             summary.prs.length > 1 ? 'es' : ''
           }`
         : null,
-      summary.streak > 1 ? `Racha: ${summary.streak} días` : null,
+      summary.streak > 1 ? frase`Racha: ${summary.streak} días` : null,
     ].filter(Boolean);
-    const message = `${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    const message = frase`${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
     try {
       await Share.share({ message });
     } catch {
@@ -917,12 +908,12 @@ export default function WorkoutScreen() {
     const parts = [
       `Sesión completada en UDECA: ${logToShare.dayName ?? routine.name}`,
       logToShare.durationMin ? `${logToShare.durationMin} min` : null,
-      `${t.sets} series`,
+      frase`${t.sets} series`,
       t.reps > 0 ? `${t.reps} reps` : null,
       t.seconds > 0 ? `${t.seconds}s isométrico` : null,
-      t.volumeKg > 0 ? `${t.volumeKg} kg de volumen` : null,
+      t.volumeKg > 0 ? frase`${t.volumeKg} kg de volumen` : null,
     ].filter(Boolean);
-    const message = `${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    const message = frase`${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
     try {
       await Share.share({ message });
     } catch {
@@ -951,7 +942,7 @@ export default function WorkoutScreen() {
     }
     const lines = summary.prs.map((pr) => `${pr.exerciseName}: ${pr.label}`);
     const message = `NUEVO RÉCORD PERSONAL\n\n${lines.join('\n')}\n\n${
-      summary.streak > 1 ? `Racha de ${summary.streak} días\n` : ''
+      summary.streak > 1 ? frase`Racha de ${summary.streak} días\n` : ''
     }Entrenando con UDECA — Universidad de Calistenia\nwww.udeca.app`;
     try {
       await Share.share({ message });
@@ -1014,7 +1005,7 @@ export default function WorkoutScreen() {
         const nextEx = day?.exercises[exerciseIndex + 1];
         const nextLabel =
           setIndex + 1 < setsInEx
-            ? `Ahora: Serie ${setIndex + 2} · ${exName}`
+            ? frase`Ahora: Serie ${setIndex + 2} · ${exName}`
             : nextEx
               ? `Ahora: ${nextEx.name}`
               : 'Última serie hecha · guarda la sesión';
@@ -1628,7 +1619,7 @@ export default function WorkoutScreen() {
                 key={d.id}
                 texto={
                   (isCycle
-                    ? `Día ${i + 1}`
+                    ? frase`Día ${i + 1}`
                     : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`) +
                   (d.optionalRest ? ' · descanso opcional' : d.isRest ? ' · descanso' : '') +
                   (isToday ? '  ·  HOY' : '')
@@ -1807,7 +1798,7 @@ export default function WorkoutScreen() {
         {routine.days.map((d, i) => (
           <Button
             key={d.id}
-            title={`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? ' (descanso)' : ''}`}
+            title={frase`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? t(' (descanso)') : ''}`}
             variant={todaySession.cycleIndex === i ? 'primary' : 'secondary'}
             onPress={() => handleSetTodayIndex(i)}
             style={{ marginTop: spacing.sm }}

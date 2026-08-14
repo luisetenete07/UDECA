@@ -1,4 +1,5 @@
 import type { UserProfile } from './types';
+import { frase } from './idioma';
 
 /**
  * Proteger los vídeos de los cursos.
@@ -102,6 +103,6 @@ export function avisoDeProteccion(plataforma: string): string {
 export function avisoDeCaptura(nombre?: string | null): string {
   const quien = (nombre ?? '').trim().split(' ')[0];
   return quien
-    ? `${quien}, esta clase va marcada con tu nombre: cualquier copia lleva tu cuenta encima. Compartirla es motivo de baja.`
+    ? frase`${quien}, esta clase va marcada con tu nombre: cualquier copia lleva tu cuenta encima. Compartirla es motivo de baja.`
     : 'Esta clase va marcada con tu nombre: cualquier copia lleva tu cuenta encima. Compartirla es motivo de baja.';
 }

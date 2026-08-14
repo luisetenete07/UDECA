@@ -1,4 +1,5 @@
 import { Alert, Platform } from 'react-native';
+import { t } from './idioma';
 
 /**
  * "¿Seguro?", una sola vez y en un solo sitio.
@@ -19,14 +20,16 @@ import { Alert, Platform } from 'react-native';
  * usuario necesita leer, no solo confirmar.
  */
 export function confirmar(mensaje: string, titulo = 'Borrar'): Promise<boolean> {
+  // Se traduce aquí dentro, que es el único sitio por el que pasan todas las
+  // confirmaciones de la app.
   if (Platform.OS === 'web') {
     // eslint-disable-next-line no-alert
-    return Promise.resolve(window.confirm(mensaje));
+    return Promise.resolve(window.confirm(t(mensaje)));
   }
   return new Promise((resolve) => {
-    Alert.alert(titulo, mensaje, [
-      { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-      { text: 'Borrar', style: 'destructive', onPress: () => resolve(true) },
+    Alert.alert(t(titulo), t(mensaje), [
+      { text: t('Cancelar'), style: 'cancel', onPress: () => resolve(false) },
+      { text: t('Borrar'), style: 'destructive', onPress: () => resolve(true) },
     ]);
   });
 }
