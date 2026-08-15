@@ -92,9 +92,22 @@ No se arregla desde el código: es un ajuste de la ficha, no del binario. Y
 conviene hacerlo antes de publicar: si sale en Mac, quien la instale ahí verá
 una app que se cierra al abrirse, y esa reseña cuenta igual que las demás.
 
-**Android: "Gradle build failed with unknown error".** El detalle de verdad no
-sale en la acción de GitHub, sale en EAS: abre el enlace `See logs:` que
-aparece en el registro y mira la fase **Run gradlew**.
+**Android: "Gradle build failed with unknown error".** Lo que había detrás era
+esto, por si vuelve a asomar:
+
+    :expo-modules-core:lintVitalAnalyzeRelease FAILED
+    > Unexpected failure during lint analysis of Logger.kt
+      Message: Metaspace
+      Stack: OutOfMemoryError...
+
+La JVM de Gradle se quedaba sin memoria para cargar clases mientras Lint
+recorría expo-modules-core. Lo arregla `plugins/memoria-de-gradle.js`, que sube
+esa memoria al generar el proyecto. Si alguien lo quita de `app.json`, la
+comprobación `check-gradle` lo canta antes de compilar.
+
+El detalle de cualquier otro fallo de Gradle no sale en la acción de GitHub,
+sale en EAS: abre el enlace `See logs:` que aparece en el registro y mira la
+fase **Run gradlew**.
 
 Si no puedes entrar en Expo en ese momento, la acción *Build Android (AAB)*
 tiene un interruptor: al lanzarla, marca **"Compilar aquí en vez de en EAS"**.

@@ -33,12 +33,17 @@ jobs:
 
       - name: Compilar en EAS
         if: ${{ !inputs.en_el_runner }}
+        timeout-minutes: 60
         run: eas build --platform android --profile production --non-interactive
 
       # La imagen de ubuntu-latest ya trae el SDK de Android y el JDK, así que
       # EAS puede ejecutar el mismo build aquí. Tarda más, pero se ve todo.
+      # Con tope de tiempo: compilando aquí, Gradle terminó en 13 minutos y el
+      # proceso se quedó otra hora sin salir. Sin este límite, un cuelgue se
+      # come el runner entero antes de que nadie se dé cuenta.
       - name: Compilar aquí (diagnóstico)
         if: ${{ inputs.en_el_runner }}
+        timeout-minutes: 45
         run: eas build --platform android --profile production --non-interactive --local --output ./udeca.aab
 
       - name: Guardar el .aab
