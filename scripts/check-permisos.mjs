@@ -73,14 +73,36 @@ for (const idioma of ['es', 'en']) {
     continue;
   }
   const fichero = JSON.parse(readFileSync(new URL('../' + locales[idioma].replace('./', ''), import.meta.url), 'utf8'));
+  /**
+   * Anidados bajo "ios", y no sueltos en la raíz.
+   *
+   * Lo que va en la raíz del fichero se lo lleva TAMBIÉN Android, que genera un
+   * values-b+en/strings.xml con esos textos. Y como no existen en el idioma por
+   * defecto, Lint los da por errores fatales y tumba el build de release:
+   *
+   *   "NSPhotoLibraryUsageDescription" is translated here but not found in
+   *   default locale [ExtraTranslation]
+   *
+   * Pasó de verdad, y costó tres compilaciones enteras encontrarlo porque EAS
+   * solo decía "Gradle build failed with unknown error". Son textos de permisos
+   * de iOS: bajo "ios" llegan a iOS y Android no ve nada.
+   */
+  if (!fichero.ios) {
+    mal(`${locales[idioma]}: los textos tienen que ir anidados bajo "ios"`);
+    continue;
+  }
+  if (fichero.android) mal(`${locales[idioma]}: Android no usa estos textos`);
+  for (const clave of Object.keys(fichero)) {
+    if (clave !== 'ios') mal(`${locales[idioma]}: "${clave}" está en la raíz y se lo lleva Android`);
+  }
   for (const [clave] of NECESARIOS) {
-    if (!fichero[clave]) mal(`${locales[idioma]}: falta ${clave}`);
+    if (!fichero.ios[clave]) mal(`${locales[idioma]}: falta ${clave}`);
   }
   // El inglés tiene que estar en inglés: si alguien copia el fichero español y
   // se olvida de traducirlo, esto lo canta.
   if (idioma === 'en') {
     for (const [clave] of NECESARIOS) {
-      const t = fichero[clave] ?? '';
+      const t = fichero.ios?.[clave] ?? '';
       if (/\b(para|tus|tu|los|las|del|que|sin)\b/i.test(t)) mal(`en.json: ${clave} sigue en español`);
     }
   }

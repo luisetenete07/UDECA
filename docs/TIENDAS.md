@@ -105,6 +105,19 @@ recorría expo-modules-core. Lo arregla `plugins/memoria-de-gradle.js`, que sube
 esa memoria al generar el proyecto. Si alguien lo quita de `app.json`, la
 comprobación `check-gradle` lo canta antes de compilar.
 
+Detrás de ese había un segundo, tapado por el primero:
+
+    :app:lintVitalRelease FAILED
+    > "NSPhotoLibraryUsageDescription" is translated here but not found in
+      default locale [ExtraTranslation]
+
+Los textos de permiso traducidos (`locales/es.json`, `locales/en.json`) iban en
+la raíz del fichero, y así se los lleva **también** Android, que los escribe en
+`values-b+en/strings.xml`. Como no existen en el idioma por defecto, Lint los da
+por errores fatales. Son textos de iOS, así que van anidados bajo una clave
+`ios`; entonces iOS los recibe y Android no ve nada. Lo vigila
+`check-permisos`.
+
 El detalle de cualquier otro fallo de Gradle no sale en la acción de GitHub,
 sale en EAS: abre el enlace `See logs:` que aparece en el registro y mira la
 fase **Run gradlew**.

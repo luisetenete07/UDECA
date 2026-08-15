@@ -1,6 +1,8 @@
 {
-  "NSPhotoLibraryUsageDescription": "To choose your profile photo, upload your progress photos and, if you are a coach, the photos in your meal books.",
-  "NSMotionUsageDescription": "To count the steps you take each day and add them to your nutrition plan, so you don't have to log them by hand.",
-  "NSCalendarsUsageDescription": "To write your payments, your training blocks and your tasks into your calendar. It only writes what you ask it to.",
-  "NSCalendarsFullAccessUsageDescription": "To write your payments, your training blocks and your tasks into your calendar. It only writes what you ask it to."
+  "ios": {
+    "NSPhotoLibraryUsageDescription": "To choose your profile photo, upload your progress photos and, if you are a coach, the photos in your meal books.",
+    "NSMotionUsageDescription": "To count the steps you take each day and add them to your nutrition plan, so you don't have to log them by hand.",
+    "NSCalendarsUsageDescription": "To write your payments, your training blocks and your tasks into your calendar. It only writes what you ask it to.",
+    "NSCalendarsFullAccessUsageDescription": "To write your payments, your training blocks and your tasks into your calendar. It only writes what you ask it to."
+  }
 }
