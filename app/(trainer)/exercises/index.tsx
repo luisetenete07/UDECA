@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import { baseDeEjercicios } from '../../../lib/rutas';
 import { frase } from '../../../lib/idioma';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Modal, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
@@ -543,7 +544,7 @@ export default function ExercisesScreen() {
         subtitle={`${exercises.length} ${exercises.length === 1 ? 'ejercicio' : 'ejercicios'}`}
         actions={
           <View style={styles.accionesCab}>
-            <Button title="+ Nuevo" onPress={() => router.push('/(trainer)/exercises/new')} />
+            <Button title="+ Nuevo" onPress={() => router.push(`${baseDeEjercicios(profile)}/new`)} />
             <Pressable onPress={() => setMenuOpen(true)} hitSlop={10} style={styles.masBtn}>
               <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
             </Pressable>
@@ -806,7 +807,7 @@ export default function ExercisesScreen() {
             {list.map((exercise, index) => (
           <FadeIn key={exercise.id} delay={Math.min(index * 30, 240)}>
           <CardButton
-            onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}
+            onPress={() => router.push(`${baseDeEjercicios(profile)}/${exercise.id}`)}
             style={styles.exerciseCard}
           >
               {/* Franja del color de su categoría: distingue de un vistazo a

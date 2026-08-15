@@ -156,6 +156,23 @@ export default function ClientLayout() {
           ),
         }}
       />
+      {/* El atleta monta sus propios entrenos, así que necesita su biblioteca
+          de ejercicios igual que un entrenador. El alumno no: los suyos se los
+          pone su coach, y una pestaña para mirar una lista que no puede tocar
+          sería una pestaña de menos para lo que sí usa. */}
+      <Tabs.Screen
+        name="exercises"
+        options={{
+          title: t('Ejercicios'),
+          href: isAthlete ? undefined : null,
+          // La pesa ya es "Entreno" en esta misma barra. Dos pestañas con el
+          // mismo icono se eligen mirando la letra, y entonces el icono no
+          // está haciendo su trabajo.
+          tabBarIcon: (props) => (
+            <TabIcon {...props} outline="list-outline" filled="list" />
+          ),
+        }}
+      />
       {/* El atleta se autoentrena (sin grupo ni coach): no ve la sección Social. */}
       <Tabs.Screen
         name="social"

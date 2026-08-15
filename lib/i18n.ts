@@ -1985,6 +1985,7 @@ export const EN: Record<string, string> = {
   'Este navegador no sabe escuchar. Escríbelo abajo y lo apunto igual.':
     "This browser can't listen. Type it below and I'll write it down all the same.",
   'Cuéntame primero qué hiciste.': 'Tell me what you did first.',
+  'Sin ejercicios que reconocer': 'No exercises to recognise',
   'No he podido apuntarlo': "I couldn't write it down",
   'No he sacado ninguna serie de ahí. Prueba a decir el ejercicio y las repeticiones.':
     "I didn't get any sets out of that. Try saying the exercise and the reps.",

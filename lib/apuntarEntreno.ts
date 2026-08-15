@@ -1,20 +1,31 @@
-import { auth } from './firebase';
-import { logError } from './errorLog';
-import { DICTADO_URL, limpiaDictado } from './dictado';
-import type { Dictado, DictadoBruto, EjercicioDelCatalogo } from './dictado';
+import { limpiaDictado } from './dictado';
+import { entiendeDictado } from './dictadoLocal';
+import type { Dictado, EjercicioDelCatalogo } from './dictado';
 
 /**
- * Mandar lo dictado al servidor y traerse el entreno entendido.
+ * Entender lo dictado y devolverlo listo para la pantalla.
  *
- * El servidor (payments-webhook/api/apuntar-entreno.js) es quien habla con la
- * IA, porque la clave es un secreto y esta app es pública. Aquí solo se pide, y
- * se manda el token de sesión: cada llamada cuesta dinero y no se atiende a
- * quien no ha entrado.
+ * SE ENTIENDE AQUÍ, EN EL MÓVIL, SIN SERVIDOR
  *
- * Lo que vuelve pasa por `limpiaDictado` SIEMPRE, aunque venga de nuestro
- * propio servidor. Lo que hay al otro lado es un modelo de lenguaje, no una
- * base de datos: puede devolver un ejercicio que no existe o cien series de
- * nada, y eso no puede llegar a la pantalla tal cual.
+ * Antes esto salía a un servidor que hablaba con un modelo de lenguaje. Ya no:
+ * lo entiende `lib/dictadoLocal`, y el cambio se nota en tres cosas que
+ * importan más que la elegancia de la solución.
+ *
+ *  - NO CUESTA DINERO. Cada dictado era una llamada de pago. Una función que
+ *    cuesta por uso acaba con un tope por usuario, y un tope es un "hoy no
+ *    puedes" en la cara de alguien que solo quería contar su entreno.
+ *  - FUNCIONA SIN COBERTURA. En medio gimnasio no hay línea. Justo donde se
+ *    usa esto.
+ *  - CONTESTA AL INSTANTE, sin los dos segundos de ir y volver.
+ *
+ * A cambio entiende menos florituras. Por eso lo entendido SIEMPRE se enseña
+ * antes de guardar: ahí se corrige en un toque, y sale más barato que esperar
+ * a que lo adivine un modelo.
+ *
+ * `limpiaDictado` sigue en medio, igual que cuando lo de enfrente era una IA:
+ * un ejercicio que no está en el catálogo o una marca imposible no entran.
+ * Desconfiar del parser propio cuesta lo mismo que desconfiar de un modelo, y
+ * un fallo aquí no puede acabar guardando series que nadie hizo.
  */
 
 export interface ResultadoDictado {
@@ -26,42 +37,10 @@ export async function apuntarEntrenoDictado(
   texto: string,
   catalogo: EjercicioDelCatalogo[]
 ): Promise<ResultadoDictado> {
-  const user = auth.currentUser;
-  if (!user) return { error: 'Sin sesión' };
-  try {
-    const idToken = await user.getIdToken();
-    const res = await fetch(DICTADO_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-      body: JSON.stringify({ texto, catalogo }),
-    });
-    const datos = (await res.json()) as DictadoBruto & { error?: string };
-    /**
-     * Un 5xx es un problema NUESTRO, y su mensaje está escrito para nosotros:
-     * "Falta ANTHROPIC_API_KEY en Vercel". Enseñárselo a un alumno que solo
-     * quería contar su entreno es dejarle mirando una palabra que no significa
-     * nada y sin saber qué hacer. Se queda en el registro de errores, que es
-     * donde sirve, y a él se le dice lo único que le importa: que ahora no
-     * puede ser y que escribiéndolo sí.
-     *
-     * Los demás mensajes del servidor SÍ están escritos para él ("No he
-     * entendido el dictado", "Has llegado al límite de dictados por hoy"), así
-     * que se enseñan tal cual.
-     */
-    if (res.status >= 500) {
-      void logError({
-        message: datos?.error ?? `El dictado falló con ${res.status}`,
-        where: 'apuntarEntrenoDictado',
-        uid: user.uid,
-        fatal: false,
-      });
-      return { error: 'La IA no está disponible ahora mismo. Escríbelo y lo apunto igual.' };
-    }
-    if (datos?.error) return { error: datos.error };
-    if (!res.ok) return { error: 'No se pudo apuntar el dictado' };
-    return { dictado: limpiaDictado(datos, catalogo) };
-  } catch {
-    // Sin conexión, el entreno se apunta a mano: la pantalla sigue detrás.
-    return { error: 'Sin conexión con el servidor' };
-  }
+  const limpio = texto.trim();
+  if (!limpio) return { error: 'Cuéntame primero qué hiciste.' };
+  if (catalogo.length === 0) return { error: 'Sin ejercicios que reconocer' };
+  // Sigue siendo asíncrona porque la pantalla la espera con su "escuchando" y
+  // porque nada obliga a que entender un dictado sea instantáneo para siempre.
+  return { dictado: limpiaDictado(entiendeDictado(limpio, catalogo), catalogo) };
 }
