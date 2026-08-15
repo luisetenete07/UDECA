@@ -1,8 +1,19 @@
 name: Build Android (AAB)
 
 # Compila el .aab en la nube (Expo) con un clic, sin herramientas locales.
+#
+# El interruptor "en_el_runner" existe por un motivo concreto: cuando EAS falla
+# compilando, aquí solo se lee "Gradle build failed with unknown error" y el
+# error de verdad se queda en la web de Expo. Compilando en la máquina de
+# GitHub, el registro entero —incluida la línea que dice qué se rompió— sale
+# aquí, que es donde se puede leer sin salir del sitio.
 on:
   workflow_dispatch:
+    inputs:
+      en_el_runner:
+        description: 'Compilar aquí en vez de en EAS, para ver el error completo'
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -19,4 +30,21 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - run: eas build --platform android --profile production --non-interactive
+
+      - name: Compilar en EAS
+        if: ${{ !inputs.en_el_runner }}
+        run: eas build --platform android --profile production --non-interactive
+
+      # La imagen de ubuntu-latest ya trae el SDK de Android y el JDK, así que
+      # EAS puede ejecutar el mismo build aquí. Tarda más, pero se ve todo.
+      - name: Compilar aquí (diagnóstico)
+        if: ${{ inputs.en_el_runner }}
+        run: eas build --platform android --profile production --non-interactive --local --output ./udeca.aab
+
+      - name: Guardar el .aab
+        if: ${{ inputs.en_el_runner }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: udeca-aab
+          path: ./udeca.aab
+          if-no-files-found: ignore
