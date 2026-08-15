@@ -78,10 +78,28 @@ existe. Va puesto en el workflow (`EXPO_APPLE_TEAM_ID`, `EXPO_APPLE_TEAM_TYPE`).
 Si algún día cambias de cuenta de desarrollador de Apple, hay que cambiarlo
 ahí.
 
+**Apple avisa de "ITMS-90863: Macs with Apple silicon support issue".** No es
+un rechazo: el build se sube igual y se puede enviar a revisión. Lo que dice es
+que la app aparecería también en Macs con Apple silicon (Apple lo activa por
+defecto para toda app de iPhone) y ahí no arrancaría, porque React Native usa
+librerías que en macOS no existen. La app no está pensada para Mac, así que la
+solución es no ofrecerla en Mac:
+
+> App Store Connect → UDECA → **Pricing and Availability** → en la lista de
+> plataformas, desmarcar **Mac con Apple silicon**. Se guarda y ya está.
+
+No se arregla desde el código: es un ajuste de la ficha, no del binario. Y
+conviene hacerlo antes de publicar: si sale en Mac, quien la instale ahí verá
+una app que se cierra al abrirse, y esa reseña cuenta igual que las demás.
+
 **Android: "Gradle build failed with unknown error".** El detalle de verdad no
 sale en la acción de GitHub, sale en EAS: abre el enlace `See logs:` que
-aparece en el registro y mira la fase **Run gradlew**. Es donde está la línea
-que dice qué se rompió.
+aparece en el registro y mira la fase **Run gradlew**.
+
+Si no puedes entrar en Expo en ese momento, la acción *Build Android (AAB)*
+tiene un interruptor: al lanzarla, marca **"Compilar aquí en vez de en EAS"**.
+Tarda más y el .aab que sale no vale para publicar, pero escupe el registro
+entero de Gradle en el propio GitHub, con la línea que dice qué falla.
 
 ---
 
