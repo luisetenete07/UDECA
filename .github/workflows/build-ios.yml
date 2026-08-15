@@ -26,11 +26,25 @@ jobs:
         run: printf '%s' "${{ secrets.ASC_API_KEY_P8 }}" > asc-key.p8
       # Con la ASC API key, EAS crea los certificados/perfiles de iOS solo, sin
       # login interactivo de Apple, y al terminar sube el build a App Store Connect.
+      # EXPO_APPLE_TEAM_ID y EXPO_APPLE_TEAM_TYPE no son un adorno: sin ellos,
+      # EAS pide el Team ID por pantalla y en una acción no hay pantalla, así
+      # que se queda sin autenticar contra Apple ("Input is required, but stdin
+      # is not readable"). Y sin autenticar no puede sincronizar las
+      # capacidades del perfil de aprovisionamiento, que es exactamente lo que
+      # hizo fallar el build al añadir "Entrar con Apple":
+      #
+      #   Provisioning profile ... doesn't include the Sign In with Apple
+      #   capability / the com.apple.developer.applesignin entitlement
+      #
+      # El Team ID no es un secreto: va dentro de cada app publicada. El
+      # secreto es la clave .p8, que sigue viniendo de los secretos del repo.
       - name: Compilar y subir a App Store
         env:
           EXPO_ASC_API_KEY_PATH: ./asc-key.p8
           EXPO_ASC_KEY_ID: MZPCDLQ2DV
           EXPO_ASC_ISSUER_ID: b4f2d2f6-3485-4bb5-8d7c-5e89c09356d9
+          EXPO_APPLE_TEAM_ID: 633UC6AVQJ
+          EXPO_APPLE_TEAM_TYPE: INDIVIDUAL
         run: eas build --platform ios --profile production --non-interactive --auto-submit
       - name: Limpiar clave
         if: always()

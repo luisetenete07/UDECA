@@ -66,6 +66,25 @@ UDECA.
 
 ---
 
+## Si un build falla
+
+Los dos primeros fallos que dio esto, por si vuelven:
+
+**iOS: "Provisioning profile doesn't include the Sign In with Apple
+capability".** Al añadir "Entrar con Apple", el perfil de aprovisionamiento
+tiene que llevar esa capacidad, y quien la añade es EAS hablando con Apple. No
+podía: le faltaba el Team ID y lo pedía por pantalla, cosa que en una acción no
+existe. Va puesto en el workflow (`EXPO_APPLE_TEAM_ID`, `EXPO_APPLE_TEAM_TYPE`).
+Si algún día cambias de cuenta de desarrollador de Apple, hay que cambiarlo
+ahí.
+
+**Android: "Gradle build failed with unknown error".** El detalle de verdad no
+sale en la acción de GitHub, sale en EAS: abre el enlace `See logs:` que
+aparece en el registro y mira la fase **Run gradlew**. Es donde está la línea
+que dice qué se rompió.
+
+---
+
 ## Antes de dar a compilar
 
 - **Los tipos y las comprobaciones tienen que estar en verde.** La acción
