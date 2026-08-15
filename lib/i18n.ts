@@ -2312,6 +2312,8 @@ export const EN: Record<string, string> = {
   Entrenamientos: 'Workouts',
   'Empieza hoy': 'Start today',
   'Entrenos dirigidos': 'Sessions coached',
+  'La IA no está disponible ahora mismo. Escríbelo y lo apunto igual.':
+    "The AI isn't available right now. Type it out and I'll log it all the same.",
 };
 
 /**

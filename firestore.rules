@@ -83,10 +83,20 @@ service cloud.firestore {
           || isUdecaAdmin()
         );
       // Al crearse, nadie puede regalarse tiempo de suscripción. Única
-      // excepción: el ATLETA nace con su prueba gratuita, acotada aquí a 14
-      // días para que no pueda pedirse más del que le corresponde (el mismo
-      // número que TRIAL_DAYS en lib/subscription.ts). El
-      // entrenador nace caducado (0) y se activa al pagar su cuota anual.
+      // excepción: el ATLETA nace con su prueba gratuita, acotada aquí para que
+      // no pueda pedirse más de la que le corresponde (TRIAL_DAYS = 14, en
+      // lib/planBase.ts). El entrenador nace caducado (0) y se activa al pagar
+      // su cuota anual.
+      //
+      // LOS DOS DÍAS DE MÁS NO SON UN DESCUIDO. El fin de la prueba lo calcula
+      // la app con el reloj DEL MÓVIL y lo comprueba esta regla con el reloj
+      // DEL SERVIDOR. Ajustando el tope a los 14 días exactos, a un móvil un
+      // segundo adelantado —que es la mitad de los móviles— le sale un valor
+      // MAYOR que el tope y Firestore le rechaza la escritura: el usuario ve
+      // "missing or insufficient permissions" al crearse la cuenta y no puede
+      // entrar. Pasaba de verdad. El margen absorbe cualquier desajuste real
+      // de reloj y lo único que concede en el peor de los casos es un par de
+      // días de prueba a quien tenga la hora mal puesta a propósito.
       allow create: if request.auth != null && request.auth.uid == userId
         && (
           // Los alumnos entran gratis: no llevan suscripción.
@@ -96,7 +106,7 @@ service cloud.firestore {
           || (
             request.resource.data.role == 'athlete'
             && request.resource.data.subscriptionUntil
-                 <= request.time.toMillis() + 14 * 24 * 60 * 60 * 1000
+                 <= request.time.toMillis() + (14 + 2) * 24 * 60 * 60 * 1000
           )
         );
       // El propio usuario edita su perfil (sin tocar su suscripción); el

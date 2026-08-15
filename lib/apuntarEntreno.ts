@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+import { logError } from './errorLog';
 import { DICTADO_URL, limpiaDictado } from './dictado';
 import type { Dictado, DictadoBruto, EjercicioDelCatalogo } from './dictado';
 
@@ -35,6 +36,27 @@ export async function apuntarEntrenoDictado(
       body: JSON.stringify({ texto, catalogo }),
     });
     const datos = (await res.json()) as DictadoBruto & { error?: string };
+    /**
+     * Un 5xx es un problema NUESTRO, y su mensaje está escrito para nosotros:
+     * "Falta ANTHROPIC_API_KEY en Vercel". Enseñárselo a un alumno que solo
+     * quería contar su entreno es dejarle mirando una palabra que no significa
+     * nada y sin saber qué hacer. Se queda en el registro de errores, que es
+     * donde sirve, y a él se le dice lo único que le importa: que ahora no
+     * puede ser y que escribiéndolo sí.
+     *
+     * Los demás mensajes del servidor SÍ están escritos para él ("No he
+     * entendido el dictado", "Has llegado al límite de dictados por hoy"), así
+     * que se enseñan tal cual.
+     */
+    if (res.status >= 500) {
+      void logError({
+        message: datos?.error ?? `El dictado falló con ${res.status}`,
+        where: 'apuntarEntrenoDictado',
+        uid: user.uid,
+        fatal: false,
+      });
+      return { error: 'La IA no está disponible ahora mismo. Escríbelo y lo apunto igual.' };
+    }
     if (datos?.error) return { error: datos.error };
     if (!res.ok) return { error: 'No se pudo apuntar el dictado' };
     return { dictado: limpiaDictado(datos, catalogo) };

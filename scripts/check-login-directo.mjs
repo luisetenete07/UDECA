@@ -36,6 +36,28 @@ const login = readFileSync('app/(auth)/login.tsx', 'utf8');
 const firebase = readFileSync('lib/firebase.ts', 'utf8');
 const cuentas = readFileSync('lib/rememberedAccounts.ts', 'utf8');
 
+console.log('\nY "usar otra cuenta" abre OTRA cuenta');
+{
+  // La petición de Google se reconstruye cuando cambia la pista, y hasta que
+  // no lo ha hecho sigue siendo la anterior, con su login_hint dentro. Si se
+  // abre sin comprobarlo, pedir "otra cuenta" lleva a la de antes y el botón
+  // parece roto. Pasó de verdad.
+  comprueba(
+    'no se abre Google con la petición de la cuenta anterior',
+    /request\.extraParams\?\.login_hint !== pista/.test(google),
+    'falta esperar a que la petición lleve la pista nueva'
+  );
+  comprueba(
+    'y el efecto se entera de que la pista ha cambiado',
+    /\}, \[porAbrir, request, pista\]\)/.test(google),
+    '`pista` no está en las dependencias: el efecto no vuelve a entrar'
+  );
+  comprueba(
+    'sin pista, Google pregunta con qué cuenta',
+    /prompt: 'select_account'/.test(google)
+  );
+}
+
 console.log('\nEl atajo entra directo a esa cuenta');
 {
   comprueba('Google recibe la pista de cuenta', /login_hint/.test(google));

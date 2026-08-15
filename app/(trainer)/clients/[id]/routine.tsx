@@ -1199,6 +1199,22 @@ export default function RoutineEditorScreen() {
                 </Pressable>
               </View>
 
+              {/* La categoría del ejercicio, debajo del nombre.
+                  Estaba en el selector de la biblioteca y se perdía justo al
+                  añadirlo al día, que es donde el entrenador pasa el rato: dos
+                  ejercicios que empiezan igual ("Front lever", "Front lever
+                  press") quedaban indistinguibles aquí y sí se distinguían en
+                  la pantalla del alumno. El dato ya viajaba en el plan; solo
+                  faltaba enseñarlo. */}
+              {ex.muscleGroup || ex.subgroup ? (
+                <Text style={styles.exerciseGrupo} numberOfLines={1}>
+                  {ex.muscleGroup}
+                  {ex.muscleGroup && ex.subgroup ? ' · ' : ''}
+                  {ex.subgroup}
+                  {ex.measure === 'seconds' ? ' · isométrico' : ''}
+                </Text>
+              ) : null}
+
               <Text style={styles.loadLabel}>Carga</Text>
               <Opciones
                 opciones={LOAD_TYPES.map((l) => ({ valor: l, texto: LOAD_LABEL[l] }))}
@@ -1843,6 +1859,7 @@ const styles = StyleSheet.create({
   },
   pickerRowText: { ...typography.body, color: colors.text },
   pickerRowMuscle: { ...typography.small, color: colors.textFaint },
+  exerciseGrupo: { ...typography.small, color: colors.textFaint, marginTop: 2 },
   mutedText: { ...typography.small, color: colors.textFaint },
   addDayBtn: { marginBottom: spacing.lg },
   saveError: {

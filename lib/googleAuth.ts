@@ -178,12 +178,27 @@ function useGoogleNativo(): EstadoGoogle {
   const [porAbrir, setPorAbrir] = useState<((e?: unknown) => void) | null>(null);
   useEffect(() => {
     if (!porAbrir || !request) return;
+    /**
+     * Y que la petición sea la de ESTA pista, no la de la vez anterior.
+     *
+     * Aquí estaba el fallo de "usar otra cuenta": bastaba con que hubiera
+     * `request` para abrir Google, y justo después de tocar una cuenta
+     * guardada el `request` que hay es el suyo, con su `login_hint` dentro.
+     * Resultado: pedías entrar con OTRA cuenta y Google te llevaba
+     * directamente a la de antes, sin preguntar. Parecía que el botón no
+     * hacía nada.
+     *
+     * El hook reconstruye la petición cuando cambia `extraParams`, así que
+     * basta con esperar: cuando esté lista, este efecto vuelve a entrar y
+     * abre la buena.
+     */
+    if (request.extraParams?.login_hint !== pista) return;
     setPorAbrir(null);
     promptAsync().catch(porAbrir);
     // `promptAsync` cambia de identidad en cada render; añadirlo aquí abriría
     // Google dos veces.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [porAbrir, request]);
+  }, [porAbrir, request, pista]);
 
   const entrar = (nuevaPista?: string) =>
     new Promise<UserCredential | null>((ok, mal) => {
