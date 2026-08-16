@@ -145,10 +145,17 @@ JavaScript** y no tiene sesión. Una pantalla de la app necesita que arranque un
 bundle de React para enseñar la primera letra, así que a esa comprobación le
 llega una página en blanco.
 
-Están en la web pública, en HTML plano, y son estas dos:
+Ahora son HTML plano y las publica **la acción de GitHub**, la misma que
+despliega la app, en cada push. Ese es el punto: no dependen de que nadie se
+acuerde de desplegar nada. Son estas dos:
 
-> **Política de privacidad:** `https://www.udeca.app/privacidad`
-> **Eliminar la cuenta:** `https://www.udeca.app/eliminar-cuenta`
+> **Política de privacidad:** `https://app.udeca.app/privacidad`
+> **Eliminar la cuenta:** `https://app.udeca.app/eliminar-cuenta`
+
+(Las mismas páginas salen también en `www.udeca.app/privacidad` y
+`www.udeca.app/eliminar-cuenta` cuando se despliega la web pública, pero esa va
+por Vercel y **se lanza a mano**. Por eso en las tiendas van las de
+`app.udeca.app`: esas se publican solas.)
 
 Dónde se pegan en Play Console:
 
@@ -166,10 +173,9 @@ Dos cosas que no son opcionales, por si algún día se reescriben esas páginas:
   solo existe dentro de la app no cumple la política aunque funcione
   perfectamente: quien la desinstaló no puede pulsarlo.
 
-Y una tercera que no depende del código: **la web pública se despliega aparte**
-(Vercel, carpeta `web/`). Si el proyecto de Vercel no está conectado al
-repositorio, subir el código no publica nada — hay que hacer
-`cd web && npx vercel --prod`. Ver `docs/WEB.md`.
+El fichero de cada una vive en `web/`, y el despliegue de la app lo copia en
+`dist/` al publicar. Si algún día alguien quita esa copia, `check-legales` lo
+canta antes de que llegue a la tienda.
 
 ---
 

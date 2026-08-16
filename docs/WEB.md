@@ -84,31 +84,41 @@ normalmente basta con esperar al primer despliegue y comprobarlo.
 En `web/` viven dos páginas que no son marketing y que hay que tratar con más
 cuidado que el resto:
 
-| Dirección | Fichero | Para qué |
+| Fichero | Se publica en | Para qué |
 |---|---|---|
-| `www.udeca.app/privacidad` | `web/privacidad.html` | La política de privacidad que se declara en Play y en App Store |
-| `www.udeca.app/eliminar-cuenta` | `web/eliminar-cuenta.html` | La página de borrado de cuenta que exige la declaración de seguridad de los datos |
+| `web/privacidad.html` | `app.udeca.app/privacidad` y `www.udeca.app/privacidad` | La política de privacidad que se declara en Play y en App Store |
+| `web/eliminar-cuenta.html` | `app.udeca.app/eliminar-cuenta` y `www.udeca.app/eliminar-cuenta` | La página de borrado de cuenta que exige la declaración de seguridad de los datos |
+
+**En las tiendas van las de `app.udeca.app`**, y el motivo es sencillo: esa la
+publica la acción de GitHub en cada push, sin que nadie tenga que acordarse. La
+web pública va por Vercel y se lanza a mano, y el día que se olvide, la tienda
+encuentra un 404 y bloquea el envío. Ya pasó.
 
 Están aquí y no dentro de la app **a propósito**. Google las comprueba con un
 revisor automático que pide el HTML, no ejecuta JavaScript y no tiene sesión: una
 pantalla de la app le devuelve una página en blanco y da el envío por rechazado.
 Aquí el texto viaja en el propio fichero.
 
-Tres reglas al tocarlas:
+Cuatro reglas al tocarlas:
 
 1. **Sin `<script>`.** Si el texto lo pinta un script, no existe para quien lo
    comprueba.
-2. **La de borrado tiene que servir a quien ya no tiene la app.** Por eso hay un
+2. **Sin nada de fuera:** ni `styles.css`, ni fuentes de Google, ni imágenes. El
+   estilo va dentro del propio fichero. Se sirven desde dos sitios distintos, y
+   una ruta que exista en uno y no en el otro deja la página sin formato justo
+   donde la mira la tienda.
+3. **La de borrado tiene que servir a quien ya no tiene la app.** Por eso hay un
    correo además del botón de dentro de la app.
-3. **El mismo texto está en `app/privacy-policy.tsx` y `app/delete-account.tsx`**,
+4. **El mismo texto está en `app/privacy-policy.tsx` y `app/delete-account.tsx`**,
    que es lo que se lee desde dentro. Si cambia uno, cambia el otro: son el mismo
    documento.
 
-Lo vigila `scripts/check-legales.mjs`, que corre en cada push.
+Lo vigila `scripts/check-legales.mjs`, que corre en cada push y comprueba también
+que el despliegue de la app las siga copiando.
 
-Y lo más fácil de olvidar: **esto es Vercel, no GitHub Pages.** Subir el código no
-publica la web si el proyecto de Vercel no está conectado al repositorio. En ese
-caso, `cd web && npx vercel --prod`.
+La web pública sigue yendo por Vercel y a mano (`cd web && npx vercel --prod`),
+pero ya no es lo que sostiene las tiendas: es solo la copia bonita, dentro del
+sitio de captación.
 
 ---
 

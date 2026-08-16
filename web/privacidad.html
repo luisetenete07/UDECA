@@ -5,56 +5,94 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Política de privacidad · UDECA</title>
 <meta name="description" content="Qué datos trata UDECA, para qué, con quién se comparten y cómo ejercer tus derechos." />
-<link rel="icon" href="/assets/favicon.png" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="/styles.css" />
 <!--
-  ESTA PÁGINA ES HTML PLANO A PROPÓSITO.
+  ESTA PÁGINA NO DEPENDE DE NADA. NI DE UN CSS, NI DE UNA FUENTE, NI DE UN LOGO.
 
-  La política de privacidad también existe dentro de la app (app/privacy-policy.tsx),
-  pero la que se declara en Google Play y en App Store tiene que ser ESTA. Quien la
-  abre no es una persona con un navegador moderno: es un revisor automático que pide
-  la URL, no ejecuta JavaScript y decide si la app pasa o no. Una pantalla de la app
-  necesita que arranque un bundle de React para enseñar una sola letra, así que a esa
-  comprobación le puede llegar una página en blanco, o directamente un error.
+  No es minimalismo: es lo que hace que funcione. Esta dirección la abre un
+  revisor automático de Google Play y de App Store que pide el HTML, no ejecuta
+  JavaScript, no tiene sesión y no espera a que cargue nada. Si el texto lo pinta
+  un script, o si el estilo vive en otro fichero que ese día no responde, lo que
+  ve es una página en blanco y la declara rota. Ya pasó una vez: las dos URLs
+  apuntaban a pantallas de la app (Expo) y Google las dio por "página no
+  encontrada".
 
-  Aquí no hay nada que arrancar: el texto viaja en el propio fichero. Sirve igual sin
-  JavaScript, sin sesión y sin la app instalada, que son las tres condiciones que
-  ponen las tiendas.
+  Por eso todo va dentro: el estilo en un <style>, la marca en texto y ni una
+  sola petición al exterior. Así el fichero se puede servir DESDE CUALQUIER
+  SITIO y siempre se ve igual. Y hace falta, porque se publica en dos:
 
-  Si cambia el texto, cámbialo también en app/privacy-policy.tsx: son el mismo
-  documento y no pueden decir cosas distintas.
+    - GitHub Pages (app.udeca.app), que se despliega solo en cada push. Es la
+      dirección que está declarada en las tiendas, justamente porque no depende
+      de que nadie se acuerde de publicar nada.
+    - Vercel (www.udeca.app), la web pública, que se despliega aparte.
+
+  Si el texto cambia, cámbialo también en app/privacy-policy.tsx: es el mismo
+  documento leído desde dentro de la app, y no pueden decir cosas distintas.
+
+  Lo vigila scripts/check-legales.mjs.
 -->
 <style>
-  .legal-doc { max-width: 760px; }
-  .legal-doc h2 { font-size: 20px; margin: 34px 0 10px; }
-  .legal-doc p, .legal-doc li { color: var(--muted); font-size: 15.5px; line-height: 1.7; }
-  .legal-doc p { margin: 0 0 14px; }
-  .legal-doc ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 8px; }
-  .legal-doc b { color: var(--text); font-weight: 600; }
-  .legal-doc a { color: var(--gold-bright); }
-  .fecha { color: var(--faint); font-size: 13px; margin-bottom: 26px; }
-  .idiomas { display: flex; gap: 14px; font-size: 13px; margin-bottom: 30px; }
+  :root {
+    --bg: #080706;
+    --surface: #100e0c;
+    --text: #f2ede7;
+    --muted: #a2968b;
+    --faint: #6f6760;
+    --gold: #c9bcae;
+    --hairline: rgba(162, 150, 139, 0.22);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 22px; }
+  header { border-bottom: 1px solid var(--hairline); }
+  header .wrap { display: flex; align-items: center; height: 64px; }
+  .brand {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 15px;
+  }
+  main { padding: 40px 0 70px; }
+  .eyebrow {
+    color: var(--gold);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 34px 0 10px; }
+  p, li { color: var(--muted); font-size: 16px; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  li { margin-bottom: 8px; }
+  b { color: var(--text); font-weight: 600; }
+  a { color: var(--gold); }
+  .fecha { color: var(--faint); font-size: 13px; margin-bottom: 8px; }
+  .idiomas { font-size: 14px; margin-bottom: 28px; }
+  hr { border: 0; height: 1px; background: var(--hairline); margin: 50px 0; }
+  footer { border-top: 1px solid var(--hairline); padding: 22px 0 40px; }
+  footer p { color: var(--faint); font-size: 13px; margin: 0; }
+  @media (min-width: 700px) { h1 { font-size: 42px; } }
 </style>
 </head>
 <body>
-<div class="halo"></div>
 
 <header>
-  <div class="wrap nav">
-    <a class="brand" href="/">
-      <img src="/assets/logo.png" alt="" />
-      <span>UDECA</span>
-    </a>
-  </div>
+  <div class="wrap"><a class="brand" href="https://www.udeca.app">UDECA</a></div>
 </header>
 
-<section style="padding-top:40px">
-  <div class="wrap legal-doc">
+<main>
+  <div class="wrap">
     <p class="eyebrow">Legal</p>
-    <h1 style="font-size:clamp(30px,6vw,44px)">Política de privacidad de UDECA</h1>
+    <h1>Política de privacidad de UDECA</h1>
     <p class="fecha">Última actualización: julio de 2026</p>
     <p class="idiomas"><a href="#english">Read this page in English</a></p>
 
@@ -143,7 +181,7 @@
       Puedes eliminar tu cuenta desde los ajustes de la app o solicitándolo en
       <b>luistenaf@gmail.com</b>. Al hacerlo, borramos tu perfil y tus datos de entrenamiento
       asociados. Tienes los pasos detallados en
-      <a href="/eliminar-cuenta">udeca.app/eliminar-cuenta</a>.
+      <a href="/eliminar-cuenta">la página de eliminación de cuenta</a>.
     </p>
 
     <h2>9. Menores</h2>
@@ -165,9 +203,9 @@
       <b>luistenaf@gmail.com</b>.
     </p>
 
-    <hr class="rule" style="margin:50px 0" />
+    <hr />
 
-    <h1 id="english" style="font-size:clamp(26px,5vw,36px)">UDECA privacy policy</h1>
+    <h1 id="english">UDECA privacy policy</h1>
     <p class="fecha">Last updated: July 2026</p>
 
     <p>
@@ -249,8 +287,8 @@
     <p>
       You can delete your account from the app's settings or by requesting it at
       <b>luistenaf@gmail.com</b>. When you do, we erase your profile and your associated training
-      data. Step-by-step instructions are at
-      <a href="/eliminar-cuenta">udeca.app/eliminar-cuenta</a>.
+      data. Step-by-step instructions are on
+      <a href="/eliminar-cuenta">the account deletion page</a>.
     </p>
 
     <h2>9. Minors</h2>
@@ -271,14 +309,13 @@
       <b>luistenaf@gmail.com</b>.
     </p>
   </div>
-</section>
+</main>
 
 <footer>
   <div class="wrap">
-    <p class="legal">
-      © <span id="year">2026</span> UDECA · Universidad de Calistenia.
-      <a href="/" style="color:var(--muted)">Volver al inicio</a> ·
-      <a href="/eliminar-cuenta" style="color:var(--muted)">Eliminar tu cuenta</a>
+    <p>
+      © 2026 UDECA · Universidad de Calistenia ·
+      <a href="/eliminar-cuenta">Eliminar tu cuenta</a>
     </p>
   </div>
 </footer>

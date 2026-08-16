@@ -55,7 +55,7 @@ if (fallos > 0) {
 const privacidad = lee('web/privacidad.html');
 const borrado = lee('web/eliminar-cuenta.html');
 
-console.log('\nSe leen sin JavaScript');
+console.log('\nSe leen sin JavaScript y sin pedir nada al exterior');
 for (const [nombre, pagina] of [
   ['privacidad', privacidad],
   ['eliminar-cuenta', borrado],
@@ -64,6 +64,14 @@ for (const [nombre, pagina] of [
   // depender de que se ejecute nada.
   ok(`${nombre}: no monta el texto con un script`, !/<script[\s>]/i.test(pagina));
   ok(`${nombre}: el texto va en el fichero`, pagina.length > 3000, `${pagina.length} caracteres`);
+  // Y no puede depender de NINGÚN otro fichero: se publica en dos sitios
+  // distintos (GitHub Pages y Vercel) y un /styles.css que exista en uno y no
+  // en el otro deja la página como un documento en blanco y negro sin formato
+  // justo en el sitio donde la mira la tienda.
+  ok(`${nombre}: no carga hojas de estilo de fuera`, !/<link[^>]+stylesheet/i.test(pagina));
+  ok(`${nombre}: no carga fuentes de fuera`, !/fonts\.(googleapis|gstatic)\.com/i.test(pagina));
+  ok(`${nombre}: no carga imágenes`, !/<img[\s>]/i.test(pagina));
+  ok(`${nombre}: lleva su propio estilo dentro`, /<style[\s>]/i.test(pagina));
 }
 
 console.log('\nLa política dice lo que tiene que decir');
@@ -110,6 +118,21 @@ console.log('\nLas direcciones no se rompen');
     );
   }
   ok('las URLs limpias siguen activadas', vercel.cleanUrls === true, 'sin esto /privacidad daría 404');
+}
+
+console.log('\nSe publican solas, sin que nadie tenga que acordarse');
+{
+  const deploy = lee('.github/workflows/deploy.yml');
+  ok(
+    'el despliegue de la app las copia',
+    /for pagina in privacidad eliminar-cuenta/.test(deploy),
+    'es el único despliegue automático que hay; Vercel se lanza a mano'
+  );
+  ok(
+    'y ya no se salta los cambios de web/',
+    !/^\s*-\s*'web\/\*\*'/m.test(deploy),
+    'si los ignora, se publica la política vieja'
+  );
 }
 
 console.log('\nY la web enlaza a las suyas, no a las de la app');

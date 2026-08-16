@@ -18,9 +18,11 @@ on:
   push:
     branches:
       - claude/calisthenics-coaching-app-o72apc
-    # Tocar la web pública no tiene por qué recompilar la app entera.
+    # `web/**` YA NO se ignora: de esa carpeta salen las dos páginas legales que
+    # este despliegue publica (ver "Prepare Pages artifacts"). Ignorarla
+    # significaría cambiar la política de privacidad y que la publicada siguiera
+    # siendo la vieja, que es peor que no tenerla.
     paths-ignore:
-      - 'web/**'
       - 'acceso/**'
       - 'docs/**'
       - '**/*.md'
@@ -67,10 +69,32 @@ jobs:
       - name: Build web (Expo export)
         run: npx expo export --platform web --clear
 
+      # Las dos páginas legales viajan con la app, y no es un capricho.
+      #
+      # Son las URLs que Google Play y App Store guardan en la ficha y comprueban
+      # ellos solos, sin avisar. Vivían únicamente en la web pública, que se
+      # despliega a mano en Vercel: el día que alguien no se acordó de publicar,
+      # Play devolvió "página no encontrada" y bloqueó el envío a revisión.
+      #
+      # Aquí no hay nadie de quien acordarse: este workflow corre en cada push.
+      # Los ficheros no dependen de ningún CSS ni de ninguna fuente (ver el
+      # comentario dentro de cada uno), así que se sirven igual desde Pages que
+      # desde Vercel.
+      #
+      # Se copian con las DOS formas —fichero suelto y carpeta con index— para
+      # que respondan tanto /privacidad como /privacidad/ pase lo que pase con la
+      # resolución de URLs del servidor. Una tienda no da segundas oportunidades
+      # rápido.
       - name: Prepare Pages artifacts
         run: |
           touch dist/.nojekyll
           echo "app.udeca.app" > dist/CNAME
+          for pagina in privacidad eliminar-cuenta; do
+            test -f "web/$pagina.html" || { echo "::error::falta web/$pagina.html"; exit 1; }
+            mkdir -p "dist/$pagina"
+            cp "web/$pagina.html" "dist/$pagina.html"
+            cp "web/$pagina.html" "dist/$pagina/index.html"
+          done
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
