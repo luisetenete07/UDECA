@@ -7,9 +7,9 @@
  * forma intermitente, y el motivo es de los que no se ven leyendo el código:
  *
  *   - La app calcula el fin de la prueba con el reloj DEL MÓVIL:
- *     `Date.now() + 14 días`.
+ *     `Date.now() + TRIAL_DAYS`.
  *   - La regla lo comprueba con el reloj DEL SERVIDOR:
- *     `<= request.time + 14 días`.
+ *     `<= request.time + TRIAL_DAYS`.
  *
  * Si el móvil va un segundo adelantado —y los relojes de los móviles van
  * adelantados o atrasados constantemente— el valor que llega es MAYOR que el

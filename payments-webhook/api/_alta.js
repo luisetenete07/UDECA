@@ -14,8 +14,15 @@ import admin from 'firebase-admin';
  * compartido y no un endpoint abierto a internet.
  */
 
-/** Días de prueba del atleta (ver lib/subscription.ts y firestore.rules). */
-export const TRIAL_DAYS = 14;
+/**
+ * Días de prueba del atleta.
+ *
+ * Copia del `TRIAL_DAYS` de lib/planBase.ts. Este servidor se despliega aparte
+ * (Vercel) y no comparte código con la app, así que el número vive en los dos
+ * sitios —y en firestore.rules, que impone el tope—. Si cambia, cambia en los
+ * tres: aquí es donde se escribe de verdad la fecha de fin.
+ */
+export const TRIAL_DAYS = 28;
 
 /**
  * Reparte el número de fundador, si la campaña sigue abierta.
@@ -85,7 +92,7 @@ export async function aplicarAlta(db, uid, { huella = null, customerId = null } 
   const datos = { entryPaidAt: Date.now(), stripeCustomerId: customerId };
   if (huella) datos.payerFingerprint = huella;
 
-  // El atleta compra con el euro sus 14 días de prueba, así que el reloj
+  // El atleta compra con el euro sus días de prueba, así que el reloj
   // empieza AQUÍ y no al registrarse: si tardó dos días en pagar, no los
   // pierde. Solo la primera vez, y sin acortar nunca un acceso mayor que ya
   // tuviera (cortesías, prórrogas dadas a mano).

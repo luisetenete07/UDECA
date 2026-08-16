@@ -54,18 +54,44 @@ jobs:
       - name: Módulos nativos declarados
         run: node scripts/check-native-deps.mjs
 
-      # Las comprobaciones de lib/: cuarenta y siete guiones que verifican las
+      # El emulador de Firebase, con datos dentro.
+      #
+      # Lo piden las DOS comprobaciones que no leen las reglas de Firestore
+      # sino que las ejecutan: `check-registro` (crear cuenta, que es donde
+      # estaba el fallo de "missing or insufficient permissions" que dejaba
+      # fuera a los atletas) y `check-rules` (quién puede escribir qué). Son
+      # las que cubren la parte del código que decide quién entra y quién
+      # paga, y son justo las que no se pueden probar leyendo un fichero: una
+      # regla mal escrita compila igual.
+      #
+      # El proyecto es `udeca-demo`, inventado y local. Los guiones lo llevan
+      # escrito dentro, así que ni tocan ni pueden tocar el Firebase de verdad
+      # aunque su configuración esté en el entorno de este workflow.
+      - name: Emulador de Firebase
+        run: |
+          npx --yes firebase-tools emulators:start \
+            --project udeca-demo --only auth,firestore > /tmp/emulador.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -s -o /dev/null http://127.0.0.1:9099/ && break
+            sleep 2
+          done
+          if ! curl -sf -o /dev/null http://127.0.0.1:9099/; then
+            echo "::error::el emulador no llegó a arrancar"
+            cat /tmp/emulador.log
+            exit 1
+          fi
+          node scripts/seed-emulator.mjs
+
+      # Las comprobaciones de lib/: cincuenta guiones que verifican las
       # reglas del producto (cobros, rachas, marcas, traducciones, permisos...)
       # sin abrir un navegador. Se ejecutaban a mano, que es como no
       # ejecutarlas: aquí ya no se pueden olvidar.
-      #
-      # Fuera check-rules: necesita el emulador de Firebase levantado.
       - name: Comprobaciones del producto
         run: |
           fallos=0
           for f in scripts/check-*.mjs; do
             case "$f" in
-              scripts/check-rules.mjs) continue ;;
+              scripts/check-rules.mjs) orden="node $f" ;;
               scripts/check-permisos.mjs) orden="node $f" ;;
               *) orden="node --experimental-strip-types --import ./scripts/_ts-hook.mjs $f" ;;
             esac

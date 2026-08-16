@@ -18,7 +18,7 @@ import {
  *    pasar de ahí, 180 €/año. Entra y usa la app entera desde el primer día;
  *    el muro solo aparece cuando su grupo crece. Pedirle 180 € antes de haber
  *    visto el producto era el mayor punto de fuga del negocio.
- *  - ATLETA: 14 días desde el alta y después 10 €/mes.
+ *  - ATLETA: TRIAL_DAYS desde el alta y después 10 €/mes.
  *  - ALUMNO de un coach: gratis siempre.
  *  - Cuentas sin `subscriptionUntil` = fundadoras (anteriores a la
  *    monetización): acceso completo para no romper nada.
@@ -75,6 +75,7 @@ export {
   CLIENT_REPORT_GRACE_DAYS,
   clientIsLocked,
   clientDaysUntilLock,
+  tocaElAvisoDelAtleta,
 } from './planBase';
 
 /**

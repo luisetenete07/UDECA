@@ -391,8 +391,10 @@ export default function ClientDashboard() {
         </Pressable>
       </View>
 
-      {/* Solo al atleta que aún no paga: a pantalla completa, y no vuelve en
-          una semana (ver UpgradePopup). */}
+      {/* Solo al atleta que aún no paga, y solo el ÚLTIMO día de su prueba
+          (ver UpgradePopup): el día que se crea la cuenta acaba de pagar y no
+          hay nada que decidir todavía. Durante todo el mes la tarjeta está en
+          su perfil para quien la busque. */}
       <UpgradePopup />
 
       {paymentAlert ? (

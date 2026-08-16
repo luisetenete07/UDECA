@@ -11,7 +11,7 @@ más problemas da— **dónde se puede enseñar un precio y dónde no**.
 | --- | --- | --- | --- |
 | **Alta** | 1 €, una vez | entrenador y atleta | web (`pagos.altaCoach` / `pagos.altaAtleta`) o app (`COACH_ENTRY_LINK` / `ATHLETE_ENTRY_LINK`) |
 | **Plan del entrenador** | 180 €/año | entrenador con más de 5 alumnos | app (`COACH_PAYMENT_LINK`) |
-| **Plan del atleta** | 10 €/mes | atleta pasados sus 14 días | app (`ATHLETE_PAYMENT_LINK`) |
+| **Plan del atleta** | 10 €/mes | atleta pasados sus 28 días | app (`ATHLETE_PAYMENT_LINK`) |
 
 El **alumno de un entrenador no le paga nada a UDECA**. Lo que le paga a su
 entrenador es cosa de los dos: la app solo lleva la cuenta.
@@ -61,7 +61,7 @@ es lo único que une el pago con la cuenta.
 
 A tres días del final y el último día, por notificación
 (`payments-webhook/api/cron-daily.js`). La app se lo promete por escrito en la
-tarjeta del plan, así que tiene que cumplirse: entrar el día 15 y encontrarse el
+tarjeta del plan, así que tiene que cumplirse: entrar el día 29 y encontrarse el
 muro de pago sin previo aviso convierte a alguien que iba a pagar en alguien que
 se va.
 
@@ -73,13 +73,13 @@ Sale por **notificación push y por correo**. Es el único aviso de la tarea
 diaria que va por los dos caminos, y con razón: el push solo existe si la
 persona tiene la app de móvil instalada y ha dado permiso, y quien usa UDECA
 desde el navegador no tendría forma de enterarse. Encontrarse el muro de pago el
-día 15 sin aviso, después de que la app lo prometiera por escrito, convierte a
+último día sin aviso, después de que la app lo prometiera por escrito, convierte a
 alguien que iba a pagar en alguien que se va.
 
 El hito se marca aunque no salga ningún aviso (ni push ni correo). Si no, se
 reintentaría a diario con quien no tiene ninguno de los dos.
 
-### Cuándo empiezan los 14 días del atleta
+### Cuándo empiezan los 28 días del atleta
 
 Al pagar el alta, no al registrarse (lo escribe `activarAlta` en el webhook).
 Si alguien tarda dos días en pagar el euro, no pierde dos días de prueba.
@@ -139,7 +139,7 @@ En Android, web y APK no cambia nada: se cobra con normalidad.
 2. Si es un **pago suelto**, mira el rol de quien paga:
    - entrenador o atleta → es el alta: escribe `entryPaidAt`, guarda la huella
      de la tarjeta, reparte (o no) las plazas de alumno y, si es atleta, arranca
-     sus 14 días.
+     sus 28 días.
    - alumno → es la cuota que le paga a su entrenador.
 
 Todos los eventos son idempotentes (colección `stripeEvents`): Stripe reenvía, y

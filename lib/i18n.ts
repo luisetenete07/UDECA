@@ -1369,6 +1369,8 @@ export const EN: Record<string, string> = {
   ' de prueba': ' trial',
   'Tu alta incluye ': 'Your sign-up includes ',
   'quedan ': 'left: ',
+  'queda {0}': '{0} left',
+  'quedan {0}': '{0} left',
 
   // --- Palabras sueltas que llegan como dato ---
   //
@@ -2092,8 +2094,8 @@ export const EN: Record<string, string> = {
   'Has terminado la prueba': 'Your trial is over',
   'Tus datos, tus rutinas y todo tu progreso siguen intactos. En cuanto tu cuenta vuelva a estar activa, la app lo reconoce sola.':
     'Your data, your routines and all your progress are untouched. As soon as your account is active again, the app picks it up by itself.',
-  'Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.':
-    "These two weeks you've already done the hard part: starting. All your progress is still here, untouched, waiting for you. This is the next level.",
+  'Este mes ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.':
+    "This past month you've already done the hard part: starting. All your progress is still here, untouched, waiting for you. This is the next level.",
   'Esta cuenta no incluye alumnos: el alta de su tarjeta ya se usó en otra cuenta de entrenador. Con la suscripción anual tienes alumnos ilimitados. Tus datos están a salvo y te esperan.':
     'This account includes no students: that card was already used to sign up another coach account. With the annual subscription you get unlimited students. Your data is safe and waiting for you.',
   'Se abre la web para activarla. Al volver, tu cuenta se enciende sola en unos segundos; si tardara, pulsa "Ya he pagado · Actualizar".':
@@ -2134,6 +2136,7 @@ export const EN: Record<string, string> = {
   'Tu plan de atleta': 'Your athlete plan',
   'Tu plan de entrenador': 'Your coach plan',
   'Así funciona tu prueba': 'How your trial works',
+  'Te queda un día de prueba': 'You have one day of trial left',
   'Así funciona tu grupo': 'How your group works',
   'No se pudo reenviar': "Couldn't resend it",
 

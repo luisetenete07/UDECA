@@ -14,6 +14,7 @@ import {
   isAdmin,
   subscriptionCheckoutUrl,
   subscriptionState,
+  tocaElAvisoDelAtleta,
   TRIAL_DAYS,
 } from '../lib/subscription';
 import type { UserProfile } from '../lib/types';
@@ -173,7 +174,7 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
 
       {/* El atleta ve lo mismo que el entrenador, pero contado en días: lo que
           compró con el euro y cuánto le queda. Un contador a la vista evita la
-          sorpresa del día 15, que es cuando se pierde a la gente. */}
+          sorpresa del último día, que es cuando se pierde a la gente. */}
       {esAtleta && diasRestantes !== null ? (
         <View style={styles.plazas}>
           <View style={styles.plazasFila}>
@@ -181,16 +182,22 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
             <Text
               style={[styles.plazasCuenta, diasRestantes <= 3 && { color: colors.warning }]}
             >
-              quedan {diasRestantes}
+              {diasRestantes === 1 ? frase`queda ${diasRestantes}` : frase`quedan ${diasRestantes}`}
             </Text>
           </View>
-          <View style={styles.plazasPuntos}>
-            {Array.from({ length: TRIAL_DAYS }, (_, i) => (
-              <View
-                key={i}
-                style={[styles.plaza, i < TRIAL_DAYS - diasRestantes && styles.plazaOcupada]}
-              />
-            ))}
+          {/* Una barra y no un punto por día: con cuatro semanas de prueba,
+              veintiocho puntos en una fila son veintiocho rayas de seis
+              píxeles, que no se cuentan de un vistazo ni dicen nada. La
+              proporción sí se lee sola. */}
+          <View style={styles.barra}>
+            <View
+              style={[
+                styles.barraGastada,
+                {
+                  width: `${Math.min(100, Math.max(0, ((TRIAL_DAYS - diasRestantes) / TRIAL_DAYS) * 100))}%`,
+                },
+              ]}
+            />
           </View>
           <Text style={styles.plazasPie}>
             Con todo abierto, sin recortes. Cuando terminen, lo que has
@@ -282,10 +289,12 @@ const CADA_CUANTO_MS = 7 * 24 * 60 * 60 * 1000;
  * plazo. Enterarse ESE día, y no antes, es lo que hace que un precio justo
  * parezca una encerrona.
  *
- * Sale igual al entrenador y al atleta, con lo suyo cada uno: las plazas de
- * alumno o los días que le quedan. Se cierra con un toque y no vuelve en una
- * semana, y el descanso se guarda en la CUENTA: cerrarlo en el móvil y que
- * salte en el ordenador media hora después no es recordar, es perseguir.
+ * Sale al entrenador y al atleta, con lo suyo cada uno y en momentos
+ * distintos: al entrenador cada semana mientras tenga plazas de las que
+ * hablar, y al atleta SOLO el último día de su prueba (ver
+ * `tocaElAvisoDelAtleta`). Se cierra con un toque y no vuelve en una semana, y
+ * el descanso se guarda en la CUENTA: cerrarlo en el móvil y que salte en el
+ * ordenador media hora después no es recordar, es perseguir.
  *
  * Cuando la prueba del atleta caduca ya no llega aquí: el muro de pago le sale
  * antes y bloquea la app entera, así que no se pisan.
@@ -307,6 +316,7 @@ export function UpgradePopup() {
   };
 
   if (cerradoAhora || !tocaEnseñarlo || !canUpgrade(profile)) return null;
+  if (esAtleta && !tocaElAvisoDelAtleta(profile)) return null;
 
   return (
     <Modal visible animationType="slide" onRequestClose={cerrar}>
@@ -323,8 +333,11 @@ export function UpgradePopup() {
           <Text style={styles.popupEyebrow}>
             {esAtleta ? 'Tu plan de atleta' : 'Tu plan de entrenador'}
           </Text>
+          {/* Al atleta se le dice por qué le sale esto HOY. Un titular que
+              explica el producto ("así funciona tu prueba") sirve el primer
+              día; el último, lo que hace falta saber es que se acaba. */}
           <Text style={styles.popupTitulo}>
-            {esAtleta ? 'Así funciona tu prueba' : 'Así funciona tu grupo'}
+            {esAtleta ? 'Te queda un día de prueba' : 'Así funciona tu grupo'}
           </Text>
           <UpgradeCard />
           <Pressable onPress={cerrar} style={styles.popupAhoraNo} hitSlop={8}>
@@ -422,6 +435,14 @@ const styles = StyleSheet.create({
   plazasTitulo: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   plazasCuenta: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   plazasPuntos: { flexDirection: 'row', gap: 5, marginTop: spacing.sm },
+  barra: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
+  barraGastada: { height: 5, borderRadius: 3, backgroundColor: colors.primary },
   plaza: {
     flex: 1,
     height: 5,

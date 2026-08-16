@@ -27,7 +27,10 @@
  * Firebase los trata como cuentas distintas. Cero cuentas de Google nuevas.
  */
 const DAY_MS = 24 * 60 * 60 * 1000;
-const TRIAL_DAYS = 14;
+// Copia de lib/planBase.ts: este script corre con `node` pelado, sin el gancho
+// que sabe leer TypeScript, así que no puede importarlo. Si cambia allí, aquí
+// también.
+const TRIAL_DAYS = 28;
 /**
  * Contraseña de las cuentas de prueba.
  *

@@ -4,7 +4,7 @@
  * Existe porque los avisos solo llegaban por notificación push, y el push solo
  * existe si la persona tiene la app de móvil instalada y ha dado permiso. Quien
  * usa UDECA desde el navegador —que son muchos— no recibía nada: se encontraba
- * el muro de pago el día 15 sin haber sido avisado, después de que la propia
+ * el muro de pago al acabarse la prueba sin haber sido avisado, después de que la propia
  * app le prometiera por escrito que se le avisaría. Eso no es un aviso perdido,
  * es alguien que iba a pagar y se va.
  *

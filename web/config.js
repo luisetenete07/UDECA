@@ -14,7 +14,7 @@ window.UDECA = {
    *
    * El ALTA es de 1 €, pago único, e igual para entrenador y atleta: es lo que
    * abre la cuenta. Lo que viene después (los 180 €/año del entrenador con más
-   * de 5 alumnos, los 10 €/mes del atleta pasados 14 días) se cobra DESDE LA
+   * de 5 alumnos, los 10 €/mes del atleta pasados 28 días) se cobra DESDE LA
    * APP, cuando toca, no aquí: nadie paga una suscripción antes de haber usado
    * el producto.
    *

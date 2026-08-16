@@ -30,7 +30,7 @@ const PAYMENT_DUE_DAYS = 3;
  * último día.
  *
  * Existe porque la app le promete por escrito que le avisaremos, y hasta ahora
- * no lo hacía: entraba el día 15 y se encontraba el muro de pago sin previo
+ * no lo hacía: entraba al acabarse la prueba y se encontraba el muro de pago sin previo
  * aviso. Enterarse así, aunque el precio sea justo, es lo que convierte a
  * alguien que iba a pagar en alguien que se va.
  */
@@ -217,7 +217,7 @@ export default async function handler(req, res) {
       // NO depende de tener la app instalada: este aviso sale por push Y por
       // correo. Es el único de la tarea que la app promete por escrito en la
       // tarjeta del plan, y quien usa UDECA desde el navegador no tiene push:
-      // se encontraba el muro de pago el día 15 sin haber sido avisado nunca.
+      // se encontraba el muro de pago sin haber sido avisado nunca.
       if (
         u.role === 'athlete' &&
         typeof u.subscriptionUntil === 'number' &&

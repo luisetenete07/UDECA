@@ -418,7 +418,7 @@ await setDoc(
     uid: atleta, role: 'athlete', name: 'Sara Vidal', email: 'atleta@demo.test',
     createdAt: now - 40 * DAY, trainerId: atleta, emailVerificationRequired: false,
     weightKg: 62.0, heightCm: 168, goal: 'Front lever', level: 'Intermedio',
-    // Dentro de la prueba gratuita (las reglas no dejan pedir más de 14 días).
+    // Dentro de la prueba gratuita (las reglas topan el máximo: TRIAL_DAYS).
     ...(yaExiste ? {} : { subscriptionUntil: now + 10 * DAY, trialEndsAt: now + 10 * DAY }),
     planPopupClosedAt: deleteField(),
   },

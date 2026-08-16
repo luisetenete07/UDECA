@@ -131,7 +131,7 @@ export function Paywall() {
   const explicacion = !CAN_LINK_TO_PAYMENT
     ? 'Tus datos, tus rutinas y todo tu progreso siguen intactos. En cuanto tu cuenta vuelva a estar activa, la app lo reconoce sola.'
     : isAthlete
-      ? 'Estas dos semanas ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.'
+      ? 'Este mes ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.'
       : plazas === 0
         ? 'Esta cuenta no incluye alumnos: el alta de su tarjeta ya se usó en otra cuenta de entrenador. Con la suscripción anual tienes alumnos ilimitados. Tus datos están a salvo y te esperan.'
         : frase`Tu grupo ha superado los ${plazas} alumnos que incluye el alta. Activa la suscripción anual para seguir con todos. Tus datos están a salvo y te esperan.`;

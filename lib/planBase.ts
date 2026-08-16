@@ -19,14 +19,15 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 /**
  * Días de prueba de una cuenta de atleta.
  *
- * Son 14 y no 7 porque en calistenia dos semanas es lo mínimo para completar
- * un par de ciclos de entrenamiento y notar algo. Con una semana la decisión
- * se toma sin haber llegado a usar el producto de verdad.
+ * Son 28 y no 7 ni 14 porque en calistenia un mes es lo que tarda en verse
+ * algo: un mesociclo entero, con su progresión y su semana de descarga. Con
+ * dos semanas la decisión de pagar se toma justo cuando el trabajo empieza a
+ * dar resultados, que es el peor momento posible para pedirla.
  *
  * Este número está también en firestore.rules, que impide pedir más prueba de
  * la que toca al crear la cuenta. Si lo cambias, cámbialo en los dos sitios.
  */
-export const TRIAL_DAYS = 14;
+export const TRIAL_DAYS = 28;
 
 /** Fecha de fin de la prueba para una cuenta de atleta que se crea ahora. */
 export function trialUntil(from: number = Date.now()): number {
@@ -122,6 +123,37 @@ export function subscriptionState(
     legacy: false,
     trial,
   };
+}
+
+/**
+ * ¿Le toca ya al ATLETA el aviso del plan a pantalla completa?
+ *
+ * Solo el último día de su prueba, y aquí está el porqué: el atleta acaba de
+ * pagar. Ha puesto su euro hace cinco minutos y lo que ha comprado es
+ * justamente un mes sin que le pidan nada más. Recibirlo con una pantalla
+ * completa de "pásate al plan" es cobrar dos veces la misma conversación, y a
+ * quien lo ve le queda la sensación de que el euro era el cebo.
+ *
+ * El aviso tiene un momento en el que sí sirve: cuando queda un día y la
+ * decisión es de verdad. Antes de eso no hay nada que decidir, y decirlo igual
+ * solo enseña que la app está pendiente de cobrar en vez de entrenar.
+ *
+ * Que exista un sitio donde mirarlo durante todo ese mes no está reñido con
+ * esto: la tarjeta del plan vive en el perfil desde el primer día, para quien
+ * la busque. La diferencia entre estar disponible y salir a la cara es la
+ * diferencia entre una oferta y una persecución.
+ *
+ * El entrenador es otro caso y no pasa por aquí: su tope no es una fecha sino
+ * las plazas de alumno, y esas se llenan cuando se llenan.
+ */
+export function tocaElAvisoDelAtleta(
+  profile: UserProfile | null,
+  now: number = Date.now()
+): boolean {
+  if (profile?.role !== 'athlete') return false;
+  const estado = subscriptionState(profile, now);
+  if (!estado.trial || estado.daysLeft === null) return false;
+  return estado.daysLeft <= 1;
 }
 
 /**

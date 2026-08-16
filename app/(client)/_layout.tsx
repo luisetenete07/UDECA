@@ -76,7 +76,7 @@ export default function ClientLayout() {
   }
   // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
-  // Alta de 1 € del atleta: con ella arrancan sus 14 días. El alumno de un
+  // Alta de 1 € del atleta: con ella arranca su prueba. El alumno de un
   // coach no paga nada, así que `needsEntryPayment` ya lo descarta.
   if (needsEntryPayment(profile)) return <EntryWall />;
   // Atleta con la suscripción caducada: muro de pago (10 €/mes). Al alumno de
