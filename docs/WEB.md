@@ -79,6 +79,39 @@ normalmente basta con esperar al primer despliegue y comprobarlo.
 
 ---
 
+## 1.6 · Las dos páginas que miran las tiendas
+
+En `web/` viven dos páginas que no son marketing y que hay que tratar con más
+cuidado que el resto:
+
+| Dirección | Fichero | Para qué |
+|---|---|---|
+| `www.udeca.app/privacidad` | `web/privacidad.html` | La política de privacidad que se declara en Play y en App Store |
+| `www.udeca.app/eliminar-cuenta` | `web/eliminar-cuenta.html` | La página de borrado de cuenta que exige la declaración de seguridad de los datos |
+
+Están aquí y no dentro de la app **a propósito**. Google las comprueba con un
+revisor automático que pide el HTML, no ejecuta JavaScript y no tiene sesión: una
+pantalla de la app le devuelve una página en blanco y da el envío por rechazado.
+Aquí el texto viaja en el propio fichero.
+
+Tres reglas al tocarlas:
+
+1. **Sin `<script>`.** Si el texto lo pinta un script, no existe para quien lo
+   comprueba.
+2. **La de borrado tiene que servir a quien ya no tiene la app.** Por eso hay un
+   correo además del botón de dentro de la app.
+3. **El mismo texto está en `app/privacy-policy.tsx` y `app/delete-account.tsx`**,
+   que es lo que se lee desde dentro. Si cambia uno, cambia el otro: son el mismo
+   documento.
+
+Lo vigila `scripts/check-legales.mjs`, que corre en cada push.
+
+Y lo más fácil de olvidar: **esto es Vercel, no GitHub Pages.** Subir el código no
+publica la web si el proyecto de Vercel no está conectado al repositorio. En ese
+caso, `cd web && npx vercel --prod`.
+
+---
+
 ## 2 · Qué se cambia cuando algo esté listo
 
 Todo lo configurable de la web pública está en **`web/config.js`**, en un solo

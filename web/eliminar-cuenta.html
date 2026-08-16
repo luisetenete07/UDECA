@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Eliminar tu cuenta · UDECA</title>
+<meta name="description" content="Cómo borrar tu cuenta de UDECA y todos tus datos, desde la app o por correo." />
+<link rel="icon" href="/assets/favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+<!--
+  LA PÁGINA QUE PIDE GOOGLE PLAY PARA BORRAR LA CUENTA.
+
+  Las tiendas exigen una dirección donde cualquiera pueda pedir que se borre su
+  cuenta SIN tener la app instalada y SIN entrar en ella. Por eso esto es HTML
+  plano y no una pantalla más de la app: el revisor que lo comprueba pide la URL,
+  no ejecuta JavaScript y no tiene sesión. Una pantalla de la app necesita que
+  arranque React para enseñar la primera letra; aquí el texto viaja en el fichero.
+
+  Y por eso hay DOS caminos, no uno: el de dentro de la app, que es instantáneo, y
+  el correo, que es el que sirve a quien ya la desinstaló. Dejar solo el primero
+  incumple la política aunque el botón funcione perfectamente.
+
+  El texto es el mismo que app/delete-account.tsx. Si cambia uno, cambia el otro.
+-->
+<style>
+  .legal-doc { max-width: 760px; }
+  .legal-doc h2 { font-size: 20px; margin: 34px 0 10px; }
+  .legal-doc p, .legal-doc li { color: var(--muted); font-size: 15.5px; line-height: 1.7; }
+  .legal-doc p { margin: 0 0 14px; }
+  .legal-doc ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 8px; }
+  .legal-doc b { color: var(--text); font-weight: 600; }
+  .legal-doc a { color: var(--gold-bright); }
+  .correo {
+    display: inline-block;
+    font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 20px;
+    color: var(--gold-bright);
+    margin: 6px 0 16px;
+  }
+  .idiomas { display: flex; gap: 14px; font-size: 13px; margin-bottom: 30px; }
+</style>
+</head>
+<body>
+<div class="halo"></div>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/">
+      <img src="/assets/logo.png" alt="" />
+      <span>UDECA</span>
+    </a>
+  </div>
+</header>
+
+<section style="padding-top:40px">
+  <div class="wrap legal-doc">
+    <p class="eyebrow">Tu cuenta</p>
+    <h1 style="font-size:clamp(30px,6vw,44px)">Eliminar tu cuenta de UDECA</h1>
+    <p class="idiomas"><a href="#english">Read this page in English</a></p>
+
+    <p>
+      Hay dos formas, y las dos borran lo mismo. La primera es inmediata; la segunda
+      existe para quien ya no tiene la app instalada.
+    </p>
+
+    <h2>Desde la app, tú mismo</h2>
+    <p>
+      Entra en UDECA y ve a <b>Perfil → Eliminar mi cuenta</b>, al final de la pantalla. Son cinco
+      pasos: te explicamos qué se borra, tienes que escribir "ELIMINAR MI CUENTA" y confirmar con tu
+      contraseña. Al terminar, tu cuenta y tus datos desaparecen en el momento. Vale para cualquier
+      tipo de perfil: alumno, atleta y entrenador.
+    </p>
+
+    <h2>Por correo, si prefieres</h2>
+    <p>Escríbenos desde la dirección con la que te registraste a:</p>
+    <p><a class="correo" href="mailto:luistenaf@gmail.com?subject=Eliminar%20cuenta">luistenaf@gmail.com</a></p>
+    <p>
+      Asunto: "Eliminar cuenta". Procesaremos la solicitud en un máximo de 30 días. Es también la vía
+      para pedir que se borren los restos que la app no puede quitar por sí sola (comidas y hábitos
+      registrados, y los mensajes con tu entrenador, que conserva su copia).
+    </p>
+
+    <h2>Qué se elimina</h2>
+    <p>
+      Perfil (nombre, email, foto), rutinas y ejercicios asignados, historial de entrenamientos y
+      estadísticas, registros de peso y nutrición, fotos de progreso, historial de pagos y mensajes
+      con tu entrenador.
+    </p>
+
+    <h2>Qué se conserva</h2>
+    <p>
+      Ningún dato personal. Podemos conservar registros de facturación durante el tiempo exigido por
+      la ley aplicable.
+    </p>
+
+    <p style="margin-top:26px">
+      Todo lo demás sobre el tratamiento de tus datos está en la
+      <a href="/privacidad">política de privacidad</a>.
+    </p>
+
+    <hr class="rule" style="margin:50px 0" />
+
+    <h1 id="english" style="font-size:clamp(26px,5vw,36px)">Delete your UDECA account</h1>
+
+    <p>
+      There are two ways, and both erase the same thing. The first is immediate; the second is there
+      for anyone who no longer has the app installed.
+    </p>
+
+    <h2>From the app, yourself</h2>
+    <p>
+      Open UDECA and go to <b>Profile → Delete my account</b>, at the bottom of the screen. It takes
+      five steps: we explain what gets erased, you type "DELETE MY ACCOUNT" and confirm with your
+      password. When you finish, your account and your data are gone right away. It works for every
+      kind of profile: student, athlete and coach.
+    </p>
+
+    <h2>By email, if you prefer</h2>
+    <p>Write to us from the address you signed up with:</p>
+    <p><a class="correo" href="mailto:luistenaf@gmail.com?subject=Delete%20account">luistenaf@gmail.com</a></p>
+    <p>
+      Subject: "Delete account". We will process the request within 30 days at most. This is also the
+      way to ask us to erase what the app cannot remove on its own (logged meals and habits, and the
+      messages with your coach, who keeps their copy).
+    </p>
+
+    <h2>What is deleted</h2>
+    <p>
+      Profile (name, email, photo), assigned routines and exercises, training history and statistics,
+      weight and nutrition records, progress photos, payment history and messages with your coach.
+    </p>
+
+    <h2>What is kept</h2>
+    <p>
+      No personal data. We may keep billing records for as long as applicable law requires.
+    </p>
+
+    <p style="margin-top:26px">
+      Everything else about how we handle your data is in the
+      <a href="/privacidad">privacy policy</a>.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="legal">
+      © <span id="year">2026</span> UDECA · Universidad de Calistenia.
+      <a href="/" style="color:var(--muted)">Volver al inicio</a> ·
+      <a href="/privacidad" style="color:var(--muted)">Política de privacidad</a>
+    </p>
+  </div>
+</footer>
+</body>
+</html>

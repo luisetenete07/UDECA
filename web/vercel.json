@@ -1,6 +1,27 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "//": [
+    "Los alias de las páginas legales.",
+    "",
+    "Google Play y App Store guardan la URL que se les dio y la comprueban sola,",
+    "sin avisar. Si mañana esa dirección deja de responder, la app se queda sin",
+    "poder enviarse a revisión y el aviso llega en forma de rechazo. Por eso",
+    "cualquier forma razonable de escribirlas lleva al mismo sitio: en español o en",
+    "inglés, con guion o sin él, y también las rutas que tenían dentro de la app",
+    "(/privacy-policy, /delete-account), que es donde apuntaban antes.",
+    "",
+    "Es una redireccion permanente (308) porque la direccion buena es una sola: la",
+    "que se declara en las tiendas."
+  ],
+  "redirects": [
+    { "source": "/privacy", "destination": "/privacidad", "permanent": true },
+    { "source": "/privacy-policy", "destination": "/privacidad", "permanent": true },
+    { "source": "/politica-de-privacidad", "destination": "/privacidad", "permanent": true },
+    { "source": "/delete-account", "destination": "/eliminar-cuenta", "permanent": true },
+    { "source": "/account-deletion", "destination": "/eliminar-cuenta", "permanent": true },
+    { "source": "/borrar-cuenta", "destination": "/eliminar-cuenta", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/(.*)",

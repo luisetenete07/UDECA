@@ -129,6 +129,50 @@ entero de Gradle en el propio GitHub, con la línea que dice qué falla.
 
 ---
 
+## Si Play no te deja enviar a revisión
+
+Esto no es un fallo de compilación: el `.aab` está bien y la app funciona. Son
+las dos direcciones que Google guarda en la ficha y comprueba **él solo**, sin
+avisar y cada cierto tiempo.
+
+    La página de la política de privacidad devuelve un error de página no encontrada
+    La página de eliminación de cuenta devuelve un error de página no encontrada
+
+Las dos apuntaban a pantallas **de la app** (`app.udeca.app/privacy-policy` y
+`/delete-account`). El problema es quién abre esas URLs: no es una persona con
+un navegador, es un revisor automático que pide el HTML, **no ejecuta
+JavaScript** y no tiene sesión. Una pantalla de la app necesita que arranque un
+bundle de React para enseñar la primera letra, así que a esa comprobación le
+llega una página en blanco.
+
+Están en la web pública, en HTML plano, y son estas dos:
+
+> **Política de privacidad:** `https://www.udeca.app/privacidad`
+> **Eliminar la cuenta:** `https://www.udeca.app/eliminar-cuenta`
+
+Dónde se pegan en Play Console:
+
+- La de privacidad, en **Contenido de la aplicación → Política de privacidad**.
+- La de borrar la cuenta, en **Contenido de la aplicación → Seguridad de los
+  datos**, en la pregunta de eliminación de cuenta. (Apple pide la misma cosa en
+  **App Privacy** de App Store Connect.)
+
+Dos cosas que no son opcionales, por si algún día se reescriben esas páginas:
+
+- **Tienen que servir sin JavaScript.** Lo vigila `check-legales`, que además
+  comprueba que no estén vacías.
+- **La de borrado tiene que ofrecer una vía a quien YA NO tiene la app
+  instalada** (por eso está el correo, además del botón de dentro). Un botón que
+  solo existe dentro de la app no cumple la política aunque funcione
+  perfectamente: quien la desinstaló no puede pulsarlo.
+
+Y una tercera que no depende del código: **la web pública se despliega aparte**
+(Vercel, carpeta `web/`). Si el proyecto de Vercel no está conectado al
+repositorio, subir el código no publica nada — hay que hacer
+`cd web && npx vercel --prod`. Ver `docs/WEB.md`.
+
+---
+
 ## Antes de dar a compilar
 
 - **Los tipos y las comprobaciones tienen que estar en verde.** La acción
