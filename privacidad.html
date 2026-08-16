@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Política de privacidad · UDECA</title>
+<meta name="description" content="Qué datos trata UDECA, para qué, con quién se comparten y cómo ejercer tus derechos." />
+<!--
+  ESTA PÁGINA NO DEPENDE DE NADA. NI DE UN CSS, NI DE UNA FUENTE, NI DE UN LOGO.
+
+  No es minimalismo: es lo que hace que funcione. Esta dirección la abre un
+  revisor automático de Google Play y de App Store que pide el HTML, no ejecuta
+  JavaScript, no tiene sesión y no espera a que cargue nada. Si el texto lo pinta
+  un script, o si el estilo vive en otro fichero que ese día no responde, lo que
+  ve es una página en blanco y la declara rota. Ya pasó una vez: las dos URLs
+  apuntaban a pantallas de la app (Expo) y Google las dio por "página no
+  encontrada".
+
+  Por eso todo va dentro: el estilo en un <style>, la marca en texto y ni una
+  sola petición al exterior. Así el fichero se puede servir DESDE CUALQUIER
+  SITIO y siempre se ve igual. Y hace falta, porque se publica en dos:
+
+    - GitHub Pages (app.udeca.app), que se despliega solo en cada push. Es la
+      dirección que está declarada en las tiendas, justamente porque no depende
+      de que nadie se acuerde de publicar nada.
+    - Vercel (www.udeca.app), la web pública, que se despliega aparte.
+
+  Si el texto cambia, cámbialo también en app/privacy-policy.tsx: es el mismo
+  documento leído desde dentro de la app, y no pueden decir cosas distintas.
+
+  Lo vigila scripts/check-legales.mjs.
+-->
+<style>
+  :root {
+    --bg: #080706;
+    --surface: #100e0c;
+    --text: #f2ede7;
+    --muted: #a2968b;
+    --faint: #6f6760;
+    --gold: #c9bcae;
+    --hairline: rgba(162, 150, 139, 0.22);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 22px; }
+  header { border-bottom: 1px solid var(--hairline); }
+  header .wrap { display: flex; align-items: center; height: 64px; }
+  .brand {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 15px;
+  }
+  main { padding: 40px 0 70px; }
+  .eyebrow {
+    color: var(--gold);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 34px 0 10px; }
+  p, li { color: var(--muted); font-size: 16px; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  li { margin-bottom: 8px; }
+  b { color: var(--text); font-weight: 600; }
+  a { color: var(--gold); }
+  .fecha { color: var(--faint); font-size: 13px; margin-bottom: 8px; }
+  .idiomas { font-size: 14px; margin-bottom: 28px; }
+  hr { border: 0; height: 1px; background: var(--hairline); margin: 50px 0; }
+  footer { border-top: 1px solid var(--hairline); padding: 22px 0 40px; }
+  footer p { color: var(--faint); font-size: 13px; margin: 0; }
+  @media (min-width: 700px) { h1 { font-size: 42px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap"><a class="brand" href="https://www.udeca.app">UDECA</a></div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="eyebrow">Legal</p>
+    <h1>Política de privacidad de UDECA</h1>
+    <p class="fecha">Última actualización: julio de 2026</p>
+    <p class="idiomas"><a href="#english">Read this page in English</a></p>
+
+    <p>
+      UDECA (Universidad de Calistenia) es una aplicación de entrenamiento de calistenia que
+      conecta a entrenadores con sus alumnos y permite a atletas individuales gestionar su propio
+      plan. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes.
+      El responsable del tratamiento es el titular de UDECA; puedes contactar en cualquier momento
+      en <b>luistenaf@gmail.com</b>.
+    </p>
+
+    <h2>1. Datos que recogemos</h2>
+    <p>Recogemos únicamente los datos necesarios para prestar el servicio:</p>
+    <ul>
+      <li><b>Datos de cuenta:</b> nombre y correo electrónico (para el registro y el inicio de sesión).</li>
+      <li><b>Perfil:</b> foto de perfil (opcional) y objetivos de entrenamiento.</li>
+      <li><b>Datos de entrenamiento y forma física:</b> rutinas, series, repeticiones, cargas (lastre),
+        peso corporal, sensaciones, hábitos, retos y estadísticas de progreso.</li>
+      <li><b>Nutrición:</b> macros y datos que introduzcas, y fotos de progreso (opcionales).</li>
+      <li><b>Comunicación:</b> mensajes con tu entrenador, y anuncios del grupo.</li>
+      <li><b>Datos técnicos:</b> un identificador de dispositivo para notificaciones push (solo si las activas).</li>
+    </ul>
+
+    <h2>2. Para qué usamos tus datos</h2>
+    <p>
+      Tratamos tus datos para: ofrecerte el servicio de entrenamiento y seguimiento con tu coach
+      (o gestionar tu propio plan si eres atleta individual); mostrarte tu progreso y estadísticas;
+      gestionar tu cuenta y la relación con tu entrenador; enviarte notificaciones relacionadas con
+      tu entrenamiento y avisos de pago (solo si las activas); y gestionar el cobro de la cuota de
+      tu entrenador. No usamos tus datos para publicidad ni para elaborar perfiles comerciales.
+    </p>
+
+    <h2>3. Pagos (Stripe)</h2>
+    <p>
+      Los pagos de las cuotas y de la suscripción se procesan a través de <b>Stripe</b>, un
+      proveedor de pagos certificado. Los datos de tu tarjeta se introducen y almacenan
+      directamente en Stripe: <b>UDECA nunca ve ni guarda los datos completos de tu tarjeta</b>.
+      Solo recibimos la confirmación de si un pago se ha realizado y su historial (fechas e
+      importes) para mostrar tu estado de cuota. Consulta la política de privacidad de Stripe en
+      <a href="https://stripe.com/es/privacy">stripe.com/es/privacy</a>.
+    </p>
+
+    <h2>4. Proveedores y con quién se comparten</h2>
+    <p>
+      Tus datos de entrenamiento son visibles para tu <b>entrenador asignado</b> en UDECA (no lo son
+      para otros alumnos, salvo la clasificación del grupo y tu estado en línea, que puedes tratar
+      con tu coach). Si eres atleta individual, tus datos no se comparten con ningún entrenador.
+    </p>
+    <p>
+      Para funcionar, la app se apoya en proveedores de infraestructura que actúan como encargados
+      del tratamiento:
+    </p>
+    <ul>
+      <li><b>Firebase (Google):</b> autenticación, base de datos y almacenamiento de imágenes.</li>
+      <li><b>Stripe:</b> procesamiento de pagos.</li>
+      <li><b>Expo:</b> envío de notificaciones push.</li>
+    </ul>
+    <p>No vendemos ni cedemos tus datos a terceros con fines publicitarios.</p>
+
+    <h2>5. Transferencias internacionales</h2>
+    <p>
+      Algunos de nuestros proveedores (Google, Stripe, Expo) pueden tratar datos en servidores
+      situados fuera del Espacio Económico Europeo. En esos casos, la transferencia se ampara en las
+      garantías previstas por el RGPD (como las Cláusulas Contractuales Tipo de la Comisión Europea).
+    </p>
+
+    <h2>6. Conservación</h2>
+    <p>
+      Conservamos tus datos mientras tu cuenta esté activa. Si eliminas tu cuenta o lo solicitas,
+      borramos tus datos personales, salvo los que debamos conservar por obligaciones legales (por
+      ejemplo, registros de facturación asociados a los pagos).
+    </p>
+
+    <h2>7. Tus derechos</h2>
+    <p>
+      Puedes ejercer en cualquier momento tus derechos de acceso, rectificación, supresión,
+      oposición, limitación y portabilidad de tus datos. Muchos de ellos los puedes ejercer
+      directamente desde la app (editar tu perfil, borrar registros o eliminar tu cuenta). Para
+      cualquier otra solicitud, escríbenos a <b>luistenaf@gmail.com</b>. Si consideras que no hemos
+      atendido correctamente tu solicitud, tienes derecho a reclamar ante la autoridad de control
+      competente (en España, la Agencia Española de Protección de Datos, aepd.es).
+    </p>
+
+    <h2>8. Eliminar tu cuenta y tus datos</h2>
+    <p>
+      Puedes eliminar tu cuenta desde los ajustes de la app o solicitándolo en
+      <b>luistenaf@gmail.com</b>. Al hacerlo, borramos tu perfil y tus datos de entrenamiento
+      asociados. Tienes los pasos detallados en
+      <a href="/eliminar-cuenta">la página de eliminación de cuenta</a>.
+    </p>
+
+    <h2>9. Menores</h2>
+    <p>
+      UDECA no está dirigida a menores de 14 años. Si eres menor de esa edad, no debes usar la app
+      sin el consentimiento de tus padres o tutores.
+    </p>
+
+    <h2>10. Cambios en esta política</h2>
+    <p>
+      Podemos actualizar esta política para reflejar cambios en el servicio o en la normativa.
+      Publicaremos siempre la versión vigente en esta misma página, indicando la fecha de última
+      actualización.
+    </p>
+
+    <h2>11. Contacto</h2>
+    <p>
+      Para cualquier duda sobre privacidad o para ejercer tus derechos, escríbenos a
+      <b>luistenaf@gmail.com</b>.
+    </p>
+
+    <hr />
+
+    <h1 id="english">UDECA privacy policy</h1>
+    <p class="fecha">Last updated: July 2026</p>
+
+    <p>
+      UDECA (Universidad de Calistenia) is a calisthenics training app that connects coaches with
+      their students and lets individual athletes manage their own plan. This policy explains what
+      data we process, what for, and what rights you have. The data controller is the owner of
+      UDECA; you can get in touch at any time at <b>luistenaf@gmail.com</b>.
+    </p>
+
+    <h2>1. Data we collect</h2>
+    <p>We collect only the data needed to provide the service:</p>
+    <ul>
+      <li><b>Account data:</b> name and email address (for sign-up and sign-in).</li>
+      <li><b>Profile:</b> profile photo (optional) and training goals.</li>
+      <li><b>Training and fitness data:</b> routines, sets, reps, added weight, body weight, how you
+        felt, habits, challenges and progress statistics.</li>
+      <li><b>Nutrition:</b> macros and the data you enter, and progress photos (optional).</li>
+      <li><b>Communication:</b> messages with your coach, and group announcements.</li>
+      <li><b>Technical data:</b> a device identifier for push notifications (only if you turn them on).</li>
+    </ul>
+
+    <h2>2. What we use your data for</h2>
+    <p>
+      We process your data to: provide the training and follow-up service with your coach (or manage
+      your own plan if you are an individual athlete); show you your progress and statistics; manage
+      your account and your relationship with your coach; send you notifications about your training
+      and payment reminders (only if you turn them on); and handle your coach's fee. We do not use
+      your data for advertising or commercial profiling.
+    </p>
+
+    <h2>3. Payments (Stripe)</h2>
+    <p>
+      Fees and subscriptions are processed through <b>Stripe</b>, a certified payment provider. Your
+      card details are entered and stored directly in Stripe: <b>UDECA never sees or stores your
+      full card details</b>. We only receive confirmation of whether a payment went through, and its
+      history (dates and amounts), to show your payment status. See Stripe's privacy policy at
+      <a href="https://stripe.com/privacy">stripe.com/privacy</a>.
+    </p>
+
+    <h2>4. Providers and who your data is shared with</h2>
+    <p>
+      Your training data is visible to your <b>assigned coach</b> in UDECA (not to other students,
+      other than the group leaderboard and your online status, which you can discuss with your
+      coach). If you are an individual athlete, your data is not shared with any coach.
+    </p>
+    <p>To operate, the app relies on infrastructure providers acting as data processors:</p>
+    <ul>
+      <li><b>Firebase (Google):</b> authentication, database and image storage.</li>
+      <li><b>Stripe:</b> payment processing.</li>
+      <li><b>Expo:</b> push notification delivery.</li>
+    </ul>
+    <p>We do not sell or transfer your data to third parties for advertising purposes.</p>
+
+    <h2>5. International transfers</h2>
+    <p>
+      Some of our providers (Google, Stripe, Expo) may process data on servers outside the European
+      Economic Area. In those cases the transfer relies on the safeguards set out in the GDPR (such
+      as the European Commission's Standard Contractual Clauses).
+    </p>
+
+    <h2>6. Retention</h2>
+    <p>
+      We keep your data while your account is active. If you delete your account or ask us to, we
+      erase your personal data, except what we must keep for legal obligations (for example, billing
+      records tied to payments).
+    </p>
+
+    <h2>7. Your rights</h2>
+    <p>
+      You can exercise your rights of access, rectification, erasure, objection, restriction and
+      portability at any time. Many of them you can exercise straight from the app (edit your
+      profile, delete records, or delete your account). For anything else, write to
+      <b>luistenaf@gmail.com</b>. If you believe we have not handled your request properly, you have
+      the right to complain to the competent supervisory authority (in Spain, the Agencia Española
+      de Protección de Datos, aepd.es).
+    </p>
+
+    <h2>8. Deleting your account and your data</h2>
+    <p>
+      You can delete your account from the app's settings or by requesting it at
+      <b>luistenaf@gmail.com</b>. When you do, we erase your profile and your associated training
+      data. Step-by-step instructions are on
+      <a href="/eliminar-cuenta">the account deletion page</a>.
+    </p>
+
+    <h2>9. Minors</h2>
+    <p>
+      UDECA is not aimed at children under 14. If you are under that age, you should not use the app
+      without your parents' or guardians' consent.
+    </p>
+
+    <h2>10. Changes to this policy</h2>
+    <p>
+      We may update this policy to reflect changes to the service or to the law. The version in
+      force will always be published on this page, with the date it was last updated.
+    </p>
+
+    <h2>11. Contact</h2>
+    <p>
+      For any question about privacy, or to exercise your rights, write to
+      <b>luistenaf@gmail.com</b>.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      © 2026 UDECA · Universidad de Calistenia ·
+      <a href="/eliminar-cuenta">Eliminar tu cuenta</a>
+    </p>
+  </div>
+</footer>
+</body>
+</html>
