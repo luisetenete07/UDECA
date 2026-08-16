@@ -92,7 +92,7 @@ jobs:
           fi
           node scripts/seed-emulator.mjs
 
-      # Las comprobaciones de lib/: cincuenta guiones que verifican las
+      # Las comprobaciones de lib/: medio centenar de guiones que verifican las
       # reglas del producto (cobros, rachas, marcas, traducciones, permisos...)
       # sin abrir un navegador. Se ejecutaban a mano, que es como no
       # ejecutarlas: aquí ya no se pueden olvidar.
