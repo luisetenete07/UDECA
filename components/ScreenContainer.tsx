@@ -9,7 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeIn } from './FadeIn';
 import { useLayout } from '../lib/responsive';
 import { colors, gradients, spacing } from '../lib/theme';
@@ -57,7 +57,29 @@ export function ScreenContainer({
   // no hay nada que esquivar y ese hueco sobraría.
   const dock =
     Platform.OS === 'web' && layout.isWide && !layout.sidebar ? spacing.xxl + spacing.lg : 0;
-  const gutter = { paddingHorizontal: layout.gutter, paddingBottom: dock };
+
+  /**
+   * El hueco de abajo, que se había quedado en CERO en el móvil.
+   *
+   * Aquí había un fallo tonto y muy visible: este objeto se aplicaba DESPUÉS de
+   * los estilos base, y traía `paddingBottom: dock`. En web ancho `dock` vale
+   * algo, pero en el móvil vale 0, así que pisaba el `paddingBottom` del estilo
+   * base y lo dejaba en nada. Resultado: el último botón de la pantalla —"usar
+   * otra cuenta", "regístrate"— quedaba pegado al borde inferior, encima de la
+   * barra de gestos del sistema.
+   *
+   * Ahora el hueco se SUMA en vez de sustituirse, y lleva además el margen que
+   * reserva el propio teléfono (`insets.bottom`): la barra de gestos de Android
+   * y la raya del iPhone se comen esa franja, y nada que se pueda pulsar debe
+   * quedar debajo.
+   *
+   * En las pantallas con barra de pestañas ese `insets.bottom` ya viene a cero:
+   * la barra ocupa esa franja y es ella quien la respeta, así que no se suma dos
+   * veces.
+   */
+  const insets = useSafeAreaInsets();
+  const abajo = dock + insets.bottom;
+  const gutter = { paddingHorizontal: layout.gutter };
 
   if (!scroll) {
     return (
@@ -68,7 +90,7 @@ export function ScreenContainer({
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
-        <View style={[styles.centerRow, gutter]}>
+        <View style={[styles.centerRow, gutter, { paddingBottom: spacing.lg + abajo }]}>
           <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
         </View>
       </SafeAreaView>
@@ -92,7 +114,11 @@ export function ScreenContainer({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, gutter]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            gutter,
+            { paddingBottom: spacing.xxl + abajo },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}

@@ -1,18 +1,21 @@
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
-import { colors, fonts, shadows, spacing } from '../lib/theme';
+import { colors, fonts, spacing } from '../lib/theme';
 
 export function Logo({ compact }: { compact?: boolean }) {
   return (
     <View style={compact ? styles.containerCompact : styles.container}>
-      <View style={!compact && styles.emblemGlow}>
-        <Image
-          source={require('../assets/android-icon-foreground.png')}
-          style={compact ? styles.emblemCompact : styles.emblem}
-          resizeMode="contain"
-        />
-      </View>
+      {/* El logo, y nada más. Aquí había un halo dorado redondo por detrás, y
+          en Android no se veía como un halo: `elevation` dibuja la sombra del
+          sistema con la silueta de la vista, así que salía un disco amarillo
+          macizo detrás del emblema. El fondo de la marca es negro; lo que hace
+          que el logo destaque es el propio negro, no un aro. */}
+      <Image
+        source={require('../assets/android-icon-foreground.png')}
+        style={compact ? styles.emblemCompact : styles.emblem}
+        resizeMode="contain"
+      />
       <Text style={[styles.mark, compact && styles.markCompact]}>UDECA</Text>
       <View style={styles.rule} />
       <Text style={styles.subtitle}>Universidad de Calistenia</Text>
@@ -29,10 +32,6 @@ const styles = StyleSheet.create({
   containerCompact: {
     alignItems: 'center',
     marginBottom: spacing.md,
-  },
-  emblemGlow: {
-    borderRadius: 999,
-    ...shadows.glowGold,
   },
   emblem: {
     width: 72,

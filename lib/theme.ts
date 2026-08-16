@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 /**
  * Dos familias y ya.
  *
@@ -97,12 +99,23 @@ export const shadows = {
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
+  /**
+   * El halo dorado de la marca. En Android NO lleva `elevation`, y no es un
+   * olvido.
+   *
+   * `elevation` no dibuja un resplandor: dibuja la sombra del sistema con la
+   * SILUETA de la vista, opaca y con su color. En una vista redonda y sin
+   * fondo, eso no es un halo difuminado, es un disco dorado macizo detrás del
+   * logo — que es justo lo que se veía en el móvil: "el logotipo sale con fondo
+   * amarillo". En iPhone y en el navegador sí es un degradado suave, así que
+   * ahí se queda.
+   */
   glowGold: {
     shadowColor: '#A2968B',
     shadowOpacity: 0.35,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
+    ...(Platform.OS === 'android' ? null : { elevation: 8 }),
   },
 };
 
