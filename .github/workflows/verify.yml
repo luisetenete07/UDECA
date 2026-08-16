@@ -67,6 +67,16 @@ jobs:
       # El proyecto es `udeca-demo`, inventado y local. Los guiones lo llevan
       # escrito dentro, así que ni tocan ni pueden tocar el Firebase de verdad
       # aunque su configuración esté en el entorno de este workflow.
+      # El emulador de Firestore corre sobre Java, y firebase-tools pide 21 o
+      # más. El runner trae una versión anterior, así que hay que ponerla: sin
+      # esto el emulador ni arranca ("no longer supports Java version before
+      # 21") y las dos comprobaciones de reglas se quedan sin correr.
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Emulador de Firebase
         run: |
           npx --yes firebase-tools emulators:start \
