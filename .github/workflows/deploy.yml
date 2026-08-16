@@ -105,3 +105,43 @@ jobs:
           user_name: "UDECA Deploy"
           user_email: "udeca-bot@example.com"
           commit_message: "Deploy web build"
+
+      # Y se comprueba que están DE VERDAD en internet, no solo en una rama.
+      #
+      # Hasta ahora la acción daba verde con haber subido los ficheros, que no es
+      # lo mismo que estar publicados: Pages tarda un poco, y un dominio mal
+      # apuntado o una copia que no se hizo dan exactamente el mismo verde. La
+      # única pregunta que importa es la que se hace la tienda cuando abre la
+      # URL, así que se hace aquí: se piden las dos direcciones y se mira que
+      # respondan y que traigan su texto.
+      #
+      # Se reintenta durante tres minutos porque la publicación no es instantánea,
+      # y no falla el despliegue de la app si no llegan a tiempo (el aviso queda
+      # escrito): la app ya está subida y tumbar la acción por eso no arregla
+      # nada.
+      - name: Comprobar las páginas legales en vivo
+        continue-on-error: true
+        run: |
+          fallos=0
+          for pagina in privacidad eliminar-cuenta; do
+            url="https://app.udeca.app/$pagina"
+            bien=0
+            for _ in $(seq 1 18); do
+              codigo=$(curl -sL -o /tmp/pagina.html -w '%{http_code}' "$url" || echo 000)
+              if [ "$codigo" = "200" ] && grep -q "UDECA" /tmp/pagina.html; then
+                echo "OK  $url ($(wc -c < /tmp/pagina.html) bytes)"
+                bien=1
+                break
+              fi
+              sleep 10
+            done
+            if [ "$bien" != "1" ]; then
+              echo "::warning::$url no responde todavía (último código: $codigo)"
+              fallos=$((fallos + 1))
+            fi
+          done
+          if [ "$fallos" -eq 0 ]; then
+            echo "Las dos páginas legales están en vivo."
+          else
+            echo "::warning::$fallos página(s) sin confirmar. Vuelve a lanzar esta acción en unos minutos."
+          fi
