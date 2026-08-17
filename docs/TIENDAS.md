@@ -129,6 +129,36 @@ entero de Gradle en el propio GitHub, con la línea que dice qué falla.
 
 ---
 
+## Si "Entrar con Google" no funciona en Android
+
+Google valida las peticiones de Android por **paquete + huella SHA-1 del
+certificado que firma la app**. El paquete es `entrenadores.app` y no cambia. La
+huella sí, y aquí está la trampa que se lleva a todo el mundo por delante:
+
+> **Google Play vuelve a firmar la app.** Al subir un `.aab`, Play lo firma con
+> SU clave antes de mandárselo a nadie. La app que instala un tester **no está
+> firmada con la clave de EAS**, sino con la de Google.
+
+Así que hay **dos huellas distintas**, y las dos tienen que estar registradas:
+
+| Huella | Firma qué | Dónde se mira |
+|---|---|---|
+| **Clave de firma de la app** (la de Google) | Todo lo que se instala **desde Play**: interna, cerrada, producción | Play Console → *Configuración* → *Integridad de la aplicación* → *Firma de apps de Play* |
+| **Clave de carga** (la de EAS) | Los `.apk`/`.aab` que instalas **a mano** | La misma pantalla, más abajo. También sale con `eas credentials` |
+
+Las dos aparecen en la misma página de Play Console, una debajo de la otra.
+
+Se registran en **Firebase Console → Configuración del proyecto → Tus apps →
+la app de Android → Añadir huella digital**. Se ponen las dos, y Firebase
+mantiene sincronizado el cliente de OAuth de Google Cloud solo.
+
+**El síntoma cuando falta la de Play** es exactamente este: pulsas el botón, se
+abre el navegador, Google da vueltas y te deja tirado en google.com; al volver a
+la app no ha pasado nada. Idéntico al de tener mal el esquema de vuelta (ver
+`check-google`), así que conviene descartar los dos.
+
+---
+
 ## Si Play no te deja enviar a revisión
 
 Esto no es un fallo de compilación: el `.aab` está bien y la app funciona. Son
