@@ -30,9 +30,10 @@
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-google.mjs
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const lee = (ruta) => readFileSync(new URL(`../${ruta}`, import.meta.url), 'utf8');
+const hay = (ruta) => existsSync(new URL(`../${ruta}`, import.meta.url));
 const app = JSON.parse(lee('app.json')).expo;
 
 let fallos = 0;
@@ -63,6 +64,31 @@ ok(
   esquemas[0] === 'udeca',
   'el primero es el que usa expo-router para los enlaces de la propia app'
 );
+
+console.log('\nY cuando vuelve, hay una pantalla esperándola');
+{
+  // Android abre la app con `udeca://oauthredirect?code=...`, y ese enlace lo
+  // recibe también expo-router. Sin un fichero con ese nombre, expo-router
+  // enseña su "Unmatched Route — Page could not be found": el acceso funciona
+  // pero el usuario acaba en un callejón sin salida, en inglés, con el código
+  // de Google escrito en pantalla. Pasó de verdad.
+  ok(
+    'existe app/oauthredirect.tsx',
+    hay('app/oauthredirect.tsx'),
+    'sin ella, expo-router enseña "Unmatched Route" al volver de Google'
+  );
+  const pantalla = lee('app/oauthredirect.tsx');
+  ok(
+    'y manda a la raíz en vez de quedarse',
+    /<Redirect href="\/" \/>/.test(pantalla),
+    'app/index.tsx es quien sabe repartir según haya sesión o no'
+  );
+  ok(
+    'con margen para el intercambio del código',
+    /ESPERA_MAXIMA_MS/.test(pantalla),
+    'sin esperar, se devuelve a la pantalla de entrar a quien acaba de entrar bien'
+  );
+}
 
 console.log('\nEl identificador de cliente de Google, uno por plataforma');
 {

@@ -437,6 +437,7 @@ export const EN: Record<string, string> = {
 
   // --- Agenda del coach ---
   'Cargando...': 'Loading...',
+  'Entrando...': 'Signing you in...',
   HOY: 'TODAY',
   'Nada este día · lo siguiente': 'Nothing on this day · up next',
   'Sin eventos este día.': 'Nothing on this day.',
