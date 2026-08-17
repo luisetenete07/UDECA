@@ -89,4 +89,74 @@ Arréglalo de una de estas dos formas:
   process.exit(1);
 }
 
-console.log(`✔ Módulos nativos correctos (${declared.size} declarados, ${ALLOWED.size} internos conocidos)`);
+/**
+ * Y AHORA AL REVÉS: declarado pero que no lo usa nadie.
+ *
+ * El fallo de arriba (módulo nativo sin declarar) ya estaba cubierto. Este es
+ * su gemelo, y ha costado más caro: `react-native-reanimated` y
+ * `react-native-worklets` estaban declarados —se declararon justo para arreglar
+ * aquel rechazo de Apple— pero NINGUNA línea de la app los usaba. Seguían
+ * metiendo `RNWorklets.framework` en el binario de iOS, con su instalación de
+ * runtime al arrancar, para no hacer nada.
+ *
+ * Un módulo nativo que no se usa no es peso muerto inofensivo: es código que se
+ * ejecuta antes que el tuyo, en el momento más frágil de la vida de la app, y
+ * que si falla la mata sin dejar ni un mensaje en pantalla. En web y en Android
+ * no se nota; en iPhone es una app que no abre.
+ *
+ * La regla: si trae código nativo y está declarado, que se use. Y si hace falta
+ * sin que aparezca en el código, que esté escrito aquí por qué.
+ */
+const SIN_IMPORTAR = new Map([
+  ['expo-linking', 'lo necesita expo-router para los enlaces profundos'],
+  ['react-native-screens', 'lo usan expo-router y react-navigation por debajo'],
+]);
+
+const FUENTES = ['app', 'components', 'lib', 'plugins'];
+
+function textoDelProyecto() {
+  let texto = readFileSync(join(ROOT, 'app.json'), 'utf8');
+  const recorrer = (dir) => {
+    for (const entrada of readdirSync(dir, { withFileTypes: true })) {
+      const ruta = join(dir, entrada.name);
+      if (entrada.isDirectory()) recorrer(ruta);
+      else if (/\.(ts|tsx|js|jsx)$/.test(entrada.name)) texto += readFileSync(ruta, 'utf8');
+    }
+  };
+  for (const d of FUENTES) {
+    const ruta = join(ROOT, d);
+    if (existsSync(ruta)) recorrer(ruta);
+  }
+  return texto;
+}
+
+const proyecto = textoDelProyecto();
+const sobrantes = [];
+for (const name of declared) {
+  const dir = join(MODULES, name);
+  if (!existsSync(dir) || !hasNativeCode(dir)) continue;
+  if (SIN_IMPORTAR.has(name)) continue;
+  if (proyecto.includes(name)) continue;
+  sobrantes.push(name);
+}
+
+if (sobrantes.length > 0) {
+  console.error('\n✖ Módulos nativos declarados que no usa nadie:\n');
+  for (const name of sobrantes) console.error(`    ${name}`);
+  console.error(`
+Traen código nativo al binario para no hacer nada. En iPhone eso es código
+que corre ANTES que el tuyo al abrir la app: si falla, la app se cierra sin
+enseñar nada (pasó con RNWorklets.framework).
+
+Arréglalo de una de estas dos formas:
+  1. Si de verdad no se usa:  npm uninstall <paquete>
+  2. Si hace falta aunque no aparezca en el código: añádelo a SIN_IMPORTAR
+     en scripts/check-native-deps.mjs, escribiendo quién lo necesita.
+`);
+  process.exit(1);
+}
+
+console.log(
+  `✔ Módulos nativos correctos (${declared.size} declarados, ${ALLOWED.size} internos conocidos, ` +
+    `ninguno de sobra)`
+);
