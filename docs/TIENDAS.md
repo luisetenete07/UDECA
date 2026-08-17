@@ -146,11 +146,23 @@ Así que hay **dos huellas distintas**, y las dos tienen que estar registradas:
 | **Clave de firma de la app** (la de Google) | Todo lo que se instala **desde Play**: interna, cerrada, producción | Play Console → *Configuración* → *Integridad de la aplicación* → *Firma de apps de Play* |
 | **Clave de carga** (la de EAS) | Los `.apk`/`.aab` que instalas **a mano** | La misma pantalla, más abajo. También sale con `eas credentials` |
 
-Las dos aparecen en la misma página de Play Console, una debajo de la otra.
+Las dos aparecen en la misma página de Play Console, una debajo de la otra. La
+de firma de aplicaciones está detrás de un botón de copiar, no escrita.
 
-Se registran en **Firebase Console → Configuración del proyecto → Tus apps →
-la app de Android → Añadir huella digital**. Se ponen las dos, y Firebase
-mantiene sincronizado el cliente de OAuth de Google Cloud solo.
+**Se registra en Google Cloud, NO en Firebase.** En Firebase de este proyecto
+solo hay una app **web** (el identificador es `1:1042172841881:web:…`), porque
+UDECA usa el SDK de JavaScript de Firebase en las tres plataformas. Al no haber
+app de Android registrada allí, no existe el "Añadir huella digital" del que
+hablan todos los tutoriales. El sitio es:
+
+> Google Cloud → **APIs y servicios** → **Credenciales** → el cliente de OAuth
+> de tipo **Android** → campo *Huella digital del certificado SHA-1*.
+
+Un cliente de Android admite **una sola** huella. Como el `androidClientId` que
+lleva la app es uno solo, la que tiene que estar puesta ahí es la de **firma de
+aplicaciones**: es la que firma lo que instala la gente desde Play. Con esa, el
+`.aab` instalado a mano no entrará con Google — y no pasa nada, se prueba desde
+la prueba interna, que tarda dos minutos en publicarse.
 
 **El síntoma cuando falta la de Play** es exactamente este: pulsas el botón, se
 abre el navegador, Google da vueltas y te deja tirado en google.com; al volver a
