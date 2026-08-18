@@ -129,6 +129,47 @@ entero de Gradle en el propio GitHub, con la línea que dice qué falla.
 
 ---
 
+## PENDIENTE AHORA MISMO · "Entrar con Apple" está quitado a propósito
+
+**Esto hay que devolverlo antes de enviar nada a revisión.** Apple OBLIGA a
+ofrecer "Sign in with Apple" a toda app que ofrezca otro acceso de terceros, y
+UDECA ofrece Google. Sin ese botón, la revisión rechaza la app.
+
+Está quitado como **experimento**, para encontrar por qué la app se cierra nada
+más abrirse en el iPhone. Lo que se ha quitado de `app.json` es esto, y solo
+esto:
+
+    "ios": { "usesAppleSignIn": true }
+    plugins: [ ..., "expo-apple-authentication", ... ]
+
+Las dos cosas juntas son las que meten el permiso
+`com.apple.developer.applesignin` en el binario. **Si un permiso está en el
+binario pero no en el perfil de aprovisionamiento, iOS cierra la app al
+abrirla**, sin enseñar nada — que es exactamente el síntoma. Y hay motivo para
+sospecharlo: la PRIMERA compilación de iOS falló justo con
+
+    Provisioning profile ... doesn't include the Sign In with Apple capability
+
+y desde entonces la app no ha abierto ni una vez.
+
+**Cómo se lee el resultado:**
+
+- **Si la app ABRE** → era el permiso. El arreglo definitivo NO es dejarlo
+  quitado, es activar la capacidad en la ficha de la app:
+  > developer.apple.com → *Certificates, Identifiers & Profiles* →
+  > **Identifiers** → `com.udeca.app` → marcar **Sign In with Apple** →
+  > *Save*.
+  Después se devuelven las dos líneas a `app.json` y se vuelve a compilar: EAS
+  regenera el perfil con la capacidad dentro y ya no choca.
+- **Si la app SIGUE sin abrir** → no era el permiso, y queda descartado para
+  siempre. El siguiente sospechoso es el otro permiso que mete un plugin:
+  `aps-environment`, de `expo-notifications`.
+
+Mientras tanto, en esa compilación el botón de Apple está en pantalla pero no
+funciona. No lo pulses: lo único que hay que comprobar es que la app ABRE.
+
+---
+
 ## Si "Entrar con Google" no funciona en Android
 
 Google valida las peticiones de Android por **paquete + huella SHA-1 del

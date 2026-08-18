@@ -2,7 +2,11 @@
   "expo": {
     "name": "UDECA",
     "slug": "udeca",
-    "scheme": ["udeca", "entrenadores.app", "com.udeca.app"],
+    "scheme": [
+      "udeca",
+      "entrenadores.app",
+      "com.udeca.app"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +19,6 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "usesAppleSignIn": true,
       "infoPlist": {
         "NSMotionUsageDescription": "Para contar los pasos que das cada día y sumarlos a tu plan de nutrición, sin que tengas que apuntarlos a mano."
       }
@@ -51,7 +54,6 @@
           "color": "#E0242F"
         }
       ],
-      "expo-apple-authentication",
       [
         "expo-calendar",
         {
