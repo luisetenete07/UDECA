@@ -1,0 +1,82 @@
+# Abrir el .ipa y mirar qué hay dentro.
+#
+# POR QUÉ EXISTE
+#
+# La app se cierra nada más abrirse en el iPhone, siempre, desde la primera
+# compilación. Nunca ha llegado a abrirse ni una vez. Android funciona con el
+# mismo código y la web también, así que el problema no está en el código: está
+# en cómo se está empaquetando iOS.
+#
+# Se han descartado ya cuatro causas a base de compilar y probar, a cuarenta
+# minutos por intento: versiones nativas fuera del SDK, RNWorklets dentro del
+# binario, el permiso de "Entrar con Apple"... y cada descarte ha costado una
+# tarde. Suponer sale caro.
+#
+# Esto no supone nada: descarga el .ipa que se acaba de compilar y enseña lo que
+# lleva dentro —el Info.plist, los permisos firmados, los frameworks incrustados
+# y si el paquete de JavaScript está o no—. Con eso se ve el fallo en vez de
+# adivinarlo.
+#
+# No compila nada ni toca credenciales: solo lee. La clave privada de firma no
+# viaja dentro del .ipa, así que aquí no hay ningún secreto que enseñar.
+name: Diagnóstico iOS (mirar dentro del .ipa)
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL del .ipa (si se deja vacío, coge la última compilación de EAS)'
+        required: false
+        default: ''
+
+jobs:
+  mirar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Averiguar la URL del .ipa
+        id: ipa
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          DADA: ${{ inputs.url }}
+        run: |
+          if [ -n "$DADA" ]; then
+            echo "url=$DADA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          npm i -g eas-cli@latest > /dev/null 2>&1
+          eas build:list --platform ios --limit 1 --status finished \
+            --non-interactive --json > builds.json 2> eas-err.txt || {
+              echo "::error::eas build:list ha fallado"; cat eas-err.txt; exit 1; }
+          node -e "
+            const fs = require('fs');
+            const lista = JSON.parse(fs.readFileSync('builds.json','utf8'));
+            const b = Array.isArray(lista) ? lista[0] : lista;
+            if (!b) { console.error('::error::no hay ninguna compilación terminada'); process.exit(1); }
+            console.log('Compilación', b.id, '· número', b.appBuildVersion, '·', b.createdAt);
+            // El nombre del campo ha cambiado entre versiones de EAS: se buscan
+            // todos los que puede tener antes de rendirse.
+            const url = b.artifacts?.applicationArchiveUrl
+              ?? b.artifacts?.buildUrl
+              ?? b.artifacts?.applicationArchive
+              ?? b.artifactUrl;
+            if (!url) {
+              console.error('::error::no encuentro la URL del .ipa; esto es lo que devuelve EAS:');
+              console.error(JSON.stringify(b, null, 2));
+              process.exit(1);
+            }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + url + '\n');
+          "
+
+      - name: Descargar y abrir
+        run: |
+          curl -sL -o app.ipa "${{ steps.ipa.outputs.url }}"
+          ls -la app.ipa
+          mkdir -p dentro && (cd dentro && unzip -q ../app.ipa)
+
+      - name: Qué lleva dentro
+        run: python3 scripts/mirar-ipa.py dentro
