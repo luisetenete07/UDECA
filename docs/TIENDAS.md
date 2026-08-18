@@ -129,46 +129,40 @@ entero de Gradle en el propio GitHub, con la línea que dice qué falla.
 
 ---
 
-## PENDIENTE AHORA MISMO · "Entrar con Apple" está quitado a propósito
+## Qué lleva dentro el .ipa, y qué queda descartado
 
-**Esto hay que devolverlo antes de enviar nada a revisión.** Apple OBLIGA a
-ofrecer "Sign in with Apple" a toda app que ofrezca otro acceso de terceros, y
-UDECA ofrece Google. Sin ese botón, la revisión rechaza la app.
+La app se cerraba nada más abrirse en el iPhone, siempre. Se probaron cuatro
+arreglos a ciegas —cuarenta minutos de compilación cada uno— y ninguno acertó.
+Lo que cortó la sangría fue dejar de suponer y **abrir el paquete**:
 
-Está quitado como **experimento**, para encontrar por qué la app se cierra nada
-más abrirse en el iPhone. Lo que se ha quitado de `app.json` es esto, y solo
-esto:
+> Actions → **Diagnóstico iOS (mirar dentro del .ipa)** → *Run workflow*.
+> Se le puede pasar la URL de un `.ipa` concreto; si se deja vacío coge el
+> último de EAS.
 
-    "ios": { "usesAppleSignIn": true }
-    plugins: [ ..., "expo-apple-authentication", ... ]
+Lo que enseñó del `.ipa` de la compilación 26, y que queda **descartado para
+siempre**:
 
-Las dos cosas juntas son las que meten el permiso
-`com.apple.developer.applesignin` en el binario. **Si un permiso está en el
-binario pero no en el perfil de aprovisionamiento, iOS cierra la app al
-abrirla**, sin enseñar nada — que es exactamente el síntoma. Y hay motivo para
-sospecharlo: la PRIMERA compilación de iOS falló justo con
+| Sospechoso | Veredicto |
+|---|---|
+| Falta el paquete de JavaScript | NO: `main.jsbundle`, 7 MB, dentro |
+| Un framework enlazado que no viaja dentro | NO: los trece que necesita están |
+| Un permiso que el perfil no concede | NO: los seis que pide están concedidos |
+| El permiso de "Entrar con Apple" | NO: el perfil lo concede (`com.apple.developer.applesignin`) |
+| Falta la pantalla de arranque | NO: `SplashScreen.storyboardc` está |
+| El ejecutable no existe o está vacío | NO: 6 MB, y el Info.plist lo nombra bien |
 
-    Provisioning profile ... doesn't include the Sign In with Apple capability
+**El paquete está sano.** Eso significa que lo que cierra la app no es cómo se
+empaqueta, sino algo que pasa YA EJECUTÁNDOSE, en los primeros instantes. Y eso
+solo lo dice el registro de fallo del propio teléfono:
 
-y desde entonces la app no ha abierto ni una vez.
+> iPhone → **Ajustes** → **Privacidad y seguridad** → **Análisis y mejoras** →
+> **Datos de análisis** → un fichero que empieza por `UDECA-`.
+> Interesan dos líneas: `Exception Type` y la primera de `Thread 0 Crashed`.
 
-**Cómo se lee el resultado:**
+También sale en **App Store Connect → TestFlight → la versión → Crashes**.
 
-- **Si la app ABRE** → era el permiso. El arreglo definitivo NO es dejarlo
-  quitado, es activar la capacidad en la ficha de la app:
-  > developer.apple.com → *Certificates, Identifiers & Profiles* →
-  > **Identifiers** → `com.udeca.app` → marcar **Sign In with Apple** →
-  > *Save*.
-  Después se devuelven las dos líneas a `app.json` y se vuelve a compilar: EAS
-  regenera el perfil con la capacidad dentro y ya no choca.
-- **Si la app SIGUE sin abrir** → no era el permiso, y queda descartado para
-  siempre. El siguiente sospechoso es el otro permiso que mete un plugin:
-  `aps-environment`, de `expo-notifications`.
-
-Mientras tanto, en esa compilación el botón de Apple está en pantalla pero no
-funciona. No lo pulses: lo único que hay que comprobar es que la app ABRE.
-
----
+Sin ese registro solo se puede ir probando a ciegas, y ya se ha visto lo que
+cuesta.
 
 ## Si "Entrar con Google" no funciona en Android
 
