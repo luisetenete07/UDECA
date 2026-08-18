@@ -14,6 +14,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { AnimatedSplash } from '../components/AnimatedSplash';
+import { ArranqueSeguro } from '../components/ArranqueSeguro';
 import { CardRendererHost } from '../components/CardRendererHost';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LoadingScreen } from '../components/LoadingScreen';
@@ -51,7 +52,11 @@ export default function RootLayout() {
   });
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
+    /* Por encima de TODO, incluidas las fuentes y el gestor de gestos: si
+       cualquiera de esas piezas falla al arrancar, sale un aviso legible en vez
+       de una pantalla negra y una app que se cierra sola. Ver ArranqueSeguro. */
+    <ArranqueSeguro>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       {Platform.OS === 'web' ? (
         <Head>
           <title>UDECA — Universidad de Calistenia</title>
@@ -80,7 +85,8 @@ export default function RootLayout() {
           )}
           {!splashDone ? <AnimatedSplash onFinish={() => setSplashDone(true)} /> : null}
         </AuthProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ArranqueSeguro>
   );
 }

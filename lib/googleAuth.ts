@@ -31,7 +31,17 @@ import { auth } from './firebase';
 
 // Cierra la ventana del navegador al volver a la app. Sin esto, en Android se
 // queda una pestaña abierta por encima después de entrar.
-WebBrowser.maybeCompleteAuthSession();
+//
+// Envuelto porque se ejecuta al cargar el módulo, y lo que lanza ahí no lo
+// recoge nadie: en el móvil, una app que se cierra sola sin decir por qué.
+// Es una llamada a un módulo nativo, y esas dependen de que el enlazado haya
+// salido bien. Si fallara, lo peor que pasa es que quede una pestaña del
+// navegador abierta después de entrar.
+try {
+  WebBrowser.maybeCompleteAuthSession();
+} catch {
+  /* entrar importa más que cerrar una pestaña */
+}
 
 /**
  * Identificadores de cliente de Google, uno por plataforma.

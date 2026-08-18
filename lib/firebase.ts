@@ -32,9 +32,36 @@ if (isFirebaseConfigured) {
   if (Platform.OS === 'web') {
     authInstance = getAuth(app);
   } else {
-    authInstance = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
+    /**
+     * ARRANCAR AUNQUE ESTO FALLE.
+     *
+     * Estas tres líneas son de las primeras que ejecuta la app, antes de que
+     * se pinte nada. Y son frágiles por debajo: `getReactNativePersistence`
+     * NO existe en los tipos de firebase/auth —de ahí el @ts-expect-error de
+     * arriba—, solo en la variante para React Native del paquete. Si el
+     * empaquetador resuelve otra variante, esa función llega `undefined`,
+     * llamarla lanza, y como esto pasa al cargar el módulo, no hay ningún
+     * `try` por encima: el proceso se muere. En el móvil eso no es un error
+     * en pantalla, es una app que se cierra sola al abrirla y no dice por qué.
+     *
+     * Sin la persistencia nativa la sesión no sobrevive a cerrar la app —hay
+     * que volver a entrar—, que es un incordio. Pero un incordio es
+     * infinitamente mejor que una app que no abre, así que si falla se sigue
+     * con lo que haya.
+     */
+    try {
+      const persistencia =
+        typeof getReactNativePersistence === 'function'
+          ? getReactNativePersistence(AsyncStorage)
+          : undefined;
+      authInstance = persistencia
+        ? initializeAuth(app, { persistence: persistencia })
+        : initializeAuth(app);
+    } catch {
+      // `initializeAuth` también lanza si ya se llamó antes (recarga en
+      // caliente). En los dos casos, `getAuth` devuelve la instancia buena.
+      authInstance = getAuth(app);
+    }
   }
 
   dbInstance = getFirestore(app);

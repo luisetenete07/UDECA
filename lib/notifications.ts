@@ -9,14 +9,30 @@ import { DIAS_VISTA, diasPendientes, horasDeAviso, textoDeAviso, TOPE_AVISOS } f
 import type { PausaPlan } from './pausa';
 import type { Routine } from './types';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+/**
+ * Esto se ejecuta AL CARGAR EL MÓDULO, o sea antes de que se pinte nada.
+ *
+ * Va envuelto por el mismo motivo que la inicialización de Firebase: lo que
+ * lanza al cargar un módulo no lo recoge nadie, y en el móvil eso no es un
+ * error en pantalla, es una app que se cierra sola al abrirla. Aquí se llama a
+ * un módulo nativo, y la forma de este objeto ha cambiado entre versiones del
+ * SDK (`shouldShowAlert` pasó a `shouldShowBanner`/`shouldShowList`).
+ *
+ * Si fallara, lo que se pierde es cómo se ven los avisos con la app abierta.
+ * La app entra igual.
+ */
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+} catch {
+  /* los avisos se verán como los ponga el sistema; entrar es más importante */
+}
 
 /**
  * Pide permiso y registra el dispositivo para notificaciones push, guardando
