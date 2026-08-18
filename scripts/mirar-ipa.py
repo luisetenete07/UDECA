@@ -165,6 +165,117 @@ if binario.exists():
             else:
                 print('  ✔ Todo lo que pide el binario está en el perfil.')
 
+# --- Lo que el binario ENLAZA, contra lo que de verdad VIAJA dentro --------
+#
+# Esta es la comprobación que caza el fallo clásico de "se cierra al abrirse":
+# el ejecutable declara que necesita un framework, el cargador de iOS lo busca
+# al arrancar, no lo encuentra dentro del paquete y mata el proceso. Antes de
+# que corra una sola línea de la app, sin mensaje y sin pantalla.
+#
+# Es exactamente lo que Apple nombró en su aviso ITMS-90863, y lo que ya pasó
+# una vez con RNWorklets.framework.
+titulo('Frameworks que el binario NECESITA (y si viajan dentro)')
+
+
+def dylibs_de(ruta):
+    """Los frameworks que declara un Mach-O, leyendo sus load commands."""
+    import struct
+    datos = ruta.read_bytes()
+    (magico,) = struct.unpack('<I', datos[:4])
+    cabeceras = []
+    if magico in (0xCAFEBABE, 0xBEBAFECA):  # binario universal
+        (n,) = struct.unpack('>I', datos[4:8])
+        for i in range(n):
+            off = 8 + i * 20
+            (desplaz,) = struct.unpack('>I', datos[off + 8:off + 12])
+            cabeceras.append(desplaz)
+    else:
+        cabeceras.append(0)
+
+    nombres = set()
+    for base in cabeceras:
+        (mag,) = struct.unpack('<I', datos[base:base + 4])
+        if mag != 0xFEEDFACF:  # solo 64 bits
+            continue
+        ncmds = struct.unpack('<I', datos[base + 16:base + 20])[0]
+        pos = base + 32
+        for _ in range(ncmds):
+            cmd, tam = struct.unpack('<II', datos[pos:pos + 8])
+            # LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB, LC_REEXPORT_DYLIB, LC_LOAD_UPWARD
+            if cmd in (0x0C, 0x18 | 0x80000000, 0x1F, 0x23 | 0x80000000):
+                (desplaz,) = struct.unpack('<I', datos[pos + 8:pos + 12])
+                crudo = datos[pos + desplaz:pos + tam]
+                nombres.add(crudo.split(b'\x00')[0].decode('utf-8', 'replace'))
+            pos += tam
+    return nombres
+
+
+if binario.exists():
+    try:
+        enlazados = dylibs_de(binario)
+    except Exception as e:  # noqa: BLE001
+        enlazados = set()
+        print(f'  (no se ha podido leer el binario: {e})')
+
+    dentro = {f.name for f in fw.iterdir()} if fw.exists() else set()
+    faltan = []
+    for d in sorted(enlazados):
+        if not d.startswith('@rpath/'):
+            continue
+        pieza = d[len('@rpath/'):].split('/')[0]
+        if pieza.endswith('.framework') or pieza.endswith('.dylib'):
+            marca = '✔' if pieza in dentro else '✖ NO ESTÁ DENTRO DEL PAQUETE'
+            if pieza not in dentro:
+                faltan.append(pieza)
+            print(f'  {marca}  {pieza}')
+    if faltan:
+        print()
+        print('  ✖✖✖ AQUÍ ESTÁ EL FALLO.')
+        print('      El ejecutable necesita estos frameworks y no viajan dentro.')
+        print('      iOS los busca al arrancar, no los encuentra y cierra la app,')
+        print('      antes de que corra una sola línea. Sin mensaje.')
+    elif enlazados:
+        print('\n  ✔ Todo lo que el binario necesita viaja dentro del paquete.')
+
+    # Y las carpetas donde el cargador buscará (@rpath).
+    print('\n  Sitios donde iOS buscará (LC_RPATH):')
+    try:
+        import struct as _s
+        datos = binario.read_bytes()
+        (mag,) = _s.unpack('<I', datos[:4])
+        if mag == 0xFEEDFACF:
+            ncmds = _s.unpack('<I', datos[16:20])[0]
+            pos = 32
+            for _ in range(ncmds):
+                cmd, tam = _s.unpack('<II', datos[pos:pos + 8])
+                if cmd == (0x1C | 0x80000000):
+                    (desplaz,) = _s.unpack('<I', datos[pos + 8:pos + 12])
+                    crudo = datos[pos + desplaz:pos + tam]
+                    print('      ' + crudo.split(b'\x00')[0].decode('utf-8', 'replace'))
+                pos += tam
+    except Exception:  # noqa: BLE001
+        pass
+
+# --- La pantalla de arranque que declara el Info.plist ---------------------
+titulo('La pantalla de arranque')
+guion = info.get('UILaunchStoryboardName')
+if not guion:
+    print('  (el Info.plist no declara ninguna)')
+else:
+    hay_guion = list(app.glob(f'{guion}.storyboardc')) + list(app.glob(f'{guion}.*'))
+    if hay_guion:
+        for g in hay_guion:
+            print(f'  ✔ {guion} → {g.name}')
+    else:
+        print(f'  ✖ El Info.plist declara "{guion}" y NO ESTÁ en el paquete.')
+        print('    iOS no puede montar la pantalla de arranque y cierra la app.')
+
+# --- Todo lo que hay, por si falta algo evidente ---------------------------
+titulo('Todos los ficheros del paquete')
+for f in sorted(app.rglob('*')):
+    if f.is_file():
+        print(f'  {f.relative_to(app)}')
+
 # --- Lo más gordo del paquete ----------------------------------------------
 titulo('Lo más grande que hay dentro (por si falta o sobra algo)')
 todo = sorted(
