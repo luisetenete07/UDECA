@@ -32,6 +32,12 @@ function idiomaDelSistema(): string | undefined {
    * Sin pista, `idiomaDe` cae en español, que es la lengua de la app. El
    * idioma de verdad se aplica en el navegador, donde sí hay alguien: primero
    * el del sistema y luego lo que la persona tenga elegido en su perfil.
+   *
+   * ESTO NO AFECTA AL MÓVIL, y conviene saber por qué antes de tocarlo: React
+   * Native define `window` al arrancar (`global.window = global`, en su
+   * setUpGlobals). Así que en iPhone y en Android se entra igual que siempre y
+   * se sigue leyendo el idioma del teléfono. Solo se queda fuera Node, que es
+   * donde se genera el HTML.
    */
   if (typeof window === 'undefined') return undefined;
   try {
