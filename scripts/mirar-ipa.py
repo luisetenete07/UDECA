@@ -256,6 +256,55 @@ if binario.exists():
     except Exception:  # noqa: BLE001
         pass
 
+# --- Y AHORA LOS FRAMEWORKS ENTRE SÍ --------------------------------------
+#
+# El hueco que tenía esta comprobación: miraba lo que necesita el EJECUTABLE,
+# pero no lo que se necesitan los frameworks unos a otros. Y un framework puede
+# enlazar contra otro que no viaja dentro —por ejemplo, si se quitó del proyecto
+# una librería de la que otra seguía dependiendo—. El cargador de iOS resuelve
+# esa cadena entera al arrancar: si falta un eslabón CUALQUIERA, mata el
+# proceso. Da igual que el ejecutable esté perfecto.
+titulo('Y qué necesitan los frameworks unos de otros')
+if fw.exists():
+    dentro = {f.name for f in fw.iterdir()}
+    rotos = []
+    for carpeta in sorted(fw.iterdir()):
+        if not carpeta.name.endswith('.framework'):
+            continue
+        binario_fw = carpeta / carpeta.name.replace('.framework', '')
+        if not binario_fw.exists():
+            continue
+        try:
+            necesita = dylibs_de(binario_fw)
+        except Exception as e:  # noqa: BLE001
+            print(f'  {carpeta.name}: no se ha podido leer ({e})')
+            continue
+        faltan_aqui = []
+        for d in sorted(necesita):
+            if not d.startswith('@rpath/'):
+                continue
+            pieza = d[len('@rpath/'):].split('/')[0]
+            if not (pieza.endswith('.framework') or pieza.endswith('.dylib')):
+                continue
+            if pieza == carpeta.name:
+                continue
+            if pieza not in dentro:
+                faltan_aqui.append(pieza)
+        if faltan_aqui:
+            rotos.append((carpeta.name, faltan_aqui))
+            print(f'  ✖ {carpeta.name} necesita: {", ".join(faltan_aqui)}  <== NO ESTÁN')
+        else:
+            print(f'  ✔ {carpeta.name}')
+    if rotos:
+        print()
+        print('  ✖✖✖ AQUÍ ESTÁ EL FALLO.')
+        print('      Estos frameworks necesitan otros que no viajan dentro del')
+        print('      paquete. iOS resuelve toda esa cadena al arrancar; si falta')
+        print('      un eslabón, cierra la app antes de ejecutar nada.')
+    else:
+        print()
+        print('  ✔ Ningún framework necesita nada que no esté dentro.')
+
 # --- La pantalla de arranque que declara el Info.plist ---------------------
 titulo('La pantalla de arranque')
 guion = info.get('UILaunchStoryboardName')
