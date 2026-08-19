@@ -96,6 +96,36 @@ jobs:
             cp "web/$pagina.html" "dist/$pagina/index.html"
           done
 
+          # La red para las direcciones con identificador dentro.
+          #
+          # `expo export` genera un fichero por ruta, pero las rutas que llevan
+          # un dato dentro —la ficha de un alumno, un curso, un ejercicio— se
+          # quedan en el disco con el corchete puesto: `clients/[id].html`. No
+          # existe ningún fichero para el alumno de verdad, así que GitHub Pages
+          # respondía con SU página de "404 no encontrado" a cualquier dirección
+          # de esas.
+          #
+          # Y eso lo notaba cualquiera: un entrenador viendo a un alumno que
+          # RECARGA la página, o que abre un enlace que le han pasado, se
+          # quedaba fuera de la app mirando un 404 de GitHub. Dentro de la app
+          # se navegaba bien, porque ahí no se pide nada al servidor.
+          #
+          # Con esto, cualquier dirección que no tenga fichero propio devuelve
+          # la app, y el enrutador resuelve dentro a qué pantalla toca ir.
+          cp dist/index.html dist/404.html
+
+          # Y que las dos cosas que se acaban de arreglar sigan arregladas.
+          #
+          # Las dos se rompen en silencio: la web seguiría publicándose, se
+          # vería bien de un vistazo, y el fallo solo aparecería al recargar
+          # una dirección con identificador o al mirar en qué idioma está
+          # escrito el HTML. Mejor que reviente aquí.
+          test -f dist/404.html || { echo "::error::falta dist/404.html"; exit 1; }
+          grep -q "Cargando" dist/index.html || {
+            echo "::error::el HTML se ha generado en otro idioma (ver idiomaDelSistema en lib/idioma.ts)"
+            exit 1
+          }
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:

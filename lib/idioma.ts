@@ -15,6 +15,25 @@ import { idiomaDe, traducir, type Idioma } from './i18n';
  */
 
 function idiomaDelSistema(): string | undefined {
+  /*
+   * Al generar el HTML de la web no hay nadie delante.
+   *
+   * `expo export` pinta cada pantalla en el servidor de compilación para
+   * dejarla ya escrita en un fichero. Ese servidor habla inglés —como casi
+   * todos—, así que preguntarle el idioma daba "en-US" y el HTML publicado
+   * salía en inglés: "Loading...", "Signing you in...", la política de
+   * privacidad entera. En una app española y con un <html lang="es"> puesto
+   * dos líneas más arriba.
+   *
+   * Además rompía la hidratación: el navegador de un usuario español pintaba
+   * "Cargando..." encima de un "Loading..." que ya venía escrito, React veía
+   * que no cuadraban y tiraba todo el HTML del servidor para rehacerlo.
+   *
+   * Sin pista, `idiomaDe` cae en español, que es la lengua de la app. El
+   * idioma de verdad se aplica en el navegador, donde sí hay alguien: primero
+   * el del sistema y luego lo que la persona tenga elegido en su perfil.
+   */
+  if (typeof window === 'undefined') return undefined;
   try {
     // Intl está en web y en Hermes con Intl. Si no estuviera, español.
     return new Intl.DateTimeFormat().resolvedOptions().locale;
@@ -55,9 +74,32 @@ function suscribir(o: () => void) {
   };
 }
 
-/** Hook: el idioma actual, y se repinta al cambiarlo. */
+/**
+ * El idioma con el que se escribió el HTML de la web.
+ *
+ * `expo export` deja cada pantalla ya pintada en un fichero, y ahí solo cabe
+ * UN idioma: el español, que es el de la app (ver `idiomaDelSistema`).
+ */
+const IDIOMA_DEL_HTML: Idioma = 'es';
+
+/**
+ * Hook: el idioma actual, y se repinta al cambiarlo.
+ *
+ * El tercer argumento es el valor que React usa en el HTML generado Y en el
+ * primer repintado del navegador al engancharse a ese HTML. Tiene que ser el
+ * mismo idioma con el que se escribió el fichero, o no cuadran: a un usuario
+ * inglés le llegaba "Cargando..." escrito y su navegador pintaba "Loading..."
+ * encima, React veía dos cosas distintas y tiraba TODO el HTML del servidor
+ * para rehacerlo desde cero. Se notaba como un parpadeo al abrir.
+ *
+ * Devolviendo aquí el idioma del fichero, el primer pintado siempre cuadra y
+ * el idioma de verdad entra en el repintado siguiente, ya sin tirar nada.
+ *
+ * En el móvil no se usa: solo entra en juego al engancharse a un HTML, y en el
+ * móvil no hay HTML. Allí el idioma correcto sale desde el primer pintado.
+ */
 export function useIdioma(): Idioma {
-  return useSyncExternalStore(suscribir, getIdioma, getIdioma);
+  return useSyncExternalStore(suscribir, getIdioma, () => IDIOMA_DEL_HTML);
 }
 
 /**
