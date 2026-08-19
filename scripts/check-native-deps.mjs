@@ -28,10 +28,13 @@ const MODULES = join(ROOT, 'node_modules');
 const ALLOWED = new Set([
   '@expo/log-box',
   '@expo/dom-webview',
+  '@expo/ui', // lo declara expo-router, y va con él
   '@react-native-masked-view/masked-view', // lo usa @react-navigation, va con él
   'expo-application',
+  'expo-asset', // lo declara el propio paquete expo
   'expo-glass-effect',
   'expo-image-loader',
+  'expo-keep-awake', // lo declara el propio paquete expo
   'expo-modules-core',
   'expo-modules-jsi',
   'expo-symbols',
