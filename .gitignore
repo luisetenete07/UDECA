@@ -52,3 +52,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# python deja esto al comprobar los scripts
+__pycache__/
+*.pyc
