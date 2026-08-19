@@ -48,6 +48,64 @@ segunda se puede automatizar con una cuenta de servicio.
 
 ---
 
+## 3 bis. Enviar la 1.0 a revisión de Apple
+
+Esto es lo que hay que rellenar **una vez**, en App Store Connect, antes del
+primer envío. Compilar ya no hace falta: la acción sube la build sola.
+
+### Lo que se rellena en la ficha
+
+| Sección | Qué poner |
+|---|---|
+| Información de la app | Categoría (Salud y forma física) y la política de privacidad: `https://app.udeca.app/privacidad` |
+| Privacidad de la app | El cuestionario de datos: qué se recoge (correo, nombre, datos de entrenamiento) y para qué. Es obligatorio y no se puede enviar sin él |
+| Clasificación por edad | Cuestionario |
+| Precio y disponibilidad | Gratis, y los países |
+| Versión 1.0 | Descripción, novedades, palabras clave, URL de soporte y **capturas de pantalla de iPhone 6.9" y 6.5"**, mínimo tres de cada |
+| Compilación | Elegir la que ha subido la acción |
+| Eliminación de cuenta | `https://app.udeca.app/eliminar-cuenta` |
+
+Las capturas son lo que más se tarda. Lo demás es media hora.
+
+### Las notas para el revisor: sin esto, rechazo casi seguro
+
+En UDECA **no hay entrar con correo y contraseña**: solo Google y Apple (ver
+`docs/ENTRAR.md`). Eso significa que la cuenta de demostración que pide Apple
+—usuario y contraseña— no sirve de nada aquí, y un revisor que no puede entrar
+rechaza la app sin mirar nada más.
+
+La salida es que use su propio Apple ID. Hay que decírselo, en el campo de
+notas:
+
+> Para entrar, pulse "Continuar con Apple" y use su Apple ID. En la pantalla
+> siguiente elija el perfil "Entrenador" para ver la app completa. No hace
+> falta cuenta de demostración ni ningún pago para acceder.
+
+Es verdad: crear cuenta no pide pagar, y el perfil de entrenador abre la app
+entera.
+
+### Por qué en iPhone no hay ningún botón de pagar
+
+Está hecho a propósito y es la razón por la que se puede enviar. La norma 3.1.1
+prohíbe los enlaces a pagar contenido digital fuera de las compras integradas
+de Apple, y es el motivo de rechazo más común que existe.
+
+Toda la decisión vive en `CAN_LINK_TO_PAYMENT` (`lib/subscription.ts`), que en
+iOS vale `false`. En iPhone la app dice en qué estado está la cuenta y ofrece
+volver a comprobarla; quien quiera pagar lo hace en udeca.app desde el
+navegador y al volver la cuenta se enciende sola. En web y en Android todo
+sigue igual.
+
+`scripts/check-pago-ios.mjs` vigila que no se cuele un botón nuevo que se salte
+esa comprobación. Si algún día se montan las compras integradas de verdad
+(StoreKit), esto se revierte cambiando esa constante.
+
+Lo que un **alumno le paga a su entrenador** no entra aquí: es un servicio real
+entre dos personas, Apple lo excluye expresamente, y sigue igual en las tres
+plataformas.
+
+---
+
 ## Lo que hace falta tener puesto una sola vez
 
 Son secretos del repositorio (Settings → Secrets and variables → Actions). Ya

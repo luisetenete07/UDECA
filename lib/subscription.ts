@@ -205,30 +205,45 @@ export function subscriptionCheckoutUrl(profile: UserProfile | null): string | n
 /**
  * ¿Se puede enlazar a pagar DESDE la app?
  *
- * Sí, en todas las plataformas, iPhone incluido: es la decisión del CEO y está
- * tomada a sabiendas.
+ * En web y en Android sí. **En iPhone no**, y es una decisión tomada para el
+ * primer envío a la App Store.
  *
- * QUÉ RIESGO SE ESTÁ ACEPTANDO
+ * POR QUÉ
  *
- * La norma 3.1.1 de la App Store obliga a que el contenido digital que se
- * consume dentro de la app se compre con las compras integradas de Apple, y
- * hasta 2024 prohibía incluso enlazar fuera. Desde las sentencias de EE. UU. y
- * el DMA europeo el enlace externo ya se permite en varios sitios, pero las
- * condiciones cambian por país y por versión de las normas, así que este botón
- * puede ser motivo de rechazo en una revisión. El precio, que era la otra
- * mitad del problema, ya no aparece en ninguna pantalla.
+ * La norma 3.1.1 obliga a que el contenido digital que se consume dentro de la
+ * app se compre con las compras integradas de Apple, y prohíbe los botones y
+ * enlaces que lleven a pagar por fuera. Desde las sentencias de EE. UU. y el
+ * DMA europeo el enlace externo se permite en algunos sitios, pero las
+ * condiciones cambian por país y por versión de las normas: es el motivo de
+ * rechazo más común que hay, y llega DESPUÉS de esperar la revisión.
  *
- * Si Apple lo rechaza, hay dos salidas y ninguna obliga a rehacer nada de
- * esto: poner `Platform.OS !== 'ios'` en esta constante (la app vuelve a decir
- * solo que la cuenta no está activa), o montar las compras integradas de
- * verdad, que es otro proyecto (StoreKit + acuerdos de pago en App Store
- * Connect). La decisión está en UNA línea, aquí, a propósito.
+ * Salir sin ese botón cuesta poco y desbloquea la publicación: quien quiera
+ * pagar lo hace en udeca.app desde el navegador y vuelve. El alta pagada en la
+ * web se recoge sola —`claimEntryNow` en EntryWall— y la cuenta se enciende.
+ * Nadie se queda en un callejón sin salida; lo único que no hay en iPhone es
+ * el atajo.
+ *
+ * QUÉ DESAPARECE EN IPHONE, Y QUÉ QUEDA
+ *
+ * Se apagan los cinco sitios que ofrecían pagar: el aviso de la prueba
+ * (TrialBanner), la tarjeta y el aviso del plan (UpgradeCard), el muro de alta
+ * (EntryWall) y el de suscripción (Paywall). Lo que queda es el estado de la
+ * cuenta —"tu cuenta está sin activar", "no está activa"—, el botón de volver
+ * a comprobar y un correo de contacto. Ni precios, ni enlaces de pago.
+ *
+ * PARA VOLVER ATRÁS
+ *
+ * Esta constante a `true` y ya está: vuelve tal cual estaba. La otra salida,
+ * la definitiva, son las compras integradas de verdad (StoreKit + acuerdos de
+ * pago en App Store Connect), que es otro proyecto. La decisión está en UNA
+ * línea, aquí, a propósito.
  *
  * Esto NO afecta a lo que un alumno le paga a su entrenador: eso es un servicio
  * real entre dos personas, no contenido digital, y Apple lo deja fuera de las
- * compras integradas expresamente.
+ * compras integradas expresamente. Por eso el enlace de cobro del entrenador
+ * (lib/enlaceDePago.ts) sigue igual en las tres plataformas.
  */
-export const CAN_LINK_TO_PAYMENT = true;
+export const CAN_LINK_TO_PAYMENT = Platform.OS !== 'ios';
 
 
 /** Correo de contacto para activar/renovar manualmente. */
