@@ -25,6 +25,7 @@ No enseña nada secreto: la clave privada de firma no viaja dentro de un .ipa.
 """
 import plistlib
 import re
+import struct
 import sys
 from pathlib import Path
 
@@ -304,6 +305,145 @@ if fw.exists():
     else:
         print()
         print('  ✔ Ningún framework necesita nada que no esté dentro.')
+
+# --- ¿El paquete de JavaScript lo entiende el motor que viaja dentro? ------
+#
+# Son DOS piezas distintas y tienen que casar:
+#
+#   - main.jsbundle: el código de la app, compilado a bytecode por Hermes en el
+#     ordenador que hizo la compilación.
+#   - hermesvm.framework: el motor que lo ejecuta, dentro del .ipa.
+#
+# El bytecode de Hermes lleva un número de versión en la cabecera. Si el motor
+# espera otro número, no avisa ni degrada: aborta el proceso. Pantalla negra
+# unos segundos —lo que tarda en cargar el paquete— y la app se cierra. No hay
+# error de JavaScript porque el JavaScript no llega a ejecutarse, así que
+# ninguna red de seguridad escrita en JavaScript puede verlo.
+#
+# Pasa cuando el bundle y los pods vienen de versiones distintas de React
+# Native, algo que un `node_modules` mal resuelto provoca sin decir nada.
+titulo('¿El motor de Hermes entiende el paquete de JavaScript?')
+
+MAGICO_HERMES = b'\xc6\x1f\xbc\x03\xc1\x03\x19\x1f'
+
+for paquete in sorted(app.rglob('main.jsbundle')):
+    cabecera = paquete.read_bytes()[:16]
+    if not cabecera.startswith(MAGICO_HERMES):
+        # Sin compilar tampoco es un fallo: Hermes acepta JavaScript en texto,
+        # solo que arranca más despacio. Lo que importa es que NO puede haber
+        # desajuste de versión.
+        print(f'  {paquete.name}: JavaScript en texto, sin compilar.')
+        print('    No hay versión que pueda desajustarse. Descartado como causa.')
+        continue
+
+    (version_paquete,) = struct.unpack('<I', cabecera[8:12])
+    print(f'  {paquete.name}: bytecode de Hermes, versión {version_paquete}')
+
+    motor = app / 'Frameworks' / 'hermesvm.framework' / 'hermesvm'
+    if not motor.exists():
+        print('  ✖✖✖ AQUÍ ESTÁ EL FALLO.')
+        print('      El paquete está compilado para Hermes y el motor de Hermes')
+        print('      no viaja dentro del paquete. No hay nada que lo ejecute.')
+        continue
+
+    # El motor lleva escrito el número que acepta, en su mensaje de error.
+    # Se le pregunta a él en vez de deducirlo de la versión de React Native.
+    crudo = motor.read_bytes()
+    acepta = sorted(
+        {int(n) for n in re.findall(rb'Bytecode version mismatch[^\x00]{0,80}?(\d{2,3})', crudo)}
+        | {int(n) for n in re.findall(rb'bytecode version (\d{2,3})', crudo)}
+    )
+    if not acepta:
+        print(f'    (el motor no dice qué versión acepta; {humano(len(crudo))} de binario)')
+        print('    No se puede confirmar ni descartar desde aquí.')
+    elif version_paquete in acepta:
+        print(f'    ✔ El motor acepta la versión {version_paquete}. Casan.')
+    else:
+        print(f'  ✖✖✖ AQUÍ ESTÁ EL FALLO.')
+        print(f'      El paquete es de la versión {version_paquete} y el motor')
+        print(f'      que viaja dentro acepta {acepta}. Hermes aborta al cargarlo.')
+
+# --- ¿Alguna pieza pide un iPhone más nuevo que la propia app? -------------
+#
+# El Info.plist de la app dice desde qué iOS se puede instalar, y es lo único
+# que mira la App Store. Pero cada framework lleva su propio mínimo grabado en
+# el Mach-O (LC_BUILD_VERSION). Si UNO SOLO pide más que el iPhone que lo
+# abre, el cargador se niega a montarlo y mata el proceso al arrancar.
+#
+# Se cuela sin avisar: la app se instala tan ricamente —porque el mínimo de la
+# app se cumple— y se cierra al abrirla, siempre, solo en los móviles por
+# debajo de ese número. Que es exactamente lo que se ve aquí.
+titulo('¿Pide alguna pieza un iPhone más nuevo que la app?')
+
+LC_BUILD_VERSION = 0x32
+LC_VERSION_MIN_IPHONEOS = 0x25
+
+
+def minimo_ios(ruta):
+    """El iOS mínimo grabado en un Mach-O, o None si no lo declara.
+
+    Devuelve una tupla (mayor, menor, parche) para poder compararlo bien:
+    16.4 es MAYOR que 16.10 escrito como número decimal, y no lo es.
+    """
+    datos = ruta.read_bytes()
+    (mag,) = struct.unpack('<I', datos[:4])
+    if mag != 0xFEEDFACF:
+        return None
+    ncmds = struct.unpack('<I', datos[16:20])[0]
+    pos = 32
+    for _ in range(ncmds):
+        cmd, tam = struct.unpack('<II', datos[pos:pos + 8])
+        if cmd in (LC_BUILD_VERSION, LC_VERSION_MIN_IPHONEOS):
+            # En los dos, el número va empaquetado igual: mayor.menor.parche,
+            # pero en sitios distintos dentro del load command.
+            desplaz = 12 if cmd == LC_BUILD_VERSION else 8
+            (bruto,) = struct.unpack('<I', datos[pos + desplaz:pos + desplaz + 4])
+            return ((bruto >> 16) & 0xFFFF, (bruto >> 8) & 0xFF, bruto & 0xFF)
+        pos += tam
+    return None
+
+
+def como_texto(v):
+    return '.'.join(str(x) for x in v[:2])
+
+
+declarado = tuple(
+    int(x) for x in (str(info.get('MinimumOSVersion', '0')).split('.') + ['0', '0'])[:3]
+)
+print(f'  La app se instala desde iOS {info.get("MinimumOSVersion", "?")}')
+print()
+
+piden_mas = []
+piezas = [(binario.name, binario)] if binario.exists() else []
+if fw.exists():
+    for carpeta in sorted(fw.iterdir()):
+        if carpeta.is_dir() and carpeta.suffix == '.framework':
+            dentro_fw = carpeta / carpeta.stem
+            if dentro_fw.exists():
+                piezas.append((carpeta.name, dentro_fw))
+
+for nombre, ruta in piezas:
+    try:
+        minimo = minimo_ios(ruta)
+    except Exception:  # noqa: BLE001
+        minimo = None
+    if minimo is None:
+        print(f'  ·  {nombre}: no lo declara')
+    elif minimo > declarado:
+        piden_mas.append((nombre, minimo))
+        print(f'  ✖  {nombre}: pide iOS {como_texto(minimo)}')
+    else:
+        print(f'  ✔  {nombre}: iOS {como_texto(minimo)}')
+
+if piden_mas:
+    print()
+    print('  ✖✖✖ AQUÍ ESTÁ EL FALLO.')
+    print(f'      La App Store deja instalar desde iOS {info.get("MinimumOSVersion")},')
+    print('      pero estas piezas piden más. En un iPhone por debajo de ese')
+    print('      número la app se instala y se cierra nada más abrirla.')
+else:
+    print()
+    print('  ✔ Ninguna pieza pide más iOS que la propia app.')
 
 # --- La pantalla de arranque que declara el Info.plist ---------------------
 titulo('La pantalla de arranque')
