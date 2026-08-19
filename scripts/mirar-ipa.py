@@ -306,6 +306,117 @@ if fw.exists():
         print()
         print('  ✔ Ningún framework necesita nada que no esté dentro.')
 
+# --- ¿SE RESUELVE CADA SÍMBOLO? Esto es lo que cerraba la app -------------
+#
+# Que estén todos los frameworks no basta, y aquí está la prueba: en la
+# compilación 27 estaban los trece y la app se cerraba igual. Lo que faltaba
+# era una FUNCIÓN dentro de uno de ellos.
+#
+# El informe del iPhone lo dijo así:
+#
+#     DYLD, Symbol missing
+#     Symbol not found: ..._decorateModule(object:in:)
+#     Referenced from:  ExpoFileSystem.framework
+#     Expected in:      ExpoModulesCore.framework
+#
+# ExpoFileSystem venía compilado contra una versión de ExpoModulesCore en la
+# que esa función tenía dos parámetros, y el ExpoModulesCore que viajaba dentro
+# solo tenía la de tres. Mismo número de versión en los dos paquetes.
+#
+# Esto hace lo mismo que el cargador de iOS: apunta qué símbolos DEFINE cada
+# pieza y cuáles ESPERA de las otras, y comprueba que no quede ninguno huérfano.
+# Solo mira los de Swift cuyo módulo es otra pieza del propio paquete; los de
+# iOS y los de Swift los pone el sistema.
+titulo('¿Se resuelve cada símbolo entre las piezas? (esto cerraba la app)')
+
+
+def tabla_de_simbolos(ruta):
+    """Los símbolos que un Mach-O define y los que espera de fuera."""
+    datos = ruta.read_bytes()
+    if len(datos) < 32 or struct.unpack('<I', datos[:4])[0] != 0xFEEDFACF:
+        return None
+    ncmds = struct.unpack('<I', datos[16:20])[0]
+    define, espera = set(), set()
+    pos = 32
+    for _ in range(ncmds):
+        if pos + 8 > len(datos):
+            break
+        cmd, tam = struct.unpack('<II', datos[pos:pos + 8])
+        if tam <= 0:
+            break
+        if cmd == 0x02:  # LC_SYMTAB
+            symoff, nsyms, stroff, _ = struct.unpack('<IIII', datos[pos + 8:pos + 24])
+            for s in range(nsyms):
+                e = symoff + s * 16
+                if e + 16 > len(datos):
+                    break
+                strx, tipo = struct.unpack('<IB', datos[e:e + 5])
+                if not strx:
+                    continue
+                fin = datos.find(b'\x00', stroff + strx)
+                if fin < 0:
+                    continue
+                nombre = datos[stroff + strx:fin].decode('utf-8', 'replace')
+                if not nombre or not (tipo & 0x01):  # solo los externos
+                    continue
+                (espera if (tipo & 0x0E) == 0 else define).add(nombre)
+        pos += tam
+    return define, espera
+
+
+def modulo_swift(simbolo):
+    """`_$s15ExpoModulesCore9AnyModule...` -> `ExpoModulesCore`."""
+    m = re.match(r'^_\$s(\d+)(.+)$', simbolo)
+    if not m:
+        return None
+    largo = int(m.group(1))
+    resto = m.group(2)
+    return resto[:largo] if len(resto) >= largo else None
+
+
+piezas_sym = []
+if binario.exists():
+    t = tabla_de_simbolos(binario)
+    if t:
+        piezas_sym.append((nombre, t[0], t[1]))
+if fw.exists():
+    for carpeta in sorted(fw.iterdir()):
+        if carpeta.is_dir() and carpeta.suffix == '.framework':
+            b = carpeta / carpeta.stem
+            if b.exists():
+                t = tabla_de_simbolos(b)
+                if t:
+                    piezas_sym.append((carpeta.stem, t[0], t[1]))
+
+if not piezas_sym:
+    print('  (no se han podido leer las tablas de símbolos)')
+else:
+    nombres_piezas = {n for n, _, _ in piezas_sym}
+    ofrecido = set()
+    for _, d, _ in piezas_sym:
+        ofrecido |= d
+
+    huerfanos_total = 0
+    for n, _, espera in piezas_sym:
+        faltan = [
+            s for s in espera
+            if (m := modulo_swift(s)) and m != n and m in nombres_piezas and s not in ofrecido
+        ]
+        huerfanos_total += len(faltan)
+        print(f'  {"✖" if faltan else "✔"}  {n}' + (f'  — {len(faltan)} sin dueño' if faltan else ''))
+        for s in sorted(faltan)[:4]:
+            print(f'        {s}')
+
+    print()
+    if huerfanos_total:
+        print('  ✖✖✖ AQUÍ ESTÁ EL FALLO.')
+        print('      Una pieza llama a una función que ninguna otra define. El')
+        print('      cargador de iOS lo resuelve al arrancar y mata el proceso')
+        print('      antes de que exista JavaScript. Se arregla cuadrando las')
+        print('      versiones de los paquetes de Expo, no tocando la app.')
+    else:
+        print('  ✔ Ninguna pieza llama a nada que no exista. La app puede arrancar.')
+
 # --- ¿El paquete de JavaScript lo entiende el motor que viaja dentro? ------
 #
 # Son DOS piezas distintas y tienen que casar:
