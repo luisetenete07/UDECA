@@ -4,6 +4,7 @@ import {
   clientSlotsOf,
   DAY_MS,
   FREE_CLIENT_LIMIT,
+  PAGOS_ACTIVOS,
   subscriptionState,
 } from './planBase';
 
@@ -79,27 +80,36 @@ export {
 } from './planBase';
 
 /**
- * Payment Links de Stripe para las suscripciones de plataforma. Se crean en el
- * panel de Stripe (Payments → Payment Links) a partir de sus precios recurrentes
- * y se pegan aquí. La app los abre añadiendo ?client_reference_id=<uid> para que
- * el webhook active la cuenta correcta automáticamente.
- *   - Coach: precio 180 €/año  (price_1TwQhVKGNohj8zznoTrUubCg)
- *   - Atleta: precio 10 €/mes   (price_1TwQi6KGNohj8zznn54uw7mC)
- */
-export const COACH_PAYMENT_LINK: string = 'https://buy.stripe.com/test_aFa5kEcao8277On4as7g401';
-export const ATHLETE_PAYMENT_LINK: string = 'https://buy.stripe.com/test_14A7sM2zO8275Gf6iA7g400';
-
-/**
- * Enlaces del ALTA de 1 € (pago único), uno por rol.
+ * Payment Links de Stripe. VACÍOS: ahora mismo no se cobra (ver PAGOS_ACTIVOS
+ * en lib/planBase.ts).
  *
- * Son los MISMOS dos que se pegan en `web/config.js`: la web los usa para quien
- * llega de fuera y la app para quien se registró sin pasar por ella. Si cambias
- * uno, cambia el otro.
+ * Estaban puestos los de PRUEBA de Stripe, que no cobran de verdad: cualquiera
+ * que hubiera pulsado habría llegado a una pantalla de pago de mentira. Fuera.
+ *
+ * CUANDO SE VUELVA A COBRAR
+ *
+ * Se crean en el panel de Stripe (Payments → Payment Links) sobre sus precios y
+ * se pegan aquí los CUATRO, los de producción (`buy.stripe.com/...`, sin
+ * `test_`). La app les añade `?client_reference_id=<uid>` para que el webhook
+ * active la cuenta correcta sola.
+ *
+ *   - Suscripción de entrenador: 180 €/año
+ *   - Suscripción de atleta:      10 €/mes
+ *   - Alta de entrenador:          1 € (pago único)
+ *   - Alta de atleta:              1 € (pago único)
+ *
+ * Los dos del alta son los MISMOS que van en `web/config.js`: la web los usa
+ * para quien llega de fuera y la app para quien se registró sin pasar por ella.
+ * Si cambias uno, cambia el otro.
+ *
+ * Vacíos no rompen nada: `subscriptionCheckoutUrl` y `entryCheckoutUrl`
+ * devuelven `null` cuando no hay enlace, y las pantallas ya saben qué hacer con
+ * eso. Aun así, quien manda es `PAGOS_ACTIVOS`, no que estén vacíos.
  */
-export const COACH_ENTRY_LINK: string =
-  'https://buy.stripe.com/test_cNi5kEdescin1pZ4as7g403';
-export const ATHLETE_ENTRY_LINK: string =
-  'https://buy.stripe.com/test_cNi3cw3DScin9WvbCU7g402';
+export const COACH_PAYMENT_LINK: string = '';
+export const ATHLETE_PAYMENT_LINK: string = '';
+export const COACH_ENTRY_LINK: string = '';
+export const ATHLETE_ENTRY_LINK: string = '';
 
 /** Enlace del alta con el uid dentro, para que el webhook sepa a quién activar. */
 export function entryCheckoutUrl(profile: UserProfile | null): string | null {
@@ -205,10 +215,16 @@ export function subscriptionCheckoutUrl(profile: UserProfile | null): string | n
 /**
  * ¿Se puede enlazar a pagar DESDE la app?
  *
- * En web y en Android sí. **En iPhone no**, y es una decisión tomada para el
- * primer envío a la App Store.
+ * AHORA MISMO EN NINGÚN SITIO, porque no se cobra todavía: manda
+ * `PAGOS_ACTIVOS` (lib/planBase.ts), que está apagado mientras la cuenta de
+ * Stripe de UDECA no exista. Donde había un botón de pagar, ahora se dice que
+ * la función todavía no está disponible.
  *
- * POR QUÉ
+ * El resto de este comentario es la regla que sigue vigente y que volverá a
+ * mandar en cuanto se reactiven los pagos: **en iPhone no, aunque los pagos
+ * estén encendidos**. Por eso son dos condiciones y no una.
+ *
+ * POR QUÉ NO EN IPHONE
  *
  * La norma 3.1.1 obliga a que el contenido digital que se consume dentro de la
  * app se compre con las compras integradas de Apple, y prohíbe los botones y
@@ -231,19 +247,22 @@ export function subscriptionCheckoutUrl(profile: UserProfile | null): string | n
  * cuenta —"tu cuenta está sin activar", "no está activa"—, el botón de volver
  * a comprobar y un correo de contacto. Ni precios, ni enlaces de pago.
  *
- * PARA VOLVER ATRÁS
+ * PARA VOLVER A COBRAR
  *
- * Esta constante a `true` y ya está: vuelve tal cual estaba. La otra salida,
- * la definitiva, son las compras integradas de verdad (StoreKit + acuerdos de
- * pago en App Store Connect), que es otro proyecto. La decisión está en UNA
- * línea, aquí, a propósito.
+ * `PAGOS_ACTIVOS` a `true` en lib/planBase.ts y pegar los cuatro enlaces de
+ * Stripe de producción aquí arriba. Con eso vuelve el cobro en web y en
+ * Android, y el iPhone sigue sin botón, que es lo que queremos.
+ *
+ * Para que el iPhone TAMBIÉN cobre hay que montar las compras integradas de
+ * verdad (StoreKit + acuerdos de pago en App Store Connect), que es otro
+ * proyecto. Las dos decisiones están cada una en UNA línea, a propósito.
  *
  * Esto NO afecta a lo que un alumno le paga a su entrenador: eso es un servicio
  * real entre dos personas, no contenido digital, y Apple lo deja fuera de las
  * compras integradas expresamente. Por eso el enlace de cobro del entrenador
  * (lib/enlaceDePago.ts) sigue igual en las tres plataformas.
  */
-export const CAN_LINK_TO_PAYMENT = Platform.OS !== 'ios';
+export const CAN_LINK_TO_PAYMENT = PAGOS_ACTIVOS && Platform.OS !== 'ios';
 
 
 /** Correo de contacto para activar/renovar manualmente. */
@@ -260,6 +279,7 @@ export { isAdmin } from './planBase';
  */
 export {
   hasPlatformAccess,
+  PAGOS_ACTIVOS,
   subscriptionState,
   trainerAtFreeLimit,
   trainerHasAccess,

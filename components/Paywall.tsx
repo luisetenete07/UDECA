@@ -11,6 +11,7 @@ import {
   CAN_LINK_TO_PAYMENT,
   CONTACT_EMAIL,
   clientSlotsOf,
+  PAGOS_ACTIVOS,
   subscriptionCheckoutUrl,
   verifySubscriptionNow,
 } from '../lib/subscription';
@@ -122,13 +123,28 @@ export function Paywall() {
     }
   };
 
-  const titulo = !CAN_LINK_TO_PAYMENT
-    ? 'Tu cuenta no está activa'
-    : isAthlete
-      ? 'Has terminado la prueba'
-      : 'Activa UDECA Pro';
+  /*
+   * Tres situaciones distintas, y decir la verdad en cada una importa.
+   *
+   *  - Todavía no se cobra (PAGOS_ACTIVOS apagado): no es que esta persona no
+   *    pueda pagar, es que AÚN NO SE PUEDE. Decirle "tu cuenta no está activa"
+   *    y callarse la sonaría a que el fallo es suyo y se pondría a buscar el
+   *    botón de pagar hasta rendirse. Se le dice lo que hay y a dónde escribir.
+   *  - Se cobra, pero no desde aquí (iPhone): texto neutro a propósito, sin
+   *    mandar a pagar fuera, que es justo lo que prohíbe la norma 3.1.1.
+   *  - Se cobra desde aquí: el muro de siempre.
+   */
+  const titulo = !PAGOS_ACTIVOS
+    ? 'Las suscripciones todavía no están abiertas'
+    : !CAN_LINK_TO_PAYMENT
+      ? 'Tu cuenta no está activa'
+      : isAthlete
+        ? 'Has terminado la prueba'
+        : 'Activa UDECA Pro';
 
-  const explicacion = !CAN_LINK_TO_PAYMENT
+  const explicacion = !PAGOS_ACTIVOS
+    ? 'Se te ha acabado el plazo, pero todavía no hemos abierto los pagos. Escríbenos y te ampliamos el acceso a mano. Tus datos, tus rutinas y todo tu progreso siguen intactos.'
+    : !CAN_LINK_TO_PAYMENT
     ? 'Tus datos, tus rutinas y todo tu progreso siguen intactos. En cuanto tu cuenta vuelva a estar activa, la app lo reconoce sola.'
     : isAthlete
       ? 'Este mes ya has hecho la parte difícil: empezar. Todo tu progreso sigue aquí, intacto, esperándote. Este es el siguiente nivel.'
@@ -142,9 +158,11 @@ export function Paywall() {
       titulo={titulo}
       texto={explicacion}
       nota={
-        CAN_LINK_TO_PAYMENT
-          ? 'Se abre la web para activarla. Al volver, tu cuenta se enciende sola en unos segundos; si tardara, pulsa "Ya he pagado · Actualizar".'
-          : frase`¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`
+        !PAGOS_ACTIVOS
+          ? frase`Escríbenos a ${CONTACT_EMAIL} y te ampliamos el acceso.`
+          : CAN_LINK_TO_PAYMENT
+            ? 'Se abre la web para activarla. Al volver, tu cuenta se enciende sola en unos segundos; si tardara, pulsa "Ya he pagado · Actualizar".'
+            : frase`¿Algún problema con tu cuenta? Escríbenos a ${CONTACT_EMAIL}.`
       }
       onSalir={signOut}
     >

@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { Segmented } from '../../components/Segmented';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
 import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
@@ -48,6 +47,17 @@ import { Dialogo } from '../../components/Dialogo';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
 
+/**
+ * Las dos clases de cuenta que pagan plataforma, en el orden en que se pintan.
+ *
+ * Van juntas aquí y no sueltas en el render para que añadir una tercera —si
+ * algún día hay otro tipo de cuenta— sea una línea y no copiar un bloque.
+ */
+const GRUPOS_ADMIN = [
+  { rol: 'trainer' as const, titulo: 'Entrenadores', vacio: 'Todavía no hay ningún entrenador registrado.' },
+  { rol: 'athlete' as const, titulo: 'Atletas', vacio: 'Todavía no hay ningún atleta registrado.' },
+];
+
 export default function TrainerProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
@@ -69,12 +79,19 @@ export default function TrainerProfileScreen() {
   const [funnelExtra, setFunnelExtra] = useState<Record<string, number>>({});
   const [funnelDays, setFunnelDays] = useState(30);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
+  /**
+   * TODAS las cuentas que pagan plataforma: entrenadores y atletas juntos.
+   *
+   * En una sola lista a propósito, aunque se pinten en dos secciones separadas:
+   * así extender, revocar o borrar sigue siendo una operación sobre un array y
+   * no hay que acertar en cuál de los dos estaba la cuenta.
+   *
+   * Antes había un selector que enseñaba una lista O la otra. El problema no
+   * era encontrarlas, era que para saber cómo iba el negocio había que ir y
+   * volver: cuántos entrenadores hay, cuántos atletas, a quién se le acaba
+   * esta semana. Ahora se ven las dos de un vistazo.
+   */
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
-  // Qué cuentas se están gestionando. Los atletas pagan igual que los coaches
-  // —al mes en vez de al año— y hasta ahora no salían en ninguna pantalla:
-  // a un atleta con la prueba caducada había que arreglárselo a mano en la
-  // base de datos.
-  const [rolAdmin, setRolAdmin] = useState<'trainer' | 'athlete'>('trainer');
   // Clasificación y presencia del grupo (socialStats de sus alumnos).
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<SocialStats | null>(null);
@@ -147,13 +164,15 @@ export default function TrainerProfileScreen() {
     }
   };
 
-  const openAdmin = async (rol: 'trainer' | 'athlete' = rolAdmin) => {
+  const openAdmin = async () => {
     setAdminOpen(true);
-    setRolAdmin(rol);
     setLoadingCoaches(true);
     setCoaches([]);
     try {
-      setCoaches(rol === 'athlete' ? await getAllAthletes() : await getAllCoaches());
+      // Las dos a la vez: son dos consultas distintas porque en Firestore el
+      // rol es un campo, no una colección.
+      const [entrenadores, atletas] = await Promise.all([getAllCoaches(), getAllAthletes()]);
+      setCoaches([...entrenadores, ...atletas]);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo cargar');
     } finally {
@@ -314,6 +333,118 @@ export default function TrainerProfileScreen() {
     } else {
       await Share.share({ message });
     }
+  };
+
+  /**
+   * Una cuenta de la lista de administración, con su estado y sus acciones.
+   *
+   * Sale de dentro del render porque ahora se pinta DOS veces —entrenadores y
+   * atletas van en secciones separadas— y tenerla duplicada era garantizar que
+   * un día se arreglara solo una de las dos.
+   */
+  const filaCuenta = (c: UserProfile) => {
+    const s = subscriptionState(c);
+    // "De prueba" se dice aparte de "Activo": las dos dejan entrar,
+    // pero una es alguien que paga y la otra alguien a quien se le
+    // acaba el plazo. Confundirlas es no saber a quién hay que
+    // llamar esta semana.
+    const label = isAdmin(c)
+      ? 'Admin'
+      : accesoIlimitado(c)
+        ? 'Cuenta de la casa'
+        : s.legacy
+        ? 'Fundador'
+        : s.active
+          ? frase`${t(s.trial ? 'De prueba' : 'Activo')} · hasta ${c.subscriptionUntil ? fechaCorta(c.subscriptionUntil) : '—'}`
+          : c.subscriptionUntil
+            ? frase`CADUCADO · desde ${fechaCorta(c.subscriptionUntil)}`
+            : 'SIN ACTIVAR';
+    return (
+      <View key={c.uid} style={styles.coachCard}>
+        <View style={styles.coachRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.coachName}>{c.name}</Text>
+            <Text style={styles.coachEmail} numberOfLines={1}>
+              {c.email}
+            </Text>
+            <Text style={[styles.coachSub, !s.active && { color: colors.danger }]}>
+              {label}
+            </Text>
+          </View>
+          {!isAdmin(c) ? (
+            <View style={styles.coachActions}>
+              {/* Al atleta se le puede dar el mes que le tocaría por su plan,
+                  o un año entero. El año hace falta desde que no se cobra: es
+                  como se cubre a quien paga por fuera, y antes solo se le
+                  podía dar de mes en mes o escribiendo 365 a mano. */}
+              {c.role === 'athlete' ? (
+                <Button
+                  title="+1 mes"
+                  variant="secondary"
+                  onPress={() => extendCoach(c, 30)}
+                  loading={updatingCoach === c.uid}
+                  style={styles.coachBtn}
+                />
+              ) : null}
+              <Button
+                title="+1 año"
+                variant="secondary"
+                onPress={() => extendCoach(c, 365)}
+                loading={updatingCoach === c.uid}
+                style={styles.coachBtn}
+              />
+              {s.active || s.legacy ? (
+                <Pressable
+                  onPress={() => revokeCoach(c)}
+                  disabled={updatingCoach === c.uid}
+                  style={styles.coachIconBtn}
+                  hitSlop={6}
+                >
+                  <Ionicons name="remove-circle-outline" size={18} color={colors.warning} />
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={() => deleteCoach(c)}
+                disabled={updatingCoach === c.uid}
+                style={[styles.coachIconBtn, styles.coachIconDanger]}
+                hitSlop={6}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.danger} />
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+        {!isAdmin(c) ? (
+          <View style={styles.customDaysRow}>
+            <TextField
+              value={daysInput[c.uid] ?? ''}
+              onChangeText={(v) => setDaysInput((p) => ({ ...p, [c.uid]: v }))}
+              placeholder="Nº de días"
+              keyboardType="numeric"
+              containerStyle={styles.customDaysField}
+            />
+            <Pressable
+              onPress={() => applyDays(c, 1)}
+              disabled={updatingCoach === c.uid}
+              style={styles.daysBtn}
+              hitSlop={4}
+            >
+              <Ionicons name="add" size={15} color={colors.primary} />
+              <Text style={styles.daysBtnText}>Añadir</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => applyDays(c, -1)}
+              disabled={updatingCoach === c.uid}
+              style={styles.daysBtn}
+              hitSlop={4}
+            >
+              <Ionicons name="remove" size={15} color={colors.warning} />
+              <Text style={[styles.daysBtnText, { color: colors.warning }]}>Quitar</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
+    );
   };
 
   return (
@@ -632,114 +763,28 @@ export default function TrainerProfileScreen() {
             </Text>
           ) : (
             <>
-              <Segmented<'trainer' | 'athlete'>
-                opciones={[
-                  { valor: 'trainer', texto: 'Entrenadores' },
-                  { valor: 'athlete', texto: 'Atletas' },
-                ]}
-                valor={rolAdmin}
-                onChange={openAdmin}
-              />
               {loadingCoaches ? (
                 <Text style={styles.helperText}>Cargando…</Text>
-              ) : coaches.length === 0 ? (
-                <Text style={styles.helperText}>
-                  {rolAdmin === 'athlete'
-                    ? 'Todavía no hay ningún atleta registrado.'
-                    : 'Todavía no hay ningún entrenador registrado.'}
-                </Text>
               ) : (
-            coaches.map((c) => {
-              const s = subscriptionState(c);
-              // "De prueba" se dice aparte de "Activo": las dos dejan entrar,
-              // pero una es alguien que paga y la otra alguien a quien se le
-              // acaba el plazo. Confundirlas es no saber a quién hay que
-              // llamar esta semana.
-              const label = isAdmin(c)
-                ? 'Admin'
-                : accesoIlimitado(c)
-                  ? 'Cuenta de la casa'
-                  : s.legacy
-                  ? 'Fundador'
-                  : s.active
-                    ? frase`${t(s.trial ? 'De prueba' : 'Activo')} · hasta ${c.subscriptionUntil ? fechaCorta(c.subscriptionUntil) : '—'}`
-                    : c.subscriptionUntil
-                      ? frase`CADUCADO · desde ${fechaCorta(c.subscriptionUntil)}`
-                      : 'SIN ACTIVAR';
-              return (
-                <View key={c.uid} style={styles.coachCard}>
-                  <View style={styles.coachRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.coachName}>{c.name}</Text>
-                      <Text style={styles.coachEmail} numberOfLines={1}>
-                        {c.email}
-                      </Text>
-                      <Text style={[styles.coachSub, !s.active && { color: colors.danger }]}>
-                        {label}
-                      </Text>
-                    </View>
-                    {!isAdmin(c) ? (
-                      <View style={styles.coachActions}>
-                        <Button
-                          title={c.role === 'athlete' ? '+1 mes' : '+1 año'}
-                          variant="secondary"
-                          onPress={() => extendCoach(c, c.role === 'athlete' ? 30 : 365)}
-                          loading={updatingCoach === c.uid}
-                          style={styles.coachBtn}
-                        />
-                        {s.active || s.legacy ? (
-                          <Pressable
-                            onPress={() => revokeCoach(c)}
-                            disabled={updatingCoach === c.uid}
-                            style={styles.coachIconBtn}
-                            hitSlop={6}
-                          >
-                            <Ionicons name="remove-circle-outline" size={18} color={colors.warning} />
-                          </Pressable>
-                        ) : null}
-                        <Pressable
-                          onPress={() => deleteCoach(c)}
-                          disabled={updatingCoach === c.uid}
-                          style={[styles.coachIconBtn, styles.coachIconDanger]}
-                          hitSlop={6}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                        </Pressable>
+                /* Las dos secciones siempre, aunque una esté vacía: que ponga
+                   "Todavía no hay ningún atleta" es información, y esconder la
+                   sección haría dudar de si existe o si ha fallado algo. */
+                GRUPOS_ADMIN.map(({ rol, titulo, vacio }) => {
+                  const cuentas = coaches.filter((c) => c.role === rol);
+                  return (
+                    <View key={rol} style={styles.grupoAdmin}>
+                      <View style={styles.grupoAdminCab}>
+                        <Text style={styles.grupoAdminTitulo}>{t(titulo)}</Text>
+                        <Text style={styles.grupoAdminCuenta}>{cuentas.length}</Text>
                       </View>
-                    ) : null}
-                  </View>
-                  {!isAdmin(c) ? (
-                    <View style={styles.customDaysRow}>
-                      <TextField
-                        value={daysInput[c.uid] ?? ''}
-                        onChangeText={(v) => setDaysInput((p) => ({ ...p, [c.uid]: v }))}
-                        placeholder="Nº de días"
-                        keyboardType="numeric"
-                        containerStyle={styles.customDaysField}
-                      />
-                      <Pressable
-                        onPress={() => applyDays(c, 1)}
-                        disabled={updatingCoach === c.uid}
-                        style={styles.daysBtn}
-                        hitSlop={4}
-                      >
-                        <Ionicons name="add" size={15} color={colors.primary} />
-                        <Text style={styles.daysBtnText}>Añadir</Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => applyDays(c, -1)}
-                        disabled={updatingCoach === c.uid}
-                        style={styles.daysBtn}
-                        hitSlop={4}
-                      >
-                        <Ionicons name="remove" size={15} color={colors.warning} />
-                        <Text style={[styles.daysBtnText, { color: colors.warning }]}>Quitar</Text>
-                      </Pressable>
+                      {cuentas.length === 0 ? (
+                        <Text style={styles.helperText}>{t(vacio)}</Text>
+                      ) : (
+                        cuentas.map(filaCuenta)
+                      )}
                     </View>
-                  ) : null}
-                </View>
-              );
-            })
+                  );
+                })
               )}
             </>
           )}
@@ -816,6 +861,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.xs,
   },
+  grupoAdmin: { marginTop: spacing.md },
+  grupoAdminCab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  grupoAdminTitulo: {
+    ...typography.label,
+    color: colors.textMuted,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  grupoAdminCuenta: {
+    ...typography.label,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+  },
   coachCard: { borderTopWidth: 1, borderTopColor: colors.border },
   funnelRow: { marginTop: spacing.md },
   funnelHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
@@ -874,7 +937,16 @@ const styles = StyleSheet.create({
   coachEmail: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   coachSub: { ...typography.small, color: colors.primaryBright, fontSize: 11, marginTop: 2 },
   coachBtn: { paddingHorizontal: spacing.md },
-  coachActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  // Con "flexWrap": la fila del atleta lleva un botón más (+1 mes y +1 año) y
+  // en pantalla estrecha tiene que poder bajar a la línea siguiente en vez de
+  // salirse o comerse los iconos de revocar y borrar.
+  coachActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
   coachIconBtn: {
     width: 38,
     height: 38,

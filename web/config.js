@@ -10,20 +10,30 @@ window.UDECA = {
   appUrl: 'https://app.udeca.app',
 
   /**
-   * Enlaces de pago de Stripe (Payments → Payment Links).
+   * Enlaces de pago del alta.
    *
-   * El ALTA es de 1 €, pago único, e igual para entrenador y atleta: es lo que
-   * abre la cuenta. Lo que viene después (los 180 €/año del entrenador con más
-   * de 5 alumnos, los 10 €/mes del atleta pasados 28 días) se cobra DESDE LA
-   * APP, cuando toca, no aquí: nadie paga una suscripción antes de haber usado
-   * el producto.
+   * AHORA MISMO NO SE COBRA: los dos llevan a /proximamente, que explica que
+   * los pagos no están abiertos todavía y manda a la app, que sí funciona.
    *
-   * Hay que crear dos Payment Links nuevos de 1 € en Stripe —uno por rol, para
-   * saber quién se da de alta— y pegarlos aquí.
+   * Antes había aquí dos enlaces de PRUEBA de Stripe (`buy.stripe.com/test_…`).
+   * Esos no cobran de verdad: quien hubiera pulsado habría metido su tarjeta en
+   * una pantalla de mentira. Por eso están fuera y no solo vacíos.
+   *
+   * CUANDO SE VUELVA A COBRAR
+   *
+   * Se crean dos Payment Links de 1 € en Stripe (Payments → Payment Links), uno
+   * por rol para saber quién se da de alta, y se pegan aquí los de PRODUCCIÓN
+   * (`buy.stripe.com/…`, sin `test_`). Son los MISMOS dos que van en
+   * lib/subscription.ts; si cambias uno, cambia el otro. Y hay que encender
+   * PAGOS_ACTIVOS en lib/planBase.ts, que es quien manda de verdad.
+   *
+   * Lo que viene después (los 180 €/año del entrenador con más de 5 alumnos,
+   * los 10 €/mes del atleta pasados 28 días) se cobra DESDE LA APP, cuando
+   * toca, no aquí: nadie paga una suscripción antes de haber usado el producto.
    */
   pagos: {
-    altaAtleta: 'https://buy.stripe.com/test_cNi3cw3DScin9WvbCU7g402',
-    altaCoach: 'https://buy.stripe.com/test_cNi5kEdescin1pZ4as7g403',
+    altaAtleta: '/proximamente',
+    altaCoach: '/proximamente',
   },
 
   /**

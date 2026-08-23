@@ -18,6 +18,7 @@ import {
   hasPlatformAccess,
   isAdmin,
   needsEntryPayment,
+  PAGOS_ACTIVOS,
   subscriptionState,
 } from '../lib/planBase.ts';
 
@@ -82,8 +83,22 @@ console.log('\nUn atleta normal, para comparar');
   comprueba('en prueba, entra', hasPlatformAccess(enPrueba, AHORA));
   comprueba('con sus días contados', subscriptionState(enPrueba, AHORA).daysLeft === 5);
   comprueba('y sabiendo que es prueba', subscriptionState(enPrueba, AHORA).trial);
-  // La prueba NO exime del alta: el euro es justo lo que la compra.
-  comprueba('estando de prueba, el alta sigue pendiente', needsEntryPayment(enPrueba));
+  /*
+   * La prueba NO exime del alta: el euro es justo lo que la compra.
+   *
+   * Pero eso vale solo mientras SE COBRE. Con los pagos apagados no hay alta
+   * que pedir y el muro se levanta entero (ver PAGOS_ACTIVOS en planBase), así
+   * que aquí se comprueba lo contrario: que nadie se queda en una puerta que no
+   * abre con ninguna llave. La condición se escribe con la constante y no a
+   * mano para que el día que se vuelva a cobrar esto vuelva a exigir el euro
+   * solo, sin que nadie se acuerde de venir.
+   */
+  comprueba(
+    PAGOS_ACTIVOS
+      ? 'estando de prueba, el alta sigue pendiente'
+      : 'sin cobrar, a nadie se le pide el alta',
+    needsEntryPayment(enPrueba) === PAGOS_ACTIVOS
+  );
 
   const caducado = atleta({
     subscriptionUntil: AHORA - DAY_MS,

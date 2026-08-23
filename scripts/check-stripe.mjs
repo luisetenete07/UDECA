@@ -55,6 +55,52 @@ const ENLACES = {
 
 const esPruebas = (u) => /\/test_/.test(u ?? '');
 
+/**
+ * ¿Se cobra ya?
+ *
+ * Se lee de `lib/planBase.ts` como texto, igual que los enlaces: es la misma
+ * razón —importar desde Node lo que arrastra React Native no se puede— y así
+ * este guion sigue sin depender de nada.
+ *
+ * Con los pagos apagados, las seis comprobaciones de abajo no solo sobran: son
+ * falsas. No hay enlaces que comparar, ni modo de cobro que mirar. Lo que hay
+ * que proteger entonces es lo contrario, y es igual de importante: que no se
+ * quede ningún enlace de Stripe a medio quitar, apuntando a un producto que
+ * nadie vigila.
+ */
+const base = readFileSync('lib/planBase.ts', 'utf8');
+const PAGOS_ACTIVOS = /export const PAGOS_ACTIVOS\s*=\s*true\s*;/.test(base);
+
+if (!PAGOS_ACTIVOS) {
+  console.log('\nAhora mismo NO se cobra (PAGOS_ACTIVOS = false)');
+  console.log('Lo que se comprueba es que no quede ningún enlace suelto.\n');
+
+  for (const nombre of [
+    'suscripción del coach',
+    'suscripción del atleta',
+    'alta del coach (app)',
+    'alta del atleta (app)',
+  ]) {
+    comprueba(`${nombre}: vacío`, ENLACES[nombre] === null, String(ENLACES[nombre]));
+  }
+  for (const nombre of ['alta del coach (web)', 'alta del atleta (web)']) {
+    comprueba(
+      `${nombre}: lleva a /proximamente`,
+      ENLACES[nombre] === '/proximamente',
+      String(ENLACES[nombre])
+    );
+  }
+  const aStripe = Object.entries(ENLACES).filter(([, u]) => (u ?? '').includes('stripe.com'));
+  comprueba(
+    'ninguno apunta a Stripe',
+    aStripe.length === 0,
+    aStripe.map(([n]) => n).join(', ')
+  );
+
+  console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
+  process.exit(fallos === 0 ? 0 : 1);
+}
+
 console.log('\nLos seis enlaces están puestos');
 for (const [nombre, url] of Object.entries(ENLACES)) {
   comprueba(nombre, !!url && url.startsWith('https://buy.stripe.com/'), String(url));

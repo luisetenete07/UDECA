@@ -84,25 +84,48 @@ notas:
 Es verdad: crear cuenta no pide pagar, y el perfil de entrenador abre la app
 entera.
 
-### Por qué en iPhone no hay ningún botón de pagar
+### Por qué no hay ningún botón de pagar
 
-Está hecho a propósito y es la razón por la que se puede enviar. La norma 3.1.1
-prohíbe los enlaces a pagar contenido digital fuera de las compras integradas
-de Apple, y es el motivo de rechazo más común que existe.
+Ahora mismo **UDECA no cobra en ninguna plataforma**, y por eso no hay ni un
+botón de pagar en toda la app. La cuenta de Stripe de UDECA no ha podido
+verificarse: una cuenta de Stripe pertenece a una persona o a una empresa que
+existe legalmente, y UDECA todavía no está dada de alta.
 
-Toda la decisión vive en `CAN_LINK_TO_PAYMENT` (`lib/subscription.ts`), que en
-iOS vale `false`. En iPhone la app dice en qué estado está la cuenta y ofrece
-volver a comprobarla; quien quiera pagar lo hace en udeca.app desde el
-navegador y al volver la cuenta se enciende sola. En web y en Android todo
-sigue igual.
+Hay **dos interruptores**, y hacen falta los dos porque son dos decisiones
+distintas:
 
-`scripts/check-pago-ios.mjs` vigila que no se cuele un botón nuevo que se salte
-esa comprobación. Si algún día se montan las compras integradas de verdad
-(StoreKit), esto se revierte cambiando esa constante.
+| Interruptor | Dónde | Qué hace |
+|---|---|---|
+| `PAGOS_ACTIVOS` | `lib/planBase.ts` | `false`: no se cobra en ningún sitio, y el muro del alta de 1 € se levanta para que quien se registre entre |
+| `CAN_LINK_TO_PAYMENT` | `lib/subscription.ts` | `PAGOS_ACTIVOS && Platform.OS !== 'ios'`: aunque se cobre, **en iPhone nunca** |
+
+El segundo es el que permite enviar a la App Store. La norma 3.1.1 prohíbe los
+enlaces a pagar contenido digital fuera de las compras integradas de Apple, y es
+el motivo de rechazo más común que existe.
+
+**Mientras no se cobre**, quien se registra entra y empieza su prueba. Al
+acabársele, la app le dice que las suscripciones todavía no están abiertas y a
+qué correo escribir; el acceso se amplía a mano desde el panel de CEO (perfil
+del entrenador → *Admin UDECA · cuentas*), que lista entrenadores y atletas por
+separado y da +1 mes o +1 año a cualquiera.
+
+En la web, los botones de empezar llevan a `app.udeca.app/proximamente`, que
+explica lo mismo y manda a la app.
+
+**Para volver a cobrar**: `PAGOS_ACTIVOS` a `true` y pegar los cuatro Payment
+Links de producción en `lib/subscription.ts` (los dos del alta, también en
+`web/config.js`). El iPhone seguirá sin botón, que es lo que queremos.
+
+Dos guardianes lo vigilan, y los dos cambian de modo solos según el
+interruptor: `scripts/check-pago-ios.mjs` (que no se cuele un botón nuevo sin
+comprobar la constante, y que no quede ningún enlace de PRUEBA de Stripe, que no
+cobra) y `scripts/check-stripe.mjs` (con los pagos apagados, que no quede ningún
+enlace suelto; encendidos, que los seis estén puestos, cuadren y sean de
+producción).
 
 Lo que un **alumno le paga a su entrenador** no entra aquí: es un servicio real
-entre dos personas, Apple lo excluye expresamente, y sigue igual en las tres
-plataformas.
+entre dos personas, Apple lo excluye expresamente, no pasa por UDECA y sigue
+igual en las tres plataformas.
 
 ---
 

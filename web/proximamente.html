@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Todavía no hemos abierto los pagos · UDECA</title>
+<meta name="description" content="UDECA se puede usar ya. Los pagos abren más adelante: mientras tanto se entra creando una cuenta." />
+<meta name="robots" content="noindex" />
+<!--
+  ESTA PÁGINA NO DEPENDE DE NADA. NI DE UN CSS, NI DE UNA FUENTE, NI DE UN LOGO.
+
+  Por lo mismo que las dos legales (ver el comentario largo de privacidad.html):
+  se publica en DOS sitios —Vercel (udeca.app) y GitHub Pages (app.udeca.app)—
+  y tiene que verse igual en los dos sin traerse nada de fuera.
+
+  QUÉ ES ESTO
+
+  Es donde caen los botones de "empezar" de la web mientras no se cobra. La
+  cuenta de Stripe de UDECA no ha podido verificarse todavía —una cuenta de
+  Stripe pertenece a una persona o empresa que existe legalmente, y UDECA aún
+  no está dada de alta—, así que no hay dónde cobrar.
+
+  Antes esos botones llevaban a un enlace de PRUEBA de Stripe: una pantalla de
+  pago que no cobra de verdad. Cualquiera que hubiera pulsado habría metido su
+  tarjeta en una caja que no existe. Eso es lo que sustituye esta página.
+
+  Lo importante: NO es un "próximamente" de producto. La app funciona y se
+  puede usar hoy; lo único que no está abierto es el cobro. Por eso el botón
+  principal lleva a la app, no a una lista de espera.
+
+  Cuando se reactiven los pagos (PAGOS_ACTIVOS en lib/planBase.ts), se vuelven
+  a poner los enlaces de Stripe en web/config.js y esta página deja de usarse.
+-->
+<style>
+  :root {
+    --bg: #080706;
+    --text: #f2ede7;
+    --muted: #a2968b;
+    --faint: #6f6760;
+    --gold: #c9bcae;
+    --hairline: rgba(162, 150, 139, 0.22);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 22px; }
+  header { border-bottom: 1px solid var(--hairline); }
+  header .wrap { display: flex; align-items: center; height: 64px; }
+  .brand {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 15px;
+  }
+  main { padding: 40px 0 70px; }
+  .eyebrow {
+    color: var(--gold);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 34px 0 10px; }
+  p, li { color: var(--muted); font-size: 16px; }
+  p { margin: 0 0 14px; }
+  b { color: var(--text); font-weight: 600; }
+  a { color: var(--gold); }
+  .idiomas { font-size: 14px; margin-bottom: 28px; }
+  .correo { display: inline-block; font-size: 21px; margin: 4px 0 14px; }
+  .cta {
+    display: inline-block;
+    margin: 18px 0 6px;
+    padding: 13px 26px;
+    border-radius: 12px;
+    background: var(--gold);
+    color: #0a0908;
+    font-weight: 700;
+    font-size: 16px;
+    text-decoration: none;
+  }
+  hr { border: 0; height: 1px; background: var(--hairline); margin: 50px 0; }
+  footer { border-top: 1px solid var(--hairline); padding: 22px 0 40px; }
+  footer p { color: var(--faint); font-size: 13px; margin: 0; }
+  @media (min-width: 700px) { h1 { font-size: 42px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap"><a class="brand" href="https://www.udeca.app">UDECA</a></div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="eyebrow">Pagos</p>
+    <h1>Todavía no hemos abierto los pagos</h1>
+    <p class="idiomas"><a href="#english">Read this page in English</a></p>
+
+    <p>
+      Estamos terminando de dar de alta la parte administrativa de UDECA, y hasta que
+      esté no podemos cobrar. Preferimos decírtelo así antes que mandarte a una pantalla
+      de pago que no funciona.
+    </p>
+
+    <h2>Pero la app se usa ya</h2>
+    <p>
+      Esto no es un aviso de "próximamente": <b>UDECA funciona y puedes entrar hoy</b>.
+      Crea tu cuenta y empiezas con tus días de prueba, sin pagar nada y sin tarjeta.
+    </p>
+    <p><a class="cta" href="https://app.udeca.app">Entrar en UDECA</a></p>
+
+    <h2>¿Y si se me acaba la prueba?</h2>
+    <p>
+      Escríbenos y te ampliamos el acceso a mano. No vas a perder nada por esto: tus
+      rutinas, tu progreso y tus datos siguen donde están.
+    </p>
+    <p><a class="correo" href="mailto:luistenaf@gmail.com?subject=Ampliar%20acceso%20en%20UDECA">luistenaf@gmail.com</a></p>
+
+    <h2>Si eres alumno de un entrenador</h2>
+    <p>
+      Esto no va contigo: tú nunca le pagas nada a UDECA. Entras con el código de tu
+      entrenador y ya está. Lo que acordéis entre vosotros es cosa vuestra.
+    </p>
+
+    <hr />
+
+    <p class="eyebrow">Payments</p>
+    <h1 id="english">We have not opened payments yet</h1>
+
+    <p>
+      We are still completing UDECA's business registration, and until that is done we
+      cannot take payments. We would rather tell you plainly than send you to a checkout
+      page that does not work.
+    </p>
+
+    <h2>The app already works</h2>
+    <p>
+      This is not a "coming soon" notice: <b>UDECA is live and you can use it today</b>.
+      Create your account and your trial starts right away, with no payment and no card.
+    </p>
+    <p><a class="cta" href="https://app.udeca.app">Open UDECA</a></p>
+
+    <h2>What if my trial runs out?</h2>
+    <p>
+      Write to us and we will extend your access by hand. You will not lose anything:
+      your routines, your progress and your data stay exactly where they are.
+    </p>
+    <p><a class="correo" href="mailto:luistenaf@gmail.com?subject=Extend%20access%20in%20UDECA">luistenaf@gmail.com</a></p>
+
+    <h2>If you train with a coach</h2>
+    <p>
+      This does not affect you: you never pay UDECA anything. You join with your coach's
+      code. Whatever you agree with them is between the two of you.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap"><p>UDECA · Universidad de Calistenia</p></div>
+</footer>
+
+</body>
+</html>

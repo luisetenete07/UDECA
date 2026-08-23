@@ -27,7 +27,7 @@
  *
  *   node scripts/check-pago-ios.mjs
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const RAIZ = new URL('..', import.meta.url).pathname;
@@ -110,6 +110,48 @@ if (sinGuarda.length) {
   console.log('         comprueban si esta plataforma puede ofrecerla. En el iPhone del');
   console.log('         revisor de Apple saldría el botón, y eso es rechazo por 3.1.1.');
   console.log(`         Envuélvelo: const url = ${GUARDA} ? ...checkoutUrl(profile) : null;`);
+}
+
+// --- 3. Ningún enlace de PRUEBA de Stripe, en ninguna parte ---------------
+//
+// Los enlaces de Stripe en modo prueba (`buy.stripe.com/test_…`) abren una
+// pantalla de pago que parece de verdad y NO COBRA NADA. Estuvieron publicados
+// en la web y dentro de la app: cualquiera que hubiera pulsado habría metido su
+// tarjeta en una caja que no existe, y nosotros habríamos dado por vendido algo
+// que nadie pagó.
+//
+// Se distinguen de los buenos por tres letras, así que es exactamente la clase
+// de cosa que se cuela al copiar y pegar con prisa.
+console.log('\n== Ni un enlace de prueba de Stripe ==');
+const DONDE = ['lib', 'web', 'app', 'components'];
+const conPrueba = [];
+for (const carpeta of DONDE) {
+  const dir = join(RAIZ, carpeta);
+  if (!existsSync(dir)) continue;
+  for (const f of readdirSync(dir, { recursive: true, encoding: 'utf8' })) {
+    const p = join(dir, f);
+    if (!/\.(ts|tsx|js|html)$/.test(p)) continue;
+    if (!statSync(p).isFile()) continue;
+    /*
+     * Se pide el identificador de verdad detrás de `test_`, no solo el prefijo.
+     *
+     * Sin eso saltaba con los COMENTARIOS que explican por qué no debe haber
+     * enlaces de prueba —los de este mismo repositorio—, y un guardián que se
+     * queja de su propia documentación acaba desactivado.
+     *
+     * Lo que sí sigue cazando: un enlace de verdad aunque esté comentado "para
+     * acordarse", que es justo el que acaba descomentado.
+     */
+    if (/buy\.stripe\.com\/test_[A-Za-z0-9]{6,}/.test(readFileSync(p, 'utf8'))) {
+      conPrueba.push(relative(RAIZ, p));
+    }
+  }
+}
+ok('no queda ninguno', conPrueba.length === 0, conPrueba.join(', '));
+if (conPrueba.length) {
+  console.log('\n         Un enlace `buy.stripe.com/test_…` no cobra: abre una pantalla');
+  console.log('         de pago de mentira. O se pone el de producción (sin `test_`),');
+  console.log('         o se deja vacío y manda PAGOS_ACTIVOS.');
 }
 
 console.log(fallos === 0 ? '\nTODO BIEN' : `\n${fallos} FALLO(S)`);

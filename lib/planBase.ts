@@ -61,6 +61,40 @@ export function isAdmin(profile: UserProfile | null): boolean {
 }
 
 /**
+ * ¿Se cobra ya en UDECA?
+ *
+ * AHORA MISMO NO, y esto es lo único que hay que cambiar cuando se vuelva a
+ * cobrar. Está aquí, en el fichero puro, porque lo mira la puerta de entrada
+ * (`needsEntryPayment`) y esa tiene que poder comprobarse sin arrancar la app.
+ *
+ * POR QUÉ ESTÁ APAGADO
+ *
+ * La cuenta de Stripe de UDECA no ha podido verificarse: una cuenta de Stripe
+ * pertenece a una persona o a una empresa que existe legalmente, y UDECA
+ * todavía no está dada de alta. Hasta que lo esté no hay dónde cobrar, así que
+ * enseñar botones de pagar sería mandar a la gente a una puerta cerrada.
+ *
+ * QUÉ APAGA, EXACTAMENTE
+ *
+ *  1. Los sitios que ofrecían pagar (ver `CAN_LINK_TO_PAYMENT` en
+ *     lib/subscription.ts): en su lugar se dice que todavía no está
+ *     disponible.
+ *  2. El muro del alta de 1 €: quien se registra entra y empieza su prueba,
+ *     sin pagar. Sin esto la app quedaría inservible para cualquiera que se
+ *     diera de alta —y para el revisor de Apple, que la rechazaría.
+ *
+ * Lo que NO apaga: la prueba sigue teniendo su plazo, y al acabarse la cuenta
+ * se para. El acceso se da a mano desde el panel de CEO (perfil del
+ * entrenador → "Admin UDECA · cuentas"), que es como se cubre a quien paga por
+ * fuera mientras tanto.
+ *
+ * Y tampoco toca lo que un ALUMNO le paga a su ENTRENADOR: ese dinero no pasa
+ * por UDECA, va por el enlace de cobro que cada entrenador pone (ver
+ * lib/enlaceDePago.ts), y sigue funcionando igual.
+ */
+export const PAGOS_ACTIVOS = false;
+
+/**
  * Cuentas con acceso permanente, SIN poderes de administración.
  *
  * Son las cuentas de la casa: la que se usa para enseñar la app, para grabar
@@ -211,6 +245,10 @@ export const ENTRY_REQUIRED_FROM = Date.parse('2026-08-03T00:00:00Z');
  */
 export function needsEntryPayment(profile: UserProfile | null): boolean {
   if (!profile) return false;
+  // Sin pagos no hay alta que cobrar: quien se registra entra y empieza su
+  // prueba. Dejar el muro puesto con el cobro apagado sería una puerta que no
+  // abre con ninguna llave (ver PAGOS_ACTIVOS).
+  if (!PAGOS_ACTIVOS) return false;
   if (profile.role !== 'trainer' && profile.role !== 'athlete') return false;
   // Las cuentas de la casa tampoco pagan el euro: no son clientes, son la
   // app enseñándose a sí misma.
