@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bienvenido a UDECA</title>
+<meta name="description" content="Tu alta está pagada. Regístrate con el mismo correo del pago y la cuenta se activa sola." />
+<meta name="robots" content="noindex" />
+<!--
+  ESTA PÁGINA NO DEPENDE DE NADA. NI DE UN CSS, NI DE UNA FUENTE, NI DE UN LOGO.
+
+  Y aquí importa más que en ninguna otra, porque es LA PÁGINA A LA QUE STRIPE
+  MANDA A ALGUIEN QUE ACABA DE PAGAR. Si esta dirección falla, la persona ve un
+  error justo después de darnos su dinero: no piensa "vaya, la web está caída",
+  piensa que el pago no ha ido y que le hemos cobrado igual. De ahí salen las
+  devoluciones y los correos enfadados.
+
+  POR QUÉ SE PUBLICA EN DOS SITIOS
+
+  Antes vivía solo en la web pública (Vercel, `www.udeca.app`), que se despliega
+  A MANO con `npx vercel --prod`. Eso ya falló una vez con las páginas legales:
+  se cambiaron, nadie se acordó de publicar, y Google Play devolvió "página no
+  encontrada" y bloqueó el envío. Con la página de después de pagar, el mismo
+  olvido sale mucho más caro.
+
+  Así que ahora también se publica en GitHub Pages (`app.udeca.app/gracias`),
+  que se despliega solo en cada push, sin que nadie tenga que acordarse. La URL
+  que se le da a Stripe es la de Pages, justamente por eso.
+
+  Y para que se vea igual en los dos sitios sin arrastrar el CSS de la web
+  pública, va todo dentro: el estilo en un <style>, la marca en texto y ni una
+  sola petición al exterior. Es la misma decisión que en privacidad.html.
+
+  Los enlaces del final van escritos a mano y no leídos de config.js por la
+  misma razón: en Pages no hay config.js.
+-->
+<style>
+  :root {
+    --bg: #080706;
+    --text: #f2ede7;
+    --muted: #a2968b;
+    --faint: #6f6760;
+    --gold: #c9bcae;
+    --hairline: rgba(162, 150, 139, 0.22);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 22px; }
+  header { border-bottom: 1px solid var(--hairline); }
+  header .wrap { display: flex; align-items: center; height: 64px; }
+  .brand {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 15px;
+  }
+  main { padding: 40px 0 70px; }
+  .eyebrow {
+    color: var(--gold);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 34px 0 10px; }
+  p, li { color: var(--muted); font-size: 16px; }
+  p { margin: 0 0 14px; }
+  b { color: var(--text); font-weight: 600; }
+  a { color: var(--gold); }
+  .idiomas { font-size: 14px; margin-bottom: 28px; }
+  .aviso {
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin: 26px 0;
+  }
+  .aviso p:last-child { margin-bottom: 0; }
+  ol { padding-left: 20px; }
+  ol li { margin-bottom: 12px; }
+  .cta {
+    display: inline-block;
+    margin: 8px 10px 6px 0;
+    padding: 13px 26px;
+    border-radius: 12px;
+    background: var(--gold);
+    color: #0a0908;
+    font-weight: 700;
+    font-size: 16px;
+    text-decoration: none;
+  }
+  .cta.suave {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--hairline);
+  }
+  hr { border: 0; height: 1px; background: var(--hairline); margin: 50px 0; }
+  footer { border-top: 1px solid var(--hairline); padding: 22px 0 40px; }
+  footer p { color: var(--faint); font-size: 13px; margin: 0; }
+  @media (min-width: 700px) { h1 { font-size: 42px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap"><a class="brand" href="https://www.udeca.app">UDECA</a></div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="eyebrow">Pago completado</p>
+    <h1>Ya eres de los nuestros</h1>
+    <p class="idiomas"><a href="#english">Read this page in English</a></p>
+
+    <p>
+      Tu alta está pagada. Para activarla solo falta una cosa, y es importante.
+    </p>
+
+    <div class="aviso">
+      <p>
+        <b>Regístrate con el mismo correo con el que acabas de pagar.</b> Ese correo es
+        lo único que une tu pago con tu cuenta.
+      </p>
+    </div>
+
+    <h2>Cómo activar tu cuenta</h2>
+    <ol>
+      <li><b>Abre UDECA.</b></li>
+      <li>
+        <b>Regístrate con el correo del pago.</b> Si usas otro distinto, tu alta se
+        queda esperando en el primero y tendrás que escribirnos para moverla.
+      </li>
+      <li>
+        <b>Ya está.</b> La app reconoce tu pago sola en unos segundos. Si te apareciera
+        la pantalla de activar, pulsa <b>“Ya he pagado”</b> y entras al momento.
+      </li>
+    </ol>
+
+    <p>
+      ¿Ya tenías cuenta con ese correo? Entonces no hay nada que hacer: al abrir la app
+      la verás activada.
+    </p>
+
+    <p style="margin-top:26px">
+      <a class="cta" href="https://app.udeca.app">Entrar en UDECA</a>
+      <a class="cta suave" href="https://www.udeca.app/#descargas">Descargar la app</a>
+    </p>
+
+    <p style="margin-top:24px">
+      ¿Algún problema con el pago o con el acceso? Escríbenos a
+      <a href="mailto:luistenaf@gmail.com?subject=Problema%20con%20mi%20pago">luistenaf@gmail.com</a>
+      y lo resolvemos.
+    </p>
+
+    <hr />
+
+    <p class="eyebrow">Payment complete</p>
+    <h1 id="english">You are in</h1>
+
+    <p>Your sign-up is paid. One thing left to activate it, and it matters.</p>
+
+    <div class="aviso">
+      <p>
+        <b>Sign up with the same email you just paid with.</b> That email is the only
+        thing linking your payment to your account.
+      </p>
+    </div>
+
+    <h2>How to activate your account</h2>
+    <ol>
+      <li><b>Open UDECA.</b></li>
+      <li>
+        <b>Sign up with the email you paid with.</b> If you use a different one, your
+        payment stays waiting on the first and you will have to write to us to move it.
+      </li>
+      <li>
+        <b>That's it.</b> The app picks up your payment on its own within seconds. If you
+        still see the activation screen, tap <b>“I have paid”</b> and you are in.
+      </li>
+    </ol>
+
+    <p>
+      Already had an account with that email? Nothing to do: open the app and you will
+      see it active.
+    </p>
+
+    <p style="margin-top:26px">
+      <a class="cta" href="https://app.udeca.app">Open UDECA</a>
+      <a class="cta suave" href="https://www.udeca.app/#descargas">Download the app</a>
+    </p>
+
+    <p style="margin-top:24px">
+      Any problem with the payment or with access? Write to
+      <a href="mailto:luistenaf@gmail.com?subject=Problem%20with%20my%20payment">luistenaf@gmail.com</a>
+      and we will sort it out.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap"><p>UDECA · Universidad de Calistenia</p></div>
+</footer>
+
+</body>
+</html>
