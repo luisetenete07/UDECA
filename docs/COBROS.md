@@ -153,8 +153,15 @@ un cobro no puede contar dos veces.
 Una vez por cada Payment Link (Payments → Payment Links → el enlace → editar):
 
 - **Después del pago → Redirigir a una página**, con la dirección
-  `https://www.udeca.app/gracias`. Es la página que explica cómo activar la
+  **`https://app.udeca.app/gracias`**. Es la página que explica cómo activar la
   cuenta; sin ella, el cliente paga y se queda mirando la pantalla de Stripe.
+
+  Ojo con el dominio: **`app.` y no `www.`**. La misma página está en los dos,
+  pero `www` es Vercel y se despliega A MANO, mientras que `app` se despliega
+  solo en cada push. Esta es la dirección a la que Stripe manda a alguien que
+  acaba de pagar: si un día falla, esa persona ve un error justo después de
+  darnos su dinero y piensa que le hemos cobrado sin darle nada. No puede
+  depender de que alguien se acuerde de publicar.
 - **Recopilar el correo del cliente**, activado. Sin correo no hay forma de unir
   el pago con la cuenta que se cree después, y el euro se pierde.
 

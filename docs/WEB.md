@@ -145,9 +145,9 @@ sitio y en castellano:
 - `comunidad`, `instagram`, `contacto`.
 
 En Stripe, en cada Payment Link, pon como página de confirmación
-`https://www.udeca.app/gracias`. Es la que le explica al cliente que tiene que
-registrarse **con el mismo correo del pago**, que es lo que vincula la
-suscripción con su cuenta.
+**`https://app.udeca.app/gracias`** (con `app.`, no `www.`: ver docs/COBROS.md).
+Es la que le explica al cliente que tiene que registrarse **con el mismo correo
+del pago**, que es lo que vincula la suscripción con su cuenta.
 
 ---
 
