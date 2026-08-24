@@ -148,6 +148,60 @@ un cobro no puede contar dos veces.
 
 ---
 
+## 3 bis · ENCENDER LOS COBROS (pendiente)
+
+Ahora mismo **UDECA no cobra**: `PAGOS_ACTIVOS = false` en `lib/planBase.ts`.
+Falta una sola cosa, y no está en este repositorio.
+
+### Lo que falta
+
+Los Payment Links se crearon en el **perfil de UDECA** (dentro de la
+organización de Stripe del coaching), pero las claves que hay en Vercel son de
+**la otra cuenta**. Cada perfil de Stripe tiene sus propias claves y sus propios
+webhooks: no se comparten.
+
+Con esa mezcla, alguien paga de verdad en UDECA, el servidor le pregunta a la
+otra cuenta, no encuentra ese pago y **la cuenta no se activa nunca**. Sin
+ningún error y con el dinero ya cobrado. Por eso está apagado.
+
+### Los cuatro enlaces, ya creados
+
+| Producto | Payment Link |
+|---|---|
+| Alta de atleta · 1 € | `https://buy.stripe.com/4gMdR8gL50UbbgY9nu3sI01` |
+| Plan de atleta · 10 €/mes | `https://buy.stripe.com/5kQ3cudyT8mDetafLS3sI03` |
+| Alta de entrenador · 1 € | `https://buy.stripe.com/5kQeVc8ezdGX84MbvC3sI00` |
+| Plan de entrenador · 180 €/año | `https://buy.stripe.com/eVqcN4cuP9qH70IgPW3sI02` |
+
+Son de producción (`buy.stripe.com/` sin `test_`): cobran de verdad.
+
+### Los pasos, en orden
+
+1. **En Stripe, con el perfil de UDECA seleccionado** (arriba a la izquierda) y
+   en modo **producción** (no "Test mode"):
+   - *Developers → API keys* → copia la **clave secreta** (`sk_live_…`).
+   - *Developers → Webhooks* → **Add endpoint** →
+     `https://udeca.vercel.app/api/stripe-webhook`, con los eventos
+     `checkout.session.completed`, `invoice.paid` y
+     `customer.subscription.deleted`. Copia su **signing secret** (`whsec_…`).
+
+   Ojo: si el webhook lo creas en modo pruebas, **no se dispara nunca** con un
+   pago real. Es el error que más caro sale aquí.
+
+2. **En Vercel**, proyecto de los webhooks → *Settings → Environment Variables*:
+   `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET` con esos dos valores. Y
+   **vuelve a desplegar**: las variables no se aplican a lo ya desplegado.
+
+3. **Avísame.** Yo pego los cuatro enlaces en `lib/subscription.ts` y los dos
+   del alta en `web/config.js`, y pongo `PAGOS_ACTIVOS = true`. Van juntos a
+   propósito y `check-stripe.mjs` no deja que se separen.
+
+4. **Pruébalo tú antes que nadie**: paga el alta de 1 € con tu tarjeta desde una
+   cuenta nueva y mira que se activa sola. Un euro es barato para saber que la
+   cadena entera funciona.
+
+---
+
 ## 4 · Qué hay que configurar en Stripe
 
 Una vez por cada Payment Link (Payments → Payment Links → el enlace → editar):

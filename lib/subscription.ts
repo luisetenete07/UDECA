@@ -80,31 +80,21 @@ export {
 } from './planBase';
 
 /**
- * Payment Links de Stripe. VACÍOS: ahora mismo no se cobra (ver PAGOS_ACTIVOS
- * en lib/planBase.ts).
+ * Payment Links de Stripe. VACÍOS a propósito: todavía no se cobra (ver
+ * PAGOS_ACTIVOS en lib/planBase.ts).
  *
- * Estaban puestos los de PRUEBA de Stripe, que no cobran de verdad: cualquiera
- * que hubiera pulsado habría llegado a una pantalla de pago de mentira. Fuera.
+ * LOS CUATRO YA EXISTEN Y ESTÁN APUNTADOS EN docs/COBROS.md, listos para pegar.
+ * No se ponen aquí todavía porque las claves de Stripe que hay en Vercel son de
+ * OTRA cuenta —la del coaching— y estos enlaces son del perfil de UDECA. Con
+ * esa mezcla, quien pagara no vería su cuenta activarse jamás.
  *
- * CUANDO SE VUELVA A COBRAR
- *
- * Se crean en el panel de Stripe (Payments → Payment Links) sobre sus precios y
- * se pegan aquí los CUATRO, los de producción (`buy.stripe.com/...`, sin
- * `test_`). La app les añade `?client_reference_id=<uid>` para que el webhook
- * active la cuenta correcta sola.
- *
- *   - Suscripción de entrenador: 180 €/año
- *   - Suscripción de atleta:      10 €/mes
- *   - Alta de entrenador:          1 € (pago único)
- *   - Alta de atleta:              1 € (pago único)
- *
- * Los dos del alta son los MISMOS que van en `web/config.js`: la web los usa
- * para quien llega de fuera y la app para quien se registró sin pasar por ella.
- * Si cambias uno, cambia el otro.
+ * Van juntos a propósito: los enlaces y el interruptor se encienden A LA VEZ, y
+ * check-stripe.mjs no deja que se separen. Un enlace puesto con el cobro
+ * apagado no hace daño en la app —manda CAN_LINK_TO_PAYMENT—, pero en la web sí:
+ * `web/config.js` no mira ningún interruptor, y ahí un enlace es un cobro real.
  *
  * Vacíos no rompen nada: `subscriptionCheckoutUrl` y `entryCheckoutUrl`
- * devuelven `null` cuando no hay enlace, y las pantallas ya saben qué hacer con
- * eso. Aun así, quien manda es `PAGOS_ACTIVOS`, no que estén vacíos.
+ * devuelven `null` cuando no hay enlace, y las pantallas ya saben qué hacer.
  */
 export const COACH_PAYMENT_LINK: string = '';
 export const ATHLETE_PAYMENT_LINK: string = '';

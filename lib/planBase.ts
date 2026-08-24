@@ -63,18 +63,37 @@ export function isAdmin(profile: UserProfile | null): boolean {
 /**
  * ¿Se cobra ya en UDECA?
  *
- * AHORA MISMO NO, y esto es lo único que hay que cambiar cuando se vuelva a
- * cobrar. Está aquí, en el fichero puro, porque lo mira la puerta de entrada
+ * Está aquí, en el fichero puro, porque lo mira la puerta de entrada
  * (`needsEntryPayment`) y esa tiene que poder comprobarse sin arrancar la app.
  *
- * POR QUÉ ESTÁ APAGADO
+ * AHORA MISMO NO, y falta UNA sola cosa: que las claves de Stripe que hay en
+ * Vercel sean las del perfil de UDECA.
  *
- * La cuenta de Stripe de UDECA no ha podido verificarse: una cuenta de Stripe
- * pertenece a una persona o a una empresa que existe legalmente, y UDECA
- * todavía no está dada de alta. Hasta que lo esté no hay dónde cobrar, así que
- * enseñar botones de pagar sería mandar a la gente a una puerta cerrada.
+ * Los cuatro Payment Links de producción ya existen y están apuntados en
+ * docs/COBROS.md, listos para pegar. Pero se crearon en el perfil UDECA, y las
+ * claves que hay en Vercel son de OTRA cuenta de Stripe (la del coaching).
+ * Encenderlo así sería lo peor que puede pasar aquí: el cliente paga de verdad
+ * en UDECA, el servidor le pregunta a la otra cuenta, no encuentra ese pago y
+ * la cuenta no se activa nunca. Sin ningún error, con el dinero ya cobrado.
  *
- * QUÉ APAGA, EXACTAMENTE
+ * DE QUÉ DEPENDE QUE UN PAGO SIRVA DE ALGO
+ *
+ * Encender esto solo enseña los botones. Que la cuenta se ACTIVE al pagar
+ * depende de dos cosas que viven fuera de este repositorio, en Vercel, y las
+ * dos tienen que ser DEL MISMO PERFIL DE STRIPE en el que están los enlaces:
+ *
+ *   - `STRIPE_SECRET_KEY` tiene que ser la de PRODUCCIÓN (`sk_live_…`).
+ *   - `STRIPE_WEBHOOK_SECRET` tiene que ser la de un endpoint creado en modo
+ *     PRODUCCIÓN de Stripe. Los webhooks son por modo: uno creado en pruebas
+ *     no se dispara nunca con un pago real, y el pago entra pero la cuenta no
+ *     se enciende. Escucha `checkout.session.completed`, `invoice.paid` y
+ *     `customer.subscription.deleted`.
+ *
+ * Si alguna de las dos se queda en modo pruebas, el cliente paga de verdad y no
+ * recibe nada. Es el peor fallo posible de todo esto, y no da ningún error: el
+ * dinero entra y no pasa nada más.
+ *
+ * QUÉ APAGA CUANDO ESTÁ EN `false`
  *
  *  1. Los sitios que ofrecían pagar (ver `CAN_LINK_TO_PAYMENT` en
  *     lib/subscription.ts): en su lugar se dice que todavía no está
