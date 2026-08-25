@@ -148,23 +148,27 @@ un cobro no puede contar dos veces.
 
 ---
 
-## 3 bis · ENCENDER LOS COBROS (pendiente)
+## 3 bis · Los cobros están ENCENDIDOS
 
-Ahora mismo **UDECA no cobra**: `PAGOS_ACTIVOS = false` en `lib/planBase.ts`.
-Falta una sola cosa, y no está en este repositorio.
+`PAGOS_ACTIVOS = true` en `lib/planBase.ts`, con los cuatro Payment Links de
+producción en `lib/subscription.ts` y los dos del alta también en
+`web/config.js`.
 
-### Lo que falta
+### Lo que tiene que seguir cuadrando
 
-Los Payment Links se crearon en el **perfil de UDECA** (dentro de la
-organización de Stripe del coaching), pero las claves que hay en Vercel son de
-**la otra cuenta**. Cada perfil de Stripe tiene sus propias claves y sus propios
-webhooks: no se comparten.
+Los enlaces se crearon en el **perfil de UDECA** de Stripe, y las claves de
+Vercel (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) son de **ese mismo
+perfil**. Esa coincidencia es todo lo que hace que un pago active una cuenta.
 
-Con esa mezcla, alguien paga de verdad en UDECA, el servidor le pregunta a la
-otra cuenta, no encuentra ese pago y **la cuenta no se activa nunca**. Sin
-ningún error y con el dinero ya cobrado. Por eso está apagado.
+Estuvo apagado un tiempo justo por eso: los enlaces eran del perfil de UDECA y
+las claves de la cuenta de coaching. Con esa mezcla el cliente paga de verdad,
+el servidor le pregunta a la cuenta equivocada, no encuentra el pago y **la
+cuenta no se activa nunca**. Sin ningún error y con el dinero ya cobrado.
 
-### Los cuatro enlaces, ya creados
+**Si algún día se cambia de perfil o de cuenta de Stripe, hay que mover LAS DOS
+COSAS a la vez**: los enlaces del repositorio y las dos claves de Vercel.
+
+### Los cuatro enlaces
 
 | Producto | Payment Link |
 |---|---|
@@ -173,32 +177,20 @@ ningún error y con el dinero ya cobrado. Por eso está apagado.
 | Alta de entrenador · 1 € | `https://buy.stripe.com/5kQeVc8ezdGX84MbvC3sI00` |
 | Plan de entrenador · 180 €/año | `https://buy.stripe.com/eVqcN4cuP9qH70IgPW3sI02` |
 
-Son de producción (`buy.stripe.com/` sin `test_`): cobran de verdad.
+### En iPhone no se cobra, y es a propósito
 
-### Los pasos, en orden
+`CAN_LINK_TO_PAYMENT` vale `PAGOS_ACTIVOS && Platform.OS !== 'ios'`. La norma
+3.1.1 de la App Store prohíbe enlazar a pagar contenido digital fuera de sus
+compras integradas. En iPhone la app dice el estado de la cuenta y ofrece volver
+a comprobarla; el cobro va por la web. Ver docs/TIENDAS.md.
 
-1. **En Stripe, con el perfil de UDECA seleccionado** (arriba a la izquierda) y
-   en modo **producción** (no "Test mode"):
-   - *Developers → API keys* → copia la **clave secreta** (`sk_live_…`).
-   - *Developers → Webhooks* → **Add endpoint** →
-     `https://udeca.vercel.app/api/stripe-webhook`, con los eventos
-     `checkout.session.completed`, `invoice.paid` y
-     `customer.subscription.deleted`. Copia su **signing secret** (`whsec_…`).
+### Si hay que apagarlo otra vez
 
-   Ojo: si el webhook lo creas en modo pruebas, **no se dispara nunca** con un
-   pago real. Es el error que más caro sale aquí.
-
-2. **En Vercel**, proyecto de los webhooks → *Settings → Environment Variables*:
-   `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET` con esos dos valores. Y
-   **vuelve a desplegar**: las variables no se aplican a lo ya desplegado.
-
-3. **Avísame.** Yo pego los cuatro enlaces en `lib/subscription.ts` y los dos
-   del alta en `web/config.js`, y pongo `PAGOS_ACTIVOS = true`. Van juntos a
-   propósito y `check-stripe.mjs` no deja que se separen.
-
-4. **Pruébalo tú antes que nadie**: paga el alta de 1 € con tu tarjeta desde una
-   cuenta nueva y mira que se activa sola. Un euro es barato para saber que la
-   cadena entera funciona.
+`PAGOS_ACTIVOS = false` y vaciar los cuatro enlaces (y dejar `web/config.js`
+apuntando a `/proximamente`). Van juntos: en la app un enlace suelto es
+inofensivo porque manda `CAN_LINK_TO_PAYMENT`, pero `web/config.js` no mira
+ningún interruptor y ahí un enlace es un cobro real. `check-stripe.mjs` no deja
+que se separen.
 
 ---
 

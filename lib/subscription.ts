@@ -80,26 +80,38 @@ export {
 } from './planBase';
 
 /**
- * Payment Links de Stripe. VACÍOS a propósito: todavía no se cobra (ver
- * PAGOS_ACTIVOS en lib/planBase.ts).
+ * Payment Links de Stripe, los CUATRO de producción. COBRAN DE VERDAD.
  *
- * LOS CUATRO YA EXISTEN Y ESTÁN APUNTADOS EN docs/COBROS.md, listos para pegar.
- * No se ponen aquí todavía porque las claves de Stripe que hay en Vercel son de
- * OTRA cuenta —la del coaching— y estos enlaces son del perfil de UDECA. Con
- * esa mezcla, quien pagara no vería su cuenta activarse jamás.
+ *   - Alta de entrenador:          1 € (pago único)
+ *   - Alta de atleta:              1 € (pago único)
+ *   - Suscripción de entrenador: 180 €/año
+ *   - Suscripción de atleta:      10 €/mes
  *
- * Van juntos a propósito: los enlaces y el interruptor se encienden A LA VEZ, y
- * check-stripe.mjs no deja que se separen. Un enlace puesto con el cobro
- * apagado no hace daño en la app —manda CAN_LINK_TO_PAYMENT—, pero en la web sí:
- * `web/config.js` no mira ningún interruptor, y ahí un enlace es un cobro real.
+ * Están creados en el perfil de UDECA, y las claves de Vercel
+ * (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) son de ESE MISMO perfil. Tienen
+ * que ir juntos: con las claves de otra cuenta, el pago entra y la cuenta no se
+ * activa nunca, sin dar ningún error. Ver PAGOS_ACTIVOS en lib/planBase.ts.
  *
- * Vacíos no rompen nada: `subscriptionCheckoutUrl` y `entryCheckoutUrl`
- * devuelven `null` cuando no hay enlace, y las pantallas ya saben qué hacer.
+ * La app les añade `?client_reference_id=<uid>` para que el webhook active la
+ * cuenta correcta sola, y `prefilled_email` para no hacer escribir el correo.
+ *
+ * NUNCA los de prueba (`buy.stripe.com/test_…`): abren la pasarela, aceptan la
+ * tarjeta, dan las gracias y no cobran nada, así que quien pulsara se quedaría
+ * convencido de haber pagado. Se distinguen por cinco letras y ya estuvieron
+ * publicados una vez, de ahí el guardián en scripts/check-pago-ios.mjs.
+ *
+ * Los dos del alta son los MISMOS que van en `web/config.js`: la web los usa
+ * para quien llega de fuera y la app para quien se registró sin pasar por ella.
+ * Si cambias uno, cambia el otro — check-stripe.mjs se queja si se separan.
  */
-export const COACH_PAYMENT_LINK: string = '';
-export const ATHLETE_PAYMENT_LINK: string = '';
-export const COACH_ENTRY_LINK: string = '';
-export const ATHLETE_ENTRY_LINK: string = '';
+export const COACH_PAYMENT_LINK: string =
+  'https://buy.stripe.com/eVqcN4cuP9qH70IgPW3sI02';
+export const ATHLETE_PAYMENT_LINK: string =
+  'https://buy.stripe.com/5kQ3cudyT8mDetafLS3sI03';
+export const COACH_ENTRY_LINK: string =
+  'https://buy.stripe.com/5kQeVc8ezdGX84MbvC3sI00';
+export const ATHLETE_ENTRY_LINK: string =
+  'https://buy.stripe.com/4gMdR8gL50UbbgY9nu3sI01';
 
 /** Enlace del alta con el uid dentro, para que el webhook sepa a quién activar. */
 export function entryCheckoutUrl(profile: UserProfile | null): string | null {

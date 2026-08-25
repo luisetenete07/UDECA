@@ -32,8 +32,8 @@ window.UDECA = {
    * toca, no aquí: nadie paga una suscripción antes de haber usado el producto.
    */
   pagos: {
-    altaAtleta: '/proximamente',
-    altaCoach: '/proximamente',
+    altaAtleta: 'https://buy.stripe.com/4gMdR8gL50UbbgY9nu3sI01',
+    altaCoach: 'https://buy.stripe.com/5kQeVc8ezdGX84MbvC3sI00',
   },
 
   /**

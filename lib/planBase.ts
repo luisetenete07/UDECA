@@ -66,15 +66,16 @@ export function isAdmin(profile: UserProfile | null): boolean {
  * Está aquí, en el fichero puro, porque lo mira la puerta de entrada
  * (`needsEntryPayment`) y esa tiene que poder comprobarse sin arrancar la app.
  *
- * AHORA MISMO NO, y falta UNA sola cosa: que las claves de Stripe que hay en
- * Vercel sean las del perfil de UDECA.
+ * AHORA MISMO SÍ. Los cuatro Payment Links de producción están en
+ * lib/subscription.ts y las claves de Vercel son del MISMO perfil de Stripe en
+ * el que se crearon (el de UDECA).
  *
- * Los cuatro Payment Links de producción ya existen y están apuntados en
- * docs/COBROS.md, listos para pegar. Pero se crearon en el perfil UDECA, y las
- * claves que hay en Vercel son de OTRA cuenta de Stripe (la del coaching).
- * Encenderlo así sería lo peor que puede pasar aquí: el cliente paga de verdad
- * en UDECA, el servidor le pregunta a la otra cuenta, no encuentra ese pago y
- * la cuenta no se activa nunca. Sin ningún error, con el dinero ya cobrado.
+ * Esa coincidencia es todo: estuvo apagado un tiempo justamente porque los
+ * enlaces eran del perfil de UDECA y las claves de otra cuenta, la del
+ * coaching. Con esa mezcla el cliente paga de verdad, el servidor le pregunta a
+ * la cuenta equivocada, no encuentra ese pago y la cuenta no se activa nunca:
+ * sin ningún error y con el dinero ya cobrado. Si algún día se cambia de perfil
+ * de Stripe, hay que mover LAS DOS COSAS a la vez.
  *
  * DE QUÉ DEPENDE QUE UN PAGO SIRVA DE ALGO
  *
@@ -111,7 +112,7 @@ export function isAdmin(profile: UserProfile | null): boolean {
  * por UDECA, va por el enlace de cobro que cada entrenador pone (ver
  * lib/enlaceDePago.ts), y sigue funcionando igual.
  */
-export const PAGOS_ACTIVOS = false;
+export const PAGOS_ACTIVOS = true;
 
 /**
  * Cuentas con acceso permanente, SIN poderes de administración.
