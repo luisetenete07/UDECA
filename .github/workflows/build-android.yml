@@ -20,9 +20,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Node 22, no 20.
+      #
+      # `eas-version: latest` instala la última eas-cli, y esa arrastra
+      # `@oclif/plugin-autocomplete`, que desde su 3.3.0 exige Node >= 22. Con
+      # 20 la instalación se para en seco ("The engine node is incompatible")
+      # y la compilación ni empieza.
+      #
+      # No es algo que hayamos cambiado nosotros: la dependencia subió su
+      # requisito y el fallo llegó solo, un día, sin tocar nada. El resto de
+      # workflows (deploy, verify) ya iban en 22; estos dos se habían quedado.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       # El modo legacy-peer-deps lo fija .npmrc, así que aquí y en las máquinas
       # de EAS se resuelve el mismo árbol que el del lockfile.
       - run: npm ci
