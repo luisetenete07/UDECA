@@ -127,15 +127,42 @@ export function caloriasDePasos(pasos: number, pesoKg?: number): number {
 }
 
 /**
+ * EL PASO FANTASMA DE ANDROID
+ *
+ * El sensor de Android (`TYPE_STEP_COUNTER`) cuenta desde que se encendió el
+ * teléfono, y suelta un primer aviso con ese total en cuanto alguien se pone a
+ * escuchar. Para que ese número no salga por la pantalla, el módulo de Expo
+ * toma como origen `total - 1`... y el resultado es que **el primer aviso
+ * siempre vale exactamente 1**, se haya andado o no.
+ *
+ * Ese 1 es el que llegaba a la app y se guardaba como los pasos del día. Quien
+ * pulsaba "traer los pasos del móvil" sentado en el sofá veía "1 paso", y con
+ * razón pensaba que el contador estaba roto: lo estaba, pero no por su móvil.
+ *
+ * Aquí se descuenta. Lo que queda son los pasos andados DE VERDAD mientras la
+ * app escuchaba, que puede ser cero — y cero es una respuesta honesta.
+ */
+export function sinElPasoFantasma(lectura: number): number {
+  return Math.max(0, Math.round(lectura) - 1);
+}
+
+/**
  * Qué cifra guardar cuando llega una lectura del teléfono.
  *
  * En iPhone la lectura es la del día entero, así que manda. En Android solo
  * cuenta lo andado con la app abierta, así que se suma a lo que ya había: si
  * se sustituyera, abrir UDECA por la tarde borraría la mañana.
  *
- * Y lo escrito a mano no lo pisa nunca una lectura parcial: quien se molesta
- * en teclear 12.000 pasos de su reloj no puede ver cómo se le quedan en 300
- * porque el móvil ha contado esos desde que abrió la app.
+ * UNA LECTURA NUNCA BAJA EL CONTADOR DEL DÍA
+ *
+ * Los pasos de un día solo pueden subir. Así que si la lectura viene por
+ * debajo de lo que ya había apuntado, no es que se haya andado menos: es que
+ * la lectura ha salido mal. Guardarla sería cambiar un dato bueno por uno malo.
+ *
+ * Antes esto solo protegía lo escrito a mano, y dejaba que una lectura
+ * defectuosa —un 1, un 0— se llevara por delante los 8.000 pasos que el propio
+ * teléfono había dado dos horas antes. Ahora protege las dos cosas: lo que se
+ * teclea desde un reloj y lo que ya había leído el móvil.
  */
 export function pasosAGuardar(
   previo: RegistroDePasos | null,
@@ -144,7 +171,7 @@ export function pasosAGuardar(
 ): number {
   const n = Math.max(0, Math.round(lectura));
   if (!previo) return n;
-  if (!acumulativo) return Math.max(n, previo.source === 'mano' ? previo.steps : 0);
+  if (!acumulativo) return Math.max(n, previo.steps);
   return previo.steps + n;
 }
 

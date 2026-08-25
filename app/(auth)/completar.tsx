@@ -53,6 +53,22 @@ export default function CompletarCuentaScreen() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Cerrar la sesión para entrar con otra cuenta.
+   *
+   * Si falla hay que DECIRLO. Antes se llamaba a `signOut` directamente desde
+   * el `onPress`, así que un error se perdía en una promesa sin recoger y la
+   * pantalla se quedaba igual: exactamente lo mismo que se ve cuando funciona
+   * pero no te sacan de aquí, y sin forma de distinguir un caso del otro.
+   */
+  const salir = async () => {
+    try {
+      await signOut();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se ha podido cerrar la sesión.');
+    }
+  };
+
   const guardar = async () => {
     if (!name.trim()) {
       setError('Pon tu nombre para que tu entrenador sepa quién eres.');
@@ -141,8 +157,9 @@ export default function CompletarCuentaScreen() {
         style={{ marginTop: spacing.md }}
       />
       {/* Salida para quien entró con la cuenta equivocada: sin esto se
-          quedaría atrapado aquí, con sesión abierta y sin poder cambiarla. */}
-      <Pressable onPress={signOut} hitSlop={8} style={styles.salir}>
+          quedaría atrapado aquí, con sesión abierta y sin poder cambiarla.
+          Quien saca de esta pantalla al cerrar la sesión es (auth)/_layout. */}
+      <Pressable onPress={salir} hitSlop={8} style={styles.salir}>
         <Text style={styles.salirTexto}>Entrar con otra cuenta</Text>
       </Pressable>
     </ScreenContainer>

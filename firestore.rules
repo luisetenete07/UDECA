@@ -458,16 +458,39 @@ service cloud.firestore {
     // usuario escribe únicamente las suyas; las leen los miembros del mismo
     // entrenador (y el propio entrenador).
     match /socialStats/{userId} {
+      function miEntrenador() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.get('trainerId', '');
+      }
+
       allow read: if request.auth != null
         && (
           resource.data.uid == request.auth.uid
           || resource.data.trainerId == request.auth.uid
-          || resource.data.trainerId ==
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
+          || resource.data.trainerId == miEntrenador()
         );
+      /*
+       * Cada uno escribe la suya, Y SOLO EN EL GRUPO AL QUE PERTENECE DE
+       * VERDAD.
+       *
+       * Antes solo se comprobaba que el uid fuera el suyo, y el `trainerId` lo
+       * ponía quien escribía. Eso dejaba dos agujeros:
+       *
+       *  - Un alumno expulsado seguía apareciendo en la clasificación de su
+       *    antiguo grupo, porque su app —con el perfil viejo aún en memoria—
+       *    volvía a escribir la ficha con el entrenador de siempre. Se borraba
+       *    y volvía sola.
+       *  - Y cualquiera podía meterse en el ranking de CUALQUIER entrenador
+       *    sin más que escribir su uid ahí, con el nombre que quisiera.
+       *
+       * Ahora el grupo lo decide el perfil, que solo escribe el propio
+       * entrenador al aceptar a alguien. Quien no tenga entrenador no publica
+       * nada, que es justo lo que hace la app (ver `syncMySocialStats`).
+       */
       allow create, update: if request.auth != null
         && request.auth.uid == userId
-        && request.resource.data.uid == request.auth.uid;
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.trainerId == miEntrenador();
       // El entrenador puede borrar la entrada de un alumno de su grupo (limpiar
       // la clasificación de perfiles antiguos o de prueba), y cada uno la suya:
       // esta ficha lleva el nombre a la vista, así que al borrarse la cuenta

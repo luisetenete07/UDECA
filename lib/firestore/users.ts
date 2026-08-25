@@ -184,8 +184,24 @@ export async function updateClientStatus(
  * El entrenador saca a un alumno de su grupo: elimina el vínculo (trainerId)
  * de su perfil. No borra la cuenta del alumno ni sus datos; simplemente deja
  * de pertenecer a este entrenador y podrá vincularse a otro con un código.
+ *
+ * Y SE VA TAMBIÉN DE LA CLASIFICACIÓN
+ *
+ * La ficha del ranking (`socialStats`) es un documento aparte, con su propia
+ * copia del `trainerId`. Quitar el vínculo del perfil no la tocaba, así que el
+ * alumno expulsado seguía compitiendo en el grupo del que acababa de salir,
+ * con su nombre y su foto a la vista de todos. Para el entrenador eso no es un
+ * detalle: expulsar a alguien y que siga ahí es no haberlo expulsado.
+ *
+ * Se borra ANTES de soltar el vínculo, y no después, porque las reglas dan
+ * permiso al entrenador mirando ese mismo `trainerId`. Al revés, el borrado
+ * quedaría fuera de plazo por un instante.
+ *
+ * Si el borrado falla, la expulsión se hace igual: quedarse en el grupo es
+ * peor que quedarse en una lista.
  */
 export async function removeClientFromTrainer(clientId: string) {
+  await deleteDoc(doc(db, 'socialStats', clientId)).catch(() => {});
   await updateDoc(doc(db, 'users', clientId), { trainerId: deleteField() });
 }
 

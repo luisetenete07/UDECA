@@ -31,6 +31,7 @@ import { RirPicker } from '../../components/RirPicker';
 import { anclaConPausas, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
 import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
+import { UltimoEntreno } from '../../components/UltimoEntreno';
 import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
 import {
@@ -50,6 +51,7 @@ import {
 } from '../../lib/gtg';
 import { PantallaGtg } from '../../components/PantallaGtg';
 import { getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
+import { ultimoEntrenoDe } from '../../lib/ultimoEntreno';
 import {
   addFlexRestDay,
   removeFlexRestDay,
@@ -1111,6 +1113,14 @@ export default function WorkoutScreen() {
    */
   const sesionEmpezada =
     inProgress || (!!pristineRef.current && JSON.stringify(log) !== pristineRef.current);
+
+  /**
+   * Por dónde ibas: el último entreno de ESTA rutina.
+   *
+   * Es lo que permite retomar un ciclo en vez de reiniciarlo. Se calcula aquí,
+   * con el historial ya cargado, y se le pasa a la tarjeta de arriba.
+   */
+  const ultimoEntreno = ultimoEntrenoDe(history, routine);
   // En Sensaciones, "flexAgain" permite ignorar la tarjeta de completado para
   // encadenar un segundo entreno el mismo día.
   const showCompleted = !!completedTodayLog && !inProgress && !corrigiendo && !(isFlex && flexAgain);
@@ -1580,6 +1590,19 @@ export default function WorkoutScreen() {
           ya está entrenando y le seguía saliendo. Ahora se compara el entreno
           con el que salió en blanco: si difiere en algo, es que está en
           marcha. */}
+      {/* Por dónde ibas y por dónde sigue el ciclo. Va justo antes de "apuntar
+          otro día" y por el mismo motivo: es aquí, al abrir el entreno, donde
+          uno se da cuenta de que lleva días sin aparecer. Y desaparece en
+          cuanto la sesión arranca, igual que la de al lado. */}
+      {!sesionEmpezada && routine ? (
+        <UltimoEntreno
+          ultimo={ultimoEntreno}
+          routine={routine}
+          onSeguirPor={handleSetTodayIndex}
+          onElegirDia={() => setDayPickerOpen(true)}
+        />
+      ) : null}
+
       {!sesionEmpezada ? <RegistrarOtroDia /> : null}
 
       {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app:

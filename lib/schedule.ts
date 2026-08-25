@@ -102,11 +102,29 @@ export function resolveSessionFor(
     return { day: routine.days[0] ?? null, isRest: false, optionalRest: false };
   }
 
-  if (routine.schedule === 'cycle' && routine.cycleStartDate) {
-    // El ancla más reciente manda: si el alumno reinició su ciclo (override) o
-    // el coach lo reprogramó (cycleStartDate), gana la fecha más nueva.
-    const anchor = Math.max(routine.cycleStartDate, anchorOverride ?? 0);
-    const idx = cycleDayIndex(anchor, routine.days.length, when);
+  if (routine.schedule === 'cycle') {
+    /*
+     * EL ANCLA MÁS RECIENTE MANDA
+     *
+     * Si el alumno reinició su ciclo o fijó qué día es hoy (`anchorOverride`),
+     * o el coach lo reprogramó (`cycleStartDate`), gana la fecha más nueva.
+     *
+     * OJO CON EL CICLO SIN FECHA DE INICIO
+     *
+     * Antes esta rama exigía que `cycleStartDate` tuviera valor, y un plan por
+     * ciclos guardado sin ella —que es lo que queda cuando nadie toca la fecha
+     * al crearlo— se caía al modo semanal sin avisar. El efecto era que el
+     * ciclo NO rotaba: salía siempre el primer día, y ni "reiniciar el ciclo"
+     * ni "fijar el día de hoy" servían de nada. Funcionaban en pantalla —la
+     * app cambiaba el día seleccionado— y al volver a entrar estaba otra vez
+     * el Día 1, que es la peor forma de fallar: parece que va.
+     *
+     * Ahora basta con que haya UN ancla, venga de quien venga. Y si no hay
+     * ninguna, el ciclo empieza hoy por el Día 1, que es lo que uno espera de
+     * un plan recién puesto.
+     */
+    const anchor = Math.max(routine.cycleStartDate ?? 0, anchorOverride ?? 0);
+    const idx = anchor > 0 ? cycleDayIndex(anchor, routine.days.length, when) : 0;
     const day = routine.days[idx] ?? null;
     return {
       day: day && !day.isRest ? day : null,

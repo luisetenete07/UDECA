@@ -19,6 +19,7 @@ import {
   pasosAGuardar,
   pasosDeHoy,
   progresoDePasos,
+  sinElPasoFantasma,
   textoDelBalance,
   textoDePasos,
   ultimosSieteDias,
@@ -93,6 +94,36 @@ console.log('\nQué se guarda cuando llega una lectura del móvil');
   comprueba('lo escrito a mano no lo pisa una lectura menor', pasosAGuardar(aMano, 300, { acumulativo: false }) === 12000);
   comprueba('pero una lectura mayor sí manda', pasosAGuardar(aMano, 15000, { acumulativo: false }) === 15000);
   comprueba('una lectura negativa no resta', pasosAGuardar(null, -50, { acumulativo: false }) === 0);
+
+  /*
+   * Y TAMPOCO LO PISA LO QUE YA HABÍA LEÍDO EL PROPIO TELÉFONO.
+   *
+   * Los pasos de un día solo suben. Una lectura por debajo de lo apuntado no
+   * es que se haya andado menos: es una lectura mala. Antes solo se protegía
+   * lo escrito a mano, así que un 1 defectuoso se llevaba por delante los
+   * 8.000 que el mismo móvil había dado dos horas antes.
+   */
+  const delMovil = { date: 0, steps: 8000, source: 'telefono' };
+  comprueba('una lectura mala no baja el contador', pasosAGuardar(delMovil, 1, { acumulativo: false }) === 8000);
+  comprueba('un cero tampoco', pasosAGuardar(delMovil, 0, { acumulativo: false }) === 8000);
+}
+
+console.log('\nEl paso fantasma de Android');
+{
+  /*
+   * El sensor de Android cuenta desde que se encendió el móvil y suelta un
+   * primer aviso nada más ponerse a escuchar. El módulo de Expo toma como
+   * origen `total - 1`, así que ese primer aviso vale SIEMPRE 1, se haya
+   * andado o no. Ese 1 es el que se guardaba como los pasos del día: quien
+   * pulsaba el botón sentado veía "1 paso" y pensaba, con razón, que el
+   * contador estaba roto.
+   */
+  comprueba('el primer aviso, que siempre vale 1, no cuenta como un paso', sinElPasoFantasma(1) === 0);
+  comprueba('sin ese paso, lo demás es lo andado de verdad', sinElPasoFantasma(24) === 23);
+  comprueba('un cero no se vuelve negativo', sinElPasoFantasma(0) === 0);
+  // Y sin haber andado no se guarda nada: guardar un cero marcaría el día como
+  // leído del teléfono sin haber leído nada.
+  comprueba('lo que se sumaría tras el fantasma es cero', pasosAGuardar({ date: 0, steps: 4000, source: 'telefono' }, sinElPasoFantasma(1), { acumulativo: true }) === 4000);
 }
 
 console.log('\nLas calorías, que son una estimación');

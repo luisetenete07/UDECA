@@ -191,6 +191,59 @@ await comprobar('borrar su propia ficha de la clasificación', true, () =>
     updatedAt: Date.now(),
   }).then(() => deleteDoc(doc(db, 'socialStats', otro.user.uid)))
 );
+
+/*
+ * EN QUÉ CLASIFICACIÓN PUEDE APARECER CADA UNO
+ *
+ * El grupo lo dice el perfil, que solo escribe el entrenador al aceptar a
+ * alguien. Antes lo decía quien escribía la ficha, y eso valía para dos cosas
+ * malas: colarse en el ranking de cualquier entrenador con el nombre que se
+ * quisiera, y —la que se notaba— volver solo al grupo del que te acababan de
+ * expulsar, porque la app del alumno seguía escribiendo con el perfil viejo.
+ */
+await comprobar('meterse en la clasificación de otro entrenador', false, () =>
+  setDoc(doc(db, 'socialStats', otro.user.uid), {
+    uid: otro.user.uid,
+    // Un entrenador que no es el suyo: el propio alumno.
+    trainerId: alumno.id,
+    name: 'Colado',
+    updatedAt: Date.now(),
+  })
+);
+await comprobar('publicar en la clasificación de SU entrenador', true, () =>
+  setDoc(doc(db, 'socialStats', otro.user.uid), {
+    uid: otro.user.uid,
+    trainerId: otro.user.uid === coach.user.uid ? otro.user.uid : coach.user.uid,
+    name: 'Prueba',
+    updatedAt: Date.now(),
+  })
+);
+// Y el entrenador puede sacarlo, que es lo que pasa al expulsarlo.
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador saca a un alumno de la clasificación', true, () =>
+  deleteDoc(doc(db, 'socialStats', otro.user.uid))
+);
+
+/*
+ * Y SE DEVUELVE LO BORRADO.
+ *
+ * Esta comprobación borra de verdad una ficha que viene de la semilla. Sin
+ * reponerla, la siguiente prueba que mire la clasificación se encuentra un
+ * miembro menos y falla por algo que no tiene nada que ver con lo que estaba
+ * probando — que es la peor manera de perder una tarde.
+ */
+await signInWithEmailAndPassword(auth, otroEmail, PW);
+await comprobar('y la ficha se repone para la siguiente prueba', true, () =>
+  setDoc(doc(db, 'socialStats', otro.user.uid), {
+    uid: otro.user.uid,
+    trainerId: coach.user.uid,
+    name: otro.user.displayName || (otroEmail === 'alumno2@demo.test' ? 'Ana Gil' : 'Marcos Ruiz'),
+    currentStreak: 0,
+    sessionsThisWeek: 0,
+    totalWorkouts: 0,
+    updatedAt: Date.now(),
+  })
+);
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
 
 console.log('\nEsfuerzo (RIR) y programación de la semana');

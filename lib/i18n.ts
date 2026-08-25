@@ -991,7 +991,9 @@ export const EN: Record<string, string> = {
   'Este móvil no tiene contador de pasos': 'This phone has no step counter',
   'Sin permiso de actividad no se pueden leer los pasos':
     'Without activity permission the steps cannot be read',
-  'Pasos del día actualizados': "Today's steps updated",
+  'Traídos {0} pasos de tu iPhone': '{0} steps brought over from your iPhone',
+  'Tu iPhone no tiene pasos guardados de hoy. Comprueba en Ajustes › Privacidad › Movimiento y forma física.':
+    'Your iPhone has no steps saved for today. Check Settings › Privacy › Motion & Fitness.',
   'No se ha podido leer el contador del móvil': "Couldn't read the phone's counter",
   'Escribe cuántos pasos has dado': 'Type how many steps you took',
   'Pasos guardados': 'Steps saved',
@@ -1416,6 +1418,15 @@ export const EN: Record<string, string> = {
   '{0} días parado': '{0} days idle',
   'Hace {0} días': '{0} days ago',
   'hace {0} días': '{0} days ago',
+  // Retomar el ciclo por donde ibas (components/UltimoEntreno.tsx).
+  hoy: 'today',
+  ayer: 'yesterday',
+  'Tu último entreno': 'Your last session',
+  'Tu ciclo sigue por el {0}.': 'Your cycle carries on with {0}.',
+  'Tu ciclo sigue por el {0}, que es descanso.':
+    'Your cycle carries on with {0}, which is a rest day.',
+  'Seguir por el {0}': 'Carry on with {0}',
+  'Elegir otro día': 'Pick another day',
   'hace {0} semanas': '{0} weeks ago',
   'hace {0} meses': '{0} months ago',
   'Ver los {0} días': 'See all {0} days',
@@ -1986,9 +1997,10 @@ export const EN: Record<string, string> = {
   'Lleva tus cobros, tus bloques y tus tareas al calendario del móvil. Puedes volver a pulsarlo cuando quieras: actualiza lo que hay, no lo duplica.':
     "Take your payments, your blocks and your tasks to your phone's calendar. You can press it again whenever you like: it updates what is there, it does not duplicate it.",
   'Nada con fecha todavía': 'Nothing dated yet',
-  'Pasos sumados desde el móvil': 'Steps added from your phone',
-  'Android solo cuenta con la app abierta. Escríbelos a mano si llevas reloj.':
-    'Android only counts with the app open. Type them in by hand if you wear a watch.',
+  'Sumados {0} pasos andados con la app abierta':
+    '{0} steps walked with the app open have been added',
+  'Android solo cuenta los pasos con la app abierta. Escríbelos a mano si llevas reloj o usas otra app.':
+    'Android only counts steps while the app is open. Type them in by hand if you wear a watch or use another app.',
   'Una semana seguida entrenando.': 'A full week of training.',
   '¡Un mes entero de racha!': 'A whole month of streak!',
   'Un año. Trescientos sesenta y cinco días.': 'A year. Three hundred and sixty-five days.',

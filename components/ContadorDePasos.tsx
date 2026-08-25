@@ -16,6 +16,7 @@ import {
   pasosAGuardar,
   pasosDeHoy,
   progresoDePasos,
+  sinElPasoFantasma,
   textoDePasos,
   ultimosSieteDias,
 } from '../lib/pasos';
@@ -102,28 +103,63 @@ export function ContadorDePasos({
         return;
       }
       if (Platform.OS === 'ios') {
-        const { steps } = await Pedometer.getStepCountAsync(new Date(inicioDelDia(Date.now())), new Date());
-        await guardar(pasosAGuardar(hoy, steps, { acumulativo: false }), 'telefono');
-        showToast('Pasos del día actualizados');
+        /*
+         * En iPhone se le puede preguntar al teléfono por el día entero, con
+         * la app cerrada incluida: esta cifra es la buena y manda sobre lo que
+         * hubiera (salvo que sea menor, ver `pasosAGuardar`).
+         */
+        const { steps } = await Pedometer.getStepCountAsync(
+          new Date(inicioDelDia(Date.now())),
+          new Date()
+        );
+        const leidos = Math.max(0, Math.round(Number(steps) || 0));
+        // Cero no es un éxito: o no se ha andado, o el teléfono no lo está
+        // guardando. Decir "actualizado" ahí es lo que hace que alguien se
+        // quede pensando que la app cuenta mal.
+        if (leidos === 0) {
+          showToast(
+            'Tu iPhone no tiene pasos guardados de hoy. Comprueba en Ajustes › Privacidad › Movimiento y forma física.'
+          );
+          return;
+        }
+        await guardar(pasosAGuardar(hoy, leidos, { acumulativo: false }), 'telefono');
+        showToast(frase`Traídos ${conMiles(leidos)} pasos de tu iPhone`);
         return;
       }
-      // Android: se escucha unos segundos y se suma lo contado.
-      const contados = await new Promise<number>((resolve) => {
-        let ultimo = 0;
-        const sub = Pedometer.watchStepCount((r: { steps: number }) => {
-          ultimo = r.steps;
-        });
-        setTimeout(() => {
-          sub.remove();
-          resolve(ultimo);
-        }, 4000);
-      });
-      await guardar(pasosAGuardar(hoy, contados, { acumulativo: true }), 'telefono');
-      showToast(
-        contados > 0
-          ? 'Pasos sumados desde el móvil'
-          : 'Android solo cuenta con la app abierta. Escríbelos a mano si llevas reloj.'
+
+      /*
+       * Android no deja preguntar por el día: su `getStepCountAsync` ni
+       * siquiera existe, lanza "not supported". Lo único que hay es escuchar el
+       * sensor, y ese solo cuenta mientras la app está delante.
+       *
+       * Se escucha un momento y lo andado se SUMA a lo que ya hubiera, porque
+       * sustituirlo borraría la mañana de quien abre UDECA por la tarde. Y se
+       * descuenta el paso fantasma que regala el módulo (ver
+       * `sinElPasoFantasma` en lib/pasos.ts): era el que ponía "1 paso" a todo
+       * el mundo.
+       */
+      const contados = sinElPasoFantasma(
+        await new Promise<number>((resolve) => {
+          let ultimo = 0;
+          const sub = Pedometer.watchStepCount((r: { steps: number }) => {
+            ultimo = r.steps;
+          });
+          setTimeout(() => {
+            sub.remove();
+            resolve(ultimo);
+          }, 4000);
+        })
       );
+      if (contados === 0) {
+        // Sin dar nada por leído: guardar un cero no aporta y encima marca el
+        // día como si viniera del teléfono.
+        showToast(
+          'Android solo cuenta los pasos con la app abierta. Escríbelos a mano si llevas reloj o usas otra app.'
+        );
+        return;
+      }
+      await guardar(pasosAGuardar(hoy, contados, { acumulativo: true }), 'telefono');
+      showToast(frase`Sumados ${conMiles(contados)} pasos andados con la app abierta`);
     } catch {
       showToast('No se ha podido leer el contador del móvil');
     } finally {
