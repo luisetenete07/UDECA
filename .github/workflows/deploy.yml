@@ -171,7 +171,43 @@ jobs:
             fi
           done
           if [ "$fallos" -eq 0 ]; then
-            echo "Las dos páginas legales están en vivo."
+            echo "Las cuatro páginas están en vivo."
           else
             echo "::warning::$fallos página(s) sin confirmar. Vuelve a lanzar esta acción en unos minutos."
+          fi
+
+      # Y LA WEB PÚBLICA, que es la que se olvida.
+      #
+      # `www.udeca.app` va por Vercel y se despliega A MANO. Este workflow no
+      # puede publicarla, pero sí puede decir si lo que hay publicado es lo de
+      # ahora o lo de la semana pasada, que es la pregunta que de verdad
+      # importa y la única que nadie se acuerda de hacerse.
+      #
+      # Se mira el botón de alta: si los pagos están encendidos tiene que
+      # llevar a Stripe, y si están apagados a /proximamente. Es el sitio donde
+      # más caro sale equivocarse —un botón de pagar que no cobra, o un cobro
+      # ofrecido cuando no debería—, y se ve desde fuera sin entrar en Vercel.
+      #
+      # No tumba el despliegue: la app ya está publicada y esto es un aviso
+      # sobre OTRA web. Sale como warning, arriba del todo, para que se lea.
+      - name: Comprobar la web pública (Vercel)
+        continue-on-error: true
+        run: |
+          if grep -q 'export const PAGOS_ACTIVOS = true;' lib/planBase.ts; then
+            espera='buy.stripe.com'; que='los enlaces de Stripe'
+          else
+            espera='/proximamente'; que='el aviso de que no se cobra'
+          fi
+
+          codigo=$(curl -sL -o /tmp/web.js -w '%{http_code}' https://www.udeca.app/config.js || echo 000)
+          if [ "$codigo" != "200" ]; then
+            echo "::warning::www.udeca.app no responde (código $codigo). ¿Está desplegada?"
+            exit 0
+          fi
+
+          if grep -q "$espera" /tmp/web.js; then
+            echo "OK  www.udeca.app está al día: lleva $que."
+          else
+            echo "::warning::www.udeca.app está DESFASADA: debería llevar $que y no lo lleva."
+            echo "::warning::Es Vercel y se despliega a mano. Conéctala a GitHub (Settings -> Git, Root Directory 'web') o lanza: cd web && npx vercel --prod"
           fi
