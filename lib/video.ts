@@ -122,6 +122,87 @@ export function miniaturaDelEnlace(url: string | undefined): string | null {
 }
 
 /**
+ * EN EL DOMINIO DE YOUTUBE VIVEN DOS COSAS QUE NO SE PARECEN EN NADA
+ *
+ *  - Las PIEZAS del reproductor: `/iframe_api`, `/s/player/…/base.js`,
+ *    `/youtubei/v1/…`. Sin ellas no hay vídeo, solo un rectángulo negro.
+ *  - Las PÁGINAS: `/watch`, `/@alguien`, `/results`, `/share`. Ahí es donde
+ *    llevan el logo y el "Ver en YouTube", y ahí es donde no se va.
+ *
+ * Bloquear el dominio entero, que es lo que se hacía, dejaba los vídeos en
+ * negro en iPhone y en Android: la API no cargaba nunca y el reproductor no
+ * llegaba a montarse. En el ordenador no se notaba porque ahí el vídeo va en un
+ * iframe normal y nadie le pregunta a estas funciones.
+ *
+ * POR QUÉ ESTO ES UNA LISTA DE LO QUE SÍ, Y NO DE LO QUE NO
+ *
+ * El primer intento fue al revés: una lista de las páginas a bloquear
+ * (`/watch`, `/channel`, `/@…`). Duró lo que tardó la prueba en recordarme
+ * `/share`, que no estaba en la lista y se colaba. Y esa es la naturaleza del
+ * problema: las rutas de YouTube las decide YouTube, y cualquiera que yo no
+ * conozca se convierte en una salida abierta.
+ *
+ * Las piezas que el reproductor necesita, en cambio, sí son un conjunto
+ * cerrado y conocido. Enumerar ESO y negar el resto convierte un olvido mío en
+ * un vídeo que no carga —visible al instante— en vez de en una puerta de salida
+ * que nadie ve hasta que un alumno se encuentra el curso abierto en YouTube.
+ */
+const RUTAS_DEL_REPRODUCTOR = [
+  '/iframe_api', // el guion que monta el reproductor
+  '/s/', // su código y sus recursos (/s/player/…/base.js)
+  '/yts/', // los mismos, en la forma antigua
+  '/youtubei/', // de dónde saca los datos del vídeo
+  '/embed/', // el marco del vídeo
+  '/api/stats/', // los avisos de "va bien / va a tirones"
+  '/api/timedtext', // los subtítulos
+  '/ptracking',
+  '/generate_204', // comprobaciones de red, sin contenido
+  '/player_204',
+  '/error_204',
+  '/videoplayback', // el vídeo, cuando no viene por googlevideo.com
+];
+
+function esRutaDelReproductor(ruta: string): boolean {
+  return RUTAS_DEL_REPRODUCTOR.some((r) =>
+    r.endsWith('/') ? ruta.startsWith(r) : ruta === r || ruta.startsWith(`${r}?`)
+  );
+}
+
+/**
+ * Dominios que solo sirven piezas: no tienen páginas donde perderse, así que
+ * se admiten enteros.
+ */
+const DOMINIOS_DE_PIEZAS = [
+  'youtube-nocookie.com',
+  'googlevideo.com',
+  'ytimg.com',
+  'gstatic.com',
+  'player.vimeo.com',
+  'vimeocdn.com',
+];
+
+/**
+ * ¿Esta dirección es una pieza del reproductor, y no una página?
+ *
+ * `youtu.be` no aparece por ningún lado a propósito: ese dominio solo sirve
+ * para mandarte a la página del vídeo.
+ */
+function esPiezaDelReproductor(destino: string): boolean {
+  try {
+    const u = new URL(destino);
+    const host = u.hostname.replace(/^www\./, '');
+    if (DOMINIOS_DE_PIEZAS.some((d) => host === d || host.endsWith(`.${d}`))) return true;
+    // En youtube.com se mira la ruta, porque ahí conviven las dos cosas.
+    if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
+      return esRutaDelReproductor(u.pathname);
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * ¿Puede el WebView cargar esta dirección?
  *
  * Solo el propio reproductor y los dominios que necesita para funcionar. Todo
@@ -131,19 +212,17 @@ export function miniaturaDelEnlace(url: string | undefined): string | null {
  */
 export function seQuedaDentro(destino: string, embedUrl: string): boolean {
   if (destino === embedUrl || destino === 'about:blank') return true;
+  if (esPiezaDelReproductor(destino)) return true;
+  /*
+   * El mismo sitio del que salió el vídeo, para lo que no sea YouTube ni Vimeo
+   * (un .mp4 alojado en cualquier parte). En YouTube esto NO vale como permiso
+   * —lo de arriba ya ha decidido, mirando la ruta—, porque el embed vive en el
+   * mismo dominio que la página del vídeo.
+   */
   try {
     const host = new URL(destino).hostname.replace(/^www\./, '');
-    const propio = new URL(embedUrl).hostname.replace(/^www\./, '');
-    if (host === propio) return true;
-    // Lo que el reproductor carga por dentro para poder reproducir.
-    return [
-      'youtube-nocookie.com',
-      'googlevideo.com',
-      'ytimg.com',
-      'player.vimeo.com',
-      'vimeocdn.com',
-      'f.vimeocdn.com',
-    ].some((d) => host === d || host.endsWith(`.${d}`));
+    if (/(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(host)) return false;
+    return host === new URL(embedUrl).hostname.replace(/^www\./, '');
   } catch {
     return false;
   }
@@ -162,20 +241,13 @@ export function seQuedaDentroDelBlindaje(destino: string): boolean {
   if (destino === 'about:blank' || destino.startsWith('data:')) return true;
   try {
     const u = new URL(destino);
-    const host = u.hostname.replace(/^www\./, '');
     // La propia página del reproductor se carga con un origen prestado
     // (youtube.com o player.vimeo.com) para que la API de la plataforma pueda
     // hablar con ella. Ese origen se admite A SECAS: sin ruta, que es como
-    // llega. Con ruta ya sería la página de YouTube, y ahí no se va.
+    // llega.
     if (u.pathname === '' || u.pathname === '/') return true;
-    return [
-      'youtube-nocookie.com',
-      'googlevideo.com',
-      'ytimg.com',
-      'player.vimeo.com',
-      'vimeocdn.com',
-    ].some((d) => host === d || host.endsWith(`.${d}`));
   } catch {
     return false;
   }
+  return esPiezaDelReproductor(destino);
 }

@@ -1102,6 +1102,15 @@ export default function WorkoutScreen() {
     ? history.find((l) => l.routineId === routine.id && esMismoDia(l.date))
     : undefined;
   const inProgress = doneSets > 0 || restored;
+  /**
+   * ¿Ha empezado ya de verdad?
+   *
+   * Más pronto que `inProgress`: cuenta desde que se escribe la primera
+   * repetición, no desde que se cierra la primera serie. Se usa para quitar de
+   * en medio lo que solo tiene sentido antes de empezar.
+   */
+  const sesionEmpezada =
+    inProgress || (!!pristineRef.current && JSON.stringify(log) !== pristineRef.current);
   // En Sensaciones, "flexAgain" permite ignorar la tarjeta de completado para
   // encadenar un segundo entreno el mismo día.
   const showCompleted = !!completedTodayLog && !inProgress && !corrigiendo && !(isFlex && flexAgain);
@@ -1560,9 +1569,18 @@ export default function WorkoutScreen() {
       ) : null}
 
       {/* Apuntar un entreno de otro día, a la vista y no en el menú de los tres
-          puntos: es aquí donde uno se da cuenta de que ayer no lo apuntó. Con
-          la sesión en marcha desaparece —lo que toca entonces es entrenar. */}
-      {!inProgress ? <RegistrarOtroDia /> : null}
+          puntos: es aquí donde uno se da cuenta de que ayer no lo apuntó.
+
+          Solo AL PRINCIPIO. En cuanto se toca algo desaparece, porque lo que
+          toca entonces es entrenar y no ponerse a rellenar el martes pasado.
+
+          Antes bastaba con `inProgress`, y `inProgress` solo es verdad cuando
+          ya se ha COMPLETADO una serie. Entre "he escrito 8 repeticiones" y
+          "he cerrado la primera serie" hay un rato entero en el que la persona
+          ya está entrenando y le seguía saliendo. Ahora se compara el entreno
+          con el que salió en blanco: si difiere en algo, es que está en
+          marcha. */}
+      {!sesionEmpezada ? <RegistrarOtroDia /> : null}
 
       {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app:
           mismas protecciones que en los cursos (ni compartir, ni salirse, ni
