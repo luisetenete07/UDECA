@@ -1,0 +1,109 @@
+# ¿Está el cobro bien conectado? Sin pagar nada.
+#
+# POR QUÉ EXISTE
+#
+# La cadena del cobro tiene una pieza que no se ve y que, si falla, no da NINGÚN
+# error: el cliente paga de verdad y su cuenta no se activa. El dinero entra y
+# no pasa nada más. Eso ocurre si las claves de Vercel no son del mismo perfil
+# de Stripe donde están los Payment Links, o si siguen en modo pruebas.
+#
+# Comprobarlo pagando de verdad cuesta un euro y una cuenta nueva cada vez.
+# Esto lo comprueba en diez segundos y sin tocar dinero, aprovechando que los
+# propios endpoints dicen qué les falta y en qué modo están.
+#
+# QUÉ COMPRUEBA, Y QUÉ NO
+#
+#   SÍ  el webhook está desplegado y tiene sus tres variables
+#   SÍ  la clave de Stripe existe, es válida y es de PRODUCCIÓN (sk_live)
+#   SÍ  Firebase está configurado
+#   NO  que el webhook de Stripe apunte a esta URL y con los eventos buenos
+#       -> eso se prueba con "Send test event" en el panel de Stripe
+#   NO  la vuelta completa de un pago real
+#
+# No manda datos de nadie: usa un correo inventado que no existe en Stripe.
+name: Comprobar los pagos (sin pagar)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. EL WEBHOOK
+      #
+      # Se le manda algo sin firmar. Lo que responde dice mucho:
+      #
+      #   400 "Firma no válida"   -> perfecto: está vivo y con sus variables
+      #   500 "Faltan variables"  -> dice CUÁLES faltan, por su nombre
+      #   404                     -> no está desplegado
+      #
+      # Rechazar algo sin firma es que funciona, no que esté roto: si aceptara
+      # esto, cualquiera podría regalarse una suscripción.
+      - name: El webhook de Stripe
+        run: |
+          url=https://udeca.vercel.app/api/stripe-webhook
+          codigo=$(curl -s -o /tmp/r.txt -w '%{http_code}' -X POST "$url" \
+            -H 'Content-Type: application/json' \
+            -H 'stripe-signature: t=0,v1=nada' --data '{}' || echo 000)
+          cuerpo=$(cat /tmp/r.txt)
+          echo "código: $codigo"
+          echo "respuesta: $cuerpo"
+
+          if [ "$codigo" = "400" ]; then
+            echo "OK  El webhook está vivo y con sus variables puestas."
+          elif echo "$cuerpo" | grep -q "Faltan variables"; then
+            echo "::error::Al webhook le faltan variables en Vercel: $cuerpo"
+            exit 1
+          elif echo "$cuerpo" | grep -q "Config inválida"; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT está mal pegado en Vercel."
+            exit 1
+          else
+            echo "::error::Respuesta inesperada del webhook (código $codigo). ¿Está desplegado?"
+            exit 1
+          fi
+
+      # 2. LA CLAVE DE STRIPE
+      #
+      # Se pregunta por un correo inventado. La respuesta dice el modo entre
+      # paréntesis —"Sin cliente en Stripe (live)"—, que es exactamente el dato
+      # que hace falta: que la clave sea de producción y no de pruebas.
+      #
+      # Y que conteste eso, en vez de un error, demuestra que Stripe aceptó la
+      # clave: la consulta llegó a hacerse.
+      - name: La clave de Stripe (modo y validez)
+        run: |
+          url=https://udeca.vercel.app/api/check-subscription
+          curl -s -o /tmp/s.txt -X POST "$url" -H 'Content-Type: application/json' \
+            --data '{"uid":"comprobacion-sin-pago","email":"no-existe@udeca-comprobacion.invalid"}' || true
+          cuerpo=$(cat /tmp/s.txt)
+          echo "respuesta: $cuerpo"
+
+          if echo "$cuerpo" | grep -q "Falta STRIPE_SECRET_KEY"; then
+            echo "::error::Falta STRIPE_SECRET_KEY en Vercel."
+            exit 1
+          fi
+          if echo "$cuerpo" | grep -q "Falta FIREBASE_SERVICE_ACCOUNT"; then
+            echo "::error::Falta FIREBASE_SERVICE_ACCOUNT en Vercel."
+            exit 1
+          fi
+          if echo "$cuerpo" | grep -q "(live)"; then
+            echo "OK  La clave es de PRODUCCIÓN y Stripe la acepta."
+          elif echo "$cuerpo" | grep -q "(test)"; then
+            echo "::error::La clave de Stripe sigue en MODO PRUEBAS (sk_test)."
+            echo "::error::Los pagos reales no se verían: hay que poner la sk_live del perfil de UDECA."
+            exit 1
+          else
+            echo "::error::Respuesta inesperada: $cuerpo"
+            exit 1
+          fi
+
+      - name: Lo que esto NO puede comprobar
+        run: |
+          echo "Falta una sola cosa, y se prueba sin pagar:"
+          echo ""
+          echo "  Stripe -> Developers -> Webhooks -> el endpoint -> Send test event"
+          echo "  Evento: checkout.session.completed"
+          echo ""
+          echo "Si responde 200, la cadena entera está conectada."
+          echo "Si responde 400, el secreto del webhook no es el de ese endpoint."
