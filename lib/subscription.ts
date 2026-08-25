@@ -54,6 +54,35 @@ export const COACH_MONTHLY_EQUIV_EUR = Math.round(ANNUAL_PRICE_EUR / 12);
 export const ATHLETE_MONTHLY_EUR = 10;
 
 /**
+ * Atleta que paga el año por delante.
+ *
+ * Son 96 y no 95 por una razón de escaparate: 96 entre 12 son 8,00 € exactos,
+ * y "8 € al mes pagando el año" se lee de un vistazo. 95 salen a 7,92, que no
+ * se recuerda ni cabe bien en un titular.
+ *
+ * Y no es un descuento por serlo: un atleta que paga al mes tiene que aguantar
+ * DIEZ MESES para dejar lo mismo que este deja el primer día, contando IVA y
+ * comisiones. En una app de entrenamiento, la mayoría no llega a seis. El
+ * anual no regala margen: cobra por adelantado lo que probablemente no se
+ * llegaría a cobrar, y de paso quita once cobros que pueden fallar.
+ */
+export const ATHLETE_ANNUAL_EUR = 96;
+
+/**
+ * Lo que se ahorra pagando el año, en porcentaje.
+ *
+ * CALCULADO, NUNCA ESCRITO A MANO. Es el único número sobre dinero que la app
+ * enseña (ver el bloque de "LA APP NO DICE PRECIOS"), y se salva de esa regla
+ * porque no es un precio: es una proporción entre dos, y mientras los dos
+ * cambien juntos sigue siendo verdad. Escribir "20%" a mano sería justo lo que
+ * esa regla evita — una cifra que se queda vieja en la versión que el usuario
+ * no ha actualizado.
+ */
+export const AHORRO_ANUAL_PCT = Math.round(
+  (1 - ATHLETE_ANNUAL_EUR / (ATHLETE_MONTHLY_EUR * 12)) * 100
+);
+
+/**
  * Estas cuatro viven en lib/planBase.ts y se reexportan aquí.
  *
  * El motivo: este fichero lee `Platform.OS` al cargarse, así que todo lo que
@@ -80,12 +109,13 @@ export {
 } from './planBase';
 
 /**
- * Payment Links de Stripe, los CUATRO de producción. COBRAN DE VERDAD.
+ * Payment Links de Stripe, los CINCO de producción. COBRAN DE VERDAD.
  *
  *   - Alta de entrenador:          1 € (pago único)
  *   - Alta de atleta:              1 € (pago único)
  *   - Suscripción de entrenador: 180 €/año
  *   - Suscripción de atleta:      10 €/mes
+ *   - Atleta, pagando el año:     96 €/año  (ver ATHLETE_ANNUAL_EUR)
  *
  * Están creados en el perfil de UDECA, y las claves de Vercel
  * (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) son de ESE MISMO perfil. Tienen
@@ -112,6 +142,9 @@ export const COACH_ENTRY_LINK: string =
   'https://buy.stripe.com/5kQeVc8ezdGX84MbvC3sI00';
 export const ATHLETE_ENTRY_LINK: string =
   'https://buy.stripe.com/4gMdR8gL50UbbgY9nu3sI01';
+/** El quinto: el atleta que paga el año (ver ATHLETE_ANNUAL_EUR). */
+export const ATHLETE_ANNUAL_LINK: string =
+  'https://buy.stripe.com/3cIdR866rcCT98Q9nu3sI05';
 
 /** Enlace del alta con el uid dentro, para que el webhook sepa a quién activar. */
 export function entryCheckoutUrl(profile: UserProfile | null): string | null {
@@ -178,10 +211,29 @@ export async function verifySubscriptionNow(
   }
 }
 
-/** URL de suscripción para este usuario, con su uid para la activación auto. */
-export function subscriptionCheckoutUrl(profile: UserProfile | null): string | null {
+/**
+ * Cómo quiere pagar el atleta. El entrenador solo tiene anual, así que no elige.
+ */
+export type PlanElegido = 'monthly' | 'annual';
+
+/**
+ * URL de suscripción para este usuario, con su uid para la activación auto.
+ *
+ * El `plan` solo lo mira el atleta, que es quien tiene dos formas de pagar. Por
+ * defecto la mensual: si algún día se llama sin decir cuál, que sea la barata
+ * de entrada y no la de 96 €.
+ */
+export function subscriptionCheckoutUrl(
+  profile: UserProfile | null,
+  plan: PlanElegido = 'monthly'
+): string | null {
   if (!profile) return null;
-  const base = profile.role === 'athlete' ? ATHLETE_PAYMENT_LINK : COACH_PAYMENT_LINK;
+  const base =
+    profile.role === 'athlete'
+      ? plan === 'annual'
+        ? ATHLETE_ANNUAL_LINK
+        : ATHLETE_PAYMENT_LINK
+      : COACH_PAYMENT_LINK;
   if (!base) return null;
   const sep = base.includes('?') ? '&' : '?';
   return (

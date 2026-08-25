@@ -557,7 +557,7 @@ service cloud.firestore {
           'intro_start', 'intro_done',
           'register_view', 'register_submit', 'register_ok', 'register_fail',
           'register_ok_trainer', 'register_ok_athlete', 'register_ok_client',
-          'login_ok', 'paywall_view', 'checkout_start',
+          'login_ok', 'paywall_view', 'checkout_start', 'checkout_start_anual',
           'updatedAt'
         ];
       }

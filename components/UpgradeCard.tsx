@@ -18,6 +18,7 @@ import {
   TRIAL_DAYS,
 } from '../lib/subscription';
 import type { UserProfile } from '../lib/types';
+import { ElegirPlan } from './ElegirPlan';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /**
@@ -73,8 +74,17 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
    * saber para decidir —cuántas plazas tiene, cuántas le quedan y qué pasa
    * cuando se acaben—. Eso ya estaba escrito; lo único que se va es el número.
    */
+  /*
+   * Al atleta ya no se le puede decir aquí "sin permanencia": desde que hay
+   * plan anual eso solo vale para uno de los dos, y además lo dice cada opción
+   * en su propia línea, justo debajo. Decirlo aquí era repetirlo dos veces y
+   * media mentira.
+   *
+   * Lo que sí conviene decir antes de que elija es lo que NO cambia entre las
+   * dos: que se lleva lo mismo pague como pague.
+   */
   const facturacion = esAtleta
-    ? 'Sin permanencia. Se cancela cuando quieras.'
+    ? 'Elijas como elijas, la app es la misma y entera.'
     : 'Se cobra una vez al año.';
 
   /**
@@ -254,18 +264,25 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         </View>
       ))}
 
-      {url ? (
-        <Pressable onPress={abrir} style={styles.boton}>
-          <Text style={styles.botonTexto}>
-            {esAtleta ? 'Pasar al plan completo' : 'Activar el plan anual'}
+      {/* El atleta elige entre el año y el mes; el entrenador solo tiene anual.
+          Y a él se le sigue enseñando UN botón, no una decisión falsa. */}
+      {esAtleta ? (
+        <ElegirPlan
+          profile={profile}
+          nota="Si prefieres esperar, no pasa nada: te avisaremos antes de que termine la prueba."
+        />
+      ) : (
+        <>
+          {url ? (
+            <Pressable onPress={abrir} style={styles.boton}>
+              <Text style={styles.botonTexto}>Activar el plan anual</Text>
+            </Pressable>
+          ) : null}
+          <Text style={styles.nota}>
+            Mientras no lo actives no se te cobra nada, y tus alumnos actuales siguen igual.
           </Text>
-        </Pressable>
-      ) : null}
-      <Text style={styles.nota}>
-        {esAtleta
-          ? 'Si prefieres esperar, no pasa nada: te avisaremos antes de que termine la prueba.'
-          : 'Mientras no lo actives no se te cobra nada, y tus alumnos actuales siguen igual.'}
-      </Text>
+        </>
+      )}
     </Card>
   );
 }

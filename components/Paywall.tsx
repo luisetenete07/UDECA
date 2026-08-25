@@ -5,6 +5,7 @@ import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { GateScreen, GateText } from './GateScreen';
+import { ElegirPlan } from './ElegirPlan';
 import { useAuth } from '../lib/auth-context';
 import { track, trackOnce } from '../lib/analytics';
 import {
@@ -189,7 +190,11 @@ export function Paywall() {
         </View>
       ))}
 
-      {CAN_LINK_TO_PAYMENT ? (
+      {/* El atleta elige cómo pagar; el entrenador solo tiene el plan anual,
+          así que para él sigue siendo un botón y no una decisión. */}
+      {CAN_LINK_TO_PAYMENT && isAthlete && checkoutUrl ? (
+        <ElegirPlan profile={profile} nota={null} />
+      ) : CAN_LINK_TO_PAYMENT ? (
         <Button
           // Sin precio y diciendo a dónde lleva: el importe se ve en la web,
           // que es donde está al día (ver lib/subscription.ts).

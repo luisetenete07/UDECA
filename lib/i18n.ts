@@ -2130,6 +2130,20 @@ export const EN: Record<string, string> = {
   'El alta de tu tarjeta ya se usó en otra cuenta de entrenador.':
     'Your card was already used to sign up another coach account.',
   'Activar el plan anual': 'Activate the annual plan',
+
+  // Las dos formas de pagar del atleta (components/ElegirPlan.tsx). Sin
+  // importes: la app no dice precios en ningún idioma.
+  'Un año por delante': 'A full year ahead',
+  'Lo pagas una vez y te olvidas del contador hasta el año que viene.':
+    'Pay once and forget the countdown until next year.',
+  'Mes a mes': 'Month to month',
+  'Sin permanencia. Lo dejas el mes que quieras, sin dar explicaciones.':
+    'No commitment. Stop any month you want, no explanations.',
+  'Ahorras un {0}%': 'Save {0}%',
+  'Se abre la web para completarlo. Al volver, tu cuenta se enciende sola.':
+    'The web opens to finish it. When you come back, your account switches on by itself.',
+  'Elijas como elijas, la app es la misma y entera.':
+    'Whichever you pick, you get the same app, all of it.',
   'Si prefieres esperar, no pasa nada: te avisaremos antes de que termine la prueba.':
     'If you would rather wait, that is fine: we will let you know before the trial ends.',
   'Mientras no lo actives no se te cobra nada, y tus alumnos actuales siguen igual.':

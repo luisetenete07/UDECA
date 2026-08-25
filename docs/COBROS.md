@@ -174,8 +174,24 @@ COSAS a la vez**: los enlaces del repositorio y las dos claves de Vercel.
 |---|---|
 | Alta de atleta · 1 € | `https://buy.stripe.com/4gMdR8gL50UbbgY9nu3sI01` |
 | Plan de atleta · 10 €/mes | `https://buy.stripe.com/5kQ3cudyT8mDetafLS3sI03` |
+| Plan de atleta · 96 €/año | `https://buy.stripe.com/3cIdR866rcCT98Q9nu3sI05` |
 | Alta de entrenador · 1 € | `https://buy.stripe.com/5kQeVc8ezdGX84MbvC3sI00` |
 | Plan de entrenador · 180 €/año | `https://buy.stripe.com/eVqcN4cuP9qH70IgPW3sI02` |
+
+### Por qué 96 y no 95
+
+96 entre 12 son **8,00 € exactos**, y "8 € al mes pagando el año" se lee de un
+vistazo. 95 salen a 7,92, que ni se recuerda ni cabe en un titular. El descuento
+es del 20%, dentro del estándar (17-25%).
+
+Y el anual no regala margen: **un atleta mensual tiene que aguantar diez meses
+para dejar lo que el anual deja el primer día**, contando IVA y comisiones. En
+una app de entrenamiento la mayoría no llega a seis. Además quita once cobros
+que pueden fallar.
+
+La app **no enseña ninguno de estos importes**: solo el ahorro en porcentaje, y
+calculado a partir de los dos precios (`AHORRO_ANUAL_PCT`), nunca escrito a
+mano. El porqué está en `lib/subscription.ts`.
 
 ### En iPhone no se cobra, y es a propósito
 

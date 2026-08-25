@@ -47,6 +47,7 @@ function claveWeb(texto, nombre) {
 const ENLACES = {
   'suscripción del coach': constante(app, 'COACH_PAYMENT_LINK'),
   'suscripción del atleta': constante(app, 'ATHLETE_PAYMENT_LINK'),
+  'atleta, pagando el año': constante(app, 'ATHLETE_ANNUAL_LINK'),
   'alta del coach (app)': constante(app, 'COACH_ENTRY_LINK'),
   'alta del atleta (app)': constante(app, 'ATHLETE_ENTRY_LINK'),
   'alta del coach (web)': claveWeb(web, 'altaCoach'),
@@ -78,6 +79,7 @@ if (!PAGOS_ACTIVOS) {
   for (const nombre of [
     'suscripción del coach',
     'suscripción del atleta',
+    'atleta, pagando el año',
     'alta del coach (app)',
     'alta del atleta (app)',
   ]) {
@@ -101,7 +103,7 @@ if (!PAGOS_ACTIVOS) {
   process.exit(fallos === 0 ? 0 : 1);
 }
 
-console.log('\nLos seis enlaces están puestos');
+console.log('\nLos siete enlaces están puestos');
 for (const [nombre, url] of Object.entries(ENLACES)) {
   comprueba(nombre, !!url && url.startsWith('https://buy.stripe.com/'), String(url));
 }
@@ -130,11 +132,12 @@ console.log('\nNo hay enlaces cruzados');
   const distintos = new Set([
     ENLACES['suscripción del coach'],
     ENLACES['suscripción del atleta'],
+    ENLACES['atleta, pagando el año'],
     ENLACES['alta del coach (app)'],
     ENLACES['alta del atleta (app)'],
   ]);
-  comprueba('los cuatro productos son cuatro enlaces distintos', distintos.size === 4,
-    `${distintos.size} distintos de 4`);
+  comprueba('los cinco productos son cinco enlaces distintos', distintos.size === 5,
+    `${distintos.size} distintos de 5`);
   comprueba('ninguno se ha quedado a medias', todos.every((u) => u.length > 30));
 }
 
