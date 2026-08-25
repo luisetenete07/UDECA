@@ -175,7 +175,10 @@ export function MemberCard() {
             : frase`Tu insignia de fundador se apaga en ${insignia.diasParaApagarse} ${t(insignia.diasParaApagarse === 1 ? 'día' : 'días')}. El número no lo pierdes: al renovar vuelve a encenderse.`}
         </Text>
       ) : (
-        <Text style={styles.ayuda}>Arrástrala para girarla</Text>
+        /* Se dice el gesto entero: en el móvil, arrastrar sin más lo entiende
+           la pantalla como desplazarse, y el que gira la tarjeta es apoyar el
+           dedo un momento antes de moverlo. */
+        <Text style={styles.ayuda}>Mantén el dedo encima y gírala</Text>
       )}
 
     </View>

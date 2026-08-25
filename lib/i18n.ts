@@ -1100,7 +1100,7 @@ export const EN: Record<string, string> = {
   'Ej. 72,5': 'e.g. 72.5',
   Carbos: 'Carbs',
   Suman: 'Total',
-  'Arrástrala para girarla': 'Drag it to flip it',
+  'Mantén el dedo encima y gírala': 'Hold your finger on it and turn it',
   Delante: 'Front',
   Detrás: 'Back',
   Menos: 'Less',

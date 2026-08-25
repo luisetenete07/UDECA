@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeIn } from './FadeIn';
+import { ContextoDeBloqueo, type BloqueoDeScroll } from '../lib/bloqueoDeScroll';
 import { useLayout } from '../lib/responsive';
 import { colors, gradients, spacing } from '../lib/theme';
 
@@ -81,6 +82,25 @@ export function ScreenContainer({
   const abajo = dock + insets.bottom;
   const gutter = { paddingHorizontal: layout.gutter };
 
+  /*
+   * La pantalla se queda quieta cuando algo de dentro lo pide.
+   *
+   * Lo pide el carné mientras se gira: en el móvil, arrastrar la tarjeta y
+   * desplazar la pantalla son el mismo gesto, y ganaba la pantalla. Ver
+   * `lib/bloqueoDeScroll.ts` para el porqué de hacerlo por contexto.
+   *
+   * Se cuenta en vez de encender y apagar, por si algún día hay dos cosas
+   * pidiendo quieto a la vez.
+   */
+  const [bloqueos, setBloqueos] = useState(0);
+  const bloqueo = useMemo<BloqueoDeScroll>(
+    () => ({
+      bloquear: () => setBloqueos((n) => n + 1),
+      soltar: () => setBloqueos((n) => Math.max(0, n - 1)),
+    }),
+    []
+  );
+
   if (!scroll) {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
@@ -122,6 +142,7 @@ export function ScreenContainer({
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          scrollEnabled={bloqueos === 0}
           refreshControl={
             onRefresh ? (
               <RefreshControl
@@ -132,7 +153,9 @@ export function ScreenContainer({
             ) : undefined
           }
         >
-          <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
+          <ContextoDeBloqueo.Provider value={bloqueo}>
+            <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
+          </ContextoDeBloqueo.Provider>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

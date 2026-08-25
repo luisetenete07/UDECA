@@ -291,15 +291,38 @@ fundador** correlativo: el 7 es el séptimo, y lo sigue siendo aunque los seis
 anteriores se borren la cuenta. Se ve en su perfil y se puede compartir como
 imagen.
 
-El número lo reparte el servidor (`payments-webhook/api/_alta.js`) dentro de una
-**transacción** sobre `config/fundadores`, para que dos altas simultáneas no se
-lleven el mismo. Las reglas impiden escribir `founderNumber` desde la app: un
-distintivo que cualquiera pudiera ponerse no valdría nada.
+### Son DOS campañas, una por tipo de cuenta
 
-**La campaña arranca CERRADA.** Se abre y se cierra desde la consola de Firebase,
-sin desplegar nada: empieza cuando lo decide quien lleva el marketing. Y cerrada
-por defecto porque repartir números antes de tiempo no tiene vuelta atrás — el
-número 1 solo se da una vez. En `config/fundadores`:
+Entrenadores y atletas tienen cada uno su serie, con su contador, su
+interruptor y su tope. Hay un **entrenador fundador #1** y un **atleta fundador
+#1**, y las dos cosas son correctas: el carné dice de qué es el número, porque
+lleva impreso el rol junto a la cifra.
+
+Al principio compartían contador, y el resultado no era el buscado: el primer
+atleta que llegaba se encontraba con un #0043 porque antes se habían dado de
+alta cuarenta y dos entrenadores. El número dejaba de decir "fuiste de los
+primeros" para decir "llegaste tarde".
+
+| Tipo de cuenta | Documento |
+| --- | --- |
+| Entrenador | `config/fundadores` |
+| Atleta | `config/fundadoresAtletas` |
+
+Las cuentas que ya tienen número lo conservan tal cual, venga de donde venga:
+un número repartido no se toca nunca.
+
+### Cómo se abre
+
+El número lo reparte el servidor (`payments-webhook/api/_alta.js`) dentro de una
+**transacción** sobre el documento de su serie, para que dos altas simultáneas
+no se lleven el mismo. Las reglas impiden escribir `founderNumber` desde la app:
+un distintivo que cualquiera pudiera ponerse no valdría nada.
+
+**Las dos campañas arrancan CERRADAS.** Se abren y se cierran desde la consola
+de Firebase, sin desplegar nada y por separado: se puede abrir la de atletas y
+dejar cerrada la de entrenadores. Cerradas por defecto porque repartir números
+antes de tiempo no tiene vuelta atrás — el número 1 solo se da una vez. En cada
+documento:
 
 | Campo | Para qué |
 | --- | --- |
@@ -309,3 +332,13 @@ número 1 solo se da una vez. En `config/fundadores`:
 
 Si el reparto falla por lo que sea, la cuenta se activa igual: el alta es lo que
 la persona ha pagado, y el número es un extra.
+
+Para dar un número a mano —a una cuenta anterior a la campaña— está
+Actions → **Número de fundador**, que sabe de qué serie sale según el rol de esa
+cuenta.
+
+El reparto está probado contra el emulador:
+
+```
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 node payments-webhook/prueba-fundadores.mjs
+```

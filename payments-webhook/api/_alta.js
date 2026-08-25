@@ -25,21 +25,46 @@ import admin from 'firebase-admin';
 export const TRIAL_DAYS = 28;
 
 /**
- * Reparte el número de fundador, si la campaña sigue abierta.
+ * DOS CAMPAÑAS DE FUNDADORES, UNA POR TIPO DE CUENTA
+ *
+ * Entrenadores y atletas tienen su propia serie, con su propio contador, su
+ * propio interruptor y su propio tope. Hay un entrenador fundador #1 y un
+ * atleta fundador #1, y no se pisan.
+ *
+ * Al principio compartían contador, y el resultado no era el que se quiere: el
+ * primer atleta que llegaba se encontraba con un #0043 porque antes se habían
+ * dado de alta cuarenta y dos entrenadores. El número dejaba de decir "fuiste
+ * de los primeros" para decir "llegaste tarde", que es justo lo contrario de
+ * para lo que existe.
+ *
+ * Son además dos productos que se venden por separado y en momentos distintos:
+ * quien abre la campaña de atletas no tiene por qué abrir la de entrenadores el
+ * mismo día, ni ponerle el mismo tope.
+ *
+ * Quien YA tiene número se lo queda tal cual. Los números repartidos no se
+ * tocan nunca —ver el porqué en lib/fundador.ts—, así que las cuentas de antes
+ * de esta separación conservan el suyo aunque venga de la cuenta compartida.
+ */
+const MOSTRADOR = { trainer: 'fundadores', athlete: 'fundadoresAtletas' };
+
+/**
+ * Reparte el número de fundador de su serie, si esa campaña sigue abierta.
  *
  * El número es correlativo y no se reutiliza: el 7 es el séptimo que pagó su
  * alta y lo seguirá siendo aunque los seis de antes se borren la cuenta. Por
- * eso el contador se guarda aparte (`config/fundadores`) y se incrementa en una
+ * eso el contador se guarda aparte (en `config/…`) y se incrementa en una
  * TRANSACCIÓN: dos altas simultáneas no pueden llevarse el mismo número.
  *
- * La campaña arranca CERRADA y se abre poniendo `abierta: true` en ese documento
- * desde la consola de Firebase; se puede fijar un tope con `limite`. Empieza y
- * termina cuando lo decide quien lleva el marketing, no cuando se despliega
- * código — y cerrada por defecto porque repartir números antes de tiempo no
- * tiene vuelta atrás: el número 1 solo se da una vez.
+ * Cada campaña arranca CERRADA y se abre poniendo `abierta: true` en su
+ * documento desde la consola de Firebase; se puede fijar un tope con `limite`.
+ * Empieza y termina cuando lo decide quien lleva el marketing, no cuando se
+ * despliega código — y cerrada por defecto porque repartir números antes de
+ * tiempo no tiene vuelta atrás: el número 1 solo se da una vez.
  */
-async function repartirNumeroDeFundador(db, uid) {
-  const ref = db.collection('config').doc('fundadores');
+async function repartirNumeroDeFundador(db, uid, rol) {
+  const doc = MOSTRADOR[rol];
+  if (!doc) return null;
+  const ref = db.collection('config').doc(doc);
   try {
     return await db.runTransaction(async (t) => {
       const snap = await t.get(ref);
@@ -121,9 +146,10 @@ export async function aplicarAlta(db, uid, { huella = null, customerId = null } 
     }
   }
 
-  // Fundador: solo la primera vez, y solo si la campaña sigue abierta.
+  // Fundador: solo la primera vez, y solo si SU campaña sigue abierta. Cada
+  // rol tiene la suya, con su contador y su interruptor.
   if (!perfil.founderNumber) {
-    const numero = await repartirNumeroDeFundador(db, uid);
+    const numero = await repartirNumeroDeFundador(db, uid, perfil.role);
     if (numero !== null) {
       datos.founderNumber = numero;
       datos.founderSince = Date.now();

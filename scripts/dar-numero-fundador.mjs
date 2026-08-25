@@ -67,7 +67,8 @@ if (!perfil.exists) {
   process.exit(1);
 }
 
-const yaTiene = perfil.data().founderNumber;
+const datos = perfil.data();
+const yaTiene = datos.founderNumber;
 if (yaTiene) {
   // No se pisa un número ya repartido: es correlativo y es su valor. Si de
   // verdad hay que cambiarlo, se quita antes a mano y se sabe lo que se hace.
@@ -75,11 +76,38 @@ if (yaTiene) {
   process.exit(1);
 }
 
-// Que nadie más tenga ya ese número: dos "fundador nº 1" no es un fallo
-// cosmético, es la campaña entera perdiendo el sentido.
-const repes = await db.collection('users').where('founderNumber', '==', numero).limit(1).get();
+/*
+ * CADA ROL TIENE SU SERIE
+ *
+ * Entrenadores y atletas llevan campañas separadas, con su contador y su
+ * interruptor (ver payments-webhook/api/_alta.js). Así que hay un entrenador
+ * fundador #1 y un atleta fundador #1, y las dos cosas son correctas.
+ *
+ * Esto importa aquí por dos motivos, y los dos harían daño en silencio: el
+ * número repetido hay que buscarlo SOLO dentro de su serie —si no, dar el #1 al
+ * primer atleta sería imposible porque ya lo tiene un entrenador—, y el
+ * contador que se mueve tiene que ser el de esa misma serie.
+ */
+const MOSTRADOR = { trainer: 'fundadores', athlete: 'fundadoresAtletas' };
+const rol = datos.role;
+const mostrador = MOSTRADOR[rol];
+if (!mostrador) {
+  // Un alumno no paga alta: si alguna vez hay que darle un número, primero hay
+  // que decidir de qué serie sale, y eso no se improvisa aquí.
+  console.error(`La cuenta ${correo} es de tipo "${rol}", que no tiene campaña de fundadores.`);
+  process.exit(1);
+}
+
+// Que nadie más de SU SERIE tenga ya ese número: dos "atleta fundador nº 1" no
+// es un fallo cosmético, es la campaña entera perdiendo el sentido.
+const repes = await db
+  .collection('users')
+  .where('role', '==', rol)
+  .where('founderNumber', '==', numero)
+  .limit(1)
+  .get();
 if (!repes.empty) {
-  console.error(`El número ${numero} ya lo tiene otra cuenta. Elige otro.`);
+  console.error(`El número ${numero} ya lo tiene otra cuenta de tipo "${rol}". Elige otro.`);
   process.exit(1);
 }
 
@@ -87,9 +115,10 @@ await ref.set(
   { founderNumber: numero, founderSince: Date.now() },
   { merge: true }
 );
-console.log(`Hecho: ${correo} es el fundador #${String(numero).padStart(4, '0')}.`);
+const comoQue = rol === 'trainer' ? 'entrenador' : 'atleta';
+console.log(`Hecho: ${correo} es el ${comoQue} fundador #${String(numero).padStart(4, '0')}.`);
 
-// El contador de la campaña, para que la siguiente alta no repita número.
+// El contador de SU campaña, para que la siguiente alta no repita número.
 if (siguiente !== null) {
   if (!Number.isInteger(siguiente) || siguiente < 1) {
     console.error('SIGUIENTE tiene que ser un entero mayor que cero.');
@@ -97,9 +126,11 @@ if (siguiente !== null) {
   }
   await db
     .collection('config')
-    .doc('fundadores')
+    .doc(mostrador)
     .set({ siguiente, updatedAt: Date.now() }, { merge: true });
-  console.log(`El próximo fundador será el #${String(siguiente).padStart(4, '0')}.`);
+  console.log(
+    `El próximo ${comoQue} fundador será el #${String(siguiente).padStart(4, '0')}.`
+  );
 } else {
   console.log('Contador sin tocar. Pasa SIGUIENTE si quieres moverlo.');
 }

@@ -12,6 +12,7 @@ import Svg, {
   Rect,
   Stop,
 } from 'react-native-svg';
+import { useBloqueoDeScroll } from '../lib/bloqueoDeScroll';
 import { colors, fonts, spacing, tabularNums, typography } from '../lib/theme';
 
 /**
@@ -86,6 +87,8 @@ export function ProgressCard({
   const giroX = useRef(new Animated.Value(0)).current;
   const giroY = useRef(new Animated.Value(0)).current;
   const entrada = useRef(new Animated.Value(0)).current;
+  /** 0 en su sitio, 1 cogida con la mano. */
+  const alzada = useRef(new Animated.Value(0)).current;
   const tocando = useRef(false);
 
   const dato = datos[i % Math.max(1, datos.length)] ?? { etiqueta: '', valor: '' };
@@ -114,11 +117,64 @@ export function ProgressCard({
     return () => a.stop();
   }, [i, entrada]);
 
+  /*
+   * AGARRAR LA TARJETA
+   *
+   * En el móvil, arrastrar la tarjeta y desplazar la pantalla son el mismo
+   * gesto: apoyar el dedo y moverlo. Antes se repartían por el eje —horizontal
+   * para la tarjeta, vertical para la pantalla—, y el resultado era que la
+   * tarjeta apenas se dejaba mover: cualquier arrastre con algo de vertical se
+   * lo llevaba la pantalla, y arrastrar recto es difícil.
+   *
+   * Ahora se puede AGARRAR: se apoya el dedo un momento sin moverlo y la
+   * tarjeta se queda contigo. A partir de ahí la pantalla se queda quieta y la
+   * tarjeta gira en cualquier dirección, que es lo que uno espera al coger un
+   * objeto con la mano.
+   *
+   * El reparto por eje sigue estando para quien no espera: un arrastre
+   * horizontal la gira al momento, sin tener que aprender nada. Y quien
+   * empieza a bajar por el perfil desde encima de la tarjeta baja, como
+   * siempre — porque el dedo se ha movido antes de que diera tiempo a agarrar.
+   */
+  const AGARRE_MS = 180;
+  /** Cuánto se puede temblar sin que cuente como movimiento. */
+  const QUIETO_PX = 8;
+
+  const agarrada = useRef(false);
+  const espera = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bloqueando = useRef(false);
+  const { bloquear, soltar } = useBloqueoDeScroll();
+  // En una ref porque el PanResponder se crea UNA vez y se quedaría con la
+  // primera versión de estas funciones para siempre.
+  const bloqueo = useRef({ bloquear, soltar });
+  bloqueo.current = { bloquear, soltar };
+
+  const quietaLaPantalla = () => {
+    if (bloqueando.current) return;
+    bloqueando.current = true;
+    bloqueo.current.bloquear();
+  };
+
+  const devuelveLaPantalla = () => {
+    if (!bloqueando.current) return;
+    bloqueando.current = false;
+    bloqueo.current.soltar();
+  };
+
+  // Si la tarjeta desaparece con el dedo encima —al cambiar de pantalla a
+  // media vuelta—, la pantalla se quedaría quieta para siempre.
+  useEffect(() => devuelveLaPantalla, []);
+
   const volver = () => {
     tocando.current = false;
+    agarrada.current = false;
+    if (espera.current) clearTimeout(espera.current);
+    espera.current = null;
+    devuelveLaPantalla();
     Animated.parallel([
       Animated.spring(giroX, { toValue: 0, useNativeDriver: true, friction: 6, tension: 60 }),
       Animated.spring(giroY, { toValue: 0, useNativeDriver: true, friction: 6, tension: 60 }),
+      Animated.spring(alzada, { toValue: 0, useNativeDriver: true, friction: 7, tension: 80 }),
     ]).start();
   };
 
@@ -128,21 +184,59 @@ export function ProgressCard({
       const horizontal = (_e: unknown, g: { dx: number; dy: number }) =>
         Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 6;
 
+      /** Ya agarrada, cualquier movimiento es suyo. */
+      const mio = (e: unknown, g: { dx: number; dy: number }) =>
+        agarrada.current || horizontal(e, g);
+
       return PanResponder.create({
-        // Solo se queda el gesto cuando el dedo va claramente en horizontal.
-        // La tarjeta vive dentro de una pantalla que se desplaza: si atrapara
-        // cualquier arrastre, girarla sería fácil y bajar por el perfil,
-        // imposible. Mandando el eje dominante, cada gesto va a quien le toca.
+        /*
+         * Al apoyar el dedo NO se coge el gesto —si no, no se podría desplazar
+         * la pantalla desde encima de la tarjeta, que ocupa media pantalla—,
+         * pero se pone el reloj en marcha. Si el dedo sigue ahí y quieto
+         * cuando salta, la tarjeta queda agarrada.
+         */
+        onStartShouldSetPanResponderCapture: () => {
+          if (espera.current) clearTimeout(espera.current);
+          espera.current = setTimeout(() => {
+            agarrada.current = true;
+            quietaLaPantalla();
+            // Se levanta un poco: sin esto no hay forma de saber que ya la
+            // tienes cogida, y se queda uno esperando a que pase algo.
+            Animated.spring(alzada, {
+              toValue: 1,
+              useNativeDriver: true,
+              friction: 7,
+              tension: 90,
+            }).start();
+          }, AGARRE_MS);
+          return false;
+        },
         onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: horizontal,
+        onMoveShouldSetPanResponder: mio,
         // Y en CAPTURA, que es lo que de verdad hace falta: el centro de la
         // tarjeta es pulsable (pasa de cifra), así que al arrastrar desde ahí
         // el hijo se quedaba el gesto y la tarjeta no giraba — justo desde la
         // zona más grande y más fácil de agarrar. Capturando, el padre se lo
-        // quita en cuanto el dedo va claramente en horizontal.
-        onMoveShouldSetPanResponderCapture: horizontal,
+        // quita.
+        onMoveShouldSetPanResponderCapture: (e, g) => {
+          // Un movimiento de verdad antes de tiempo cancela el agarre: quien
+          // ha empezado a desplazar la pantalla quiere desplazarla.
+          if (
+            !agarrada.current &&
+            espera.current &&
+            Math.abs(g.dx) + Math.abs(g.dy) > QUIETO_PX
+          ) {
+            clearTimeout(espera.current);
+            espera.current = null;
+          }
+          return mio(e, g);
+        },
         onPanResponderGrant: () => {
           tocando.current = true;
+          // Un arrastre horizontal la gira sin haberla agarrado antes; ahí la
+          // pantalla también tiene que quedarse quieta, o el gesto se pelea
+          // con ella a mitad de camino.
+          quietaLaPantalla();
         },
         onPanResponderMove: (_e, g) => {
           // 140 px de arrastre = tope de inclinación. Con menos recorrido la
@@ -152,6 +246,9 @@ export function ProgressCard({
         },
         onPanResponderRelease: volver,
         onPanResponderTerminate: volver,
+        // Agarrada, no se suelta: sin esto el `ScrollView` puede reclamar el
+        // gesto a media vuelta y la tarjeta se cae de las manos.
+        onPanResponderTerminationRequest: () => !agarrada.current,
       });
     },
     // Los Animated.Value no cambian de identidad; el responder se crea una vez.
@@ -177,6 +274,9 @@ export function ProgressCard({
       { perspective: 900 },
       { rotateX: grados(giroX) },
       { rotateY: grados(giroY) },
+      // Cogida, se acerca un poco. Es el único aviso de que ya la tienes: sin
+      // él, el momento del agarre no se nota y parece que no ha pasado nada.
+      { scale: alzada.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) },
     ],
   };
 
