@@ -82,10 +82,11 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
    *
    * Lo que sí conviene decir antes de que elija es lo que NO cambia entre las
    * dos: que se lleva lo mismo pague como pague.
+   *
+   * Al entrenador ya no le corresponde nada aquí: él no elige, y "se cobra una
+   * vez al año" va pegado a su botón, que es donde importa saberlo.
    */
-  const facturacion = esAtleta
-    ? 'Elijas como elijas, la app es la misma y entera.'
-    : 'Se cobra una vez al año.';
+  const facturacion = 'Elijas como elijas, la app es la misma y entera.';
 
   /**
    * Las plazas del entrenador, con nombre y apellidos.
@@ -99,17 +100,40 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
   const usados = profile?.clientCount ?? 0;
   const lleno = usados >= plazas;
 
+  /*
+   * LAS VENTAJAS DEL ATLETA SÍ SON VENTAJAS. LAS DEL ENTRENADOR NO LO ERAN.
+   *
+   * Al atleta, sin plan, se le acaba el acceso: todo lo que hay en esta lista
+   * es de verdad lo que se lleva por pagar.
+   *
+   * Al entrenador se le enseñaban tres: alumnos ilimitados, cobros e informes.
+   * Solo la primera era cierta. Los cobros y los informes los tiene desde el
+   * primer día con su alta —lo único que el plan levanta es el TOPE DE ALUMNOS,
+   * y así está escrito en `trainerHasAccess`—, así que la tarjeta le estaba
+   * vendiendo cosas que ya había pagado.
+   *
+   * Eso hace daño dos veces: descubrirlo es descubrir que le han inflado la
+   * lista, y de paso esconde lo que de verdad tiene, que es mucho. Lo que se
+   * enseña ahora es lo que cambia (una cosa, grande y clara) y, debajo, lo que
+   * YA tiene incluido. Decirle "el plan no desbloquea funciones, quita el
+   * tope" vende mejor que tres promesas de las cuales dos ya se cumplían.
+   */
   const ventajas = esAtleta
     ? [
         'Tus rutinas y tu progreso, sin límite de tiempo',
         'Nutrición, macros y libreta de comidas',
         'Informes en PDF y récords guardados para siempre',
       ]
-    : [
-        frase`Alumnos ilimitados (tu alta incluye ${plazas})`,
-        'Cobros, avisos de impago y control de cuotas',
-        'Informes de progreso con tu marca',
-      ];
+    : [];
+
+  /** Lo que el entrenador ya tiene con su alta, pague o no el plan. */
+  const yaIncluido = [
+    'Cobros, avisos de impago y control de cuotas',
+    'Rutinas, ciclos y calendario',
+    'Nutrición, macros y pasos',
+    'Informes de progreso con tu marca',
+    'Cursos y clases VIP',
+  ];
 
   /** El titular del recordatorio para el entrenador, según dónde esté. */
   const tituloCoach = lleno
@@ -255,8 +279,6 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         </View>
       ) : null}
 
-      <Text style={styles.pie}>{facturacion}</Text>
-
       {ventajas.map((v) => (
         <View key={v} style={styles.ventaja}>
           <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
@@ -264,13 +286,59 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
         </View>
       ))}
 
+      {/* LO QUE CAMBIA, en dos columnas.
+          Una sola fila, porque una sola cosa cambia. Enseñarla así —lo que
+          tienes hoy al lado de lo que tendrías— dice en un vistazo lo que tres
+          líneas de texto no consiguen, y no promete nada de más. */}
+      {!esAtleta ? (
+        <>
+          <Text style={styles.seccion}>Lo que cambia</Text>
+          <View style={styles.comparaFila}>
+            <View style={styles.compara}>
+              <Text style={styles.comparaCuando}>Ahora</Text>
+              <Text style={styles.comparaValor}>
+                {plazas === 0 ? 'Sin plazas' : frase`${plazas} alumnos`}
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward" size={16} color={colors.textFaint} />
+            <View style={[styles.compara, styles.comparaDestacada]}>
+              <Text style={[styles.comparaCuando, { color: colors.primary }]}>Con el plan</Text>
+              <Text style={[styles.comparaValor, { color: colors.primaryBright }]}>
+                Sin tope
+              </Text>
+            </View>
+          </View>
+
+          {/* Y lo que NO cambia, que es casi todo. Va explícito porque es la
+              diferencia entre "te falta la mitad del producto" y "tienes el
+              producto entero, y lo que compras es sitio". */}
+          <Text style={styles.seccion}>Ya lo tienes con tu alta</Text>
+          {yaIncluido.map((v) => (
+            <View key={v} style={styles.ventaja}>
+              <Ionicons name="checkmark-circle" size={15} color={colors.textMuted} />
+              <Text style={[styles.ventajaTexto, { color: colors.textMuted }]}>{v}</Text>
+            </View>
+          ))}
+          <Text style={styles.aclara}>
+            El plan no desbloquea funciones: las tienes todas desde el primer
+            día. Lo que quita es el tope de alumnos.
+          </Text>
+        </>
+      ) : null}
+
       {/* El atleta elige entre el año y el mes; el entrenador solo tiene anual.
           Y a él se le sigue enseñando UN botón, no una decisión falsa. */}
       {esAtleta ? (
-        <ElegirPlan
-          profile={profile}
-          nota="Si prefieres esperar, no pasa nada: te avisaremos antes de que termine la prueba."
-        />
+        <>
+          {/* Va JUSTO encima de las dos opciones, no suelto más arriba: lo que
+              dice es sobre la elección que viene a continuación, y a media
+              tarjeta de distancia no se lee como parte de ella. */}
+          <Text style={styles.pie}>{facturacion}</Text>
+          <ElegirPlan
+            profile={profile}
+            nota="Si prefieres esperar, no pasa nada: te avisaremos antes de que termine la prueba."
+          />
+        </>
       ) : (
         <>
           {url ? (
@@ -278,8 +346,13 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
               <Text style={styles.botonTexto}>Activar el plan anual</Text>
             </Pressable>
           ) : null}
+          {/* Cómo se cobra va aquí, pegado al botón: es lo último que se lee
+              antes de pulsar, y es donde de verdad importa saberlo. Es UNA
+              frase entera y no un trozo pegado a una variable, porque el
+              diccionario traduce por frase completa. */}
           <Text style={styles.nota}>
-            Mientras no lo actives no se te cobra nada, y tus alumnos actuales siguen igual.
+            Se cobra una vez al año. Mientras no lo actives no se te cobra nada, y tus
+            alumnos actuales siguen igual.
           </Text>
         </>
       )}
@@ -471,6 +544,41 @@ const styles = StyleSheet.create({
   pie: { ...typography.small, color: colors.textFaint, marginBottom: spacing.md },
   ventaja: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 4 },
   ventajaTexto: { ...typography.small, color: colors.text, flex: 1 },
+  seccion: {
+    ...typography.small,
+    color: colors.textFaint,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontFamily: fonts.semiBold,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  comparaFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  compara: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+  },
+  // Se distingue por el borde, como en ElegirPlan: un bloque de color aquí se
+  // leería como publicidad metida con calzador en una app negra y sobria.
+  comparaDestacada: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
+  comparaCuando: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  comparaValor: {
+    ...typography.body,
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    marginTop: 2,
+  },
+  aclara: {
+    ...typography.small,
+    color: colors.textFaint,
+    marginTop: spacing.sm,
+    lineHeight: 17,
+  },
   boton: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,

@@ -1,5 +1,5 @@
 /*
- * Los enlaces de cobro de Stripe (lib/subscription.ts y web/config.js).
+ * Los enlaces de cobro de Stripe (lib/enlacesDeCobro.ts y web/config.js).
  *
  * Lo que hay que proteger son dos cosas que no dan error hasta que ya han
  * pasado:
@@ -13,8 +13,10 @@
  *     entre sí. El día que se cambie uno y no el otro, la mitad de las altas
  *     irán a un producto y la otra mitad a otro.
  *
- * Los ficheros se leen como TEXTO a propósito: `lib/subscription.ts` importa
- * React Native en cuanto se carga y no se puede importar desde Node pelado.
+ * Los ficheros se leen como TEXTO a propósito: así se comprueba lo que está
+ * ESCRITO, sin depender de que se pueda importar. `web/config.js` no es un
+ * módulo que se pueda cargar aquí, y con los enlaces leídos igual en los dos
+ * lados la comparación es de verdad línea contra línea.
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-stripe.mjs
  */
@@ -29,7 +31,10 @@ function comprueba(nombre, condicion, detalle = '') {
   }
 }
 
-const app = readFileSync('lib/subscription.ts', 'utf8');
+// Los cinco enlaces viven en lib/enlacesDeCobro.ts (antes estaban en
+// subscription.ts, y se sacaron de ahí para poder recorrer la cadena de cobro
+// entera desde Node — ver scripts/check-cadena-cobro.mjs).
+const app = readFileSync('lib/enlacesDeCobro.ts', 'utf8');
 const web = readFileSync('web/config.js', 'utf8');
 
 /** El valor de una constante exportada, tal y como está escrito. */

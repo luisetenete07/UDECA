@@ -1506,7 +1506,19 @@ export const EN: Record<string, string> = {
   'Te quedan {0} días de prueba': '{0} trial days left',
   'Te quedan {0} días de prueba. Si ya lo tienes claro, pasa al plan completo y olvídate del contador.':
     '{0} trial days left. If you already know this is for you, move to the full plan and forget the countdown.',
-  'Alumnos ilimitados (tu alta incluye {0})': 'Unlimited students (your sign-up includes {0})',
+  // La tarjeta del plan del entrenador: lo que cambia, y lo que ya tiene.
+  'Lo que cambia': 'What changes',
+  'Ahora': 'Now',
+  'Con el plan': 'With the plan',
+  'Sin tope': 'No cap',
+  'Sin plazas': 'No places',
+  '{0} alumnos': '{0} students',
+  'Ya lo tienes con tu alta': 'Already yours with your sign-up',
+  'Rutinas, ciclos y calendario': 'Routines, cycles and calendar',
+  'Nutrición, macros y pasos': 'Nutrition, macros and steps',
+  'Cursos y clases VIP': 'Courses and VIP classes',
+  'El plan no desbloquea funciones: las tienes todas desde el primer día. Lo que quita es el tope de alumnos.':
+    'The plan does not unlock features: you have them all from day one. What it removes is the cap on students.',
   'Has llenado tus {0} plazas': "You've filled your {0} places",
   'Tu alta incluye {0} alumnos': 'Your sign-up includes {0} students',
   'Tu alta incluye {0} alumnos. Activa la suscripción anual para aceptar a más.':
@@ -2112,7 +2124,6 @@ export const EN: Record<string, string> = {
   'Tu progreso se queda contigo pase lo que pase.':
     'Your progress stays with you whatever happens.',
   'Sin permanencia. Se cancela cuando quieras.': 'No lock-in. Cancel whenever you like.',
-  'Se cobra una vez al año.': 'Charged once a year.',
   'Tus rutinas y tu progreso, sin límite de tiempo':
     'Your routines and your progress, with no time limit',
   'Nutrición, macros y libreta de comidas': 'Nutrition, macros and meal book',
@@ -2146,8 +2157,8 @@ export const EN: Record<string, string> = {
     'Whichever you pick, you get the same app, all of it.',
   'Si prefieres esperar, no pasa nada: te avisaremos antes de que termine la prueba.':
     'If you would rather wait, that is fine: we will let you know before the trial ends.',
-  'Mientras no lo actives no se te cobra nada, y tus alumnos actuales siguen igual.':
-    'Until you activate it you are charged nothing, and your current students carry on as they are.',
+  'Se cobra una vez al año. Mientras no lo actives no se te cobra nada, y tus alumnos actuales siguen igual.':
+    'Charged once a year. Until you activate it you are charged nothing, and your current students carry on as they are.',
   'Tu plan de atleta': 'Your athlete plan',
   'Tu plan de entrenador': 'Your coach plan',
   'Así funciona tu prueba': 'How your trial works',

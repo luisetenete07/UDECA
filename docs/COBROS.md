@@ -101,8 +101,8 @@ consuma dentro de la app se compre con las compras integradas de Apple, y
 prohíbe además **enseñar precios o poner enlaces que lleven a pagar por fuera**.
 Una pantalla con "180 €/año" y un botón a Stripe no es discutible: es rechazo.
 
-Por eso existe `CAN_SELL_IN_APP` en `lib/subscription.ts` (`false` en iOS). Con
-ella apagada:
+Por eso existe `CAN_LINK_TO_PAYMENT` en `lib/subscription.ts` (`false` en iOS,
+sea cual sea el interruptor general). Con ella apagada:
 
 - El muro del alta (`components/EntryWall.tsx`) dice solo que la cuenta está sin
   activar. Sin precio, sin botón de pago y sin explicar dónde se paga.
@@ -135,7 +135,7 @@ En Android, web y APK no cambia nada: se cobra con normalidad.
 `payments-webhook/api/stripe-webhook.js`, evento `checkout.session.completed`:
 
 1. Si es una **suscripción**, extiende `subscriptionUntil` hasta el fin del
-   periodo pagado.
+   periodo pagado y escribe `subscriptionPlan`.
 2. Si es un **pago suelto**, mira el rol de quien paga:
    - entrenador o atleta → es el alta: escribe `entryPaidAt`, guarda la huella
      de la tarjeta, reparte (o no) las plazas de alumno y, si es atleta, arranca
@@ -145,14 +145,37 @@ En Android, web y APK no cambia nada: se cobra con normalidad.
 Todos los eventos son idempotentes (colección `stripeEvents`): Stripe reenvía, y
 un cobro no puede contar dos veces.
 
+### El plan sale del cobro, no del rol
+
+`subscriptionPlan` (`annual` o `monthly`) se saca del **intervalo que cobra
+Stripe**, y se relee en cada renovación por si alguien se pasa de mensual a
+anual.
+
+Antes se deducía del rol —"el entrenador paga al año y el atleta al mes"—, y esa
+regla dejó de ser verdad el día que el atleta pudo pagar el año por delante:
+quien pagaba los 96 € se quedaba con el plan en blanco o con "mensual" escrito.
+Lo mismo pasaba en el panel del CEO al darle un año a un atleta.
+
+No decide el acceso —eso lo decide `subscriptionUntil`—, así que el fallo no se
+notaba en el uso. Lo que quedaba mal era lo que se lee al mirar una cuenta, que
+es justo lo que se mira cuando alguien pide una devolución.
+`scripts/check-cadena-cobro.mjs` recorre esto de punta a punta.
+
 
 ---
 
 ## 3 bis · Los cobros están ENCENDIDOS
 
-`PAGOS_ACTIVOS = true` en `lib/planBase.ts`, con los cuatro Payment Links de
-producción en `lib/subscription.ts` y los dos del alta también en
+`PAGOS_ACTIVOS = true` en `lib/planBase.ts`, con los cinco Payment Links de
+producción en `lib/enlacesDeCobro.ts` y los dos del alta también en
 `web/config.js`.
+
+Los enlaces viven en su propio fichero, y no en `lib/subscription.ts`, por lo
+mismo que la puerta de acceso vive en `planBase.ts`: `subscription.ts` lee
+`Platform.OS` al cargarse y arrastra React Native entera, así que la parte que
+decide **a qué producto de Stripe se manda a cada persona** no se podía probar
+desde Node. Ahora sí: `scripts/check-cadena-cobro.mjs` la recorre con cada rol y
+cada plan.
 
 ### Lo que tiene que seguir cuadrando
 
@@ -168,7 +191,7 @@ cuenta no se activa nunca**. Sin ningún error y con el dinero ya cobrado.
 **Si algún día se cambia de perfil o de cuenta de Stripe, hay que mover LAS DOS
 COSAS a la vez**: los enlaces del repositorio y las dos claves de Vercel.
 
-### Los cuatro enlaces
+### Los cinco enlaces
 
 | Producto | Payment Link |
 |---|---|
@@ -202,7 +225,7 @@ a comprobarla; el cobro va por la web. Ver docs/TIENDAS.md.
 
 ### Si hay que apagarlo otra vez
 
-`PAGOS_ACTIVOS = false` y vaciar los cuatro enlaces (y dejar `web/config.js`
+`PAGOS_ACTIVOS = false` y vaciar los cinco enlaces de `lib/enlacesDeCobro.ts` (y dejar `web/config.js`
 apuntando a `/proximamente`). Van juntos: en la app un enlace suelto es
 inofensivo porque manda `CAN_LINK_TO_PAYMENT`, pero `web/config.js` no mira
 ningún interruptor y ahí un enlace es un cobro real. `check-stripe.mjs` no deja

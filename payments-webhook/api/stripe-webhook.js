@@ -89,6 +89,26 @@ function subPeriodEndMs(sub) {
   return secs ? secs * 1000 : addOneMonth(Date.now());
 }
 
+/**
+ * Qué plan ha contratado, leído de la propia suscripción.
+ *
+ * Se saca del INTERVALO que cobra Stripe, no del rol de la cuenta. Antes se
+ * deducía del rol —"el entrenador paga al año y el atleta al mes"— y esa regla
+ * dejó de ser verdad el día que el atleta pudo pagar el año por delante: quien
+ * pagaba los 96 € quedaba con "mensual" escrito en su ficha.
+ *
+ * No decide el acceso —eso lo decide `subscriptionUntil`, que sale del fin del
+ * periodo pagado— pero sí es lo que se lee al mirar una cuenta, y un plan
+ * equivocado ahí manda a devolver un dinero que no toca.
+ */
+function planDeLaSuscripcion(sub) {
+  const precio = sub?.items?.data?.[0]?.price;
+  const intervalo = precio?.recurring?.interval ?? sub?.plan?.interval;
+  if (intervalo === 'year') return 'annual';
+  if (intervalo === 'month') return 'monthly';
+  return null;
+}
+
 /** Id de suscripción de una factura, tolerante a la versión de la API. */
 function invoiceSubscriptionId(invoice) {
   return (
@@ -222,13 +242,18 @@ async function activateSubscription(session) {
   const uid = session.client_reference_id;
   if (!uid) return;
   let until = addOneMonth(Date.now());
+  let plan = null;
   if (session.subscription) {
     const sub = await stripe.subscriptions.retrieve(session.subscription);
     until = subPeriodEndMs(sub); // fin del periodo pagado (mes o año)
+    plan = planDeLaSuscripcion(sub);
   }
   await db.collection('users').doc(uid).set(
     {
       subscriptionUntil: until,
+      // Solo si se ha podido leer: dejar un `null` encima borraría el plan
+      // que ya hubiera escrito, y ninguna información es mejor que la falsa.
+      ...(plan ? { subscriptionPlan: plan } : {}),
       stripeCustomerId: session.customer || null,
       stripeSubscriptionId: session.subscription || null,
     },
@@ -327,7 +352,16 @@ async function renewSubscription(invoice) {
     .limit(1)
     .get();
   if (q.empty) return;
-  await q.docs[0].ref.set({ subscriptionUntil: subPeriodEndMs(sub) }, { merge: true });
+  // El plan se relee en cada renovación: quien se pase de mensual a anual en
+  // Stripe lo hace ahí, y su ficha tiene que enterarse.
+  const plan = planDeLaSuscripcion(sub);
+  await q.docs[0].ref.set(
+    {
+      subscriptionUntil: subPeriodEndMs(sub),
+      ...(plan ? { subscriptionPlan: plan } : {}),
+    },
+    { merge: true }
+  );
 }
 
 // Cancelación: la cuenta caduca de inmediato (datos intactos).

@@ -112,8 +112,8 @@ separado y da +1 mes o +1 año a cualquiera.
 En la web, los botones de empezar llevan a `app.udeca.app/proximamente`, que
 explica lo mismo y manda a la app.
 
-**Para volver a cobrar**: `PAGOS_ACTIVOS` a `true` y pegar los cuatro Payment
-Links de producción en `lib/subscription.ts` (los dos del alta, también en
+**Para volver a cobrar**: `PAGOS_ACTIVOS` a `true` y pegar los cinco Payment
+Links de producción en `lib/enlacesDeCobro.ts` (los dos del alta, también en
 `web/config.js`). El iPhone seguirá sin botón, que es lo que queremos.
 
 Dos guardianes lo vigilan, y los dos cambian de modo solos según el

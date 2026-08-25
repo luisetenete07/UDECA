@@ -180,9 +180,17 @@ export default function TrainerProfileScreen() {
     }
   };
 
-  /** El plan que le toca a esa cuenta: el coach paga al año, el atleta al mes. */
-  const planDe = (c: UserProfile): 'annual' | 'monthly' =>
-    c.role === 'athlete' ? 'monthly' : 'annual';
+  /**
+   * Qué plan queda escrito, según lo que se le está dando.
+   *
+   * Sale de los DÍAS y no del rol. Antes salía del rol —"el entrenador paga al
+   * año y el atleta al mes"—, y esa regla dejó de ser verdad el día que el
+   * atleta pudo pagar el año por delante: darle "+1 año" a un atleta le dejaba
+   * "mensual" escrito en la ficha. No le rompía el acceso, que lo manda la
+   * fecha, pero es lo que se lee al mirar la cuenta.
+   */
+  const planPorDias = (dias: number): 'annual' | 'monthly' =>
+    dias >= 365 ? 'annual' : 'monthly';
 
   // Confirmación multiplataforma para acciones destructivas del admin.
   const confirmAdmin = (message: string): Promise<boolean> => {
@@ -208,12 +216,13 @@ export default function TrainerProfileScreen() {
       return;
     setUpdatingCoach(coach.uid);
     try {
-      await setCoachSubscription(coach.uid, 0, planDe(coach));
+      // Al quitar la suscripción se conserva el plan que tuviera: lo que se le
+      // retira es el acceso, no el recuerdo de lo que contrató.
+      const plan = coach.subscriptionPlan ?? (coach.role === 'athlete' ? 'monthly' : 'annual');
+      await setCoachSubscription(coach.uid, 0, plan);
       setCoaches((prev) =>
         prev.map((c) =>
-          c.uid === coach.uid
-            ? { ...c, subscriptionUntil: 0, subscriptionPlan: planDe(coach) }
-            : c
+          c.uid === coach.uid ? { ...c, subscriptionUntil: 0, subscriptionPlan: plan } : c
         )
       );
       showToast('Suscripción retirada');
@@ -254,12 +263,11 @@ export default function TrainerProfileScreen() {
           ? coach.subscriptionUntil
           : Date.now();
       const until = base + days * DAY_MS;
-      await setCoachSubscription(coach.uid, until, planDe(coach));
+      const plan = planPorDias(days);
+      await setCoachSubscription(coach.uid, until, plan);
       setCoaches((prev) =>
         prev.map((c) =>
-          c.uid === coach.uid
-            ? { ...c, subscriptionUntil: until, subscriptionPlan: planDe(coach) }
-            : c
+          c.uid === coach.uid ? { ...c, subscriptionUntil: until, subscriptionPlan: plan } : c
         )
       );
       showToast(frase`${coach.name.split(' ')[0]}: activo hasta ${fechaCorta(until)}`);

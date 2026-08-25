@@ -9,6 +9,26 @@ import {
 } from './planBase';
 
 /**
+ * Los enlaces de Stripe y las direcciones que se abren para pagar viven en
+ * lib/enlacesDeCobro.ts, y se reexportan aquí para no tocar ni un import.
+ *
+ * Están allí por lo mismo que la puerta de acceso está en planBase.ts: este
+ * fichero lee `Platform.OS` al cargarse, y eso dejaba sin poder probar en Node
+ * justo la parte que decide a qué producto de Stripe se manda a cada persona
+ * —que es la que, cuando falla, falla cobrando.
+ */
+export {
+  ATHLETE_ANNUAL_LINK,
+  ATHLETE_ENTRY_LINK,
+  ATHLETE_PAYMENT_LINK,
+  COACH_ENTRY_LINK,
+  COACH_PAYMENT_LINK,
+  entryCheckoutUrl,
+  subscriptionCheckoutUrl,
+  type PlanElegido,
+} from './enlacesDeCobro';
+
+/**
  * Modelo SaaS de UDECA: los COACHES pagan la plataforma; sus alumnos entran
  * gratis con el código del coach.
  *
@@ -108,56 +128,6 @@ export {
   tocaElAvisoDelAtleta,
 } from './planBase';
 
-/**
- * Payment Links de Stripe, los CINCO de producción. COBRAN DE VERDAD.
- *
- *   - Alta de entrenador:          1 € (pago único)
- *   - Alta de atleta:              1 € (pago único)
- *   - Suscripción de entrenador: 180 €/año
- *   - Suscripción de atleta:      10 €/mes
- *   - Atleta, pagando el año:     96 €/año  (ver ATHLETE_ANNUAL_EUR)
- *
- * Están creados en el perfil de UDECA, y las claves de Vercel
- * (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) son de ESE MISMO perfil. Tienen
- * que ir juntos: con las claves de otra cuenta, el pago entra y la cuenta no se
- * activa nunca, sin dar ningún error. Ver PAGOS_ACTIVOS en lib/planBase.ts.
- *
- * La app les añade `?client_reference_id=<uid>` para que el webhook active la
- * cuenta correcta sola, y `prefilled_email` para no hacer escribir el correo.
- *
- * NUNCA los de prueba (`buy.stripe.com/test_…`): abren la pasarela, aceptan la
- * tarjeta, dan las gracias y no cobran nada, así que quien pulsara se quedaría
- * convencido de haber pagado. Se distinguen por cinco letras y ya estuvieron
- * publicados una vez, de ahí el guardián en scripts/check-pago-ios.mjs.
- *
- * Los dos del alta son los MISMOS que van en `web/config.js`: la web los usa
- * para quien llega de fuera y la app para quien se registró sin pasar por ella.
- * Si cambias uno, cambia el otro — check-stripe.mjs se queja si se separan.
- */
-export const COACH_PAYMENT_LINK: string =
-  'https://buy.stripe.com/eVqcN4cuP9qH70IgPW3sI02';
-export const ATHLETE_PAYMENT_LINK: string =
-  'https://buy.stripe.com/5kQ3cudyT8mDetafLS3sI03';
-export const COACH_ENTRY_LINK: string =
-  'https://buy.stripe.com/5kQeVc8ezdGX84MbvC3sI00';
-export const ATHLETE_ENTRY_LINK: string =
-  'https://buy.stripe.com/4gMdR8gL50UbbgY9nu3sI01';
-/** El quinto: el atleta que paga el año (ver ATHLETE_ANNUAL_EUR). */
-export const ATHLETE_ANNUAL_LINK: string =
-  'https://buy.stripe.com/3cIdR866rcCT98Q9nu3sI05';
-
-/** Enlace del alta con el uid dentro, para que el webhook sepa a quién activar. */
-export function entryCheckoutUrl(profile: UserProfile | null): string | null {
-  if (!profile) return null;
-  const base = profile.role === 'athlete' ? ATHLETE_ENTRY_LINK : COACH_ENTRY_LINK;
-  if (!base) return null;
-  const sep = base.includes('?') ? '&' : '?';
-  return (
-    `${base}${sep}client_reference_id=${encodeURIComponent(profile.uid)}` +
-    `&prefilled_email=${encodeURIComponent(profile.email)}`
-  );
-}
-
 /** Endpoint de comprobación bajo demanda (Vercel). Activa la cuenta al momento. */
 export const CHECK_SUB_URL = 'https://udeca.vercel.app/api/check-subscription';
 
@@ -211,37 +181,6 @@ export async function verifySubscriptionNow(
   }
 }
 
-/**
- * Cómo quiere pagar el atleta. El entrenador solo tiene anual, así que no elige.
- */
-export type PlanElegido = 'monthly' | 'annual';
-
-/**
- * URL de suscripción para este usuario, con su uid para la activación auto.
- *
- * El `plan` solo lo mira el atleta, que es quien tiene dos formas de pagar. Por
- * defecto la mensual: si algún día se llama sin decir cuál, que sea la barata
- * de entrada y no la de 96 €.
- */
-export function subscriptionCheckoutUrl(
-  profile: UserProfile | null,
-  plan: PlanElegido = 'monthly'
-): string | null {
-  if (!profile) return null;
-  const base =
-    profile.role === 'athlete'
-      ? plan === 'annual'
-        ? ATHLETE_ANNUAL_LINK
-        : ATHLETE_PAYMENT_LINK
-      : COACH_PAYMENT_LINK;
-  if (!base) return null;
-  const sep = base.includes('?') ? '&' : '?';
-  return (
-    `${base}${sep}client_reference_id=${encodeURIComponent(profile.uid)}` +
-    `&prefilled_email=${encodeURIComponent(profile.email)}`
-  );
-}
-
 /*
  * LA APP NO DICE PRECIOS. NUNCA. EN NINGUNA PLATAFORMA.
  *
@@ -269,14 +208,12 @@ export function subscriptionCheckoutUrl(
 /**
  * ¿Se puede enlazar a pagar DESDE la app?
  *
- * AHORA MISMO EN NINGÚN SITIO, porque no se cobra todavía: manda
- * `PAGOS_ACTIVOS` (lib/planBase.ts), que está apagado mientras la cuenta de
- * Stripe de UDECA no exista. Donde había un botón de pagar, ahora se dice que
- * la función todavía no está disponible.
+ * En la web y en Android SÍ; **en iPhone no, aunque los pagos estén
+ * encendidos**. Por eso son dos condiciones y no una:
  *
- * El resto de este comentario es la regla que sigue vigente y que volverá a
- * mandar en cuanto se reactiven los pagos: **en iPhone no, aunque los pagos
- * estén encendidos**. Por eso son dos condiciones y no una.
+ *  - `PAGOS_ACTIVOS` (lib/planBase.ts) es el interruptor general. Encendido:
+ *    los cinco enlaces de producción de aquí arriba cobran de verdad.
+ *  - `Platform.OS !== 'ios'` es la norma de Apple, y no depende del anterior.
  *
  * POR QUÉ NO EN IPHONE
  *
@@ -301,11 +238,12 @@ export function subscriptionCheckoutUrl(
  * cuenta —"tu cuenta está sin activar", "no está activa"—, el botón de volver
  * a comprobar y un correo de contacto. Ni precios, ni enlaces de pago.
  *
- * PARA VOLVER A COBRAR
+ * PARA DEJAR DE COBRAR, Y PARA VOLVER
  *
- * `PAGOS_ACTIVOS` a `true` en lib/planBase.ts y pegar los cuatro enlaces de
- * Stripe de producción aquí arriba. Con eso vuelve el cobro en web y en
- * Android, y el iPhone sigue sin botón, que es lo que queremos.
+ * `PAGOS_ACTIVOS` a `false` en lib/planBase.ts apaga el cobro en todas partes
+ * de golpe, y donde había un botón de pagar se dice que la función todavía no
+ * está disponible. Volver a `true` lo devuelve, en web y en Android; el iPhone
+ * sigue sin botón, que es lo que queremos.
  *
  * Para que el iPhone TAMBIÉN cobre hay que montar las compras integradas de
  * verdad (StoreKit + acuerdos de pago en App Store Connect), que es otro

@@ -66,8 +66,8 @@ export function isAdmin(profile: UserProfile | null): boolean {
  * Está aquí, en el fichero puro, porque lo mira la puerta de entrada
  * (`needsEntryPayment`) y esa tiene que poder comprobarse sin arrancar la app.
  *
- * AHORA MISMO SÍ. Los cuatro Payment Links de producción están en
- * lib/subscription.ts y las claves de Vercel son del MISMO perfil de Stripe en
+ * AHORA MISMO SÍ. Los cinco Payment Links de producción están en
+ * lib/enlacesDeCobro.ts y las claves de Vercel son del MISMO perfil de Stripe en
  * el que se crearon (el de UDECA).
  *
  * Esa coincidencia es todo: estuvo apagado un tiempo justamente porque los
