@@ -728,11 +728,13 @@ export default function ProgressScreen() {
               <CollapsibleCard
                 id="progreso-mapa"
                 icon="body-outline"
-                title="Mapa muscular (28 días)"
+                title="Mapa muscular"
                 hint={`${muscleMap.length} patrones`}
                 defaultOpen={false}
               >
-                <Text style={styles.photoHint}>Series completadas por patrón de movimiento.</Text>
+                <Text style={styles.photoHint}>
+                  Series completadas por patrón de movimiento, en los últimos 28 días.
+                </Text>
                 {muscleMap.map((m) => (
                   <View key={m.group} style={styles.muscleRow}>
                     <Text style={styles.muscleLabel} numberOfLines={1}>
@@ -755,7 +757,7 @@ export default function ProgressScreen() {
             <CollapsibleCard
               id="progreso-top"
               icon="podium-outline"
-              title="Ejercicios más entrenados"
+              title="Más entrenados"
               hint={topExercises(workoutLogs)[0]?.name}
               defaultOpen={false}
             >

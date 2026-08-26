@@ -80,7 +80,15 @@ export function CollapsibleCard({
     <Card style={style}>
       <Pressable onPress={alternar} style={styles.cabecera} hitSlop={6}>
         <Ionicons name={icon} size={16} color={colors.primary} />
-        <Text style={styles.titulo}>{title}</Text>
+        {/* El título cede sitio, la pista no.
+            Antes era al revés: el título ocupaba lo que necesitaba y a la
+            pista le quedaba lo que sobrara, que en un móvil estrecho eran
+            cuatro píxeles. El "Código de invitación" del entrenador —que es
+            justo el dato que va a copiar y mandar— se quedaba en una raya. El
+            título se adivina por el icono; el código no se adivina. */}
+        <Text style={styles.titulo} numberOfLines={1}>
+          {title}
+        </Text>
         {!visible && hint ? (
           <Text style={styles.hint} numberOfLines={1}>
             {hint}
@@ -108,14 +116,15 @@ export function CollapsibleCard({
 
 const styles = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  titulo: { ...typography.h3, color: colors.text },
+  titulo: { ...typography.h3, color: colors.text, flexShrink: 1, flexGrow: 1 },
   hint: {
     ...typography.small,
     // Un punto menos que el cuerpo: la pista acompaña al título, no compite
     // con él, y a igual tamaño no cabían los dos en un móvil estrecho.
     fontSize: 12,
     color: colors.textFaint,
-    flex: 1,
+    // Sin `flex`: la pista se queda con lo que mide y no menos.
+    flexShrink: 0,
     textAlign: 'right',
     fontFamily: fonts.medium,
   },

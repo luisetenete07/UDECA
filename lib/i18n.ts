@@ -325,7 +325,8 @@ export const EN: Record<string, string> = {
     'Sets completed each week in what you train the most. Tap a category to follow or unfollow it.',
   'Registra entrenamientos para ver aquí tus series por categoría.':
     'Log workouts to see your sets by category here.',
-  'Series completadas por patrón de movimiento.': 'Sets completed by movement pattern.',
+  'Series completadas por patrón de movimiento, en los últimos 28 días.':
+    'Sets completed by movement pattern, over the last 28 days.',
   'Músculos trabajados': 'Muscles worked',
   'Última sesión': 'Last session',
   CONFIRMAR: 'CONFIRM',
@@ -341,8 +342,8 @@ export const EN: Record<string, string> = {
   'Peso corporal': 'Body weight',
   'isom.': 'hold',
   'Series semanales': 'Weekly sets',
-  'Mapa muscular (28 días)': 'Muscle map (28 days)',
-  'Ejercicios más entrenados': 'Most trained exercises',
+  'Mapa muscular': 'Muscle map',
+  'Más entrenados': 'Most trained',
   'Aún no hay datos por ejercicio': 'No per-exercise data yet',
   'Cuando completes entrenamientos verás aquí cómo mejoras en cada ejercicio.':
     "When you complete workouts you'll see here how you improve in each exercise.",

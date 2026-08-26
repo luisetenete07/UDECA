@@ -27,10 +27,32 @@ import { traducir } from '../lib/i18n';
  * Y solo se toca el texto SUELTO: `<Text>Hola {nombre}</Text>` llega aquí como
  * dos trozos, y el que se busca en el diccionario es "Hola ", no el nombre.
  */
+/**
+ * Hasta dónde puede crecer la letra del sistema.
+ *
+ * En iOS y en Android se puede subir el tamaño de texto en los ajustes del
+ * teléfono, y React Native lo aplica a TODO por defecto, sin tope. Con el
+ * ajuste al máximo, un texto de 15 puntos se pinta a 52: un botón de 52 de alto
+ * con la palabra "Borrador" dentro pasa a enseñar "Borrado" y una "r" debajo, y
+ * los selectores se salen de su caja.
+ *
+ * No se apaga: alguien que necesita la letra grande la necesita de verdad, y
+ * dejar la app clavada al tamaño de siempre es dejarla fuera. Lo que se hace es
+ * poner un techo. Hasta 1,3 la app crece y sigue cuadrando; por encima, lo que
+ * se rompe no es solo la estética —los textos empiezan a taparse unos a otros y
+ * a salirse de los botones, y entonces no se puede usar tampoco.
+ *
+ * Va aquí, en el `Text` de la app, por lo mismo que la traducción: ponerlo
+ * pantalla por pantalla es un trabajo que hay que repetir con cada texto nuevo,
+ * y basta que a uno se le olvide para que esa pantalla se rompa. Quien de
+ * verdad necesite otro techo lo pasa por prop, que gana a este.
+ */
+export const TOPE_DE_LETRA = 1.3;
+
 export function Text({ children, ...resto }: TextProps) {
   const idioma = useIdioma();
   return (
-    <TextoDeRN {...resto}>
+    <TextoDeRN maxFontSizeMultiplier={TOPE_DE_LETRA} {...resto}>
       {idioma === 'en' ? traduceHijos(children, idioma) : children}
     </TextoDeRN>
   );

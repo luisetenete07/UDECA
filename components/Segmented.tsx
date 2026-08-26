@@ -28,6 +28,14 @@ export interface OpcionSegmento<T extends string> {
   contador?: number;
 }
 
+/** Dónde ha quedado un segmento, medido por el propio sistema de diseño. */
+interface Caja {
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+}
+
 export function Segmented<T extends string>({
   opciones,
   valor,
@@ -42,18 +50,71 @@ export function Segmented<T extends string>({
 }) {
   const [ancho, setAncho] = useState(0);
   const indice = Math.max(0, opciones.findIndex((o) => o.valor === valor));
-  const desliz = useRef(new Animated.Value(indice)).current;
+
+  /*
+   * DÓNDE SE PINTA LA PASTILLA: DONDE ESTÁ EL SEGMENTO, NO DONDE DEBERÍA ESTAR
+   *
+   * Antes la posición se CALCULABA: fila = índice / 2, columna = índice % 2,
+   * multiplicado por el ancho y el alto teóricos. Esa cuenta y el reparto real
+   * que hace flexbox son dos verdades distintas sobre lo mismo, y el día que no
+   * coinciden pasa lo que se vio en un móvil: los cuatro segmentos en UNA fila
+   * y la pastilla dibujada en la segunda, fuera de su caja y encima del texto
+   * de abajo.
+   *
+   * Basta con que el ancho medido llegue tarde o llegue distinto —una animación
+   * de entrada, una rotación, una letra del sistema más grande— para que la
+   * cuenta y la realidad se separen. Y como la cuenta no sabe que se ha
+   * separado, no hay forma de que se corrija sola.
+   *
+   * Ahora cada segmento dice dónde ha quedado (`onLayout`, en coordenadas de su
+   * propio contenedor) y la pastilla se pone AHÍ. Se reparta como se reparta
+   * —una fila, dos, tres— la pastilla no puede estar en otro sitio que encima
+   * del segmento elegido.
+   */
+  const [cajas, setCajas] = useState<Record<number, Caja>>({});
+  const cajaActiva = cajas[indice];
+
+  const mide = (i: number, c: Caja) => {
+    setCajas((prev) => {
+      const v = prev[i];
+      // Solo si ha cambiado de verdad: `onLayout` se dispara en cada pasada y
+      // guardar un objeto nuevo idéntico volvería a pintar sin fin.
+      if (v && v.x === c.x && v.y === c.y && v.ancho === c.ancho && v.alto === c.alto) return prev;
+      return { ...prev, [i]: c };
+    });
+  };
+
+  const x = useRef(new Animated.Value(0)).current;
+  const y = useRef(new Animated.Value(0)).current;
+  const primera = useRef(true);
 
   useEffect(() => {
-    const a = Animated.timing(desliz, {
-      toValue: indice,
-      duration: 220,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    });
+    if (!cajaActiva) return;
+    // La primera vez se coloca sin animar: verla venir desde la esquina cada
+    // vez que se abre la pantalla parece un fallo, no un detalle.
+    if (primera.current) {
+      primera.current = false;
+      x.setValue(cajaActiva.x);
+      y.setValue(cajaActiva.y);
+      return;
+    }
+    const a = Animated.parallel([
+      Animated.timing(x, {
+        toValue: cajaActiva.x,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(y, {
+        toValue: cajaActiva.y,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
     a.start();
     return () => a.stop();
-  }, [desliz, indice]);
+  }, [cajaActiva, x, y]);
 
   /*
    * A partir de cuatro opciones se parte en dos filas. En una sola, cada
@@ -74,44 +135,36 @@ export function Segmented<T extends string>({
   const util = ancho - PADDING * 2 - BORDE * 2;
   const bruto = porFila > 0 ? util / porFila : 0;
   const anchoSeg = partido ? Math.floor(bruto) : bruto;
-  // Con una sola opción no hay nada que interpolar (haría falta un rango de
-  // dos valores), y tampoco hay a dónde deslizarse.
-  const rango = opciones.map((_, i) => i);
 
   return (
     <View style={styles.caja} onLayout={(e) => setAncho(e.nativeEvent.layout.width)}>
-      {anchoSeg > 0 && opciones.length > 1 ? (
+      {cajaActiva && opciones.length > 1 ? (
         <Animated.View
           style={[
             styles.pastilla,
             {
-              width: anchoSeg,
-              height: alto,
-              transform: [
-                {
-                  translateX: desliz.interpolate({
-                    inputRange: rango,
-                    outputRange: rango.map((i) => (i % porFila) * anchoSeg),
-                  }),
-                },
-                {
-                  translateY: desliz.interpolate({
-                    inputRange: rango,
-                    outputRange: rango.map((i) => Math.floor(i / porFila) * alto),
-                  }),
-                },
-              ],
+              // El tamaño se toma tal cual del segmento medido, sin animarlo:
+              // solo cambia cuando cambia el reparto (girar el móvil, otra
+              // letra del sistema), y animarlo ahí sería animar un
+              // redimensionado, que se ve como un tirón.
+              width: cajaActiva.ancho,
+              height: cajaActiva.alto,
+              transform: [{ translateX: x }, { translateY: y }],
             },
           ]}
           pointerEvents="none"
         />
       ) : null}
 
-      {opciones.map((o) => {
+      {opciones.map((o, i) => {
         const activo = o.valor === valor;
         return (
           <Pressable
             key={o.valor}
+            onLayout={(e) => {
+              const { x: ex, y: ey, width, height } = e.nativeEvent.layout;
+              mide(i, { x: ex, y: ey, ancho: width, alto: height });
+            }}
             onPress={() => {
               if (o.valor === valor) return;
               if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
@@ -119,7 +172,10 @@ export function Segmented<T extends string>({
             }}
             style={[
               styles.segmento,
-              { height: alto },
+              // `minHeight` y no `height`: con la letra grande del sistema, una
+              // altura fija recorta el texto por la mitad en vez de dejar que
+              // el segmento crezca.
+              { minHeight: alto },
               // En dos filas el ancho no puede salir de `flex: 1`, o la última
               // fila incompleta repartiría su hueco entre menos segmentos y no
               // cuadrarían con la pastilla. Se fija por `flexBasis` y no por
@@ -177,10 +233,13 @@ const styles = StyleSheet.create({
     padding: PADDING,
     marginBottom: spacing.md,
   },
+  // Sin `top`/`left` propios: la posición entera viene de lo que mide el
+  // segmento, y esas coordenadas ya cuentan el relleno de la caja. Sumarlo otra
+  // vez aquí desplazaría la pastilla cuatro píxeles en diagonal.
   pastilla: {
     position: 'absolute',
-    top: PADDING,
-    left: PADDING,
+    top: 0,
+    left: 0,
     backgroundColor: colors.primary,
     borderRadius: radius.sm,
   },

@@ -786,20 +786,23 @@ export default function RoutineEditorScreen() {
           <Button
             title="Borrador"
             variant="secondary"
+            compacto
             onPress={handleGenerateDraft}
-            style={{ flex: 1 }}
+            style={styles.accionAncha}
           />
           <Button
             title="Plantillas"
             variant="secondary"
+            compacto
             onPress={openTemplates}
-            style={{ flex: 1 }}
+            style={styles.accionAncha}
           />
           <Button
             title="Copiar"
             variant="secondary"
+            compacto
             onPress={openCopyPicker}
-            style={{ flex: 1 }}
+            style={styles.accionAncha}
           />
         </View>
       )}
@@ -1839,7 +1842,22 @@ const styles = StyleSheet.create({
   linkBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   copyCard: { marginBottom: spacing.md },
   copyTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  actionsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  /*
+   * Tres botones en fila, y si no caben, en dos filas.
+   *
+   * Con `flex: 1` a secas se reparten el ancho pase lo que pase, y en un móvil
+   * estrecho —o con la letra del sistema más grande— a cada uno le tocan menos
+   * píxeles de los que mide su palabra: "Borrador" se partía en "Borrado" y una
+   * "r" suelta debajo. Con un ancho mínimo, cuando los tres ya no caben la fila
+   * se parte en dos y cada botón vuelve a tener sitio para su texto.
+   */
+  actionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  accionAncha: { flexGrow: 1, flexShrink: 1, flexBasis: 96, minWidth: 96 },
   templateRow: {
     flexDirection: 'row',
     alignItems: 'center',

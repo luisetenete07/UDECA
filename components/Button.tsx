@@ -12,6 +12,15 @@ interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Menos margen a los lados, para botones que van VARIOS EN UNA FILA.
+   *
+   * El relleno de siempre (24 a cada lado) está pensado para un botón que se
+   * lee solo y ocupa el ancho. Metidos tres en una fila de móvil, esos 48
+   * píxeles salen del texto: al botón le quedan sesenta y pocos para una
+   * palabra que mide ochenta, y la palabra se corta.
+   */
+  compacto?: boolean;
 }
 
 export function Button({
@@ -21,6 +30,7 @@ export function Button({
   loading,
   disabled,
   style,
+  compacto,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -38,7 +48,24 @@ export function Button({
   const inner = loading ? (
     <ActivityIndicator color={variant === 'primary' ? colors.onPrimary : colors.text} />
   ) : (
-    <Text style={[styles.text, variant === 'primary' && styles.textPrimary]}>{title}</Text>
+    /*
+     * Una línea, y sin partir palabras.
+     *
+     * Sin esto, un botón más estrecho que su texto no encoge la letra ni pone
+     * puntos suspensivos: parte la palabra por donde le cabe. "Borrador" salía
+     * como "Borrado" y una "r" suelta en la línea de abajo, que no se lee como
+     * un texto largo sino como una app rota.
+     *
+     * Quien de verdad no quepa se corta con puntos suspensivos, que al menos
+     * se entiende. Y para que no llegue a pasar, los botones que van en fila
+     * llevan un ancho mínimo y la fila se parte en dos.
+     */
+    <Text
+      style={[styles.text, variant === 'primary' && styles.textPrimary]}
+      numberOfLines={1}
+    >
+      {title}
+    </Text>
   );
 
   return (
@@ -60,13 +87,13 @@ export function Button({
           colors={gradients.gold}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          style={styles.base}
+          style={[styles.base, compacto && styles.baseCompacta]}
         >
           <View style={styles.sheen} />
           {inner}
         </LinearGradient>
       ) : (
-        <View style={[styles.base, variantStyles[variant]]}>{inner}</View>
+        <View style={[styles.base, compacto && styles.baseCompacta, variantStyles[variant]]}>{inner}</View>
       )}
     </Pressable>
   );
@@ -87,6 +114,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
+  baseCompacta: { paddingHorizontal: spacing.sm },
   sheen: {
     position: 'absolute',
     top: 0,

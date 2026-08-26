@@ -390,7 +390,20 @@ const styles = StyleSheet.create({
   podiumDias: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   podiumVacio: { color: colors.textFaint },
   summaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  summaryCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
+  /*
+   * Poco margen a los lados, que aquí no sobra ni un píxel.
+   *
+   * La tarjeta trae 22 de relleno por lado. Con tres en una fila de un móvil
+   * estrecho, esos 44 se los quita al rótulo: a "Miembros" le quedaban menos
+   * píxeles de los que mide y salía "Mie…", que no dice nada. La cifra manda
+   * aquí; el aire de los lados no.
+   */
+  summaryCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
   summaryValue: { ...typography.h2, color: colors.text, marginTop: spacing.xs },
   summaryLabel: {
     ...typography.small,
@@ -400,10 +413,19 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
+  /*
+   * Separación corta entre las piezas de la fila.
+   *
+   * En la fila caben cinco cosas: el puesto, la foto, el nombre, lo que ha
+   * hecho y las marcas. Con 16 de separación, los tres huecos se comían 48
+   * píxeles que salían de la única parte elástica —el nombre—, y en un móvil
+   * estrecho "Marcos Ruiz" acababa en "M…". Un ranking en el que no se leen
+   * los nombres no es un ranking.
+   */
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.sm,
   },
   rowMe: { borderColor: colors.primary },
