@@ -26,6 +26,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # Sí, hace falta instalar, aunque aquí no se compile nada.
+      #
+      # `eas build:list` lee app.json antes de preguntar nada, y app.json
+      # declara plugins que viven en node_modules. Sin instalar, se cae con
+      # PLUGIN_NOT_FOUND y por fuera solo dice "build:list command failed".
+      - run: npm ci
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -35,16 +41,13 @@ jobs:
         id: buscar
         run: |
           set -uo pipefail
-          # `eas build:list` falla diciendo solo "build:list command failed",
-          # sin más. EXPO_DEBUG saca el error de verdad, y se prueba primero la
-          # forma corta: si el filtro de estado es lo que no le gusta, se ve.
+          # Si falla, que se vea POR QUÉ. Sin esto, eas dice solo "build:list
+          # command failed" y el error de verdad se queda en su stderr.
           export EXPO_DEBUG=1
           if ! eas build:list --platform android --limit 1 \
                --json --non-interactive > builds.json 2> error.txt; then
             echo "--- lo que dijo eas ---"
-            cat error.txt
-            echo "--- lo que escribió ---"
-            head -c 2000 builds.json || true
+            tail -40 error.txt
             exit 1
           fi
           set -e
