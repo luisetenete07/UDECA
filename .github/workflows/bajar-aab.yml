@@ -1,0 +1,75 @@
+name: Bajar el ultimo .aab
+
+# Deja el .aab de la última compilación de Android colgado aquí, en GitHub.
+#
+# POR QUÉ EXISTE
+#
+# El .aab lo guarda EAS en expo.dev, y para bajarlo hay que entrar a la cuenta,
+# buscar la build y darle a descargar. No es difícil, pero es un paseo cada vez
+# que hay que subir algo a Play Console, y se hace con el móvil en la mano
+# tantas veces como con el ordenador.
+#
+# Esto NO vuelve a compilar: coge la build que YA está hecha y la deja como
+# adjunto de esta ejecución. Se baja desde la página de la ejecución, en
+# "Artifacts", sin entrar en ningún sitio más.
+#
+# La dirección de descarga se oculta del registro a propósito: este repositorio
+# es público y su registro lo lee cualquiera. El adjunto se queda 14 días.
+on:
+  workflow_dispatch:
+
+jobs:
+  bajar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Buscar la última build de Android
+        id: buscar
+        run: |
+          set -euo pipefail
+          eas build:list --platform android --status finished --limit 1 \
+            --json --non-interactive > builds.json
+
+          # El nombre del campo ha cambiado entre versiones de eas-cli, así que
+          # se prueban los dos en vez de dar por hecho uno y quedarse sin nada.
+          URL=$(node -e '
+            const b = JSON.parse(require("fs").readFileSync("builds.json","utf8"))[0] ?? {};
+            const a = b.artifacts ?? {};
+            process.stdout.write(a.applicationArchiveUrl || a.buildUrl || "");
+          ')
+          if [ -z "$URL" ]; then
+            echo "::error::No hay ninguna build de Android terminada en EAS"
+            exit 1
+          fi
+          # Fuera del registro: es una dirección de descarga directa y esto se
+          # publica en abierto.
+          echo "::add-mask::$URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+          VERSION=$(node -e '
+            const b = JSON.parse(require("fs").readFileSync("builds.json","utf8"))[0] ?? {};
+            process.stdout.write(`${b.appVersion ?? "?"}-${b.appBuildVersion ?? "?"}`);
+          ')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Build encontrada: $VERSION"
+
+      - name: Descargar
+        run: |
+          set -euo pipefail
+          curl -fsSL -o udeca.aab "${{ steps.buscar.outputs.url }}"
+          ls -lh udeca.aab
+
+      - name: Dejarlo aquí
+        uses: actions/upload-artifact@v4
+        with:
+          name: udeca-${{ steps.buscar.outputs.version }}-aab
+          path: udeca.aab
+          if-no-files-found: error
