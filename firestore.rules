@@ -442,6 +442,73 @@ service cloud.firestore {
         && resource.data.trainerId == request.auth.uid;
     }
 
+    /*
+     * LA RUTINA DIARIA: la pone el entrenador, la hace el alumno.
+     *
+     * El id del documento ES el uid del alumno, así que la regla puede
+     * comprobarlo sin leer nada: `clientId` tiene que ser ese mismo uid. Sin
+     * eso, un entrenador podría escribir la rutina de un alumno ajeno con solo
+     * poner su uid en el campo.
+     *
+     * La escribe SU entrenador, o el propio interesado cuando se entrena solo
+     * (el atleta es su propio entrenador: su `trainerId` es su uid).
+     */
+    match /rutinasDiarias/{clientId} {
+      allow read: if request.auth != null
+        && (
+          request.auth.uid == clientId
+          || resource.data.trainerId == request.auth.uid
+        );
+      /*
+       * LA ESCRIBE QUIEN LA MANDA, Y SOLO ÉL.
+       *
+       * El entrenador del alumno, según el `trainerId` de su perfil — que solo
+       * escribe el propio entrenador al aceptarlo.
+       *
+       * El atleta que se entrena solo entra por esa misma puerta sin ninguna
+       * excepción: al crearse su cuenta, su `trainerId` es su propio uid. Es su
+       * entrenador, literalmente.
+       *
+       * La segunda mitad es para quien NO tiene entrenador (un alumno al que
+       * han sacado de un grupo): puede llevar la suya, porque no hay nadie más
+       * a quien pertenezca.
+       *
+       * Lo que NO se permite —y se permitía— es que un alumno CON entrenador se
+       * reescriba la rutina. Quitarse el ejercicio que no apetece dejaría a su
+       * entrenador creyendo que lo hace, y el registro dejaría de significar
+       * nada. Lo cazó scripts/check-rules.mjs.
+       */
+      allow write: if request.auth != null
+        && request.resource.data.clientId == clientId
+        && (
+          get(/databases/$(database)/documents/users/$(clientId)).data.get('trainerId', '')
+            == request.auth.uid
+          || (
+            request.auth.uid == clientId
+            && get(/databases/$(database)/documents/users/$(clientId)).data.get('trainerId', '') == ''
+          )
+        );
+    }
+
+    /*
+     * Y lo que lleva hecho hoy, que lo marca ÉL.
+     *
+     * El entrenador puede leerlo —para eso se la puso— pero no escribirlo: dar
+     * por hecho el ejercicio de otro no es una función, es falsear su registro.
+     */
+    match /rutinasDiariasDias/{diaId} {
+      allow read: if request.auth != null
+        && (
+          resource.data.clientId == request.auth.uid
+          || resource.data.trainerId == request.auth.uid
+        );
+      allow write: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid
+        // El id lleva dentro el uid: sin esto se podría escribir en el día de
+        // otro poniendo su id y el clientId propio.
+        && diaId.split('_')[0] == request.auth.uid;
+    }
+
     // Registros diarios de hábitos: los crea y borra el propio alumno.
     match /habitLogs/{logId} {
       allow read: if request.auth != null

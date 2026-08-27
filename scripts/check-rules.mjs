@@ -187,6 +187,78 @@ await comprobar('dejar a todos fuera subiendo la versión mínima', false, () =>
   setDoc(doc(db, 'config', 'version'), { minima: '99.0.0' })
 );
 
+/*
+ * LA RUTINA DIARIA: la pone el entrenador, la hace el alumno.
+ *
+ * Las dos mitades importan. Si el alumno pudiera escribir la rutina, se
+ * quitaría lo que no le apetece y su entrenador seguiría creyendo que lo hace.
+ * Y si el entrenador pudiera marcar lo hecho, el registro dejaría de ser lo que
+ * el alumno ha hecho para ser lo que su entrenador cree.
+ */
+console.log('\nRutina diaria');
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador le pone la rutina diaria a su alumno', true, () =>
+  setDoc(doc(db, 'rutinasDiarias', alumno.id), {
+    trainerId: coach.user.uid,
+    clientId: alumno.id,
+    activa: true,
+    nombre: 'Diaria',
+    ejercicios: [{ id: 'e1', nombre: 'Pino', objetivo: '3 series de 30 s' }],
+    updatedAt: Date.now(),
+  })
+);
+// Un entrenador no puede escribirle la rutina a quien no es suyo.
+await comprobar('pero no a un alumno que no es suyo', false, () =>
+  setDoc(doc(db, 'rutinasDiarias', 'de-otro-cualquiera'), {
+    trainerId: coach.user.uid,
+    clientId: 'de-otro-cualquiera',
+    activa: true,
+    nombre: 'Diaria',
+    ejercicios: [],
+    updatedAt: Date.now(),
+  })
+);
+
+await signInWithEmailAndPassword(auth, alumno.data().email, PW);
+await comprobar('el alumno la LEE', true, () => getDoc(doc(db, 'rutinasDiarias', alumno.id)));
+// Quitarse el ejercicio que no apetece dejaría al entrenador creyendo que se
+// hace: la rutina la escribe quien la manda.
+await comprobar('pero no se la reescribe', false, () =>
+  setDoc(doc(db, 'rutinasDiarias', alumno.id), {
+    trainerId: coach.user.uid,
+    clientId: alumno.id,
+    activa: false,
+    nombre: 'Ya no',
+    ejercicios: [],
+    updatedAt: Date.now(),
+  })
+);
+const claveDia = `${alumno.id}_2026-01-01`;
+await comprobar('y marca lo que ha hecho hoy', true, () =>
+  setDoc(doc(db, 'rutinasDiariasDias', claveDia), {
+    clientId: alumno.id,
+    trainerId: coach.user.uid,
+    date: Date.now(),
+    hechos: ['e1'],
+    updatedAt: Date.now(),
+  })
+);
+
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador ve lo que lleva hecho', true, () =>
+  getDoc(doc(db, 'rutinasDiariasDias', claveDia))
+);
+// Dar por hecho el ejercicio de otro no es una función: es falsear su registro.
+await comprobar('pero no puede darlo por hecho él', false, () =>
+  setDoc(doc(db, 'rutinasDiariasDias', claveDia), {
+    clientId: alumno.id,
+    trainerId: coach.user.uid,
+    date: Date.now(),
+    hechos: ['e1', 'e2'],
+    updatedAt: Date.now(),
+  })
+);
+
 // Un alta pagada en la web queda apuntada a un correo. Si se pudiera leer o
 // escribir desde la app, cualquiera se regalaría el euro o se llevaría la
 // lista de correos de quien ha pagado.

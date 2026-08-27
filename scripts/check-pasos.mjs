@@ -126,6 +126,47 @@ console.log('\nEl paso fantasma de Android');
   comprueba('lo que se sumaría tras el fantasma es cero', pasosAGuardar({ date: 0, steps: 4000, source: 'telefono' }, sinElPasoFantasma(1), { acumulativo: true }) === 4000);
 }
 
+console.log('\nSe conecta UNA VEZ y se lee solo');
+{
+  /*
+   * El fallo que hacía que nadie usara el contador no era de cuentas: era que
+   * había que pedir los pasos a mano CADA DÍA. Un contador que hay que
+   * despertar cada mañana se abandona a los tres días.
+   *
+   * Lo que se comprueba aquí es la parte que lo arregla: que la elección se
+   * guarde en la cuenta y que la app lea sola.
+   */
+  const { readFileSync } = await import('node:fs');
+  const sinComentarios = (x) =>
+    x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const lee = (f) => sinComentarios(readFileSync(new URL(`../${f}`, import.meta.url), 'utf8'));
+  const contador = lee('components/ContadorDePasos.tsx');
+  const tipos = lee('lib/types.ts');
+
+  comprueba('la elección vive en la cuenta, no en el móvil', /stepsSource\?: 'telefono' \| 'mano'/.test(tipos));
+  comprueba('y se guarda al elegir', /updateUserProfile\(profile\.uid, \{ stepsSource: cual \}\)/.test(contador));
+  // Lo que hace que aparezcan solos: leer al abrir y al volver a la app.
+  comprueba('lee al abrir la pantalla', /useEffect\(\(\) => \{\s*leerSiToca\(\);/.test(contador));
+  comprueba('y al volver del segundo plano', /AppState\.addEventListener/.test(contador));
+  comprueba('solo si está conectado al móvil', /if \(origen !== 'telefono'/.test(contador));
+  // Una lectura que nadie ha pedido no puede llenar la pantalla de avisos.
+  comprueba('la lectura automática va en silencio', /enSilencio: true/.test(contador));
+  comprueba('y no escribe si el número no cambia',
+    /if \(enSilencio && aGuardar === \(hoy\?\.steps \?\? 0\)\) return;/.test(contador));
+  // Y se puede cambiar de fuente cuando se quiera.
+  comprueba('se puede cambiar de fuente', /setCambiando\(true\)/.test(contador));
+  // Escribirlos a mano sigue estando con el móvil conectado: se sale a andar
+  // sin él más veces de las que parece.
+  comprueba('escribir a mano sigue disponible', /Apuntar a mano/.test(contador));
+  /*
+   * Y sin tener que contestar antes de dónde salen. Estuvo escondido detrás de
+   * la pregunta de la fuente y era un paso de más para quien solo entra a
+   * apuntar sus 9.000 pasos del reloj.
+   */
+  comprueba('y sin pasar antes por la pregunta',
+    !/\{origen \?[\s\S]{0,80}styles\.filaMano/.test(contador));
+}
+
 console.log('\nLas calorías, que son una estimación');
 {
   comprueba('10.000 pasos de una persona de 70 kg', caloriasDePasos(10000, 70) === 350, String(caloriasDePasos(10000, 70)));

@@ -19,6 +19,7 @@ import { Chip, ChipRow } from '../../../../components/Chip';
 import { DiasSemana } from '../../../../components/DiasSemana';
 import { Opciones } from '../../../../components/Opciones';
 import { Segmented } from '../../../../components/Segmented';
+import { RutinaDiariaEditor } from '../../../../components/RutinaDiariaEditor';
 import { TextField } from '../../../../components/TextField';
 import { DragList } from '../../../../components/DragList';
 import { moveItem } from '../../../../lib/useDragReorder';
@@ -806,6 +807,13 @@ export default function RoutineEditorScreen() {
           />
         </View>
       )}
+
+      {/* Lo que hará TODOS los días aparte del plan. Va aquí, pegado a la
+          programación, porque es cuando se está decidiendo qué entrena y
+          cuándo: es el momento en que uno se acuerda del pino y la movilidad. */}
+      {clientId && profile ? (
+        <RutinaDiariaEditor trainerId={profile.uid} clientId={clientId} />
+      ) : null}
 
       <Card accent style={styles.scheduleCard}>
         <Text style={styles.scheduleTitle}>Programación</Text>

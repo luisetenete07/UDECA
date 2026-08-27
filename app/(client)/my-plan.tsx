@@ -16,6 +16,7 @@ import { Chip } from '../../components/Chip';
 import { DiasSemana } from '../../components/DiasSemana';
 import { Opciones } from '../../components/Opciones';
 import { Segmented } from '../../components/Segmented';
+import { RutinaDiariaEditor } from '../../components/RutinaDiariaEditor';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -292,6 +293,12 @@ export default function MyPlanScreen() {
       ) : null}
 
       <TextField label="Nombre del plan" value={name} onChangeText={setName} />
+
+      {/* El atleta se entrena solo, así que se pone su propia rutina diaria:
+          es su entrenador. Misma pieza que usa el coach con sus alumnos. */}
+      {profile ? (
+        <RutinaDiariaEditor trainerId={profile.uid} clientId={profile.uid} paraMi />
+      ) : null}
 
       {/* Método de programación (igual que el coach). */}
       <Card accent style={styles.scheduleCard}>

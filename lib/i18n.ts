@@ -1425,6 +1425,39 @@ export const EN: Record<string, string> = {
   'Tu último entreno': 'Your last session',
   // El muro de actualizar (components/ActualizacionObligatoria.tsx).
   'Hay una versión nueva': 'There is a new version',
+  // La rutina diaria: lo que se hace todos los días aparte del plan.
+  'Rutina diaria': 'Daily routine',
+  'Tu rutina diaria': 'Your daily routine',
+  'Lo que hará todos los días aparte de su plan: pino, movilidad, lo que se repite. Corto y a diario.':
+    'What they will do every day on top of their plan: handstand, mobility, whatever repeats. Short and daily.',
+  'Lo que harás todos los días aparte de tu plan: pino, movilidad, lo que se repite. Corto y a diario.':
+    'What you will do every day on top of your plan: handstand, mobility, whatever repeats. Short and daily.',
+  'Activa: la ve en su Entreno': 'On: they see it in their Training',
+  'Activa: la ves en tu Entreno': 'On: you see it in your Training',
+  'Apagada. Los ejercicios se guardan igual.': 'Off. The exercises are kept anyway.',
+  'Ejercicio (p. ej. Pino contra pared)': 'Exercise (e.g. Wall handstand)',
+  'Objetivo (p. ej. 3 series de 30 s)': 'Target (e.g. 3 sets of 30 s)',
+  'Hecha. Mañana otra vez.': 'Done. Again tomorrow.',
+  '{0} cosas cortas, cuando puedas.': '{0} short things, whenever you can.',
+  'Una cosa corta, cuando puedas.': 'One short thing, whenever you can.',
+  '{0} de {1}. Lo que caiga suma.': '{0} of {1}. Whatever you get counts.',
+  'apagada': 'off',
+  'sin ejercicios': 'no exercises',
+  // El contador de pasos, que ahora se conecta una sola vez.
+  '¿De dónde saco tus pasos?': 'Where do I get your steps from?',
+  'Se elige una vez. A partir de ahí aparecen solos cada día.':
+    'You choose once. From then on they appear on their own every day.',
+  'Este móvil': 'This phone',
+  'Los escribo yo': 'I type them in',
+  'De mi iPhone': 'From my iPhone',
+  'De este móvil': 'From this phone',
+  'Se leen solos de tu iPhone': 'Read automatically from your iPhone',
+  'Se leen solos de este móvil': 'Read automatically from this phone',
+  'Los escribes tú': 'You type them in',
+  'Cambiar': 'Change',
+  'Puedes cambiarlo cuando quieras. Lo que ya está apuntado no se toca.':
+    'You can change it whenever you like. What is already recorded is left alone.',
+  'Dejarlo como está': 'Leave it as it is',
   'Esta versión de UDECA ya no está al día. Actualiza para seguir entrenando: tus datos, tus rutinas y tu progreso te esperan intactos.':
     'This version of UDECA is out of date. Update to keep training: your data, your routines and your progress are waiting, untouched.',
   'Actualizar en la App Store': 'Update on the App Store',

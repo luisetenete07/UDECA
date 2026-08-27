@@ -134,6 +134,27 @@ export interface UserProfile {
    */
   stepGoal?: number;
   /**
+   * De dónde salen sus pasos, una vez elegido. Se guarda en LA CUENTA.
+   *
+   * Antes no se guardaba nada: había que pulsar "traer los pasos del móvil"
+   * cada día, y un contador que hay que pedir a mano cada mañana no lo usa
+   * nadie más de tres días. Ahora se elige una vez y a partir de ahí los pasos
+   * aparecen solos al abrir la app.
+   *
+   * En la cuenta y no en el móvil a propósito: quien cambia de teléfono o entra
+   * desde otro no tiene que volver a decidirlo. Lo único que sigue siendo del
+   * aparato es el PERMISO del sistema, que no se puede llevar de un móvil a
+   * otro por definición.
+   *
+   *  - `telefono`: el contador del propio móvil.
+   *  - `mano`: lo escribe él (reloj, otra app). Es una elección legítima, no un
+   *    plan B: mucha gente lleva reloj, y un contador que solo acepta lo que
+   *    mide él deja fuera justo a quien más anda.
+   *
+   * Sin valor = todavía no lo ha elegido.
+   */
+  stepsSource?: 'telefono' | 'mano';
+  /**
    * Idioma elegido ('es' | 'en'). Sin valor, el del teléfono. No se guarda
    * "es" por omisión a propósito: quien no ha elegido no ha elegido español,
    * ha elegido "lo que hable mi móvil", y el día que cambie de móvil quiere
@@ -1029,6 +1050,72 @@ export interface Habit {
   clientId: string;
   name: string;
   createdAt: number;
+}
+
+/**
+ * LA RUTINA DIARIA: lo que se hace TODOS los días, aparte del plan.
+ *
+ * El pino, la movilidad, los estiramientos de la cadera. Cosas que no son "el
+ * entreno del martes" sino algo corto que se repite a diario y que, precisamente
+ * por repetirse, es lo que más cambia a alguien en seis meses.
+ *
+ * POR QUÉ NO ES UNA RUTINA NORMAL
+ *
+ * Una rutina normal tiene días, y cada día toca o no toca. Esto toca siempre.
+ * Meterlo en el plan obligaría a copiar los mismos ejercicios en los siete días
+ * y a que el alumno los viera mezclados con su sesión, compitiendo con ella.
+ * Va aparte y se ve aparte.
+ *
+ * POR QUÉ NO ES UN HÁBITO
+ *
+ * Los hábitos ya existen y son una lista de frases que se marcan ("beber 2 L").
+ * Esto son EJERCICIOS: llevan un objetivo por sesión —tres series de treinta
+ * segundos— y quien los pone es el entrenador pensando en entrenamiento, no en
+ * costumbres.
+ *
+ * ES COMO EL GREASE THE GROOVE, PERO AL LADO
+ *
+ * La idea es la misma —poco, fácil y a menudo— con una diferencia que importa:
+ * el grease the groove SUSTITUYE al entreno del día y esto lo ACOMPAÑA.
+ */
+export interface EjercicioDiario {
+  id: string;
+  /** Cómo se llama. Lo escribe el entrenador; no hace falta que esté en la biblioteca. */
+  nombre: string;
+  /**
+   * Qué hay que hacer, en una línea: "3 series de 30 s", "5 × 5", "2 min".
+   *
+   * Texto libre y no números sueltos a propósito: aquí caben cosas que no son
+   * series por repeticiones —un aguante, unos minutos de movilidad, "hasta que
+   * deje de tirar"— y encajarlas en campos numéricos obligaría a mentir.
+   */
+  objetivo: string;
+}
+
+export interface RutinaDiaria {
+  /** El id ES el del alumno: una rutina diaria por alumno, ni más ni menos. */
+  id: string;
+  trainerId: string;
+  clientId: string;
+  /** Apagada, no se le enseña nada al alumno. Se apaga sin perder los ejercicios. */
+  activa: boolean;
+  /** Cómo la llama el entrenador. Lo ve el alumno. */
+  nombre: string;
+  ejercicios: EjercicioDiario[];
+  updatedAt: number;
+}
+
+/** Lo hecho de la rutina diaria en un día concreto (medianoche local). */
+export interface DiaDeRutinaDiaria {
+  /** `${clientId}_${aaaa-mm-dd}`. */
+  id: string;
+  clientId: string;
+  trainerId?: string;
+  /** Día al que corresponde, a medianoche. */
+  date: number;
+  /** Ids de los ejercicios ya hechos hoy. */
+  hechos: string[];
+  updatedAt: number;
 }
 
 /** Registro de un hábito cumplido en un día concreto (medianoche local). */

@@ -32,6 +32,7 @@ import { anclaConPausas, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
 import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { UltimoEntreno } from '../../components/UltimoEntreno';
+import { RutinaDiariaDelDia } from '../../components/RutinaDiariaDelDia';
 import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
 import {
@@ -1602,6 +1603,11 @@ export default function WorkoutScreen() {
           onElegirDia={() => setDayPickerOpen(true)}
         />
       ) : null}
+
+      {/* Lo que toca a diario aparte del plan: el pino, la movilidad. Va aquí
+          y no en el inicio porque es entrenamiento, y porque el inicio ya está
+          lleno. Desaparece con la sesión en marcha, como sus vecinas. */}
+      {!sesionEmpezada ? <RutinaDiariaDelDia profile={profile} /> : null}
 
       {!sesionEmpezada ? <RegistrarOtroDia /> : null}
 

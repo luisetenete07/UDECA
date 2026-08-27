@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { frase } from '../lib/idioma';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressRing } from './ProgressRing';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
+import { Dialogo } from './Dialogo';
 import { setStepLog, type StepLog } from '../lib/firestore/steps';
+import { updateUserProfile } from '../lib/firestore/users';
+import { useAuth } from '../lib/auth-context';
 import { inicioDelDia } from '../lib/fechas';
 import { conMiles } from '../lib/texto';
 import {
@@ -62,6 +65,10 @@ export function ContadorDePasos({
 }) {
   const [aMano, setAMano] = useState('');
   const [leyendo, setLeyendo] = useState(false);
+  const [cambiando, setCambiando] = useState(false);
+  const { refreshProfile } = useAuth();
+  /** De dónde salen sus pasos. Vacío = todavía no lo ha elegido. */
+  const origen = profile.stepsSource;
 
   const cargar = onCambio;
 
@@ -85,8 +92,9 @@ export function ContadorDePasos({
    * abierta, así que se escucha un momento y lo que salga se SUMA a lo que ya
    * hubiera: sustituirlo borraría la mañana de quien abre la app por la tarde.
    */
-  const leerDelTelefono = async () => {
+  const leerDelTelefono = async ({ enSilencio = false } = {}) => {
     if (Platform.OS === 'web') {
+      if (enSilencio) return;
       showToast('El contador del móvil solo está en la app de iPhone o Android');
       return;
     }
@@ -94,12 +102,17 @@ export function ContadorDePasos({
     try {
       const Pedometer = require('expo-sensors').Pedometer;
       if (!(await Pedometer.isAvailableAsync())) {
-        showToast('Este móvil no tiene contador de pasos');
+        if (!enSilencio) showToast('Este móvil no tiene contador de pasos');
         return;
       }
+      /*
+       * El permiso se PIDE la primera vez y ya está concedido las siguientes,
+       * así que esta llamada no molesta a nadie en las lecturas automáticas: si
+       * ya se dijo que sí, devuelve que sí sin enseñar nada.
+       */
       const permiso = await Pedometer.requestPermissionsAsync();
       if (!permiso.granted) {
-        showToast('Sin permiso de actividad no se pueden leer los pasos');
+        if (!enSilencio) showToast('Sin permiso de actividad no se pueden leer los pasos');
         return;
       }
       if (Platform.OS === 'ios') {
@@ -117,13 +130,19 @@ export function ContadorDePasos({
         // guardando. Decir "actualizado" ahí es lo que hace que alguien se
         // quede pensando que la app cuenta mal.
         if (leidos === 0) {
-          showToast(
-            'Tu iPhone no tiene pasos guardados de hoy. Comprueba en Ajustes › Privacidad › Movimiento y forma física.'
-          );
+          if (!enSilencio) {
+            showToast(
+              'Tu iPhone no tiene pasos guardados de hoy. Comprueba en Ajustes › Privacidad › Movimiento y forma física.'
+            );
+          }
           return;
         }
-        await guardar(pasosAGuardar(hoy, leidos, { acumulativo: false }), 'telefono');
-        showToast(frase`Traídos ${conMiles(leidos)} pasos de tu iPhone`);
+        const aGuardar = pasosAGuardar(hoy, leidos, { acumulativo: false });
+        // En la lectura automática, si no cambia nada no se escribe: cada
+        // escritura hace recargar la pantalla entera al padre.
+        if (enSilencio && aGuardar === (hoy?.steps ?? 0)) return;
+        await guardar(aGuardar, 'telefono');
+        if (!enSilencio) showToast(frase`Traídos ${conMiles(leidos)} pasos de tu iPhone`);
         return;
       }
 
@@ -153,19 +172,73 @@ export function ContadorDePasos({
       if (contados === 0) {
         // Sin dar nada por leído: guardar un cero no aporta y encima marca el
         // día como si viniera del teléfono.
-        showToast(
-          'Android solo cuenta los pasos con la app abierta. Escríbelos a mano si llevas reloj o usas otra app.'
-        );
+        if (!enSilencio) {
+          showToast(
+            'Android solo cuenta los pasos con la app abierta. Escríbelos a mano si llevas reloj o usas otra app.'
+          );
+        }
         return;
       }
       await guardar(pasosAGuardar(hoy, contados, { acumulativo: true }), 'telefono');
-      showToast(frase`Sumados ${conMiles(contados)} pasos andados con la app abierta`);
+      if (!enSilencio) {
+        showToast(frase`Sumados ${conMiles(contados)} pasos andados con la app abierta`);
+      }
     } catch {
-      showToast('No se ha podido leer el contador del móvil');
+      if (!enSilencio) showToast('No se ha podido leer el contador del móvil');
     } finally {
       setLeyendo(false);
     }
   };
+
+  /**
+   * Elegir de dónde salen los pasos. Se guarda EN LA CUENTA, una sola vez.
+   *
+   * Al elegir el móvil se lee ya mismo, sin esperar a mañana: quien acaba de
+   * conectarlo quiere ver sus pasos ahora, y una función que no enseña nada al
+   * activarla parece que no ha hecho nada.
+   */
+  const conectar = async (cual: 'telefono' | 'mano') => {
+    setCambiando(false);
+    try {
+      await updateUserProfile(profile.uid, { stepsSource: cual });
+      await refreshProfile();
+    } catch {
+      showToast('No se ha podido guardar');
+      return;
+    }
+    if (cual === 'telefono') await leerDelTelefono();
+  };
+
+  /**
+   * LOS PASOS APARECEN SOLOS.
+   *
+   * Con el móvil conectado se lee al abrir la pantalla y cada vez que se vuelve
+   * a la app. No hay que pulsar nada nunca más: eso era lo que hacía que el
+   * contador se abandonara a los tres días.
+   *
+   * Se lee también al volver del segundo plano porque es justo cuando han
+   * pasado cosas: se ha salido a andar con el móvil en el bolsillo y al volver
+   * a UDECA la cifra tiene que estar puesta.
+   *
+   * En silencio: nadie ha pedido nada, así que ningún aviso por pantalla. Y sin
+   * escribir si el número no cambia, para no hacer recargar la pantalla entera
+   * por nada.
+   */
+  const leerSiToca = useCallback(() => {
+    if (origen !== 'telefono' || Platform.OS === 'web') return;
+    leerDelTelefono({ enSilencio: true }).catch(() => {});
+    // `leerDelTelefono` se recrea en cada pintado y meterlo aquí dispararía el
+    // efecto sin parar; lo que de verdad decide es el origen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origen, registros]);
+
+  useEffect(() => {
+    leerSiToca();
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') leerSiToca();
+    });
+    return () => sub.remove();
+  }, [leerSiToca]);
 
   const guardarAMano = async () => {
     const n = Number.parseInt(aMano, 10);
@@ -176,6 +249,12 @@ export function ContadorDePasos({
     await guardar(n, 'mano');
     setAMano('');
     showToast('Pasos guardados');
+    // Quien escribe sus pasos ya ha elegido, aunque no haya tocado el selector.
+    if (!origen) {
+      updateUserProfile(profile.uid, { stepsSource: 'mano' })
+        .then(() => refreshProfile())
+        .catch(() => {});
+    }
   };
 
   const maximo = Math.max(objetivo, ...semana.map((d) => d.steps), 1);
@@ -223,17 +302,56 @@ export function ContadorDePasos({
       </View>
       <Text style={styles.media}>Media de la semana: {conMiles(media)} pasos al día</Text>
 
-      <Pressable onPress={leerDelTelefono} disabled={leyendo} style={styles.conectar} hitSlop={6}>
-        <Ionicons
-          name={leyendo ? 'hourglass-outline' : 'phone-portrait-outline'}
-          size={15}
-          color={colors.primary}
-        />
-        <Text style={styles.conectarTexto}>
-          {leyendo ? 'Leyendo…' : 'Traer los pasos del móvil'}
-        </Text>
-      </Pressable>
+      {/* ---- De dónde salen los pasos ----
 
+           Se elige UNA VEZ y queda en la cuenta. Antes había que pulsar "traer
+           los pasos del móvil" cada día: un contador que hay que pedir a mano
+           cada mañana no lo usa nadie más de tres días. */}
+      {!origen ? (
+        <View style={styles.elegir}>
+          <Text style={styles.elegirTitulo}>¿De dónde saco tus pasos?</Text>
+          <Text style={styles.elegirTexto}>
+            Se elige una vez. A partir de ahí aparecen solos cada día.
+          </Text>
+          <View style={styles.elegirBotones}>
+            <Pressable onPress={() => conectar('telefono')} style={styles.elegirPrincipal}>
+              <Ionicons name="phone-portrait-outline" size={15} color={colors.onPrimary} />
+              <Text style={styles.elegirPrincipalTexto}>Este móvil</Text>
+            </Pressable>
+            <Pressable onPress={() => conectar('mano')} style={styles.elegirOtro} hitSlop={6}>
+              <Text style={styles.elegirOtroTexto}>Los escribo yo</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.conectado}>
+          <Ionicons
+            name={leyendo ? 'hourglass-outline' : origen === 'telefono' ? 'phone-portrait-outline' : 'create-outline'}
+            size={14}
+            color={colors.primary}
+          />
+          <Text style={styles.conectadoTexto} numberOfLines={1}>
+            {leyendo
+              ? 'Leyendo…'
+              : origen === 'telefono'
+                ? Platform.OS === 'ios'
+                  ? 'Se leen solos de tu iPhone'
+                  : 'Se leen solos de este móvil'
+                : 'Los escribes tú'}
+          </Text>
+          <Pressable onPress={() => setCambiando(true)} hitSlop={8}>
+            <Text style={styles.cambiar}>Cambiar</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Escribirlos a mano está SIEMPRE, se haya elegido o no.
+
+          Estuvo un rato escondido detrás de la pregunta de arriba y era un paso
+          de más: quien entra a apuntar sus 9.000 pasos no quiere contestar
+          antes de dónde salen. Y con el móvil conectado sigue haciendo falta —
+          se sale a andar sin él más veces de las que parece, y ese día los
+          pasos los sabe el reloj. */}
       <View style={styles.filaMano}>
         <TextField
           value={aMano}
@@ -252,6 +370,34 @@ export function ContadorDePasos({
       {hoy?.source === 'mano' ? (
         <Text style={styles.origen}>Los de hoy los has escrito tú.</Text>
       ) : null}
+
+      {/* Cambiar de fuente: dos opciones y ya. */}
+      <Dialogo
+        visible={cambiando}
+        onClose={() => setCambiando(false)}
+        titulo="¿De dónde saco tus pasos?"
+        texto="Puedes cambiarlo cuando quieras. Lo que ya está apuntado no se toca."
+        cancelar="Dejarlo como está"
+      >
+        <View style={styles.opcionesFuente}>
+          <Pressable onPress={() => conectar('telefono')} style={styles.opcionFuente}>
+            <Ionicons name="phone-portrait-outline" size={17} color={colors.primary} />
+            <Text style={styles.opcionFuenteTexto}>
+              {Platform.OS === 'ios' ? 'De mi iPhone' : 'De este móvil'}
+            </Text>
+            {origen === 'telefono' ? (
+              <Ionicons name="checkmark" size={16} color={colors.primary} />
+            ) : null}
+          </Pressable>
+          <Pressable onPress={() => conectar('mano')} style={styles.opcionFuente}>
+            <Ionicons name="create-outline" size={17} color={colors.primary} />
+            <Text style={styles.opcionFuenteTexto}>Los escribo yo</Text>
+            {origen === 'mano' ? (
+              <Ionicons name="checkmark" size={16} color={colors.primary} />
+            ) : null}
+          </Pressable>
+        </View>
+      </Dialogo>
     </View>
   );
 }
@@ -288,14 +434,63 @@ const styles = StyleSheet.create({
   diaLetra: { fontSize: 10, color: colors.textFaint },
   diaHoy: { color: colors.primaryBright, fontFamily: fonts.semiBold },
   media: { ...typography.small, color: colors.textFaint, fontSize: 11, marginTop: spacing.sm },
-  conectar: {
+  // Elegir de dónde salen los pasos: solo la primera vez.
+  elegir: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+  },
+  elegirTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  elegirTexto: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
+  elegirBotones: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.md,
+  },
+  elegirPrincipal: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingVertical: 9,
+    paddingHorizontal: spacing.md,
   },
-  conectarTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  elegirPrincipalTexto: {
+    ...typography.small,
+    color: colors.onPrimary,
+    fontFamily: fonts.semiBold,
+  },
+  elegirOtro: { paddingVertical: 9 },
+  elegirOtroTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+
+  // Ya conectado: una línea discreta que dice de dónde salen y deja cambiarlo.
+  conectado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  conectadoTexto: { ...typography.small, color: colors.textMuted, flexShrink: 1, flexGrow: 1 },
+  cambiar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  opcionesFuente: { gap: spacing.sm, marginTop: spacing.sm },
+  opcionFuente: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md - 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  opcionFuenteTexto: { ...typography.body, color: colors.text, flex: 1 },
   filaMano: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
   campo: { flex: 1, marginBottom: 0 },
   botonMano: {
