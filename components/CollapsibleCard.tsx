@@ -80,20 +80,23 @@ export function CollapsibleCard({
     <Card style={style}>
       <Pressable onPress={alternar} style={styles.cabecera} hitSlop={6}>
         <Ionicons name={icon} size={16} color={colors.primary} />
-        {/* El título cede sitio, la pista no.
-            Antes era al revés: el título ocupaba lo que necesitaba y a la
-            pista le quedaba lo que sobrara, que en un móvil estrecho eran
-            cuatro píxeles. El "Código de invitación" del entrenador —que es
-            justo el dato que va a copiar y mandar— se quedaba en una raya. El
-            título se adivina por el icono; el código no se adivina. */}
-        <Text style={styles.titulo} numberOfLines={1}>
-          {title}
-        </Text>
-        {!visible && hint ? (
-          <Text style={styles.hint} numberOfLines={1}>
-            {hint}
+        {/* El título arriba y la pista DEBAJO, no al lado.
+            Compitiendo por el mismo renglón perdían los dos. Al lado, con la
+            pista quieta, el título se cortaba: "Actividad (12 sema…". Y al
+            revés, con el título quieto, era el "Código de invitación" —justo el
+            dato que el entrenador va a copiar y mandar— el que se quedaba en
+            una raya. No hay reparto bueno de 177 píxeles entre dos textos.
+            Uno debajo del otro caben enteros los dos, en cualquier móvil. */}
+        <View style={styles.textos}>
+          <Text style={styles.titulo} numberOfLines={2}>
+            {title}
           </Text>
-        ) : null}
+          {!visible && hint ? (
+            <Text style={styles.hint} numberOfLines={1}>
+              {hint}
+            </Text>
+          ) : null}
+        </View>
         <Animated.View
           style={{
             transform: [
@@ -116,16 +119,18 @@ export function CollapsibleCard({
 
 const styles = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  titulo: { ...typography.h3, color: colors.text, flexShrink: 1, flexGrow: 1 },
+  // `minWidth: 0` para que la columna pueda encogerse de verdad: sin eso, en la
+  // web un hijo flexible se planta en su ancho mínimo de contenido y empuja la
+  // flecha fuera de la tarjeta.
+  textos: { flex: 1, minWidth: 0 },
+  titulo: { ...typography.h3, color: colors.text },
   hint: {
     ...typography.small,
     // Un punto menos que el cuerpo: la pista acompaña al título, no compite
-    // con él, y a igual tamaño no cabían los dos en un móvil estrecho.
+    // con él.
     fontSize: 12,
     color: colors.textFaint,
-    // Sin `flex`: la pista se queda con lo que mide y no menos.
-    flexShrink: 0,
-    textAlign: 'right',
+    marginTop: 1,
     fontFamily: fonts.medium,
   },
   cuerpo: { marginTop: spacing.md },

@@ -72,7 +72,16 @@ ok('quien necesite otro tope puede ponerlo',
   texto.indexOf('maxFontSizeMultiplier=') < texto.indexOf('{...resto}'));
 
 console.log('\nUn botón no parte palabras por la mitad');
-ok('el texto del botón va en una línea', /numberOfLines=\{1\}/.test(boton));
+/*
+ * Una línea POR DEFECTO. Dos solo si se piden a mano.
+ *
+ * Un botón con el texto envuelto casi siempre es un texto demasiado largo, y lo
+ * que hay que arreglar es el texto. Pero hay etiquetas que llevan una fecha
+ * dentro —"Registrar el entreno del 14 de agosto"— y esas no se pueden acortar
+ * sin quitarles justo lo que dicen: ahí se pide `dosLineas` y se sabe por qué.
+ */
+ok('el texto del botón va en una línea', /numberOfLines=\{dosLineas \? 2 : 1\}/.test(boton));
+ok('y las dos líneas hay que pedirlas', /dosLineas\?: boolean;/.test(boton));
 // Y para que no llegue a hacer falta cortar: menos margen cuando van en fila.
 ok('hay una variante estrecha para los que van en fila', /baseCompacta/.test(boton));
 

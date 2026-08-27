@@ -112,7 +112,12 @@ jobs:
           #
           # Con esto, cualquier dirección que no tenga fichero propio devuelve
           # la app, y el enrutador resuelve dentro a qué pantalla toca ir.
-          cp dist/index.html dist/404.html
+          #
+          # No es una copia tal cual: en esa copia hay que APAGAR la
+          # hidratación, o React da por bueno el inicio ya dibujado y luego se
+          # encuentra con que tocaba pintar la ficha de un alumno. El porqué
+          # entero está en el propio script.
+          node scripts/fallback-404.mjs dist
 
           # Y que las dos cosas que se acaban de arreglar sigan arregladas.
           #
@@ -121,6 +126,14 @@ jobs:
           # una dirección con identificador o al mirar en qué idioma está
           # escrito el HTML. Mejor que reviente aquí.
           test -f dist/404.html || { echo "::error::falta dist/404.html"; exit 1; }
+          grep -q "__EXPO_ROUTER_HYDRATE__=false" dist/404.html || {
+            echo "::error::404.html hidrata: las direcciones con identificador darán error de React"
+            exit 1
+          }
+          grep -q "__EXPO_ROUTER_HYDRATE__=true" dist/index.html || {
+            echo "::error::index.html ya no hidrata: la web arrancará más lenta de lo que debe"
+            exit 1
+          }
           grep -q "Cargando" dist/index.html || {
             echo "::error::el HTML se ha generado en otro idioma (ver idiomaDelSistema en lib/idioma.ts)"
             exit 1

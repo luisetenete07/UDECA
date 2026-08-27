@@ -683,9 +683,13 @@ export default function ClientDetailScreen() {
             placeholder="Días"
             containerStyle={styles.daysField}
           />
+          {/* Compacto: al lado del campo de días, la caja se queda en 134
+              píxeles en un móvil estrecho, y con el aire de un botón normal
+              —24 a cada lado— la etiqueta se quedaba en "Añadir dí…". */}
           <Button
             title="Añadir días"
             variant="secondary"
+            compacto
             onPress={handleExtendDays}
             disabled={!(parseInt(extendDaysInput, 10) > 0)}
             style={{ flex: 1 }}

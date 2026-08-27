@@ -21,6 +21,15 @@ interface ButtonProps {
    * palabra que mide ochenta, y la palabra se corta.
    */
   compacto?: boolean;
+  /**
+   * Deja que la etiqueta ocupe dos líneas.
+   *
+   * Se pide a mano y no se da por defecto: un botón con el texto envuelto casi
+   * siempre es un texto demasiado largo, y lo que hay que arreglar es el texto.
+   * Pero hay etiquetas que llevan una fecha dentro —"Registrar el entreno del
+   * 14 de agosto"— y esas no se pueden acortar sin quitarles lo que dicen.
+   */
+  dosLineas?: boolean;
 }
 
 export function Button({
@@ -31,6 +40,7 @@ export function Button({
   disabled,
   style,
   compacto,
+  dosLineas,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -62,7 +72,7 @@ export function Button({
      */
     <Text
       style={[styles.text, variant === 'primary' && styles.textPrimary]}
-      numberOfLines={1}
+      numberOfLines={dosLineas ? 2 : 1}
     >
       {title}
     </Text>

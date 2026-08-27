@@ -117,7 +117,9 @@ export function BlockOverview({
       <View style={styles.head}>
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>Volumen del bloque</Text>
-          <Text style={styles.title} numberOfLines={1}>
+          {/* Dos líneas: al lado del porcentaje de adherencia quedan 163
+              píxeles y "Últimas 4 semanas" pide 194 a tamaño de titular. */}
+          <Text style={styles.title} numberOfLines={2}>
             {title}
           </Text>
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}

@@ -129,7 +129,11 @@ export default function PlanningScreen() {
               <Pressable key={cycle.id} onPress={() => abrir(cycle.id)}>
                 <Card style={styles.cycleCard}>
                   <View style={styles.cycleHead}>
-                    <Text style={styles.cycleName} numberOfLines={1}>
+                    {/* Dos líneas: al lado del distintivo de estado quedan 149
+                        píxeles y el nombre del ciclo lo pone el entrenador
+                        ("Bloque de fuerza · otoño"). Cortarlo deja la lista con
+                        varios ciclos que empiezan igual y no se distinguen. */}
+                    <Text style={styles.cycleName} numberOfLines={2}>
                       {nombreDeCiclo(cycle.name)}
                     </Text>
                     <View style={styles.statusPill}>

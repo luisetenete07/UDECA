@@ -193,13 +193,20 @@ export function Segmented<T extends string>({
                 color={activo ? colors.onPrimary : colors.textMuted}
               />
             ) : null}
+            {/* Dos líneas, no una.
+                Con cuatro opciones y un móvil de 320 a cada segmento le tocan
+                102 píxeles, y "Grease the groove" pide 106: en una sola línea
+                se quedaba en "Grease the groo…". El nombre del método no se
+                puede abreviar —es como se llama— así que baja de línea. La
+                altura la marca el segmento más alto de la fila, y la pastilla
+                se dibuja de lo que MIDE el segmento, así que le sigue sola. */}
             <Text
               style={[
                 styles.texto,
                 compacto && styles.textoCompacto,
                 activo && styles.textoActivo,
               ]}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {o.texto}
             </Text>

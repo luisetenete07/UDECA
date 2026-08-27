@@ -937,11 +937,6 @@ export default function RoutineEditorScreen() {
               <Text style={styles.dayTitle} numberOfLines={1}>
                 {nombreDelDia(day.name, dayIndex)}
               </Text>
-              {/* Dos líneas: en una sola, "3 ejercicios · 14 series" se cortaba
-                  justo donde estaba la información que se venía a buscar. */}
-              <Text style={styles.daySummary} numberOfLines={2}>
-                {summaryParts.join(' · ')}
-              </Text>
             </Pressable>
             {/* Asa del día: mantener pulsado y mover para cambiar su orden. */}
             <View {...asaDia} style={styles.moveDayBtn}>
@@ -961,6 +956,17 @@ export default function RoutineEditorScreen() {
               />
             </Pressable>
           </View>
+
+          {/* El resumen del día va DEBAJO de la fila, a lo ancho de la tarjeta.
+              Al lado de los cuatro botones —mover, duplicar, borrar, desplegar—
+              le quedaban 81 píxeles en un móvil de 320, y lo que se leía era
+              "Día 1 · Intensidad ...": se perdían los ejercicios y las series,
+              que es justo lo que se viene a mirar sin abrir el día. */}
+          <Pressable onPress={() => toggleDayExpanded(day.id)}>
+            <Text style={styles.daySummary} numberOfLines={2}>
+              {summaryParts.join(' · ')}
+            </Text>
+          </Pressable>
 
           {isOpen ? (
           <>
@@ -1679,6 +1685,10 @@ const styles = StyleSheet.create({
   gtgFila: {
     flexDirection: 'row',
     alignItems: 'center',
+    // El nombre del método no se abrevia: "Grease the groove" pide seis
+    // píxeles más de los que quedan al lado del campo de series en un móvil
+    // estrecho, así que el campo se va debajo en vez de comerse la etiqueta.
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },

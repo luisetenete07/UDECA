@@ -387,8 +387,13 @@ export default function RegistrarScreen() {
             </Text>
           </Card>
 
+          {/* Dos líneas: la etiqueta lleva la fecha dentro y "Registrar el
+              entreno del 14 de agosto" no cabe de una en ningún móvil. Antes se
+              quedaba en "Registrar el entreno del d…", que es justo perder el
+              dato que distingue este botón de guardar el de hoy. */}
           <Button
             title={frase`Registrar el entreno del ${esMismoDia(dia, Date.now()) ? t('día de hoy') : diaYMes(dia)}`}
+            dosLineas
             onPress={guardar}
             loading={guardando}
             disabled={!hayAlgoQueGuardar(log)}

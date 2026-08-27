@@ -101,6 +101,14 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    /*
+     * Una etiqueta no se encoge: o cabe entera o se va a la línea de abajo.
+     *
+     * Encogiéndose se cortaba lo único que lleva escrito. "Grease the groove"
+     * se quedaba en "Grease the groo…", y una etiqueta a medio leer no dice
+     * qué se está activando, que es para lo único que está ahí.
+     */
+    flexShrink: 0,
     gap: 5,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

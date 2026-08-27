@@ -316,10 +316,14 @@ export default function SocialScreen() {
                   {index + 1}
                 </Text>
               </View>
-              <Avatar name={member.name} photoURL={member.photoURL} size={44} />
-              <View style={{ flex: 1 }}>
+              {/* 38 y no 44. En un móvil de 320 la fila lleva cinco cosas y
+                  al nombre le quedaban 53 píxeles: "Marcos Ruiz" se veía
+                  "Marc…". Seis píxeles de foto no los echa nadie de menos; un
+                  ranking donde no se leen los nombres, sí. */}
+              <Avatar name={member.name} photoURL={member.photoURL} size={38} />
+              <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={styles.nameRow}>
-                  <Text style={[styles.name, { flexShrink: 1 }]} numberOfLines={1}>
+                  <Text style={[styles.name, { flexShrink: 1 }]} numberOfLines={2}>
                     {member.name}
                   </Text>
                   {isMe ? <Text style={styles.youTag}>TÚ</Text> : null}
@@ -429,7 +433,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   rowMe: { borderColor: colors.primary },
-  rankWrap: { width: 26, alignItems: 'center' },
+  rankWrap: { width: 22, alignItems: 'center' },
   rankNumber: { ...typography.body, color: colors.textFaint, fontFamily: fonts.semiBold, ...tabularNums },
   // Cuerpo, no titular: el peso visual de la pantalla lo lleva el podio, y a
   // tamaño de titular un apellido normal ya no cabía en la fila.

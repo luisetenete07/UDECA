@@ -107,7 +107,10 @@ export default function TrainerCoursesScreen() {
                     recuento en otras dos. Abajo, junto al recuento, cabe todo
                     en una tarjeta de dos líneas. */}
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.courseTitle} numberOfLines={1}>
+                  {/* Dos líneas. Al lado de la portada quedan 122 píxeles, y
+                      "Planche desde cero" pide 160: en una sola línea no había
+                      forma de que cupiera sin cortar el nombre del curso. */}
+                  <Text style={styles.courseTitle} numberOfLines={2}>
                     {course.title}
                   </Text>
                   <View style={styles.metaFila}>
@@ -159,6 +162,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    // Que el distintivo baje solo si no cabe al lado del recuento, en vez de
+    // dejar "5 lec…" a su izquierda.
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: 4,
   },

@@ -90,7 +90,10 @@ export default function ClientCoursesScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.courseTitle}>{course.title}</Text>
                 {course.description ? (
-                  <Text style={styles.courseDesc} numberOfLines={2}>
+                  /* Tres líneas. Con dos, una descripción corriente se quedaba
+                     en "De la base al tuck advanced, paso a…" en un móvil
+                     estrecho: es el texto que decide si se entra al curso. */
+                  <Text style={styles.courseDesc} numberOfLines={3}>
                     {course.description}
                   </Text>
                 ) : null}
@@ -111,7 +114,7 @@ export default function ClientCoursesScreen() {
                         entrar y buscar entre las secciones cuál era la primera
                         sin marcar. Dicho aquí, el curso se retoma sin pensar. */}
                     {estado.siguiente ? (
-                      <Text style={styles.siguiente} numberOfLines={1}>
+                      <Text style={styles.siguiente} numberOfLines={2}>
                         Sigues por: {estado.siguiente.title}
                       </Text>
                     ) : null}

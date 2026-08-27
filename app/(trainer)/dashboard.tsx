@@ -684,7 +684,12 @@ export default function TrainerDashboard() {
                 }}
               >
                 <View style={styles.taskCheck} />
-                <Text style={styles.taskTitle} numberOfLines={1}>
+                {/* Dos líneas: el título de una tarea lo escribe el entrenador
+                    y suele ser una frase entera —"Llamar a María para revisar
+                    la dieta"—. En una sola línea caben veinticuatro letras en
+                    un móvil estrecho, y lo que queda cortado es justo el final,
+                    que es donde está lo que hay que hacer. */}
+                <Text style={styles.taskTitle} numberOfLines={2}>
                   {t.title}
                 </Text>
                 {t.flagged ? (

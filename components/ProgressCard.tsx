@@ -405,7 +405,11 @@ export function ProgressCard({
 
       <View style={styles.abajo}>
         <View style={styles.identidad}>
-          <Text style={styles.nombre} numberOfLines={1}>
+          {/* Dos líneas. Es un carné: el nombre es lo que acredita, y
+              "MARÍA DEL CARMEN FERNÁNDEZ RODRÍG…" no acredita a nadie. La
+              tarjeta tiene proporción fija, así que la segunda línea se come
+              alto de la parte de abajo, que es la que va holgada. */}
+          <Text style={styles.nombre} numberOfLines={2}>
             {nombre.toUpperCase()}
           </Text>
           {desde ? (
@@ -468,7 +472,7 @@ const styles = StyleSheet.create({
     ...tabularNums,
   },
   abajo: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.sm },
-  identidad: { flexShrink: 1 },
+  identidad: { flexShrink: 1, minWidth: 0 },
   nombre: {
     ...typography.small,
     color: colors.text,

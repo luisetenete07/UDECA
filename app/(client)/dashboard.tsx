@@ -952,7 +952,15 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.md,
   },
-  cycleTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  cycleTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    // "INTENSIFICACIÓN" y "Semana 6 de 8" juntas piden 248 y hay 222: la
+    // segunda baja de línea en lugar de cortar el nombre de la fase.
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   cycleLevel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
   cycleDeload: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, fontSize: 11 },
   cycleName: { ...typography.h3, color: colors.text, marginTop: 4 },
