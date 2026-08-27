@@ -34,9 +34,20 @@ jobs:
       - name: Buscar la última build de Android
         id: buscar
         run: |
-          set -euo pipefail
-          eas build:list --platform android --status finished --limit 1 \
-            --json --non-interactive > builds.json
+          set -uo pipefail
+          # `eas build:list` falla diciendo solo "build:list command failed",
+          # sin más. EXPO_DEBUG saca el error de verdad, y se prueba primero la
+          # forma corta: si el filtro de estado es lo que no le gusta, se ve.
+          export EXPO_DEBUG=1
+          if ! eas build:list --platform android --limit 1 \
+               --json --non-interactive > builds.json 2> error.txt; then
+            echo "--- lo que dijo eas ---"
+            cat error.txt
+            echo "--- lo que escribió ---"
+            head -c 2000 builds.json || true
+            exit 1
+          fi
+          set -e
 
           # El nombre del campo ha cambiado entre versiones de eas-cli, así que
           # se prueban los dos en vez de dar por hecho uno y quedarse sin nada.
