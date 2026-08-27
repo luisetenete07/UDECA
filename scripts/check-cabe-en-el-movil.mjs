@@ -76,6 +76,30 @@ ok('el texto del botón va en una línea', /numberOfLines=\{1\}/.test(boton));
 // Y para que no llegue a hacer falta cortar: menos margen cuando van en fila.
 ok('hay una variante estrecha para los que van en fila', /baseCompacta/.test(boton));
 
+/*
+ * EL ESTILO VA AL PULSABLE, NO A UNA CAPA DE DENTRO
+ *
+ * `PressableScale` envolvía sus hijos en una vista con el estilo y la
+ * animación. El estilo caía en esa vista y NO en el pulsable, así que un
+ * `flex: 1` puesto por quien lo usa no estiraba el pulsable: seguía midiendo lo
+ * que midieran sus contenidos.
+ *
+ * En una fila eso deja a cero lo único elástico. En la lista de "Entrar como"
+ * se veía la foto, la flecha y la equis, y en medio nada: ni el nombre ni el
+ * tipo de cuenta. Con dos cuentas del mismo dueño no había forma de saber cuál
+ * era cuál.
+ *
+ * Alguien ya se lo encontró una vez en la pantalla de entreno y lo rodeó
+ * metiendo otra vista por fuera. Rodearlo deja el fallo esperando al siguiente.
+ */
+console.log('\nEl estilo de un pulsable va al pulsable');
+const pulsable = sinComentarios(lee('components/PressableScale.tsx'));
+ok('el pulsable ES la caja animada', /Animated\.createAnimatedComponent\(Pressable\)/.test(pulsable));
+ok('y el estilo se le pone a él', /<PulsableAnimado[\s\S]{0,400}style=\{\[style,/.test(pulsable));
+// Lo que no puede volver: una vista en medio quedándose con el estilo.
+ok('ya no hay una vista en medio con el estilo',
+  !/<Animated\.View style=\{\[style,/.test(pulsable));
+
 console.log('\nLos botones que van en fila caben o se parten en dos filas');
 const rutina = sinComentarios(lee('app/(trainer)/clients/[id]/routine.tsx'));
 ok('la fila de acciones puede partirse', /actionsRow: \{[\s\S]{0,120}flexWrap: 'wrap'/.test(rutina));

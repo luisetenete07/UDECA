@@ -2195,7 +2195,6 @@ export default function WorkoutScreen() {
                 {/* El nombre de la serie también marca: es hueco muerto al lado
                     del círculo, y con las manos cansadas se falla menos cuanto
                     más grande es lo que hay que tocar. */}
-                <View style={styles.setToggleWrap}>
                   <PressableScale
                     haptic
                     onPress={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
@@ -2213,7 +2212,6 @@ export default function WorkoutScreen() {
                       Serie {setIndex + 1}
                     </Text>
                   </PressableScale>
-                </View>
                 <TextField
                   value={set.reps}
                   onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
@@ -2710,10 +2708,17 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.xs,
   },
-  // El flex vive fuera: PressableScale pone el estilo en su capa animada, no en
-  // el Pressable, así que sin envoltorio la fila no reparte el espacio.
-  setToggleWrap: { flex: 1 },
+  /*
+   * El `flex` va aquí, en el propio pulsable.
+   *
+   * Antes hacía falta envolverlo en otra vista, porque `PressableScale` ponía
+   * el estilo en una capa interna y el flex no llegaba al pulsable. Eso ya no
+   * pasa: el pulsable ES la capa animada. La envoltura se ha quitado, y con
+   * ella el comentario que la explicaba — que había pasado a decir lo
+   * contrario de lo que hace el código.
+   */
   setToggle: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
