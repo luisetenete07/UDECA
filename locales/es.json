@@ -1,8 +1,6 @@
 {
   "ios": {
     "NSPhotoLibraryUsageDescription": "Para elegir tu foto de perfil, subir tus fotos de progreso y, si eres entrenador, las fotos de tus libretas de comida.",
-    "NSMotionUsageDescription": "Para contar los pasos que das cada día y sumarlos a tu plan de nutrición, sin que tengas que apuntarlos a mano.",
-    "NSCalendarsUsageDescription": "Para escribir en tu calendario tus cobros, tus bloques de entrenamiento y tus tareas. Solo escribe lo que tú le pidas.",
-    "NSCalendarsFullAccessUsageDescription": "Para escribir en tu calendario tus cobros, tus bloques de entrenamiento y tus tareas. Solo escribe lo que tú le pidas."
+    "NSMotionUsageDescription": "Para contar los pasos que das cada día y sumarlos a tu plan de nutrición, sin que tengas que apuntarlos a mano."
   }
 }

@@ -3,7 +3,7 @@ import { nombreDeCiclo } from '../../lib/cyclePlan';
 import { frase } from '../../lib/idioma';
 import { diaLargo, inicioDelDia, mesLargo } from '../../lib/fechas';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { LayoutAnimation, Modal, Platform, Pressable, StyleSheet, TextInput, UIManager, useWindowDimensions, View } from 'react-native';
+import { LayoutAnimation, Modal, Platform, Pressable, StyleSheet, TextInput, UIManager, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -22,13 +22,11 @@ import {
 } from '../../lib/firestore/coachTasks';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
-import { ConectarCalendario } from '../../components/ConectarCalendario';
 import { Segmented } from '../../components/Segmented';
 import { Dialogo } from '../../components/Dialogo';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
-  TASK_SCOPE_LABEL,
   type CoachTask,
   type TaskScope,
   type TrainingCycle,
@@ -38,14 +36,6 @@ import {
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-const SCOPES: TaskScope[] = ['day', 'week', 'month', 'goal'];
-const PLACEHOLDER: Record<TaskScope, string> = {
-  day: 'Añade algo para hoy…',
-  week: 'Algo para esta semana…',
-  month: 'Algo para este mes…',
-  goal: 'Nuevo objetivo de negocio…',
-};
 
 function animate() {
   LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
@@ -75,7 +65,6 @@ const TYPE_ICON: Record<EventType, keyof typeof Ionicons.glyphMap> = {
 export default function CoachCalendarScreen() {
   const { profile } = useAuth();
   const router = useRouter();
-  const [view, setView] = useState<'calendar' | 'tasks'>('calendar');
   const [loading, setLoading] = useState(true);
 
   // --- Datos ---
@@ -84,9 +73,10 @@ export default function CoachCalendarScreen() {
   const [cycles, setCycles] = useState<TrainingCycle[]>([]);
 
   // --- Tareas ---
-  const [scope, setScope] = useState<TaskScope>('day');
   const [draft, setDraft] = useState('');
-  const [showDone, setShowDone] = useState(false);
+  /** Lo que se escribe en Objetivos, que van aparte porque no tienen día. */
+  const [goalDraft, setGoalDraft] = useState('');
+  const [verObjetivos, setVerObjetivos] = useState(false);
   const [editing, setEditing] = useState<CoachTask | null>(null);
   // Tarea que el coach está reubicando en el calendario (abre el selector de día).
   const [movingTask, setMovingTask] = useState<CoachTask | null>(null);
@@ -98,8 +88,6 @@ export default function CoachCalendarScreen() {
     return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   });
   const [selectedDay, setSelectedDay] = useState<number>(() => inicioDelDia(Date.now()));
-  const { width } = useWindowDimensions();
-  const isWide = width >= 820;
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -120,53 +108,85 @@ export default function CoachCalendarScreen() {
     }, [load])
   );
 
-  // ---------- TAREAS: derivados y acciones ----------
-  const inScope = useMemo(() => tasks.filter((t) => t.scope === scope), [tasks, scope]);
-  const active = useMemo(
-    () =>
-      inScope
-        .filter((t) => !t.done)
-        .sort((a, b) => Number(!!b.flagged) - Number(!!a.flagged) || a.order - b.order),
-    [inScope]
-  );
-  const done = useMemo(
-    () => inScope.filter((t) => t.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)),
-    [inScope]
-  );
-  const pendingCount = (s: TaskScope) => tasks.filter((t) => t.scope === s && !t.done).length;
+  /*
+   * ---------- TAREAS ----------
+   *
+   * Ya no hay listas por "Hoy / Semana / Mes": una tarea es algo que se hace un
+   * DÍA, y el día se elige tocándolo en el calendario. Lo que antes eran cuatro
+   * pestañas y un selector de día aparte es ahora un calendario y una línea
+   * para escribir.
+   *
+   * Los OBJETIVOS se quedan, y aparte: un objetivo no tiene día —es a dónde se
+   * quiere llegar— y en un calendario no pinta nada.
+   */
+  const enElDia = (t: CoachTask, dia: number) =>
+    t.scope === 'day' && inicioDelDia(t.dueDate ?? Date.now()) === dia;
 
-  const header = useMemo(() => {
-    if (scope === 'goal') {
-      const goals = inScope;
-      const avg =
-        goals.length > 0
-          ? goals.reduce((s, g) => s + (g.progress ?? (g.done ? 100 : 0)), 0) / goals.length
-          : 0;
-      return { progress: avg / 100, text: frase`${Math.round(avg)}% de media`, total: goals.length };
-    }
-    const total = inScope.length;
-    return {
-      progress: total > 0 ? done.length / total : 0,
-      text: total > 0 ? frase`${done.length} de ${total} hechas` : 'Sin tareas',
-      total,
-    };
-  }, [scope, inScope, done]);
+  const tareasDelDia = useMemo(
+    () =>
+      tasks
+        .filter((t) => enElDia(t, selectedDay))
+        .sort(
+          (a, b) =>
+            Number(a.done) - Number(b.done) ||
+            Number(!!b.flagged) - Number(!!a.flagged) ||
+            a.order - b.order
+        ),
+    [tasks, selectedDay]
+  );
+
+  const objetivos = useMemo(
+    () =>
+      tasks
+        .filter((t) => t.scope === 'goal')
+        .sort((a, b) => Number(a.done) - Number(b.done) || a.order - b.order),
+    [tasks]
+  );
+
+  /*
+   * Lo que quedó de las listas de "Semana" y "Mes".
+   *
+   * Esas dos ya no existen, pero lo que se apuntó en ellas sí. Aparece aquí
+   * para poder ponerle día de un toque, y esta sección desaparece sola en
+   * cuanto no queda ninguna. Hacer desaparecer lo que alguien escribió, aunque
+   * sea de una función retirada, es la clase de cosa que hace desconfiar de una
+   * app para siempre.
+   */
+  const sinDia = useMemo(
+    () => tasks.filter((t) => (t.scope === 'week' || t.scope === 'month') && !t.done),
+    [tasks]
+  );
 
   const haptic = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const addTask = async () => {
-    const title = draft.trim();
+  /**
+   * Apunta algo, y lo apunta DONDE SE ESTÁ MIRANDO.
+   *
+   * Antes había que ir a la pestaña de Tareas, elegir "Hoy / Semana / Mes" y
+   * escribir; si la tarea era para el jueves, además tocaba moverla después con
+   * otro selector de día. Tres pantallas para apuntar una frase.
+   *
+   * Ahora el día ya lo has elegido tocándolo en el calendario: escribir y darle
+   * a intro es todo. Es la misma idea que hace útil un calendario de papel.
+   */
+  const addTask = async (paraObjetivo = false) => {
+    const title = (paraObjetivo ? goalDraft : draft).trim();
     if (!title || !profile) return;
-    setDraft('');
+    if (paraObjetivo) setGoalDraft('');
+    else setDraft('');
+    const scope: TaskScope = paraObjetivo ? 'goal' : 'day';
+    // Un objetivo no tiene día: es a dónde se quiere llegar, no cuándo.
+    const dueDate = paraObjetivo ? undefined : selectedDay;
     const temp: CoachTask = {
       id: `tmp-${Date.now()}`,
       trainerId: profile.uid,
       title,
       scope,
+      dueDate,
       done: false,
-      progress: scope === 'goal' ? 0 : undefined,
+      progress: paraObjetivo ? 0 : undefined,
       order: Date.now(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -174,14 +194,15 @@ export default function CoachCalendarScreen() {
     animate();
     setTasks((prev) => [...prev, temp]);
     haptic();
-    inputRef.current?.focus();
+    if (!paraObjetivo) inputRef.current?.focus();
     try {
       const id = await createCoachTask({
         trainerId: profile.uid,
         title,
         scope,
+        dueDate,
         done: false,
-        progress: scope === 'goal' ? 0 : undefined,
+        progress: paraObjetivo ? 0 : undefined,
         order: temp.order,
       });
       setTasks((prev) => prev.map((t) => (t.id === temp.id ? { ...t, id } : t)));
@@ -296,7 +317,16 @@ export default function CoachCalendarScreen() {
   for (let d = 1; d <= daysInMonth; d++)
     gridCells.push(new Date(anchor.getFullYear(), anchor.getMonth(), d).getTime());
   while (gridCells.length % 7 !== 0) gridCells.push(null);
-  const selectedEvents = eventsByDay.get(selectedDay) ?? [];
+  /*
+   * Los eventos del día, SIN las tareas.
+   *
+   * Las tareas siguen contando para el punto de color de la rejilla —es como se
+   * ve de un vistazo qué días tienen algo— pero abajo se pintan como filas con
+   * su casilla, para poder marcarlas. Sin este filtro salían dos veces: una
+   * para marcar y otra al lado de los cobros, que es de esas cosas que hacen
+   * dudar de si son la misma.
+   */
+  const selectedEvents = (eventsByDay.get(selectedDay) ?? []).filter((e) => e.type !== 'task');
 
   /**
    * Lo siguiente que pasa, a partir del día elegido.
@@ -308,7 +338,8 @@ export default function CoachCalendarScreen() {
    * es lo próximo y cuándo.
    */
   const proximo = (() => {
-    if (selectedEvents.length > 0) return null;
+    // Con tareas apuntadas, el día no está vacío aunque no haya cobros ni ciclos.
+    if (selectedEvents.length > 0 || tareasDelDia.length > 0) return null;
     const dias = [...eventsByDay.keys()].filter((d) => d > selectedDay).sort((a, b) => a - b);
     const dia = dias[0];
     if (dia === undefined) return null;
@@ -321,8 +352,6 @@ export default function CoachCalendarScreen() {
     setMonthAnchor(new Date(now.getFullYear(), now.getMonth(), 1).getTime());
     setSelectedDay(inicioDelDia(Date.now()));
   };
-
-  const allDone = scope !== 'goal' && header.total > 0 && active.length === 0;
 
   // Calendario mensual + eventos del día seleccionado.
   const calendarContent = (
@@ -398,7 +427,44 @@ export default function CoachCalendarScreen() {
         <Text style={styles.selectedDate}>{diaLargo(selectedDay)}</Text>
         {selectedDay === today ? <Text style={styles.todayTag}>HOY</Text> : null}
       </View>
-      {selectedEvents.length === 0 ? (
+
+      {/* Apuntar algo EN ESTE DÍA, sin salir de aquí ni elegir una lista.
+          Va antes que la lista del día a propósito: en un calendario, lo
+          primero que se quiere hacer sobre un día es escribir en él. */}
+      <View style={styles.addRow}>
+        <Ionicons name="add" size={20} color={colors.primary} />
+        <TextInput
+          ref={inputRef}
+          style={styles.addInput}
+          placeholder={
+            selectedDay === today ? 'Apuntar algo para hoy' : 'Apuntar algo para este día'
+          }
+          placeholderTextColor={colors.textFaint}
+          value={draft}
+          onChangeText={setDraft}
+          onSubmitEditing={() => addTask()}
+          returnKeyType="done"
+          blurOnSubmit={false}
+        />
+        {draft.trim() ? (
+          <Pressable onPress={() => addTask()} style={styles.addBtn} hitSlop={6}>
+            <Text style={styles.addBtnText}>Añadir</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {/* Las tareas de este día: se marcan aquí mismo. */}
+      {tareasDelDia.map((task) => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          onToggle={() => toggleDone(task)}
+          onFlag={() => toggleFlag(task)}
+          onEdit={() => setEditing(task)}
+          onMover={() => setMovingTask(task)}
+        />
+      ))}
+      {selectedEvents.length === 0 && tareasDelDia.length === 0 ? (
         proximo ? (
           <Pressable
             style={styles.proximo}
@@ -457,111 +523,100 @@ export default function CoachCalendarScreen() {
     </>
   );
 
-  // Gestor de tareas y objetivos del coach.
-  const tasksContent = (
-    <>
-      <View style={styles.progressWrap}>
-        <View style={styles.progressTop}>
-          <Text style={styles.progressText}>{header.text}</Text>
-          {allDone ? (
-            <View style={styles.donePill}>
-              <Ionicons name="checkmark" size={13} color={colors.onPrimary} />
-              <Text style={styles.donePillText}>Al día</Text>
-            </View>
-          ) : null}
-        </View>
-        <ProgressBar progress={header.progress} height={8} />
-      </View>
+  /*
+   * OBJETIVOS, Y LO QUE QUEDÓ SIN DÍA
+   *
+   * Lo único de la antigua pantalla de Tareas que no cabe en un calendario. Un
+   * objetivo no tiene fecha: es a dónde se quiere llegar, y se mide en
+   * porcentaje, no en días.
+   *
+   * Va plegado. Es lo que se mira una vez al mes, y desplegado empujaba hacia
+   * abajo lo que se mira cada día.
+   */
+  const mediaObjetivos =
+    objetivos.length > 0
+      ? objetivos.reduce((n, g) => n + (g.progress ?? (g.done ? 100 : 0)), 0) / objetivos.length
+      : 0;
 
-      <Segmented
-        compacto
-        valor={scope}
-        opciones={SCOPES.map((s) => ({
-          valor: s,
-          texto: TASK_SCOPE_LABEL[s],
-          contador: pendingCount(s),
-        }))}
-        onChange={(s) => {
+  const objetivosContent = (
+    <View style={styles.objetivos}>
+      <Pressable
+        style={styles.objetivosCabecera}
+        onPress={() => {
           animate();
-          setScope(s);
-          setShowDone(false);
+          setVerObjetivos((v) => !v);
         }}
-      />
-
-      <View style={styles.addRow}>
-        <Ionicons name="add" size={20} color={colors.primary} />
-        <TextInput
-          ref={inputRef}
-          style={styles.addInput}
-          placeholder={PLACEHOLDER[scope]}
-          placeholderTextColor={colors.textFaint}
-          value={draft}
-          onChangeText={setDraft}
-          onSubmitEditing={addTask}
-          returnKeyType="done"
-          blurOnSubmit={false}
+        hitSlop={6}
+      >
+        <Ionicons name="flag-outline" size={16} color={colors.primary} />
+        <Text style={styles.objetivosTitulo}>Objetivos</Text>
+        <Text style={styles.objetivosPista}>
+          {objetivos.length === 0
+            ? 'ninguno'
+            : frase`${Math.round(mediaObjetivos)}% de media`}
+        </Text>
+        <Ionicons
+          name={verObjetivos ? 'chevron-up' : 'chevron-down'}
+          size={16}
+          color={colors.textFaint}
         />
-        {draft.trim() ? (
-          <Pressable onPress={addTask} style={styles.addBtn} hitSlop={6}>
-            <Text style={styles.addBtnText}>Añadir</Text>
-          </Pressable>
-        ) : null}
-      </View>
+      </Pressable>
 
-      {scope === 'goal' ? (
-        <GoalsList goals={active.concat(done)} onEdit={setEditing} onProgress={setGoalProgress} />
-      ) : (
+      {verObjetivos ? (
         <>
-          {active.length === 0 && done.length === 0 ? (
-            <View style={styles.empty}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="sunny-outline" size={26} color={colors.primary} />
-              </View>
-              <Text style={styles.emptyTitle}>Nada por aquí</Text>
-              <Text style={styles.emptySub}>
-                Apunta lo que quieras sacar adelante {TASK_SCOPE_LABEL[scope].toLowerCase()}.
-              </Text>
-            </View>
-          ) : null}
-          {active.map((task) => (
+          {objetivos.length > 0 ? <ProgressBar progress={mediaObjetivos / 100} height={8} /> : null}
+          <View style={styles.addRow}>
+            <Ionicons name="add" size={20} color={colors.primary} />
+            <TextInput
+              style={styles.addInput}
+              placeholder="A dónde quieres llegar"
+              placeholderTextColor={colors.textFaint}
+              value={goalDraft}
+              onChangeText={setGoalDraft}
+              onSubmitEditing={() => addTask(true)}
+              returnKeyType="done"
+              blurOnSubmit={false}
+            />
+            {goalDraft.trim() ? (
+              <Pressable onPress={() => addTask(true)} style={styles.addBtn} hitSlop={6}>
+                <Text style={styles.addBtnText}>Añadir</Text>
+              </Pressable>
+            ) : null}
+          </View>
+          <GoalsList goals={objetivos} onEdit={setEditing} onProgress={setGoalProgress} />
+        </>
+      ) : null}
+
+      {/* Lo que se apuntó en las antiguas listas de Semana y Mes. Se le pone
+          día de un toque, y esta sección desaparece cuando no queda ninguna. */}
+      {sinDia.length > 0 ? (
+        <View style={styles.sinDia}>
+          <Text style={styles.sinDiaTitulo}>Sin día · ponles uno</Text>
+          {sinDia.map((task) => (
             <TaskRow
               key={task.id}
               task={task}
               onToggle={() => toggleDone(task)}
               onFlag={() => toggleFlag(task)}
               onEdit={() => setEditing(task)}
+              onMover={() => setMovingTask(task)}
             />
           ))}
-          {done.length > 0 ? (
-            <Pressable
-              style={styles.doneHeader}
-              onPress={() => {
-                animate();
-                setShowDone((v) => !v);
-              }}
-            >
-              <Text style={styles.doneHeaderText}>Completadas · {done.length}</Text>
-              <Ionicons name={showDone ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textFaint} />
-            </Pressable>
-          ) : null}
-          {showDone
-            ? done.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={() => toggleDone(task)}
-                  onFlag={() => toggleFlag(task)}
-                  onEdit={() => setEditing(task)}
-                />
-              ))
-            : null}
-        </>
-      )}
-    </>
+        </View>
+      ) : null}
+    </View>
   );
 
   return (
-    <ScreenContainer>
+    /*
+     * Una columna, y con tope de ancho.
+     *
+     * En un monitor, la rejilla del mes se estiraba hasta el borde: celdas de
+     * 140 píxeles para un número de dos cifras, y el día elegido —con su línea
+     * para apuntar, que es a lo que se viene— empujado fuera de la pantalla.
+     * Un calendario tiene un tamaño; más ancho no es más calendario.
+     */
+    <ScreenContainer maxWidth={620}>
       <Pressable
         onPress={() => router.push('/(trainer)/dashboard')}
         style={styles.backBtn}
@@ -571,53 +626,14 @@ export default function CoachCalendarScreen() {
       </Pressable>
       {/* Título de sección */}
       <View style={styles.screenHeader}>
-        <Text style={styles.screenTitle}>
-          {isWide ? 'Calendario y tareas' : view === 'calendar' ? 'Calendario' : 'Tareas'}
-        </Text>
+        <Text style={styles.screenTitle}>Calendario</Text>
         <Text style={styles.screenSubtitle}>
-          {isWide
-            ? 'Cobros, ciclos y tus tareas, todo a la vista.'
-            : view === 'calendar'
-              ? 'Cobros, ciclos y tareas de tu grupo, día a día.'
-              : 'Tus recordatorios y objetivos como coach.'}
+          Cobros, ciclos y tus tareas. Toca un día y apunta lo que quieras.
         </Text>
       </View>
 
-      {/* Conmutador (solo en móvil; en ancho se ven las dos columnas a la vez). */}
-      {!isWide ? (
-        <Segmented
-          valor={view}
-          opciones={[
-            { valor: 'calendar' as const, texto: 'Calendario', icono: 'calendar-outline' },
-            { valor: 'tasks' as const, texto: 'Tareas', icono: 'checkbox-outline' },
-          ]}
-          onChange={(v) => {
-            animate();
-            setView(v);
-          }}
-        />
-      ) : null}
-
-      {isWide ? (
-        // Escritorio/tablet: calendario y tareas juntos, a pantalla completa.
-        <View style={styles.twoCol}>
-          <View style={styles.colCal}>
-            <Text style={styles.colHeading}>Calendario</Text>
-            {calendarContent}
-          </View>
-          <View style={styles.colTasks}>
-            <Text style={styles.colHeading}>Tareas y objetivos</Text>
-            {tasksContent}
-          </View>
-        </View>
-      ) : view === 'calendar' ? (
-        calendarContent
-      ) : (
-        tasksContent
-      )}
-
-      {/* La agenda, en el calendario que ya mira cada mañana. */}
-      <ConectarCalendario perfil={profile} tareas={tasks} alumnos={clients} ciclos={cycles} />
+      {calendarContent}
+      {objetivosContent}
 
       <MoveTaskModal
         task={movingTask}
@@ -751,11 +767,14 @@ function TaskRow({
   onToggle,
   onFlag,
   onEdit,
+  onMover,
 }: {
   task: CoachTask;
   onToggle: () => void;
   onFlag: () => void;
   onEdit: () => void;
+  /** Cambiar de día. Con el calendario delante hace falta poco, pero hace falta. */
+  onMover?: () => void;
 }) {
   return (
     <View style={styles.row}>
@@ -772,6 +791,11 @@ function TaskRow({
           </Text>
         ) : null}
       </Pressable>
+      {!task.done && onMover ? (
+        <Pressable onPress={onMover} hitSlop={8} style={styles.flagBtn}>
+          <Ionicons name="calendar-outline" size={17} color={colors.textFaint} />
+        </Pressable>
+      ) : null}
       {!task.done ? (
         <Pressable onPress={onFlag} hitSlop={8} style={styles.flagBtn}>
           <Ionicons
@@ -867,17 +891,8 @@ const styles = StyleSheet.create({
   screenTitle: { ...typography.h1, color: colors.text },
   screenSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   // Escritorio/tablet: dos columnas a pantalla completa (calendario + tareas).
-  twoCol: { flexDirection: 'row', gap: spacing.xl, alignItems: 'flex-start' },
   // El calendario ocupa más ancho que las tareas (aprox. 60/40): la rejilla
   // mensual se ve holgada y las tareas quedan en una columna cómoda al lado.
-  colCal: { flex: 1.5, maxWidth: 560 },
-  colTasks: { flex: 1, maxWidth: 460 },
-  colHeading: {
-    ...typography.label,
-    color: colors.primaryBright,
-    textTransform: 'uppercase',
-    marginBottom: spacing.md,
-  },
   // Calendario
   monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.lg },
   monthNav: {
@@ -989,20 +1004,36 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
-  // Tareas
-  progressWrap: { marginBottom: spacing.lg },
-  progressTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
-  progressText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  donePill: {
+  objetivos: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  objetivosCabecera: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  donePillText: { ...typography.small, color: colors.onPrimary, fontSize: 11, fontFamily: fonts.semiBold },
+  objetivosTitulo: { ...typography.h3, color: colors.text, flexShrink: 1, flexGrow: 1 },
+  objetivosPista: { ...typography.small, color: colors.textFaint, flexShrink: 0 },
+  sinDia: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  sinDiaTitulo: {
+    ...typography.small,
+    color: colors.textFaint,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    fontFamily: fonts.semiBold,
+    marginBottom: spacing.sm,
+  },
+
+  // Tareas
   addRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1042,8 +1073,6 @@ const styles = StyleSheet.create({
   rowTitleDone: { color: colors.textFaint, textDecorationLine: 'line-through' },
   rowNotes: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   flagBtn: { padding: 4 },
-  doneHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.md, marginTop: spacing.xs },
-  doneHeaderText: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   goalCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,

@@ -56,13 +56,6 @@
         }
       ],
       "expo-apple-authentication",
-      [
-        "expo-calendar",
-        {
-          "calendarPermission": "Para escribir en tu calendario tus cobros, tus bloques de entrenamiento y tus tareas. Solo escribe lo que tú le pidas.",
-          "remindersPermission": false
-        }
-      ],
       "./plugins/memoria-de-gradle"
     ],
     "experiments": {

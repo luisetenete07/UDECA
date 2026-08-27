@@ -40,12 +40,24 @@ const plist = introspect.ios?.infoPlist ?? {};
 const NECESARIOS = [
   ['NSPhotoLibraryUsageDescription', 'foto de perfil, fotos de progreso y libretas'],
   ['NSMotionUsageDescription', 'contador de pasos'],
-  ['NSCalendarsUsageDescription', 'llevar cobros y bloques al calendario'],
-  ['NSCalendarsFullAccessUsageDescription', 'lo mismo, en iOS 17+'],
 ];
 
 /** Lo que NO se usa: si aparece, alguien añadió un plugin sin mirar. */
 const SOBRAN = [
+  /*
+   * El calendario del móvil YA NO se toca.
+   *
+   * La agenda llevaba una función para exportar cobros, ciclos y tareas al
+   * calendario del teléfono. Se ha quitado: pedía un permiso delicado —acceso
+   * completo al calendario, que Apple mira con lupa— para algo que casi nadie
+   * usaba, y la propia agenda hace ese trabajo mejor desde que se puede apuntar
+   * en cualquier día de un toque.
+   *
+   * Un permiso que no se pide es una pregunta menos en la revisión y una
+   * pantalla menos que asusta al instalar.
+   */
+  'NSCalendarsUsageDescription',
+  'NSCalendarsFullAccessUsageDescription',
   'NSCameraUsageDescription',
   'NSMicrophoneUsageDescription',
   'NSRemindersUsageDescription',
