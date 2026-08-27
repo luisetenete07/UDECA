@@ -52,9 +52,24 @@ export default function Root({ children }: PropsWithChildren) {
  * había una versión esperando de la sesión anterior, porque en ese caso
  * "updatefound" no vuelve a dispararse y el aviso no salía nunca.
  *
- * Lo que NO se hace: recargar solo. Alguien puede estar a mitad de una serie
- * con datos sin guardar, y quitarle la pantalla de debajo para darle una
- * mejora es un mal negocio. El aviso está a un toque.
+ * ACTUALIZAR ES OBLIGATORIO
+ *
+ * El aviso era una barra que se podía ignorar, y la ignoraba justo quien peor
+ * versión tenía: se quedaba semanas con la de hace tres despliegues, arrastrando
+ * fallos ya corregidos y escribiendo al soporte por cosas que no existen desde
+ * hace un mes. Con dos versiones en la calle, cada fallo se responde dos veces.
+ *
+ * Ahora tapa la pantalla y solo tiene un botón. En la web esto casi no cuesta:
+ * recargar tarda un segundo y no hay nada que descargar.
+ *
+ * SIGUE SIN RECARGAR SOLA, Y ESO IMPORTA. Alguien puede estar a mitad de una
+ * serie; quitarle la pantalla de debajo sin avisar es perderle el sitio. El
+ * muro dice lo que va a pasar y espera a que lo pulse él, que es la diferencia
+ * entre obligar y arrebatar.
+ *
+ * Se pinta a mano, sin React, porque esto vive en el HTML: tiene que poder
+ * aparecer aunque el JavaScript de la app se haya quedado a medias, que es
+ * precisamente uno de los casos en los que hay que actualizar.
  */
 const swRegistration = (base: string) => `
 if ('serviceWorker' in navigator) {
@@ -62,18 +77,27 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('${base}/sw.js', { updateViaCache: 'none' }).then(function (reg) {
       function showUpdateBanner() {
         if (document.getElementById('udeca-update-bar')) return;
-        var bar = document.createElement('div');
-        bar.id = 'udeca-update-bar';
-        bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:99999;background:#0D0D0D;border:1px solid #2A2A2A;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;max-width:460px;margin:0 auto;';
+        var fondo = document.createElement('div');
+        fondo.id = 'udeca-update-bar';
+        fondo.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
+        var caja = document.createElement('div');
+        caja.style.cssText = 'max-width:380px;width:100%;text-align:center;';
+        var tit = document.createElement('div');
+        tit.style.cssText = 'color:#fff;font-size:26px;font-weight:800;letter-spacing:-0.3px;';
+        tit.textContent = 'Hay una versión nueva';
         var txt = document.createElement('div');
-        txt.style.cssText = 'flex:1;color:#fff;font-size:14px;font-weight:600;';
-        txt.textContent = 'Nueva versión disponible';
+        txt.style.cssText = 'color:#9A9A9A;font-size:15px;line-height:22px;margin-top:10px;';
+        txt.textContent = 'Actualiza para seguir entrenando. Tarda un segundo y no pierdes nada de lo que tienes guardado.';
         var btn = document.createElement('button');
-        btn.style.cssText = 'border:none;border-radius:10px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#C9BDB0,#A2968B);color:#0A0A0A;';
+        btn.style.cssText = 'margin-top:24px;width:100%;border:none;border-radius:14px;padding:15px 16px;font-weight:700;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#C9BDB0,#A2968B);color:#0A0A0A;';
         btn.textContent = 'Actualizar';
         btn.onclick = function () { window.location.reload(); };
-        bar.appendChild(txt); bar.appendChild(btn);
-        document.body.appendChild(bar);
+        caja.appendChild(tit); caja.appendChild(txt); caja.appendChild(btn);
+        fondo.appendChild(caja);
+        document.body.appendChild(fondo);
+        // Detrás del muro no se puede seguir tocando ni desplazando: si se
+        // pudiera, no sería obligatorio.
+        document.documentElement.style.overflow = 'hidden';
       }
       reg.addEventListener('updatefound', function () {
         var nw = reg.installing;
@@ -89,10 +113,25 @@ if ('serviceWorker' in navigator) {
       // ya no volverá a saltar, así que el aviso hay que ponerlo aquí.
       if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
 
-      // El service worker nuevo entra solo (hace skipWaiting), pero la
-      // pantalla sigue siendo la vieja hasta que se recargue. Ese cambio de
-      // mando es la señal más fiable de que hay algo nuevo que ver.
-      navigator.serviceWorker.addEventListener('controllerchange', showUpdateBanner);
+      /*
+       * El service worker nuevo entra solo (hace skipWaiting), pero la pantalla
+       * sigue siendo la vieja hasta que se recargue. Ese cambio de mando es la
+       * señal más fiable de que hay algo nuevo que ver.
+       *
+       * SOLO SI YA HABÍA UNO MANDANDO. En la PRIMERA visita no hay ninguno, y
+       * el que se acaba de instalar también dispara este aviso: sin esta
+       * condición, quien abre la app por primera vez se encuentra un muro
+       * diciéndole que actualice algo que acaba de cargar.
+       *
+       * Con la barra pequeña de antes eso era una molestia y pasó desapercibido.
+       * Convertida en un muro que tapa la pantalla, es lo primero que vería un
+       * usuario nuevo. Lo cazaron las pruebas: cada navegador limpio se comía el
+       * muro y no podía tocar nada.
+       */
+      var yaHabiaControl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (yaHabiaControl) showUpdateBanner();
+      });
 
       // Preguntar de verdad: al cargar y cada vez que se vuelve a la app.
       var ultima = 0;

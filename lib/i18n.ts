@@ -1423,6 +1423,13 @@ export const EN: Record<string, string> = {
   hoy: 'today',
   ayer: 'yesterday',
   'Tu último entreno': 'Your last session',
+  // El muro de actualizar (components/ActualizacionObligatoria.tsx).
+  'Hay una versión nueva': 'There is a new version',
+  'Esta versión de UDECA ya no está al día. Actualiza para seguir entrenando: tus datos, tus rutinas y tu progreso te esperan intactos.':
+    'This version of UDECA is out of date. Update to keep training: your data, your routines and your progress are waiting, untouched.',
+  'Actualizar en la App Store': 'Update on the App Store',
+  'Actualizar en Google Play': 'Update on Google Play',
+  'Tienes la {0}': 'You have {0}',
   'Tu ciclo sigue por el {0}.': 'Your cycle carries on with {0}.',
   'Tu ciclo sigue por el {0}, que es descanso.':
     'Your cycle carries on with {0}, which is a rest day.',

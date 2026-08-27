@@ -19,6 +19,7 @@ import { CardRendererHost } from '../components/CardRendererHost';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ToastHost } from '../components/Toast';
+import { ActualizacionObligatoria } from '../components/ActualizacionObligatoria';
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { installGlobalErrorLogging } from '../lib/errorLog';
 import { colors } from '../lib/theme';
@@ -84,6 +85,10 @@ export default function RootLayout() {
             </ErrorBoundary>
           )}
           {!splashDone ? <AnimatedSplash onFinish={() => setSplashDone(true)} /> : null}
+          {/* El muro de "actualiza para seguir", por encima de todo lo demás.
+              Va aquí y no dentro de una pantalla porque tiene que tapar la app
+              entera, esté donde esté quien la abre. */}
+          <ActualizacionObligatoria />
         </AuthProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>

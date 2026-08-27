@@ -171,6 +171,22 @@ await comprobar('leer los ajustes del servidor (config)', false, () =>
   getDoc(doc(db, 'config', 'comunidad'))
 );
 
+/*
+ * LA VERSIÓN MÍNIMA ES LA EXCEPCIÓN, Y TIENE QUE SERLO
+ *
+ * `config/version` dice qué versión de la app ha dejado de valer, y la app
+ * necesita leerla para saber si le toca el muro de "actualiza para seguir". Si
+ * no pudiera, el muro no aparecería NUNCA: es tanto como no tenerlo.
+ *
+ * Escribirla sigue prohibido, y esta es de las prohibiciones que más importan
+ * de todo el fichero: quien pudiera escribir ahí una versión altísima dejaría
+ * fuera de la app a todos los usuarios a la vez, de golpe.
+ */
+await comprobar('leer la versión mínima', true, () => getDoc(doc(db, 'config', 'version')));
+await comprobar('dejar a todos fuera subiendo la versión mínima', false, () =>
+  setDoc(doc(db, 'config', 'version'), { minima: '99.0.0' })
+);
+
 // Un alta pagada en la web queda apuntada a un correo. Si se pudiera leer o
 // escribir desde la app, cualquiera se regalaría el euro o se llevaría la
 // lista de correos de quien ha pagado.

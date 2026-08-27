@@ -663,6 +663,28 @@ service cloud.firestore {
      * puerta. Se escribe a mano desde la consola de Firebase o con el SDK de
      * administrador, que no pasa por estas reglas.
      */
+    /*
+     * LA VERSIÓN MÍNIMA SÍ SE LEE, Y TIENE QUE LEERSE
+     *
+     * `config/version` dice qué versión de la app ha dejado de valer. La app la
+     * consulta para saber si le toca el muro de "actualiza para seguir", y si
+     * no pudiera leerla el muro no aparecería nunca — que es tanto como no
+     * tenerlo.
+     *
+     * No hay nada que esconder ahí: es un número de versión, lo mismo que hay
+     * publicado en la ficha de la tienda. Y se lee SIN sesión a propósito,
+     * porque una versión vieja tiene que encontrarse el muro antes de intentar
+     * entrar, no después.
+     *
+     * Escribir sigue prohibido: se cambia desde la consola de Firebase, que no
+     * pasa por estas reglas. Si se pudiera escribir desde la app, cualquiera
+     * podría dejar fuera a todo el mundo poniendo una versión altísima.
+     */
+    match /config/version {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /config/{docId} {
       allow read, write: if false;
     }
