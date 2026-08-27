@@ -33,18 +33,27 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function (reg) {
       function showUpdateBanner() {
         if (document.getElementById('udeca-update-bar')) return;
-        var bar = document.createElement('div');
-        bar.id = 'udeca-update-bar';
-        bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:99999;background:#0D0D0D;border:1px solid #2A2A2A;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;max-width:460px;margin:0 auto;';
+        var fondo = document.createElement('div');
+        fondo.id = 'udeca-update-bar';
+        fondo.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
+        var caja = document.createElement('div');
+        caja.style.cssText = 'max-width:380px;width:100%;text-align:center;';
+        var tit = document.createElement('div');
+        tit.style.cssText = 'color:#fff;font-size:26px;font-weight:800;letter-spacing:-0.3px;';
+        tit.textContent = 'Hay una versión nueva';
         var txt = document.createElement('div');
-        txt.style.cssText = 'flex:1;color:#fff;font-size:14px;font-weight:600;';
-        txt.textContent = 'Nueva versión disponible';
+        txt.style.cssText = 'color:#9A9A9A;font-size:15px;line-height:22px;margin-top:10px;';
+        txt.textContent = 'Actualiza para seguir entrenando. Tarda un segundo y no pierdes nada de lo que tienes guardado.';
         var btn = document.createElement('button');
-        btn.style.cssText = 'border:none;border-radius:10px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#C9BDB0,#A2968B);color:#0A0A0A;';
+        btn.style.cssText = 'margin-top:24px;width:100%;border:none;border-radius:14px;padding:15px 16px;font-weight:700;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#C9BDB0,#A2968B);color:#0A0A0A;';
         btn.textContent = 'Actualizar';
         btn.onclick = function () { window.location.reload(); };
-        bar.appendChild(txt); bar.appendChild(btn);
-        document.body.appendChild(bar);
+        caja.appendChild(tit); caja.appendChild(txt); caja.appendChild(btn);
+        fondo.appendChild(caja);
+        document.body.appendChild(fondo);
+        // Detrás del muro no se puede seguir tocando ni desplazando: si se
+        // pudiera, no sería obligatorio.
+        document.documentElement.style.overflow = 'hidden';
       }
       reg.addEventListener('updatefound', function () {
         var nw = reg.installing;
@@ -60,10 +69,25 @@ if ('serviceWorker' in navigator) {
       // ya no volverá a saltar, así que el aviso hay que ponerlo aquí.
       if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
 
-      // El service worker nuevo entra solo (hace skipWaiting), pero la
-      // pantalla sigue siendo la vieja hasta que se recargue. Ese cambio de
-      // mando es la señal más fiable de que hay algo nuevo que ver.
-      navigator.serviceWorker.addEventListener('controllerchange', showUpdateBanner);
+      /*
+       * El service worker nuevo entra solo (hace skipWaiting), pero la pantalla
+       * sigue siendo la vieja hasta que se recargue. Ese cambio de mando es la
+       * señal más fiable de que hay algo nuevo que ver.
+       *
+       * SOLO SI YA HABÍA UNO MANDANDO. En la PRIMERA visita no hay ninguno, y
+       * el que se acaba de instalar también dispara este aviso: sin esta
+       * condición, quien abre la app por primera vez se encuentra un muro
+       * diciéndole que actualice algo que acaba de cargar.
+       *
+       * Con la barra pequeña de antes eso era una molestia y pasó desapercibido.
+       * Convertida en un muro que tapa la pantalla, es lo primero que vería un
+       * usuario nuevo. Lo cazaron las pruebas: cada navegador limpio se comía el
+       * muro y no podía tocar nada.
+       */
+      var yaHabiaControl = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (yaHabiaControl) showUpdateBanner();
+      });
 
       // Preguntar de verdad: al cargar y cada vez que se vuelve a la app.
       var ultima = 0;
@@ -676,6 +700,7 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 .r-y7v2we{background-color:rgba(32,36,37,1.00);}
 .r-yc9v9c{width:22px;}
 .r-yie26v{z-index:1001;}
+.r-yivrw8{height:62px;}
 .r-yy2aun{font-size:26px;}
 .r-z2g584{width:76px;}
 .r-z5qs1h{gap:2px;}
@@ -701,5 +726,5 @@ input::-webkit-search-cancel-button,input::-webkit-search-decoration,input::-web
 @font-face{font-family:"Inter_400Regular";src:url("/assets/node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.51b6ad87261f18b6433ec52871ddfabc.ttf");font-display:auto}
 @font-face{font-family:"Inter_500Medium";src:url("/assets/node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.137ab18bace28dd0bd83eb3b8ed2bc54.ttf");font-display:auto}
 @font-face{font-family:"Inter_600SemiBold";src:url("/assets/node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.a5f35888d2da465de352e0dcfaf33324.ttf");font-display:auto}
-@font-face{font-family:"Inter_700Bold";src:url("/assets/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf");font-display:auto}</style><link rel="preload" href="/assets/node_modules/@expo-google-fonts/sora/600SemiBold/Sora_600SemiBold.8569cb014b6e06cfd0e5b26805e96ca0.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/sora/700Bold/Sora_700Bold.d4691f264e2c1ed09de4766e489a99b2.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.51b6ad87261f18b6433ec52871ddfabc.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.137ab18bace28dd0bd83eb3b8ed2bc54.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.a5f35888d2da465de352e0dcfaf33324.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf" as="font" crossorigin="" /><link rel="icon" href="/favicon.ico"/><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx" style="flex:1;background-color:rgba(0,0,0,1.00)"><div class="css-g5y9jx r-13awgt0"><div style="position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;visibility:hidden"></div><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx r-13awgt0 r-1p0dtai r-1d2f490 r-u8s1d r-zchlnj r-ipm5af" style="background-color:rgba(242,242,242,1.00);display:flex"><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx r-13awgt0" style="background-color:rgba(0,0,0,1.00)"><!--$--><div class="css-g5y9jx r-1awozwy r-kemksi r-13awgt0 r-f4gmv6 r-1777fci"><div class="css-g5y9jx r-1mlwlqe r-1udh08x r-417010 r-y47klf r-1s5nyi r-1kesqaa" style="transform:scale(0.9)"><div class="css-g5y9jx r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-ehq7j7"></div></div></div><!--/$--></div></div></div></div><div class="css-g5y9jx r-1awozwy r-kemksi r-1p0dtai r-1777fci r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-c97pre r-633pao" style="opacity:1"><div class="css-g5y9jx r-1llaxt6 r-34ffwy" style="opacity:0;transform:scale(0.82)"><div class="css-g5y9jx r-1mlwlqe r-1udh08x r-417010 r-nsiyw1 r-1wztat5 r-1n20pny"><div class="css-g5y9jx r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-ehq7j7"></div></div></div></div></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-f1c3ef1ce4263d15f0810419e6e51899.js" defer></script>
+@font-face{font-family:"Inter_700Bold";src:url("/assets/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf");font-display:auto}</style><link rel="preload" href="/assets/node_modules/@expo-google-fonts/sora/600SemiBold/Sora_600SemiBold.8569cb014b6e06cfd0e5b26805e96ca0.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/sora/700Bold/Sora_700Bold.d4691f264e2c1ed09de4766e489a99b2.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.51b6ad87261f18b6433ec52871ddfabc.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.137ab18bace28dd0bd83eb3b8ed2bc54.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.a5f35888d2da465de352e0dcfaf33324.ttf" as="font" crossorigin="" /><link rel="preload" href="/assets/node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.6e237de4f1f413afa2fcc45c77ac343a.ttf" as="font" crossorigin="" /><link rel="icon" href="/favicon.ico"/><script type="module">globalThis.__EXPO_ROUTER_HYDRATE__=true;</script></head><body><div id="root"><div class="css-g5y9jx r-13awgt0"><!--$--><div class="css-g5y9jx" style="flex:1;background-color:rgba(0,0,0,1.00)"><div class="css-g5y9jx r-13awgt0"><div style="position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;visibility:hidden"></div><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx r-13awgt0 r-1p0dtai r-1d2f490 r-u8s1d r-zchlnj r-ipm5af" style="background-color:rgba(242,242,242,1.00);display:flex"><div class="css-g5y9jx r-13awgt0"><div class="css-g5y9jx r-13awgt0" style="background-color:rgba(0,0,0,1.00)"><!--$--><div class="css-g5y9jx r-1awozwy r-kemksi r-13awgt0 r-f4gmv6 r-1777fci"><div class="css-g5y9jx r-1mlwlqe r-1udh08x r-417010 r-y47klf r-1s5nyi r-1kesqaa" style="transform:scale(0.9)"><div class="css-g5y9jx r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-ehq7j7"></div></div></div><!--/$--></div></div></div></div><div class="css-g5y9jx r-1awozwy r-kemksi r-1p0dtai r-1777fci r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-c97pre r-633pao" style="opacity:1"><div class="css-g5y9jx r-1llaxt6 r-34ffwy" style="opacity:0;transform:scale(0.82)"><div class="css-g5y9jx r-1mlwlqe r-1udh08x r-417010 r-nsiyw1 r-1wztat5 r-1n20pny"><div class="css-g5y9jx r-1niwhzg r-vvn4in r-u6sd8q r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw r-ehq7j7"></div></div></div></div></div></div><!--/$--></div></div><script src="/_expo/static/js/web/entry-b09f0ab4efcd74464c84e0fe8f5fa638.js" defer></script>
 </body></html>
