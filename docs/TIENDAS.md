@@ -349,8 +349,30 @@ canta antes de que llegue a la tienda.
   en el móvil.
 - **La versión la lleva EAS.** En `eas.json`, el perfil de producción tiene
   `autoIncrement`, así que el número de build sube solo en cada compilación. El
-  número que ve el usuario (`version` en `app.json`, hoy `1.0.0`) se sube a
-  mano cuando toque.
+  número que ve el usuario (`version` en `app.json`, hoy `1.0.1`) se sube a
+  mano cuando toque, y no es un detalle: es lo que compara la actualización
+  obligatoria. Dos versiones distintas con el mismo número son indistinguibles
+  para ella, y entonces no se puede sacar a nadie de la vieja.
+
+---
+
+## Lo último, cuando ya está publicada en las dos
+
+**No antes.** Cuando la versión se pueda descargar de verdad en Play y en la App
+Store, en la consola de Firebase, colección `config`, documento `version`:
+
+| Campo | Tipo | Valor |
+| --- | --- | --- |
+| `minima` | string | La versión recién publicada, hoy `1.0.1` |
+
+Con eso, quien tenga una anterior se encuentra el muro y va a la tienda. El
+detalle entero está en `docs/ACTUALIZAR.md`.
+
+El orden importa y no se puede deshacer bien: si se pone antes de que la
+descarga exista, la gente ve un muro que manda a una tienda donde todavía está
+la versión vieja, y se queda encerrada fuera de la app hasta que la nueva
+aparezca. Primero publicar, comprobar que se descarga, y entonces tocar
+Firestore.
 
 ---
 
