@@ -356,6 +356,53 @@ canta antes de que llegue a la tienda.
 
 ---
 
+## DÓNDE SE QUEDÓ EL LANZAMIENTO (28 de agosto de 2026)
+
+Esto es una foto del estado, para que tres días de espera no se lleven por
+delante lo que ya se sabe.
+
+### El tope de Expo
+
+Las compilaciones están BLOQUEADAS hasta el **1 de septiembre**: la cuenta
+agotó las builds del plan gratuito de este mes, en iOS y en Android. El aviso
+que sale es este, y no es un fallo del código:
+
+    You've reached your included build credits this billing period.
+    New builds are blocked until your billing period resets.
+
+Se desbloquea solo ese día, o antes pagando el plan Starter en
+`expo.dev/accounts/luistenafits-team/settings/billing`.
+
+### Lo que hay que compilar el 1 de septiembre, y por qué
+
+Las dos compilaciones que están hoy en las tiendas —iOS 1.0.1 (35) y el `.aab`
+con versionCode 22— **no valen**, y no hay que enviarlas. Les faltan dos
+arreglos que se hicieron después:
+
+1. **Nadie que entrara con Google o Apple podía borrar su cuenta.** El último
+   paso pedía una contraseña que esa gente no tiene. Es obligatorio para las dos
+   tiendas y es lo que un revisor de Apple prueba a mano.
+2. **Los permisos READ_MEDIA_IMAGES / READ_MEDIA_VIDEO**, que Google Play
+   rechazó. Los traía `expo-screen-capture`; ahora van bloqueados.
+
+Así que el 1 de septiembre: *Build iOS* y *Build Android*, y con lo que salga se
+sustituye lo que hay en las dos tiendas.
+
+### Play Store
+
+Enviado a revisión con la versión mala. Puede pasar: lo que Google comprueba del
+borrado de cuenta es la URL de `/eliminar-cuenta`, que funciona y ofrece el
+borrado por correo. Si lo aprueban, se sube la versión buena encima el mismo
+día; si lo rechazan, se sube y se reenvía.
+
+### App Store
+
+La ficha se rellenó entera el 28 de agosto (textos, capturas de 1284x2778,
+notas del revisor, URL de soporte). Falta solo elegir la compilación, que no
+existe todavía.
+
+---
+
 ## Lo último, cuando ya está publicada en las dos
 
 **No antes.** Cuando la versión se pueda descargar de verdad en Play y en la App
