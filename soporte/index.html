@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Soporte · UDECA</title>
+<meta name="description" content="Ayuda y contacto de UDECA: cómo entrar, cómo funciona y a quién escribir." />
+<!--
+  LA PÁGINA DE SOPORTE, LA QUE PIDE LA APP STORE.
+
+  Existe por una razón muy concreta: la ficha de Apple obliga a una "URL de
+  soporte", y el revisor la abre. La web pública (www.udeca.app) se despliega a
+  mano en Vercel, así que el día que nadie se acuerde de publicar, esa URL
+  responde con nada y el envío se cae. Esta se publica SOLA con cada push, en el
+  mismo sitio que la política de privacidad.
+
+  Sin CSS de fuera, sin fuentes, sin imágenes y sin JavaScript, por lo mismo que
+  las otras dos: quien la abre para darla por buena puede ser un revisor
+  automático que pide el HTML y no ejecuta nada.
+-->
+<style>
+  :root {
+    --bg: #080706;
+    --text: #f2ede7;
+    --muted: #a2968b;
+    --faint: #6f6760;
+    --gold: #c9bcae;
+    --hairline: rgba(162, 150, 139, 0.22);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 22px; }
+  header { border-bottom: 1px solid var(--hairline); }
+  header .wrap { display: flex; align-items: center; height: 64px; }
+  .brand {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 15px;
+  }
+  main { padding: 40px 0 70px; }
+  .eyebrow {
+    color: var(--gold);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 34px 0 10px; }
+  p, li { color: var(--muted); font-size: 16px; }
+  p { margin: 0 0 14px; }
+  b { color: var(--text); font-weight: 600; }
+  a { color: var(--gold); }
+  .idiomas { font-size: 14px; margin-bottom: 28px; }
+  .correo { display: inline-block; font-size: 21px; margin: 4px 0 14px; }
+  hr { border: 0; height: 1px; background: var(--hairline); margin: 50px 0; }
+  footer { border-top: 1px solid var(--hairline); padding: 22px 0 40px; }
+  footer p { color: var(--faint); font-size: 13px; margin: 0; }
+  @media (min-width: 700px) { h1 { font-size: 42px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap"><a class="brand" href="https://app.udeca.app">UDECA</a></div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="eyebrow">Ayuda</p>
+    <h1>Soporte de UDECA</h1>
+    <p class="idiomas"><a href="#english">Read this page in English</a></p>
+
+    <p>
+      UDECA es una aplicación de entrenamiento de calistenia. Un entrenador programa,
+      hace el seguimiento y lleva las cuentas de sus alumnos; un atleta que va por su
+      cuenta se lleva su propio plan. Si algo no funciona o tienes una duda, escríbenos
+      y contestamos.
+    </p>
+
+    <h2>Escríbenos</h2>
+    <p><a class="correo" href="mailto:luistenaf@gmail.com?subject=Soporte%20UDECA">luistenaf@gmail.com</a></p>
+    <p>Respondemos en un plazo de 48 horas laborables.</p>
+
+    <h2>Cómo se entra</h2>
+    <p>
+      Con <b>Google</b> o con <b>Apple</b>. No hay usuario y contraseña: se quitaron a
+      propósito, porque una contraseña más es una contraseña que se olvida. Si eres alumno,
+      tu entrenador te pasa un código; si entrenas por tu cuenta, eliges el perfil de atleta
+      al crear la cuenta.
+    </p>
+
+    <h2>Si algo va mal</h2>
+    <p>
+      Antes de escribir, prueba a cerrar la app del todo y volver a abrirla, y comprueba que
+      la tienes actualizada. Si sigue igual, cuéntanos <b>qué móvil tienes</b>, <b>qué
+      hacías</b> y <b>qué pasó</b>: con esas tres cosas se arregla mucho más rápido.
+    </p>
+
+    <h2>Tu cuenta y tus datos</h2>
+    <p>
+      Puedes borrar tu cuenta tú mismo desde <b>Perfil → Eliminar mi cuenta</b>, y también
+      pedirlo por correo si ya no tienes la app. Todo está explicado en
+      <a href="/eliminar-cuenta">eliminar tu cuenta</a>, y qué datos tratamos y por qué, en la
+      <a href="/privacidad">política de privacidad</a>.
+    </p>
+
+    <hr />
+
+    <h1 id="english">UDECA support</h1>
+
+    <p>
+      UDECA is a calisthenics training app. A coach programs, follows up and keeps track of
+      their students; an athlete training alone runs their own plan. If something is not
+      working or you have a question, write to us and we will answer.
+    </p>
+
+    <h2>Write to us</h2>
+    <p><a class="correo" href="mailto:luistenaf@gmail.com?subject=UDECA%20support">luistenaf@gmail.com</a></p>
+    <p>We reply within 48 working hours.</p>
+
+    <h2>How you sign in</h2>
+    <p>
+      With <b>Google</b> or <b>Apple</b>. There is no username and password: they were removed
+      on purpose, because one more password is one more password to forget. If you are a
+      student, your coach gives you a code; if you train on your own, you pick the athlete
+      profile when you create the account.
+    </p>
+
+    <h2>If something goes wrong</h2>
+    <p>
+      Before writing, try closing the app completely and opening it again, and check that it is
+      up to date. If it still happens, tell us <b>which phone you have</b>, <b>what you were
+      doing</b> and <b>what happened</b>: with those three things it gets fixed much faster.
+    </p>
+
+    <h2>Your account and your data</h2>
+    <p>
+      You can delete your account yourself from <b>Profile → Delete my account</b>, and you can
+      also ask by email if you no longer have the app. It is all explained in
+      <a href="/eliminar-cuenta">deleting your account</a>, and what data we handle and why, in the
+      <a href="/privacidad">privacy policy</a>.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      © 2026 UDECA · Universidad de Calistenia ·
+      <a href="/privacidad">Política de privacidad</a> ·
+      <a href="/eliminar-cuenta">Eliminar tu cuenta</a>
+    </p>
+  </div>
+</footer>
+</body>
+</html>
