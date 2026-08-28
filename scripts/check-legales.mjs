@@ -54,16 +54,28 @@ if (fallos > 0) {
 
 const privacidad = lee('web/privacidad.html');
 const borrado = lee('web/eliminar-cuenta.html');
+/*
+ * La de soporte va en el mismo saco.
+ *
+ * La ficha de la App Store obliga a una "URL de soporte" y el revisor la abre.
+ * Apuntarla a la web pública era una trampa: esa se despliega A MANO en Vercel,
+ * así que el día que nadie se acuerde, la URL de la ficha responde con nada.
+ * Esta se publica sola con cada push, en el mismo sitio que las otras dos.
+ */
+const soporte = lee('web/soporte.html');
 
 console.log('\nSe leen sin JavaScript y sin pedir nada al exterior');
 for (const [nombre, pagina] of [
   ['privacidad', privacidad],
   ['eliminar-cuenta', borrado],
+  ['soporte', soporte],
 ]) {
   // El único <script> tolerable sería uno decorativo; el texto legal NO puede
   // depender de que se ejecute nada.
   ok(`${nombre}: no monta el texto con un script`, !/<script[\s>]/i.test(pagina));
-  ok(`${nombre}: el texto va en el fichero`, pagina.length > 3000, `${pagina.length} caracteres`);
+  // La de soporte es más corta que un texto legal, y no tiene por qué serlo.
+  const minimo = nombre === 'soporte' ? 2000 : 3000;
+  ok(`${nombre}: el texto va en el fichero`, pagina.length > minimo, `${pagina.length} caracteres`);
   // Y no puede depender de NINGÚN otro fichero: se publica en dos sitios
   // distintos (GitHub Pages y Vercel) y un /styles.css que exista en uno y no
   // en el otro deja la página como un documento en blanco y negro sin formato
@@ -150,9 +162,22 @@ console.log('\nLas pantallas de dentro de la app siguen ahí');
 ok('app/privacy-policy.tsx', hay('app/privacy-policy.tsx'), 'la enlaza la propia app');
 ok('app/delete-account.tsx', hay('app/delete-account.tsx'));
 
+console.log('\nLa de soporte sirve para lo que existe');
+{
+  // Sin una forma de contactar no es soporte, es un folleto.
+  ok('hay un correo al que escribir', soporte.includes(`mailto:${CORREO}`));
+  ok('dice cómo se entra (Google y Apple)', /Google/.test(soporte) && /Apple/.test(soporte));
+  ok('y también en inglés', soporte.includes('UDECA support'));
+  ok(
+    'la publica el despliegue de la app',
+    /for pagina in [^\n]*\bsoporte\b/.test(lee('.github/workflows/deploy.yml')),
+    'sin esto la URL de soporte de la ficha de Apple daría 404'
+  );
+}
+
 console.log(
   fallos === 0
-    ? '\n✔ Las dos páginas legales se abren sin la app y sin JavaScript'
+    ? '\n✔ Las tres páginas se abren sin la app y sin JavaScript'
     : `\n${fallos} fallo(s)`
 );
 process.exit(fallos === 0 ? 0 : 1);

@@ -11,6 +11,9 @@ import { Card } from '../components/Card';
 import { TextField } from '../components/TextField';
 import { showToast } from '../components/Toast';
 import { useAuth } from '../lib/auth-context';
+import { auth } from '../lib/firebase';
+import { useGoogleSignIn } from '../lib/googleAuth';
+import { useAppleSignIn } from '../lib/appleAuth';
 import { eraseMyData, RESTOS_TRAS_BORRAR } from '../lib/firestore/eraseAccount';
 import { CONTACT_EMAIL } from '../lib/subscription';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
@@ -38,7 +41,7 @@ const MOTIVOS = [
  *
  * Ahora bien: borrarse es irreversible y aquí hay años de entrenamiento de por
  * medio, así que el camino es largo a propósito. Cinco pasos, una palabra
- * escrita a mano, la contraseña y una espera final. Cada paso dice algo que el
+ * escrita a mano, volver a identificarse y una espera final. Cada paso dice algo que el
  * usuario necesita saber —qué se borra, qué alternativas tiene, qué queda—, de
  * forma que la fricción informa en vez de solo estorbar; poner obstáculos por
  * poner sería, además, justo lo que el RGPD llama obstaculizar el derecho.
@@ -48,7 +51,30 @@ const MOTIVOS = [
  */
 export default function AccountDeletionScreen() {
   const router = useRouter();
-  const { profile, signOut, deleteAccount, reauthenticate } = useAuth();
+  const { profile, firebaseUser, signOut, deleteAccount, reauthenticate } = useAuth();
+  const google = useGoogleSignIn();
+  const apple = useAppleSignIn();
+
+  /*
+   * CON QUÉ SE VUELVE A IDENTIFICAR.
+   *
+   * Firebase no borra una cuenta si hace rato que se entró: exige volver a
+   * demostrar que eres tú. Aquí se pedía SIEMPRE la contraseña, y desde que
+   * UDECA entra solo con Google y Apple la mayoría de la gente NO TIENE
+   * contraseña: escribieran lo que escribieran, fallaba. O sea que nadie que
+   * hubiera entrado con Google o con Apple podía borrar su cuenta.
+   *
+   * No es un detalle: poder borrarse desde dentro de la app es obligatorio para
+   * Apple (norma 5.1.1) y para Google Play, y es de lo que un revisor
+   * comprueba a mano. Además es un derecho, no una función.
+   *
+   * Se mira con qué entró cada uno y se le pide eso mismo. Las cuentas de
+   * correo y contraseña de antes de la mudanza siguen funcionando igual.
+   */
+  const proveedor = firebaseUser?.providerData?.[0]?.providerId ?? 'password';
+  const conGoogle = proveedor === 'google.com';
+  const conApple = proveedor === 'apple.com';
+  const conPassword = !conGoogle && !conApple;
   const [paso, setPaso] = React.useState(0);
   const [motivo, setMotivo] = React.useState<string | null>(null);
   const [palabra, setPalabra] = React.useState('');
@@ -73,11 +99,43 @@ export default function AccountDeletionScreen() {
 
   const borrar = async () => {
     if (!profile) return;
+    const uidQueSeBorra = auth.currentUser?.uid;
+    if (!uidQueSeBorra) return;
     setBorrando(true);
     setError(null);
     try {
-      // 1) La contraseña. Si es incorrecta no se ha tocado nada todavía.
-      await reauthenticate(password);
+      /*
+       * 1) Volver a identificarse. Si falla, no se ha tocado nada todavía.
+       *
+       * Con Google o Apple se vuelve a pasar por su pantalla. Y AL VOLVER se
+       * comprueba que sigue siendo la misma cuenta: si ahí dentro alguien elige
+       * otra de las suyas —tener la personal y la del trabajo es lo normal—,
+       * la sesión pasa a ser esa otra, y seguir adelante borraría la cuenta
+       * equivocada. Eso no se puede deshacer, así que se para en seco.
+       */
+      if (conGoogle) {
+        const r = await google.entrar(firebaseUser?.email ?? undefined);
+        if (!r) {
+          setBorrando(false);
+          return; // cerró la ventana: ni error ni borrado
+        }
+      } else if (conApple) {
+        const r = await apple.entrar();
+        if (!r) {
+          setBorrando(false);
+          return;
+        }
+      } else {
+        await reauthenticate(password);
+      }
+      if (auth.currentUser?.uid !== uidQueSeBorra) {
+        setError(
+          'Has entrado con otra cuenta distinta. No se ha borrado nada. Vuelve a empezar con la cuenta que quieres eliminar.'
+        );
+        setBorrando(false);
+        setAvance(null);
+        return;
+      }
       // 2) Los datos, con la sesión aún viva (después ya no habría permisos).
       setAvance('Borrando tus datos...');
       await eraseMyData(profile, (p) => setAvance(`${p.texto}: ${p.hechos}`));
@@ -90,7 +148,9 @@ export default function AccountDeletionScreen() {
       const codigo = (e as { code?: string })?.code;
       setError(
         codigo === 'auth/wrong-password' || codigo === 'auth/invalid-credential'
-          ? 'La contraseña no es correcta.'
+          ? conPassword
+            ? 'La contraseña no es correcta.'
+            : 'No se ha podido confirmar que eres tú. Inténtalo otra vez.'
           : codigo === 'auth/too-many-requests'
             ? 'Demasiados intentos. Espera unos minutos y vuelve a probar.'
             : 'No se ha podido completar. Inténtalo de nuevo o escríbenos.'
@@ -273,16 +333,24 @@ export default function AccountDeletionScreen() {
           <>
             <Text style={styles.titulo}>Último paso</Text>
             <Text style={styles.parrafo}>
-              Confirma que eres tú con tu contraseña. Al pulsar el botón, tu cuenta y tus
-              datos se borran inmediatamente.
+              {conPassword
+                ? 'Confirma que eres tú con tu contraseña. Al pulsar el botón, tu cuenta y tus datos se borran inmediatamente.'
+                : conGoogle
+                  ? 'Confirma que eres tú con Google. Al pulsar el botón se abrirá Google y, al volver, tu cuenta y tus datos se borran inmediatamente.'
+                  : 'Confirma que eres tú con Apple. Al pulsar el botón se abrirá Apple y, al volver, tu cuenta y tus datos se borran inmediatamente.'}
             </Text>
-            <TextField
-              placeholder="Tu contraseña"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            {/* La contraseña, solo a quien la tiene. Quien entró con Google o
+                con Apple no tiene ninguna, y pedírsela era pedirle algo
+                imposible: se quedaba sin poder borrar su cuenta. */}
+            {conPassword ? (
+              <TextField
+                placeholder="Tu contraseña"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+            ) : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
             {avance ? <Text style={styles.avance}>{avance}</Text> : null}
             <Button
@@ -291,10 +359,14 @@ export default function AccountDeletionScreen() {
                   ? `Espera ${segundos} s...`
                   : borrando
                     ? 'Borrando...'
-                    : 'Eliminar mi cuenta para siempre'
+                    : conGoogle
+                      ? 'Confirmar con Google y eliminar'
+                      : conApple
+                        ? 'Confirmar con Apple y eliminar'
+                        : 'Eliminar mi cuenta para siempre'
               }
               variant="danger"
-              disabled={segundos > 0 || password.length === 0 || borrando}
+              disabled={segundos > 0 || (conPassword && password.length === 0) || borrando}
               loading={borrando}
               onPress={borrar}
             />

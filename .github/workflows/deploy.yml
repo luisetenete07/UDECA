@@ -89,7 +89,7 @@ jobs:
         run: |
           touch dist/.nojekyll
           echo "app.udeca.app" > dist/CNAME
-          for pagina in privacidad eliminar-cuenta proximamente gracias; do
+          for pagina in privacidad eliminar-cuenta soporte proximamente gracias; do
             test -f "web/$pagina.html" || { echo "::error::falta web/$pagina.html"; exit 1; }
             mkdir -p "dist/$pagina"
             cp "web/$pagina.html" "dist/$pagina.html"
