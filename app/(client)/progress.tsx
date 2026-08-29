@@ -435,26 +435,12 @@ export default function ProgressScreen() {
           </Card>
         ) : (
           <>
-            {/* Cómo se reparte el trabajo del bloque y qué días has entrenado
-                EN ESE bloque, en la misma tarjeta. Eran dos, y la segunda
-                hablaba de doce semanas mientras la primera hablaba de seis:
-                dos periodos pegados que nadie compara mentalmente, así que la
-                cuadrícula se miraba como un adorno. Ahora la segunda mitad
-                explica la primera. */}
+            {/* El reparto del bloque se fue a "Tu progreso completo".
+                Aquí quedaba una tabla de números encima de todo lo demás, y lo
+                primero que se viene a mirar es si se ha entrenado, no cuántas
+                series de tirón llevas en la semana 3. Dentro está al lado de la
+                tabla de marcas, que es con lo que de verdad se compara. */}
             <Card style={styles.section}>
-              <BlockOverview
-                view={buildBlockView({
-                  cycle: bloqueActual,
-                  cycles,
-                  logs: workoutLogs,
-                  routine: activeRoutine,
-                  muscleByExercise,
-                  measureByExercise,
-                })}
-                title={ventana.titulo}
-                subtitle={ventana.hayBloque ? 'Tu bloque en curso' : 'Cómo se te reparte el trabajo'}
-              />
-
               <View style={styles.constancia}>
                 <View style={styles.constanciaFila}>
                   <Text style={styles.constanciaTitulo}>Días que has entrenado</Text>
@@ -909,6 +895,27 @@ export default function ProgressScreen() {
                 onViewChange={setMatrixView}
               />
             ) : null}
+
+            {/* El reparto del bloque, DEBAJO de la tabla de marcas.
+                Aquí es donde tiene sentido: arriba se ve qué se ha levantado
+                en cada ejercicio, y justo debajo, en qué se ha repartido el
+                trabajo esas mismas semanas. Separados —uno en cada pantalla—
+                eran dos tablas que nadie cruzaba. */}
+            <View style={styles.bloqueEnCompleto}>
+              <BlockOverview
+                view={buildBlockView({
+                  cycle: bloqueActual,
+                  cycles,
+                  logs: workoutLogs,
+                  routine: activeRoutine,
+                  muscleByExercise,
+                  measureByExercise,
+                })}
+                title={ventana.titulo}
+                subtitle={ventana.hayBloque ? 'Tu bloque en curso' : 'Cómo se te reparte el trabajo'}
+              />
+            </View>
+
             <Button
               title="Exportar a PDF"
               variant="secondary"
@@ -992,6 +999,14 @@ const styles = StyleSheet.create({
   fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   section: { marginBottom: spacing.md },
+  // Separado de la tabla de marcas con una raya: son dos cosas distintas que
+  // se leen seguidas, y pegadas parecerían la misma tabla con más filas.
+  bloqueEnCompleto: {
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   constancia: {
     marginTop: spacing.lg,
     paddingTop: spacing.lg,

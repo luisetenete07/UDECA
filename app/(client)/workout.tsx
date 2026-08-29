@@ -190,6 +190,13 @@ export default function WorkoutScreen() {
   const [history, setHistory] = useState<import('../../lib/types').WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
+  /**
+   * Si ya se ha pulsado "Empezar entreno" para el día que está en pantalla.
+   *
+   * Guarda el ID del día y no un sí/no: al cambiar de día hay que volver a
+   * empezar, porque lo que se abre es OTRO entreno.
+   */
+  const [diaEmpezado, setDiaEmpezado] = useState<string | null>(null);
   const [log, setLog] = useState<LoggedExercise[]>([]);
   const [lastPerf, setLastPerf] = useState<Record<string, LastPerformance>>({});
   const [videoByExercise, setVideoByExercise] = useState<Record<string, string>>({});
@@ -1116,6 +1123,21 @@ export default function WorkoutScreen() {
     inProgress || (!!pristineRef.current && JSON.stringify(log) !== pristineRef.current);
 
   /**
+   * ¿Está el entreno en marcha en la pantalla?
+   *
+   * O se ha pulsado "Empezar entreno", o ya hay algo escrito —un borrador
+   * recuperado, una corrección, un entreno a medias de antes—. Ese segundo
+   * caso importa: quien vuelve a una sesión empezada no tiene que volver a
+   * pulsar nada, se encuentra sus series donde las dejó.
+   *
+   * Antes de eso, la pantalla enseña con qué se llega —el último entreno, la
+   * rutina diaria y apuntar otro día— y nada más. Las tres cosas dejan de
+   * tener sentido en el momento en que se está entrenando, que es cuando
+   * estorban: es entonces cuando la pantalla tiene que ser solo el ejercicio.
+   */
+  const enMarcha = sesionEmpezada || diaEmpezado === (day?.id ?? null);
+
+  /**
    * Por dónde ibas: el último entreno de ESTA rutina.
    *
    * Es lo que permite retomar un ciclo en vez de reiniciarlo. Se calcula aquí,
@@ -1595,7 +1617,7 @@ export default function WorkoutScreen() {
           otro día" y por el mismo motivo: es aquí, al abrir el entreno, donde
           uno se da cuenta de que lleva días sin aparecer. Y desaparece en
           cuanto la sesión arranca, igual que la de al lado. */}
-      {!sesionEmpezada && routine ? (
+      {!enMarcha && routine ? (
         <UltimoEntreno
           ultimo={ultimoEntreno}
           routine={routine}
@@ -1607,9 +1629,25 @@ export default function WorkoutScreen() {
       {/* Lo que toca a diario aparte del plan: el pino, la movilidad. Va aquí
           y no en el inicio porque es entrenamiento, y porque el inicio ya está
           lleno. Desaparece con la sesión en marcha, como sus vecinas. */}
-      {!sesionEmpezada ? <RutinaDiariaDelDia profile={profile} /> : null}
+      {!enMarcha ? <RutinaDiariaDelDia profile={profile} /> : null}
 
-      {!sesionEmpezada ? <RegistrarOtroDia /> : null}
+      {!enMarcha ? <RegistrarOtroDia /> : null}
+
+      {/* EMPEZAR ENTRENO.
+          Hasta que se pulsa, la pantalla enseña con qué se llega —por dónde
+          ibas, la rutina diaria, apuntar otro día— y los ejercicios esperan
+          debajo. Al pulsar desaparece todo eso y queda el ejercicio solo.
+
+          No sale en un día de descanso ni con el entreno ya terminado: ahí no
+          hay nada que empezar. Y no vuelve a salir al recuperar un borrador,
+          porque quien vuelve a una sesión a medias ya la empezó. */}
+      {!enMarcha && day && !day.isRest && !showCompleted && log.length > 0 ? (
+        <Button
+          title="Empezar entreno"
+          onPress={() => setDiaEmpezado(day.id)}
+          style={{ marginBottom: spacing.md }}
+        />
+      ) : null}
 
       {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app:
           mismas protecciones que en los cursos (ni compartir, ni salirse, ni
@@ -2033,6 +2071,9 @@ export default function WorkoutScreen() {
       ) : null}
 
       {(() => {
+        // Los ejercicios, solo con el entreno en marcha. Es lo que hace que la
+        // pantalla de antes de empezar sea corta y diga una sola cosa.
+        if (!enMarcha) return null;
         const exerciseIndex = safeIndex;
         const exercise = log[exerciseIndex];
         if (!exercise) return null;
