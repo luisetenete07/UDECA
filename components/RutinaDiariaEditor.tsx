@@ -3,10 +3,16 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
+import { DragList } from './DragList';
 import { showToast } from './Toast';
 import { getRutinaDiaria, setRutinaDiaria } from '../lib/firestore/rutinaDiaria';
 import { nuevoId } from '../lib/ids';
-import { NOMBRE_POR_DEFECTO } from '../lib/rutinaDiaria';
+import {
+  moverEjercicio,
+  NOMBRE_POR_DEFECTO,
+  seriesDeTexto,
+  textoDelEjercicio,
+} from '../lib/rutinaDiaria';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { EjercicioDiario } from '../lib/types';
 
@@ -19,16 +25,28 @@ import type { EjercicioDiario } from '../lib/types';
  * "el entreno del martes" sino algo que se repite a diario y que, justo por
  * repetirse, es lo que más cambia a alguien en seis meses.
  *
- * POR QUÉ ES UNA LISTA Y NO UN PLAN
+ * POR QUÉ NO ES EL EDITOR DE RUTINAS OTRA VEZ
  *
- * Aquí no hay series, descansos ni progresión: hay un nombre y un objetivo en
- * una línea ("3 series de 30 s", "2 min por lado"). Con los campos del editor
- * de rutinas —series, repeticiones, descanso, medida— poner "movilidad de
- * cadera, un par de minutos" obliga a inventarse números que nadie va a
+ * Cada ejercicio lleva tres cosas y ninguna es obligatoria: un objetivo en
+ * TEXTO LIBRE, las series si se quieren contar, y el vídeo de la técnica. Nada
+ * de repeticiones, descansos, RIR ni progresión: poner "movilidad de cadera, un
+ * par de minutos" en esos campos obliga a inventarse números que nadie va a
  * cumplir ni mirar.
  *
- * Y por eso el objetivo es TEXTO LIBRE: cabe un aguante, unos minutos o "hasta
- * que deje de tirar", que es como se explican de verdad estas cosas.
+ * El objetivo es texto libre justo por eso: cabe un aguante, unos minutos o
+ * "hasta que deje de tirar", que es como se explican de verdad estas cosas.
+ *
+ * LAS SERIES, CUANDO SE QUIEREN CONTAR
+ *
+ * En el grease the groove las series no van seguidas: se reparten por el día.
+ * Con un número aquí, el alumno las marca de una en una y sabe cuántas le
+ * quedan. Sin número, el ejercicio se marca entero de un toque — y eso es lo
+ * correcto para dos minutos de movilidad, que no se cuentan por series.
+ *
+ * Y EL ORDEN SE ARRASTRA
+ *
+ * Porque no es decorativo: quien pone las muñecas antes del pino lo hace para
+ * llegar al pino con las muñecas calientes.
  *
  * SE APAGA SIN PERDER NADA
  *
@@ -54,6 +72,9 @@ export function RutinaDiariaEditor({
   const [ejercicios, setEjercicios] = useState<EjercicioDiario[]>([]);
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoObjetivo, setNuevoObjetivo] = useState('');
+  const [nuevasSeries, setNuevasSeries] = useState('');
+  /** Cuál se está editando. Solo uno a la vez: la tarjeta es pequeña. */
+  const [editando, setEditando] = useState<string | null>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -106,13 +127,17 @@ export function RutinaDiariaEditor({
   const anadir = () => {
     const n = nuevoNombre.trim();
     if (!n) return;
+    const series = seriesDeTexto(nuevasSeries);
     const lista = [
       ...ejercicios,
-      { id: nuevoId(), nombre: n, objetivo: nuevoObjetivo.trim() },
+      // `series` solo si de verdad hay un número: sin poner y "una serie" son
+      // cosas distintas, y guardar un campo vacío ensucia el documento.
+      { id: nuevoId(), nombre: n, objetivo: nuevoObjetivo.trim(), ...(series ? { series } : {}) },
     ];
     setEjercicios(lista);
     setNuevoNombre('');
     setNuevoObjetivo('');
+    setNuevasSeries('');
     // El primero que se añade la enciende: nadie escribe una lista para dejarla
     // apagada, y obligar a buscar el interruptor después es un paso de más.
     const encender = !activa && lista.length === 1;
@@ -122,6 +147,34 @@ export function RutinaDiariaEditor({
 
   const quitar = (id: string) => {
     const lista = ejercicios.filter((e) => e.id !== id);
+    setEjercicios(lista);
+    if (editando === id) setEditando(null);
+    void guardar({ ejercicios: lista });
+  };
+
+  /**
+   * Cambia UN campo de UN ejercicio. Solo en pantalla, sin guardar.
+   *
+   * Se guarda al salir del campo, con `guardarLista`. Guardar en cada letra
+   * sería una escritura por pulsación; y guardar en `onEndEditing`, como estaba,
+   * se perdía el vídeo entero: al tocar la cabecera para salir del campo, el
+   * campo se desmonta y ese aviso no llega a saltar nunca.
+   */
+  const cambiar = (id: string, campos: Partial<EjercicioDiario>) => {
+    setEjercicios((prev) => prev.map((e) => (e.id === id ? { ...e, ...campos } : e)));
+  };
+
+  /** Guarda lo que haya ahora en pantalla. Se llama al salir de un campo. */
+  const guardarLista = () => {
+    setEjercicios((prev) => {
+      void guardar({ ejercicios: prev });
+      return prev;
+    });
+  };
+
+  const reordenar = (desde: number, hasta: number) => {
+    const lista = moverEjercicio(ejercicios, desde, hasta);
+    if (lista === ejercicios) return;
     setEjercicios(lista);
     void guardar({ ejercicios: lista });
   };
@@ -144,8 +197,13 @@ export function RutinaDiariaEditor({
     <Card style={styles.tarjeta}>
       <Pressable style={styles.cabecera} onPress={() => setAbierto((v) => !v)} hitSlop={6}>
         <Ionicons name="repeat-outline" size={16} color={colors.primary} />
-        <Text style={styles.titulo}>Rutina diaria</Text>
-        <Text style={styles.pista}>{resumen}</Text>
+        {/* La pista DEBAJO del título, igual que en el resto de paneles
+            plegables: al lado no caben los dos en un móvil estrecho y "Rutina
+            diaria" se partía en "Rutina / diaria". */}
+        <View style={styles.cabeceraTextos}>
+          <Text style={styles.titulo}>Rutina diaria</Text>
+          <Text style={styles.pista}>{resumen}</Text>
+        </View>
         <Ionicons
           name={abierto ? 'chevron-up' : 'chevron-down'}
           size={16}
@@ -183,17 +241,106 @@ export function RutinaDiariaEditor({
             placeholderTextColor={colors.textFaint}
           />
 
-          {ejercicios.map((e) => (
-            <View key={e.id} style={styles.fila}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.filaNombre}>{e.nombre}</Text>
-                {e.objetivo ? <Text style={styles.filaObjetivo}>{e.objetivo}</Text> : null}
+          {/* El arrastre sale SOLO del asa (`handleOnly`): la fila lleva campos
+              de texto dentro, y sin eso colocar el cursor en uno la movería. */}
+          <DragList
+            items={ejercicios}
+            keyOf={(e) => e.id}
+            onReorder={reordenar}
+            handleOnly
+            gap={0}
+            style={styles.lista}
+            renderItem={(e, _i, arrastrando, asa) => (
+              <View style={[styles.fila, arrastrando && styles.filaArrastrando]}>
+                <View style={styles.filaCabecera}>
+                  {/* Con nombre: para quien usa lector de pantalla, un icono
+                      sin etiqueta es un elemento mudo en medio de la fila. */}
+                  <View
+                    {...asa}
+                    style={styles.asa}
+                    accessibilityLabel="Mover de sitio"
+                    accessibilityRole="adjustable"
+                  >
+                    <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
+                  </View>
+                  <Pressable
+                    style={styles.filaTextos}
+                    onPress={() => {
+                      if (editando === e.id) guardarLista();
+                      setEditando((v) => (v === e.id ? null : e.id));
+                    }}
+                    hitSlop={4}
+                  >
+                    <Text style={styles.filaNombre}>{e.nombre}</Text>
+                    {textoDelEjercicio(e) ? (
+                      <Text style={styles.filaObjetivo}>{textoDelEjercicio(e)}</Text>
+                    ) : null}
+                  </Pressable>
+                  {/* Que se vea desde fuera si tiene vídeo: entrar a cada uno a
+                      comprobarlo es lo que hace que no se rellene nunca. */}
+                  {e.video?.trim() ? (
+                    <Ionicons name="play-circle-outline" size={16} color={colors.primary} />
+                  ) : null}
+                  <Pressable
+                    onPress={() => {
+                      // Cerrar también guarda: es la otra forma de salir de los
+                      // campos, y perder lo escrito por cerrar sería lo peor.
+                      if (editando === e.id) guardarLista();
+                      setEditando((v) => (v === e.id ? null : e.id));
+                    }}
+                    hitSlop={10}
+                  >
+                    <Ionicons
+                      name={editando === e.id ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={colors.textFaint}
+                    />
+                  </Pressable>
+                  <Pressable onPress={() => quitar(e.id)} hitSlop={10}>
+                    <Ionicons name="close" size={16} color={colors.textFaint} />
+                  </Pressable>
+                </View>
+
+                {editando === e.id ? (
+                  <View style={styles.edicion}>
+                    <TextInput
+                      style={styles.campoEjercicio}
+                      defaultValue={e.objetivo}
+                      onChangeText={(t) => cambiar(e.id, { objetivo: t })}
+                      onBlur={guardarLista}
+                      placeholder="Objetivo (p. ej. 30 s por lado)"
+                      placeholderTextColor={colors.textFaint}
+                    />
+                    <View style={styles.edicionFila}>
+                      <TextInput
+                        style={[styles.campoEjercicio, styles.campoSeries]}
+                        defaultValue={e.series ? String(e.series) : ''}
+                        onChangeText={(t) => cambiar(e.id, { series: seriesDeTexto(t) })}
+                        onBlur={guardarLista}
+                        placeholder="Series"
+                        placeholderTextColor={colors.textFaint}
+                        keyboardType="number-pad"
+                      />
+                      <Text style={styles.pistaSeries}>
+                        Con series, se marcan de una en una a lo largo del día.
+                      </Text>
+                    </View>
+                    <TextInput
+                      style={styles.campoEjercicio}
+                      defaultValue={e.video ?? ''}
+                      onChangeText={(t) => cambiar(e.id, { video: t.trim() || undefined })}
+                      onBlur={guardarLista}
+                      placeholder="Enlace del vídeo (YouTube o Vimeo)"
+                      placeholderTextColor={colors.textFaint}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="url"
+                    />
+                  </View>
+                ) : null}
               </View>
-              <Pressable onPress={() => quitar(e.id)} hitSlop={10}>
-                <Ionicons name="close" size={16} color={colors.textFaint} />
-              </Pressable>
-            </View>
-          ))}
+            )}
+          />
 
           <View style={styles.anadir}>
             <TextInput
@@ -206,13 +353,21 @@ export function RutinaDiariaEditor({
             />
             <View style={styles.filaObjetivoNuevo}>
               <TextInput
-                style={[styles.campoEjercicio, { flex: 1 }]}
+                style={[styles.campoEjercicio, styles.campoObjetivoNuevo]}
                 value={nuevoObjetivo}
                 onChangeText={setNuevoObjetivo}
-                placeholder="Objetivo (p. ej. 3 series de 30 s)"
+                placeholder="Objetivo (p. ej. 30 s)"
                 placeholderTextColor={colors.textFaint}
                 onSubmitEditing={anadir}
                 returnKeyType="done"
+              />
+              <TextInput
+                style={[styles.campoEjercicio, styles.campoSeries]}
+                value={nuevasSeries}
+                onChangeText={setNuevasSeries}
+                placeholder="Series"
+                placeholderTextColor={colors.textFaint}
+                keyboardType="number-pad"
               />
               <Pressable
                 onPress={anadir}
@@ -232,8 +387,9 @@ export function RutinaDiariaEditor({
 const styles = StyleSheet.create({
   tarjeta: { marginBottom: spacing.md },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  titulo: { ...typography.h3, color: colors.text, flexShrink: 1, flexGrow: 1 },
-  pista: { ...typography.small, color: colors.textFaint, flexShrink: 0 },
+  cabeceraTextos: { flex: 1, minWidth: 0 },
+  titulo: { ...typography.h3, color: colors.text },
+  pista: { ...typography.small, color: colors.textFaint, fontSize: 12, marginTop: 1 },
   explica: {
     ...typography.small,
     color: colors.textMuted,
@@ -268,16 +424,26 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     backgroundColor: colors.surfaceAlt,
   },
+  lista: { marginTop: spacing.sm },
   fila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  // Mientras se arrastra, la fila se despega del fondo para que se vea cuál va
+  // en el dedo y dónde va a caer.
+  filaArrastrando: { backgroundColor: colors.surfaceAlt, borderRadius: radius.md },
+  filaCabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // El asa se coge con el dedo: pequeña no se acierta, y fallar al arrastrar
+  // acaba moviendo la pantalla en vez del ejercicio.
+  asa: { paddingVertical: 4, paddingRight: 2 },
+  filaTextos: { flex: 1, minWidth: 0 },
   filaNombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   filaObjetivo: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  edicion: { gap: spacing.sm, marginTop: spacing.sm, paddingLeft: 26 },
+  edicionFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  campoSeries: { width: 84, flexGrow: 0, flexShrink: 0 },
+  pistaSeries: { ...typography.small, color: colors.textFaint, flex: 1, minWidth: 140 },
   anadir: { marginTop: spacing.md, gap: spacing.sm },
   campoEjercicio: {
     ...typography.small,
@@ -289,7 +455,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
     backgroundColor: colors.surfaceAlt,
   },
-  filaObjetivoNuevo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  filaObjetivoNuevo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    // Tres cosas en una fila no caben en un móvil estrecho: que bajen en vez de
+    // encogerse hasta que el objetivo se quede en dos letras.
+    flexWrap: 'wrap',
+  },
+  campoObjetivoNuevo: { flexGrow: 1, flexShrink: 1, minWidth: 130 },
   botonAnadir: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,

@@ -2066,6 +2066,11 @@ export const EN: Record<string, string> = {
   'Toca para hablar': 'Tap to speak',
   'Toca aquí y luego el micro de tu teclado': 'Tap here and then the mic on your keyboard',
   '1 serie': '1 set',
+  'Objetivo (p. ej. 30 s)': 'Target (e.g. 30 s)',
+  'Objetivo (p. ej. 30 s por lado)': 'Target (e.g. 30 s per side)',
+  'Enlace del vídeo (YouTube o Vimeo)': 'Video link (YouTube or Vimeo)',
+  'Con series, se marcan de una en una a lo largo del día.': 'With sets, they are ticked one at a time through the day.',
+  'Mover de sitio': 'Move',
   'Solo alumnos VIP': 'VIP students only',
   'Para todos tus alumnos': 'For all your students',
   'Solo la ven los alumnos que hayas marcado como VIP en su ficha. Para el resto no existe.':

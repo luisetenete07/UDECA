@@ -1090,6 +1090,28 @@ export interface EjercicioDiario {
    * deje de tirar"— y encajarlas en campos numéricos obligaría a mentir.
    */
   objetivo: string;
+  /**
+   * Cuántas series al día, si se quiere contarlas.
+   *
+   * Es lo que separa esto de una lista de tareas: en el grease the groove no se
+   * hacen las cinco series seguidas, se reparten por el día. Con un número
+   * aquí, el alumno va marcando de una en una y sabe cuántas le quedan; sin él,
+   * el ejercicio se marca entero de un toque, como hasta ahora.
+   *
+   * Sin poner es exactamente eso: SIN PONER. No es "una serie" disfrazado de
+   * vacío, porque hay ejercicios —dos minutos de movilidad— que no se cuentan
+   * por series y obligarles a llevar un 1 sería inventarse un dato.
+   */
+  series?: number;
+  /**
+   * Enlace al vídeo de la técnica (YouTube o Vimeo).
+   *
+   * El mismo campo que los ejercicios del plan, y se abre con el mismo visor:
+   * un pino mal hecho cien días seguidos es cien días haciéndolo mal, así que
+   * de todos los ejercicios de la app estos son de los que más falta les hace
+   * poder mirar cómo se hacen.
+   */
+  video?: string;
 }
 
 export interface RutinaDiaria {

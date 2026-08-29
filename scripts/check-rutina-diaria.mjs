@@ -19,10 +19,17 @@
  */
 import { readFileSync } from 'node:fs';
 import {
-  conEjercicioMarcado,
+  conMarca,
   hayRutinaDiaria,
   hechosDeHoy,
+  marcaDeSerie,
+  marcasDeLaRutina,
+  moverEjercicio,
+  MAX_SERIES,
   progresoDiario,
+  seriesDe,
+  seriesDeTexto,
+  textoDelEjercicio,
   textoDiario,
 } from '../lib/rutinaDiaria.ts';
 import { masDias } from '../lib/fechas.ts';
@@ -112,13 +119,80 @@ console.log('\nEl entrenador cambia la rutina a media semana');
   ok('si añade uno, quedan cosas por hacer', conUnoMas.quedan === 1 && !conUnoMas.completa);
 }
 
+console.log('\nLas series se marcan de una en una');
+{
+  /*
+   * Es lo que separa esto de una lista de tareas. En el grease the groove las
+   * cinco series no van seguidas: se reparten por el día, y hay que poder decir
+   * "llevo dos" sin dar el ejercicio por hecho.
+   */
+  const conSeries = rutina([
+    { id: 'e1', nombre: 'Pino', objetivo: '30 s', series: 5 },
+    { id: 'e2', nombre: 'Muñecas', objetivo: '1 min' },
+  ]);
+  const marcas = marcasDeLaRutina(conSeries);
+  ok('cinco series y un ejercicio suelto son seis cosas', marcas.length === 6, String(marcas.length));
+  ok('las series van numeradas', marcas[0] === 'e1#1' && marcas[4] === 'e1#5', marcas.join(','));
+  ok('y el que no las lleva se marca entero', marcas[5] === 'e2');
+
+  const p = progresoDiario(conSeries, dia(['e1#1', 'e1#2']), AHORA);
+  ok('dos series de seis cosas', p.hechos === 2 && p.total === 6, `${p.hechos}/${p.total}`);
+  ok('y quedan cuatro', p.quedan === 4);
+
+  /*
+   * Y si el entrenador BAJA las series de cinco a tres, lo marcado de la cuarta
+   * deja de contar. Si no, saldría "4 de 4" con la cuarta serie ya inexistente.
+   */
+  const bajado = rutina([{ id: 'e1', nombre: 'Pino', objetivo: '30 s', series: 3 }]);
+  const tras = progresoDiario(bajado, dia(['e1#1', 'e1#4']), AHORA);
+  ok('bajar las series descuenta lo que sobra', tras.hechos === 1 && tras.total === 3, `${tras.hechos}/${tras.total}`);
+}
+
+console.log('\nEl número de series, leído de lo que se teclea');
+{
+  ok('vacío es SIN PONER, no cero', seriesDeTexto('') === undefined);
+  ok('un número normal se lee', seriesDeTexto('5') === 5);
+  // Sin poner y "una serie" son cosas distintas: dos minutos de movilidad no se
+  // cuentan por series, y ponerles un 1 sería inventarse un dato.
+  ok('sin poner cuenta como una sola cosa', seriesDe({}) === 1);
+  ok('el cero no vale', seriesDeTexto('0') === undefined);
+  ok('lo que no son cifras se ignora', seriesDeTexto('3 series') === 3);
+  ok('un dedo que resbala tiene tope', seriesDeTexto('900') === MAX_SERIES);
+  ok('y el tope también al leer', seriesDe({ series: 900 }) === MAX_SERIES);
+  ok('un negativo no rompe', seriesDe({ series: -3 }) === 1);
+}
+
+console.log('\nCambiar el orden');
+{
+  /*
+   * El orden no es decorativo: quien pone las muñecas antes del pino lo hace
+   * para llegar al pino con las muñecas calientes.
+   */
+  const l = tres;
+  ok('el primero al final', moverEjercicio(l, 0, 2).map((e) => e.id).join() === 'e2,e3,e1');
+  ok('el último al principio', moverEjercicio(l, 2, 0).map((e) => e.id).join() === 'e3,e1,e2');
+  ok('al mismo sitio no cambia nada', moverEjercicio(l, 1, 1) === l);
+  ok('fuera de la lista no rompe', moverEjercicio(l, 0, 9).map((e) => e.id).join() === 'e1,e2,e3');
+  ok('y no toca la lista original', l.map((e) => e.id).join() === 'e1,e2,e3');
+}
+
+console.log('\nLo que se lee debajo del nombre');
+{
+  ok('series y objetivo', textoDelEjercicio({ id: 'x', nombre: 'Pino', objetivo: '30 s', series: 5 }) === '5 series · 30 s');
+  // El singular otra vez: "1 series" delata que nadie lo ha leído.
+  ok('una serie, en singular', textoDelEjercicio({ id: 'x', nombre: 'Pino', objetivo: '30 s', series: 1 }) === '1 serie · 30 s');
+  ok('sin series, solo el objetivo', textoDelEjercicio({ id: 'x', nombre: 'Pino', objetivo: '30 s' }) === '30 s');
+  ok('sin objetivo, solo las series', textoDelEjercicio({ id: 'x', nombre: 'Pino', objetivo: '', series: 3 }) === '3 series');
+  ok('sin nada, nada', textoDelEjercicio({ id: 'x', nombre: 'Pino', objetivo: '' }) === '');
+}
+
 console.log('\nMarcar y desmarcar');
 {
-  ok('marcar añade', conEjercicioMarcado([], 'e1', true).join() === 'e1');
-  ok('desmarcar quita', conEjercicioMarcado(['e1', 'e2'], 'e1', false).join() === 'e2');
+  ok('marcar añade', conMarca([], 'e1', true).join() === 'e1');
+  ok('desmarcar quita', conMarca(['e1', 'e2'], 'e1', false).join() === 'e2');
   // El doble toque en un móvil lento es lo normal, no la excepción.
-  ok('marcar dos veces no duplica', conEjercicioMarcado(['e1'], 'e1', true).join() === 'e1');
-  ok('desmarcar lo que no está no rompe', conEjercicioMarcado(['e1'], 'e9', false).join() === 'e1');
+  ok('marcar dos veces no duplica', conMarca(['e1'], 'e1', true).join() === 'e1');
+  ok('desmarcar lo que no está no rompe', conMarca(['e1'], 'e9', false).join() === 'e1');
 }
 
 console.log('\nLo que se le dice');
