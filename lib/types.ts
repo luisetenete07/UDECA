@@ -767,6 +767,25 @@ export interface WeekPlanEntry {
   rir?: number;
 }
 
+/**
+ * Un objetivo medible del ciclo: un ejercicio y un número.
+ *
+ * "Dominadas, 12 repeticiones". "Planche tuck, 20 segundos". Nada de
+ * porcentajes a mano ni de casillas que marcar: se compara con la mejor marca
+ * que ya está apuntada, y se acabó.
+ */
+export interface ObjetivoDeCiclo {
+  id: string;
+  /** El ejercicio con el que se compara. Sin él no hay nada que medir. */
+  ejercicioId: string;
+  /** Cómo se llama, para no tener que buscarlo en la biblioteca al leerlo. */
+  nombre: string;
+  /** Qué se mide: repeticiones, segundos de aguante o kilos. */
+  medida: 'reps' | 'seg' | 'kg';
+  /** El número que se persigue. */
+  meta: number;
+}
+
 export interface TrainingCycle {
   id: string;
   trainerId: string;
@@ -784,8 +803,22 @@ export interface TrainingCycle {
   /** Fechas (medianoche). Opcionales: un ciclo puede quedar abierto. */
   startDate?: number;
   endDate?: number;
-  /** Objetivo del ciclo (texto libre). */
+  /** Objetivo del ciclo (texto libre): la frase que explica el bloque. */
   goal?: string;
+  /**
+   * Los objetivos que se persiguen en este ciclo, medibles.
+   *
+   * Distinto de `goal`, que es una frase ("preparar la planche") y no se puede
+   * comparar con nada. Estos son un ejercicio y un número, así que la app puede
+   * decir cuánto falta — que es lo único que hace que un objetivo se mire dos
+   * veces.
+   *
+   * Los pone el entrenador, o el propio atleta en su plan. Y el progreso sale
+   * de las marcas que ya se apuntan al entrenar: un objetivo que hay que
+   * actualizar a mano deja de estar actualizado la segunda semana, y entonces
+   * miente, que es peor que no estar.
+   */
+  objetivos?: ObjetivoDeCiclo[];
   /** Notas privadas del coach. */
   notes?: string;
   /** Meta de sesiones para el % completado y avisos (opcional). */

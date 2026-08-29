@@ -24,6 +24,7 @@ import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
 import { ProgressMatrix } from '../../components/ProgressMatrix';
 import { BlockOverview } from '../../components/BlockOverview';
+import { ObjetivosDeCiclo } from '../../components/ObjetivosDeCiclo';
 import { resumenDeConstancia, ventanaDeConstancia } from '../../lib/constancia';
 import { buildBlockView } from '../../lib/blockView';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
@@ -435,6 +436,20 @@ export default function ProgressScreen() {
           </Card>
         ) : (
           <>
+            {/* LO QUE SE PERSIGUE, lo primero.
+                Es lo único de esta pantalla que mira hacia delante: el resto
+                cuenta lo que ya pasó. Y aquí es donde se viene a ver si uno se
+                está acercando, así que va antes que nada.
+
+                Solo de lectura: los pone el entrenador (o el atleta en su
+                propio plan). Un objetivo que el alumno puede cambiarse a sí
+                mismo cuando se le hace cuesta arriba deja de ser un objetivo. */}
+            {bloqueActual?.objetivos?.length ? (
+              <Card style={styles.section}>
+                <ObjetivosDeCiclo objetivos={bloqueActual.objetivos} logs={workoutLogs} paraMi />
+              </Card>
+            ) : null}
+
             {/* El reparto del bloque se fue a "Tu progreso completo".
                 Aquí quedaba una tabla de números encima de todo lo demás, y lo
                 primero que se viene a mirar es si se ha entrenado, no cuántas
@@ -1007,12 +1022,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  constancia: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
+  /*
+   * Sin separación arriba: ahora es lo PRIMERO de su tarjeta.
+   *
+   * El margen y la raya estaban para despegarla del reparto del bloque, que
+   * vivía encima. Al mudarse ese, quedaba un hueco vacío con una raya en medio
+   * de la nada, que es de esas cosas que parecen un fallo de carga.
+   */
+  constancia: {},
   constanciaFila: {
     flexDirection: 'row',
     alignItems: 'baseline',

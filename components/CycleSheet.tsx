@@ -7,6 +7,9 @@ import { DateField, startOfToday } from './DateField';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { createCycle, updateCycle } from '../lib/firestore/cycles';
+import { getActiveRoutineForClient } from '../lib/firestore/routines';
+import { getWorkoutLogsForClient } from '../lib/firestore/workoutLogs';
+import { ObjetivosDeCiclo } from './ObjetivosDeCiclo';
 import { Segmented } from './Segmented';
 import { Sheet } from './Sheet';
 import { fechaLegible } from '../lib/fechas';
@@ -15,7 +18,9 @@ import {
   CYCLE_DEFAULT_WEEKS,
   CYCLE_LEVEL_LABEL,
   type CycleLevel,
+  type ObjetivoDeCiclo,
   type TrainingCycle,
+  type WorkoutLog,
 } from '../lib/types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -47,6 +52,15 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
   const [notes, setNotes] = useState('');
   const [isDeload, setIsDeload] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [objetivos, setObjetivos] = useState<ObjetivoDeCiclo[]>([]);
+  /*
+   * El plan y el historial, para los objetivos: de uno salen los ejercicios que
+   * se pueden elegir, del otro cuánto lleva hecho. Se piden al abrir la hoja y
+   * no antes: es una pantalla que se abre de vez en cuando, y cargarlos con la
+   * pantalla de al lado sería pedirlos siempre para nada.
+   */
+  const [ejerciciosDelPlan, setEjerciciosDelPlan] = useState<{ id: string; name: string }[]>([]);
+  const [logs, setLogs] = useState<WorkoutLog[]>([]);
 
   // Rellena el formulario al abrir (con los valores del ciclo si se edita).
   useEffect(() => {
@@ -63,6 +77,7 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
       }
       setTarget(cycle.targetSessions ? String(cycle.targetSessions) : '');
       setGoal(cycle.goal ?? '');
+      setObjetivos(cycle.objetivos ?? []);
       setNotes(cycle.notes ?? '');
       setIsDeload(!!cycle.isDeload);
     } else {
@@ -73,10 +88,42 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
       setOpen(false);
       setTarget('');
       setGoal('');
+      setObjetivos([]);
       setNotes('');
       setIsDeload(false);
     }
   }, [visible, cycle]);
+
+  /*
+   * El plan y el historial del alumno, para los objetivos.
+   *
+   * Del plan salen los ejercicios que se pueden elegir —no la biblioteca
+   * entera: un objetivo sobre algo que no se entrena no se cumple nunca— y del
+   * historial, cuánto lleva hecho.
+   */
+  useEffect(() => {
+    if (!visible || !clientId) return;
+    let vivo = true;
+    Promise.all([
+      getActiveRoutineForClient(clientId).catch(() => null),
+      getWorkoutLogsForClient(clientId).catch(() => []),
+    ])
+      .then(([rutina, historial]) => {
+        if (!vivo) return;
+        const vistos = new Map<string, string>();
+        for (const dia of rutina?.days ?? []) {
+          for (const e of dia.exercises ?? []) {
+            if (e.exerciseId && !vistos.has(e.exerciseId)) vistos.set(e.exerciseId, e.name);
+          }
+        }
+        setEjerciciosDelPlan([...vistos].map(([id, name]) => ({ id, name })));
+        setLogs(historial ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [visible, clientId]);
 
   const pickLevel = (l: CycleLevel) => {
     setLevel(l);
@@ -100,6 +147,7 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
         endDate,
         targetSessions: target.trim() ? Number(target) || undefined : undefined,
         goal: goal.trim() || undefined,
+        objetivos: objetivos.length > 0 ? objetivos : undefined,
         notes: notes.trim() || undefined,
         isDeload: level === 'micro' && isDeload ? true : undefined,
       };
@@ -202,6 +250,17 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
         value={goal}
         onChangeText={setGoal}
       />
+      {/* Los objetivos medibles del ciclo. Justo debajo del objetivo en texto,
+          porque son la misma idea: uno es la frase y estos son los números. */}
+      <View style={styles.objetivos}>
+        <ObjetivosDeCiclo
+          objetivos={objetivos}
+          logs={logs}
+          onCambiar={setObjetivos}
+          ejerciciosDelPlan={ejerciciosDelPlan}
+        />
+      </View>
+
       <TextField
         label="Notas del coach"
         placeholder="Notas privadas…"
@@ -225,6 +284,14 @@ export function CycleSheet({ visible, trainerId, clientId, cycle, onClose, onSav
 }
 
 const styles = StyleSheet.create({
+  // Separados con una raya: son otra cosa que el formulario de arriba, y
+  // pegados parecerían un campo más del ciclo.
+  objetivos: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   label: {
     ...typography.label,
     color: colors.textMuted,
