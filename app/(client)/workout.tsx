@@ -32,7 +32,6 @@ import { anclaConPausas, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
 import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { UltimoEntreno } from '../../components/UltimoEntreno';
-import { RutinaDiariaDelDia } from '../../components/RutinaDiariaDelDia';
 import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
 import {
@@ -1613,41 +1612,7 @@ export default function WorkoutScreen() {
           ya está entrenando y le seguía saliendo. Ahora se compara el entreno
           con el que salió en blanco: si difiere en algo, es que está en
           marcha. */}
-      {/* Por dónde ibas y por dónde sigue el ciclo. Va justo antes de "apuntar
-          otro día" y por el mismo motivo: es aquí, al abrir el entreno, donde
-          uno se da cuenta de que lleva días sin aparecer. Y desaparece en
-          cuanto la sesión arranca, igual que la de al lado. */}
-      {!enMarcha && routine ? (
-        <UltimoEntreno
-          ultimo={ultimoEntreno}
-          routine={routine}
-          onSeguirPor={handleSetTodayIndex}
-          onElegirDia={() => setDayPickerOpen(true)}
-        />
-      ) : null}
 
-      {/* Lo que toca a diario aparte del plan: el pino, la movilidad. Va aquí
-          y no en el inicio porque es entrenamiento, y porque el inicio ya está
-          lleno. Desaparece con la sesión en marcha, como sus vecinas. */}
-      {!enMarcha ? <RutinaDiariaDelDia profile={profile} /> : null}
-
-      {!enMarcha ? <RegistrarOtroDia /> : null}
-
-      {/* EMPEZAR ENTRENO.
-          Hasta que se pulsa, la pantalla enseña con qué se llega —por dónde
-          ibas, la rutina diaria, apuntar otro día— y los ejercicios esperan
-          debajo. Al pulsar desaparece todo eso y queda el ejercicio solo.
-
-          No sale en un día de descanso ni con el entreno ya terminado: ahí no
-          hay nada que empezar. Y no vuelve a salir al recuperar un borrador,
-          porque quien vuelve a una sesión a medias ya la empezó. */}
-      {!enMarcha && day && !day.isRest && !showCompleted && log.length > 0 ? (
-        <Button
-          title="Empezar entreno"
-          onPress={() => setDiaEmpezado(day.id)}
-          style={{ marginBottom: spacing.md }}
-        />
-      ) : null}
 
       {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app:
           mismas protecciones que en los cursos (ni compartir, ni salirse, ni
@@ -1692,7 +1657,10 @@ export default function WorkoutScreen() {
         </View>
       </Modal>
 
-      {isFlex || esModoGtg ? null : (
+      {/* Elegir el día: en la portada. En directo la pantalla es el ejercicio y
+          nada más; cambiar de día a mitad de una serie no es una función, es
+          una forma de perder lo apuntado. */}
+      {enMarcha || isFlex || esModoGtg ? null : (
         <ChipRow scroll>
           {routine.days.map((d, i) => {
             const isCycle = routine.schedule === 'cycle';
@@ -1988,7 +1956,7 @@ export default function WorkoutScreen() {
       <>
       {/* El cuánto llevas lo dice el anillo de la cabecera; aquí solo queda el
           salto entre ejercicios, que es navegación y no información. */}
-      {totalSets > 0 && log.length > 1 ? (
+      {enMarcha && totalSets > 0 && log.length > 1 ? (
         <View style={styles.exDotsRow}>
           {log.map((ex, i) => {
             const exDone = ex.sets.length > 0 && ex.sets.every((s) => s.completed);
@@ -2015,7 +1983,9 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
-      {safeIndex === 0 && doneSets === 0 && day && !day.isRest ? (
+      {/* El calentamiento va en la portada: es lo que se hace ANTES. Dentro del
+          entreno estorbaba, y es de las cosas que se leen una vez. */}
+      {!enMarcha && day && !day.isRest ? (
         <View style={styles.warmupCard}>
           <Pressable onPress={() => setWarmupOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
             <Ionicons name="flame-outline" size={15} color={colors.primary} />
@@ -2047,7 +2017,7 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
-      {day && !day.isRest && day.showIntervalTimer ? (
+      {enMarcha && day && !day.isRest && day.showIntervalTimer ? (
         <View style={styles.warmupCard}>
           <Pressable
             onPress={() => setIntervalOpen((o) => !o)}
@@ -2068,6 +2038,43 @@ export default function WorkoutScreen() {
             </View>
           ) : null}
         </View>
+      ) : null}
+
+
+      {/* Y AL FINAL, lo de mirar hacia atrás.
+
+          Por dónde ibas y apuntar un entreno de otro día son cosas que se
+          hacen ANTES de entrenar, pero no son lo de hoy: van después del día y
+          del calentamiento, justo encima del botón, para que lo primero que se
+          lee al abrir sea qué toca. */}
+      {!enMarcha && routine ? (
+        <UltimoEntreno
+          ultimo={ultimoEntreno}
+          routine={routine}
+          onSeguirPor={handleSetTodayIndex}
+          onElegirDia={() => setDayPickerOpen(true)}
+        />
+      ) : null}
+
+      {!enMarcha ? <RegistrarOtroDia /> : null}
+
+      {/* EMPEZAR ENTRENO, lo último de la portada.
+
+          Antes de él va todo lo que uno quiere mirar sin haber empezado: por
+          dónde iba, qué día toca, el calentamiento y apuntar otro día. Al
+          pulsarlo, todo eso desaparece y la pantalla pasa a ser el ejercicio y
+          nada más: ni tarjetas al lado, ni botones que no sean los de la serie
+          que se está haciendo.
+
+          No sale en un día de descanso ni con el entreno ya terminado: ahí no
+          hay nada que empezar. Y no vuelve a salir al recuperar un borrador,
+          porque quien vuelve a una sesión a medias ya la empezó. */}
+      {!enMarcha && day && !day.isRest && !showCompleted && log.length > 0 ? (
+        <Button
+          title="Empezar entreno"
+          onPress={() => setDiaEmpezado(day.id)}
+          style={{ marginTop: spacing.sm, marginBottom: spacing.md }}
+        />
       ) : null}
 
       {(() => {
@@ -2371,13 +2378,14 @@ export default function WorkoutScreen() {
 
       {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
 
-      {isLastExercise && doneSets === 0 ? (
+      {enMarcha && isLastExercise && doneSets === 0 ? (
         <Text style={styles.saveHint}>
           Marca cada serie con ✓, o pulsa “Terminar” para dar la sesión por hecha
           sin apuntar nada.
         </Text>
       ) : null}
 
+      {enMarcha ? (
       <View style={styles.navRow}>
         <Pressable
           onPress={() => setViewIndex((i) => Math.max(0, i - 1))}
@@ -2424,6 +2432,7 @@ export default function WorkoutScreen() {
           </Pressable>
         )}
       </View>
+      ) : null}
       </>
       )}
     </ScreenContainer>

@@ -19,6 +19,7 @@ import { ProgressRing } from '../../components/ProgressRing';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
+import { RutinaDiariaDelDia } from '../../components/RutinaDiariaDelDia';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import {
@@ -754,6 +755,15 @@ export default function ClientDashboard() {
           </View>
         </View>
       </Card>
+      </FadeIn>
+
+      {/* LO QUE TOCA A DIARIO, aparte del plan: el pino, la movilidad.
+          Vivía en Entreno y ahí no era su sitio: se hace TODOS los días, no
+          los de entrenar, y allí competía con la sesión en marcha. Aquí, en la
+          pantalla que se abre cada mañana, es lo primero que se ve y se marca
+          de camino. Se pinta sola solo si su entrenador le ha puesto una. */}
+      <FadeIn delay={205}>
+        <RutinaDiariaDelDia profile={profile} />
       </FadeIn>
 
       {/* La racha y las sesiones ya están en el anillo de arriba: repetirlas
