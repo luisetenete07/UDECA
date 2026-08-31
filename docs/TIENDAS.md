@@ -8,6 +8,10 @@ falta Mac, ni Android Studio, ni Xcode.
 Aquí está solo lo que hay que hacer. El porqué de cada decisión está en los
 comentarios de los ficheros correspondientes.
 
+> **Para lanzar una versión tú solo, paso a paso y sin nada instalado, ve a
+> [docs/LANZAR.md](LANZAR.md).** Este documento es el de referencia —qué se
+> rellena, qué falla y por qué—; aquel es la lista del día del lanzamiento.
+
 ---
 
 ## 1. La web (app.udeca.app)
