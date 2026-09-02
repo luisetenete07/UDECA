@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { frase } from '../../../lib/idioma';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -17,6 +17,7 @@ import {
   getExercisesForTrainer,
   updateExercise,
 } from '../../../lib/firestore/exercises';
+import { propagarNombreDeEjercicio } from '../../../lib/firestore/renombrarEjercicio';
 import { showToast } from '../../../components/Toast';
 import { ListaRadio } from '../../../components/ListaRadio';
 import { Chip, ChipRow } from '../../../components/Chip';
@@ -75,12 +76,17 @@ export default function ExerciseEditorScreen() {
   // Nombres ya usados en la biblioteca, para no crear duplicados.
   const [takenNames, setTakenNames] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  // Cómo se llamaba al abrir. Solo sirve para saber si el nombre ha cambiado:
+  // sin esto habría que recorrer las rutinas de todos los alumnos cada vez que
+  // se guarda, aunque lo único que se haya tocado sea el vídeo.
+  const nombreAlAbrir = useRef('');
 
   useEffect(() => {
     if (isNew || !id) return;
     (async () => {
       const exercise = await getExercise(id);
       if (exercise) {
+        nombreAlAbrir.current = exercise.name;
         setName(exercise.name);
         setMuscleGroup(exercise.muscleGroup);
         setDescription(exercise.description ?? '');
@@ -135,6 +141,28 @@ export default function ExerciseEditorScreen() {
         await createExercise({ trainerId: profile.uid, ...campos });
       } else if (id) {
         await updateExercise(id, campos);
+        /*
+         * El nombre está copiado dentro de cada rutina (ver
+         * lib/renombrarEjercicio.ts). Si ha cambiado, hay que llevarlo a los
+         * alumnos que ya tienen el ejercicio puesto; antes había que quitarlo
+         * del plan y volverlo a poner para que les saliera bien escrito.
+         *
+         * Se hace DESPUÉS de guardar y sin tumbar el guardado: si esto falla
+         * (cobertura, permisos), el ejercicio ya está bien en la biblioteca y
+         * lo que queda pendiente son las copias, así que se avisa y punto. Lo
+         * que no puede pasar es que un fallo aquí parezca que no se guardó
+         * nada y el entrenador lo escriba otra vez.
+         */
+        if (nombreAlAbrir.current && nombreAlAbrir.current !== campos.name) {
+          try {
+            await propagarNombreDeEjercicio(profile.uid, id, campos.name);
+            nombreAlAbrir.current = campos.name;
+          } catch {
+            showToast('Guardado, pero no se pudo cambiar el nombre en las rutinas');
+            router.back();
+            return;
+          }
+        }
       }
       showToast('Ejercicio guardado');
       router.back();

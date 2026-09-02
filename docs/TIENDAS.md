@@ -353,59 +353,59 @@ canta antes de que llegue a la tienda.
   en el móvil.
 - **La versión la lleva EAS.** En `eas.json`, el perfil de producción tiene
   `autoIncrement`, así que el número de build sube solo en cada compilación. El
-  número que ve el usuario (`version` en `app.json`, hoy `1.0.1`) se sube a
+  número que ve el usuario (`version` en `app.json`, hoy `1.0.2`) se sube a
   mano cuando toque, y no es un detalle: es lo que compara la actualización
   obligatoria. Dos versiones distintas con el mismo número son indistinguibles
   para ella, y entonces no se puede sacar a nadie de la vieja.
 
 ---
 
-## DÓNDE SE QUEDÓ EL LANZAMIENTO (28 de agosto de 2026)
+## DÓNDE SE QUEDÓ EL LANZAMIENTO (1 de septiembre de 2026)
 
-Esto es una foto del estado, para que tres días de espera no se lleven por
-delante lo que ya se sabe.
+Una foto del estado, para no tener que reconstruirlo de memoria.
 
-### El tope de Expo
+### App Store: aceptada
 
-Las compilaciones están BLOQUEADAS hasta el **1 de septiembre**: la cuenta
-agotó las builds del plan gratuito de este mes, en iOS y en Android. El aviso
-que sale es este, y no es un fallo del código:
+La 1.0.1 pasó la revisión. Antes de aceptarla, Apple pidió cuatro cosas que se
+resolvieron todas en la ficha: el copyright (`2026 Luis Tena`), desmarcar
+**"Se requiere iniciar sesión"** —cualquiera puede crear una cuenta gratis
+desde la app, así que el revisor no necesita credenciales— y subir capturas de
+**iPad de 13 pulgadas a 2064 x 2752**, obligatorias porque `app.json` declara
+`ios.supportsTablet: true`.
 
-    You've reached your included build credits this billing period.
-    New builds are blocked until your billing period resets.
+Sobre el iPad: no se ha diseñado nada específico, pero la app tiene disposición
+adaptable y en pantalla ancha la barra inferior pasa a ser lateral con el
+contenido en una columna centrada. Se ve correcta. Lo que se nota es que en
+Progreso y en Comunidad sobra el tercio de abajo, y que en el entreno en directo
+la casilla de repeticiones se va al extremo derecho.
 
-Se desbloquea solo ese día, o antes pagando el plan Starter en
-`expo.dev/accounts/luistenafits-team/settings/billing`.
+### Play Store: pendiente del aviso de permisos
 
-### Lo que hay que compilar el 1 de septiembre, y por qué
+Play sigue marcando la **política de permisos de fotos y vídeos**, señalando los
+códigos de versión **22 y 15**. Los dos son anteriores al arreglo (28 de
+agosto), así que el aviso no habla del binario nuevo.
 
-Las dos compilaciones que están hoy en las tiendas —iOS 1.0.1 (35) y el `.aab`
-con versionCode 22— **no valen**, y no hay que enviarlas. Les faltan dos
-arreglos que se hicieron después:
+No hay que enviarlo como "creo que es un error": en el 22 y en el 15 el permiso
+está de verdad. Lo que pide el aviso es que no quede NINGÚN canal con esos
+códigos activos —producción, pruebas internas y pruebas cerradas—, y ese es el
+paso que se olvida y por el que no desaparece.
 
-1. **Nadie que entrara con Google o Apple podía borrar su cuenta.** El último
-   paso pedía una contraseña que esa gente no tiene. Es obligatorio para las dos
-   tiendas y es lo que un revisor de Apple prueba a mano.
-2. **Los permisos READ_MEDIA_IMAGES / READ_MEDIA_VIDEO**, que Google Play
-   rechazó. Los traía `expo-screen-capture`; ahora van bloqueados.
+Para comprobar que el binario nuevo está limpio, sin subir nada:
 
-Así que el 1 de septiembre: *Build iOS* y *Build Android*, y con lo que salga se
-sustituye lo que hay en las dos tiendas.
+    rm -rf android && npx expo prebuild --platform android --no-install --clean
+    grep READ_MEDIA android/app/src/main/AndroidManifest.xml
+    rm -rf android && git checkout -- package.json
 
-### Play Store
+Tienen que salir los dos con `tools:node="remove"`. (`prebuild` toca
+`package.json`; de ahí el `checkout` del final.)
 
-Enviado a revisión con la versión mala. Puede pasar: lo que Google comprueba del
-borrado de cuenta es la URL de `/eliminar-cuenta`, que funciona y ofrece el
-borrado por correo. Si lo aprueban, se sube la versión buena encima el mismo
-día; si lo rechazan, se sube y se reenvía.
+### El número de versión
 
-### App Store
-
-La ficha se rellenó entera el 28 de agosto (textos, capturas de 1284x2778,
-notas del revisor, URL de soporte). Falta solo elegir la compilación, que no
-existe todavía.
-
----
+`app.json` va por **1.0.2**. Se subió desde 1.0.1 porque esa ya está aceptada en
+Apple, y una versión aceptada no admite un binario nuevo encima: hay que crear
+una versión nueva en App Store Connect. En Android el `versionCode` lo lleva
+`autoIncrement` y sube solo; el 25 se quemó al subirlo a Play, y por eso el
+siguiente fue el 26.
 
 ## Lo último, cuando ya está publicada en las dos
 
@@ -414,7 +414,7 @@ Store, en la consola de Firebase, colección `config`, documento `version`:
 
 | Campo | Tipo | Valor |
 | --- | --- | --- |
-| `minima` | string | La versión recién publicada, hoy `1.0.1` |
+| `minima` | string | La versión recién publicada, hoy `1.0.2` |
 
 Con eso, quien tenga una anterior se encuentra el muro y va a la tienda. El
 detalle entero está en `docs/ACTUALIZAR.md`.
