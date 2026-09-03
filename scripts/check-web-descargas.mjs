@@ -35,9 +35,9 @@ const app = JSON.parse(lee('app.json')).expo;
 console.log('\nCada tienda con su logo de verdad');
 {
   const tarjetas = html.slice(html.indexOf('<div class="stores">'), html.indexOf('</section>', html.indexOf('<div class="stores">')));
-  ok('hay cuatro sitios de donde bajarla', (tarjetas.match(/class="store"/g) ?? []).length === 4);
+  ok('hay tres sitios de donde bajarla', (tarjetas.match(/class="store"/g) ?? []).length === 3);
   // Dibujados en línea: escalan sin pesar y no son una petición más.
-  ok('los logos son SVG, no imágenes', (tarjetas.match(/<svg /g) ?? []).length === 4, 'faltan logos');
+  ok('los logos son SVG, no imágenes', (tarjetas.match(/<svg /g) ?? []).length === 3, 'faltan logos');
   ok('y no quedan caracteres haciendo de logo', !/<span class="logo"[^>]*>\s*[▶⌘]/.test(tarjetas));
   // El triángulo de Play sin sus colores es una flecha cualquiera.
   ok('el de Play lleva sus cuatro colores',
@@ -52,8 +52,14 @@ console.log('\nA dónde lleva cada una');
   const paquete = app.android.package;
   ok('Play apunta al paquete de verdad',
     config.includes(`play.google.com/store/apps/details?id=${paquete}`), paquete);
-  // Mientras Apple no publique, vacío: así la tarjeta se queda en Próximamente.
-  ok('la App Store espera a estar publicada', /appStore: ''/.test(config));
+  ok('la App Store apunta a su ficha', /apps\.apple\.com\/app\/id\d+/.test(config));
+  /*
+   * Y NO hay tarjeta de APK. Se decidió no hacerlo: un APK fuera de la tienda
+   * necesita su propio actualizador y sería mantener dos Android para siempre.
+   * Un "Próximamente" de algo que no va a llegar es una promesa que no se
+   * piensa cumplir, y eso cuesta más que no tener el botón.
+   */
+  ok('no se promete un APK que no va a existir', !/apkPc/.test(html) && !/apkPc/.test(config));
   ok('y el ordenador va a la app web', /\[data-app\]/.test(main) && /appUrl: 'https:\/\//.test(config));
 }
 
@@ -111,6 +117,13 @@ console.log('\nQue la app se pueda instalar en el ordenador');
 
   // Y que la web lo cuente: una app instalable que nadie sabe que lo es, no lo es.
   ok('la web dice que se puede instalar', /instalarla/.test(html));
+  /*
+   * Una pregunta frecuente que se queda vieja miente igual que un botón roto, y
+   * dura más porque nadie la vuelve a leer. Esta decía "estamos en ello" cuando
+   * la app ya llevaba semanas publicada en las dos tiendas.
+   */
+  ok('las preguntas no dicen que aún no está en las tiendas',
+    !/Cuándo estará en la App Store/.test(html));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

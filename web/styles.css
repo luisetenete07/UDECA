@@ -162,6 +162,37 @@ section { position: relative; z-index: 1; padding: 84px 0; }
 .phone:nth-child(3) { transform: rotateY(-9deg) translateZ(-40px); }
 .phone:nth-child(2) { display: none; }
 
+/* ---------- Galería de pantallas ---------- */
+/* Una columna en el móvil y en fila a partir de tablet. El marco de móvil es
+   el mismo de la portada (.phone), para que las pantallas se vean igual en
+   toda la página y no parezcan de dos sitios distintos. */
+/* En el móvil, una TIRA que se desliza con el dedo.
+   Apiladas en una columna son cuatro mil píxeles de scroll y nadie llega al
+   final; en dos columnas cada pantalla mide 160 px y no se lee nada de lo que
+   sale dentro, que es justo lo que se venía a enseñar. La tira las deja
+   grandes y ocupa el alto de una sola. */
+.galeria {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 62vw;
+  gap: 18px;
+  margin-top: 48px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* Que la primera y la última puedan quedar pegadas al borde del texto. */
+  padding-inline: 0 22px;
+  scrollbar-width: none;
+}
+.galeria::-webkit-scrollbar { display: none; }
+.galeria figure { scroll-snap-align: start; }
+.galeria .phone { width: 100%; }
+.galeria figcaption {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* ---------- Rejillas ---------- */
 .grid { display: grid; gap: 18px; margin-top: 40px; }
 .card {
@@ -181,8 +212,9 @@ section { position: relative; z-index: 1; padding: 84px 0; }
   background: rgba(162, 150, 139, 0.12);
   border: 1px solid var(--hairline);
   margin-bottom: 16px;
-  font-size: 19px;
+  color: var(--gold-bright);
 }
+.card .ico svg { width: 21px; height: 21px; display: block; }
 
 /* ---------- Planes ---------- */
 .plans { display: grid; gap: 20px; margin-top: 44px; }
@@ -342,7 +374,15 @@ footer { border-top: 1px solid var(--border); padding: 44px 0 60px; position: re
   .section-title { font-size: 38px; }
   .grid { grid-template-columns: repeat(2, 1fr); gap: 22px; }
   .plans { grid-template-columns: repeat(2, 1fr); gap: 26px; }
-  .stores { grid-template-columns: repeat(2, 1fr); }
+  .stores { grid-template-columns: repeat(3, 1fr); }
+  /* A partir de tablet caben las seis a la vista y la tira sobra. */
+  .galeria {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 34px 26px;
+    overflow-x: visible;
+    padding-inline: 0;
+  }
   .store { flex-direction: column; align-items: flex-start; gap: 10px; }
   .store .state { margin-left: 0; }
   .phone:nth-child(2) { display: block; transform: translateZ(30px); }

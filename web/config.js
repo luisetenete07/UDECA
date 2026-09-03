@@ -39,11 +39,16 @@ window.UDECA = {
   /**
    * Descargas. Deja el valor vacío mientras la ficha no esté publicada: el
    * botón se queda en "Próximamente" en vez de llevar a un 404.
+   *
+   * NO hay descarga directa de APK, y no es un olvido: un APK repartido fuera
+   * de la tienda tendría que traer su propio actualizador —Google prohíbe que
+   * una app publicada en Play se actualice por su cuenta—, y eso es mantener
+   * dos versiones distintas de Android para siempre. Con Play cubriendo el
+   * móvil y la app web instalable en el ordenador, no compensa.
    */
   descargas: {
-    appStore: '',
+    appStore: 'https://apps.apple.com/app/id6794591283',
     playStore: 'https://play.google.com/store/apps/details?id=entrenadores.app',
-    apkPc: '',
   },
 
   /**

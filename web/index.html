@@ -75,35 +75,65 @@
 
     <div class="grid">
       <article class="card reveal">
-        <div class="ico">◪</div>
+        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v15H4z"/><path d="M4 9.5h16"/><path d="M9 5v15"/></svg></div>
         <h3>Planes que se siguen</h3>
         <p>Por días de la semana, por ciclo o a sensaciones. Con superseries, clústeres, isométricos, lastre y descansos configurados serie a serie.</p>
       </article>
       <article class="card reveal">
-        <div class="ico">▲</div>
+        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-6 4 3.5L20 7"/><path d="M16 7h4v4"/></svg></div>
         <h3>Progreso real</h3>
         <p>La mejor serie de cada ejercicio, semana a semana. Se ve de dónde vienes, dónde estás y qué se ha estancado.</p>
       </article>
       <article class="card reveal">
-        <div class="ico">◷</div>
+        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 1.6"/><path d="M9.5 3h5"/></svg></div>
         <h3>Entreno guiado</h3>
         <p>Cronómetro de descanso, EMOM, clústeres con pausas cortas, marcas de la última vez y récords que saltan solos.</p>
       </article>
       <article class="card reveal">
-        <div class="ico">◈</div>
+        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></div>
         <h3>Informe en PDF</h3>
         <p>La mejoría de cada ejercicio, el volumen por mes y el reparto del trabajo, en un documento con tu marca listo para entregar.</p>
       </article>
       <article class="card reveal">
-        <div class="ico">♟</div>
+        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16.5 11.5a2.8 2.8 0 1 0 0-5.6"/><path d="M17.5 20a5.4 5.4 0 0 0-2-4.2"/></svg></div>
         <h3>Panel del entrenador</h3>
         <p>Alumnos, cobros, avisos de quién lleva días sin entrenar y quién debe pagar. La gestión, resuelta.</p>
       </article>
       <article class="card reveal">
-        <div class="ico">◍</div>
+        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5c1.6-3 6-3.2 7 .3.9 3.2-2.2 8-5.2 10.4a2.8 2.8 0 0 1-3.6 0C7.2 16.8 4.1 12 5 8.8c1-3.5 5.4-3.3 7-.3z"/></svg></div>
         <h3>Nutrición y hábitos</h3>
         <p>Macros calculados, libretas de comidas del entrenador, hábitos diarios y fotos de progreso.</p>
       </article>
+    </div>
+
+    <!-- Las capturas van DESPUÉS de las tarjetas, no antes: primero se lee qué
+         hace y luego se ve. Al revés son seis pantallas de móvil sin contexto,
+         que es lo que hace que se pase de largo. -->
+    <div class="galeria">
+      <figure class="reveal">
+        <div class="phone"><img src="/assets/app-entreno.png" alt="Entrenamiento en directo en UDECA" loading="lazy" /></div>
+        <figcaption>Cada serie se apunta mientras entrenas, con esfuerzo y descanso.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <div class="phone"><img src="/assets/app-progreso.png" alt="Progreso del alumno en UDECA" loading="lazy" /></div>
+        <figcaption>El progreso sale de tus marcas, no de rellenar formularios.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <div class="phone"><img src="/assets/app-rutina.png" alt="Editor de rutina del entrenador en UDECA" loading="lazy" /></div>
+        <figcaption>Días que rotan en bucle, sin atarse a los de la semana.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <div class="phone"><img src="/assets/app-diaria.png" alt="Rutina diaria de grease the groove en UDECA" loading="lazy" /></div>
+        <figcaption>Grease the groove: series sueltas repartidas por el día.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <div class="phone"><img src="/assets/app-comunidad.png" alt="Comunidad y ranking en UDECA" loading="lazy" /></div>
+        <figcaption>El ranking mide a cada uno contra sí mismo, no contra el resto.</figcaption>
+      </figure>
+      <figure class="reveal">
+        <div class="phone"><img src="/assets/app-coach.png" alt="Panel del entrenador en UDECA" loading="lazy" /></div>
+        <figcaption>Alumnos, cobros y quién lleva días sin entrenar, de un vistazo.</figcaption>
+      </figure>
     </div>
   </div>
 </section>
@@ -174,8 +204,7 @@
     <p class="eyebrow">Descargar</p>
     <h2 class="section-title">En tu móvil y en tu ordenador</h2>
     <p class="lead">
-      Ya está en Google Play. La ficha de la App Store está en revisión: ese
-      botón se activa solo el día que se publique.
+      Ya está publicada en Google Play y en la App Store.
     </p>
     <p class="lead">
       En el ordenador se abre en el navegador, y desde ahí puedes
@@ -215,18 +244,6 @@
         <span>
           <b>Google Play</b>
           <small>Android</small>
-        </span>
-        <span class="state">Próximamente</span>
-      </a>
-      <a class="store" data-descarga="apkPc" href="#">
-        <span class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3v11"/><path d="M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-          </svg>
-        </span>
-        <span>
-          <b>Descarga directa</b>
-          <small>Android, sin pasar por la tienda</small>
         </span>
         <span class="state">Próximamente</span>
       </a>
@@ -356,8 +373,8 @@
         <p>Sí. Sin permanencia ni penalización. La cuenta sigue activa hasta el final del periodo pagado.</p>
       </details>
       <details>
-        <summary>¿Cuándo estará en la App Store y en Google Play?</summary>
-        <p>Estamos en ello. Mientras tanto la versión web es la app completa y se instala en la pantalla de inicio del móvil como una aplicación más.</p>
+        <summary>¿Dónde me la descargo?</summary>
+        <p>Ya está en la App Store y en Google Play. En el ordenador se abre en el navegador y se puede instalar desde ahí: queda con su icono y su propia ventana, y se actualiza sola.</p>
       </details>
       <details>
         <summary>¿Sirve si entreno en casa, sin material?</summary>
