@@ -42,7 +42,7 @@ window.UDECA = {
    */
   descargas: {
     appStore: '',
-    playStore: '',
+    playStore: 'https://play.google.com/store/apps/details?id=entrenadores.app',
     apkPc: '',
   },
 
