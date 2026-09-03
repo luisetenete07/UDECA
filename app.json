@@ -7,7 +7,7 @@
       "entrenadores.app",
       "com.udeca.app"
     ],
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -60,7 +60,8 @@
         }
       ],
       "expo-apple-authentication",
-      "./plugins/memoria-de-gradle"
+      "./plugins/memoria-de-gradle",
+      "./plugins/optimizar-android"
     ],
     "experiments": {
       "typedRoutes": true

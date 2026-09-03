@@ -353,7 +353,7 @@ canta antes de que llegue a la tienda.
   en el móvil.
 - **La versión la lleva EAS.** En `eas.json`, el perfil de producción tiene
   `autoIncrement`, así que el número de build sube solo en cada compilación. El
-  número que ve el usuario (`version` en `app.json`, hoy `1.0.2`) se sube a
+  número que ve el usuario (`version` en `app.json`, hoy `1.0.3`) se sube a
   mano cuando toque, y no es un detalle: es lo que compara la actualización
   obligatoria. Dos versiones distintas con el mismo número son indistinguibles
   para ella, y entonces no se puede sacar a nadie de la vieja.
@@ -379,18 +379,13 @@ contenido en una columna centrada. Se ve correcta. Lo que se nota es que en
 Progreso y en Comunidad sobra el tercio de abajo, y que en el entreno en directo
 la casilla de repeticiones se va al extremo derecho.
 
-### Play Store: pendiente del aviso de permisos
+### Play Store: publicada
 
-Play sigue marcando la **política de permisos de fotos y vídeos**, señalando los
-códigos de versión **22 y 15**. Los dos son anteriores al arreglo (28 de
-agosto), así que el aviso no habla del binario nuevo.
+La 1.0.2 (versionCode 27) está publicada. El aviso de la política de permisos
+de fotos y vídeos se cerró al dejar de haber canales con los códigos 22 y 15,
+que eran anteriores al arreglo del 28 de agosto.
 
-No hay que enviarlo como "creo que es un error": en el 22 y en el 15 el permiso
-está de verdad. Lo que pide el aviso es que no quede NINGÚN canal con esos
-códigos activos —producción, pruebas internas y pruebas cerradas—, y ese es el
-paso que se olvida y por el que no desaparece.
-
-Para comprobar que el binario nuevo está limpio, sin subir nada:
+Para comprobar que un binario nuevo sigue limpio, sin subir nada:
 
     rm -rf android && npx expo prebuild --platform android --no-install --clean
     grep READ_MEDIA android/app/src/main/AndroidManifest.xml
@@ -399,9 +394,30 @@ Para comprobar que el binario nuevo está limpio, sin subir nada:
 Tienen que salir los dos con `tools:node="remove"`. (`prebuild` toca
 `package.json`; de ahí el `checkout` del final.)
 
+### Play Store: el aviso de optimización, y por qué hay que probar en el móvil
+
+Después de publicar, Play avisó de otra cosa distinta:
+
+    La optimización de la aplicación está por debajo de nuestro umbral.
+    Ofuscación (1 %). Los porcentajes inferiores al 25 % pueden afectar a tu
+    visibilidad y a tus capacidades de publicación en Google Play.
+
+Ese 1 % era literal: la app se empaquetaba SIN minificar, porque el proyecto
+que genera Expo trae los interruptores apagados. Lo enciende
+`plugins/optimizar-android.js`, que además deja las reglas de R8 que no trae
+ninguna librería.
+
+**Esta versión NO se sube directamente a producción.** Minificar renombra
+clases, y lo que se busca por reflexión deja de encontrarse; eso no se ve al
+compilar, revienta en el móvil y a veces solo en una pantalla concreta. El
+camino es: subirla a **Pruebas internas**, instalarla en un móvil de verdad,
+recorrer la app entera —entrar con Google y con Apple, un entreno completo, un
+vídeo de un curso, subir una foto, las notificaciones— y solo entonces
+promocionarla a producción.
+
 ### El número de versión
 
-`app.json` va por **1.0.2**. Se subió desde 1.0.1 porque esa ya está aceptada en
+`app.json` va por **1.0.3**. Antes fue 1.0.2, que se subió desde 1.0.1 porque esa ya estaba aceptada en
 Apple, y una versión aceptada no admite un binario nuevo encima: hay que crear
 una versión nueva en App Store Connect. En Android el `versionCode` lo lleva
 `autoIncrement` y sube solo; el 25 se quemó al subirlo a Play, y por eso el
@@ -414,7 +430,7 @@ Store, en la consola de Firebase, colección `config`, documento `version`:
 
 | Campo | Tipo | Valor |
 | --- | --- | --- |
-| `minima` | string | La versión recién publicada, hoy `1.0.2` |
+| `minima` | string | La versión recién publicada (la que esté en las DOS tiendas) |
 
 Con eso, quien tenga una anterior se encuentra el muro y va a la tienda. El
 detalle entero está en `docs/ACTUALIZAR.md`.
