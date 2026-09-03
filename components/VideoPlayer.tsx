@@ -49,7 +49,7 @@ export function VideoPlayer({
   // Contenido de curso: se reproduce blindado —el reproductor de la plataforma
   // tapado con un cristal y con nuestros propios controles encima—, para que no
   // quede a la vista ni un logo, ni un título, ni un botón de compartir.
-  const blindado = protectedContent ? fuenteBlindada(url) : null;
+  const blindado = protectedContent ? fuenteBlindada(url, origenDelReproductor()) : null;
   if (blindado) return <VideoBlindado fuente={blindado} />;
 
   // Enlaces de Vimeo: se reproducen con el player oficial embebido, que
@@ -78,6 +78,28 @@ export function VideoPlayer({
 }
 
 /**
+ * El origen desde el que se va a hablar con el reproductor de la plataforma.
+ *
+ * En el ordenador la página del blindaje va en un iframe `srcdoc`, que hereda
+ * el origen de la app. En el móvil va en un WebView cargado con un origen
+ * prestado, el mismo que se le pasa como `baseUrl`.
+ *
+ * YouTube lo necesita declarado para dejar hablar a la API del iframe. Sin él
+ * el reproductor puede no llegar a arrancar, y lo que se ve entonces no es un
+ * error: es un rectángulo negro.
+ */
+const BASE_NATIVA = 'https://www.youtube.com';
+
+function origenDelReproductor(): string {
+  if (Platform.OS !== 'web') return BASE_NATIVA;
+  try {
+    return window.location.origin;
+  } catch {
+    return BASE_NATIVA;
+  }
+}
+
+/**
  * El reproductor de curso: el de la plataforma, tapado.
  *
  * La página la monta `lib/reproductorBlindado` y es LA MISMA en el móvil y en
@@ -87,13 +109,32 @@ export function VideoPlayer({
  *
  * El `baseUrl` no es cosmético: la API de YouTube habla con su reproductor por
  * postMessage y necesita un origen de verdad. Cargando la página sin él, el
- * origen es "null", la API no contesta nunca y el blindaje se cae solo a los
- * ocho segundos.
+ * origen es "null", la API no contesta nunca y el blindaje se cae solo.
+ *
+ * EN EL MÓVIL, EL BLINDAJE PUEDE RENDIRSE, Y TIENE QUE PODER
+ *
+ * La página avisa por `postMessage` cuando se ha desblindado, y el WebView
+ * avisa si no ha podido ni cargar. Cuando pasa cualquiera de las dos cosas se
+ * cambia de mecanismo: se deja de montar una página nuestra con un origen
+ * prestado y se carga el embed a pelo, que es una navegación normal a una
+ * dirección de verdad y es lo más difícil de romper que hay.
+ *
+ * Antes esto no existía: la página gritaba "me he desblindado" y no había
+ * nadie escuchando al otro lado, así que un fallo del blindaje era un vídeo
+ * negro para siempre.
  */
 function VideoBlindado({ fuente }: { fuente: NonNullable<ReturnType<typeof fuenteBlindada>> }) {
   const html = React.useMemo(() => paginaDelReproductor(fuente), [fuente.src]);
-  const base =
-    fuente.dialecto === 'youtube' ? 'https://www.youtube.com' : 'https://player.vimeo.com';
+  const [seRindio, setSeRindio] = React.useState(false);
+  const base = fuente.dialecto === 'youtube' ? BASE_NATIVA : 'https://player.vimeo.com';
+
+  // Vídeo nuevo, oportunidad nueva: lo que falló con uno no tiene por qué
+  // fallar con el siguiente.
+  React.useEffect(() => setSeRindio(false), [fuente.src]);
+
+  if (Platform.OS !== 'web' && seRindio) {
+    return <VimeoVideo embedUrl={fuente.srcNormal} protectedContent />;
+  }
 
   if (Platform.OS === 'web') {
     return React.createElement('iframe', {
@@ -129,6 +170,21 @@ function VideoBlindado({ fuente }: { fuente: NonNullable<ReturnType<typeof fuent
         onShouldStartLoadWithRequest={(req: { url: string }) =>
           seQuedaDentroDelBlindaje(req.url)
         }
+        // La página avisa cuando ha tenido que quitarse el cristal. Aquí es
+        // donde se recoge ese aviso para cambiar de mecanismo, en vez de
+        // reintentar lo mismo que acaba de fallar.
+        onMessage={(e: { nativeEvent: { data: string } }) => {
+          try {
+            const m = JSON.parse(e.nativeEvent.data);
+            if (m?.de === 'reproductor' && m.que === 'sin-blindaje') setSeRindio(true);
+          } catch {
+            /* un mensaje que no entendemos no es motivo para tirar el vídeo */
+          }
+        }}
+        // Y si el WebView no llega ni a cargar la página, lo mismo.
+        onError={() => setSeRindio(true)}
+        onHttpError={() => setSeRindio(true)}
+        onRenderProcessGone={() => setSeRindio(true)}
         allowsLinkPreview={false}
         suppressMenuItems={['copy', 'share', 'select', 'selectAll', 'lookup', 'translate']}
         style={{ flex: 1, backgroundColor: '#000', borderRadius: radius.md }}

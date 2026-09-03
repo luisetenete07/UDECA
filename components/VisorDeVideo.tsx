@@ -35,12 +35,31 @@ export function VisorDeVideo({
   profile,
   visible,
   onCerrar,
+  protegido = true,
 }: {
   url?: string;
   titulo?: string;
   profile: Pick<UserProfile, 'name' | 'uid'> | null | undefined;
   visible: boolean;
   onCerrar: () => void;
+  /**
+   * Si el vídeo va BLINDADO (el reproductor de la plataforma tapado con un
+   * cristal y con controles nuestros) o con el embed normal.
+   *
+   * Las CLASES DE UN CURSO van blindadas: son el material que se vende, y ahí
+   * el logo, el título y el "Ver en YouTube" son puertas para sacarlo.
+   *
+   * Los VÍDEOS DE TÉCNICA de un ejercicio, no. Es un enlace público de YouTube
+   * que el entrenador ha pegado para que se vea dónde va el codo: no hay nada
+   * que proteger, y el blindaje es la parte más frágil de todo esto —depende de
+   * que la API de YouTube conteste dentro de una página con origen prestado—.
+   * Poner en riesgo el vídeo que más se mira, para proteger un enlace que
+   * cualquiera puede buscar, sale carísimo.
+   *
+   * Lo que NO cambia con esto: la marca de agua sigue encima, el vídeo sigue
+   * sin poder navegar fuera de la app y sigue sin pantalla completa.
+   */
+  protegido?: boolean;
 }) {
   const { width, height } = useWindowDimensions();
   const tam = tamanoDelVisor(width, height);
@@ -66,7 +85,7 @@ export function VisorDeVideo({
           onPress={(e) => e.stopPropagation?.()}
         >
           <MarcaDeAgua profile={profile}>
-            <VideoPlayer url={url} protectedContent />
+            <VideoPlayer url={url} protectedContent={protegido} />
           </MarcaDeAgua>
         </Pressable>
 

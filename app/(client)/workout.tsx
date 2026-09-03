@@ -1614,15 +1614,19 @@ export default function WorkoutScreen() {
           marcha. */}
 
 
-      {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app:
-          mismas protecciones que en los cursos (ni compartir, ni salirse, ni
-          los controles de YouTube a la vista). */}
+      {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app.
+          Sin blindar, a diferencia de las clases de un curso: esto es un enlace
+          público que el entrenador ha pegado, no material de pago, y el
+          blindaje es la parte más frágil del reproductor (ver
+          components/VisorDeVideo). Sigue con marca de agua y sin poder navegar
+          fuera de la app. */}
       <VisorDeVideo
         visible={videoAbierto !== null}
         url={videoAbierto?.url}
         titulo={videoAbierto?.titulo}
         profile={profile}
         onCerrar={() => setVideoAbierto(null)}
+        protegido={false}
       />
 
       <Modal

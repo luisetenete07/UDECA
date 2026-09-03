@@ -59,7 +59,18 @@ console.log('\nLo que se le pide al reproductor de la plataforma');
   comprueba('sin pantalla completa', yt.src.includes('fs=0'));
   comprueba('sin teclado propio', yt.src.includes('disablekb=1'));
   comprueba('en la propia pantalla del móvil', yt.src.includes('playsinline=1'));
-  comprueba('el paracaídas sí lleva controles', yt.srcNormal.includes('controls=1'));
+  /*
+   * El paracaídas va DESNUDO: sin `enablejsapi`, sin `fs=0` y sin `disablekb`,
+   * o sea, sin ninguno de los parámetros por los que el blindaje se puede haber
+   * caído. Antes era el mismo enlace con `controls=1`, que es reintentar
+   * exactamente lo que acaba de fallar.
+   *
+   * Sin `controls` en la dirección, YouTube pone los suyos, que es lo que se
+   * quiere aquí: que la clase se pueda ver.
+   */
+  comprueba('el paracaídas no repite lo que falló', !yt.srcNormal.includes('enablejsapi'));
+  comprueba('ni lleva el resto del blindaje', !/fs=0|disablekb/.test(yt.srcNormal));
+  comprueba('y no le quita los controles', !yt.srcNormal.includes('controls=0'));
   comprueba('y es el mismo vídeo', yt.srcNormal.includes('abc123XYZ_-'));
 
   const vi = fuenteBlindada('https://vimeo.com/123456789');
@@ -102,7 +113,9 @@ console.log('\nLa página que se monta');
   // El paracaídas: una clase que no se puede ver es peor que una clase que se
   // puede compartir.
   comprueba('se desblinda solo si la API no contesta', html.includes('setTimeout(desblinda,'));
-  comprueba('a los ocho segundos', html.includes('var ESPERA = 8000;') && ESPERA_MS === 8000);
+  // Cinco segundos y no ocho: son segundos mirando un rectángulo negro sin
+  // saber que hay un plan B en marcha.
+  comprueba('a los cinco segundos', html.includes('var ESPERA = 5000;') && ESPERA_MS === 5000);
   comprueba('recargando con los controles normales', html.includes('marco.src = NORMAL'));
 }
 

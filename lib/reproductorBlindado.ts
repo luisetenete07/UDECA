@@ -56,7 +56,23 @@ export function tiempoCorto(segundos: number): string {
  * como estaba —dentro de la app, sin menú y sin navegar fuera—, porque taparle
  * los controles sería dejar una clase que no se puede ni arrancar.
  */
-export function fuenteBlindada(url: string | undefined): FuenteBlindada | null {
+export function fuenteBlindada(
+  url: string | undefined,
+  /**
+   * El origen REAL de la página que va a contener el reproductor.
+   *
+   * No es un adorno: cuando se usa la API del iframe (`enablejsapi=1`), YouTube
+   * exige saber desde qué origen se le va a hablar, y sin `origin` el
+   * reproductor se puede quedar sin arrancar —negro— en vez de dar un error.
+   *
+   * Cambia según dónde esté la página, y por eso lo pasa quien la monta:
+   *  - En el ordenador va en un iframe `srcdoc`, que hereda el origen de la
+   *    app (github.io, el dominio propio…).
+   *  - En el móvil va en un WebView cargado con un origen prestado
+   *    (`https://www.youtube.com`), que es el que hay que declarar.
+   */
+  origen?: string
+): FuenteBlindada | null {
   if (!url) return null;
 
   const vimeo = parseVimeoUrl(url);
@@ -82,7 +98,7 @@ export function fuenteBlindada(url: string | undefined): FuenteBlindada | null {
 
   const yt = parseYouTubeId(url);
   if (yt) {
-    const comun = {
+    const blindado: Record<string, string> = {
       rel: '0',
       modestbranding: '1',
       playsinline: '1',
@@ -96,13 +112,26 @@ export function fuenteBlindada(url: string | undefined): FuenteBlindada | null {
       // controles, y las teclas de YouTube abren cosas suyas.
       disablekb: '1',
       enablejsapi: '1',
+      controls: '0',
     };
-    const conControles = new URLSearchParams({ ...comun, controls: '1' });
-    const sinControles = new URLSearchParams({ ...comun, controls: '0' });
+    if (origen) blindado.origin = origen;
+    /*
+     * EL PARACAÍDAS VA DESNUDO, Y ESO ES LO IMPORTANTE
+     *
+     * Antes el repuesto era el mismo enlace con `controls=1`: llevaba dentro
+     * `enablejsapi`, `fs=0` y `disablekb`, o sea, exactamente los parámetros
+     * por los que el blindaje se puede haber caído. Reintentar con lo mismo que
+     * acaba de fallar no es un repuesto, es esperar sentado.
+     *
+     * Este es el embed más simple que existe: tres parámetros y ninguna API.
+     * Es lo que hay que enseñar cuando lo otro no sale, porque una clase que no
+     * se puede ver es peor problema que una clase que se puede compartir.
+     */
+    const desnudo = new URLSearchParams({ rel: '0', modestbranding: '1', playsinline: '1' });
     return {
       dialecto: 'youtube',
-      src: `https://www.youtube-nocookie.com/embed/${yt}?${sinControles.toString()}`,
-      srcNormal: `https://www.youtube-nocookie.com/embed/${yt}?${conControles.toString()}`,
+      src: `https://www.youtube-nocookie.com/embed/${yt}?${new URLSearchParams(blindado).toString()}`,
+      srcNormal: `https://www.youtube-nocookie.com/embed/${yt}?${desnudo.toString()}`,
     };
   }
 
@@ -111,8 +140,14 @@ export function fuenteBlindada(url: string | undefined): FuenteBlindada | null {
 
 /** Segundos que saltan los botones de atrás y adelante. */
 export const SALTO = 10;
-/** Si la API no ha contestado en este tiempo, se desblinda y se ve igual. */
-export const ESPERA_MS = 8000;
+/**
+ * Si la API no ha contestado en este tiempo, se desblinda y se ve igual.
+ *
+ * Cinco segundos y no ocho: son segundos mirando un rectángulo negro, y quien
+ * los mira no sabe que hay un plan B en marcha. Cinco ya dan de sobra para que
+ * conteste una API que va a contestar.
+ */
+export const ESPERA_MS = 5000;
 
 /**
  * El trozo que habla con el reproductor de YouTube.

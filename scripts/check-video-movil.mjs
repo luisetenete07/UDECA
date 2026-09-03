@@ -27,7 +27,9 @@
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-video-movil.mjs
  */
+import { readFileSync } from 'node:fs';
 import { seQuedaDentro, seQuedaDentroDelBlindaje } from '../lib/video.ts';
+import { ESPERA_MS, fuenteBlindada } from '../lib/reproductorBlindado.ts';
 
 let fallos = 0;
 /** El porqué solo se imprime cuando falla; si pasa, sobra y despista. */
@@ -91,6 +93,73 @@ for (const [url, que] of NO_DEBE_PASAR) {
   const blindado = seQuedaDentroDelBlindaje(url);
   const normal = seQuedaDentro(url, EMBED);
   ok(que, !blindado && !normal, blindado ? 'pasa en el blindado' : 'pasa en el normal');
+}
+
+
+const lee = (ruta) => readFileSync(new URL(`../${ruta}`, import.meta.url), 'utf8');
+
+console.log('\nEl reproductor le dice a YouTube desde dónde se le habla');
+{
+  /*
+   * Con `enablejsapi=1`, YouTube exige saber el origen desde el que se le va a
+   * hablar. Sin `origin` el reproductor puede no llegar a arrancar, y lo que se
+   * ve entonces no es un mensaje de error: es un rectángulo negro.
+   *
+   * El origen no es fijo: en el ordenador la página hereda el de la app y en el
+   * móvil va en un WebView con uno prestado. Por eso lo pasa quien la monta.
+   */
+  const con = fuenteBlindada('https://youtu.be/ID', 'https://www.youtube.com');
+  ok('el blindado declara el origen', /[?&]origin=https%3A%2F%2Fwww\.youtube\.com/.test(con.src), con.src);
+  ok('y sigue usando la API del iframe', /[?&]enablejsapi=1/.test(con.src));
+  const sin = fuenteBlindada('https://youtu.be/ID');
+  ok('sin origen conocido, no se inventa uno', !/origin=/.test(sin.src));
+}
+
+console.log('\nEl paracaídas no repite lo que acaba de fallar');
+{
+  const f = fuenteBlindada('https://youtu.be/ID', 'https://www.youtube.com');
+  /*
+   * El repuesto era el mismo enlace con los controles puestos, y llevaba dentro
+   * los parámetros por los que el blindaje se puede haber caído. Reintentar con
+   * eso no es un repuesto: es esperar sentado con el vídeo en negro.
+   */
+  ok('el repuesto no usa la API', !/enablejsapi/.test(f.srcNormal), f.srcNormal);
+  ok('ni bloquea el teclado', !/disablekb/.test(f.srcNormal));
+  ok('ni quita la pantalla completa', !/fs=0/.test(f.srcNormal));
+  ok('y sigue siendo el mismo vídeo', f.srcNormal.includes('/embed/ID'));
+  // Segundos mirando un rectángulo negro sin saber que hay un plan B.
+  ok('no se tarda una eternidad en rendirse', ESPERA_MS <= 5000, `${ESPERA_MS} ms`);
+}
+
+console.log('\nCuando el blindaje se rinde, alguien lo escucha');
+{
+  const vp = lee('components/VideoPlayer.tsx');
+  // La página gritaba "me he desblindado" y no había nadie al otro lado, así
+  // que un fallo del blindaje era un vídeo negro para siempre.
+  ok('el WebView escucha los avisos de la página', /onMessage=/.test(vp));
+  ok('y reacciona al de sin blindaje', /'sin-blindaje'\) setSeRindio\(true\)/.test(vp));
+  ok('un error de carga también cuenta', /onError=\{\(\) => setSeRindio\(true\)\}/.test(vp));
+  // Y lo que se enseña entonces es OTRO mecanismo: una navegación normal a una
+  // dirección de verdad, no la misma página con origen prestado.
+  ok('y se cambia de mecanismo, no se reintenta',
+    /seRindio\) \{\s*return <VimeoVideo embedUrl=\{fuente\.srcNormal\}/.test(vp), 'sigue reintentando lo mismo');
+}
+
+console.log('\nQué va blindado y qué no');
+{
+  const visor = lee('components/VisorDeVideo.tsx');
+  ok('el visor deja elegir', /protegido = true/.test(visor));
+  ok('y por defecto protege', /protectedContent=\{protegido\}/.test(visor));
+  // Una clase de curso es material de pago: va blindada.
+  const curso = lee('app/(client)/courses/[id].tsx');
+  ok('las clases de un curso siguen blindadas', !/protegido=\{false\}/.test(curso));
+  /*
+   * El vídeo de técnica no. Es un enlace público que el entrenador ha pegado, y
+   * el blindaje es la parte más frágil del reproductor: arriesgar el vídeo que
+   * más se mira para proteger algo que cualquiera puede buscar sale carísimo.
+   */
+  ok('la técnica del entreno, sin blindar', /protegido=\{false\}/.test(lee('app/(client)/workout.tsx')));
+  ok('la de la rutina diaria, tampoco', /protegido=\{false\}/.test(lee('components/RutinaDiariaDelDia.tsx')));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
