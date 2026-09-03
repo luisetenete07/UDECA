@@ -79,5 +79,39 @@ console.log('\nLas capturas de la portada');
   }
 }
 
+
+console.log('\nQue la app se pueda instalar en el ordenador');
+{
+  /*
+   * Lo que pidió el CEO —"que se actualice sola y obligue a todos"— ya lo hace
+   * la app web: el service worker detecta la versión nueva y el muro de
+   * app/+html.tsx tapa la pantalla hasta que se recarga. Lo que le faltaba era
+   * PARECER una aplicación: sin esto, instalarla es un acceso directo y el
+   * diálogo de Chrome es una línea con el nombre.
+   */
+  const m = JSON.parse(lee('public/manifest.json'));
+  ok('se abre en su propia ventana', m.display === 'standalone');
+  ok('tiene identidad estable', typeof m.id === 'string' && m.id.length > 0);
+  // Sin capturas, el diálogo de instalar en escritorio es el mínimo.
+  const anchas = (m.screenshots ?? []).filter((c) => c.form_factor === 'wide');
+  const estrechas = (m.screenshots ?? []).filter((c) => c.form_factor === 'narrow');
+  ok('el diálogo de instalar enseña la app', anchas.length > 0 && estrechas.length > 0);
+  for (const c of m.screenshots ?? []) {
+    ok(`${c.src} existe`, !!lee(`public/${c.src}`).length);
+  }
+  // Un icono de 512 con relleno es lo que pide Android para no recortarlo mal.
+  ok('hay icono grande y adaptable',
+    (m.icons ?? []).some((i) => i.sizes === '512x512' && i.purpose === 'maskable'));
+  /*
+   * NO se fija la orientación. Estaba en "portrait", que en un móvil se
+   * entiende, pero una ventana de escritorio es apaisada: dejarla bloqueada es
+   * pedirle a la app que se vea de canto en el sitio donde más ancho hay.
+   */
+  ok('no se bloquea la orientación', !('orientation' in m), 'una ventana de ordenador es apaisada');
+
+  // Y que la web lo cuente: una app instalable que nadie sabe que lo es, no lo es.
+  ok('la web dice que se puede instalar', /instalarla/.test(html));
+}
+
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);
