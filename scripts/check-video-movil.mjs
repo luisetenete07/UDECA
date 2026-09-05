@@ -71,10 +71,25 @@ const NO_DEBE_PASAR = [
   ['https://www.youtube.com/playlist?list=X', 'una lista'],
   ['https://www.youtube.com/share?v=ID', 'compartir'],
   ['https://music.youtube.com/watch?v=ID', 'YouTube Music'],
-  // La razón de ser de la lista de permitidos: una ruta que hoy no existe, o
-  // que existe y yo no conozco, se queda fuera sola.
-  ['https://www.youtube.com/algo-que-aun-no-existe', 'una ruta que no conozco'],
-  ['https://ejemplo.com/cualquier-cosa', 'cualquier otra web'],
+];
+
+/*
+ * LO QUE YA NO SE BLOQUEA, Y ES A PROPÓSITO
+ *
+ * Antes esto era una lista de permitidos y aquí abajo estaban "una ruta que no
+ * conozco" y "cualquier otra web", que se bloqueaban por no estar en la lista.
+ * Ese criterio dejó el vídeo en negro tres versiones seguidas: cualquier pieza
+ * del reproductor que YouTube moviera de sitio caía del lado malo, sin dar
+ * ningún error.
+ *
+ * Ahora se bloquean solo las páginas que sacan de la app. Una ruta desconocida
+ * carga, y eso es lo que se quiere: como mucho, alguien acaba donde no
+ * esperábamos; antes, nadie podía ver la clase.
+ */
+const AHORA_SE_DEJAN_PASAR = [
+  ['https://www.youtube.com/algo-que-aun-no-existe', 'una ruta de YouTube que no conozco'],
+  ['https://www.youtube.com/s/player/abc/base.js', 'una pieza del reproductor'],
+  ['https://rr3.googlevideo.com/videoplayback?y=2', 'el vídeo por otro servidor'],
 ];
 
 console.log('\nLo que el reproductor necesita para arrancar');
@@ -160,6 +175,32 @@ console.log('\nQué va blindado y qué no');
    */
   ok('la técnica del entreno, sin blindar', /protegido=\{false\}/.test(lee('app/(client)/workout.tsx')));
   ok('la de la rutina diaria, tampoco', /protegido=\{false\}/.test(lee('components/RutinaDiariaDelDia.tsx')));
+}
+
+console.log('\nLo desconocido carga, en vez de quedarse en negro');
+for (const [url, que] of AHORA_SE_DEJAN_PASAR) {
+  const blindado = seQuedaDentroDelBlindaje(url);
+  const normal = seQuedaDentro(url, EMBED);
+  ok(que, blindado && normal, blindado ? 'lo bloquea el reproductor normal' : 'lo bloquea el blindado');
+}
+
+// Una dirección que ni se puede leer suele ser algo interno del WebView.
+// Bloquearla era dejar el vídeo negro por algo que no era una página de nadie.
+ok('lo que no es ni una dirección, pasa', seQuedaDentro('esto-no-es-una-url', EMBED));
+
+console.log('\nEn el móvil las clases ya no van blindadas');
+{
+  const vp = readFileSync(new URL('../components/VideoPlayer.tsx', import.meta.url), 'utf8');
+  /*
+   * El blindaje necesita montar una página nuestra con un origen PRESTADO y que
+   * la API de YouTube conteste dentro. En un iframe del navegador funciona; en
+   * un WebView no lo ha hecho ni una vez. Se cambia una protección cosmética
+   * —esconder el logo de YouTube— por que la clase se pueda ver.
+   */
+  ok('solo se blinda en el ordenador', /protectedContent && Platform\.OS === 'web'/.test(vp));
+  // Lo que NO se toca: sigue sin poder salirse ni ponerse a pantalla completa.
+  ok('sigue sin pantalla completa en el blindado', /allowsFullscreenVideo=\{false\}/.test(vp));
+  ok('y sigue sin poder navegar fuera', /onShouldStartLoadWithRequest/.test(vp));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

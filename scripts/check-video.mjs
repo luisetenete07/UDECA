@@ -107,7 +107,15 @@ console.log('\nEn móvil, el vídeo no saca al alumno de la app');
   comprueba('pero la página de YouTube NO', !seQuedaDentro('https://www.youtube.com/watch?v=dQw4w9WgXcQ', embed));
   comprueba('ni el canal', !seQuedaDentro('https://www.youtube.com/@alguien', embed));
   comprueba('ni la app por esquema propio', !seQuedaDentro('vnd.youtube://dQw4w9WgXcQ', embed));
-  comprueba('ni un enlace cualquiera', !seQuedaDentro('https://ejemplo.com', embed));
+  /*
+   * Una web cualquiera SÍ carga, y es a propósito. Esto era una lista de
+   * permitidos y bloquear "todo lo demás" dejó el vídeo en negro tres versiones
+   * seguidas, porque cualquier pieza que YouTube moviera de sitio caía del lado
+   * malo sin dar ningún error. Ahora se bloquea lo que saca de la app —las
+   * páginas de YouTube y de Vimeo, y cualquier esquema que no sea http— y lo
+   * demás pasa. El reproductor no navega a webs de terceros por su cuenta.
+   */
+  comprueba('una web cualquiera ya no se bloquea', seQuedaDentro('https://ejemplo.com', embed));
 
   const vimeo = vimeoEmbedUrl({ id: '123456789', hash: 'abc' });
   comprueba('el reproductor de Vimeo carga', seQuedaDentro(vimeo, vimeo));
@@ -115,7 +123,9 @@ console.log('\nEn móvil, el vídeo no saca al alumno de la app');
   comprueba('pero la página de Vimeo no', !seQuedaDentro('https://vimeo.com/123456789', vimeo));
 
   comprueba('about:blank sí, que es el arranque', seQuedaDentro('about:blank', embed));
-  comprueba('una dirección rota no rompe nada', !seQuedaDentro('no es una url', embed));
+  // Lo que ni se puede leer como dirección suele ser algo interno del WebView.
+  // Bloquearlo era dejar el vídeo negro por algo que no era la página de nadie.
+  comprueba('una dirección rota se deja pasar', seQuedaDentro('no es una url', embed));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

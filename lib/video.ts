@@ -121,110 +121,105 @@ export function miniaturaDelEnlace(url: string | undefined): string | null {
   return yt ? miniaturaDeYouTube(yt) : null;
 }
 
-/**
- * EN EL DOMINIO DE YOUTUBE VIVEN DOS COSAS QUE NO SE PARECEN EN NADA
+/*
+ * QUÉ SE DEJA CARGAR AL WEBVIEW, Y POR QUÉ SE CAMBIÓ DE CRITERIO
  *
- *  - Las PIEZAS del reproductor: `/iframe_api`, `/s/player/…/base.js`,
- *    `/youtubei/v1/…`. Sin ellas no hay vídeo, solo un rectángulo negro.
- *  - Las PÁGINAS: `/watch`, `/@alguien`, `/results`, `/share`. Ahí es donde
- *    llevan el logo y el "Ver en YouTube", y ahí es donde no se va.
+ * En el dominio de YouTube conviven dos cosas que no se parecen en nada: las
+ * PIEZAS del reproductor (`/iframe_api`, `/s/player/…/base.js`, `/youtubei/…`),
+ * sin las cuales no hay vídeo, y las PÁGINAS (`/watch`, `/@alguien`,
+ * `/results`), que son las que sacan de la app.
  *
- * Bloquear el dominio entero, que es lo que se hacía, dejaba los vídeos en
- * negro en iPhone y en Android: la API no cargaba nunca y el reproductor no
- * llegaba a montarse. En el ordenador no se notaba porque ahí el vídeo va en un
- * iframe normal y nadie le pregunta a estas funciones.
+ * Aquí hubo una lista de PERMITIDOS: se enumeraban las piezas y se negaba todo
+ * lo demás. El razonamiento era que las rutas de YouTube las decide YouTube, y
+ * una que no estuviera en mi lista sería una salida abierta que nadie ve.
  *
- * POR QUÉ ESTO ES UNA LISTA DE LO QUE SÍ, Y NO DE LO QUE NO
+ * La realidad enseñó que el error se paga al revés. Con lista de permitidos,
+ * una pieza que YouTube mueva de sitio —o que yo no supiera— deja el vídeo EN
+ * NEGRO, sin ningún error por ninguna parte, y eso pasó tres versiones
+ * seguidas: tres arreglos razonados y las tres veces seguía sin verse en el
+ * móvil.
  *
- * El primer intento fue al revés: una lista de las páginas a bloquear
- * (`/watch`, `/channel`, `/@…`). Duró lo que tardó la prueba en recordarme
- * `/share`, que no estaba en la lista y se colaba. Y esa es la naturaleza del
- * problema: las rutas de YouTube las decide YouTube, y cualquiera que yo no
- * conozca se convierte en una salida abierta.
- *
- * Las piezas que el reproductor necesita, en cambio, sí son un conjunto
- * cerrado y conocido. Enumerar ESO y negar el resto convierte un olvido mío en
- * un vídeo que no carga —visible al instante— en vez de en una puerta de salida
- * que nadie ve hasta que un alumno se encuentra el curso abierto en YouTube.
+ * Ahora es una lista de BLOQUEADOS, y falla al revés: lo peor que puede pasar
+ * es que alguien acabe en una página de YouTube que yo no había previsto. Un
+ * vídeo que no se ve rompe el producto; un alumno que se escapa a YouTube es
+ * una molestia. Cuando hay que elegir de qué lado fallar, se falla del lado de
+ * que el vídeo se vea.
  */
-const RUTAS_DEL_REPRODUCTOR = [
-  '/iframe_api', // el guion que monta el reproductor
-  '/s/', // su código y sus recursos (/s/player/…/base.js)
-  '/yts/', // los mismos, en la forma antigua
-  '/youtubei/', // de dónde saca los datos del vídeo
-  '/embed/', // el marco del vídeo
-  '/api/stats/', // los avisos de "va bien / va a tirones"
-  '/api/timedtext', // los subtítulos
-  '/ptracking',
-  '/generate_204', // comprobaciones de red, sin contenido
-  '/player_204',
-  '/error_204',
-  '/videoplayback', // el vídeo, cuando no viene por googlevideo.com
+
+/**
+ * Las PÁGINAS de YouTube: lo único que de verdad hay que impedir.
+ *
+ * Son las que sacan al alumno de UDECA y lo dejan en la app de YouTube, con el
+ * vídeo del curso a la vista de cualquiera y sin forma cómoda de volver.
+ */
+const PAGINAS_QUE_SACAN = [
+  '/watch',
+  '/shorts',
+  '/results',
+  '/playlist',
+  '/channel',
+  '/user',
+  '/c/',
+  '/share',
+  '/feed',
+  '/account',
+  '/premium',
+  '/subscribe',
+  '/signin',
+  '/upload',
 ];
 
-function esRutaDelReproductor(ruta: string): boolean {
-  return RUTAS_DEL_REPRODUCTOR.some((r) =>
-    r.endsWith('/') ? ruta.startsWith(r) : ruta === r || ruta.startsWith(`${r}?`)
-  );
-}
+function esPaginaQueSaca(u: URL): boolean {
+  /*
+   * Los ESQUEMAS PROPIOS son lo primero, y son lo más grave de todo esto: un
+   * `youtube://` o un `vnd.youtube:` no abre una página, abre LA APP DE
+   * YOUTUBE, con la clase del curso dentro y sin forma de volver. Se bloquea
+   * cualquier cosa que no sea http o https.
+   */
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return true;
 
-/**
- * Dominios que solo sirven piezas: no tienen páginas donde perderse, así que
- * se admiten enteros.
- */
-const DOMINIOS_DE_PIEZAS = [
-  'youtube-nocookie.com',
-  'googlevideo.com',
-  'ytimg.com',
-  'gstatic.com',
-  'player.vimeo.com',
-  'vimeocdn.com',
-];
-
-/**
- * ¿Esta dirección es una pieza del reproductor, y no una página?
- *
- * `youtu.be` no aparece por ningún lado a propósito: ese dominio solo sirve
- * para mandarte a la página del vídeo.
- */
-function esPiezaDelReproductor(destino: string): boolean {
-  try {
-    const u = new URL(destino);
-    const host = u.hostname.replace(/^www\./, '');
-    if (DOMINIOS_DE_PIEZAS.some((d) => host === d || host.endsWith(`.${d}`))) return true;
-    // En youtube.com se mira la ruta, porque ahí conviven las dos cosas.
-    if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
-      return esRutaDelReproductor(u.pathname);
-    }
-    return false;
-  } catch {
-    return false;
-  }
+  const host = u.hostname.replace(/^www\./, '');
+  // youtu.be solo sirve para mandarte a la página del vídeo.
+  if (host === 'youtu.be' || host === 'm.youtube.com' || host === 'music.youtube.com') return true;
+  /*
+   * La página de Vimeo, igual: el reproductor vive en `player.vimeo.com` y la
+   * página del vídeo —con su logo, su autor y su botón de compartir— en
+   * `vimeo.com` a secas. Separar por subdominio los distingue sin listas.
+   */
+  if (host === 'vimeo.com') return true;
+  if (!(host === 'youtube.com' || host.endsWith('.youtube.com'))) return false;
+  // Los canales con arroba: /@alguien.
+  if (/^\/@/.test(u.pathname)) return true;
+  return PAGINAS_QUE_SACAN.some((r) => u.pathname === r || u.pathname.startsWith(`${r}/`) || u.pathname.startsWith(`${r}?`));
 }
 
 /**
  * ¿Puede el WebView cargar esta dirección?
  *
- * Solo el propio reproductor y los dominios que necesita para funcionar. Todo
- * lo demás —la página de YouTube, la de Vimeo, un enlace de un comentario— se
- * queda fuera: el alumno se ha metido en una lección de su curso, no en un
- * navegador.
+ * ESTO ERA UNA LISTA DE LO QUE SÍ, Y AHORA ES DE LO QUE NO. IMPORTA.
+ *
+ * Antes se enumeraban las piezas que el reproductor necesita y se negaba todo
+ * lo demás. El razonamiento era bueno: las rutas de YouTube las decide YouTube,
+ * y una que yo no conozca se convertiría en una salida abierta que nadie ve.
+ *
+ * Lo que enseñó la realidad es que el error se paga al revés. Con lista de
+ * permitidos, una pieza que YouTube mueva de sitio —o que yo no supiera— deja
+ * el vídeo EN NEGRO, sin ningún error, y eso ya ha pasado tres versiones
+ * seguidas. Con lista de bloqueados, lo peor que pasa es que un alumno acabe
+ * en una página de YouTube que yo no había previsto.
+ *
+ * Un vídeo que no se ve rompe el producto. Un alumno que se escapa a YouTube
+ * es una molestia. Cuando hay que elegir de qué lado fallar, se falla del lado
+ * de que el vídeo se vea.
  */
 export function seQuedaDentro(destino: string, embedUrl: string): boolean {
-  if (destino === embedUrl || destino === 'about:blank') return true;
-  if (esPiezaDelReproductor(destino)) return true;
-  /*
-   * El mismo sitio del que salió el vídeo, para lo que no sea YouTube ni Vimeo
-   * (un .mp4 alojado en cualquier parte). En YouTube esto NO vale como permiso
-   * —lo de arriba ya ha decidido, mirando la ruta—, porque el embed vive en el
-   * mismo dominio que la página del vídeo.
-   */
+  if (destino === embedUrl || destino === 'about:blank' || destino.startsWith('data:')) return true;
   try {
-    const host = new URL(destino).hostname.replace(/^www\./, '');
-    if (/(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(host)) return false;
-    return host === new URL(embedUrl).hostname.replace(/^www\./, '');
+    return !esPaginaQueSaca(new URL(destino));
   } catch {
-    return false;
+    // Una dirección que ni siquiera se puede leer no es una página de YouTube:
+    // suele ser algo interno del WebView. Bloquearla era dejar el vídeo negro.
+    return true;
   }
 }
 
@@ -241,13 +236,19 @@ export function seQuedaDentroDelBlindaje(destino: string): boolean {
   if (destino === 'about:blank' || destino.startsWith('data:')) return true;
   try {
     const u = new URL(destino);
+    /*
+     * Los esquemas propios se miran ANTES que nada. `vnd.youtube://abc` se lee
+     * como una dirección sin ruta, así que el atajo de aquí abajo lo daba por
+     * bueno — y ese atajo era justo el que abría la app de YouTube.
+     */
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
     // La propia página del reproductor se carga con un origen prestado
     // (youtube.com o player.vimeo.com) para que la API de la plataforma pueda
     // hablar con ella. Ese origen se admite A SECAS: sin ruta, que es como
     // llega.
     if (u.pathname === '' || u.pathname === '/') return true;
+    return !esPaginaQueSaca(u);
   } catch {
-    return false;
+    return true;
   }
-  return esPiezaDelReproductor(destino);
 }

@@ -46,10 +46,32 @@ export function VideoPlayer({
     );
   }
 
-  // Contenido de curso: se reproduce blindado —el reproductor de la plataforma
-  // tapado con un cristal y con nuestros propios controles encima—, para que no
-  // quede a la vista ni un logo, ni un título, ni un botón de compartir.
-  const blindado = protectedContent ? fuenteBlindada(url, origenDelReproductor()) : null;
+  /*
+   * EL BLINDAJE, SOLO EN EL ORDENADOR. Y no es una preferencia: es lo que
+   * quedó después de tres intentos.
+   *
+   * El reproductor blindado necesita montar una página NUESTRA con un origen
+   * PRESTADO (`baseUrl: youtube.com`) y que la API de YouTube conteste dentro.
+   * En un iframe del navegador eso funciona y se ve todos los días. Dentro de
+   * un WebView no ha funcionado ni una vez: tres versiones seguidas con el
+   * vídeo en negro en iPhone y en Android, tres arreglos razonados —la lista
+   * de rutas permitidas, el parámetro `origin`, el paracaídas que avisa— y las
+   * tres veces seguía negro.
+   *
+   * Llegados aquí, la decisión no es cuál es la causa, es cuánto vale
+   * seguir buscándola. El blindaje esconde el logo y el botón de compartir de
+   * YouTube. El vídeo ES el producto: un curso que no se puede ver no es un
+   * curso. Se cambia una protección cosmética por la función principal.
+   *
+   * En el móvil se carga el embed a pelo, que es una navegación normal a una
+   * dirección de verdad: lo más difícil de romper que hay. Lo que SÍ se
+   * mantiene: la marca de agua con el nombre de quien mira, no poder navegar
+   * fuera de la app y no tener pantalla completa.
+   */
+  const blindado =
+    protectedContent && Platform.OS === 'web'
+      ? fuenteBlindada(url, origenDelReproductor())
+      : null;
   if (blindado) return <VideoBlindado fuente={blindado} />;
 
   // Enlaces de Vimeo: se reproducen con el player oficial embebido, que

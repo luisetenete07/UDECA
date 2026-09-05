@@ -134,8 +134,12 @@ console.log('\nA dónde puede navegar el reproductor');
   comprueba('a un canal NO', !seQuedaDentroDelBlindaje('https://www.youtube.com/@canal'));
   comprueba('a la página de Vimeo NO', !seQuedaDentroDelBlindaje('https://vimeo.com/123456789'));
   comprueba('a compartir NO', !seQuedaDentroDelBlindaje('https://www.youtube.com/share?v=abc'));
-  comprueba('a cualquier otro sitio NO', !seQuedaDentroDelBlindaje('https://ejemplo.com/loquesea'));
-  comprueba('basura NO', !seQuedaDentroDelBlindaje('vaya vaya'));
+  // Y lo que NO saca de la app, pasa: ver el porqué del cambio de criterio en
+  // lib/video.ts. Bloquear lo desconocido dejaba el vídeo en negro.
+  comprueba('un sitio cualquiera ya no se bloquea', seQuedaDentroDelBlindaje('https://ejemplo.com/loquesea'));
+  comprueba('lo que ni es una dirección, tampoco', seQuedaDentroDelBlindaje('vaya vaya'));
+  // Lo que sí sigue bloqueado, que es lo que importa: abrir la app de YouTube.
+  comprueba('la app de YouTube por esquema propio NO', !seQuedaDentroDelBlindaje('vnd.youtube://abc'));
 
   // El guardián de siempre, el de los enlaces que NO se blindan, sigue igual.
   const embed = 'https://www.youtube-nocookie.com/embed/abc';
