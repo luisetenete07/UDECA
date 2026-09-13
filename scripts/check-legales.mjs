@@ -117,6 +117,37 @@ ok('con un plazo escrito', /30 días/.test(borrado));
 console.log('\nLas direcciones no se rompen');
 {
   const vercel = JSON.parse(lee('web/vercel.json'));
+
+  /*
+   * NINGUNA CLAVE QUE VERCEL NO CONOZCA. Y esto ya costó caro.
+   *
+   * El fichero llevaba una clave `"//"` con un comentario dentro, al estilo de
+   * package.json. JSON no admite comentarios, y npm se traga esa clave sin
+   * decir nada — pero Vercel valida este fichero de forma ESTRICTA y rechaza
+   * cualquier propiedad que no reconozca.
+   *
+   * El resultado es de los peores que hay: el despliegue falla en un segundo,
+   * antes de compilar nada, y la web pública se queda congelada en la versión
+   * anterior mientras en GitHub todo sale en verde. Nadie se entera, porque no
+   * hay nada roto que mirar: la web sigue abriendo, solo que es la de antes.
+   * Se descubrió cuando ya llevaba días sin actualizarse, con los precios
+   * nuevos y las insignias de las tiendas sin publicar.
+   *
+   * Los comentarios de este fichero viven en docs/WEB.md, que es donde se
+   * pueden escribir sin romper nada.
+   */
+  const CLAVES_DE_VERCEL = [
+    'buildCommand', 'cleanUrls', 'crons', 'devCommand', 'framework', 'functions',
+    'git', 'headers', 'ignoreCommand', 'images', 'installCommand',
+    'outputDirectory', 'public', 'redirects', 'regions', 'rewrites', 'routes',
+    'trailingSlash', 'version',
+  ];
+  const raras = Object.keys(vercel).filter((k) => !CLAVES_DE_VERCEL.includes(k));
+  ok(
+    'web/vercel.json no lleva claves inventadas',
+    raras.length === 0,
+    `${raras.join(', ')} — Vercel rechaza el fichero entero y la web deja de publicarse sin avisar`
+  );
   const paginas = new Set(['/privacidad', '/eliminar-cuenta']);
   for (const r of vercel.redirects ?? []) {
     ok(`${r.source} lleva a una página que existe`, paginas.has(r.destination), r.destination);

@@ -159,6 +159,30 @@ sitio y en castellano:
   lleva a ninguna parte hace dudar de la página entera. Con enlace vuelve sola.
 - `comunidad`, `instagram`, `contacto`.
 
+### `web/vercel.json`: por qué no lleva comentarios
+
+Porque tumban la web entera, y en silencio.
+
+Vercel valida ese fichero de forma estricta y **rechaza cualquier propiedad que
+no reconozca**. Una clave `"//"` con un comentario dentro —el truco que sí
+funciona en `package.json`— hace que el despliegue falle en un segundo, antes de
+compilar nada. Y lo peor no es el fallo: es que la web pública se queda
+congelada en la versión anterior mientras en GitHub todo sale en verde. No hay
+nada roto que mirar, la página sigue abriendo; solo que es la de antes. Así
+estuvo días, con los precios nuevos y las insignias de las tiendas sin publicar.
+
+Lo vigila `scripts/check-legales.mjs`. Los comentarios van aquí.
+
+**Los alias de las páginas legales** (los `redirects` de ese fichero): Google
+Play y App Store guardan la URL que se les dio y la comprueban solas, sin
+avisar. Si un día esa dirección deja de responder, la app se queda sin poder
+enviarse a revisión y el aviso llega en forma de rechazo. Por eso cualquier
+forma razonable de escribirlas lleva al mismo sitio: en español o en inglés, con
+guion o sin él, y también las rutas que tenían dentro de la app
+(`/privacy-policy`, `/delete-account`), que es donde apuntaban antes. Son
+redirecciones permanentes (308) porque la dirección buena es una sola: la que se
+declara en las tiendas.
+
 ### Las insignias de las tiendas
 
 Están en `web/assets/badge-app-store.svg` y `web/assets/badge-google-play.svg`,
