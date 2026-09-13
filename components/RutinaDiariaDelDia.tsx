@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Text } from './Texto';
 import { frase } from '../lib/idioma';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from './Card';
 import { ProgressBar } from './ProgressBar';
 import { VisorDeVideo } from './VisorDeVideo';
 import {
@@ -23,17 +23,22 @@ import {
   textoDelEjercicio,
   textoDiario,
 } from '../lib/rutinaDiaria';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, gradients, radius, spacing, typography } from '../lib/theme';
 import type { DiaDeRutinaDiaria, RutinaDiaria, UserProfile } from '../lib/types';
 
 /**
  * Lo que toca hacer HOY aparte del entreno, y marcarlo.
  *
- * POR QUÉ VA EN ENTRENO Y NO EN EL INICIO
+ * POR QUÉ VA EN EL INICIO
  *
- * Porque es entrenamiento, y porque el inicio ya tiene la racha, los avisos y
- * el resumen: una cosa más ahí se pierde. En Entreno está donde se está cuando
- * se entrena, que es cuando se acuerda uno del pino.
+ * Porque no se hace los días de entrenar: se hace TODOS. Estuvo en Entreno, que
+ * parecía lo lógico —es entrenamiento—, y ahí solo lo veía quien iba a entrenar;
+ * justo los días de descanso, que son en los que más falta hace acordarse del
+ * pino, no aparecía por ningún lado.
+ *
+ * Y en el inicio va arriba, con la sesión del día y no debajo del resumen de la
+ * semana: las dos contestan a "¿qué hago hoy?", y esa pregunta se responde
+ * antes de mirar cómo va el mes.
  *
  * POR QUÉ NO SE PARECE A UNA SESIÓN
  *
@@ -95,27 +100,60 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
   const p = progresoDiario(rutina, dia);
 
   return (
-    <Card style={styles.tarjeta}>
+    /*
+     * NO ES UNA TARJETA MÁS, Y TIENE QUE NOTARSE.
+     *
+     * Era una `Card` igual que las otras cinco del inicio —mismo fondo, mismo
+     * borde, mismo todo— y se perdía entre ellas. El problema no es que
+     * estuviera fea: es que esto se hace TODOS los días, y lo que se hace
+     * todos los días es justo lo que se olvida cuando no se ve.
+     *
+     * Lleva el mismo tratamiento que la tarjeta de la sesión de hoy: el
+     * degradado dorado y el filo del sistema. Las dos responden a la misma
+     * pregunta —"¿qué hago hoy?"— y ahora se parecen entre sí y no al resto.
+     */
+    <LinearGradient
+      colors={gradients.goldSubtle}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.tarjeta}
+    >
       <View style={styles.cabecera}>
-        <View style={styles.icono}>
+        <View style={[styles.icono, p.completa && styles.iconoHecho]}>
           <Ionicons
-            name={p.completa ? 'checkmark-circle' : 'repeat-outline'}
-            size={17}
-            color={colors.primary}
+            name={p.completa ? 'checkmark' : 'repeat'}
+            size={19}
+            color={p.completa ? colors.onPrimary : colors.primaryBright}
           />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.titulo} numberOfLines={1}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          {/* El rótulo dice QUÉ ES esto antes de decir cómo se llama. El nombre
+              lo pone el entrenador y puede ser cualquier cosa ("KFOU2", "Mi
+              rutina"); sin esta línea, quien abre la app por primera vez no
+              tiene forma de saber que es lo de cada día. */}
+          <Text style={styles.rotulo}>Cada día</Text>
+          {/* Dos líneas, no una: el nombre lo escribe el entrenador y en un
+              móvil de 320, con el marcador al lado, "Grease the groove" se
+              quedaba en "Grease the ...". Un nombre a medias no identifica
+              nada. */}
+          <Text style={styles.titulo} numberOfLines={2}>
             {rutina.nombre || NOMBRE_POR_DEFECTO}
           </Text>
-          <Text style={styles.texto}>{textoDiario(p)}</Text>
         </View>
-        <Text style={styles.cuenta}>
-          {p.hechos}/{p.total}
-        </Text>
+        {/* La cuenta, grande. Es el dato que hace volver: cuánto llevas hoy. */}
+        <View style={styles.marcador}>
+          <Text style={styles.cuenta}>{p.hechos}</Text>
+          <Text style={styles.deTotal}>/{p.total}</Text>
+        </View>
       </View>
 
-      <ProgressBar progress={p.ratio} height={6} />
+      <ProgressBar progress={p.ratio} height={8} />
+      <Text style={styles.texto}>{textoDiario(p)}</Text>
+
+      {/* Una línea entre el titular y la lista. Sin ella, con tres ejercicios y
+          sus series, la cabecera se leía como una fila más de la lista y el
+          número grande perdía todo el trabajo que hace. */}
+      <View style={styles.raya} />
 
       {rutina.ejercicios.map((e) => {
         const series = seriesDe(e);
@@ -206,28 +244,53 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
         onCerrar={() => setVideo(null)}
         protegido={false}
       />
-    </Card>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  tarjeta: { marginBottom: spacing.md, gap: spacing.sm },
+  tarjeta: {
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: spacing.lg,
+  },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   icono: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     borderRadius: radius.full,
     backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  titulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  texto: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  // Completo: el círculo se rellena. Es la recompensa del día, y es lo único
+  // de la tarjeta que cambia de color entero.
+  iconoHecho: { backgroundColor: colors.primary, borderColor: colors.primary },
+  rotulo: {
+    ...typography.label,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    fontSize: 10,
+  },
+  titulo: { ...typography.h3, color: colors.text, marginTop: 2 },
+  texto: { ...typography.small, color: colors.textMuted },
+  // La cuenta, en dos tamaños: lo hecho manda y el total acompaña. Alineados
+  // por la base para que no bailen entre sí.
+  marcador: { flexDirection: 'row', alignItems: 'baseline', flexShrink: 0 },
   cuenta: {
-    ...typography.body,
+    ...typography.h1,
     color: colors.primaryBright,
+  },
+  raya: { height: 1, backgroundColor: colors.border, marginTop: spacing.xs },
+  deTotal: {
+    ...typography.small,
+    color: colors.textMuted,
     fontFamily: fonts.semiBold,
-    flexShrink: 0,
   },
   fila: {
     flexDirection: 'row',

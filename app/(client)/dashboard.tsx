@@ -576,6 +576,16 @@ export default function ClientDashboard() {
       </Pressable>
       </FadeIn>
 
+      {/* LO QUE TOCA A DIARIO, aparte del plan: el pino, la movilidad.
+          Va JUSTO DEBAJO de la sesión de hoy, y no al final, porque las dos
+          contestan a la misma pregunta —"¿qué hago hoy?"— y esa se responde
+          antes de mirar cómo va la semana. Abajo se leía como un apéndice del
+          resumen, y lo que se hace todos los días es justo lo que se olvida
+          cuando no se ve. Se pinta sola solo si le han puesto una. */}
+      <FadeIn delay={70}>
+        <RutinaDiariaDelDia profile={profile} />
+      </FadeIn>
+
       {/* Atleta: acceso a gestionar su propio plan de entreno. */}
       {profile?.role === 'athlete' ? (
         <Pressable
@@ -757,14 +767,6 @@ export default function ClientDashboard() {
       </Card>
       </FadeIn>
 
-      {/* LO QUE TOCA A DIARIO, aparte del plan: el pino, la movilidad.
-          Vivía en Entreno y ahí no era su sitio: se hace TODOS los días, no
-          los de entrenar, y allí competía con la sesión en marcha. Aquí, en la
-          pantalla que se abre cada mañana, es lo primero que se ve y se marca
-          de camino. Se pinta sola solo si su entrenador le ha puesto una. */}
-      <FadeIn delay={205}>
-        <RutinaDiariaDelDia profile={profile} />
-      </FadeIn>
 
       {/* APUNTAR UN ENTRENO DE OTRO DÍA.
           Estaba en Entreno, encima de "Empezar entreno", y ahí estorbaba: esa
