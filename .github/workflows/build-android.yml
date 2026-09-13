@@ -74,8 +74,32 @@ jobs:
         timeout-minutes: 45
         run: eas build --platform android --profile production --non-interactive --local --output ./udeca.aab
 
+      # Si el proceso se cuelga DESPUÉS de compilar, el .aab existe igual.
+      #
+      # Ya pasó una vez: Gradle terminó en 13 minutos y el mandato se quedó otra
+      # hora sin salir, hasta que el tope lo mató. Con el paso en rojo, el de
+      # guardar no llegaba a correr y el archivo —hecho y bueno— se iba a la
+      # basura con el runner. Así que se busca donde Gradle lo deja, y se sube
+      # pase lo que pase con el paso anterior.
+      - name: Rescatar el .aab
+        if: ${{ always() && inputs.en_el_runner }}
+        run: |
+          set -uo pipefail
+          if [ -s ./udeca.aab ]; then
+            echo "El .aab está donde se pidió."
+          else
+            SUELTO=$(find . -name '*.aab' -size +1M -print -quit 2>/dev/null || true)
+            if [ -n "$SUELTO" ]; then
+              echo "Encontrado en $SUELTO"
+              cp "$SUELTO" ./udeca.aab
+            else
+              echo "::warning::No hay ningún .aab: la compilación no llegó a terminar"
+            fi
+          fi
+          ls -lh ./udeca.aab 2>/dev/null || true
+
       - name: Guardar el .aab
-        if: ${{ inputs.en_el_runner }}
+        if: ${{ always() && inputs.en_el_runner }}
         uses: actions/upload-artifact@v4
         with:
           name: udeca-aab
