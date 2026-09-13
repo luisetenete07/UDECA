@@ -96,9 +96,34 @@ export function youTubeEmbedUrl(id: string): string {
  *
  * La solución es la de siempre para un WebView: en vez de navegar al embed, se
  * carga una página NUESTRA —cuatro líneas— con el embed en un `iframe`, y se
- * le dice al WebView que esa página vive en `https://www.youtube.com`. Con eso
- * la petición del iframe sale con su `Referer` en regla y el reproductor se
- * configura.
+ * le dice al WebView dónde vive esa página. Con eso la petición del iframe sale
+ * con su `Referer` en regla y el reproductor se configura.
+ *
+ * Y EL ERROR 152, QUE VINO DESPUÉS
+ *
+ * El primer intento le dijo al WebView que la página vivía en
+ * `https://www.youtube.com`. Quitó el 153 —el `Referer` ya llegaba— y lo
+ * cambió por esto:
+ *
+ *     Este vídeo no está disponible
+ *     Código de error: 152 - 4
+ *
+ * Porque estábamos contándole a YouTube que quien lo incrusta es el propio
+ * YouTube. Eso no es un embed de nadie: es su reproductor dentro de su propia
+ * casa, y su reproductor lo rechaza.
+ *
+ * Lo que lo señaló fue una asimetría que estaba a la vista: en la WEB el mismo
+ * vídeo, con el mismo dominio sin cookies, se reproduce sin problema. Allí el
+ * `iframe` vive en la página de verdad y su origen es el nuestro; no se inventa
+ * ninguno. La única diferencia entre las dos era el origen prestado.
+ *
+ * Y se descartó lo demás antes de tocar nada: probado con un vídeo PÚBLICO
+ * ajeno, el error era el mismo. No era la visibilidad de los vídeos, ni el
+ * permiso de inserción, ni la protección de las clases.
+ *
+ * Así que se presta el origen que de verdad tenemos. `app.udeca.app` existe, es
+ * nuestro y sirve la app: para YouTube es un sitio normal incrustando un vídeo,
+ * que es exactamente lo que somos.
  *
  * NO ES LO MISMO QUE EL BLINDAJE QUE SE RINDIÓ, y conviene dejarlo escrito
  * para que nadie vuelva a atar los dos cabos equivocados. Aquel montaba
@@ -108,7 +133,7 @@ export function youTubeEmbedUrl(id: string): string {
  * hay API, ni cristal, ni mensajes: hay un `iframe` y nada más. Lo único que
  * tiene que pasar es que cargue.
  */
-export const ORIGEN_DE_YOUTUBE = 'https://www.youtube.com';
+export const ORIGEN_DE_LA_APP = 'https://app.udeca.app';
 
 /** ¿Es este embed de YouTube (o de su dominio sin cookies)? */
 export function esEmbedDeYouTube(url: string): boolean {
@@ -137,7 +162,7 @@ export function esEmbedDeYouTube(url: string): boolean {
  * hay algo que desplazar.
  */
 export function paginaDeEmbed(embedUrl: string): string {
-  const src = conOrigenDeYouTube(embedUrl);
+  const src = conNuestroOrigen(embedUrl);
   const atributo = src.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -146,11 +171,11 @@ iframe{display:block;border:0;width:100%;height:100%}</style></head>
 <body><iframe src="${atributo}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></body></html>`;
 }
 
-/** Le pega el `origin` al embed, si no lo lleva ya. */
-function conOrigenDeYouTube(embedUrl: string): string {
+/** Le pega NUESTRO `origin` al embed, si no lo lleva ya. */
+function conNuestroOrigen(embedUrl: string): string {
   if (embedUrl.includes('origin=')) return embedUrl;
   const sep = embedUrl.includes('?') ? '&' : '?';
-  return `${embedUrl}${sep}origin=${encodeURIComponent(ORIGEN_DE_YOUTUBE)}`;
+  return `${embedUrl}${sep}origin=${encodeURIComponent(ORIGEN_DE_LA_APP)}`;
 }
 
 

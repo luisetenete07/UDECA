@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   esEmbedDeYouTube,
-  ORIGEN_DE_YOUTUBE,
+  ORIGEN_DE_LA_APP,
   paginaDeEmbed,
   parseVimeoUrl,
   parseYouTubeId,
@@ -322,7 +322,7 @@ function VideoEnWebView({
    */
   const deYouTube = esEmbedDeYouTube(embedUrl);
   const fuente = deYouTube
-    ? { html: paginaDeEmbed(embedUrl), baseUrl: ORIGEN_DE_YOUTUBE }
+    ? { html: paginaDeEmbed(embedUrl), baseUrl: ORIGEN_DE_LA_APP }
     : { uri: embedUrl };
   return (
     <View style={styles.video}>

@@ -30,7 +30,7 @@
 import { readFileSync } from 'node:fs';
 import {
   esEmbedDeYouTube,
-  ORIGEN_DE_YOUTUBE,
+  ORIGEN_DE_LA_APP,
   paginaDeEmbed,
   seQuedaDentro,
   seQuedaDentroDelBlindaje,
@@ -250,14 +250,26 @@ console.log('\nEl reproductor de YouTube sabe quién lo incrusta (error 153)');
  * lo que contesta entonces es su propio "Error de configuración del reproductor
  * de vídeo · Error 153" dentro de nuestra app, con dos botones suyos que además
  * no respondían. Se arregla cargando una página nuestra con el embed en un
- * iframe y prestándole el origen de YouTube.
+ * iframe y diciéndole al WebView dónde vive esa página.
+ *
+ * Y EL ORIGEN TIENE QUE SER NUESTRO, NO EL DE YOUTUBE.
+ *
+ * El primer intento prestó `https://www.youtube.com`. Quitó el 153 y trajo un
+ * "Este vídeo no está disponible · 152 - 4": le estábamos diciendo a YouTube
+ * que quien lo incrusta es el propio YouTube, y su reproductor rechaza eso.
+ * Comprobado además con un vídeo público ajeno, así que no era la visibilidad
+ * de los vídeos de nadie.
+ *
+ * `app.udeca.app` es un sitio que existe y es nuestro, que es justo lo que el
+ * reproductor espera encontrar al otro lado. Esta comprobación existe para que
+ * a nadie le parezca buena idea volver a prestarle un dominio de YouTube.
  */
 {
   const pagina = paginaDeEmbed(EMBED);
   ok('el embed va dentro de un iframe', /<iframe src="/.test(pagina), pagina.slice(0, 80));
   ok(
     'y lleva el origen puesto',
-    pagina.includes(`origin=${encodeURIComponent(ORIGEN_DE_YOUTUBE)}`),
+    pagina.includes(`origin=${encodeURIComponent(ORIGEN_DE_LA_APP)}`),
     'sin él, el reproductor no sabe quién lo incrusta'
   );
   // Ni un solo & suelto dentro del atributo: uno sin escapar corta la
@@ -271,7 +283,12 @@ console.log('\nEl reproductor de YouTube sabe quién lo incrusta (error 153)');
     );
   }
   // Dos orígenes distintos serían el mismo error con más pasos.
-  ok('el origen es el mismo que el prestado', ORIGEN_DE_YOUTUBE === 'https://www.youtube.com');
+  ok('el origen prestado es un sitio nuestro', ORIGEN_DE_LA_APP === 'https://app.udeca.app');
+  ok(
+    'y NO un dominio de YouTube',
+    !esEmbedDeYouTube(ORIGEN_DE_LA_APP),
+    'prestarle su propio dominio es lo que daba el error 152'
+  );
   ok('no se le pega dos veces', paginaDeEmbed(`${EMBED}&origin=x`).split('origin=').length === 2);
 
   ok('reconoce el dominio sin cookies', esEmbedDeYouTube(EMBED));
