@@ -30,7 +30,6 @@ import { esfuerzoDePct, pctCombinado, textoIntensidad } from '../../lib/intensid
 import { SelectorDeEsfuerzo } from '../../components/SelectorDeEsfuerzo';
 import { diasDePausa, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
-import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { UltimoEntreno } from '../../components/UltimoEntreno';
 import { SessionHeader } from '../../components/SessionHeader';
 import type { AccionRapida } from '../../components/QuickSheet';
@@ -2257,12 +2256,16 @@ export default function WorkoutScreen() {
         />
       ) : null}
 
-      {!enMarcha ? <RegistrarOtroDia /> : null}
+      {/* Aquí estaba "Registrar un entreno de otro día", y se ha ido a Inicio.
+          Esta pantalla es la del entreno de HOY: quien entra a hacer su día se
+          encontraba, justo encima del botón de empezar, uno que habla de otro
+          día. En Inicio —la pantalla del repaso— es donde uno se acuerda de que
+          el martes entrenó sin el móvil delante. */}
 
       {/* EMPEZAR ENTRENO, lo último de la portada.
 
           Antes de él va todo lo que uno quiere mirar sin haber empezado: por
-          dónde iba, qué día toca, el calentamiento y apuntar otro día. Al
+          dónde iba, qué día toca y el calentamiento. Al
           pulsarlo, todo eso desaparece y la pantalla pasa a ser el ejercicio y
           nada más: ni tarjetas al lado, ni botones que no sean los de la serie
           que se está haciendo.

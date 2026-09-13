@@ -29,6 +29,7 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-ficha-nutricional.mjs
  */
 import { readFileSync } from 'node:fs';
+import { objetivosDelDia } from '../lib/macrosDelDia.ts';
 
 let fallos = 0;
 const ok = (n, c, porQue = '') => {
@@ -129,44 +130,60 @@ ok(
 );
 
 // =========================================================================
-console.log('\n4 · Y lo que se calcula, se ve');
+console.log('\n4 · Manda el alumno, y se aplica al momento');
 // =========================================================================
 /*
- * "Funciona bien el proceso pero no se rehace con los nuevos datos aplicados".
+ * "El plan nutricional lo decide el alumno, no el coach. Si lo actualiza se
+ * hace y ya, el coach no tiene que verificar nada".
  *
- * Con un plan del entrenador activo, lo que calcula el alumno SÍ se guarda
- * —comprobado contra la base de datos— pero mandaba el del coach y lo suyo no
- * salía por ninguna parte. Desde fuera eso es indistinguible de que no se haya
- * guardado nada, y encima el aviso decía "Macros actualizados" mientras la
- * pantalla enseñaba los mismos números de antes.
+ * Antes ganaba siempre el plan del entrenador, y por eso rehacer la ficha
+ * parecía roto: se guardaba, el aviso decía "guardado", y en pantalla no
+ * cambiaba ni una cifra. Ahora gana el último que habló, y en empate el
+ * alumno.
  *
- * Quién manda no cambia: el plan del coach. Lo que cambia es que lo del alumno
- * existe a la vista y que el aviso dice la verdad.
+ * La regla NO es "el alumno siempre", aunque suene mejor: casi todos calculan
+ * sus macros en la bienvenida, el primer día, y si eso ganara para siempre el
+ * plan que mande el entrenador la semana que viene no se aplicaría nunca. Esa
+ * trampa es la que prueban los casos de aquí abajo.
  */
+const CIFRAS = { dailyCalories: 2000, proteinG: 150, carbsG: 200, fatG: 60 };
+const plan = (updatedAt) => ({ name: 'Plan del coach', ...CIFRAS, updatedAt });
+const mios = (updatedAt) => ({ ...CIFRAS, updatedAt });
+
+ok('sin nada de nadie, no hay objetivos', objetivosDelDia(null, null) === null);
+ok('solo el plan del coach: manda el suyo', objetivosDelDia(plan(100), null)?.fromCoach === true);
+ok('solo lo del alumno: manda lo suyo', objetivosDelDia(null, mios(100))?.fromCoach === false);
 ok(
-  'con plan del coach, el aviso no promete que hayan cambiado los del día',
-  /En tu día sigue mandando el plan de tu entrenador/.test(panel),
-  'decir "Macros actualizados" sin que cambie nada en pantalla es lo que parecía un fallo'
+  'el alumno recalcula después del plan: manda el alumno',
+  objetivosDelDia(plan(100), mios(200))?.fromCoach === false,
+  'es el caso del aviso: si esto falla, rehacer la ficha vuelve a no hacer nada'
 );
 ok(
-  'y sin plan del coach, sigue siendo el de siempre',
-  /: 'Macros actualizados'/.test(panel)
+  'el coach manda un plan nuevo después: manda el coach',
+  objetivosDelDia(plan(300), mios(200))?.fromCoach === true,
+  'sin esto, quien calculó en la bienvenida no recibiría nunca un plan de su entrenador'
+);
+ok('en empate gana el alumno', objetivosDelDia(plan(100), mios(100))?.fromCoach === false);
+ok(
+  'sin fecha, lo viejo no gana por no tenerla',
+  objetivosDelDia(plan(500), mios(undefined))?.fromCoach === true,
+  'un updatedAt que falta es dato antiguo, no dato de ahora'
+);
+
+ok(
+  'el aviso ya no matiza nada: se aplica y punto',
+  /showToast\('Macros actualizados'\)/.test(panel) &&
+    !/sigue mandando el plan de tu entrenador/.test(panel)
 );
 ok(
-  'lo calculado por el alumno se enseña',
-  /Lo que has calculado tú/.test(panel)
+  'la pantalla usa la regla, no la escribe otra vez',
+  /objetivosDelDia\(plan, nt\)/.test(panel),
+  'dos copias de "quién manda" acaban discrepando'
 );
 ok(
-  'solo cuando manda el del coach (si no, ya son los del día)',
-  /targets\.fromCoach && nt \?/.test(panel)
-);
-ok(
-  'con sus cuatro cifras',
-  /nt\.dailyCalories.*nt\.proteinG.*nt\.carbsG.*nt\.fatG/s.test(panel)
-);
-ok(
-  'y diciendo qué pasa con ellos',
-  /pasan a ser tus objetivos del día/.test(panel)
+  'con plan del coach se dice de quién son los números y cómo cambiarlos',
+  /Los ha puesto tu entrenador\. Si calculas los tuyos, mandan los tuyos\./.test(panel),
+  'unas cifras que no reconoces y sin salida es lo que hace escribir al soporte'
 );
 
 console.log(

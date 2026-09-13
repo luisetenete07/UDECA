@@ -19,6 +19,7 @@ import { ProgressRing } from '../../components/ProgressRing';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
+import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { RutinaDiariaDelDia } from '../../components/RutinaDiariaDelDia';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
@@ -763,6 +764,16 @@ export default function ClientDashboard() {
           de camino. Se pinta sola solo si su entrenador le ha puesto una. */}
       <FadeIn delay={205}>
         <RutinaDiariaDelDia profile={profile} />
+      </FadeIn>
+
+      {/* APUNTAR UN ENTRENO DE OTRO DÍA.
+          Estaba en Entreno, encima de "Empezar entreno", y ahí estorbaba: esa
+          pantalla es para el entreno de HOY, y quien entra a hacer su día se
+          encuentra antes un botón que habla de otro. Aquí sí: esta es la
+          pantalla del repaso —cómo va la semana, qué falta—, que es cuando uno
+          se acuerda de que el martes entrenó sin el móvil delante. */}
+      <FadeIn delay={208}>
+        <RegistrarOtroDia />
       </FadeIn>
 
       {/* La racha y las sesiones ya están en el anillo de arriba: repetirlas
