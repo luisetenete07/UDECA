@@ -7,15 +7,65 @@
 <meta name="description" content="La plataforma de calistenia de UDECA: planes, progreso medido de verdad y seguimiento del entrenador. Para atletas que entrenan solos y para entrenadores que viven de esto." />
 <meta name="theme-color" content="#000000" />
 <link rel="icon" href="/assets/favicon.png" />
+<link rel="canonical" href="https://www.udeca.app/" />
 <meta property="og:title" content="UDECA · Universidad de Calistenia" />
 <meta property="og:description" content="Entrena con método. Mide lo que de verdad importa." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://www.udeca.app" />
+<meta property="og:site_name" content="UDECA" />
+<meta property="og:locale" content="es_ES" />
 <meta property="og:image" content="https://www.udeca.app/assets/app-inicio.png" />
+<meta property="og:image:alt" content="La pantalla de inicio de UDECA" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="UDECA · Universidad de Calistenia" />
+<meta name="twitter:description" content="Entrena con método. Mide lo que de verdad importa." />
+<meta name="twitter:image" content="https://www.udeca.app/assets/app-inicio.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
+
+<!--
+  Lo que Google necesita para entender qué es esto.
+
+  Sin estos datos, un buscador ve una página negra con mucho texto y tiene que
+  adivinar que hay una app detrás, en qué tiendas está y cuánto cuesta. Con
+  ellos puede enseñar el precio y las dos tiendas directamente en el resultado.
+
+  Las cifras tienen que coincidir con las de la página y con las de la app
+  (lib/precios.ts). Un precio distinto aquí no se ve en pantalla —no lo pinta
+  nadie— y es de los que se descubren tarde y desde fuera, así que lo vigila
+  scripts/check-web-tiendas.mjs.
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "UDECA",
+  "alternateName": "Universidad de Calistenia",
+  "applicationCategory": "HealthApplication",
+  "operatingSystem": "Android, iOS, Web",
+  "url": "https://www.udeca.app",
+  "inLanguage": "es",
+  "description": "Plataforma de calistenia: planes, progreso medido de verdad y seguimiento del entrenador.",
+  "offers": [
+    {
+      "@type": "Offer",
+      "name": "Primer año · Atleta",
+      "price": "17",
+      "priceCurrency": "EUR",
+      "category": "Primer año completo"
+    },
+    {
+      "@type": "Offer",
+      "name": "Primer año · Entrenador",
+      "price": "27",
+      "priceCurrency": "EUR",
+      "category": "Primer año completo, con 5 alumnos incluidos"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <div class="halo"></div>
@@ -47,9 +97,20 @@
       libreta suelta: plan, marcas, progreso semana a semana e informes que se
       entienden de un vistazo. Para quien entrena solo y para quien entrena a otros.
     </p>
+    <!-- Las insignias suben a la portada, y no se quedan solo en la sección de
+         descargar, porque son la prueba más rápida de que esto es una app de
+         verdad y no una página que promete una. Quien llega buscando eso lo ve
+         sin bajar; quien viene a ver qué cuesta tiene "Ver planes" al lado. -->
     <div class="hero-cta">
       <a class="btn btn-primary" href="#planes">Ver planes</a>
-      <a class="btn btn-ghost" href="#descargas">Descargar la app</a>
+      <div class="badges">
+        <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar UDECA en la App Store">
+          <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
+        </a>
+        <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar UDECA en Google Play">
+          <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
+        </a>
+      </div>
     </div>
     <p class="hero-note">Primer año completo: 1,42 €/mes atleta · 2,25 €/mes entrenador · Alumnos de un entrenador, gratis</p>
 
@@ -77,7 +138,7 @@
       <article class="card reveal">
         <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v15H4z"/><path d="M4 9.5h16"/><path d="M9 5v15"/></svg></div>
         <h3>Planes que se siguen</h3>
-        <p>Por días de la semana, por ciclo o a sensaciones. Con superseries, clústeres, isométricos, lastre y descansos configurados serie a serie.</p>
+        <p>Por días de la semana, por días sueltos que rotan o montado por ti de cero. Con superseries, clústeres, isométricos, lastre y descansos configurados serie a serie.</p>
       </article>
       <article class="card reveal">
         <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-6 4 3.5L20 7"/><path d="M16 7h4v4"/></svg></div>
@@ -179,6 +240,7 @@
         <p class="sub">27 € en un solo pago, con 5 alumnos incluidos desde el primer día.</p>
         <ul>
           <li>Hasta 5 alumnos, cada uno con su propia cuenta</li>
+          <li>Tu método, no el nuestro: tu escala de esfuerzo y tu vocabulario</li>
           <li>Rutinas, ciclos y biblioteca de ejercicios</li>
           <li>Cobros, avisos de impago y control de cuotas</li>
           <li>Informes de progreso con tu marca</li>
@@ -207,62 +269,42 @@
     <p class="eyebrow">Descargar</p>
     <h2 class="section-title">En tu móvil y en tu ordenador</h2>
     <p class="lead">
-      Ya está publicada en Google Play y en la App Store.
-    </p>
-    <p class="lead">
-      En el ordenador se abre en el navegador, y desde ahí puedes
-      <strong>instalarla</strong>: en Chrome o Edge sale un icono de instalar en
-      la barra de direcciones y UDECA queda como una aplicación más, con su
-      icono en el escritorio y su propia ventana. Se actualiza sola: cuando
-      publicamos una versión, la siguiente vez que la abras ya es la nueva.
+      Ya está publicada en las dos tiendas. Es la misma app y la misma cuenta:
+      entras en el móvil y sigues en el ordenador donde lo dejaste.
     </p>
 
-    <div class="stores">
-      <!-- Los logos van EN LÍNEA, en SVG, y no como imagen ni como carácter
-           suelto. Un carácter (▶, ⌘) no es el logo de nadie: se ve distinto en
-           cada sistema y de lejos parece una web sin terminar. Y un .png sería
-           una petición más, borrosa en pantallas de retina, para dibujar cuatro
-           trazos. Dibujados aquí escalan solos y toman el color del texto. -->
-      <a class="store" data-descarga="appStore" href="#">
-        <span class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.36 12.74c.02-2.3 1.88-3.4 1.96-3.45-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.98.9-3.78 2.29-1.61 2.79-.41 6.92 1.16 9.19.77 1.11 1.68 2.35 2.87 2.31 1.15-.05 1.59-.74 2.98-.74 1.39 0 1.78.74 3 .72 1.24-.02 2.02-1.13 2.78-2.24.88-1.29 1.24-2.54 1.26-2.6-.03-.01-2.41-.93-2.42-3.72zM14.1 5.62c.64-.77 1.07-1.85.95-2.92-.92.04-2.03.61-2.69 1.38-.59.68-1.11 1.77-.97 2.82 1.03.08 2.07-.52 2.71-1.28z"/></svg>
-        </span>
-        <span>
-          <b>App Store</b>
-          <small>iPhone y iPad</small>
-        </span>
-        <span class="state">Próximamente</span>
+    <!-- LAS INSIGNIAS SON LAS OFICIALES, no un dibujo nuestro.
+         La de Apple sale de developer.apple.com y la de Google Play es su
+         artwork oficial, las dos sin retocar y servidas desde aquí, que es lo
+         que piden las dos guías de marca. Un logo redibujado a mano se nota
+         —y lo que se nota es que la app a lo mejor no está de verdad en la
+         tienda—, y justo eso es lo que estas dos imágenes tienen que despejar
+         de un vistazo.
+         Los altos son distintos a propósito: la de Google trae su propio
+         margen de respeto dentro del archivo, así que a la misma altura de CSS
+         su cápsula se vería más pequeña que la de Apple. Ver .badge en
+         styles.css. -->
+    <div class="badges">
+      <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar UDECA en la App Store">
+        <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
       </a>
-      <a class="store" data-descarga="playStore" href="#">
-        <span class="logo" aria-hidden="true">
-          <!-- El triángulo de Play, con sus cuatro colores: es lo que se
-               reconoce de un vistazo y sin ellos no es el logo, es una flecha. -->
-          <svg viewBox="0 0 24 24">
-            <path fill="#00D3FF" d="M3.6 1.9a1.5 1.5 0 0 0-.6 1.2v17.8c0 .5.22.94.6 1.2l9.35-10.1z"/>
-            <path fill="#FFCE00" d="M17.1 8.4l-3.4-1.94-3.03 3.28 3.03 3.27 3.43-1.95c1-.57 1-1.98-.03-2.66z"/>
-            <path fill="#FF3A44" d="M3.6 1.9c.44-.3 1.07-.34 1.72.02l11.78 6.48-3.4 3.6z"/>
-            <path fill="#00C853" d="M3.6 22.1l10.1-10.1 3.4 3.6L5.32 22.1c-.65.36-1.28.31-1.72 0z"/>
-          </svg>
-        </span>
-        <span>
-          <b>Google Play</b>
-          <small>Android</small>
-        </span>
-        <span class="state">Próximamente</span>
-      </a>
-      <a class="store" data-app href="https://app.udeca.app">
-        <span class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>
-          </svg>
-        </span>
-        <span>
-          <b>En el ordenador</b>
-          <small>Se abre en el navegador, y se puede instalar</small>
-        </span>
-        <span class="state ready-siempre">Disponible</span>
+      <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar UDECA en Google Play">
+        <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
       </a>
     </div>
+
+    <a class="store" data-app href="https://app.udeca.app">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>
+        </svg>
+      </span>
+      <span>
+        <b>En el ordenador</b>
+        <small>Se abre en el navegador y se instala desde ahí: queda con su icono y su ventana, y se actualiza sola</small>
+      </span>
+      <span class="state ready-siempre">Abrir</span>
+    </a>
 
   </div>
 </section>

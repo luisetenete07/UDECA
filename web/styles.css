@@ -50,9 +50,13 @@ h1, h2, h3 {
 .wrap { width: 100%; max-width: var(--max); margin: 0 auto; padding: 0 22px; }
 
 /* Halo cálido de fondo: la app tiene el mismo, y sin él el negro es plano. */
+/* Se desborda por arriba, nunca por los lados: al ser `fixed` no lo recorta el
+   `overflow-x` del body, así que los -20% de la izquierda y la derecha hacían
+   que la página entera se pudiera arrastrar de lado en pantallas estrechas.
+   El degradado va centrado al 50 %, así que quitarlos no se nota. */
 .halo {
   position: fixed;
-  inset: -20% -20% auto -20%;
+  inset: -20% 0 auto 0;
   height: 70vh;
   background: radial-gradient(60% 60% at 50% 0%, rgba(162, 150, 139, 0.16), rgba(0, 0, 0, 0) 70%);
   pointer-events: none;
@@ -120,7 +124,30 @@ header.scrolled { border-bottom-color: var(--border); }
 }
 
 /* ---------- Estructura ---------- */
-section { position: relative; z-index: 1; padding: 84px 0; }
+
+/*
+ * El hueco de la cabecera, para que un enlace del menú no esconda el título.
+ *
+ * La cabecera es `sticky` y mide 68 px, así que al pulsar "Planes" el
+ * navegador dejaba la sección justo arriba del todo... y la cabecera le tapaba
+ * el titular. Se llegaba a "Planes" leyendo la segunda línea, que es la manera
+ * más tonta de perder a alguien que HA PEDIDO ver los precios.
+ */
+section { position: relative; z-index: 1; padding: 84px 0; scroll-margin-top: 84px; }
+
+/*
+ * Quien va con el teclado tiene que ver por dónde va.
+ *
+ * El navegador trae su propio recuadro de foco, pero sobre negro casi no se
+ * distingue, y en los botones dorados desaparece del todo. `:focus-visible`
+ * solo se enciende cuando se navega con teclado: a quien usa el ratón no le
+ * sale nada, que es justo por lo que se solía quitar el de por defecto.
+ */
+:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
 .eyebrow {
   font-size: 11px;
   letter-spacing: 0.3em;
@@ -255,7 +282,35 @@ section { position: relative; z-index: 1; padding: 84px 0; }
 .plan .after { margin-top: 12px; font-size: 12px; color: var(--faint); text-align: center; }
 
 /* ---------- Descargas ---------- */
-.stores { display: grid; gap: 14px; margin-top: 36px; }
+
+/*
+ * Las insignias oficiales de las dos tiendas.
+ *
+ * NO SE TOCAN POR DENTRO: las dos guías de marca prohíben recolorear, recortar
+ * o reescribir el texto, y una insignia retocada se reconoce igual de rápido
+ * que una buena —para mal—. Aquí solo se les da tamaño.
+ *
+ * Y CADA UNA A SU ALTURA, que es lo que no se ve venir. El archivo de Apple es
+ * la cápsula justa: ocupa el 100 % de su caja. El de Google trae dentro el
+ * margen de respeto que su guía exige, y ese margen NO es decoración: la
+ * cápsula ocupa solo el 67 % de la caja (medido, no estimado: 134 px de 200).
+ *
+ * O sea que a la misma altura de CSS la de Google se ve un tercio más pequeña,
+ * y la pareja queda descuadrada. La cuenta es 48 / 0,67 = 72. El margen se
+ * respeta tal cual —recortarlo es incumplir la guía—, así que el hueco que
+ * queda entre las dos ya es el suyo y por eso la separación de aquí es corta:
+ * sumadas, se ven a la distancia correcta.
+ */
+.badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.badge { display: inline-flex; border-radius: 10px; transition: opacity 0.18s ease, transform 0.18s ease; }
+.badge:hover { opacity: 0.86; transform: translateY(-1px); }
+.badge img { display: block; width: auto; }
+.badge-apple { height: 48px; }
+.badge-play { height: 72px; }
+
+#descargas .badges { margin-top: 34px; }
+#descargas .store { margin-top: 18px; }
+
 .store {
   display: flex;
   align-items: center;
@@ -374,7 +429,6 @@ footer { border-top: 1px solid var(--border); padding: 44px 0 60px; position: re
   .section-title { font-size: 38px; }
   .grid { grid-template-columns: repeat(2, 1fr); gap: 22px; }
   .plans { grid-template-columns: repeat(2, 1fr); gap: 26px; }
-  .stores { grid-template-columns: repeat(3, 1fr); }
   /* A partir de tablet caben las seis a la vista y la tira sobra. */
   .galeria {
     grid-auto-flow: row;
@@ -383,8 +437,6 @@ footer { border-top: 1px solid var(--border); padding: 44px 0 60px; position: re
     overflow-x: visible;
     padding-inline: 0;
   }
-  .store { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .store .state { margin-left: 0; }
   .phone:nth-child(2) { display: block; transform: translateZ(30px); }
   .people { grid-template-columns: repeat(2, 1fr); }
 }

@@ -19,9 +19,17 @@
   });
 
   /**
-   * Descargas. Mientras una tienda no tenga ficha publicada, su tarjeta se
-   * queda anunciada como "Próximamente" y no navega: prometer una descarga que
-   * lleva a un 404 cuesta más credibilidad de lo que suma tener el botón.
+   * Descargas.
+   *
+   * Sin ficha publicada, la insignia de esa tienda SE QUITA. No se deja
+   * apagada ni con un "próximamente" encima: la insignia oficial es una
+   * promesa concreta —"esto está en esta tienda, pulsa y lo tienes"— y una que
+   * no lleva a ninguna parte hace dudar de la página entera, no solo de ese
+   * botón. Si falta una, la otra se queda sola y centrada, que se lee igual de
+   * bien.
+   *
+   * Las tarjetas que no son insignia (la del ordenador) sí se quedan, con su
+   * distintivo en texto.
    */
   document.querySelectorAll('[data-descarga]').forEach(function (el) {
     var url = (C.descargas || {})[el.getAttribute('data-descarga')];
@@ -32,13 +40,17 @@
       el.rel = 'noopener';
       el.classList.add('ready');
       if (estado) estado.textContent = 'Disponible';
-    } else {
-      el.addEventListener('click', function (e) {
-        e.preventDefault();
-        var destino = document.getElementById('comunidad');
-        if (destino) destino.scrollIntoView({ behavior: 'smooth' });
-      });
+      return;
     }
+    if (el.classList.contains('badge')) {
+      el.remove();
+      return;
+    }
+    el.addEventListener('click', function (e) {
+      e.preventDefault();
+      var destino = document.getElementById('comunidad');
+      if (destino) destino.scrollIntoView({ behavior: 'smooth' });
+    });
   });
 
   var enlaces = [

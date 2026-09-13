@@ -152,10 +152,31 @@ sitio y en castellano:
   va debajo, en pequeño pero visible. `scripts/check-precios.mjs` comprueba que
   las dos copias digan lo mismo y que las cuentas cuadren: es la comprobación
   que evita que la página anuncie un precio y la pasarela cobre otro.
-- `descargas.appStore`, `descargas.playStore`, `descargas.apkPc` — déjalos
-  vacíos hasta que la ficha exista. Vacío = la tarjeta se queda en
-  "Próximamente" y no lleva a un 404; con enlace = pasa sola a "Disponible".
+- `descargas.appStore` y `descargas.playStore` — déjalos vacíos hasta que la
+  ficha exista. Vacío = **la insignia de esa tienda desaparece de la web**, y no
+  se queda apagada ni con un "próximamente" encima: la insignia oficial promete
+  algo muy concreto —"está en esta tienda, pulsa y la tienes"— y una que no
+  lleva a ninguna parte hace dudar de la página entera. Con enlace vuelve sola.
 - `comunidad`, `instagram`, `contacto`.
+
+### Las insignias de las tiendas
+
+Están en `web/assets/badge-app-store.svg` y `web/assets/badge-google-play.svg`,
+y son **el artwork oficial de cada tienda, sin retocar**: la de Apple viene de
+`developer.apple.com/assets/elements/badges/`, y la de Google es su insignia
+oficial en inglés.
+
+No se recolorean, no se recortan y no se les cambia el texto: las dos guías de
+marca lo prohíben, y es una de las condiciones que aceptas al publicar la app.
+Si algún día quieres las versiones en castellano ("Consíguelo en el App Store"
+/ "Disponible en Google Play"), se bajan de la web de cada tienda y se dejan en
+esos mismos dos nombres de archivo — no hay que tocar ni el HTML ni el CSS.
+
+Un detalle que parece un error y no lo es: en `styles.css` la de Google va a
+72 px y la de Apple a 48. El archivo de Google trae dentro su margen de respeto
+obligatorio y el de Apple no, así que su cápsula solo ocupa el 67 % de la caja;
+a la misma altura se vería un tercio más pequeña. `scripts/check-web-tiendas.mjs`
+vigila que nadie las "cuadre" igualándolas, que es justo lo que las descuadra.
 
 En Stripe, en cada Payment Link, pon como página de confirmación
 **`https://app.udeca.app/gracias`** (con `app.`, no `www.`: ver docs/COBROS.md).

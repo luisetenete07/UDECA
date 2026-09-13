@@ -34,15 +34,26 @@ const app = JSON.parse(lee('app.json')).expo;
 
 console.log('\nCada tienda con su logo de verdad');
 {
-  const tarjetas = html.slice(html.indexOf('<div class="stores">'), html.indexOf('</section>', html.indexOf('<div class="stores">')));
-  ok('hay tres sitios de donde bajarla', (tarjetas.match(/class="store"/g) ?? []).length === 3);
-  // Dibujados en línea: escalan sin pesar y no son una petición más.
-  ok('los logos son SVG, no imágenes', (tarjetas.match(/<svg /g) ?? []).length === 3, 'faltan logos');
-  ok('y no quedan caracteres haciendo de logo', !/<span class="logo"[^>]*>\s*[▶⌘]/.test(tarjetas));
-  // El triángulo de Play sin sus colores es una flecha cualquiera.
-  ok('el de Play lleva sus cuatro colores',
-    ['#00D3FF', '#FFCE00', '#FF3A44', '#00C853'].every((c) => tarjetas.includes(c)));
-  ok('el hueco del logo mide igual para las cuatro', /\.store \.logo \{[^}]*width: 34px/.test(css));
+  /*
+   * LOS LOGOS DEJARON DE SER DIBUJOS NUESTROS.
+   *
+   * Aquí se comprobaba que hubiera tres tarjetas con su SVG dibujado a mano —el
+   * triángulo de Play con sus cuatro colores incluido—, porque antes de estar
+   * publicados en las tiendas era lo único honesto que se podía enseñar.
+   *
+   * Ahora la app está en las dos, así que van las insignias OFICIALES, que son
+   * archivos de Apple y de Google y no se tocan. Eso se vigila entero —que los
+   * archivos estén, que nadie los haya retocado y que los tamaños sigan
+   * compensados— en scripts/check-web-tiendas.mjs.
+   *
+   * Lo que queda aquí es lo que aquel guardián no mira: que siga habiendo un
+   * sitio donde bajarla desde el ordenador, que es el que no tiene insignia
+   * porque no tiene tienda.
+   */
+  ok('la tarjeta del ordenador sigue estando', /class="store" data-app/.test(html));
+  ok('con su logo dibujado', /<span class="logo"[^>]*>[\s\S]{0,120}<svg /.test(html));
+  ok('y no quedan caracteres haciendo de logo', !/<span class="logo"[^>]*>\s*[▶⌘]/.test(html));
+  ok('el hueco del logo mide lo de siempre', /\.store \.logo \{[^}]*width: 34px/.test(css));
 }
 
 console.log('\nA dónde lleva cada una');
@@ -116,7 +127,7 @@ console.log('\nQue la app se pueda instalar en el ordenador');
   ok('no se bloquea la orientación', !('orientation' in m), 'una ventana de ordenador es apaisada');
 
   // Y que la web lo cuente: una app instalable que nadie sabe que lo es, no lo es.
-  ok('la web dice que se puede instalar', /instalarla/.test(html));
+  ok('la web dice que se puede instalar', /instalarla|se instala desde ahí/.test(html));
   /*
    * Una pregunta frecuente que se queda vieja miente igual que un botón roto, y
    * dura más porque nadie la vuelve a leer. Esta decía "estamos en ello" cuando
