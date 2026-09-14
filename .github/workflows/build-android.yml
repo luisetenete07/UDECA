@@ -83,6 +83,55 @@ jobs:
           key: gradle-dists-${{ runner.os }}
           restore-keys: gradle-dists-
 
+      # Y si no está en la caché, se baja AQUÍ, no desde el wrapper.
+      #
+      # El wrapper de Gradle le da a esa descarga diez segundos y un intento. El
+      # 14 de septiembre eso falló dos veces seguidas, primero por tiempo y luego
+      # con un 504 del propio servidor de Gradle. Dos compilaciones perdidas sin
+      # una sola línea de código compilada, y nada que arreglar por nuestra
+      # parte.
+      #
+      # `curl` sí sabe insistir: cinco intentos, diez segundos entre ellos y
+      # reintentando también los errores del servidor (`--retry-all-errors`, que
+      # es lo que cubre un 504). Y si el servidor de siempre sigue caído, prueba
+      # el CDN de Gradle, que es otra máquina.
+      #
+      # Dónde se deja: el wrapper busca el zip en
+      # ~/.gradle/wrapper/dists/<nombre>/<hash>/, donde <hash> es el MD5 de la
+      # dirección leído como número y escrito en base 36. Si esa cuenta se
+      # rompiera algún día, lo peor que pasa es que el wrapper se lo baje él
+      # como hasta ahora: esto solo puede ayudar, nunca estorbar.
+      - name: Traer Gradle sin depender del wrapper
+        if: ${{ inputs.en_el_runner }}
+        run: |
+          set -uo pipefail
+          URL=$(grep -h distributionUrl \
+            node_modules/@react-native/gradle-plugin/gradle/wrapper/gradle-wrapper.properties \
+            | cut -d= -f2- | sed 's/\\//g')
+          if [ -z "$URL" ]; then
+            echo "::warning::No sé qué versión de Gradle toca; que se la baje el wrapper."
+            exit 0
+          fi
+          ZIP=$(basename "$URL")
+          HASH=$(node -e 'const c=require("crypto");process.stdout.write(BigInt("0x"+c.createHash("md5").update(process.argv[1]).digest("hex")).toString(36))' "$URL")
+          DEST="$HOME/.gradle/wrapper/dists/${ZIP%.zip}/$HASH"
+          echo "Gradle: $ZIP  ->  $DEST"
+          if [ -s "$DEST/$ZIP" ]; then
+            echo "Ya estaba guardado de una compilación anterior."
+            exit 0
+          fi
+          mkdir -p "$DEST"
+          for origen in "$URL" "https://downloads.gradle-dn.com/distributions/$ZIP"; do
+            echo "Probando $origen"
+            if curl -fL --retry 5 --retry-all-errors --retry-delay 10 \
+                 --connect-timeout 30 --max-time 600 -o "$DEST/$ZIP" "$origen"; then
+              ls -lh "$DEST/$ZIP"
+              exit 0
+            fi
+          done
+          rm -f "$DEST/$ZIP"
+          echo "::warning::No se ha podido traer Gradle desde aquí. Lo intentará el wrapper."
+
       # La imagen de ubuntu-latest ya trae el SDK de Android y el JDK, así que
       # EAS puede ejecutar el mismo build aquí. Tarda más, pero se ve todo.
       #
@@ -114,7 +163,8 @@ jobs:
             echo "::warning::El intento $intento ha fallado."
             [ "$intento" = 1 ] && sleep 20
           done
-          echo "::error::Los dos intentos han fallado. Esto ya no es la red."
+          echo "::error::Los dos intentos han fallado. Mira el registro de arriba: si"
+          echo "::error::vuelve a ser una descarga que no llega, no es el código."
           exit 1
 
       # Si el proceso se cuelga DESPUÉS de compilar, el .aab existe igual.
