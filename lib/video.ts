@@ -66,6 +66,42 @@ export function parseYouTubeId(url: string): string | null {
 }
 
 /**
+ * ¿Este vídeo es vertical?
+ *
+ * POR QUÉ HACE FALTA SABERLO
+ *
+ * Todo el reproductor daba por hecho 16:9. Un Short metido en una caja 16:9 se
+ * pinta con barras negras a los lados y el vídeo de verdad se queda en una
+ * columna estrechísima en medio: en un móvil de 390 px eran unos 118 px de
+ * ancho. Para ver una técnica —dónde va el codo, cómo se abre la escápula— eso
+ * no vale para nada, y es exactamente el aviso que llegó ("apenas se puede ver
+ * en móvil").
+ *
+ * CÓMO SE SABE, Y QUÉ NO SE PUEDE SABER
+ *
+ * Por la dirección: YouTube publica los verticales en `/shorts/`, y eso es lo
+ * que copia quien comparte uno. No hay forma de preguntarle al reproductor por
+ * la forma del vídeo sin su API de JavaScript, que dentro de un WebView es
+ * justo lo que nunca ha funcionado aquí.
+ *
+ * Así que esto acierta con lo que se pega normalmente y NO acierta con un
+ * vertical compartido como `watch?v=…`. Ese caso se sigue viendo como antes,
+ * que es lo que había: se queda igual de mal, no peor. Si algún día molesta,
+ * la salida es una casilla en el editor del entrenador, no adivinar.
+ */
+export function esVertical(url: string): boolean {
+  try {
+    const raw = url.trim();
+    const u = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    const host = u.hostname.replace(/^www\./, '');
+    if (!host.endsWith('youtube.com') && host !== 'youtu.be') return false;
+    return /^\/shorts\//.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * URL de embed de YouTube para reproducir DENTRO de la app. Dominio
  * youtube-nocookie.com (menos avisos de cookies en la UE) y playsinline para
  * que en iPhone se reproduzca en la propia pantalla, sin salir de la app.

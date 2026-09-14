@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MarcaDeAgua } from './MarcaDeAgua';
 import { VideoPlayer } from './VideoPlayer';
 import { avisoDeProteccion } from '../lib/marcaDeAgua';
-import { tamanoDelVisor } from '../lib/visorDeVideo';
+import { relacionDelVideo, tamanoDelVisor } from '../lib/visorDeVideo';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { UserProfile } from '../lib/types';
 
@@ -62,7 +62,9 @@ export function VisorDeVideo({
   protegido?: boolean;
 }) {
   const { width, height } = useWindowDimensions();
-  const tam = tamanoDelVisor(width, height);
+  // Un vertical ampliado a lo ancho sería una raya: el marco toma la forma del
+  // vídeo (ver lib/visorDeVideo.ts).
+  const tam = tamanoDelVisor(width, height, relacionDelVideo(url));
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onCerrar}>

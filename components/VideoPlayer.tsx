@@ -14,6 +14,7 @@ import {
   vimeoEmbedUrl,
   youTubeEmbedUrl,
 } from '../lib/video';
+import { RELACION, relacionDelVideo } from '../lib/visorDeVideo';
 import { fuenteBlindada, paginaDelReproductor } from '../lib/reproductorBlindado';
 import { colors, radius, spacing, typography } from '../lib/theme';
 
@@ -75,7 +76,7 @@ export function VideoPlayer({
     protectedContent && Platform.OS === 'web'
       ? fuenteBlindada(url, origenDelReproductor())
       : null;
-  if (blindado) return <VideoBlindado fuente={blindado} />;
+  if (blindado) return <VideoBlindado fuente={blindado} relacion={relacionDelVideo(url)} />;
 
   // Enlaces de Vimeo: se reproducen con el player oficial embebido, que
   // respeta la privacidad "solo donde esté incrustado" configurada en Vimeo.
@@ -87,7 +88,11 @@ export function VideoPlayer({
   const youtubeId = parseYouTubeId(url);
   if (youtubeId) {
     return (
-      <VimeoVideo embedUrl={youTubeEmbedUrl(youtubeId)} protectedContent={protectedContent} />
+      <VimeoVideo
+        embedUrl={youTubeEmbedUrl(youtubeId)}
+        protectedContent={protectedContent}
+        relacion={relacionDelVideo(url)}
+      />
     );
   }
 
@@ -148,7 +153,13 @@ function origenDelReproductor(): string {
  * nadie escuchando al otro lado, así que un fallo del blindaje era un vídeo
  * negro para siempre.
  */
-function VideoBlindado({ fuente }: { fuente: NonNullable<ReturnType<typeof fuenteBlindada>> }) {
+function VideoBlindado({
+  fuente,
+  relacion = RELACION,
+}: {
+  fuente: NonNullable<ReturnType<typeof fuenteBlindada>>;
+  relacion?: number;
+}) {
   const html = React.useMemo(() => paginaDelReproductor(fuente), [fuente.src]);
   const [seRindio, setSeRindio] = React.useState(false);
   const base = fuente.dialecto === 'youtube' ? BASE_NATIVA : 'https://player.vimeo.com';
@@ -158,7 +169,7 @@ function VideoBlindado({ fuente }: { fuente: NonNullable<ReturnType<typeof fuent
   React.useEffect(() => setSeRindio(false), [fuente.src]);
 
   if (Platform.OS !== 'web' && seRindio) {
-    return <VimeoVideo embedUrl={fuente.srcNormal} protectedContent />;
+    return <VimeoVideo embedUrl={fuente.srcNormal} protectedContent relacion={relacion} />;
   }
 
   if (Platform.OS === 'web') {
@@ -173,7 +184,7 @@ function VideoBlindado({ fuente }: { fuente: NonNullable<ReturnType<typeof fuent
       onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
       style: {
         width: '100%',
-        aspectRatio: '16 / 9',
+        aspectRatio: String(relacion),
         backgroundColor: '#000',
         borderRadius: radius.md,
         border: 'none',
@@ -221,9 +232,17 @@ function VideoBlindado({ fuente }: { fuente: NonNullable<ReturnType<typeof fuent
 function VimeoVideo({
   embedUrl,
   protectedContent = false,
+  /*
+   * La forma del vídeo. Por defecto 16:9, que es lo que son los vídeos de
+   * técnica y las clases; los verticales la traen puesta desde arriba (ver
+   * lib/visorDeVideo.ts). Sin esto, un Short se pintaba dentro de una caja
+   * apaisada y se quedaba en una columna estrecha entre dos barras negras.
+   */
+  relacion = RELACION,
 }: {
   embedUrl: string;
   protectedContent?: boolean;
+  relacion?: number;
 }) {
   if (Platform.OS === 'web') {
     return React.createElement('iframe', {
@@ -236,7 +255,7 @@ function VimeoVideo({
       onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
       style: {
         width: '100%',
-        aspectRatio: '16 / 9',
+        aspectRatio: String(relacion),
         backgroundColor: '#000',
         borderRadius: radius.md,
         border: 'none',
@@ -255,7 +274,9 @@ function VimeoVideo({
    * carga el propio reproductor y lo que este necesite. Un toque en "Ver en
    * YouTube" no hace nada, que es exactamente lo que tiene que hacer.
    */
-  return <VideoEnWebView embedUrl={embedUrl} protectedContent={protectedContent} />;
+  return (
+    <VideoEnWebView embedUrl={embedUrl} protectedContent={protectedContent} relacion={relacion} />
+  );
 }
 
 /**
@@ -276,9 +297,11 @@ function VimeoVideo({
 function VideoEnWebView({
   embedUrl,
   protectedContent,
+  relacion = RELACION,
 }: {
   embedUrl: string;
   protectedContent?: boolean;
+  relacion?: number;
 }) {
   const [fallo, setFallo] = React.useState(false);
   // Cambiar la clave vuelve a montar el WebView entero: es la forma de
@@ -290,7 +313,7 @@ function VideoEnWebView({
 
   if (fallo) {
     return (
-      <View style={styles.placeholder}>
+      <View style={[styles.placeholder, { aspectRatio: relacion }]}>
         <Ionicons name="cloud-offline-outline" size={28} color={colors.textFaint} />
         <Text style={styles.placeholderText}>No se ha podido cargar el vídeo</Text>
         <Pressable
@@ -325,7 +348,7 @@ function VideoEnWebView({
     ? { html: paginaDeEmbed(embedUrl), baseUrl: ORIGEN_DE_LA_APP }
     : { uri: embedUrl };
   return (
-    <View style={styles.video}>
+    <View style={[styles.video, { aspectRatio: relacion }]}>
       <WebView
         key={intento}
         source={fuente}

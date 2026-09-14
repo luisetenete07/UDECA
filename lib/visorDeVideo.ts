@@ -1,3 +1,5 @@
+import { esVertical } from './video';
+
 /**
  * De qué tamaño se ve un vídeo cuando se amplía.
  *
@@ -24,11 +26,28 @@ export const ANCHO_MAXIMO = 0.96;
  * Cuánto del alto. Menos que el ancho a propósito: hay que dejar sitio para el
  * botón de cerrar y para el título, y un vídeo que llega al borde de arriba en
  * un móvil se mete debajo de la muesca.
+ *
+ * Se probó a subirlo para que los verticales se vieran más y NO sirve de nada:
+ * en un móvil de pie lo que limita es el ancho (un vertical sale 374×666 en un
+ * 390×844, muy por debajo del tope de alto), así que subirlo no gana un píxel
+ * donde hacía falta. Y en un móvil TUMBADO sí cambia, para mal: ahí el alto es
+ * lo único que hay, y el hueco que queda para la barra del título y el aviso ya
+ * es justo. Se queda en 0,80.
  */
 export const ALTO_MAXIMO = 0.8;
 
 /** La relación de siempre. Los vídeos de técnica y los cursos son 16:9. */
 export const RELACION = 16 / 9;
+
+/**
+ * La de un vertical: los Shorts y lo que se graba con el móvil de pie.
+ *
+ * Forzarlos a 16:9 no los recortaba —el reproductor respeta la forma— pero los
+ * dejaba en una columna en medio de dos barras negras enormes. En un móvil de
+ * 390 el vídeo útil se quedaba en 118 px de ancho: menos de un tercio de la
+ * pantalla para lo único que importa mirar.
+ */
+export const RELACION_VERTICAL = 9 / 16;
 
 export interface TamanoDelVisor {
   width: number;
@@ -58,6 +77,18 @@ export function tamanoDelVisor(
     width = height * r;
   }
   return { width: Math.round(width), height: Math.round(height) };
+}
+
+/**
+ * La forma que le toca a este vídeo.
+ *
+ * Vive aquí, junto a los tamaños, y no en cada pantalla: la relación la usan el
+ * visor ampliado y el reproductor de dentro de la página, y si cada uno la
+ * decide por su cuenta acaban discrepando — el vídeo pequeño vertical y el
+ * grande apaisado, o al revés.
+ */
+export function relacionDelVideo(url: string | undefined | null): number {
+  return url && esVertical(url) ? RELACION_VERTICAL : RELACION;
 }
 
 /**

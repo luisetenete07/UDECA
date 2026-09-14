@@ -15,6 +15,8 @@ import {
   ANCHO_MAXIMO,
   mereceAmpliar,
   RELACION,
+  RELACION_VERTICAL,
+  relacionDelVideo,
   tamanoDelVisor,
 } from '../lib/visorDeVideo.ts';
 
@@ -58,6 +60,46 @@ console.log('\nMantiene la forma del vídeo');
   const cuadrado = tamanoDelVisor(1000, 1000, 1);
   comprueba('respeta otra relación si se le pide', Math.abs(cuadrado.width / cuadrado.height - 1) < 0.02,
     `${cuadrado.width}×${cuadrado.height}`);
+}
+
+/*
+ * LOS VERTICALES.
+ *
+ * "Los shorts apenas se pueden ver en móvil". Todo el reproductor daba por
+ * hecho 16:9, así que un vertical se pintaba dentro de una caja apaisada y el
+ * vídeo de verdad se quedaba en una columna entre dos barras negras enormes: en
+ * un móvil de 390, 119 px de ancho.
+ *
+ * Aquí se comprueban las dos mitades: que la forma salga de la DIRECCIÓN del
+ * vídeo, y que el resultado sea de verdad mucho más grande. La segunda importa
+ * tanto como la primera: una relación bien puesta que no se note en pantalla no
+ * habría arreglado el aviso.
+ */
+console.log('\nLos verticales se ven como verticales');
+{
+  comprueba('un Short es vertical', relacionDelVideo('https://www.youtube.com/shorts/aBcD1234xyz') === RELACION_VERTICAL);
+  comprueba('con www o sin él', relacionDelVideo('https://youtube.com/shorts/aBcD1234xyz') === RELACION_VERTICAL);
+  comprueba('un vídeo normal no lo es', relacionDelVideo('https://www.youtube.com/watch?v=aBcD1234xyz') === RELACION);
+  comprueba('un embed tampoco', relacionDelVideo('https://www.youtube.com/embed/aBcD1234xyz') === RELACION);
+  comprueba('ni Vimeo', relacionDelVideo('https://vimeo.com/123456789') === RELACION);
+  comprueba('ni un enlace roto', relacionDelVideo('no soy una dirección') === RELACION);
+  comprueba('ni nada', relacionDelVideo(undefined) === RELACION);
+  // "shorts" dentro del nombre de otra cosa no cuenta.
+  comprueba('ni un canal que se llame shorts', relacionDelVideo('https://www.youtube.com/@shorts') === RELACION);
+
+  for (const [nombre, w, h] of [['móvil de pie', 390, 844], ['móvil pequeño', 320, 568]]) {
+    const v = tamanoDelVisor(w, h, RELACION_VERTICAL);
+    comprueba(`${nombre}: el vertical cabe`, cabe(v, w, h), `${v.width}×${v.height}`);
+    // Lo que se veía antes: el vídeo se ajustaba al ALTO de la caja 16:9.
+    const caja = tamanoDelVisor(w, h);
+    const antes = { width: Math.round(caja.height * RELACION_VERTICAL), height: caja.height };
+    const veces = (v.width * v.height) / (antes.width * antes.height);
+    comprueba(
+      `${nombre}: se ve mucho más (×${veces.toFixed(1)})`,
+      veces > 5,
+      `antes ${antes.width}×${antes.height}, ahora ${v.width}×${v.height}`
+    );
+  }
 }
 
 console.log('\nEs de verdad más grande que lo de antes');
