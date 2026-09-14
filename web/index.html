@@ -247,9 +247,16 @@
           <li>Cursos, tablón y ranking del grupo</li>
         </ul>
         <a class="btn btn-primary" data-pago="altaCoach" href="#">Empezar mi primer año · 27 €</a>
+        <!-- Aquí iba el precio del plan sin tope (180 € al año). Se quita a
+             propósito: en la tarjeta donde alguien decide pagar 27 €, un
+             segundo importe seis veces mayor no informa, frena. Y no es lo que
+             está comprando hoy — es un plan al que se pasa cuando su grupo
+             crezca, si crece.
+             NO desaparece de la web: sigue contestado en las preguntas, con su
+             cifra y sin rodeos. Lo vigila scripts/check-precios.mjs. -->
         <p class="after">
-          Sin tope de alumnos, cuando lo necesites: <b>180 € al año</b> —15 € al mes—, el
-          mismo plan al que se renueva a partir del segundo año.
+          Hasta 5 alumnos incluidos todo el año. Si tu grupo crece, hay un plan
+          sin tope esperándote.
         </p>
       </article>
     </div>
