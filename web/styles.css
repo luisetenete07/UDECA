@@ -786,3 +786,150 @@ footer { border-top: 1px solid var(--border); padding: 54px 0 44px; position: re
 @media (min-width: 1000px) {
   .pasos { gap: 24px; }
 }
+
+/* ---------- Funciones: se elige una y se ve su pantalla ----------
+ *
+ * CON RADIOS, NO CON JAVASCRIPT. Es un patrón viejo de CSS y por eso funciona
+ * en todo: se maneja con el teclado como cualquier grupo de opciones, lo lee un
+ * lector de pantalla como lo que es, y si un archivo .js no carga no se queda
+ * media página en blanco. Aquí esa media página es justo lo que se vende.
+ *
+ * Los radios están escondidos pero NO con `display:none`, que los sacaría del
+ * orden de tabulación y dejaría la lista inservible con teclado.
+ */
+.funciones { margin-top: 40px; display: grid; gap: 28px; }
+.funciones > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.fn-lista { display: grid; gap: 10px; }
+.fn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.22s ease, background 0.22s ease;
+}
+.fn:hover { border-color: var(--hairline); }
+.fn .ico {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+.fn .ico svg { width: 20px; height: 20px; }
+.fn b { display: block; font-size: 15.5px; color: var(--text); }
+.fn small {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+/* El punto de la derecha: dice cuál está elegida sin tener que leer nada. */
+.fn-punto {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  transition: background 0.22s ease, border-color 0.22s ease;
+}
+
+/* EN EL MÓVIL, LA PANTALLA VA ARRIBA.
+   Debajo de la lista no sirve de nada: se toca una función y la imagen que
+   acaba de cambiar está fuera de la vista, así que el cambio no se ve y la
+   lista parece que no hace nada. Arriba, cada toque se ve al momento. En
+   pantalla grande caben las dos cosas a la vez y vuelve a su sitio. */
+.fn-vista { order: -1; }
+@media (min-width: 900px) { .fn-vista { order: 0; } }
+
+/* La pantalla: las seis apiladas y solo una visible. Apiladas y no cambiadas
+   por JavaScript para que el navegador ya las tenga y el cambio sea instantáneo
+   en vez de un parpadeo con hueco en blanco. */
+.fn-vista { display: flex; justify-content: center; }
+.fn-vista .phone { position: relative; width: min(260px, 62vw); }
+.fn-shot {
+  border-radius: 24px;
+  transition: opacity 0.3s ease;
+}
+/* Todas menos la primera, encima y transparentes: así el contenedor conserva la
+   altura de una y no hay salto al cambiar. */
+.fn-shot:not(.s1) { position: absolute; inset: 7px; width: calc(100% - 14px); opacity: 0; }
+.fn-shot.s1 { opacity: 1; }
+
+/* Y el enlace de cada radio con lo suyo. Escrito a mano seis veces porque CSS
+   no tiene forma de decir "la enésima": es feo y es lo que hay. */
+#fn1:checked ~ .fn-lista .fn:nth-child(1),
+#fn2:checked ~ .fn-lista .fn:nth-child(2),
+#fn3:checked ~ .fn-lista .fn:nth-child(3),
+#fn4:checked ~ .fn-lista .fn:nth-child(4),
+#fn5:checked ~ .fn-lista .fn:nth-child(5),
+#fn6:checked ~ .fn-lista .fn:nth-child(6) {
+  border-color: var(--hairline);
+  background: linear-gradient(140deg, rgba(162, 150, 139, 0.13), rgba(162, 150, 139, 0.02));
+}
+#fn1:checked ~ .fn-lista .fn:nth-child(1) .ico,
+#fn2:checked ~ .fn-lista .fn:nth-child(2) .ico,
+#fn3:checked ~ .fn-lista .fn:nth-child(3) .ico,
+#fn4:checked ~ .fn-lista .fn:nth-child(4) .ico,
+#fn5:checked ~ .fn-lista .fn:nth-child(5) .ico,
+#fn6:checked ~ .fn-lista .fn:nth-child(6) .ico {
+  color: var(--gold-bright);
+  border-color: var(--hairline);
+}
+#fn1:checked ~ .fn-lista .fn:nth-child(1) .fn-punto,
+#fn2:checked ~ .fn-lista .fn:nth-child(2) .fn-punto,
+#fn3:checked ~ .fn-lista .fn:nth-child(3) .fn-punto,
+#fn4:checked ~ .fn-lista .fn:nth-child(4) .fn-punto,
+#fn5:checked ~ .fn-lista .fn:nth-child(5) .fn-punto,
+#fn6:checked ~ .fn-lista .fn:nth-child(6) .fn-punto {
+  background: var(--gold-bright);
+  border-color: var(--gold-bright);
+}
+/* Con el teclado tiene que verse cuál tienes puesta antes de moverla. */
+#fn1:focus-visible ~ .fn-lista .fn:nth-child(1),
+#fn2:focus-visible ~ .fn-lista .fn:nth-child(2),
+#fn3:focus-visible ~ .fn-lista .fn:nth-child(3),
+#fn4:focus-visible ~ .fn-lista .fn:nth-child(4),
+#fn5:focus-visible ~ .fn-lista .fn:nth-child(5),
+#fn6:focus-visible ~ .fn-lista .fn:nth-child(6) {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
+}
+#fn1:checked ~ .fn-vista .s1,
+#fn2:checked ~ .fn-vista .s2,
+#fn3:checked ~ .fn-vista .s3,
+#fn4:checked ~ .fn-vista .s4,
+#fn5:checked ~ .fn-vista .s5,
+#fn6:checked ~ .fn-vista .s6 { opacity: 1; }
+/* La primera deja de mandar en cuanto se elige otra. */
+#fn2:checked ~ .fn-vista .s1,
+#fn3:checked ~ .fn-vista .s1,
+#fn4:checked ~ .fn-vista .s1,
+#fn5:checked ~ .fn-vista .s1,
+#fn6:checked ~ .fn-vista .s1 { opacity: 0; }
+
+@media (min-width: 900px) {
+  /* La lista a la izquierda y la pantalla a la derecha, que es como se lee:
+     primero qué hace y al lado cómo se ve. */
+  .funciones { grid-template-columns: 1fr 320px; gap: 48px; align-items: center; }
+  .fn-vista .phone { width: 300px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fn-shot { transition: none; }
+}

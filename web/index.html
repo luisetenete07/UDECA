@@ -257,67 +257,92 @@
       (:hover y :focus-within). Lo de main.js solo añade que, al desplazarte por
       el móvil, se encienda sola la que está en el centro de la pantalla.
     -->
-    <div class="grid">
-      <article class="card reveal" tabindex="0">
-        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v15H4z"/><path d="M4 9.5h16"/><path d="M9 5v15"/></svg></div>
-        <h3>Planes que se siguen</h3>
-        <p>Por días de la semana, por días sueltos que rotan o montado por ti de cero. Con superseries, clústeres, isométricos, lastre y descansos configurados serie a serie.</p>
-      </article>
-      <article class="card reveal" tabindex="0">
-        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-6 4 3.5L20 7"/><path d="M16 7h4v4"/></svg></div>
-        <h3>Progreso real</h3>
-        <p>La mejor serie de cada ejercicio, semana a semana. Se ve de dónde vienes, dónde estás y qué se ha estancado.</p>
-      </article>
-      <article class="card reveal" tabindex="0">
-        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 1.6"/><path d="M9.5 3h5"/></svg></div>
-        <h3>Entreno guiado</h3>
-        <p>Cronómetro de descanso, EMOM, clústeres con pausas cortas, marcas de la última vez y récords que saltan solos.</p>
-      </article>
-      <article class="card reveal" tabindex="0">
-        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></div>
-        <h3>Informe en PDF</h3>
-        <p>La mejoría de cada ejercicio, el volumen por mes y el reparto del trabajo, en un documento con tu marca listo para entregar.</p>
-      </article>
-      <article class="card reveal" tabindex="0">
-        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16.5 11.5a2.8 2.8 0 1 0 0-5.6"/><path d="M17.5 20a5.4 5.4 0 0 0-2-4.2"/></svg></div>
-        <h3>Panel del entrenador</h3>
-        <p>Alumnos, cobros, avisos de quién lleva días sin entrenar y quién debe pagar. La gestión, resuelta.</p>
-      </article>
-      <article class="card reveal" tabindex="0">
-        <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5c1.6-3 6-3.2 7 .3.9 3.2-2.2 8-5.2 10.4a2.8 2.8 0 0 1-3.6 0C7.2 16.8 4.1 12 5 8.8c1-3.5 5.4-3.3 7-.3z"/></svg></div>
-        <h3>Nutrición y hábitos</h3>
-        <p>Macros calculados, libretas de comidas del entrenador, hábitos diarios y fotos de progreso.</p>
-      </article>
-    </div>
+    <!--
+      UNA LISTA QUE SE ELIGE, Y LA PANTALLA DE LO ELEGIDO AL LADO.
 
-    <!-- Las capturas van DESPUÉS de las tarjetas, no antes: primero se lee qué
-         hace y luego se ve. Al revés son seis pantallas de móvil sin contexto,
-         que es lo que hace que se pase de largo. -->
-    <div class="galeria">
-      <figure class="reveal">
-        <div class="phone"><img src="/assets/app-entreno.webp" alt="Entrenamiento en directo en UDECA" loading="lazy" /></div>
-        <figcaption>Cada serie se apunta mientras entrenas, con esfuerzo y descanso.</figcaption>
-      </figure>
-      <figure class="reveal">
-        <div class="phone"><img src="/assets/app-progreso.webp" alt="Progreso del alumno en UDECA" loading="lazy" /></div>
-        <figcaption>El progreso sale de tus marcas, no de rellenar formularios.</figcaption>
-      </figure>
-      <figure class="reveal">
-        <div class="phone"><img src="/assets/app-rutina.webp" alt="Editor de rutina del entrenador en UDECA" loading="lazy" /></div>
-        <figcaption>Días que rotan en bucle, sin atarse a los de la semana.</figcaption>
-      </figure>
-      <figure class="reveal">
-        <div class="phone"><img src="/assets/app-diaria.webp" alt="Rutina diaria de grease the groove en UDECA" loading="lazy" /></div>
-        <figcaption>Grease the groove: series sueltas repartidas por el día.</figcaption>
-      </figure>
-      <figure class="reveal">
-        <div class="phone"><img src="/assets/app-comunidad.webp" alt="Comunidad y ranking en UDECA" loading="lazy" /></div>
-        <figcaption>El ranking mide a cada uno contra sí mismo, no contra el resto.</figcaption>
-      </figure>
-      <figure class="reveal">
-        <div class="phone"><img src="/assets/app-coach.webp" alt="Panel del entrenador en UDECA" loading="lazy" /></div>
-        <figcaption>Alumnos, cobros y quién lleva días sin entrenar, de un vistazo.</figcaption>
-      </figure>
+      Antes esto eran DOS cosas seguidas: seis tarjetas explicando las funciones
+      y, debajo, una galería con las mismas seis pantallas y sus pies de foto.
+      Se contaba lo mismo dos veces y ninguna de las dos se quedaba con la
+      atención: quien leía las tarjetas se saltaba la galería, y quien miraba
+      las pantallas no sabía qué estaba viendo.
+
+      Ahora es una sola: eliges una función y ves ESA pantalla.
+
+      SIN JAVASCRIPT. Va con radios y etiquetas, no con guiones: es un patrón de
+      CSS de toda la vida, se maneja con el teclado —flechas, como cualquier
+      grupo de opciones— y lo lee un lector de pantalla como lo que es. Un
+      carrusel que se cae si falla un archivo .js deja la mitad de la página en
+      blanco, y aquí esa mitad es justo lo que se vende.
+    -->
+    <div class="funciones">
+      <input type="radio" name="fn" id="fn1" checked />
+      <input type="radio" name="fn" id="fn2" />
+      <input type="radio" name="fn" id="fn3" />
+      <input type="radio" name="fn" id="fn4" />
+      <input type="radio" name="fn" id="fn5" />
+      <input type="radio" name="fn" id="fn6" />
+
+      <div class="fn-lista">
+        <label class="fn" for="fn1">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 1.6"/><path d="M9.5 3h5"/></svg></span>
+          <span>
+            <b>Entreno guiado</b>
+            <small>Cronómetro de descanso, EMOM, clústeres, marcas de la última vez y récords que saltan solos.</small>
+          </span>
+          <i class="fn-punto" aria-hidden="true"></i>
+        </label>
+        <label class="fn" for="fn2">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-6 4 3.5L20 7"/><path d="M16 7h4v4"/></svg></span>
+          <span>
+            <b>Progreso real</b>
+            <small>La mejor serie de cada ejercicio, semana a semana. De dónde vienes, dónde estás y qué se ha estancado.</small>
+          </span>
+          <i class="fn-punto" aria-hidden="true"></i>
+        </label>
+        <label class="fn" for="fn3">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v15H4z"/><path d="M4 9.5h16"/><path d="M9 5v15"/></svg></span>
+          <span>
+            <b>Planes que se siguen</b>
+            <small>Por semana, por días sueltos que rotan o montado por ti: tu escala de esfuerzo y tu vocabulario.</small>
+          </span>
+          <i class="fn-punto" aria-hidden="true"></i>
+        </label>
+        <label class="fn" for="fn4">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 6h18"/><path d="M7 22l-4-4 4-4"/><path d="M21 18H3"/></svg></span>
+          <span>
+            <b>Lo de cada día</b>
+            <small>El pino, la movilidad, las series sueltas repartidas por el día. Se marca de camino, sin abrir una sesión.</small>
+          </span>
+          <i class="fn-punto" aria-hidden="true"></i>
+        </label>
+        <label class="fn" for="fn5">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 8.3l5-.7z"/></svg></span>
+          <span>
+            <b>Comunidad y ranking</b>
+            <small>El ranking mide a cada uno contra sí mismo, no contra el resto. Con cursos y tablón del grupo.</small>
+          </span>
+          <i class="fn-punto" aria-hidden="true"></i>
+        </label>
+        <label class="fn" for="fn6">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16.5 11.5a2.8 2.8 0 1 0 0-5.6"/><path d="M17.5 20a5.4 5.4 0 0 0-2-4.2"/></svg></span>
+          <span>
+            <b>Panel del entrenador</b>
+            <small>Alumnos, cobros, avisos de impago y de quién lleva días sin entrenar. La gestión, resuelta.</small>
+          </span>
+          <i class="fn-punto" aria-hidden="true"></i>
+        </label>
+      </div>
+
+      <div class="fn-vista">
+        <div class="phone">
+          <img class="fn-shot s1" src="/assets/app-entreno.webp" alt="Entrenamiento en directo en UDECA" loading="lazy" />
+          <img class="fn-shot s2" src="/assets/app-progreso.webp" alt="Progreso del alumno en UDECA" loading="lazy" />
+          <img class="fn-shot s3" src="/assets/app-rutina.webp" alt="Editor de rutina del entrenador en UDECA" loading="lazy" />
+          <img class="fn-shot s4" src="/assets/app-diaria.webp" alt="Rutina diaria en UDECA" loading="lazy" />
+          <img class="fn-shot s5" src="/assets/app-comunidad.webp" alt="Comunidad y ranking en UDECA" loading="lazy" />
+          <img class="fn-shot s6" src="/assets/app-coach.webp" alt="Panel del entrenador en UDECA" loading="lazy" />
+        </div>
+      </div>
     </div>
   </div>
 </section>
