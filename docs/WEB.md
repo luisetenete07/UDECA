@@ -183,6 +183,44 @@ guion o sin él, y también las rutas que tenían dentro de la app
 redirecciones permanentes (308) porque la dirección buena es una sola: la que se
 declara en las tiendas.
 
+### Las imágenes: WebP, y por qué
+
+Las capturas de la app van en **`.webp`**, no en `.png`. Son capturas de
+interfaz —zonas planas y texto— y ahí el PNG es malísimo: las siete pesaban
+2.113 KB y en WebP pesan 287, un 86 % menos, sin diferencia visible (comparadas
+lado a lado antes de cambiarlas). La página entera pasó de unos 2,2 MB a
+**392 KB**.
+
+Importa más de lo que parece: la mayoría del tráfico llega desde Instagram, con
+datos móviles, y una portada de dos megas se abandona antes de que cargue.
+
+**No se guardan los PNG originales al lado.** Tener `app-inicio.png` y
+`app-inicio.webp` en la misma carpeta es una trampa: alguien actualiza el PNG,
+la web no cambia, y no hay ningún error que lo delate. Un archivo por captura.
+
+Para volver a exportar una: guárdala como PNG y conviértela con
+`sharp(origen).webp({ quality: 82, effort: 6 })`. Con 82 no se distingue del
+original y es donde la curva de tamaño deja de bajar.
+
+### La imagen de compartir (`compartir.png`)
+
+Es la que sale en WhatsApp, en X o en LinkedIn al pegar el enlace. Mide
+**1200 × 630**, que es la medida que esperan todas.
+
+Antes ahí iba `app-inicio.png`, una captura de móvil de 780 × 1688. Eso en un
+enlace compartido se recorta a una tira central donde no se lee nada — y es la
+primera imagen que ve alguien a quien le pasan la web.
+
+Se genera a mano y va en PNG a propósito: el WebP como `og:image` lo entienden
+casi todas las plataformas, pero "casi" aquí significa que en alguna sale el
+enlace sin foto.
+
+Cómo se rehizo: una página de 1200 × 630 con el fondo, el logo, el titular y las
+dos insignias, fotografiada con el navegador. **La tipografía Sora sale de
+`node_modules/@expo-google-fonts/sora`**, que ya está en el proyecto: es la
+misma fuente que usa la app, así que la tarjeta y el producto se ven de la misma
+marca sin depender de ninguna descarga.
+
 ### Las insignias de las tiendas
 
 Están en `web/assets/badge-app-store.svg` y `web/assets/badge-google-play.svg`,

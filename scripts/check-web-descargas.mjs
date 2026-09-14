@@ -92,7 +92,7 @@ console.log('\nLas capturas de la portada');
   // Tres capturas de la app en la portada. Si alguien renombra una y no toca el
   // HTML, el hueco se queda en blanco y solo se ve entrando en la web.
   for (const n of ['app-entreno', 'app-inicio', 'app-coach']) {
-    ok(`${n} está puesta y existe`, html.includes(`/assets/${n}.png`) && !!lee(`web/assets/${n}.png`).length);
+    ok(`${n} está puesta y existe`, html.includes(`/assets/${n}.webp`) && !!lee(`web/assets/${n}.webp`).length);
   }
 }
 
