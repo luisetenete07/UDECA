@@ -64,15 +64,58 @@ jobs:
         timeout-minutes: 180
         run: eas build --platform android --profile production --non-interactive
 
+      # Gradle se baja UNA VEZ y se guarda.
+      #
+      # Lo primero que hace el wrapper es descargar su propia versión de Gradle
+      # —unos 150 MB de services.gradle.org— y le da diez segundos. El 14 de
+      # septiembre ese tope se quedó corto y la compilación se cayó a los 75
+      # segundos, con la app ya empaquetada y sin haber compilado una línea:
+      #
+      #   Downloading .../gradle-9.3.1-bin.zip failed: timeout (10000ms)
+      #
+      # Guardado aquí, la siguiente compilación no lo descarga: ni espera, ni
+      # depende de que el servidor de Gradle vaya fino ese día.
+      - name: Guardar la descarga de Gradle
+        if: ${{ inputs.en_el_runner }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/wrapper/dists
+          key: gradle-dists-${{ runner.os }}
+          restore-keys: gradle-dists-
+
       # La imagen de ubuntu-latest ya trae el SDK de Android y el JDK, así que
       # EAS puede ejecutar el mismo build aquí. Tarda más, pero se ve todo.
+      #
+      # DOS INTENTOS, no uno. Lo que falla en este paso no suele ser el código
+      # —el código ya lo han mirado el TypeScript y los 76 guardianes antes de
+      # llegar aquí— sino la red del runner: una descarga que no llega. Un fallo
+      # así no se arregla mirándolo, se arregla repitiéndolo, y repetirlo a mano
+      # cuesta veinte minutos de reloj de alguien.
+      #
+      # Cuando el fallo es de red, el segundo intento cuesta poco: se cae en el
+      # primer minuto. Y si el problema fuera del código, se cae dos veces y el
+      # registro lo dice igual de claro.
+      #
       # Con tope de tiempo: compilando aquí, Gradle terminó en 13 minutos y el
       # proceso se quedó otra hora sin salir. Sin este límite, un cuelgue se
       # come el runner entero antes de que nadie se dé cuenta.
       - name: Compilar aquí (diagnóstico)
         if: ${{ inputs.en_el_runner }}
-        timeout-minutes: 45
-        run: eas build --platform android --profile production --non-interactive --local --output ./udeca.aab
+        timeout-minutes: 70
+        run: |
+          for intento in 1 2; do
+            echo "::group::Intento $intento"
+            if eas build --platform android --profile production \
+                 --non-interactive --local --output ./udeca.aab; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "::warning::El intento $intento ha fallado."
+            [ "$intento" = 1 ] && sleep 20
+          done
+          echo "::error::Los dos intentos han fallado. Esto ya no es la red."
+          exit 1
 
       # Si el proceso se cuelga DESPUÉS de compilar, el .aab existe igual.
       #
