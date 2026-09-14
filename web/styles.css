@@ -63,18 +63,45 @@ h1, h2, h3 {
   z-index: 0;
 }
 
-/* ---------- Navegación ---------- */
+/* ---------- Navegación ----------
+ *
+ * LA CABECERA FLOTA, NO SE PEGA AL BORDE.
+ *
+ * Era una barra de lado a lado con una línea debajo: correcta y de documento.
+ * Como cápsula con aire alrededor, el contenido se ve pasar por detrás y la
+ * página se lee como una aplicación, que es lo que hay detrás.
+ *
+ * El `top` y el ancho máximo van juntos: sin el segundo, en un monitor la
+ * cápsula se estira de punta a punta y vuelve a ser la barra de antes.
+ */
 header {
   position: sticky;
-  top: 0;
+  top: 12px;
   z-index: 50;
-  backdrop-filter: blur(14px);
-  background: rgba(0, 0, 0, 0.72);
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.25s ease;
+  padding: 0 16px;
+  margin-bottom: -68px;
 }
-header.scrolled { border-bottom-color: var(--border); }
-.nav { display: flex; align-items: center; gap: 20px; height: 68px; }
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 60px;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 12px 0 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: rgba(10, 10, 10, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+/* Solo se marca cuando hay contenido detrás: arriba del todo, flotando sobre
+   el negro, un borde es una caja alrededor de nada. */
+header.scrolled .nav {
+  border-color: var(--border);
+  background: rgba(10, 10, 10, 0.82);
+}
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
 .brand img { width: 34px; height: 34px; }
 .brand span {
@@ -161,7 +188,10 @@ section { position: relative; z-index: 1; padding: 84px 0; scroll-margin-top: 84
 .rule { height: 1px; background: linear-gradient(90deg, var(--hairline), transparent); margin: 0; border: 0; }
 
 /* ---------- Portada ---------- */
-.hero { padding: 64px 0 30px; }
+/* El hueco de arriba cuenta con la cabecera flotante: como se solapa con el
+   contenido (margin-bottom negativo, para que la página se vea pasar por
+   detrás), sin este aire el primer sello sale debajo de la cápsula. */
+.hero { padding: 118px 0 30px; }
 .hero h1 { font-size: clamp(38px, 9vw, 68px); letter-spacing: 0.01em; }
 .hero h1 em { font-style: normal; color: var(--gold-bright); }
 .hero p.lead { margin-top: 20px; font-size: 18px; }
@@ -444,7 +474,7 @@ footer { border-top: 1px solid var(--border); padding: 44px 0 60px; position: re
   .nav-links { display: flex; }
   .grid { grid-template-columns: repeat(3, 1fr); }
   .story { grid-template-columns: 1.1fr 0.9fr; align-items: start; gap: 48px; }
-  .hero { padding: 96px 0 40px; }
+  .hero { padding: 148px 0 40px; }
 }
 
 /* Pasos numerados de la página de gracias: lo único que se lee ahí. */
@@ -457,3 +487,234 @@ footer { border-top: 1px solid var(--border); padding: 44px 0 60px; position: re
   line-height: 1.55;
 }
 .pasos b { color: var(--text); }
+
+/* =====================================================================
+   LA WEB NUEVA: portada con sellos, cifras, pasos y cierre.
+   ===================================================================== */
+
+/* El salto al contenido: invisible hasta que alguien llega con el teclado. */
+.saltar {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 12px 18px;
+  border-radius: 0 0 12px 0;
+  background: var(--gold-bright);
+  color: #0a0a0a;
+  font-weight: 600;
+}
+.saltar:focus { left: 0; }
+
+/* ---------- Sellos de la portada ----------
+ *
+ * Son los de confianza, y no llevan ni una cifra a propósito: no tenemos
+ * descargas ni reseñas que enseñar todavía, y un número inventado aquí sería
+ * lo primero que alguien comprueba. Lo que dicen es verdad y se sostiene.
+ */
+.sellos { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
+.sello {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px 8px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.sello svg { width: 15px; height: 15px; color: var(--gold); flex: 0 0 auto; }
+
+/* ---------- Cifras ----------
+ *
+ * Cuatro cuadros con un número grande. Lo que va dentro son datos del PRODUCTO
+ * —alumnos incluidos, formas de montar un plan, lo que paga un alumno— y no de
+ * popularidad. Todos se pueden comprobar bajando por esta misma página.
+ */
+.cifras-sec { padding: 0 0 24px; }
+.cifras { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.cifra {
+  padding: 22px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-align: center;
+}
+.cifra b {
+  display: block;
+  font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px, 7vw, 40px);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--text);
+}
+.cifra span {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* ---------- Titulares en dos tonos ----------
+ *
+ * La mitad en blanco y la mitad en gris cálido. Es lo que hace que un titular
+ * de tres palabras ocupe media pantalla sin gritar: el contraste lo pone la
+ * tipografía, no el tamaño de la fuente ni un color chillón.
+ */
+.section-title.big {
+  font-size: clamp(30px, 7.5vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  margin-bottom: 18px;
+}
+.section-title.big em { font-style: normal; color: var(--gold-dark); }
+
+/* ---------- Los tres pasos ---------- */
+.pasos { list-style: none; margin: 44px 0 0; padding: 0; display: grid; gap: 20px; }
+.paso {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  padding: 26px 22px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  overflow: hidden;
+}
+/* El número, enorme y detrás de todo. Es la referencia de por dónde vas sin
+   que compita con el titular por la atención. */
+.paso-num {
+  position: absolute;
+  top: -14px;
+  right: 6px;
+  font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 800;
+  font-size: 96px;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: rgba(162, 150, 139, 0.07);
+  pointer-events: none;
+  user-select: none;
+}
+.paso-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.paso-rotulo i { display: block; width: 26px; height: 2px; background: var(--gold-dark); border-radius: 2px; }
+.paso h3 { font-size: 20px; margin-bottom: 10px; }
+.paso p { color: var(--muted); font-size: 15px; margin: 0; }
+
+.cta-centro { margin-top: 36px; text-align: center; }
+.cta-centro .hero-note { margin-top: 12px; }
+.btn-lg { padding: 16px 30px; font-size: 16px; }
+.btn-sm { padding: 10px 18px; font-size: 14px; }
+
+/* ---------- Las tarjetas se encienden ----------
+ *
+ * La que tienes delante se ilumina y las demás se quedan como están. Es lo que
+ * hace que una rejilla de seis se lea en vez de saltársela.
+ *
+ * En ORO, no en un color por función. La web en la que nos fijamos le pone a
+ * cada una el suyo —azul, morado, naranja—; aquí eso serían cinco marcas
+ * distintas dentro de la nuestra.
+ *
+ * Funciona sin JavaScript: con el ratón (:hover) y con el teclado
+ * (:focus-visible, por eso las tarjetas llevan tabindex). Lo de main.js solo
+ * añade que al desplazarse por el móvil se encienda sola la del centro.
+ */
+.card { transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease; }
+.card:hover,
+.card:focus-visible,
+.card.viva {
+  border-color: var(--hairline);
+  background: linear-gradient(140deg, rgba(162, 150, 139, 0.11), rgba(162, 150, 139, 0.02));
+  transform: translateY(-2px);
+}
+.card:hover .ico,
+.card:focus-visible .ico,
+.card.viva .ico {
+  border-color: var(--hairline);
+  color: var(--gold-bright);
+}
+.card .ico { transition: border-color 0.25s ease, color 0.25s ease; }
+
+/* ---------- El cierre ---------- */
+.cierre { padding-top: 20px; }
+.cierre-caja {
+  padding: 44px 24px 38px;
+  border-radius: 26px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(90% 120% at 50% 0%, rgba(162, 150, 139, 0.14), rgba(0, 0, 0, 0) 65%),
+    var(--surface);
+  text-align: center;
+}
+.pildora {
+  display: inline-block;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-bottom: 22px;
+}
+.cierre-caja h2 {
+  font-size: clamp(28px, 7vw, 46px);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.cierre-caja h2 em { font-style: normal; color: var(--gold-dark); }
+.cierre-caja > p {
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 46ch;
+  margin: 18px auto 0;
+}
+.badges.centradas { justify-content: center; margin-top: 28px; }
+.garantias {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 24px;
+}
+.garantias li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.garantias svg { width: 16px; height: 16px; color: var(--ok); flex: 0 0 auto; }
+
+/* ---------- Pantallas grandes ---------- */
+@media (min-width: 760px) {
+  .cifras { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .paso { grid-template-columns: 96px 1fr; align-items: start; gap: 26px; padding: 32px 30px; }
+  /* A partir de aquí el número deja de ser marca de agua y pasa a ser columna:
+     hay sitio, y leído de arriba abajo se sigue mejor que buscándolo detrás. */
+  .paso-num {
+    position: static;
+    font-size: 62px;
+    color: rgba(162, 150, 139, 0.22);
+  }
+  .cierre-caja { padding: 64px 48px 56px; }
+  .sellos { gap: 12px; }
+}
+@media (min-width: 1000px) {
+  .pasos { gap: 24px; }
+}

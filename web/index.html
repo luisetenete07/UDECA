@@ -22,7 +22,7 @@
 <meta name="twitter:image" content="https://www.udeca.app/assets/app-inicio.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
 
 <!--
@@ -70,47 +70,73 @@
 <body>
 <div class="halo"></div>
 
-<header id="top">
-  <div class="wrap nav">
+<!-- Salto al contenido: quien navega con teclado o lector no tiene por qué
+     recorrerse el menú entero en cada página. -->
+<a class="saltar" href="#top">Saltar al contenido</a>
+
+<!--
+  LA CABECERA VA FLOTANDO, NO PEGADA AL BORDE.
+
+  Antes era una barra de lado a lado, con una línea debajo. Flotando —una
+  cápsula con fondo difuminado y aire alrededor— la página respira por arriba y
+  el contenido se ve pasar por detrás, que es lo que da la sensación de
+  aplicación y no de documento.
+-->
+<header>
+  <div class="nav">
     <a class="brand" href="#top">
       <img src="/assets/logo.png" alt="" />
       <span>UDECA</span>
     </a>
     <nav class="nav-links">
-      <a href="#planes">Planes</a>
+      <a href="#como">Cómo funciona</a>
       <a href="#app">La app</a>
-      <a href="#descargas">Descargar</a>
-      <a href="#historia">Quiénes somos</a>
+      <a href="#planes">Planes</a>
       <a href="#preguntas">Preguntas</a>
     </nav>
-    <a class="btn btn-primary" href="#planes">Empezar</a>
+    <a class="btn btn-primary btn-sm" href="#planes">Empezar</a>
   </div>
 </header>
 
 <!-- ============ PORTADA ============ -->
-<section class="hero">
+<section class="hero" id="top">
   <div class="wrap">
-    <p class="eyebrow">Universidad de Calistenia</p>
+    <!--
+      LOS SELLOS DE ARRIBA SON VERDAD, Y POR ESO NO SON CIFRAS.
+
+      El sitio en el que nos hemos fijado abre con "4,8 de 50.000 reseñas" y
+      "+500k atletas". Nosotros no tenemos esos números, y ponerlos inventados
+      sería la forma más rápida de perder lo único que todavía no hemos gastado.
+      Lo que sí es cierto y además importa más a quien nos va a pagar: quién
+      está detrás, y que la app está publicada de verdad en las dos tiendas.
+    -->
+    <div class="sellos reveal">
+      <span class="sello">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 8.3l5-.7z"/></svg>
+        Hecha por entrenadores en activo
+      </span>
+      <span class="sello">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+        En App Store y Google Play
+      </span>
+    </div>
+
     <h1>Entrena con método.<br /><em>Mide lo que importa.</em></h1>
     <p class="lead">
-      UDECA es la plataforma donde el entrenamiento de calistenia deja de ser una
-      libreta suelta: plan, marcas, progreso semana a semana e informes que se
-      entienden de un vistazo. Para quien entrena solo y para quien entrena a otros.
+      La calistenia deja de ser una libreta suelta: plan, marcas, progreso semana
+      a semana e informes que se entienden de un vistazo. Para quien entrena solo
+      y para quien entrena a otros.
     </p>
-    <!-- Las insignias suben a la portada, y no se quedan solo en la sección de
-         descargar, porque son la prueba más rápida de que esto es una app de
-         verdad y no una página que promete una. Quien llega buscando eso lo ve
-         sin bajar; quien viene a ver qué cuesta tiene "Ver planes" al lado. -->
-    <div class="hero-cta">
-      <a class="btn btn-primary" href="#planes">Ver planes</a>
-      <div class="badges">
-        <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar UDECA en la App Store">
-          <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
-        </a>
-        <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar UDECA en Google Play">
-          <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
-        </a>
-      </div>
+
+    <!-- Las insignias oficiales, en la portada: son la prueba más rápida de que
+         esto es una app de verdad y no una página que promete una. -->
+    <div class="badges reveal">
+      <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar UDECA en la App Store">
+        <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
+      </a>
+      <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar UDECA en Google Play">
+        <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
+      </a>
     </div>
     <p class="hero-note">Primer año completo: 1,42 €/mes atleta · 2,25 €/mes entrenador · Alumnos de un entrenador, gratis</p>
 
@@ -122,45 +148,137 @@
   </div>
 </section>
 
+<!-- ============ CIFRAS ============ -->
+<!--
+  CIFRAS DEL PRODUCTO, NO DE POPULARIDAD.
+
+  La rejilla de cuatro cuadros es de las cosas que mejor funcionan de la web en
+  la que nos hemos fijado. Lo que cambia es qué se mete dentro: ellos ponen
+  descargas y usuarios activos; nosotros no tenemos esos números todavía y no
+  se van a inventar. Estas cuatro son comprobables una por una en la propia
+  página, y a un entrenador le dicen más que un contador de descargas.
+-->
+<section class="cifras-sec">
+  <div class="wrap">
+    <div class="cifras">
+      <div class="cifra reveal"><b>5</b><span>alumnos incluidos el primer año</span></div>
+      <div class="cifra reveal"><b>3</b><span>formas de montar un plan</span></div>
+      <div class="cifra reveal"><b>0 €</b><span>para los alumnos de un entrenador</span></div>
+      <div class="cifra reveal"><b>1,42 €</b><span>al mes el primer año</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CÓMO FUNCIONA ============ -->
+<section id="como">
+  <div class="wrap">
+    <p class="eyebrow">Cómo funciona</p>
+    <h2 class="section-title big">De la libreta al método<em> en tres pasos</em></h2>
+    <p class="lead">
+      No hay curva de aprendizaje ni configuración de media tarde. Se monta una
+      vez y a partir de ahí la app trabaja sola.
+    </p>
+
+    <ol class="pasos">
+      <li class="paso reveal">
+        <div class="paso-num" aria-hidden="true">01</div>
+        <div>
+          <p class="paso-rotulo"><i></i> Paso 01</p>
+          <h3>El plan, montado a tu manera</h3>
+          <p>
+            Por días de la semana, por días sueltos que rotan en bucle o montado
+            por ti de cero: tu escala de esfuerzo, tu vocabulario y qué puede
+            tocar el alumno. Con superseries, clústeres, isométricos, lastre y
+            descansos configurados serie a serie.
+          </p>
+        </div>
+      </li>
+      <li class="paso reveal">
+        <div class="paso-num" aria-hidden="true">02</div>
+        <div>
+          <p class="paso-rotulo"><i></i> Paso 02</p>
+          <h3>Entrenas, y se apunta solo</h3>
+          <p>
+            Cronómetro de descanso, marcas de la última vez y récords que saltan
+            sin pedirlos. Cada serie queda registrada mientras entrenas, no
+            después de memoria. ¿Entrenaste sin el móvil delante? Se apunta con
+            su fecha y cuenta igual.
+          </p>
+        </div>
+      </li>
+      <li class="paso reveal">
+        <div class="paso-num" aria-hidden="true">03</div>
+        <div>
+          <p class="paso-rotulo"><i></i> Paso 03</p>
+          <h3>El progreso sale solo, y se puede enseñar</h3>
+          <p>
+            La mejor serie de cada ejercicio, semana a semana, sin rellenar
+            formularios. Y un informe en PDF con tu marca, listo para entregarle
+            a un alumno el día que pregunte si está mejorando.
+          </p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="cta-centro reveal">
+      <a class="btn btn-primary btn-lg" href="#planes">Empezar mi primer año</a>
+      <p class="hero-note">Sin permanencia y sin renovación automática.</p>
+    </div>
+  </div>
+</section>
+
 <hr class="rule" />
 
 <!-- ============ QUÉ HACE ============ -->
 <section id="app">
   <div class="wrap">
     <p class="eyebrow">La app</p>
-    <h2 class="section-title">Todo lo que hace falta. Nada que sobre.</h2>
+    <h2 class="section-title big">Todo lo que hace falta.<em> Nada que sobre.</em></h2>
     <p class="lead">
       Cada función existe porque resuelve algo que pasa de verdad en un entrenamiento
       o en la gestión de un grupo. Si no, no está.
     </p>
 
+    <!--
+      LAS TARJETAS SE ENCIENDEN AL PASAR POR ELLAS.
+
+      Es el mecanismo que hace que esa lista se lea en vez de saltársela: la que
+      tienes delante se ilumina y las demás se apagan. Lo que NO se copia es el
+      color: allí cada función tiene el suyo —azul, morado, naranja— y aquí todo
+      es el oro de la casa, con más o menos intensidad. Un arcoíris dentro de
+      una marca de dos colores no es vistoso, es otra marca.
+
+      Sin JavaScript funciona igual: se encienden con el ratón y con el teclado
+      (:hover y :focus-within). Lo de main.js solo añade que, al desplazarte por
+      el móvil, se encienda sola la que está en el centro de la pantalla.
+    -->
     <div class="grid">
-      <article class="card reveal">
+      <article class="card reveal" tabindex="0">
         <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v15H4z"/><path d="M4 9.5h16"/><path d="M9 5v15"/></svg></div>
         <h3>Planes que se siguen</h3>
         <p>Por días de la semana, por días sueltos que rotan o montado por ti de cero. Con superseries, clústeres, isométricos, lastre y descansos configurados serie a serie.</p>
       </article>
-      <article class="card reveal">
+      <article class="card reveal" tabindex="0">
         <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-6 4 3.5L20 7"/><path d="M16 7h4v4"/></svg></div>
         <h3>Progreso real</h3>
         <p>La mejor serie de cada ejercicio, semana a semana. Se ve de dónde vienes, dónde estás y qué se ha estancado.</p>
       </article>
-      <article class="card reveal">
+      <article class="card reveal" tabindex="0">
         <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 1.6"/><path d="M9.5 3h5"/></svg></div>
         <h3>Entreno guiado</h3>
         <p>Cronómetro de descanso, EMOM, clústeres con pausas cortas, marcas de la última vez y récords que saltan solos.</p>
       </article>
-      <article class="card reveal">
+      <article class="card reveal" tabindex="0">
         <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></div>
         <h3>Informe en PDF</h3>
         <p>La mejoría de cada ejercicio, el volumen por mes y el reparto del trabajo, en un documento con tu marca listo para entregar.</p>
       </article>
-      <article class="card reveal">
+      <article class="card reveal" tabindex="0">
         <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16.5 11.5a2.8 2.8 0 1 0 0-5.6"/><path d="M17.5 20a5.4 5.4 0 0 0-2-4.2"/></svg></div>
         <h3>Panel del entrenador</h3>
         <p>Alumnos, cobros, avisos de quién lleva días sin entrenar y quién debe pagar. La gestión, resuelta.</p>
       </article>
-      <article class="card reveal">
+      <article class="card reveal" tabindex="0">
         <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8.5c1.6-3 6-3.2 7 .3.9 3.2-2.2 8-5.2 10.4a2.8 2.8 0 0 1-3.6 0C7.2 16.8 4.1 12 5 8.8c1-3.5 5.4-3.3 7-.3z"/></svg></div>
         <h3>Nutrición y hábitos</h3>
         <p>Macros calculados, libretas de comidas del entrenador, hábitos diarios y fotos de progreso.</p>
@@ -205,7 +323,7 @@
 <section id="planes">
   <div class="wrap">
     <p class="eyebrow">Planes</p>
-    <h2 class="section-title">El primer año, al precio de empezar</h2>
+    <h2 class="section-title big">El primer año,<em> al precio de empezar</em></h2>
     <p class="lead">
       Un pago, doce meses, la plataforma entera. Sin permanencia, sin renovación
       automática y sin funciones guardadas para un plan de más arriba: pagas aquí
@@ -283,14 +401,9 @@
     <!-- LAS INSIGNIAS SON LAS OFICIALES, no un dibujo nuestro.
          La de Apple sale de developer.apple.com y la de Google Play es su
          artwork oficial, las dos sin retocar y servidas desde aquí, que es lo
-         que piden las dos guías de marca. Un logo redibujado a mano se nota
-         —y lo que se nota es que la app a lo mejor no está de verdad en la
-         tienda—, y justo eso es lo que estas dos imágenes tienen que despejar
-         de un vistazo.
+         que piden las dos guías de marca.
          Los altos son distintos a propósito: la de Google trae su propio
-         margen de respeto dentro del archivo, así que a la misma altura de CSS
-         su cápsula se vería más pequeña que la de Apple. Ver .badge en
-         styles.css. -->
+         margen de respeto dentro del archivo. Ver .badge en styles.css. -->
     <div class="badges">
       <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar UDECA en la App Store">
         <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
@@ -322,7 +435,7 @@
 <section id="historia">
   <div class="wrap">
     <p class="eyebrow">Quiénes somos</p>
-    <h2 class="section-title">Nacida en el entrenamiento, no en una reunión</h2>
+    <h2 class="section-title big">Nacida en el entrenamiento,<em> no en una reunión</em></h2>
 
     <div class="story">
       <div>
@@ -436,6 +549,44 @@
   </div>
 </section>
 
+<!-- ============ CIERRE ============ -->
+<!--
+  EL CIERRE REPITE LAS DOS TIENDAS, Y NO ES REDUNDANTE.
+
+  Quien llega hasta aquí ha leído la página entera y ya ha decidido. Obligarle a
+  subir hasta la portada para encontrar el botón es la forma más tonta de perder
+  a alguien convencido.
+
+  Las tres garantías de abajo son literalmente ciertas y se pueden comprobar en
+  esta misma página: no hay permanencia, no hay cobro automático, y los alumnos
+  de un entrenador entran gratis.
+-->
+<section class="cierre">
+  <div class="wrap">
+    <div class="cierre-caja reveal">
+      <span class="pildora">Universidad de Calistenia</span>
+      <h2>Empieza a medir<br /><em>lo que ya estás haciendo</em></h2>
+      <p>
+        Doce meses completos por el precio de un café al mes. Y si entrenas con un
+        entrenador de UDECA, ni eso.
+      </p>
+      <div class="badges centradas">
+        <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar UDECA en la App Store">
+          <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
+        </a>
+        <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar UDECA en Google Play">
+          <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
+        </a>
+      </div>
+      <ul class="garantias">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Sin permanencia</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Sin renovación automática</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Los alumnos entran gratis</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <div class="foot">
@@ -444,6 +595,7 @@
         <span>UDECA</span>
       </a>
       <nav class="foot-links">
+        <a href="#como">Cómo funciona</a>
         <a href="#planes">Planes</a>
         <a href="#descargas">Descargar</a>
         <a href="#historia">Quiénes somos</a>

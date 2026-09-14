@@ -73,15 +73,37 @@ for (const [ruta, tienda] of INSIGNIAS) {
     'si el nombre del archivo y el del src se separan, queda el hueco del alt'
   );
 }
-// Dos veces cada una: en la portada y en la sección de descargar.
+/*
+ * En la PORTADA y en el CIERRE, como mínimo. Y no es repetirse.
+ *
+ * Arriba, porque son la prueba más rápida de que esto es una app de verdad y no
+ * una página que promete una: quien llega buscando eso lo ve sin bajar.
+ *
+ * Abajo, porque quien ha leído la página entera ya ha decidido, y obligarle a
+ * subir hasta el principio a buscar el botón es la forma más tonta de perder a
+ * alguien convencido.
+ *
+ * Se comprueba por SECCIÓN y no contando apariciones: contar obliga a tocar
+ * esta cuenta cada vez que se añade una sección, y una comprobación que hay que
+ * ajustar cada dos por tres acaba ajustándose sin mirar qué protegía.
+ */
+const trozo = (desde, hasta) => {
+  const i = html.indexOf(desde);
+  if (i < 0) return '';
+  const j = hasta ? html.indexOf(hasta, i) : -1;
+  return html.slice(i, j < 0 ? html.length : j);
+};
+const PORTADA = trozo('<section class="hero"', '</section>');
+const CIERRE = trozo('<section class="cierre"', '</section>');
+const DESCARGAS = trozo('<section id="descargas"', '</section>');
+
+ok('la portada existe', PORTADA.length > 0);
+ok('y el cierre también', CIERRE.length > 0);
 for (const [ruta, tienda] of INSIGNIAS) {
   const nombre = ruta.replace('web', '');
-  const veces = html.split(nombre).length - 1;
-  ok(
-    `${tienda} sale en la portada y en descargas`,
-    veces === 2,
-    `aparece ${veces} vez(ces); se esperaban 2`
-  );
+  ok(`${tienda} está en la portada`, PORTADA.includes(nombre));
+  ok(`${tienda} está en el cierre`, CIERRE.includes(nombre));
+  ok(`${tienda} está en descargas`, DESCARGAS.includes(nombre));
 }
 
 // =========================================================================

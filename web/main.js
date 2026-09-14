@@ -83,6 +83,32 @@
   marcarScroll();
   window.addEventListener('scroll', marcarScroll, { passive: true });
 
+  /**
+   * En el móvil, la tarjeta del centro de la pantalla se enciende sola.
+   *
+   * Con ratón basta el `:hover` del CSS, pero en un móvil no hay puntero: la
+   * rejilla de seis funciones se quedaba entera apagada y se pasaba de largo.
+   * Encendiendo la que tienes delante, la lista se lee.
+   *
+   * Solo donde NO hay puntero fino: en un ordenador, dos tarjetas encendidas a
+   * la vez —la del ratón y la del centro— son un parpadeo sin sentido.
+   */
+  var conPuntero = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+  var tarjetas = document.querySelectorAll('.grid .card');
+  if (!conPuntero && tarjetas.length && 'IntersectionObserver' in window) {
+    var viva = new IntersectionObserver(
+      function (entradas) {
+        entradas.forEach(function (e) {
+          e.target.classList.toggle('viva', e.isIntersecting);
+        });
+      },
+      // Una banda estrecha en mitad de la pantalla: así hay una encendida cada
+      // vez, y no las tres que se ven a la vez.
+      { rootMargin: '-45% 0px -45% 0px' }
+    );
+    tarjetas.forEach(function (el) { viva.observe(el); });
+  }
+
   /** Aparición al entrar en pantalla. Si el navegador no la soporta, se ve todo. */
   var reveals = document.querySelectorAll('.reveal');
   if (!('IntersectionObserver' in window)) {
