@@ -419,9 +419,30 @@ section { position: relative; z-index: 1; padding: 84px 0; scroll-margin-top: 84
 .community p { color: var(--muted); max-width: 54ch; margin: 0 auto 26px; }
 
 /* ---------- Preguntas ---------- */
+/* ---------- Preguntas ----------
+ *
+ * Cada una en su tarjeta, y no siete líneas separadas por una raya. Con el
+ * resto de la página en tarjetas, la lista de rayas se leía como el pie de
+ * página: como algo que ya no importa. Y aquí están justo las tres respuestas
+ * que deciden una compra —qué incluye, qué pasa al terminar el año, y si un
+ * alumno paga—, así que importan bastante.
+ *
+ * La abierta se marca con el mismo oro que las tarjetas de funciones: es el
+ * mismo gesto —"esto es lo que estás mirando"— y conviene que se diga igual en
+ * toda la página.
+ */
 details {
-  border-bottom: 1px solid var(--border);
-  padding: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 4px 18px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+details:hover { border-color: var(--hairline); }
+details[open] {
+  border-color: var(--hairline);
+  background: linear-gradient(140deg, rgba(162, 150, 139, 0.08), rgba(162, 150, 139, 0.01));
 }
 details summary {
   cursor: pointer;
@@ -429,21 +450,68 @@ details summary {
   font-size: 16px;
   list-style: none;
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 16px 0;
 }
 details summary::-webkit-details-marker { display: none; }
-details summary::after { content: '+'; color: var(--gold); font-size: 20px; line-height: 1; }
-details[open] summary::after { content: '−'; }
-details p { color: var(--muted); margin: 12px 0 0; font-size: 15px; }
+/* El signo, en su círculo: un "+" suelto a la derecha del todo no parece un
+   botón, y esta lista solo sirve si se pulsa. */
+details summary::after {
+  content: '+';
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  color: var(--gold);
+  font-size: 17px;
+  line-height: 26px;
+  text-align: center;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+details[open] summary::after { content: '−'; border-color: var(--hairline); }
+details p { color: var(--muted); margin: 0 0 18px; font-size: 15px; max-width: 70ch; }
 
-/* ---------- Pie ---------- */
-footer { border-top: 1px solid var(--border); padding: 44px 0 60px; position: relative; z-index: 1; }
-.foot { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
-.foot .brand { margin-right: auto; }
-.foot-links { display: flex; flex-wrap: wrap; gap: 20px; font-size: 14px; color: var(--muted); }
-.foot-links a:hover { color: var(--gold-bright); }
-.legal { margin-top: 26px; color: var(--faint); font-size: 12.5px; }
+/* ---------- Pie ----------
+ *
+ * En columnas, no en una fila de enlaces sueltos. El pie es donde va a buscar
+ * alguien que ya ha decidido algo: escribir, entrar en la comunidad, o leer qué
+ * hacemos con sus datos. Todo junto en una línea, cualquiera de las tres cosas
+ * cuesta encontrarla.
+ *
+ * Las dos legales van abajo del todo y aparte: son las direcciones que se
+ * declaran en Google Play y en la App Store, y tienen que estar donde se espera
+ * y sin moverse (ver web/vercel.json).
+ */
+footer { border-top: 1px solid var(--border); padding: 54px 0 44px; position: relative; z-index: 1; }
+.foot { display: grid; gap: 34px; }
+.foot-marca { max-width: 34ch; }
+.foot-marca .brand { margin-bottom: 14px; }
+.foot-lema { color: var(--faint); font-size: 13.5px; line-height: 1.6; margin: 0; }
+.foot-col h4 {
+  font-family: Inter, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+.foot-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 11px; }
+.foot-col a { font-size: 14px; color: var(--muted); transition: color 0.2s ease; }
+.foot-col a:hover { color: var(--gold-bright); }
+.legal {
+  margin: 38px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  color: var(--faint);
+  font-size: 12.5px;
+}
+@media (min-width: 760px) {
+  .foot { grid-template-columns: 1.5fr 1fr 1fr; gap: 40px; }
+}
 
 /* ---------- Aparición al bajar ---------- */
 .reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
