@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
 import { Card } from '../../../components/Card';
 import { EmptyState } from '../../../components/EmptyState';
+import { Sheet } from '../../../components/Sheet';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { DragList } from '../../../components/DragList';
@@ -21,9 +22,15 @@ import {
   updateMealBook,
 } from '../../../lib/firestore/mealBooks';
 import { pickMealPhoto } from '../../../lib/image';
+import {
+  LARGO_DEL_COMENTARIO,
+  conComentario,
+  cuantasComentadas,
+  limpiarComentario,
+} from '../../../lib/libretaDeComidas';
 import { confirmar } from '../../../lib/confirmar';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
-import type { MealBook } from '../../../lib/types';
+import type { MealBook, MealBookPhoto } from '../../../lib/types';
 
 // Tope de fotos por libreta: cada foto va comprimida dentro del documento y
 // Firestore limita cada documento a 1 MB. Con este tope vamos sobrados.
@@ -39,6 +46,12 @@ export default function MealBooksScreen() {
   const [renameText, setRenameText] = useState('');
   const [creating, setCreating] = useState(false);
   const [busyBook, setBusyBook] = useState<string | null>(null);
+  // Foto que se está comentando, y el texto en curso. Se guarda al pulsar, no
+  // al teclear: cada letra sería una escritura en Firestore de un documento
+  // que lleva doce fotos dentro.
+  const [comentando, setComentando] = useState<{ libro: string; foto: string } | null>(null);
+  const [comentario, setComentario] = useState('');
+  const [guardandoComentario, setGuardandoComentario] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -141,6 +154,39 @@ export default function MealBooksScreen() {
     }
   };
 
+  // Comentar una foto: se abre el panel con la foto grande, porque en la tira
+  // se ven a 120 px y a ese tamaño no se distingue un plato de otro.
+  const abrirComentario = (book: MealBook, foto: MealBookPhoto) => {
+    setComentando({ libro: book.id, foto: foto.id });
+    setComentario(foto.caption ?? '');
+  };
+
+  const fotoComentada = comentando
+    ? books.find((b) => b.id === comentando.libro)?.photos.find((p) => p.id === comentando.foto)
+    : undefined;
+
+  const guardarComentario = async () => {
+    if (!comentando) return;
+    const book = books.find((b) => b.id === comentando.libro);
+    if (!book) return;
+    const photos = conComentario(book.photos, comentando.foto, comentario);
+    const antes = book.photos;
+    setBooks((prev) => prev.map((b) => (b.id === book.id ? { ...b, photos } : b)));
+    setComentando(null);
+    setGuardandoComentario(true);
+    try {
+      await updateMealBook(book.id, { photos });
+      showToast(limpiarComentario(comentario) ? 'Comentario guardado' : 'Comentario quitado');
+    } catch {
+      // Se deshace lo pintado: si no, la pantalla enseña un comentario que no
+      // existe en ningún sitio y el entrenador cree que lo ha dicho.
+      setBooks((prev) => prev.map((b) => (b.id === book.id ? { ...b, photos: antes } : b)));
+      showToast('No se pudo guardar el comentario');
+    } finally {
+      setGuardandoComentario(false);
+    }
+  };
+
   const handleRemovePhoto = async (book: MealBook, photoId: string) => {
     if (!(await confirmar('¿Quitar esta foto de la libreta?'))) return;
     const photos = book.photos.filter((p) => p.id !== photoId);
@@ -171,7 +217,8 @@ export default function MealBooksScreen() {
       <Text style={styles.title}>Libretas de comida</Text>
       <Text style={styles.subtitle}>
         Sube tus cuadernos de recetas y platos por foto. Los verán TODOS tus alumnos dentro
-        de la app, al final de su pestaña de nutrición.
+        de la app, al final de su pestaña de nutrición. Toca una foto para escribir tu
+        comentario: cantidades, cambios, cuándo tomarla.
       </Text>
 
       <Card style={styles.createCard}>
@@ -242,13 +289,31 @@ export default function MealBooksScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoStrip}>
                 {book.photos.map((p) => (
                   <View key={p.id} style={styles.photoWrap}>
-                    <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
+                    {/* Tocar la foto la comenta. La equis borra, y va aparte:
+                        son el gesto de siempre y uno nuevo, y confundirlos
+                        aquí cuesta una foto. */}
+                    <Pressable onPress={() => abrirComentario(book, p)}>
+                      <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
+                    </Pressable>
                     <Pressable
                       onPress={() => handleRemovePhoto(book, p.id)}
                       style={styles.photoRemove}
                       hitSlop={6}
                     >
                       <Ionicons name="close" size={14} color={colors.onPrimary} />
+                    </Pressable>
+                    <Pressable style={styles.comentarioPie} onPress={() => abrirComentario(book, p)}>
+                      <Ionicons
+                        name={p.caption ? 'chatbubble' : 'chatbubble-outline'}
+                        size={12}
+                        color={p.caption ? colors.primary : colors.textFaint}
+                      />
+                      <Text
+                        style={[styles.comentarioTexto, !p.caption && styles.comentarioVacio]}
+                        numberOfLines={2}
+                      >
+                        {p.caption || 'Comentar'}
+                      </Text>
                     </Pressable>
                   </View>
                 ))}
@@ -264,11 +329,58 @@ export default function MealBooksScreen() {
             />
             <Text style={styles.count}>
               {book.photos.length}/{MAX_PHOTOS} fotos
+              {cuantasComentadas(book.photos) > 0
+                ? frase` · ${cuantasComentadas(book.photos)} con comentario`
+                : ''}
             </Text>
           </Card>
           )}
         />
       )}
+
+      {/*
+        EL COMENTARIO, EN UN PANEL Y NO BAJO LA MINIATURA.
+
+        La tentación era un campo de texto debajo de cada foto, en la propia
+        tira. Pero esa tira mide 120 px de ancho por foto: escribir dos frases
+        ahí es escribir a través de una rendija, y sobre todo no se ve QUÉ plato
+        se está comentando, que es justo lo que hay que mirar mientras se
+        escribe. Aquí la foto sale grande encima del campo.
+      */}
+      {comentando && fotoComentada ? (
+        <Sheet
+          onClose={() => setComentando(null)}
+          titulo="Comentario de la foto"
+          descripcion="Lo verán todos tus alumnos debajo de esta foto, en su pestaña de nutrición."
+        >
+          <Image
+            source={{ uri: fotoComentada.imageURL }}
+            style={styles.comentarioFoto}
+            resizeMode="cover"
+          />
+          <TextField
+            placeholder="Ej. 120 g de arroz en crudo. El pollo lo puedes cambiar por pavo o por huevos."
+            value={comentario}
+            onChangeText={setComentario}
+            multiline
+            maxLength={LARGO_DEL_COMENTARIO}
+            style={styles.comentarioCampo}
+            autoFocus
+          />
+          <Text style={styles.comentarioCuenta}>
+            {limpiarComentario(comentario).length}/{LARGO_DEL_COMENTARIO}
+          </Text>
+          {/* Con el campo vacío solo hay algo que hacer si antes había texto:
+              quitarlo. Si la foto nunca tuvo comentario, el botón no promete
+              nada — guardar la nada no es guardar. */}
+          <Button
+            title={limpiarComentario(comentario) ? 'Guardar comentario' : 'Quitar el comentario'}
+            onPress={guardarComentario}
+            loading={guardandoComentario}
+            disabled={!limpiarComentario(comentario) && !fotoComentada.caption}
+          />
+        </Sheet>
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -301,6 +413,31 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   photo: { width: 120, height: 150, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
+  comentarioPie: {
+    width: 120,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+    marginTop: 5,
+  },
+  comentarioTexto: { ...typography.small, color: colors.textMuted, fontSize: 11, flex: 1, lineHeight: 14 },
+  comentarioVacio: { color: colors.textFaint },
+  comentarioFoto: {
+    width: '100%',
+    height: 220,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: spacing.md,
+  },
+  // Alto fijo y texto arriba: en Android un `multiline` sin altura crece de
+  // golpe al segundo renglón y empuja el botón fuera de la pantalla.
+  comentarioCampo: { minHeight: 96, textAlignVertical: 'top', paddingTop: spacing.sm },
+  comentarioCuenta: {
+    ...typography.small,
+    color: colors.textFaint,
+    textAlign: 'right',
+    marginBottom: spacing.sm,
+  },
   photoRemove: {
     position: 'absolute',
     top: 6,

@@ -21,6 +21,7 @@ import {
   getProgressPhotosForClient,
 } from '../lib/firestore/progressPhotos';
 import { getMealBooksForTrainer } from '../lib/firestore/mealBooks';
+import { seCorta } from '../lib/libretaDeComidas';
 import { objetivosDelDia } from '../lib/macrosDelDia';
 import { updateUserProfile } from '../lib/firestore/users';
 import { pickProgressPhoto } from '../lib/image';
@@ -75,7 +76,16 @@ export function PanelDeNutricion() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
-  const [zoomPhoto, setZoomPhoto] = useState<string | null>(null);
+  /*
+   * El visor guarda la foto Y lo que el entrenador escribió en ella.
+   *
+   * Antes solo llevaba la dirección de la imagen, que bastaba cuando el pie
+   * de foto era el nombre del plato. Ahora ahí abajo hay hasta 200 caracteres
+   * del coach —cantidades, cambios, cuándo tomarlo— y bajo una miniatura de
+   * 130 px eso son diez renglones que nadie lee. Se recorta en la tira y se
+   * lee entero aquí, con la foto grande delante.
+   */
+  const [zoomPhoto, setZoomPhoto] = useState<{ uri: string; comentario?: string } | null>(null);
   const [calcOpen, setCalcOpen] = useState(false);
   // El peso vive aquí desde que se sacó de Progreso: no sube ni baja por lo
   // que levantas, sube y baja por lo que comes. Y de paso es lo que permite
@@ -446,10 +456,19 @@ export function PanelDeNutricion() {
                     <Pressable
                       key={p.id}
                       style={styles.bookPhotoWrap}
-                      onPress={() => setZoomPhoto(p.imageURL)}
+                      onPress={() => setZoomPhoto({ uri: p.imageURL, comentario: p.caption })}
                     >
                       <Image source={{ uri: p.imageURL }} style={styles.bookPhoto} resizeMode="cover" />
-                      {p.caption ? <Text style={styles.bookCaption}>{p.caption}</Text> : null}
+                      {p.caption ? (
+                        <>
+                          <Text style={styles.bookCaption} numberOfLines={3}>
+                            {p.caption}
+                          </Text>
+                          {seCorta(p.caption) ? (
+                            <Text style={styles.bookCaptionMas}>Toca para leerlo</Text>
+                          ) : null}
+                        </>
+                      ) : null}
                     </Pressable>
                   ))}
                 </ScrollView>
@@ -517,7 +536,19 @@ export function PanelDeNutricion() {
       <Modal visible={!!zoomPhoto} transparent animationType="fade" onRequestClose={() => setZoomPhoto(null)}>
         <Pressable style={styles.zoomBackdrop} onPress={() => setZoomPhoto(null)}>
           {zoomPhoto ? (
-            <Image source={{ uri: zoomPhoto }} style={styles.zoomImage} resizeMode="contain" />
+            <>
+              <Image
+                source={{ uri: zoomPhoto.uri }}
+                style={[styles.zoomImage, zoomPhoto.comentario && styles.zoomImageConTexto]}
+                resizeMode="contain"
+              />
+              {zoomPhoto.comentario ? (
+                <View style={styles.zoomComentario}>
+                  <Text style={styles.zoomComentarioRotulo}>Tu entrenador</Text>
+                  <Text style={styles.zoomComentarioTexto}>{zoomPhoto.comentario}</Text>
+                </View>
+              ) : null}
+            </>
           ) : null}
           <Pressable style={styles.zoomClose} onPress={() => setZoomPhoto(null)} hitSlop={8}>
             <Ionicons name="close" size={26} color="#fff" />
@@ -645,6 +676,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   zoomImage: { width: '92%', height: '80%' },
+  // Con texto debajo la foto cede altura, si no el comentario se sale por
+  // abajo en un móvil bajo y no se lee la última línea, que suele ser la que
+  // dice la cantidad.
+  zoomImageConTexto: { height: '62%' },
+  zoomComentario: { width: '92%', marginTop: spacing.md },
+  zoomComentarioRotulo: {
+    ...typography.small,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  zoomComentarioTexto: { ...typography.body, color: '#fff', lineHeight: 21 },
   zoomClose: { position: 'absolute', top: 44, right: 20 },
   // Rejilla 2x2 fiable en móvil: dos columnas al 48% con hueco entre ellas.
   macroGrid: {
@@ -700,7 +746,8 @@ const styles = StyleSheet.create({
   bookTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: spacing.sm },
   bookPhotoWrap: { marginRight: spacing.sm, width: 130 },
   bookPhoto: { width: 130, height: 165, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
-  bookCaption: { ...typography.small, color: colors.textMuted, marginTop: 4, fontSize: 11 },
+  bookCaption: { ...typography.small, color: colors.textMuted, marginTop: 4, fontSize: 11, lineHeight: 14 },
+  bookCaptionMas: { ...typography.small, color: colors.primary, fontSize: 10, marginTop: 2 },
   /*
    * Se parte en dos filas antes que cortar una palabra.
    *

@@ -1053,7 +1053,14 @@ export interface MealBookPhoto {
   id: string;
   /** Foto (data URL comprimida). */
   imageURL: string;
-  /** Pie de foto opcional (nombre del plato, ingredientes...). */
+  /**
+   * Lo que el entrenador escribe sobre esa foto: qué es, cantidades, con qué
+   * se puede cambiar, cuándo tomarla. Opcional, y cuando está vacío la clave
+   * NO existe (ver `conComentario` en lib/libretaDeComidas.ts).
+   *
+   * Se llama `caption` y no `comentario` porque ya hay libretas guardadas con
+   * ese nombre: renombrarlo dejaría sin texto lo que ya está escrito.
+   */
   caption?: string;
 }
 
