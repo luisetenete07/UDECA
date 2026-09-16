@@ -2,6 +2,7 @@ import React from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import {
   esEmbedDeYouTube,
@@ -401,7 +402,61 @@ function VideoEnWebView({
           : null)}
         style={{ flex: 1, backgroundColor: '#000', borderRadius: radius.md }}
       />
+      {protectedContent ? <TapaLaBarraDeYouTube /> : null}
     </View>
+  );
+}
+
+/**
+ * La barra de arriba del reproductor de YouTube, tapada.
+ *
+ * QUÉ SE TAPA Y POR QUÉ
+ *
+ * Cuando alguien toca el vídeo, YouTube saca su propia barra superior con el
+ * título, el canal y —a la derecha— COMPARTIR y "ver más tarde". Compartir
+ * abre su panel con el enlace del vídeo y el botón de copiarlo. En una clase de
+ * pago eso es la puerta de salida: un toque, un enlace, y la clase ya está
+ * fuera.
+ *
+ * Todo lo demás del reproductor sigue funcionando, y eso es a propósito: el
+ * play, la barra de tiempo y la pantalla completa viven en la mitad de abajo y
+ * no se tocan. Una clase que no se puede rebobinar no es una clase.
+ *
+ * POR QUÉ ASÍ Y NO QUITANDO LOS CONTROLES
+ *
+ * Porque quitarlos (`controls=0`) obliga a poner los nuestros, y los nuestros
+ * necesitan que la API de YouTube conteste por postMessage dentro de un
+ * WebView. Eso es exactamente el blindaje que se intentó tres veces y que
+ * dejaba el vídeo en negro (ver el comentario largo en VideoPlayer). Esto no
+ * habla con el reproductor: es una capa encima. Si YouTube cambia algo mañana,
+ * lo peor que pasa es que tape un trozo de negro.
+ *
+ * LO QUE ESTO NO ES
+ *
+ * No es una cerradura. Quien tenga el enlace por otro lado sigue pudiendo ver
+ * el vídeo en YouTube. Lo que cierra es el camino de un toque desde DENTRO de
+ * la app, que es por donde se escapan las cosas de verdad. Lo demás ya está:
+ * capturas bloqueadas, marca de agua con el nombre encima y navegación fuera
+ * cortada.
+ *
+ * El degradado no es adorno: la barra de YouTube lleva el suyo, así que esto se
+ * lee como parte del reproductor y no como un parche. Va opaco los primeros dos
+ * tercios —que es donde están los botones— y se desvanece antes de comerse
+ * imagen de más.
+ */
+const ALTO_DE_LA_BARRA = 72;
+
+function TapaLaBarraDeYouTube() {
+  return (
+    <LinearGradient
+      // Sin `pointerEvents="none"`: esta capa TIENE que quedarse los toques.
+      // Es justo lo que hace que el botón de compartir no responda.
+      colors={['rgba(0,0,0,1)', 'rgba(0,0,0,1)', 'rgba(0,0,0,0)']}
+      locations={[0, 0.62, 1]}
+      style={styles.tapa}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    />
   );
 }
 
@@ -448,6 +503,17 @@ function WebVideo({ url }: { url: string }) {
 }
 
 const styles = StyleSheet.create({
+  // La tapa de la barra de YouTube. Redondeada por arriba como el reproductor,
+  // o asomaría por las esquinas.
+  tapa: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: ALTO_DE_LA_BARRA,
+    borderTopLeftRadius: radius.md,
+    borderTopRightRadius: radius.md,
+  },
   video: {
     width: '100%',
     aspectRatio: 16 / 9,

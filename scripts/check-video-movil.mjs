@@ -173,6 +173,7 @@ console.log('\nQué va blindado y qué no');
   ok('y por defecto protege', /protectedContent=\{protegido\}/.test(visor));
   // Una clase de curso es material de pago: va blindada.
   const curso = lee('app/(client)/courses/[id].tsx');
+  const reproductor = lee('components/VideoPlayer.tsx');
   ok('las clases de un curso siguen blindadas', !/protegido=\{false\}/.test(curso));
   /*
    * El vídeo de técnica no. Es un enlace público que el entrenador ha pegado, y
@@ -181,6 +182,63 @@ console.log('\nQué va blindado y qué no');
    */
   ok('la técnica del entreno, sin blindar', /protegido=\{false\}/.test(lee('app/(client)/workout.tsx')));
   ok('la de la rutina diaria, tampoco', /protegido=\{false\}/.test(lee('components/RutinaDiariaDelDia.tsx')));
+
+  /*
+   * LA BARRA DE COMPARTIR DE YOUTUBE, TAPADA EN LAS CLASES.
+   *
+   * Al tocar el vídeo, YouTube saca su barra de arriba con el título y, a la
+   * derecha, COMPARTIR. Ese botón abre su panel con el enlace y el botón de
+   * copiarlo: en una clase de pago es la puerta de salida, a un solo toque y
+   * desde dentro de la app.
+   *
+   * Lo que se comprueba aquí es lo que hace que funcione y lo que hace que no
+   * estorbe:
+   *
+   *  - Que la capa exista y SOLO en contenido protegido. En un vídeo de técnica
+   *    —un enlace público del canal— tapar nada sería quitar función a cambio
+   *    de nada.
+   *  - Que NO lleve `pointerEvents="none"`. Es el detalle del que depende todo:
+   *    con eso puesto la capa se ve pero deja pasar el toque, el botón responde
+   *    y la protección es decorativa. Es además el cambio de una palabra que
+   *    alguien podría hacer copiando el estilo de la marca de agua, que sí lo
+   *    lleva.
+   *  - Que tape solo la franja de ARRIBA. El play, la barra de tiempo y la
+   *    pantalla completa viven abajo: una capa a pantalla completa dejaría la
+   *    clase sin poder pausarse ni rebobinarse, que es peor que el problema.
+   */
+  // Sin comentarios: lo que se comprueba es el código. El propio comentario de
+  // la capa explica por qué NO lleva `pointerEvents`, y esa frase hacía saltar
+  // la comprobación de abajo.
+  const sinComentar = (t) =>
+    t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const capa = sinComentar(
+    reproductor.slice(
+      reproductor.indexOf('function TapaLaBarraDeYouTube'),
+      reproductor.indexOf('function NativeVideo')
+    )
+  );
+  ok('la barra de YouTube se tapa en las clases', capa.length > 0);
+  ok(
+    'y solo cuando el contenido está protegido',
+    /\{protectedContent \? <TapaLaBarraDeYouTube \/> : null\}/.test(reproductor),
+    'un vídeo de técnica es público: taparlo quita función sin dar nada'
+  );
+  ok(
+    'la capa SE QUEDA los toques',
+    !/pointerEvents/.test(capa),
+    'con pointerEvents="none" se vería igual y el botón de compartir seguiría respondiendo'
+  );
+  ok(
+    'y solo tapa la franja de arriba',
+    /top: 0,/.test(reproductor) && /height: ALTO_DE_LA_BARRA/.test(reproductor),
+    'a pantalla completa dejaría la clase sin play ni barra de tiempo'
+  );
+  ok(
+    'con una altura corta',
+    /const ALTO_DE_LA_BARRA = (\d+);/.test(reproductor) &&
+      Number(reproductor.match(/const ALTO_DE_LA_BARRA = (\d+);/)[1]) <= 96,
+    'cuanto más alta, más imagen se come'
+  );
 }
 
 console.log('\nLo desconocido carga, en vez de quedarse en negro');
