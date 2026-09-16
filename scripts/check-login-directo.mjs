@@ -21,6 +21,7 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-login-directo.mjs
  */
 import { readFileSync } from 'node:fs';
+import { mensajeDeEntrada } from '../lib/mensajesDeEntrada.ts';
 
 let fallos = 0;
 function comprueba(nombre, condicion, detalle = '') {
@@ -30,6 +31,8 @@ function comprueba(nombre, condicion, detalle = '') {
     fallos++;
   }
 }
+
+const lee = (ruta) => readFileSync(ruta, 'utf8');
 
 const google = readFileSync('lib/googleAuth.ts', 'utf8');
 const login = readFileSync('app/(auth)/login.tsx', 'utf8');
@@ -111,6 +114,82 @@ console.log('\nLa sesión se guarda sola');
   const auth = readFileSync('lib/auth-context.tsx', 'utf8');
   const signOut = auth.slice(auth.indexOf('const signOut'), auth.indexOf('const signOut') + 400);
   comprueba('cerrar sesión no borra los atajos', !/forgetAccount/.test(signOut), signOut.slice(0, 120));
+}
+
+/*
+ * EL MENSAJE CUANDO FALLA GOOGLE O APPLE.
+ *
+ * LO QUE COSTÓ: el 15 de septiembre Apple rechazó la app por la norma 2.1(a).
+ * El revisor pulsó "Entrar con Apple" en un iPad, falló, y la app le contestó
+ * "Esa contraseña no es. Si no te acuerdas, pide restablecerla desde abajo" —
+ * en una pantalla sin campo de contraseña, en una app que NO tiene
+ * contraseñas.
+ *
+ * El motivo: `auth/invalid-credential` significa dos cosas distintas. Con
+ * correo y clave es "la contraseña no es"; con Google o con Apple es "Firebase
+ * ha rechazado la credencial", y ahí no hay contraseña de por medio. Estaban
+ * mapeados al mismo texto.
+ *
+ * Lo que se vigila:
+ *
+ *  1. Que la función SEPA de dónde viene el intento. Sin ese dato vuelve a ser
+ *     imposible distinguir los dos casos.
+ *  2. Que las dos pantallas de entrada se lo digan. Es lo que se olvida al
+ *     añadir una tercera.
+ *  3. Que un fallo de proveedor no hable de contraseñas.
+ *  4. Que el mensaje lleve el código de Firebase detrás. Es la diferencia entre
+ *     arreglar el siguiente fallo con una captura o gastar tres compilaciones
+ *     adivinando — y esta vez se gastó un rechazo entero.
+ */
+console.log('\nUn fallo de Google o de Apple no habla de contraseñas');
+{
+  const mensajes = lee('lib/mensajesDeEntrada.ts');
+  comprueba(
+    'el mensaje sabe de dónde viene el intento',
+    /mensajeDeEntrada\(e: unknown, origen: OrigenDeEntrada/.test(mensajes)
+  );
+  // Y que siga pudiendo ejecutarse desde aquí. En cuanto este fichero importe
+  // Firebase o React Native, las cuatro comprobaciones de abajo dejan de correr
+  // y volvemos a fiarnos de leer el texto, que es lo que dejó pasar el fallo.
+  comprueba('los mensajes no arrastran dependencias', !/^import /m.test(mensajes));
+  comprueba(
+    'y enlazarCuenta.ts los sigue ofreciendo',
+    /export \{ mensajeDeEntrada[^}]*\} from '\.\/mensajesDeEntrada'/.test(
+      lee('lib/enlazarCuenta.ts')
+    )
+  );
+  for (const pantalla of ['app/(auth)/login.tsx', 'app/(auth)/register.tsx']) {
+    comprueba(
+      `${pantalla} lo dice al fallar un proveedor`,
+      /mensajeDeEntrada\(e, 'proveedor'\)/.test(lee(pantalla))
+    );
+  }
+  // Y que de verdad conteste otra cosa. Se llama a la función con el error que
+  // devuelve Firebase cuando rechaza una credencial de Apple.
+  const fallo = { code: 'auth/invalid-credential' };
+  const conProveedor = mensajeDeEntrada(fallo, 'proveedor');
+  const conClave = mensajeDeEntrada(fallo);
+  comprueba(
+    'con Apple no dice "esa contraseña no es"',
+    !/contrase/i.test(conProveedor),
+    conProveedor
+  );
+  comprueba(
+    'y lleva el código de Firebase detrás',
+    /\(invalid-credential\)/.test(conProveedor),
+    conProveedor
+  );
+  comprueba(
+    'pero con correo y clave sigue diciéndolo',
+    /contrase/i.test(conClave),
+    conClave
+  );
+  // Sin código, nada de paréntesis vacíos.
+  comprueba(
+    'sin código no se inventa un paréntesis',
+    !/\(\s*\)/.test(mensajeDeEntrada({}, 'proveedor')),
+    mensajeDeEntrada({}, 'proveedor')
+  );
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

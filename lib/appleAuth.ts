@@ -106,7 +106,12 @@ function useAppleNativo(): EstadoApple {
         nonce: cifrado,
       });
       if (!credencial.identityToken) {
-        throw new Error('Apple no ha devuelto la identidad de la cuenta.');
+        // Con código, para que salga detrás del mensaje. Sin él, este fallo
+        // —el de Apple— y el de Firebase rechazando el token se leen igual en
+        // una captura, y son dos arreglos distintos en dos sitios distintos.
+        throw Object.assign(new Error('Apple no ha devuelto la identidad de la cuenta.'), {
+          code: 'apple-sin-identidad',
+        });
       }
       const proveedor = new OAuthProvider('apple.com');
       return await signInWithCredential(

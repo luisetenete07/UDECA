@@ -66,7 +66,10 @@ export default function RegisterScreen() {
     try {
       await proveedor.entrar();
     } catch (e) {
-      setError(mensajeDeEntrada(e) || frase`No se ha podido entrar con ${cual}. Inténtalo otra vez.`);
+      setError(
+        mensajeDeEntrada(e, 'proveedor') ||
+          frase`No se ha podido entrar con ${cual}. Inténtalo otra vez.`
+      );
     }
   };
 

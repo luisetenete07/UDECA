@@ -7,6 +7,7 @@ import {
   type AuthCredential,
 } from 'firebase/auth';
 import { auth } from './firebase';
+import { mensajeDeEntrada } from './mensajesDeEntrada';
 
 /**
  * Rescatar una cuenta que se creó con contraseña.
@@ -130,36 +131,15 @@ export async function anadirContrasena(
   }
 }
 
-/**
- * El error de Firebase, dicho como se lo diría una persona.
+/*
+ * Los mensajes viven en lib/mensajesDeEntrada.ts, sin importar nada.
  *
- * Los códigos crudos ("auth/wrong-password") no ayudan a nadie, y el mensaje
- * en inglés que trae dentro, tampoco.
+ * Este fichero arrastra Firebase, que arrastra React Native, así que no se
+ * puede ejecutar desde Node pelado — y esa función es justo la que costó un
+ * rechazo de Apple por decir "esa contraseña no es" cuando falló "Entrar con
+ * Apple". Una función que decide lo que lee un revisor no puede quedarse sin
+ * poder probarse.
+ *
+ * Se reexporta para no tocar ni un import de los que ya había.
  */
-export function mensajeDeEntrada(e: unknown): string {
-  const codigo = (e as { code?: string })?.code ?? '';
-  if (/wrong-password|invalid-credential|invalid-login/.test(codigo)) {
-    return 'Esa contraseña no es. Si no te acuerdas, pide restablecerla desde abajo.';
-  }
-  if (codigo.includes('user-not-found')) return 'No hay ninguna cuenta con ese correo.';
-  if (codigo.includes('too-many-requests')) {
-    return 'Demasiados intentos seguidos. Espera un momento y vuelve a probar.';
-  }
-  if (codigo.includes('network-request-failed')) return 'Sin conexión. Inténtalo de nuevo.';
-  if (codigo.includes('email-already-in-use')) return 'Ese correo ya está en otra cuenta.';
-  if (codigo.includes('weak-password')) return 'La contraseña necesita al menos 6 caracteres.';
-  if (codigo.includes('invalid-email')) return 'Ese correo no parece válido.';
-  if (codigo.includes('popup-blocked')) {
-    return 'Tu navegador ha bloqueado la ventana de acceso. Permítela y vuelve a probar.';
-  }
-  if (codigo.includes('unauthorized-domain')) {
-    return 'Este sitio no está autorizado para entrar. Avisa a UDECA.';
-  }
-  if (codigo.includes('operation-not-allowed')) {
-    return 'Esa forma de entrar no está disponible ahora mismo. Prueba con la otra.';
-  }
-  // Cualquier otra cosa se dice en cristiano. El texto que trae Firebase
-  // ("Firebase: Error (auth/internal-error).") no le sirve a nadie que esté
-  // intentando entrar en una app de entrenamiento, y encima da mala espina.
-  return 'No se ha podido entrar. Inténtalo otra vez en un momento.';
-}
+export { mensajeDeEntrada, type OrigenDeEntrada } from './mensajesDeEntrada';
