@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Condiciones de contratación · UDECA</title>
+<meta name="description" content="Qué se contrata al suscribirse a UDECA: precios, renovación, cancelación y derecho de desistimiento." />
+<!--
+  ESTA PÁGINA NO DEPENDE DE NADA, igual que privacidad.html y por lo mismo: la
+  abren revisores automáticos que piden el HTML y no ejecutan JavaScript. Todo
+  va dentro y no hay ni una petición al exterior.
+
+  Y ADEMÁS ES LA URL DE CONDICIONES QUE SE LE DA A STRIPE.
+
+  Sin ella, la casilla "Exigir que los clientes acepten las condiciones de
+  servicio" sale en gris y no se puede activar. Esa casilla es la que deja
+  constancia de que alguien aceptó estas condiciones al pagar — y dentro de
+  estas condiciones está el apartado 6, que es el que permite empezar a prestar
+  el servicio de inmediato sin quedar catorce días a merced de una devolución.
+
+  Los precios de aquí tienen que ser los de lib/precios.ts. Lo vigila
+  scripts/check-condiciones.mjs, que también se queja si queda algún dato del
+  titular sin rellenar.
+-->
+<style>
+  :root {
+    --bg: #080706;
+    --surface: #100e0c;
+    --text: #f2ede7;
+    --muted: #a2968b;
+    --faint: #6f6760;
+    --gold: #c9bcae;
+    --hairline: rgba(162, 150, 139, 0.22);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 22px; }
+  header { border-bottom: 1px solid var(--hairline); }
+  header .wrap { display: flex; align-items: center; height: 64px; }
+  .brand {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    font-size: 15px;
+  }
+  main { padding: 40px 0 70px; }
+  .eyebrow {
+    color: var(--gold);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; }
+  h2 { font-size: 19px; margin: 34px 0 10px; }
+  p, li { color: var(--muted); font-size: 16px; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  li { margin-bottom: 8px; }
+  b { color: var(--text); font-weight: 600; }
+  a { color: var(--gold); }
+  .fecha { color: var(--faint); font-size: 13px; margin-bottom: 8px; }
+  .idiomas { font-size: 14px; margin-bottom: 28px; }
+  hr { border: 0; height: 1px; background: var(--hairline); margin: 50px 0; }
+  footer { border-top: 1px solid var(--hairline); padding: 22px 0 40px; }
+  footer p { color: var(--faint); font-size: 13px; margin: 0; }
+  @media (min-width: 700px) { h1 { font-size: 42px; } }
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="wrap"><a class="brand" href="https://www.udeca.app">UDECA</a></div>
+</header>
+
+<main>
+  <div class="wrap">
+    <p class="eyebrow">Legal</p>
+    <h1>Condiciones de contratación</h1>
+    <p class="fecha">Última actualización: septiembre de 2026</p>
+
+    <p>
+      Estas condiciones regulan la suscripción a UDECA (Universidad de Calistenia). Al
+      suscribirte las aceptas. Están escritas para leerse: si algo no se entiende, escríbenos a
+      <b>luistenaf@gmail.com</b> antes de pagar.
+    </p>
+
+    <h2>1. Quién presta el servicio</h2>
+    <p>
+      <!-- RELLENAR ANTES DE PUBLICAR. Nombre o razón social, NIF y domicilio
+           fiscal. No los invento: son datos legales y tienen que ser los tuyos
+           de verdad. La LSSI obliga a identificar al prestador, y Stripe pide
+           esta URL como condiciones de servicio.
+           check-condiciones.mjs falla mientras esto siga sin rellenar. -->
+      PENDIENTE: titular, NIF y domicilio.
+      Correo de contacto: <b>luistenaf@gmail.com</b>.
+    </p>
+
+    <h2>2. Qué se contrata</h2>
+    <p>
+      El acceso a la plataforma UDECA (aplicación móvil y web) durante el periodo contratado, con
+      todas sus funciones. No hay funciones reservadas a un plan superior ni límite de alumnos
+      para las cuentas de entrenador.
+    </p>
+
+    <h2>3. Precios</h2>
+    <ul>
+      <li><b>Atleta:</b> 60 € al año. El primer año, 30 €.</li>
+      <li><b>Entrenador:</b> 240 € al año. El primer año, 120 €.</li>
+      <li><b>Alumnos de un entrenador:</b> gratis. No pagan nada a UDECA.</li>
+    </ul>
+    <p>
+      Los precios incluyen los impuestos aplicables. El descuento del primer año se aplica una
+      sola vez, en la primera factura.
+    </p>
+
+    <h2>4. Renovación</h2>
+    <p>
+      La suscripción <b>se renueva automáticamente</b> cada año al precio ordinario indicado en el
+      apartado 3, salvo que la canceles antes. Te avisamos por correo antes de cada renovación.
+    </p>
+
+    <h2>5. Cancelación</h2>
+    <p>
+      Puedes cancelar cuando quieras desde tu cuenta, sin dar explicaciones y sin penalización. Al
+      cancelar conservas el acceso hasta el final del periodo que ya has pagado, y a partir de ahí
+      no se te cobra nada más. <b>No se devuelve la parte del periodo no consumido.</b>
+    </p>
+    <p>
+      Cancelar no borra nada: tus rutinas, tus marcas, tu historial y —si eres entrenador— tus
+      alumnos siguen en la cuenta. Si vuelves, están donde los dejaste.
+    </p>
+
+    <h2>6. Derecho de desistimiento</h2>
+    <p>
+      Si contratas como consumidor, la ley te da <b>14 días naturales</b> para desistir del
+      contrato sin dar explicaciones.
+    </p>
+    <p>
+      Ahora bien: UDECA es un servicio digital que empieza a prestarse en el momento en que se
+      activa tu cuenta, que es inmediatamente después del pago. Por eso, al suscribirte
+      <b>solicitas expresamente que el servicio comience de inmediato</b> y
+      <b>reconoces que, una vez ejecutado por completo, pierdes el derecho de desistimiento</b>.
+      Así lo prevé el artículo 103.m) del texto refundido de la Ley General para la Defensa de los
+      Consumidores y Usuarios.
+    </p>
+    <p>
+      Si prefieres conservar tus 14 días, no aceptes el inicio inmediato: escríbenos antes de
+      pagar a <b>luistenaf@gmail.com</b> y lo activamos al terminar el plazo.
+    </p>
+    <p>
+      Este apartado no se aplica si contratas como profesional o empresa: en ese caso no existe
+      derecho de desistimiento.
+    </p>
+
+    <h2>7. Impagos</h2>
+    <p>
+      Si un cobro de renovación no se puede completar, lo reintentamos y te avisamos. Si aun así
+      no entra, la cuenta deja de estar activa. Los datos no se borran por un impago.
+    </p>
+
+    <h2>8. Uso del servicio</h2>
+    <p>
+      La cuenta es personal. Un entrenador no puede compartir su cuenta con otros entrenadores:
+      cada uno necesita la suya. El contenido que subes (rutinas, fotos, cursos) sigue siendo
+      tuyo; solo lo tratamos para prestarte el servicio, como se explica en la
+      <a href="/privacidad">política de privacidad</a>.
+    </p>
+
+    <h2>9. Entrenadores y alumnos</h2>
+    <p>
+      UDECA es la herramienta, no la parte. La relación entre un entrenador y sus alumnos —lo que
+      cobra, cómo lo cobra y qué les entrega— es entre ellos. El dinero de esa relación no pasa
+      por UDECA: cada entrenador cobra a sus alumnos con sus propios medios.
+    </p>
+
+    <h2>10. Cambios</h2>
+    <p>
+      Si cambiamos estas condiciones o los precios, te avisamos con antelación suficiente y el
+      cambio solo te afecta en la siguiente renovación, nunca en el periodo que ya has pagado.
+      Si no te conviene, cancelas.
+    </p>
+
+    <h2>11. Ley aplicable</h2>
+    <p>
+      Se aplica la legislación española. Si eres consumidor, puedes acudir a los tribunales de tu
+      domicilio y a la plataforma europea de resolución de litigios en línea.
+    </p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      © 2026 UDECA · Universidad de Calistenia ·
+      <a href="/eliminar-cuenta">Eliminar tu cuenta</a>
+    </p>
+  </div>
+</footer>
+</body>
+</html>
