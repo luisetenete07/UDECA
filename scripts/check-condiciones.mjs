@@ -78,27 +78,23 @@ console.log('\nLo que se cobra es lo que dice lib/precios.ts');
   ok('y de que cancelar no borra nada', /cancelar no borra nada/i.test(visible));
 }
 
-console.log('\nCubre los DOS servicios del mismo titular');
+console.log('\nY deja claro que NO cubre el entrenamiento personal');
 {
   /*
-   * La URL de condiciones es de la CUENTA de Stripe, no del enlace de pago. Y
-   * bajo la misma entidad jurídica se cobran dos cosas distintas: la
-   * suscripción a UDECA y el entrenamiento personal del entrenador. Los dos
-   * checkouts enseñan este mismo documento, así que si solo hablara de la app,
-   * quien contrata entrenamiento estaría aceptando unas condiciones que no son
-   * las suyas.
+   * La URL de condiciones es de la CUENTA de Stripe, no del enlace de pago, y
+   * bajo la misma entidad se cobran dos cosas: la suscripción a UDECA y el
+   * entrenamiento personal del entrenador. Los dos checkouts van a enseñar
+   * este documento.
+   *
+   * El entrenamiento tiene sus propias condiciones, así que aquí no se
+   * escriben: lo único que hace falta es que quien lo contrate y acabe leyendo
+   * esta página sepa que no es la suya. Una línea, y evita que alguien crea
+   * que su seguimiento se rige por las reglas de una app.
    */
-  ok('dice que son dos servicios', /dos servicios distintos/i.test(visible));
-  ok('acota los apartados de la app', /se refieren solo a la suscripción a UDECA/i.test(visible));
-  ok('y tiene su apartado de entrenamiento personal', /Entrenamiento personal/.test(visible));
+  ok('acota el documento a la suscripción', /y solo\s+eso/i.test(visible));
   ok(
-    'con su propio desistimiento',
-    /parte\s+proporcional ya prestada/i.test(visible),
-    'el del entrenamiento no es el mismo que el de un servicio digital'
-  );
-  ok(
-    'y aclarando que ese cobro no pasa por la app',
-    /no pasa por la plataforma UDECA/i.test(visible)
+    'y remite el entrenamiento a sus propias condiciones',
+    /sus propias\s+condiciones/i.test(visible) && /no se les aplica/i.test(visible)
   );
 }
 
@@ -119,10 +115,7 @@ console.log('\nY no sale a la calle a medio rellenar');
    */
   const aMedias = /PENDIENTE/.test(visible);
   if (aMedias) {
-    const cuantos = (visible.match(/PENDIENTE/g) || []).length;
-    console.log(`  ⚠ FALTAN ${cuantos} huecos por rellenar:`);
-    console.log('    · apartado 1  — titular, NIF y domicilio');
-    console.log('    · apartado 12 — precio y condiciones del entrenamiento personal');
+    console.log('  ⚠ FALTA por rellenar: titular, NIF y domicilio (apartado 1)');
     console.log('    Hasta entonces, NO le des esta URL a Stripe como condiciones');
     console.log('    de servicio: publicar unas condiciones sin identificar a quién');
     console.log('    cobra es peor que no tenerlas.');
