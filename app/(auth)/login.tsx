@@ -145,7 +145,7 @@ export default function LoginScreen() {
     return (
       <ScreenContainer contentStyle={styles.content} maxWidth={560}>
         <View style={styles.header}>
-          <Logo />
+          <Logo sinSesion />
           <Text style={styles.title}>Un paso y ya está</Text>
         </View>
         <Card accent style={styles.formCard}>
@@ -194,7 +194,7 @@ export default function LoginScreen() {
           style={styles.heroGlow}
           pointerEvents="none"
         />
-        <Logo />
+        <Logo sinSesion />
         <Text style={styles.title}>Bienvenido de nuevo</Text>
         <Text style={styles.subtitle}>Entra y sigue con tu entrenamiento</Text>
       </View>

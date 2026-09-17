@@ -159,6 +159,22 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
 }
 
 /**
+ * Fija (o BORRA) la marca propia de una cuenta.
+ *
+ * Con texto vacío borra el campo DE VERDAD (`deleteField`), por lo mismo que
+ * el enlace de pago de aquí abajo: `updateUserProfile` descarta los `undefined`
+ * antes de escribir, así que "guardar vacío" no borraría nada y la marca
+ * anterior reaparecería al recargar el perfil. Quien quita su marca quiere
+ * volver a UDECA, no quedarse con la de ayer.
+ */
+export async function setBrandName(uid: string, marca: string) {
+  const limpio = marca.trim();
+  await updateDoc(doc(db, 'users', uid), {
+    brandName: limpio ? limpio : deleteField(),
+  });
+}
+
+/**
  * Fija (o BORRA) el enlace de pago de UN ALUMNO, desde su ficha.
  *
  * Va por alumno y no por entrenador porque los precios no son uno solo: cada

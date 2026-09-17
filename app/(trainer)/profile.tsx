@@ -9,6 +9,7 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
+import { EditorDeMarca } from '../../components/EditorDeMarca';
 import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
 import { RateApp } from '../../components/RateApp';
 import { UpgradeCard } from '../../components/UpgradeCard';
@@ -486,6 +487,8 @@ export default function TrainerProfileScreen() {
 
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
       <MemberCard />
+
+      <EditorDeMarca />
 
       <SelectorDeIdioma />
 

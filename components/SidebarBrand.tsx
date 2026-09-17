@@ -25,7 +25,7 @@ export const BRAND_HEIGHT = 96;
  * arriba a la izquierda era un cargo que no es el suyo.
  */
 export function SidebarBrand() {
-  const { profile } = useAuth();
+  const { profile, marca } = useAuth();
   return (
     <View style={styles.fill} pointerEvents="none">
       <View style={styles.row}>
@@ -35,7 +35,13 @@ export function SidebarBrand() {
           resizeMode="contain"
         />
         <View>
-          <Text style={styles.mark}>UDECA</Text>
+          {/* La marca de quien mira: la suya si paga, la de su entrenador si
+              es alumno. `numberOfLines` es el seguro del tope de doce letras:
+              con una tipografía más ancha o un panel más estrecho, antes que
+              empujar al emblema, se recorta. */}
+          <Text style={styles.mark} numberOfLines={1}>
+            {marca}
+          </Text>
           <Text style={styles.sub}>{rotuloDelRol(profile)}</Text>
         </View>
       </View>

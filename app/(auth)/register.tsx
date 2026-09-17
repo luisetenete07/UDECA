@@ -81,7 +81,7 @@ export default function RegisterScreen() {
           style={styles.heroGlow}
           pointerEvents="none"
         />
-        <Logo />
+        <Logo sinSesion />
         <Text style={styles.title}>Crea tu cuenta</Text>
         <Text style={styles.subtitle}>En un toque. Sin contraseñas que recordar.</Text>
       </View>

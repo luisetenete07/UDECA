@@ -104,7 +104,7 @@ export default function WelcomeScreen() {
           },
         ]}
       >
-        <Logo />
+        <Logo sinSesion />
       </Animated.View>
 
       <ScrollView

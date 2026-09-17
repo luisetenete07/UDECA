@@ -73,6 +73,16 @@ export interface UserProfile {
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /**
+   * La palabra que sustituye a "UDECA" en la app.
+   *
+   * La pone el entrenador o el atleta desde su perfil. La del entrenador la ven
+   * también SUS ALUMNOS: para ellos la app es la de su coach, no la nuestra.
+   *
+   * Vacío o sin poner significa UDECA. Tope de caracteres y limpieza en
+   * lib/marcaPropia.ts, que es donde se explica de dónde sale el número.
+   */
+  brandName?: string;
+  /**
    * Enlace de cobro de ESTE alumno (Stripe Payment Link, Bizum, PayPal.me…):
    * el que abre para pagar su cuota de un toque desde el aviso de cobro. Lo
    * pone su entrenador en su ficha, junto a la cuota.

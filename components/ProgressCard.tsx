@@ -12,6 +12,7 @@ import Svg, {
   Rect,
   Stop,
 } from 'react-native-svg';
+import { useAuth } from '../lib/auth-context';
 import { useBloqueoDeScroll } from '../lib/bloqueoDeScroll';
 import { colors, fonts, spacing, tabularNums, typography } from '../lib/theme';
 
@@ -82,6 +83,7 @@ export function ProgressCard({
    */
   fundador?: string;
 }) {
+  const { marca } = useAuth();
   const [i, setI] = useState(0);
   const [caja, setCaja] = useState({ w: 0, h: 0 });
   const giroX = useRef(new Animated.Value(0)).current;
@@ -359,7 +361,11 @@ export function ProgressCard({
       ) : null}
 
       <View style={styles.arriba}>
-        <Text style={styles.marca}>UDECA</Text>
+        {/* La tarjeta se comparte fuera de la app: aquí la marca importa el
+            doble, porque es lo que ve quien todavía no es cliente de nadie. */}
+        <Text style={styles.marca} numberOfLines={1}>
+          {marca}
+        </Text>
         <Text style={styles.rol}>{rol.toUpperCase()}</Text>
       </View>
 
