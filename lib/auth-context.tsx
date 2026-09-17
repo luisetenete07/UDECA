@@ -18,7 +18,7 @@ import { sendJoinRequest } from './firestore/joinRequests';
 import { registerForPushNotificationsAsync } from './notifications';
 import { forgetAccount, proveedorDe, rememberAccount } from './rememberedAccounts';
 import { clearCache } from './screenCache';
-import { trialUntil } from './subscription';
+import { suscripcionAlNacer } from './subscription';
 import { aplicarIdiomaDelPerfil } from './idioma';
 import type { UserProfile, UserRole } from './types';
 
@@ -221,8 +221,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       trainerId: user.uid,
       ...foto,
-      subscriptionUntil: trialUntil(),
-      trialEndsAt: trialUntil(),
+      // Nace caducada y se abre al pagar, igual que la del entrenador. Sin
+      // `trialEndsAt`: ese campo es lo que hace que la app diga "estás de
+      // prueba" y que la tarea diaria mande avisos de prueba, y desde que el
+      // primer año se paga al entrar las dos cosas serían mentira.
+      ...suscripcionAlNacer(),
     };
     await setDoc(doc(db, 'users', user.uid), nuevo);
     setProfile(nuevo);
@@ -303,9 +306,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       trainerId: credential.user.uid,
       emailVerificationRequired: true,
-      // El atleta entra probando y decide después de haber usado la app.
-      subscriptionUntil: trialUntil(),
-      trialEndsAt: trialUntil(),
+      // Nace pendiente de activación, como dice el comentario de arriba. Antes
+      // decía eso y escribía 28 días de prueba justo debajo.
+      ...suscripcionAlNacer(),
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     sendEmailVerification(credential.user).catch(() => {});

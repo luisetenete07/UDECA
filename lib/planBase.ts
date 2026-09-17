@@ -33,6 +33,35 @@ export function trialUntil(from: number = Date.now()): number {
 }
 
 /**
+ * Con qué suscripción nace una cuenta nueva que paga plataforma.
+ *
+ * CERO. Nace caducada y se abre al pagar, igual el atleta que el entrenador.
+ *
+ * ESTO ESTUVO MAL DESDE EL 11 DE SEPTIEMBRE y no dio un solo error. El
+ * entrenador ya nacía con `subscriptionUntil: 0`, pero el atleta seguía
+ * naciendo con 28 días de prueba y con `trialEndsAt` puesto, de cuando había
+ * prueba. Tres cosas se torcían a la vez, todas en silencio:
+ *
+ *  - En el panel de administración salía "De prueba · hasta <fecha>" en vez de
+ *    "SIN ACTIVAR". Es decir: la lista de atletas no decía quién ha pagado y
+ *    quién no, que es exactamente para lo que se mira esa lista.
+ *  - La tarea diaria le mandaba avisos de "se te acaba la prueba" por una
+ *    prueba que ya no se vende.
+ *  - Y `subscriptionUntil` guardaba una fecha que nadie había comprado.
+ *
+ * El acceso nunca llegó a abrirse de más —`needsEntryPayment` devuelve cierto
+ * cuando el estado es de prueba, así que el muro de pago salía igual—, y por
+ * eso no se notó: lo único roto era lo que se LEE, que es lo último que
+ * alguien comprueba.
+ *
+ * Está aquí, suelto y sin imports, para que el guardián pueda ejecutarlo en
+ * vez de leer el texto de auth-context.tsx, que arrastra Firebase.
+ */
+export function suscripcionAlNacer(): { subscriptionUntil: number } {
+  return { subscriptionUntil: 0 };
+}
+
+/**
  * El primer año, que es lo que se compra al entrar.
  *
  * Antes esto eran 28 días de prueba del atleta y un alta simbólica de 1 €.

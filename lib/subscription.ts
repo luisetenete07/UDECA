@@ -97,6 +97,7 @@ export {
   primerAnoHasta,
   TRIAL_DAYS,
   trialUntil,
+  suscripcionAlNacer,
   CLIENT_GRACE_DAYS,
   CLIENT_REPORT_GRACE_DAYS,
   clientIsLocked,
