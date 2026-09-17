@@ -74,9 +74,13 @@ console.log('\nY el servidor escribe ese mismo año, para los dos roles');
   // pagaba su alta y se quedaba sin `subscriptionUntil`: su cuenta entraba
   // caducada y veía el muro de pago con el año recién pagado.
   const bloque = alta.slice(alta.indexOf('const datos = {'), alta.indexOf("if (perfil.role === 'trainer'"));
+  // El año contado a mano solo se usa cuando el pago NO es una suscripción
+  // (las de antes). Con suscripción manda la fecha de fin que da Stripe, que
+  // es la del cargo de verdad; calcularla aquí sería inventarse otro día.
   ok(
     'sin distinguir el rol',
-    bloque.includes('if (!perfil.entryPaidAt) {') && !bloque.includes("role === 'athlete'"),
+    /if \(!suscripcion && !perfil\.entryPaidAt\) \{/.test(bloque) &&
+      !bloque.includes("role === 'athlete'"),
     'el entrenador también compra su año al entrar'
   );
   // `trialEndsAt` es lo que hace que la app diga "estás de prueba" y que el

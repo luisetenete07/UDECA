@@ -239,14 +239,33 @@ async function tarjetaDelPago(session) {
 // Activa la cuenta tras el primer pago. El uid llega en client_reference_id
 // (el Payment Link se abre desde la app con ?client_reference_id=<uid>).
 async function activateSubscription(session) {
-  const uid = session.client_reference_id;
-  if (!uid) return;
   let until = addOneMonth(Date.now());
   let plan = null;
   if (session.subscription) {
     const sub = await stripe.subscriptions.retrieve(session.subscription);
     until = subPeriodEndMs(sub); // fin del periodo pagado (mes o año)
     plan = planDeLaSuscripcion(sub);
+  }
+
+  /*
+   * SIN UID NO SE TIRA EL COBRO, SE GUARDA POR CORREO.
+   *
+   * Aquí había un `if (!uid) return;` y era un agujero con forma de dinero.
+   * Mientras la entrada fue un pago suelto no se notaba: quien pagaba en la
+   * web caía en `altaPagadaSinCuenta`, que apunta el pago por correo para que
+   * lo recoja al registrarse. Pero esa rama solo corre cuando el pago NO es
+   * suscripción.
+   *
+   * Desde que la entrada ES una suscripción, todo el que pague en udeca.app
+   * —que es el camino normal, se paga primero y se crea la cuenta después—
+   * entraba por aquí sin uid y se iba por ese `return`: cobro hecho, cuenta sin
+   * activar, ni un solo error en ninguna parte. Se descubriría leyendo las
+   * cuentas del mes, o por un correo enfadado.
+   */
+  const uid = session.client_reference_id;
+  if (!uid) {
+    await suscripcionSinCuenta(session, { until, plan });
+    return;
   }
   await db.collection('users').doc(uid).set(
     {
@@ -259,6 +278,59 @@ async function activateSubscription(session) {
     },
     { merge: true }
   );
+}
+
+/**
+ * Suscripción pagada ANTES de existir la cuenta.
+ *
+ * Mismo camino que `altaPagadaSinCuenta` y por el mismo motivo —en la web se
+ * paga primero y se crea la cuenta después—, pero guardando además lo que hace
+ * distinta a una suscripción: su identificador, su fecha de fin real y su plan.
+ * Sin esos tres, quien pagara en la web entraría con un año contado a ojo y sin
+ * el plan que le quita el tope de alumnos, que es justo lo que ha comprado.
+ */
+async function suscripcionSinCuenta(session, { until, plan }) {
+  const email = correoDelPago(session);
+  if (!email) {
+    // Sin correo no hay forma humana de saber de quién es este dinero. Que
+    // quede gritando en el registro: es lo único que se puede hacer.
+    console.error('Suscripción pagada sin uid y sin correo:', session.id);
+    return;
+  }
+
+  const suscripcion = { id: session.subscription || null, until, plan };
+
+  const q = await db.collection('users').where('email', '==', email).limit(1).get();
+  if (!q.empty) {
+    const perfil = q.docs[0].data();
+    if (perfil.role === 'trainer' || perfil.role === 'athlete') {
+      await aplicarAlta(db, q.docs[0].id, {
+        huella: await tarjetaDelPago(session),
+        customerId: session.customer || null,
+        suscripcion,
+      });
+      return;
+    }
+  }
+
+  await db
+    .collection('entryPayments')
+    .doc(claveDeCorreo(email))
+    .set(
+      {
+        email,
+        paidAt: Date.now(),
+        amountEur: (session.amount_total || 0) / 100,
+        stripeCustomerId: session.customer || null,
+        stripeSessionId: session.id,
+        payerFingerprint: (await tarjetaDelPago(session)) || null,
+        // Lo que lo convierte en una suscripción y no en un pago suelto.
+        // `claim-entry` los vuelca tal cual cuando alguien lo reclama.
+        suscripcion,
+        claimedBy: null,
+      },
+      { merge: true }
+    );
 }
 
 /**

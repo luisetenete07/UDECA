@@ -347,7 +347,7 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
           {url ? <Text style={styles.pie}>{facturacion}</Text> : null}
           <ElegirPlan
             profile={profile}
-            nota="Se paga una vez y te olvidas del contador hasta el año que viene."
+            nota="Se renueva sola cada año. Cancelas cuando quieras, y lo que has registrado no se borra."
           />
         </>
       ) : (
@@ -365,8 +365,8 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
               diccionario traduce por frase completa. */}
           <Text style={styles.nota}>
             {caducado
-              ? 'Se cobra una vez al año e incluye la app entera sin tope de alumnos. Tu grupo y tu trabajo te esperan intactos.'
-              : 'Se cobra una vez al año. Mientras no lo actives no se te cobra nada, y tus alumnos actuales siguen igual.'}
+              ? 'Se cobra una vez al año y se renueva sola, con la app entera y sin tope de alumnos. Cancelas cuando quieras. Tu grupo y tu trabajo te esperan intactos.'
+              : 'Se cobra una vez al año y se renueva sola; cancelas cuando quieras. Mientras no lo actives no se te cobra nada, y tus alumnos actuales siguen igual.'}
           </Text>
         </>
       )}

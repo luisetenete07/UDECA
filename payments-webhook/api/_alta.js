@@ -111,7 +111,11 @@ export async function cuentasConLaMismaTarjeta(db, fingerprint, uid) {
  * Devuelve false si no había nada que hacer (cuenta inexistente, o que no
  * paga plataforma), para que quien llame pueda decirlo.
  */
-export async function aplicarAlta(db, uid, { huella = null, customerId = null } = {}) {
+export async function aplicarAlta(
+  db,
+  uid,
+  { huella = null, customerId = null, suscripcion = null } = {}
+) {
   const snap = await db.collection('users').doc(uid).get();
   if (!snap.exists) return false;
   const perfil = snap.data();
@@ -119,6 +123,30 @@ export async function aplicarAlta(db, uid, { huella = null, customerId = null } 
 
   const datos = { entryPaidAt: Date.now(), stripeCustomerId: customerId };
   if (huella) datos.payerFingerprint = huella;
+
+  /*
+   * SI LO QUE SE HA PAGADO ES UNA SUSCRIPCIÓN, MANDA ELLA.
+   *
+   * Desde que la entrada es una suscripción anual con el primer año a mitad de
+   * precio, el alta y la cuota son EL MISMO producto. Lo que llega aquí ya no
+   * es "un pago suelto de un año": es una suscripción de verdad, con su fecha
+   * de fin real y su renovación automática.
+   *
+   * Por eso se escriben sus tres campos y no los 365 días de abajo: la fecha
+   * que manda Stripe es la buena —la que se va a cobrar— y calcularla nosotros
+   * sería inventarnos un día distinto al del cargo.
+   *
+   * `subscriptionPlan` es el que quita el tope de alumnos (`planIlimitado` en
+   * lib/planBase.ts). No es un efecto secundario: es exactamente lo que se ha
+   * comprado.
+   */
+  if (suscripcion) {
+    if (suscripcion.id) datos.stripeSubscriptionId = suscripcion.id;
+    if (suscripcion.plan) datos.subscriptionPlan = suscripcion.plan;
+    if (suscripcion.until) {
+      datos.subscriptionUntil = Math.max(suscripcion.until, perfil.subscriptionUntil || 0);
+    }
+  }
 
   // Lo que se compra al entrar es el PRIMER AÑO, y vale para los dos roles: el
   // entrenador y el atleta pagan su año por adelantado. El reloj empieza AQUÍ
@@ -129,7 +157,7 @@ export async function aplicarAlta(db, uid, { huella = null, customerId = null } 
   // No se escribe `trialEndsAt`: esto no es una prueba, es un año pagado. Ese
   // campo es lo que hace que la app diga "estás de prueba" y que la tarea
   // diaria mande los avisos de prueba, y las dos cosas serían mentira.
-  if (!perfil.entryPaidAt) {
+  if (!suscripcion && !perfil.entryPaidAt) {
     const fin = Date.now() + PRIMER_ANO_DIAS * 24 * 60 * 60 * 1000;
     datos.subscriptionUntil = Math.max(fin, perfil.subscriptionUntil || 0);
   }
@@ -137,9 +165,22 @@ export async function aplicarAlta(db, uid, { huella = null, customerId = null } 
   if (perfil.role === 'trainer' && huella) {
     const { ref, otras, yaEstaba } = await cuentasConLaMismaTarjeta(db, huella, uid);
     if (otras.length > 0) {
-      // Esta tarjeta ya compró sus plazas. La cuenta entra igual, pero sin
-      // plazas incluidas: para tener alumnos, el plan anual sin tope.
-      datos.clientSlots = 0;
+      /*
+       * Se ANOTA, pero ya no se penaliza.
+       *
+       * Esto existía porque el alta barata traía cinco plazas: con cuatro
+       * cuentas a 27 € salían veinte alumnos por 108 € en vez de 180, así que
+       * a la segunda tarjeta repetida se le daban cero plazas.
+       *
+       * Con una sola suscripción sin tope de alumnos ese atajo no lleva a
+       * ninguna parte: abrir una segunda cuenta cuesta otra suscripción entera
+       * y no da nada que no diera la primera. Quitar plazas hoy solo castiga
+       * al caso legítimo —la pareja que paga con la misma tarjeta, el centro
+       * con dos entrenadores—, que es lo que este código decía que no quería
+       * hacer.
+       *
+       * La anotación se queda: es una señal barata y a veces dice algo.
+       */
       datos.sharedCardWith = otras;
     }
     if (!yaEstaba) {

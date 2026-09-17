@@ -56,17 +56,17 @@
   "offers": [
     {
       "@type": "Offer",
-      "name": "Primer año · Atleta",
-      "price": "17",
+      "name": "Atleta · primer año",
+      "price": "30",
       "priceCurrency": "EUR",
-      "category": "Primer año completo"
+      "category": "Suscripción anual, primer año a mitad de precio (después 60 €)"
     },
     {
       "@type": "Offer",
-      "name": "Primer año · Entrenador",
-      "price": "27",
+      "name": "Entrenador · primer año",
+      "price": "120",
       "priceCurrency": "EUR",
-      "category": "Primer año completo, con 5 alumnos incluidos"
+      "category": "Suscripción anual con alumnos ilimitados, primer año a mitad de precio (después 240 €)"
     }
   ]
 }
@@ -143,7 +143,7 @@
         <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
       </a>
     </div>
-    <p class="hero-note">Primer año completo: 1,42 €/mes atleta · 2,25 €/mes entrenador · Alumnos de un entrenador, gratis</p>
+    <p class="hero-note">Primer año a mitad de precio: 2,50 €/mes atleta · 10 €/mes entrenador · Alumnos de un entrenador, gratis</p>
 
     <div class="shots reveal">
       <div class="phone"><img src="/assets/app-entreno.webp" alt="Pantalla de entrenamiento de UDECA" loading="lazy" /></div>
@@ -166,10 +166,14 @@
 <section class="cifras-sec">
   <div class="wrap">
     <div class="cifras">
-      <div class="cifra reveal"><b>5</b><span>alumnos incluidos el primer año</span></div>
+      <!-- Estas cuatro cifras tienen que ser las de lib/precios.ts. Aquí se
+           quedó un cambio de precios entero con el mensual antiguo escrito,
+           porque el guardián comprobaba que estuvieran los precios NUEVOS y no
+           que hubieran desaparecido los viejos. Ahora comprueba las dos. -->
+      <div class="cifra reveal"><b>Sin tope</b><span>de alumnos por entrenador</span></div>
       <div class="cifra reveal"><b>3</b><span>formas de montar un plan</span></div>
       <div class="cifra reveal"><b>0 €</b><span>para los alumnos de un entrenador</span></div>
-      <div class="cifra reveal"><b>1,42 €</b><span>al mes el primer año</span></div>
+      <div class="cifra reveal"><b>2,50 €</b><span>al mes el primer año</span></div>
     </div>
   </div>
 </section>
@@ -226,8 +230,8 @@
     </ol>
 
     <div class="cta-centro reveal">
-      <a class="btn btn-primary btn-lg" href="#planes">Empezar mi primer año</a>
-      <p class="hero-note">Sin permanencia y sin renovación automática.</p>
+      <a class="btn btn-primary btn-lg" href="#planes">Ver los planes</a>
+      <p class="hero-note">El primer año, a mitad de precio. Cancelas cuando quieras.</p>
     </div>
   </div>
 </section>
@@ -353,30 +357,34 @@
 <section id="planes">
   <div class="wrap">
     <p class="eyebrow">Planes</p>
-    <h2 class="section-title big">El primer año,<em> al precio de empezar</em></h2>
+    <h2 class="section-title big">Un plan por persona.<em> Sin topes y sin letra pequeña</em></h2>
     <p class="lead">
-      Un pago, doce meses, la plataforma entera. Sin permanencia, sin renovación
-      automática y sin funciones guardadas para un plan de más arriba: pagas aquí
-      y la cuenta queda activa en la app con el mismo correo.
+      Una suscripción al año, la plataforma entera desde el primer día y ninguna
+      función guardada para un plan de más arriba. El primer año cuesta la mitad;
+      después se renueva sola al precio de siempre, y se cancela cuando quieras.
     </p>
 
     <div class="plans">
       <article class="plan reveal">
         <p class="who">Atleta</p>
         <h3>Entrenas por tu cuenta</h3>
-        <div class="price"><b>1,42 €</b><span>/mes el primer año</span></div>
-        <p class="sub">17 € en un solo pago, y doce meses por delante.</p>
+        <div class="price"><b>2,50 €</b><span>/mes el primer año</span></div>
+        <!-- El total y la renovación, ANTES del botón y no debajo.
+             Enseñar el mensual y cobrar el año sin decirlo es lo que hace que
+             la gente pida la devolución; y desde que esto se renueva solo, no
+             decirlo antes de pagar además no sería legal. -->
+        <p class="sub">30 € el primer año. Luego 60 € al año, 5 € al mes.</p>
         <ul>
           <li>Tu plan, montado por ti, con todos los métodos</li>
           <li>Progreso por ejercicio, semana a semana</li>
-          <li>Informe en PDF de tu evolución</li>
           <li>Nutrición, hábitos y fotos de progreso</li>
+          <li>Informe en PDF de tu evolución</li>
           <li>Cursos y comunidad</li>
         </ul>
-        <a class="btn btn-ghost" data-pago="altaAtleta" href="#">Empezar mi primer año · 17 €</a>
+        <a class="btn btn-ghost" data-pago="altaAtleta" href="#">Empezar · 30 € el primer año</a>
         <p class="after">
-          Al terminar el año se renueva a <b>96 € anuales</b> —8 € al mes—. Ese es el
-          precio de siempre: el primer año entras un 82% por debajo.
+          Se renueva sola a 60 € al año. Cancelas cuando quieras desde tu cuenta,
+          y lo que has registrado no se borra nunca.
         </p>
       </article>
 
@@ -384,34 +392,30 @@
         <span class="tag">Para profesionales</span>
         <p class="who">Entrenador</p>
         <h3>Vives de entrenar a gente</h3>
-        <div class="price"><b>2,25 €</b><span>/mes el primer año</span></div>
-        <p class="sub">27 € en un solo pago, con 5 alumnos incluidos desde el primer día.</p>
+        <div class="price"><b>10 €</b><span>/mes el primer año</span></div>
+        <p class="sub">120 € el primer año. Luego 240 € al año, 20 € al mes.</p>
         <ul>
-          <li>Hasta 5 alumnos, cada uno con su propia cuenta</li>
+          <!-- Lo primero de la lista es lo que antes echaba a la puerta al
+               mejor cliente posible: un entrenador con doce alumnos leía
+               "hasta 5" y se iba. -->
+          <li><b>Alumnos ilimitados</b>, cada uno con su cuenta</li>
+          <li><b>Tus alumnos no pagan nada</b>, ni el alta</li>
           <li>Tu método, no el nuestro: tu escala de esfuerzo y tu vocabulario</li>
           <li>Rutinas, ciclos y biblioteca de ejercicios</li>
           <li>Cobros, avisos de impago y control de cuotas</li>
           <li>Informes de progreso con tu marca</li>
           <li>Cursos, tablón y ranking del grupo</li>
         </ul>
-        <a class="btn btn-primary" data-pago="altaCoach" href="#">Empezar mi primer año · 27 €</a>
-        <!-- Aquí iba el precio del plan sin tope (180 € al año). Se quita a
-             propósito: en la tarjeta donde alguien decide pagar 27 €, un
-             segundo importe seis veces mayor no informa, frena. Y no es lo que
-             está comprando hoy — es un plan al que se pasa cuando su grupo
-             crezca, si crece.
-             NO desaparece de la web: sigue contestado en las preguntas, con su
-             cifra y sin rodeos. Lo vigila scripts/check-precios.mjs. -->
+        <a class="btn btn-primary" data-pago="altaCoach" href="#">Empezar · 120 € el primer año</a>
         <p class="after">
-          Hasta 5 alumnos incluidos todo el año. Si tu grupo crece, hay un plan
-          sin tope esperándote.
+          Se renueva sola a 240 € al año. Cancelas cuando quieras, y tus alumnos,
+          sus rutinas y su historial siguen ahí pase lo que pase.
         </p>
       </article>
     </div>
 
     <p class="hero-note" style="margin-top:26px">
-      ¿Eres alumno de un entrenador de UDECA? No pagas nada, ni el alta: pídele su
-      código y entra gratis.
+      ¿Eres alumno de un entrenador de UDECA? No pagas nada: pídele su código y entra gratis.
     </p>
   </div>
 </section>
@@ -552,12 +556,12 @@
         <p>No. Los alumnos entran gratis con el código de su entrenador; quien paga la plataforma es él.</p>
       </details>
       <details>
-        <summary>¿Qué incluye el primer año?</summary>
-        <p>La plataforma entera, sin recortes ni funciones reservadas: 17 € el atleta y 27 € el entrenador, en un solo pago y para doce meses. No es una suscripción: no se renueva sola y no se cobra nada más durante el año.</p>
+        <summary>¿Qué incluye?</summary>
+        <p>La plataforma entera desde el primer día, sin recortes ni funciones reservadas para un plan superior. El primer año vale la mitad: 30 € el atleta y 120 € el entrenador. Después se renueva a 60 € y 240 € al año, y no se cobra nada más por el camino.</p>
       </details>
       <details>
-        <summary>Soy entrenador, ¿qué pasa cuando llego a 5 alumnos?</summary>
-        <p>Sigues con tus 5 el resto del año sin pagar nada más. Para aceptar al sexto está el plan sin tope: 180 € al año —15 € al mes—, y el grupo deja de crecer con techo. Nada se borra ni se bloquea por el camino.</p>
+        <summary>Soy entrenador, ¿cuántos alumnos puedo llevar?</summary>
+        <p>Los que quieras. No hay tope, ni escalones de precio por número de alumnos, ni nada que pagar por el sexto ni por el sesenta. Y ninguno de ellos paga nada a UDECA: entran gratis con tu código.</p>
       </details>
       <details>
         <summary>¿Cómo activo mi cuenta después de pagar?</summary>
@@ -565,7 +569,11 @@
       </details>
       <details>
         <summary>¿Qué pasa cuando termina el año?</summary>
-        <p>Decides tú: el atleta renueva por 96 € al año —8 € al mes— y el entrenador por 180 €. No hay cobro automático ni permanencia, y si no renuevas no se borra nada — tus rutinas, tus marcas y tus alumnos te esperan intactos hasta que vuelvas.</p>
+        <p>Se renueva sola al precio de siempre: 60 € el atleta y 240 € el entrenador. Lo sabes desde que pagas, te avisamos antes de cobrar y cancelas cuando quieras desde tu cuenta, sin llamar a nadie ni dar explicaciones. Si cancelas no se borra nada: tus rutinas, tus marcas y tus alumnos te esperan intactos hasta que vuelvas.</p>
+      </details>
+      <details>
+        <summary>¿Y si un día dejo UDECA? ¿Me quedo sin los datos de mis alumnos?</summary>
+        <p>No. El progreso de cada alumno se descarga en PDF cuando quieras, y sus rutinas y su historial siguen en su cuenta aunque tú te vayas. UDECA tampoco toca el dinero de tus alumnos: les cobras tú, con tu enlace, así que si te vas no tienes que mover ningún cobro.</p>
       </details>
       <details>
         <summary>¿Dónde me la descargo?</summary>
@@ -610,7 +618,7 @@
       </div>
       <ul class="garantias">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Sin permanencia</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Sin renovación automática</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Cancelas cuando quieras</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Los alumnos entran gratis</li>
       </ul>
     </div>

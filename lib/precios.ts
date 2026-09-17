@@ -19,61 +19,99 @@
 /**
  * LOS PRECIOS, EN UN SOLO SITIO.
  *
- * EL MODELO, EN TRES FRASES
+ * EL MODELO, EN DOS FRASES
  *
- *  - Se entra pagando el PRIMER AÑO ENTERO, una sola vez: 27 € el entrenador,
- *    17 € el atleta. Doce meses por delante, sin nada más que decidir.
- *  - Al terminar ese año hay que renovar: 180 € el entrenador, 95 € el atleta.
- *    Sin renovar, la cuenta de entrenador no se puede usar.
- *  - El entrenador puede pasarse al plan de 180 € cuando quiera, también
- *    durante el primer año: es el que quita el tope de cinco alumnos.
+ *  - Hay UNA suscripción anual por rol: 240 € el entrenador, 60 € el atleta.
+ *  - El primer año vale la mitad: 120 € y 30 €. Después se renueva sola al
+ *    precio de siempre, y se cancela cuando se quiera.
  *
- * POR QUÉ UN AÑO Y NO UNA PRUEBA
+ * UN SOLO PRODUCTO POR ROL, Y ESO ES LO IMPORTANTE
  *
- * Antes había 28 días de prueba y un alta de 1 €. Una prueba corta obliga a
- * decidir justo cuando el trabajo empieza a dar resultados —en calistenia, el
- * primer mes es casi todo aprender a colocarse— y esa decisión se toma con las
- * manos vacías. Un año por delante cambia la pregunta: ya no es "¿me servirá?"
- * sino "¿me ha servido?", y esa se responde mirando doce meses de progreso.
+ * Antes había cuatro: un alta barata de entrada (27 € / 17 €) y una cuota
+ * distinta para después (180 € / 96 €). Eso tenía dos fallos, y el segundo era
+ * caro.
  *
- * Y el precio de entrada no es un descuento: es el año de trabajo que hace
- * falta para que el producto demuestre lo que vale.
+ * El primero: un entrenador con doce alumnos llegaba a la web, leía "27 €,
+ * hasta 5 alumnos" y se iba, porque lo que él necesitaba no estaba a la venta.
+ * El mejor cliente posible, filtrado en la puerta por el escaparate.
+ *
+ * El segundo: 27 € y luego 180 € es un salto de casi siete veces, decidido de
+ * nuevo doce meses después, con la tarjeta otra vez en la mano. Una renovación
+ * así no ocurre. Todo el negocio colgaba de un momento diseñado para fallar.
+ *
+ * Ahora es una suscripción, se renueva sola y el salto es de 2×. Y como lo que
+ * se compra no lleva cuenta de alumnos, el tope de cinco desaparece solo: el
+ * plan anual es lo que mira `planIlimitado` en lib/planBase.ts.
+ *
+ * POR QUÉ LA MITAD Y NO UN 85 %
+ *
+ * Un descuento de entrada tiene que ser lo bastante grande para mover a
+ * alguien y lo bastante pequeño para que la renovación no se sienta como una
+ * compra nueva. Al 85 % la segunda factura es un desconocido llamando a la
+ * puerta. A la mitad es lo que se había contado desde el principio.
+ *
+ * Y la mitad se dice en una frase que vale para los dos roles —"el primer año,
+ * a mitad de precio"—, sin tener que explicar dos ofertas distintas.
+ *
+ * TODOS LOS MENSUALES SALEN EXACTOS
+ *
+ * 10,00 / 20,00 / 2,50 / 5,00. No es coquetería: 17/12 daba 1,4166… que se
+ * enseñaba como 1,42, y un precio con un redondeo raro parece un error de la
+ * web justo en la pantalla donde alguien decide pagar.
  *
  * DÓNDE SE ENSEÑAN Y DÓNDE NO
  *
- * En la WEB, siempre por mes y con el total anual debajo: 2,25 €/mes se
- * compara con lo que cuesta una hora de entrenador, y 27 € de golpe no se
- * compara con nada. Pero el total va SIEMPRE visible, porque enseñar el
- * mensual y cobrar el anual sin decirlo es lo que hace que la gente pida la
- * devolución y se vaya.
+ * En la WEB, siempre por mes y con el total anual y el precio de renovación
+ * debajo: 10 €/mes se compara con lo que cuesta una hora de entrenador, y
+ * 120 € de golpe no se compara con nada. Pero el total y la renovación van
+ * SIEMPRE visibles, porque enseñar el mensual y cobrar el anual sin decirlo es
+ * lo que hace que la gente pida la devolución y se vaya.
  *
  * En la APP, nunca (ver el bloque de "LA APP NO DICE PRECIOS" más abajo).
  */
 
-/** Entrenador: el primer año entero, pago único. */
-export const COACH_FIRST_YEAR_EUR = 27;
+/** Entrenador: lo que se paga la primera vez (la mitad de la cuota). */
+export const COACH_FIRST_YEAR_EUR = 120;
 
-/** Atleta: el primer año entero, pago único. */
-export const ATHLETE_FIRST_YEAR_EUR = 17;
-
-/**
- * Entrenador: la cuota anual.
- *
- * Es dos cosas a la vez, y por eso hay un solo número: el plan que quita el
- * tope de alumnos durante el primer año, y la única forma de seguir a partir
- * del segundo.
- */
-export const ANNUAL_PRICE_EUR = 180;
+/** Atleta: lo que se paga la primera vez (la mitad de la cuota). */
+export const ATHLETE_FIRST_YEAR_EUR = 30;
 
 /**
- * Atleta: la cuota anual a partir del segundo año.
+ * Entrenador: la cuota anual. 20,00 € al mes.
  *
- * NOVENTA Y SEIS Y NO NOVENTA Y CINCO, a propósito: 96 entre 12 son 8,00 €
- * exactos, y "8 € al mes pagando el año" se lee de un vistazo. 95 salen a 7,92,
- * que ni se recuerda ni cabe en un titular. El euro de diferencia no lo nota
- * nadie; el titular sí.
+ * Es el precio del producto, no "el precio de después": la suscripción es ésta
+ * desde el primer día, con la primera factura a mitad.
+ *
+ * Para un entrenador con doce alumnos a 40 € al mes son unos 5.760 € al año de
+ * facturación: esto es el 4 %. Las herramientas equivalentes cuestan varias
+ * veces más. No es un precio ambicioso, es un precio serio — y eso importa
+ * cuando lo que se le pide a alguien es que te confíe su cartera de clientes.
  */
-export const ATHLETE_ANNUAL_EUR = 96;
+export const ANNUAL_PRICE_EUR = 240;
+
+/**
+ * Atleta: la cuota anual. 5,00 € al mes.
+ *
+ * MÁS BARATO QUE ANTES, Y A PROPÓSITO.
+ *
+ * El atleta autoentrenado es lo más commoditizado que hay: compite con
+ * Freeletics, con Thenx y con quinientas más. Por precio ahí no se gana dinero
+ * y por funciones tampoco, con un solo desarrollador.
+ *
+ * Pero no es el negocio: es la puerta. Un atleta que se atasca en la muscle-up
+ * es exactamente el futuro alumno de un entrenador de UDECA, y ya está dentro,
+ * con su historial y su progreso. Y hay un segundo efecto que vale más: más
+ * atletas es más gente en el tablón y en el ranking, y una app viva es lo que
+ * hace que los alumnos de un coach no se caigan — que es lo que hace que el
+ * coach renueve.
+ *
+ * O sea que este precio está pagando la retención del entrenador. Es de
+ * alcance, no de margen; el coste marginal de un atleta más son céntimos.
+ *
+ * Por abajo tiene suelo: a 5 € al mes sigue siendo una decisión. Más barato
+ * dejaría de significar compromiso, y quien no decide nada tampoco entrena.
+ */
+export const ATHLETE_ANNUAL_EUR = 60;
 
 /**
  * Lo que sale al mes cada precio.

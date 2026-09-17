@@ -26,12 +26,20 @@ import type { UserProfile } from './types';
 /**
  * Payment Links de Stripe. COBRAN DE VERDAD.
  *
- * LOS CUATRO DEL MODELO
+ * DOS, NO CUATRO. Y eso es lo que arregla la mitad de los fallos posibles.
  *
- *   - Primer año de entrenador:   27 €  (pago único)
- *   - Primer año de atleta:       17 €  (pago único)
- *   - Cuota anual de entrenador: 180 €/año  (el plan que quita el tope)
- *   - Cuota anual de atleta:      96 €/año
+ * Había un enlace para el alta y otro para la cuota, por rol. Pero el alta y
+ * la cuota son EL MISMO producto desde que la entrada es una suscripción anual
+ * con la primera factura a mitad de precio: la web y la app mandan al mismo
+ * sitio, y ya no existe la posibilidad de que una cobre un importe y la otra
+ * otro, que era la avería cara de este fichero.
+ *
+ *   - Entrenador: 240 €/año, primera factura 120 €
+ *   - Atleta:      60 €/año, primera factura  30 €
+ *
+ * El descuento del primer año NO está aquí: vive en Stripe, como cupón de un
+ * solo uso pegado al enlace. Así la app no tiene que saber nada de ofertas, y
+ * cambiar la campaña no es desplegar una versión.
  *
  * SON DE PRODUCCIÓN, Y ESO HAY QUE MIRARLO CADA VEZ
  *
@@ -40,40 +48,41 @@ import type { UserProfile } from './types';
  * convencido de haber pagado. Ya estuvieron publicados una vez, de ahí el
  * guardián en scripts/check-pago-ios.mjs.
  *
- * Y cada producto al suyo: un enlace equivocado no se nota al probar —la
- * pasarela se abre, la tarjeta pasa, la cuenta se activa— y se descubre
- * mirando las cuentas del mes. Lo comprueba scripts/check-stripe.mjs.
+ * Y TIENEN QUE SER SUSCRIPCIONES, no pagos sueltos. Si alguno fuera un cobro
+ * único, la cuenta se activaría igual y no se renovaría jamás; y en el
+ * entrenador, además, no se escribiría `subscriptionPlan: 'annual'`, que es lo
+ * único que le quita el tope de cinco alumnos (`planIlimitado`). Un entrenador
+ * pagando 240 € y sin poder pasar de cinco alumnos.
+ *
+ * Los dos son los MISMOS que van en `web/config.js`. Si cambias uno, cambia el
+ * otro — check-stripe.mjs se queja si se separan.
  *
  * Si alguno hubiera que quitarlo, se deja VACÍO (''), nunca con el de otro
  * importe: vacío se comporta solo —`entryCheckoutUrl` y
  * `subscriptionCheckoutUrl` devuelven null y el botón no se enseña— y nadie
  * puede pagar el importe que no es.
  *
- * Los dos del primer año son los MISMOS que van en `web/config.js`: la web los
- * usa para quien llega de fuera y la app para quien se registró sin pasar por
- * ella. Si cambias uno, cambia el otro — check-stripe.mjs se queja si se
- * separan.
- *
  * La app les añade `?client_reference_id=<uid>` para que el webhook active la
  * cuenta correcta sola, y `prefilled_email` para no hacer escribir el correo.
  */
-export const COACH_ENTRY_LINK: string =
-  'https://buy.stripe.com/28E4gy8ezcCT70I43a3sI07';
-export const ATHLETE_ENTRY_LINK: string =
-  'https://buy.stripe.com/00w14mamH9qHetafLS3sI06';
-/**
- * La cuota anual del entrenador (180 €). Sigue siendo la de siempre: el precio
- * no ha cambiado, así que el enlace tampoco.
+export const COACH_LINK: string =
+  'https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09';
+export const ATHLETE_LINK: string =
+  'https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08';
+
+/*
+ * Los cuatro nombres de antes, apuntando a los dos de ahora.
+ *
+ * No es pereza: `COACH_ENTRY_LINK` y `COACH_PAYMENT_LINK` están escritos en
+ * media docena de sitios entre pantallas y guardianes, y renombrarlos en el
+ * mismo cambio que mueve los precios mezclaría dos cosas que conviene poder
+ * revisar por separado. Apuntan al mismo enlace porque AHORA SON EL MISMO
+ * producto, que es justo lo que se quería conseguir.
  */
-export const COACH_PAYMENT_LINK: string =
-  'https://buy.stripe.com/eVqcN4cuP9qH70IgPW3sI02';
-/**
- * La cuota anual del atleta (96 €). También es la de siempre: el producto ya
- * existía en Stripe con ese importe, y 96 es mejor titular que 95 porque son
- * 8,00 € al mes exactos (ver lib/precios.ts).
- */
-export const ATHLETE_ANNUAL_LINK: string =
-  'https://buy.stripe.com/3cIdR866rcCT98Q9nu3sI05';
+export const COACH_ENTRY_LINK = COACH_LINK;
+export const ATHLETE_ENTRY_LINK = ATHLETE_LINK;
+export const COACH_PAYMENT_LINK = COACH_LINK;
+export const ATHLETE_ANNUAL_LINK = ATHLETE_LINK;
 
 /**
  * Le pega al enlace el uid y el correo.

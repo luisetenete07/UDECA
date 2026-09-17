@@ -92,6 +92,11 @@ export default async function handler(req, res) {
     const hecho = await aplicarAlta(db, uid, {
       huella: datos.payerFingerprint || null,
       customerId: datos.stripeCustomerId || null,
+      // Si lo que pagó fue una suscripción, viaja entera: su identificador, su
+      // fin de periodo y su plan. Sin esto se activaría la cuenta con un año
+      // contado a ojo, sin enlazarla a la suscripción que se va a renovar sola
+      // y sin el plan que le quita el tope de alumnos.
+      suscripcion: datos.suscripcion || null,
     });
     if (!hecho) {
       return res.status(200).json({ activa: false, motivo: 'Esta cuenta no necesita alta' });

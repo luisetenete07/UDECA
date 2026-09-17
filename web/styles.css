@@ -306,8 +306,34 @@ section { position: relative; z-index: 1; padding: 84px 0; scroll-margin-top: 84
 .price span { color: var(--muted); font-size: 15px; }
 .plan .sub { color: var(--faint); font-size: 13px; margin-bottom: 22px; }
 .plan ul { list-style: none; margin: 0 0 26px; padding: 0; display: grid; gap: 11px; }
-.plan li { display: flex; gap: 10px; font-size: 15px; color: var(--muted); }
-.plan li::before { content: '✓'; color: var(--gold-bright); font-weight: 700; }
+/*
+ * NADA DE FLEX AQUÍ: es texto corrido con sangría.
+ *
+ * Esto era `display: flex; gap: 10px`, y con flex cada trozo de la línea pasa a
+ * ser un elemento independiente: la marca, el `<b>` y el texto que lo sigue.
+ * Eso rompía la frase de dos formas distintas. En escritorio, el `gap` metía un
+ * espacio antes de la coma ("Alumnos ilimitados , cada uno..."). Y en móvil era
+ * peor: al no caber, la negrita y el resto se colocaban en DOS COLUMNAS, una al
+ * lado de la otra, en la primera línea de la tarjeta que más se mira.
+ *
+ * Con sangría y la marca colgando a la izquierda, el texto fluye como texto:
+ * la negrita va dentro de la frase, se parte por donde toca y las líneas
+ * siguientes quedan alineadas bajo la primera.
+ */
+.plan li {
+  position: relative;
+  padding-left: 24px;
+  font-size: 15px;
+  color: var(--muted);
+}
+.plan li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--gold-bright);
+  font-weight: 700;
+}
 .plan .btn { width: 100%; margin-top: auto; }
 .plan .after { margin-top: 12px; font-size: 12px; color: var(--faint); text-align: center; }
 

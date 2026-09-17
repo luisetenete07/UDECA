@@ -82,8 +82,8 @@ export function ElegirPlan({ profile, nota }: Props) {
             <Text style={styles.titulo}>Un año por delante</Text>
             <Text style={styles.detalle}>
               {esEntrenador
-                ? 'Tu grupo sin tope de alumnos y la app entera, doce meses. Se paga una vez.'
-                : 'Lo pagas una vez y te olvidas del contador hasta el año que viene.'}
+                ? 'Tu grupo sin tope de alumnos y la app entera. Se cobra una vez al año y se renueva sola; cancelas cuando quieras.'
+                : 'Se cobra una vez al año y se renueva sola. Cancelas cuando quieras y no se borra nada.'}
             </Text>
           </View>
           <Ionicons name="arrow-forward" size={18} color={colors.primary} />

@@ -42,10 +42,20 @@ function comprueba(nombre, condicion, detalle = '') {
 const app = readFileSync('lib/enlacesDeCobro.ts', 'utf8');
 const web = readFileSync('web/config.js', 'utf8');
 
-/** El valor de una constante exportada, tal y como está escrito ('' = null). */
-function constante(texto, nombre) {
-  const m = texto.match(new RegExp(`${nombre}[^=]*=\\s*\\n?\\s*'([^']*)'`));
-  return m && m[1] ? m[1] : null;
+/**
+ * El valor de una constante exportada, tal y como está escrito ('' = null).
+ *
+ * Sigue UN alias. Desde que el alta y la cuota son el mismo producto, los
+ * cuatro nombres de siempre (`COACH_ENTRY_LINK`, `COACH_PAYMENT_LINK`…) apuntan
+ * a las dos constantes de verdad (`COACH_LINK`, `ATHLETE_LINK`). Sin seguir el
+ * alias, esto leía `null` y daba por retirado un enlace que está puesto.
+ */
+function constante(texto, nombre, saltos = 1) {
+  const directo = texto.match(new RegExp(`${nombre}[^=]*=\\s*\\n?\\s*'([^']*)'`));
+  if (directo) return directo[1] || null;
+  const alias = texto.match(new RegExp(`${nombre}\\s*=\\s*([A-Z_][A-Z0-9_]*)\\s*;`));
+  if (alias && saltos > 0) return constante(texto, alias[1], saltos - 1);
+  return null;
 }
 
 /** El valor de una clave dentro del objeto `pagos` de la web. */
@@ -152,18 +162,34 @@ console.log('\nLas dos copias del primer año dicen lo mismo');
 
 console.log('\nNo hay enlaces cruzados');
 {
-  // Cada producto al suyo: con el enlace del primer año en el botón de la
-  // cuota, alguien paga 27 € creyendo que ha pagado 180 y se queda sin plan.
-  const productos = [
-    ENLACES['primer año del entrenador (app)'],
-    ENLACES['primer año del atleta (app)'],
-    ENLACES['cuota anual del entrenador'],
-    ENLACES['cuota anual del atleta'],
-  ].filter(Boolean);
+  /*
+   * LA REGLA SE HA DADO LA VUELTA, Y CONVIENE ENTENDER POR QUÉ.
+   *
+   * Antes había cuatro productos y la regla era "cada uno con su enlace":
+   * poner el del alta en el botón de la cuota hacía que alguien pagase 27 €
+   * creyendo pagar 180 y se quedara sin plan.
+   *
+   * Ahora hay DOS. El alta y la cuota son el mismo producto —una suscripción
+   * anual con la primera factura a mitad—, así que los dos botones de un mismo
+   * rol tienen que apuntar al MISMO sitio: eso ya no es un cruce, es lo que se
+   * quería. Exigir cuatro enlaces distintos hoy obligaría a inventarse dos
+   * productos que no existen.
+   *
+   * Lo que sigue sin poder pasar es lo caro: que el entrenador y el atleta
+   * compartan enlace. Ahí sí se cobran 60 € por lo que vale 240, o al revés.
+   */
+  const coach = ENLACES['primer año del entrenador (app)'];
+  const atleta = ENLACES['primer año del atleta (app)'];
   comprueba(
-    'cada producto tiene su propio enlace',
-    new Set(productos).size === productos.length,
-    `${new Set(productos).size} distintos de ${productos.length}`
+    'el entrenador y el atleta no comparten enlace',
+    !coach || !atleta || coach !== atleta,
+    `${coach} vs ${atleta}`
+  );
+  comprueba(
+    'y en cada rol, entrar y renovar van al mismo producto',
+    ENLACES['cuota anual del entrenador'] === coach &&
+      ENLACES['cuota anual del atleta'] === atleta,
+    'si se separan, la web y la app cobran cosas distintas'
   );
 }
 

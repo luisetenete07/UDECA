@@ -96,15 +96,34 @@ for (const [que, url, esperado] of casos) {
   );
 }
 
-// Los que estén puestos tienen que ser DISTINTOS: dos iguales significa cobrar
-// otra cosa. Los pendientes no cuentan, que si no "vacío = vacío" daría falso.
+/*
+ * Los DOS ROLES no pueden compartir enlace. Dentro de un rol, sí.
+ *
+ * Con cuatro productos la regla era que los cuatro enlaces fueran distintos.
+ * Ahora el alta y la cuota son el mismo producto —una suscripción anual con la
+ * primera factura a mitad—, así que `COACH_ENTRY_LINK` y `COACH_PAYMENT_LINK`
+ * apuntan al mismo sitio a propósito: es lo que hace imposible el fallo que
+ * más miedo daba de este fichero, que la web cobrase un importe y la app otro.
+ *
+ * Lo que sigue siendo caro es cruzar los roles: ahí se cobran 60 € por lo que
+ * vale 240, o se le cobran 240 a quien venía a por el de 60.
+ */
+ok(
+  'el entrenador y el atleta no comparten enlace',
+  !COACH_ENTRY_LINK || !ATHLETE_ENTRY_LINK || COACH_ENTRY_LINK !== ATHLETE_ENTRY_LINK
+);
+ok(
+  'y en cada rol, entrar y renovar van al mismo producto',
+  COACH_ENTRY_LINK === COACH_PAYMENT_LINK && ATHLETE_ENTRY_LINK === ATHLETE_ANNUAL_LINK
+);
+
+/** Los que están puestos, para lo que se comprueba de todos por igual. */
 const enlaces = [
   ATHLETE_ENTRY_LINK,
   COACH_ENTRY_LINK,
   ATHLETE_ANNUAL_LINK,
   COACH_PAYMENT_LINK,
 ].filter(Boolean);
-ok('cada producto tiene su propio enlace', new Set(enlaces).size === enlaces.length);
 ok('ninguno es de prueba', !enlaces.some((l) => /\/test_[A-Za-z0-9]{6,}/.test(l)));
 
 console.log('\n2 · Y llevan dentro con qué activar la cuenta');

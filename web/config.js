@@ -10,31 +10,32 @@ window.UDECA = {
   appUrl: 'https://app.udeca.app',
 
   /**
-   * Enlaces de pago del primer año: 17 € el atleta y 27 € el entrenador.
+   * Los dos enlaces de pago. 240 €/año el entrenador, 60 €/año el atleta,
+   * con la primera factura a mitad de precio (el cupón vive en Stripe).
    *
    * Son PRODUCCIÓN (`buy.stripe.com/…`, sin `test_`). Un enlace de prueba abre
    * la pasarela, acepta la tarjeta, da las gracias y no cobra nada: quien
    * pulsara se quedaría convencido de haber pagado.
    *
-   * Son también los MISMOS dos que van en lib/enlacesDeCobro.ts
-   * (`ATHLETE_ENTRY_LINK` / `COACH_ENTRY_LINK`): la web los usa para quien
-   * llega de fuera y la app para quien se registró sin pasar por ella. Si
-   * cambias uno, cambia el otro — scripts/check-stripe.mjs se queja si se
+   * Son los MISMOS dos que van en lib/enlacesDeCobro.ts: la web los usa para
+   * quien llega de fuera y la app para quien se registró sin pasar por ella.
+   * Si cambias uno, cambia el otro — scripts/check-stripe.mjs se queja si se
    * separan, y ese día la mitad de las altas irían a un producto y la otra
    * mitad a otro.
+   *
+   * Ya no hay un enlace distinto para renovar: es la misma suscripción, que se
+   * renueva sola. Los nombres `altaAtleta` y `altaCoach` se quedan porque son
+   * los que lee el HTML en `data-pago`.
    *
    * Si alguna vez hay que retirarlos, se dejan en '/proximamente' —nunca con
    * un enlace de otro importe—: esa página explica que el cobro no está
    * abierto en vez de cobrar un precio que no es el que anuncia la página.
-   *
-   * Lo que viene después (los 180 €/año del entrenador sin tope de alumnos y
-   * los 96 €/año del atleta al renovar) se cobra DESDE LA APP, cuando toca, no
-   * aquí: nadie renueva un año antes de haberlo usado.
    */
   pagos: {
-    altaAtleta: 'https://buy.stripe.com/00w14mamH9qHetafLS3sI06',
-    altaCoach: 'https://buy.stripe.com/28E4gy8ezcCT70I43a3sI07',
+    altaAtleta: 'https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08',
+    altaCoach: 'https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09',
   },
+
 
   /**
    * Descargas. Deja el valor vacío mientras la ficha no esté publicada: el
