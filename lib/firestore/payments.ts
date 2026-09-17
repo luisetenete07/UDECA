@@ -35,6 +35,34 @@ export async function updatePayment(id: string, amountEur: number): Promise<void
   await updateDoc(doc(db, 'payments', id), { amountEur });
 }
 
+/**
+ * Borra del historial TODOS los cobros de un pagador.
+ *
+ * Existe para el que ya no está: el alumno que se fue hace un año, el pagador
+ * suelto de un bono que no va a volver. Sus cobros siguen sumando a los totales
+ * históricos y ocupando una ficha en una lista que se mira para saber quién
+ * paga AHORA.
+ *
+ * Borra de uno en uno y no en lote a propósito: son pocos documentos por
+ * persona, y si a mitad falla la red se queda lo que se haya borrado, sin dejar
+ * la operación a medias de una forma que haya que deshacer. Devuelve cuántos se
+ * fueron, para poder decirlo.
+ */
+export async function deletePaymentsOfPayer(
+  trainerId: string,
+  clientId: string
+): Promise<number> {
+  const snap = await getDocs(
+    query(col, where('trainerId', '==', trainerId), where('clientId', '==', clientId))
+  );
+  let borrados = 0;
+  for (const d of snap.docs) {
+    await deleteDoc(doc(db, 'payments', d.id));
+    borrados++;
+  }
+  return borrados;
+}
+
 /** Elimina un pago registrado. */
 export async function deletePayment(id: string): Promise<void> {
   await deleteDoc(doc(db, 'payments', id));

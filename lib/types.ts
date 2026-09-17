@@ -938,7 +938,20 @@ export interface CoachTask {
 export interface Payment {
   id: string;
   trainerId: string;
+  /**
+   * A quién se le cobró. Normalmente el uid de un alumno, pero también puede
+   * ser un identificador de pagador SIN CUENTA (`externo:ana-gil`), para el
+   * que ya paga al entrenador pero todavía no ha entrado en la app. Ver
+   * lib/cobrosExternos.ts.
+   */
   clientId: string;
+  /**
+   * Copia del nombre, solo en los cobros de quien no tiene cuenta.
+   *
+   * Hace falta porque no hay perfil del que sacarlo. En los alumnos con cuenta
+   * NO se guarda: manda el nombre de su perfil, que es el que está al día.
+   */
+  clientName?: string;
   amountEur: number;
   date: number;
   createdAt: number;

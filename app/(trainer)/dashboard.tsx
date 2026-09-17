@@ -1,4 +1,13 @@
-import { resumenDeCobros } from '../../lib/cobros';
+import { repartoDelMes, resumenDeCobros } from '../../lib/cobros';
+import {
+  cobroValido,
+  idDePagadorExterno,
+  importeEscrito,
+  LARGO_DEL_NOMBRE,
+  limpiarNombreDePagador,
+  nombreDelPagador,
+} from '../../lib/cobrosExternos';
+import { guardarIngresosOcultos, importeVisible, ingresosOcultos } from '../../lib/ocultarIngresos';
 import { frase } from '../../lib/idioma';
 import { diaMes, fechaNumerica, inicioDelDia } from '../../lib/fechas';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -13,6 +22,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { TextField } from '../../components/TextField';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
@@ -33,6 +43,7 @@ import {
 import {
   createPayment,
   deletePayment,
+  deletePaymentsOfPayer,
   getPaymentsForTrainer,
   updatePayment,
 } from '../../lib/firestore/payments';
@@ -97,6 +108,13 @@ export default function TrainerDashboard() {
   const [paysReminded, setPaysReminded] = useState(false);
   const [payListOpen, setPayListOpen] = useState(false);
   const [incomeOpen, setIncomeOpen] = useState(false);
+  // El ojo: marca del aparato, no de la cuenta (ver lib/ocultarIngresos.ts).
+  const [ocultos, setOcultos] = useState(false);
+  // Alta de un cobro de alguien que todavía no está en la app.
+  const [nuevoCobroAbierto, setNuevoCobroAbierto] = useState(false);
+  const [nuevoNombre, setNuevoNombre] = useState('');
+  const [nuevoImporte, setNuevoImporte] = useState('');
+  const [guardandoCobro, setGuardandoCobro] = useState(false);
   const [incomeScope, setIncomeScope] = useState<'month' | 'all'>('month');
   const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [editPayId, setEditPayId] = useState<string | null>(null);
@@ -166,6 +184,21 @@ export default function TrainerDashboard() {
     }, [profile])
   );
 
+  /*
+   * El ojo, recordado del aparato.
+   *
+   * AQUÍ ARRIBA, CON LOS DEMÁS HOOKS, y no junto al código de cobros que es
+   * donde se usa. Más abajo hay un `return` para el esqueleto de carga, y un
+   * `useEffect` después de un return condicional se ejecuta unas veces sí y
+   * otras no: React cuenta los hooks y, en cuanto el número cambia entre dos
+   * renders, revienta la pantalla entera con el error 310. Pasó al escribir
+   * esto, y el panel del entrenador se quedó en "Algo no ha ido bien".
+   */
+  useEffect(() => {
+    // Sin bloquear el arranque: mientras no se sepa, se enseñan.
+    ingresosOcultos().then(setOcultos).catch(() => {});
+  }, []);
+
   // Esqueleto con la cabecera ya pintada: abrir la app no pasa por una
   // pantalla negra con logo, sino por el panel tomando forma.
   if (loading) {
@@ -200,6 +233,17 @@ export default function TrainerDashboard() {
 
   // Los cobros, enteros y comprobados aparte (ver lib/cobros.ts).
   const cobros = resumenDeCobros(clients, payments, now);
+  // Lo cobrado frente a lo que tocaba: una barra en vez de tres cajas.
+  const reparto = repartoDelMes(cobros.ingresoDelMes, cobros.importePendiente);
+  /** Un importe, tapado si el ojo está cerrado. */
+  const euros = (n: number) => importeVisible(n.toLocaleString('es-ES'), ocultos);
+
+
+  const alternarOjo = () => {
+    const siguiente = !ocultos;
+    setOcultos(siguiente);
+    void guardarIngresosOcultos(siguiente);
+  };
 
   const handleApproveRequest = async (req: JoinRequest) => {
     // Aviso inmediato si ya sabemos que está lleno, para no hacerle esperar a
@@ -309,6 +353,64 @@ export default function TrainerDashboard() {
   };
 
   // Eliminar un pago registrado por error.
+  /**
+   * Registrar un cobro de alguien que no está en la app.
+   *
+   * Se guarda como un pago normal con un `clientId` sacado del nombre, así que
+   * suma a los totales y sale en el histórico como cualquier otro. Ver
+   * lib/cobrosExternos.ts.
+   */
+  const registrarCobroExterno = async () => {
+    if (!profile) return;
+    const nombre = limpiarNombreDePagador(nuevoNombre);
+    const importe = importeEscrito(nuevoImporte);
+    if (!cobroValido(nombre, importe)) return;
+    setGuardandoCobro(true);
+    try {
+      const clientId = idDePagadorExterno(nombre);
+      const id = await createPayment({
+        trainerId: profile.uid,
+        clientId,
+        clientName: nombre,
+        amountEur: importe,
+        date: Date.now(),
+      });
+      setPayments((prev) => [
+        { id, trainerId: profile.uid, clientId, clientName: nombre, amountEur: importe, date: Date.now(), createdAt: Date.now() },
+        ...prev,
+      ]);
+      setNuevoNombre('');
+      setNuevoImporte('');
+      setNuevoCobroAbierto(false);
+      showToast(frase`Cobro de ${nombre} registrado`);
+    } catch {
+      showToast('No se pudo registrar el cobro');
+    } finally {
+      setGuardandoCobro(false);
+    }
+  };
+
+  /**
+   * Borra del historial TODOS los cobros de un pagador.
+   *
+   * Para el que ya no está: sus cobros siguen sumando a los totales históricos
+   * y ocupando una ficha en una lista que se mira para saber quién paga AHORA.
+   */
+  const borrarFichaDeCobros = async (clientId: string, nombre: string, cuantos: number) => {
+    if (!profile) return;
+    const aviso = frase`¿Borrar del historial los ${cuantos} cobros de ${nombre}? Esto no borra a nadie de tu grupo, solo sus cobros.`;
+    if (!(await confirmar(aviso))) return;
+    const antes = payments;
+    setPayments((prev) => prev.filter((x) => x.clientId !== clientId));
+    try {
+      await deletePaymentsOfPayer(profile.uid, clientId);
+      showToast(frase`Cobros de ${nombre} borrados`);
+    } catch {
+      setPayments(antes);
+      showToast('No se pudieron borrar');
+    }
+  };
+
   const handleDeletePayment = async (id: string) => {
     // Un pago registrado es dinero cobrado a un alumno. Que desapareciera
     // porque el dedo rozó una papelera no es un fallo de diseño, es un fallo
@@ -393,7 +495,7 @@ export default function TrainerDashboard() {
     return [...m.entries()]
       .map(([cid, pays]) => ({
         cid,
-        name: byId(cid)?.name ?? 'Cliente',
+        name: nombreDelPagador(pays[0], byId(cid)),
         photoURL: byId(cid)?.photoURL,
         total: pays.reduce((s, p) => s + (p.amountEur || 0), 0),
         pays,
@@ -407,9 +509,13 @@ export default function TrainerDashboard() {
     const editing = editPayId === p.id;
     return (
       <View key={p.id} style={styles.payRow}>
-        {showAvatar ? <Avatar name={client?.name} photoURL={client?.photoURL} size={34} /> : null}
+        {showAvatar ? (
+          <Avatar name={nombreDelPagador(p, client)} photoURL={client?.photoURL} size={34} />
+        ) : null}
         <View style={{ flex: 1 }}>
-          {showAvatar ? <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text> : null}
+          {showAvatar ? (
+            <Text style={styles.logClient}>{nombreDelPagador(p, client)}</Text>
+          ) : null}
           <Text style={styles.logDetail}>{fechaNumerica(p.date)}</Text>
         </View>
         {editing ? (
@@ -445,7 +551,10 @@ export default function TrainerDashboard() {
           </>
         ) : (
           <>
-            <Text style={styles.payAmount}>{p.amountEur} €</Text>
+            {/* Con coma, como el resto. Aquí salía "35.5 €" al lado de un
+                total que decía "35,5 €": dos formatos distintos para el mismo
+                número en la misma pantalla es lo que hace dudar de la cifra. */}
+            <Text style={styles.payAmount}>{(p.amountEur ?? 0).toLocaleString('es-ES')} €</Text>
             <Pressable
               onPress={() => {
                 setEditPayId(p.id);
@@ -748,52 +857,94 @@ export default function TrainerDashboard() {
           id="cobros"
           icon="cash-outline"
           title="Cobros del mes"
-          hint={`${cobros.ingresoDelMes} € · ${cobros.importePendiente} € pendiente`}
+          /* Con el ojo cerrado, TAMBIÉN aquí. Este resumen se ve con la
+             tarjeta plegada, que es como está la mayor parte del tiempo: si se
+             escapara, tapar los importes no taparía nada. */
+          hint={
+            ocultos
+              ? frase`${cobros.aReclamar.length} pendiente(s)`
+              : `${cobros.ingresoDelMes} € · ${cobros.importePendiente} € pendiente`
+          }
         >
-          <View style={styles.revenueRow}>
-            <Pressable style={styles.revenueBox} onPress={() => setIncomeOpen(true)}>
-              <CountUp value={cobros.ingresoDelMes} suffix=" €" style={styles.revenueValue} />
-              <Text style={styles.revenueLabel}>Ingresado este mes</Text>
+          {/*
+            UNA CIFRA QUE MANDA, UNA BARRA Y DOS FILAS.
+
+            Aquí había tres cajas iguales —ingresado, pendiente, previsto— cada
+            una con su color fuerte y su iconito en la esquina. Tres cifras del
+            mismo tamaño no son un resumen: son tres cosas compitiendo, y
+            ninguna contesta de un vistazo a lo único que se pregunta un
+            entrenador al abrir esto, que es "¿voy bien este mes?".
+
+            Ahora lo cobrado va grande y solo, la barra dice qué parte del mes
+            es, y lo pendiente y lo previsto bajan a una fila de dos columnas
+            —etiqueta a la izquierda, cifra a la derecha— que es como lo enseña
+            cualquier herramienta de contabilidad. Ocupa lo mismo o menos.
+          */}
+          <View style={styles.cobroCabecera}>
+            <Text style={styles.cobroRotulo}>Cobrado este mes</Text>
+            <Pressable onPress={alternarOjo} hitSlop={10} style={styles.ojo}>
               <Ionicons
-                name="create-outline"
-                size={13}
+                name={ocultos ? 'eye-off-outline' : 'eye-outline'}
+                size={17}
                 color={colors.textFaint}
-                style={styles.revenueBoxIcon}
               />
             </Pressable>
-            <Pressable style={styles.revenueBox} onPress={() => setPayListOpen(true)}>
-              <CountUp
-                value={cobros.importePendiente}
-                suffix=" €"
-                style={[styles.revenueValue, { color: '#C9902B' }]}
-              />
-              <Text style={styles.revenueLabel}>Pendiente ({cobros.aReclamar.length})</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={13}
-                color={colors.textFaint}
-                style={styles.revenueBoxIcon}
-              />
-            </Pressable>
-            {cobros.previsto30 > 0 ? (
-              <Pressable style={styles.revenueBox} onPress={() => setUpcomingOpen(true)}>
-                <CountUp
-                  value={cobros.previsto30}
-                  suffix=" €"
-                  style={[styles.revenueValue, { color: colors.textMuted }]}
-                />
-                <Text style={styles.revenueLabel}>
-                  Previsto 30 días ({cobros.renuevanEn30.length})
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={13}
-                  color={colors.textFaint}
-                  style={styles.revenueBoxIcon}
-                />
-              </Pressable>
-            ) : null}
           </View>
+          <Pressable onPress={() => setIncomeOpen(true)} style={styles.cobroPrincipal} hitSlop={4}>
+            {ocultos ? (
+              <Text style={styles.cobroCifra}>•••</Text>
+            ) : (
+              <CountUp value={cobros.ingresoDelMes} suffix=" €" style={styles.cobroCifra} />
+            )}
+            <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+          </Pressable>
+
+          {reparto.total > 0 ? (
+            <>
+              {/* Dos segmentos en una sola barra: lo cobrado y lo que falta.
+                  El ancho mínimo evita que un euro suelto salga invisible. */}
+              <View style={styles.barra}>
+                <View
+                  style={[
+                    styles.barraCobrado,
+                    { width: `${Math.max(2, Math.round(reparto.porcentaje * 100))}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.barraPie}>
+                {ocultos
+                  ? frase`${Math.round(reparto.porcentaje * 100)}% de lo previsto para el mes`
+                  : frase`${Math.round(reparto.porcentaje * 100)}% de ${reparto.total.toLocaleString('es-ES')} € previstos este mes`}
+              </Text>
+            </>
+          ) : null}
+
+          <View style={styles.raya} />
+
+          <Pressable style={styles.cobroFila} onPress={() => setPayListOpen(true)} hitSlop={4}>
+            <View style={[styles.punto, { backgroundColor: '#C9902B' }]} />
+            <Text style={styles.cobroFilaEtiqueta}>
+              Pendiente{cobros.aReclamar.length > 0 ? ` · ${cobros.aReclamar.length}` : ''}
+            </Text>
+            <Text style={[styles.cobroFilaCifra, { color: '#C9902B' }]}>
+              {euros(cobros.importePendiente)}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
+          </Pressable>
+
+          {cobros.previsto30 > 0 ? (
+            <Pressable style={styles.cobroFila} onPress={() => setUpcomingOpen(true)} hitSlop={4}>
+              <View style={[styles.punto, { backgroundColor: colors.textFaint }]} />
+              <Text style={styles.cobroFilaEtiqueta}>
+                Próximos 30 días · {cobros.renuevanEn30.length}
+              </Text>
+              <Text style={[styles.cobroFilaCifra, { color: colors.textMuted }]}>
+                {euros(cobros.previsto30)}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
+
           {cobros.proximoCobro ? (
             <Pressable
               onPress={() => router.push(`/(trainer)/clients/${cobros.proximoCobro!.uid}`)}
@@ -805,7 +956,9 @@ export default function TrainerDashboard() {
                 <Text style={styles.nextPayLabel}>Próximo cobro</Text>
                 <Text style={styles.nextPayName} numberOfLines={1}>
                   {cobros.proximoCobro.name}
-                  {cobros.proximoCobro.monthlyFeeEur ? ` · ${cobros.proximoCobro.monthlyFeeEur} €` : ''}
+                  {cobros.proximoCobro.monthlyFeeEur
+                    ? ` · ${importeVisible(cobros.proximoCobro.monthlyFeeEur, ocultos)}`
+                    : ''}
                 </Text>
               </View>
               <Text style={styles.nextPayDate}>
@@ -813,18 +966,6 @@ export default function TrainerDashboard() {
               </Text>
             </Pressable>
           ) : null}
-          <View style={styles.countsRow}>
-            {PAYMENT_STATUSES.filter((p) => cobros.porEstado[p]).map((p) => (
-              <View key={p} style={styles.countChip}>
-                <View
-                  style={[styles.dot, { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[p]] }]}
-                />
-                <Text style={styles.countText}>
-                  {cobros.porEstado[p]} {PAYMENT_STATUS_LABEL[p]}
-                </Text>
-              </View>
-            ))}
-          </View>
           {cobros.aReclamar.length > 0 ? (
             <Pressable
               onPress={() => setPayListOpen(true)}
@@ -974,6 +1115,57 @@ export default function TrainerDashboard() {
             <Text style={styles.subtleHint}>
               Ajusta el importe o elimina un pago si hubo un error.
             </Text>
+
+            {/*
+              REGISTRAR UN COBRO DE ALGUIEN QUE NO ESTÁ EN LA APP.
+
+              Un entrenador no empieza con la app: empieza con gente que ya le
+              paga. Sin esto, sus ingresos de verdad —la mitad, o todos el
+              primer mes— no cabían en ninguna parte, y una pantalla de
+              ingresos que no cuadra con el banco no se mira dos veces.
+
+              Va aquí y no en la tarjeta del inicio a propósito: la tarjeta es
+              para mirar de un vistazo, y esto es una herramienta.
+            */}
+            {nuevoCobroAbierto ? (
+              <View style={{ marginBottom: spacing.md }}>
+                <TextField
+                  value={nuevoNombre}
+                  onChangeText={setNuevoNombre}
+                  placeholder="Nombre de quien paga"
+                  maxLength={LARGO_DEL_NOMBRE}
+                  autoFocus
+                />
+                <TextField
+                  value={nuevoImporte}
+                  onChangeText={setNuevoImporte}
+                  placeholder="Importe en euros"
+                  keyboardType="decimal-pad"
+                />
+                <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                  <Button
+                    title="Cancelar"
+                    variant="secondary"
+                    onPress={() => setNuevoCobroAbierto(false)}
+                    style={{ flex: 1 }}
+                    compacto
+                  />
+                  <Button
+                    title="Registrar"
+                    onPress={registrarCobroExterno}
+                    loading={guardandoCobro}
+                    disabled={!cobroValido(nuevoNombre, importeEscrito(nuevoImporte))}
+                    style={{ flex: 1 }}
+                    compacto
+                  />
+                </View>
+              </View>
+            ) : (
+              <Pressable onPress={() => setNuevoCobroAbierto(true)} style={styles.nuevoCobroBtn}>
+                <Ionicons name="add" size={16} color={colors.primary} />
+                <Text style={styles.nuevoCobroTexto}>Registrar un cobro de fuera de la app</Text>
+              </Pressable>
+            )}
             {incomeScope === 'month' ? (
               cobros.pagosDelMes.length === 0 ? (
                 <Text style={styles.mutedText}>Aún no hay pagos registrados este mes.</Text>
@@ -996,6 +1188,17 @@ export default function TrainerDashboard() {
                       <Text style={styles.clientGroupTotal}>
                         {g.total.toLocaleString('es-ES')} €
                       </Text>
+                      {/* Borra los cobros de esta persona, no a la persona. El
+                          aviso lo dice con esas palabras: alguien que se fue
+                          del grupo hace un año sigue ocupando una ficha en una
+                          lista que se mira para saber quién paga AHORA. */}
+                      <Pressable
+                        onPress={() => borrarFichaDeCobros(g.cid, g.name, g.pays.length)}
+                        style={styles.fichaBorrar}
+                        hitSlop={8}
+                      >
+                        <Ionicons name="trash-outline" size={17} color={colors.textFaint} />
+                      </Pressable>
                     </View>
                     {g.pays.map((p) => renderPayRow(p, false))}
                   </View>
@@ -1139,19 +1342,61 @@ const styles = StyleSheet.create({
   },
   quickBadgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.semiBold },
   section: { marginBottom: spacing.md },
-  revenueRow: { flexDirection: 'row', gap: spacing.sm },
-  revenueBox: {
-    flex: 1,
+  /* --- Cobros del mes ------------------------------------------------- */
+  cobroCabecera: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cobroRotulo: {
+    ...typography.small,
+    color: colors.textFaint,
+    fontSize: 11,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+  },
+  ojo: { padding: 2 },
+  cobroPrincipal: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+  /*
+   * La cifra grande va en BLANCO, no en verde.
+   *
+   * Estaba en `colors.success`, y el verde de "correcto" aplicado a un importe
+   * dice que ese número está bien. No lo está ni lo deja de estar: es lo que se
+   * ha cobrado. El color se reserva para lo que sí es un estado —el ámbar de lo
+   * pendiente— y así, cuando algo se pone de color, significa algo.
+   */
+  cobroCifra: { ...typography.h1, color: colors.text, fontFamily: fonts.heading, flex: 1 },
+  barra: {
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.surfaceAlt,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  barraCobrado: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
+  barraPie: { ...typography.small, color: colors.textFaint, fontSize: 12, marginTop: 6 },
+  raya: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
+  cobroFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 7,
+  },
+  punto: { width: 7, height: 7, borderRadius: 4 },
+  cobroFilaEtiqueta: { ...typography.small, color: colors.textMuted, flex: 1 },
+  // Cifras alineadas a la derecha y con cifras de ancho fijo: una columna de
+  // importes que baila al cambiar un número se lee como una hoja mal hecha.
+  cobroFilaCifra: { ...typography.body, fontFamily: fonts.semiBold, ...tabularNums },
+  nuevoCobroBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
+    borderStyle: 'dashed',
+    marginBottom: spacing.md,
   },
-  revenueValue: { ...typography.h2, color: colors.success, fontFamily: fonts.heading },
-  revenueLabel: { ...typography.small, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
-  revenueBoxIcon: { position: 'absolute', top: 6, right: 6 },
+  nuevoCobroTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  fichaBorrar: { padding: 4 },
   amountInput: {
     width: 64,
     ...typography.body,
@@ -1218,10 +1463,6 @@ const styles = StyleSheet.create({
   nextPayLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
   nextPayName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginTop: 1 },
   nextPayDate: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  countsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
-  countChip: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  countText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
   dueBanner: {
     flexDirection: 'row',
     alignItems: 'center',

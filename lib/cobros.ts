@@ -113,3 +113,33 @@ export function resumenDeCobros(
   };
 }
 
+
+/**
+ * Lo cobrado frente a lo que tocaba cobrar este mes.
+ *
+ * Es UNA barra en vez de tres cajas de colores, y ese cambio no es estético.
+ * Tres cifras sueltas —45 cobrado, 45 pendiente, 85 previsto— obligan a hacer
+ * la división mentalmente para responder a la única pregunta que se hace un
+ * entrenador al abrir esto: "¿voy bien este mes?". La proporción la responde
+ * de un vistazo.
+ *
+ * El total es cobrado + pendiente, no el previsto: lo previsto son las
+ * renovaciones de los próximos treinta días, que se salen del mes y meterlas
+ * aquí haría que la barra bajara sola cada vez que se acerca un cobro futuro.
+ */
+export interface RepartoDelMes {
+  cobrado: number;
+  pendiente: number;
+  /** Cobrado + pendiente. Cero si no hay ni una cosa ni la otra. */
+  total: number;
+  /** De 0 a 1. Con total 0 es 0, no NaN: una barra vacía, no una rota. */
+  porcentaje: number;
+}
+
+export function repartoDelMes(cobrado: number, pendiente: number): RepartoDelMes {
+  const limpio = (n: number) => (Number.isFinite(n) && n > 0 ? n : 0);
+  const c = limpio(cobrado);
+  const p = limpio(pendiente);
+  const total = c + p;
+  return { cobrado: c, pendiente: p, total, porcentaje: total > 0 ? c / total : 0 };
+}
