@@ -65,10 +65,32 @@ import type { UserProfile } from './types';
  * La app les añade `?client_reference_id=<uid>` para que el webhook active la
  * cuenta correcta sola, y `prefilled_email` para no hacer escribir el correo.
  */
+/**
+ * EL `prefilled_promo_code` NO ES UN ADORNO: es el precio de entrada.
+ *
+ * El descuento del primer año vive en Stripe como cupón, y el panel no deja
+ * pegarlo al Payment Link para que se aplique solo. Sin este parámetro, quien
+ * llega a la pasarela ve 240 € donde la web le prometía 120 €, y o se va o
+ * paga el doble de lo anunciado. Las dos cosas son igual de malas.
+ *
+ * Va en la dirección y no en un campo que haya que teclear a propósito: un
+ * descuento que hay que escribir a mano se lo salta media pasarela.
+ *
+ * Y HAY UN SEGUNDO MOTIVO, que es el que decide la forma. Los códigos de los
+ * creadores (65 %) van por este MISMO parámetro, así que el suyo SUSTITUYE al
+ * del primer año en vez de sumarse. Un 50 % y un 65 % encadenados dejarían la
+ * suscripción casi regalada, y eso no se evita confiando en cómo se porte
+ * Stripe: se evita porque solo hay un hueco donde cabe un descuento.
+ *
+ * El código tiene que existir en Stripe con ESTE nombre exacto. Si no existe,
+ * la pasarela abre igual y cobra el precio entero, sin avisar.
+ */
+const PRIMER_ANO = '?prefilled_promo_code=PRIMERANO';
+
 export const COACH_LINK: string =
-  'https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09';
+  `https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09${PRIMER_ANO}`;
 export const ATHLETE_LINK: string =
-  'https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08';
+  `https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08${PRIMER_ANO}`;
 
 /*
  * Los cuatro nombres de antes, apuntando a los dos de ahora.

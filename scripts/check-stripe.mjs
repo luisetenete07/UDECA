@@ -51,8 +51,17 @@ const web = readFileSync('web/config.js', 'utf8');
  * alias, esto leía `null` y daba por retirado un enlace que está puesto.
  */
 function constante(texto, nombre, saltos = 1) {
+  // Comillas simples o acento grave: los enlaces llevan el código del primer
+  // año pegado con una plantilla, y leyendo solo `'...'` esto devolvía null y
+  // daba por retirado un enlace que está puesto y cobrando.
   const directo = texto.match(new RegExp(`${nombre}[^=]*=\\s*\\n?\\s*'([^']*)'`));
   if (directo) return directo[1] || null;
+  const plantilla = texto.match(new RegExp(`${nombre}[^=]*=\\s*\\n?\\s*\`([^\`]*)\``));
+  if (plantilla) {
+    // `${CONSTANTE}` dentro de la plantilla se sustituye por su valor.
+    const resuelto = plantilla[1].replace(/\$\{(\w+)\}/g, (_, x) => constante(texto, x, 0) ?? '');
+    return resuelto || null;
+  }
   const alias = texto.match(new RegExp(`${nombre}\\s*=\\s*([A-Z_][A-Z0-9_]*)\\s*;`));
   if (alias && saltos > 0) return constante(texto, alias[1], saltos - 1);
   return null;

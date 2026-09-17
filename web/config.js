@@ -32,8 +32,8 @@ window.UDECA = {
    * abierto en vez de cobrar un precio que no es el que anuncia la página.
    */
   pagos: {
-    altaAtleta: 'https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08',
-    altaCoach: 'https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09',
+    altaAtleta: 'https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08?prefilled_promo_code=PRIMERANO',
+    altaCoach: 'https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09?prefilled_promo_code=PRIMERANO',
   },
 
 

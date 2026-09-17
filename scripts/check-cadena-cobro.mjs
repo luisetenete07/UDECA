@@ -117,6 +117,29 @@ ok(
   COACH_ENTRY_LINK === COACH_PAYMENT_LINK && ATHLETE_ENTRY_LINK === ATHLETE_ANNUAL_LINK
 );
 
+/*
+ * EL DESCUENTO DEL PRIMER AÑO VIAJA EN LA DIRECCIÓN, y si se cae no avisa nadie.
+ *
+ * El panel de Stripe no deja pegar el cupón al Payment Link, así que va como
+ * `?prefilled_promo_code=`. Si alguien quita ese trozo al tocar un enlace, la
+ * pasarela sigue abriendo, la tarjeta sigue pasando... y cobra 240 € donde la
+ * web prometía 120. Nadie ve un error: se descubre por un correo pidiendo la
+ * devolución.
+ *
+ * También se vigila que lo lleven LOS DOS. Con uno solo, la mitad de la gente
+ * paga el doble que la otra mitad por lo mismo.
+ */
+for (const [quien, enlace] of [
+  ['entrenador', COACH_ENTRY_LINK],
+  ['atleta', ATHLETE_ENTRY_LINK],
+]) {
+  ok(
+    `el ${quien} lleva el descuento del primer año en el enlace`,
+    !enlace || /[?&]prefilled_promo_code=[A-Z0-9]+/.test(enlace),
+    `sin él se cobra el precio entero: ${enlace}`
+  );
+}
+
 /** Los que están puestos, para lo que se comprueba de todos por igual. */
 const enlaces = [
   ATHLETE_ENTRY_LINK,
