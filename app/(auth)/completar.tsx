@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { frase } from '../../lib/idioma';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +7,6 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
-import { FREE_CLIENT_LIMIT } from '../../lib/subscription';
 import type { UserRole } from '../../lib/types';
 
 /**
@@ -41,14 +39,36 @@ const OPCIONES: { valor: UserRole; titulo: string; icono: keyof typeof Ionicons.
     valor: 'trainer',
     titulo: 'Entrenador',
     icono: 'people-outline',
-    texto: frase`Tus alumnos, tus cobros y tu negocio. El plan de entrada incluye ${FREE_CLIENT_LIMIT} alumnos.`,
+    // Sin tope de alumnos desde que la entrada es una suscripción anual: lo que
+    // lo quita es el plan, y el plan es lo que se compra al entrar. Aquí seguía
+    // escrito "incluye 5 alumnos", que era el modelo anterior — y lo leía un
+    // revisor de Apple en la pantalla de crear cuenta.
+    texto: 'Tus alumnos, tus cobros y tu negocio. Sin tope de alumnos.',
   },
 ];
 
 export default function CompletarCuentaScreen() {
   const { firebaseUser, completarPerfilDeGoogle, signOut } = useAuth();
   const [role, setRole] = useState<UserRole>('client');
-  const [name, setName] = useState(firebaseUser?.displayName ?? '');
+  const nombreDelProveedor = (firebaseUser?.displayName ?? '').trim();
+  const [name, setName] = useState(nombreDelProveedor);
+  /*
+   * SI EL PROVEEDOR YA DIO EL NOMBRE, NO SE PIDE.
+   *
+   * Es la norma 4 de Apple, y es por lo que rechazaron la 1.1.2: "users are
+   * required to provide their name ... even though that information is already
+   * provided by the Authentication Services framework". Un campo obligatorio
+   * relleno con lo que acabas de darles sigue siendo pedirlo.
+   *
+   * Se enseña quién eres y un enlace para cambiarlo, que es lo que hace falta
+   * de verdad: Apple deja ocultar el nombre real, y quien lo haga tiene que
+   * poder escribir el suyo sin tener que salir y volver a entrar.
+   *
+   * Cuando NO llega nombre —Apple no lo manda en las entradas siguientes a la
+   * primera— el campo sale como siempre, porque entonces no se está pidiendo
+   * dos veces: se está pidiendo una.
+   */
+  const [editandoNombre, setEditandoNombre] = useState(!nombreDelProveedor);
   const [codigo, setCodigo] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,16 +113,33 @@ export default function CompletarCuentaScreen() {
     <ScreenContainer contentStyle={styles.contenido}>
       <Text style={styles.titulo}>Ya casi</Text>
       <Text style={styles.subtitulo}>
-        Has entrado como {firebaseUser?.email ?? 'tu cuenta de Google'}. Solo falta saber
-        cómo vas a usar UDECA.
+        {/* Ni "Google" ni "Apple" a fuego: aquí se llega por los dos, y decir
+            el que no es hace dudar de si la cuenta es la correcta. */}
+        Has entrado como {firebaseUser?.email ?? 'tu cuenta'}. Solo falta saber cómo vas a
+        usar UDECA.
       </Text>
 
-      <TextField
-        label="Tu nombre"
-        value={name}
-        onChangeText={setName}
-        placeholder="Nombre y apellido"
-      />
+      {editandoNombre ? (
+        <TextField
+          label="Tu nombre"
+          value={name}
+          onChangeText={setName}
+          placeholder="Nombre y apellido"
+          autoFocus={!nombreDelProveedor ? undefined : true}
+        />
+      ) : (
+        <View style={styles.nombreFila}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.nombreEtiqueta}>Tu nombre</Text>
+            <Text style={styles.nombreValor} numberOfLines={1}>
+              {name}
+            </Text>
+          </View>
+          <Pressable onPress={() => setEditandoNombre(true)} hitSlop={8}>
+            <Text style={styles.nombreCambiar}>Cambiar</Text>
+          </Pressable>
+        </View>
+      )}
 
       <Text style={styles.etiqueta}>¿Cómo entrenas?</Text>
       {OPCIONES.map((o) => {
@@ -169,6 +206,24 @@ export default function CompletarCuentaScreen() {
 const styles = StyleSheet.create({
   contenido: { flexGrow: 1, justifyContent: 'center' },
   titulo: { ...typography.h1, color: colors.text, textAlign: 'center' },
+  // El nombre ya sabido: se enseña como un dato, no como un formulario. La
+  // altura es parecida a la del campo para que la pantalla no dé un salto al
+  // pulsar "Cambiar".
+  nombreFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  nombreEtiqueta: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  nombreValor: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginTop: 1 },
+  nombreCambiar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   subtitulo: {
     ...typography.body,
     color: colors.textMuted,

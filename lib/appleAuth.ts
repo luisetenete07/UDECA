@@ -2,8 +2,15 @@ import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import { OAuthProvider, signInWithCredential, signInWithPopup, type UserCredential } from 'firebase/auth';
+import {
+  OAuthProvider,
+  signInWithCredential,
+  signInWithPopup,
+  updateProfile,
+  type UserCredential,
+} from 'firebase/auth';
 import { auth } from './firebase';
+import { nombreDeApple } from './nombreDelProveedor';
 
 /**
  * Entrar con Apple.
@@ -114,10 +121,38 @@ function useAppleNativo(): EstadoApple {
         });
       }
       const proveedor = new OAuthProvider('apple.com');
-      return await signInWithCredential(
+      const sesion = await signInWithCredential(
         auth,
         proveedor.credential({ idToken: credencial.identityToken, rawNonce: bruto })
       );
+
+      /*
+       * EL NOMBRE, GUARDADO AQUÍ Y AHORA. ES LA ÚNICA OPORTUNIDAD.
+       *
+       * Apple manda el nombre en el PRIMER inicio de sesión y nunca más. Y no
+       * viaja dentro del identity token, así que Firebase no lo ve: la cuenta
+       * nace sin `displayName` por muchas veces que se vuelva a entrar.
+       *
+       * `nombreDeApple` existía desde el principio y no la llamaba nadie. El
+       * resultado: se tiraba el nombre que Apple acababa de dar y después la
+       * app se lo pedía por escrito en la pantalla de completar cuenta. Eso es
+       * exactamente lo que Apple rechazó por la norma 4 el 17 de septiembre —
+       * "users are required to provide their name ... even though that
+       * information is already provided by the Authentication Services
+       * framework"—, y con razón: pedir dos veces algo que ya te han dado es
+       * hacerle trabajo al usuario para nada.
+       *
+       * Solo si no hay ya uno: en las entradas siguientes Apple no manda
+       * nombre, y escribir vacío encima borraría el que se guardó la primera.
+       *
+       * Si falla, se sigue. Quedarse sin nombre es un incordio; quedarse sin
+       * entrar por no poder escribirlo, no.
+       */
+      const nombre = nombreDeApple(credencial.fullName);
+      if (nombre && !sesion.user.displayName) {
+        await updateProfile(sesion.user, { displayName: nombre }).catch(() => {});
+      }
+      return sesion;
     } catch (e) {
       // Cancelar no es fallar: se cierra la hoja y ya está.
       if ((e as { code?: string })?.code === 'ERR_REQUEST_CANCELED') return null;
@@ -143,16 +178,12 @@ function useSinApple(): EstadoApple {
 export const useAppleSignIn: () => EstadoApple =
   Platform.OS === 'web' ? useAppleWeb : Platform.OS === 'ios' ? useAppleNativo : useSinApple;
 
-/**
- * El nombre que Apple manda UNA sola vez.
+/*
+ * El nombre vive en lib/nombreDelProveedor.ts, sin imports.
  *
- * Apple da el nombre en el primer inicio de sesión y nunca más: si no se
- * guarda ahí, esa cuenta se queda sin nombre para siempre. Y con "Ocultar mi
- * correo" tampoco llega uno de verdad, así que el nombre es lo único con lo
- * que se puede llamar a esa persona por su nombre.
+ * Este fichero arrastra React Native, así que no se puede ejecutar desde Node
+ * pelado — y esa función es justo la que costó el rechazo de la norma 4 por
+ * estar escrita y no llamarse desde ningún sitio. Se reexporta para no tocar
+ * ningún import de los que ya había.
  */
-export function nombreDeApple(
-  full: { givenName?: string | null; familyName?: string | null } | null | undefined
-): string {
-  return [full?.givenName, full?.familyName].filter(Boolean).join(' ').trim();
-}
+export { nombreDeApple } from './nombreDelProveedor';
