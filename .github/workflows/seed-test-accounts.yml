@@ -10,8 +10,8 @@ name: Cuentas de prueba
 on:
   workflow_dispatch:
     inputs:
-      password:
-        description: 'Contraseña (déjalo VACÍO: los registros son públicos; entrarás con «he olvidado mi contraseña»)'
+      password: 123udecatest.
+        description: 'Contraseña'
         required: false
         default: ''
       email_base:
