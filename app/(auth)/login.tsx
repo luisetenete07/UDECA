@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import { sendPasswordResetEmail, type AuthCredential } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +17,7 @@ import { emailFieldProps, TextField } from '../../components/TextField';
 import { t, useT, frase  } from '../../lib/idioma';
 import { useAppleSignIn } from '../../lib/appleAuth';
 import { useGoogleSignIn } from '../../lib/googleAuth';
+import { puedeEntrarConCorreo } from '../../lib/accesoConCorreo';
 import {
   correoDelError,
   credencialDelError,
@@ -24,6 +25,7 @@ import {
   esCuentaConOtroMetodo,
   mensajeDeEntrada,
 } from '../../lib/enlazarCuenta';
+import { useAuth } from '../../lib/auth-context';
 import { track } from '../../lib/analytics';
 import { auth } from '../../lib/firebase';
 import {
@@ -61,7 +63,30 @@ export default function LoginScreen() {
   const [rescate, setRescate] = useState<{ email: string; credencial: AuthCredential | null } | null>(
     null
   );
+  const { signIn } = useAuth();
   const [password, setPassword] = useState('');
+  /*
+   * ACCESO TEMPORAL CON CORREO — SE QUITA CUANDO APPLE ACEPTE LA VERSIÓN.
+   * Ver lib/accesoConCorreo.ts, que explica por qué existe y cómo retirarlo.
+   */
+  const conCorreo = Platform.OS === 'ios';
+  const [correoAbierto, setCorreoAbierto] = useState(false);
+  const [correo, setCorreo] = useState('');
+  const [entrandoCorreo, setEntrandoCorreo] = useState(false);
+
+  const entrarConCorreo = async () => {
+    if (!puedeEntrarConCorreo(correo, password)) return;
+    setError(null);
+    setInfo(null);
+    setEntrandoCorreo(true);
+    try {
+      await signIn(correo.trim(), password);
+    } catch (e) {
+      setError(mensajeDeEntrada(e));
+    } finally {
+      setEntrandoCorreo(false);
+    }
+  };
   const [enlazando, setEnlazando] = useState(false);
 
   useEffect(() => {
@@ -276,6 +301,55 @@ export default function LoginScreen() {
           <Text style={styles.error}>
             No se puede entrar desde este dispositivo. Prueba desde el navegador en app.udeca.app.
           </Text>
+        ) : null}
+
+        {/*
+          ======================= ACCESO TEMPORAL =======================
+          Correo y contraseña, SOLO en iPhone/iPad y solo hasta que Apple
+          acepte la versión. Está aquí porque la revisión pide unas
+          credenciales que abran la app, y con Google/Apple no se le pueden
+          dar. Cómo retirarlo: lib/accesoConCorreo.ts.
+
+          Va plegado y en último lugar a propósito: no es una forma de entrar
+          que queramos enseñar, es una puerta de servicio.
+          =============================================================== */}
+        {conCorreo ? (
+          correoAbierto ? (
+            <View style={styles.hueco}>
+              <TextField
+                label={t('Correo')}
+                {...emailFieldProps}
+                value={correo}
+                onChangeText={setCorreo}
+                placeholder="tu@correo.com"
+              />
+              <TextField
+                label={t('Contraseña')}
+                secureTextEntry
+                autoComplete="password"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                returnKeyType="go"
+                onSubmitEditing={entrarConCorreo}
+              />
+              <Button
+                title={t('Entrar')}
+                onPress={entrarConCorreo}
+                loading={entrandoCorreo}
+                disabled={!puedeEntrarConCorreo(correo, password)}
+              />
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => setCorreoAbierto(true)}
+              hitSlop={8}
+              style={styles.hueco}
+              accessibilityRole="button"
+            >
+              <Text style={styles.forgot}>{t('Entrar con correo')}</Text>
+            </Pressable>
+          )
         ) : null}
 
         <Text style={styles.legal}>
