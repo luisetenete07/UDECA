@@ -16,12 +16,16 @@
  * que da a Apple EXACTAMENTE lo que pide, porque cada vuelta de revisión cuesta
  * días y ya van dos.
  *
- * POR QUÉ SOLO EN iOS
+ * DÓNDE SE VE: EN TODO MENOS ANDROID
  *
- * Porque el problema es solo de Apple. En Android nadie ha pedido nada, y
- * enseñar allí una forma de entrar que vamos a quitar sería enseñársela a
- * usuarios de verdad para retirársela después. Lo mira `Platform.OS === 'ios'`
- * en app/(auth)/login.tsx.
+ *  - iPhone y iPad: porque es lo que pide la revisión de Apple.
+ *  - Web: para poder probarlo al momento, sin esperar una compilación entera
+ *    de iOS cada vez que se quiera comprobar que la puerta abre.
+ *  - Android NO. Es donde hay usuarios de verdad y donde nadie ha pedido nada;
+ *    enseñar allí una forma de entrar que vamos a quitar sería enseñársela
+ *    para retirársela después.
+ *
+ * Lo mira `Platform.OS !== 'android'` en app/(auth)/login.tsx.
  *
  * CÓMO SE QUITA, cuando Apple acepte la versión
  *

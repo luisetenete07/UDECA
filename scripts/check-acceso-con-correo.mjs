@@ -60,21 +60,27 @@ console.log('\nEstá puesto, y entra por donde entra todo el mundo');
   ok('los errores se traducen', /setError\(mensajeDeEntrada\(e\)\)/.test(login));
 }
 
-console.log('\nSOLO en iOS, y marcado para borrar');
+console.log('\nEn todo menos Android, y marcado para borrar');
 {
   const login = lee('app/(auth)/login.tsx');
-  // LO IMPORTANTE. En Android nadie ha pedido nada: enseñar allí una forma de
-  // entrar que vamos a quitar sería enseñársela a usuarios de verdad para
-  // retirársela después.
+  /*
+   * LO IMPORTANTE: QUE ANDROID SIGA FUERA.
+   *
+   * En iPhone y iPad porque lo pide la revisión de Apple; en la web para poder
+   * probarlo sin esperar una compilación. Android es donde hay usuarios de
+   * verdad y donde nadie ha pedido nada: enseñar allí una forma de entrar que
+   * vamos a quitar sería enseñársela para retirársela después.
+   */
   ok(
-    'la puerta solo se abre en iPhone/iPad',
-    /const conCorreo = Platform\.OS === 'ios';/.test(login),
-    'si esto se amplía, deja de ser temporal sin que nadie lo decida'
+    'la puerta NO se abre en Android',
+    /const conCorreo = Platform\.OS !== 'android';/.test(login),
+    'si esto se amplía a Android, deja de ser temporal sin que nadie lo decida'
   );
   ok('y el bloque solo se pinta con eso', /\{conCorreo \? \(/.test(login));
   // El porqué, escrito donde se ve. Una puerta de servicio sin cartel se queda
   // abierta para siempre.
   ok('el bloque va marcado como temporal', /ACCESO TEMPORAL/.test(login));
+  ok('y el módulo dice dónde se ve', /EN TODO MENOS ANDROID/.test(lee('lib/accesoConCorreo.ts')));
   const modulo = lee('lib/accesoConCorreo.ts');
   ok('y el módulo explica cómo quitarlo', /CÓMO SE QUITA/.test(modulo));
   ok('sin imports, para poder probarlo', !/^import /m.test(modulo));

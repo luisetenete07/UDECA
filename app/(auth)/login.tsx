@@ -67,9 +67,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   /*
    * ACCESO TEMPORAL CON CORREO — SE QUITA CUANDO APPLE ACEPTE LA VERSIÓN.
+   *
+   * En todo MENOS Android: en iPhone y iPad porque es lo que pide la revisión
+   * de Apple, y en la web para poder probarlo sin esperar a una compilación.
+   * En Android no, que es donde hay usuarios de verdad y donde enseñar una
+   * forma de entrar que vamos a quitar sería enseñarla para retirarla.
+   *
    * Ver lib/accesoConCorreo.ts, que explica por qué existe y cómo retirarlo.
    */
-  const conCorreo = Platform.OS === 'ios';
+  const conCorreo = Platform.OS !== 'android';
   const [correoAbierto, setCorreoAbierto] = useState(false);
   const [correo, setCorreo] = useState('');
   const [entrandoCorreo, setEntrandoCorreo] = useState(false);
