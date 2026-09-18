@@ -1,3 +1,5 @@
+name: Cuentas de prueba
+
 # Crea (o resetea) las tres cuentas de prueba: coach, atleta y alumno.
 #
 # Se lanza a mano desde Actions → "Cuentas de prueba" → Run workflow. Así no
@@ -5,13 +7,24 @@
 # clave privada en el ordenador: GitHub ya la tiene guardada como secreto.
 #
 # Solo puede lanzarlo quien tenga permiso de escritura en el repositorio.
-name: Cuentas de prueba
+#
+# EL `name:` VA EN LA PRIMERA LÍNEA, y no es cosmética. Estaba más abajo, tras
+# este comentario, y GitHub lo listaba en Actions como
+# ".github/workflows/seed-test-accounts.yml" en vez de "Cuentas de prueba":
+# guarda el nombre de cuando indexó el fichero por primera vez y no lo refresca
+# solo. Buscándolo por su nombre en la barra lateral, no aparecía.
 
 on:
   workflow_dispatch:
     inputs:
-      password: 123udecatest.
-        description: 'Contraseña'
+      # LA CONTRASEÑA SE ESCRIBE EN EL FORMULARIO, NO AQUÍ.
+      #
+      # Esto es una DESCRIPCIÓN del campo que GitHub enseña al pulsar "Run
+      # workflow"; el valor lo teclea quien lo lanza, en la caja que sale
+      # debajo. Escribirla en este fichero la publica: el repositorio es
+      # público y cualquiera lee su historial.
+      password:
+        description: 'Contraseña de las cuentas de prueba (se escribe abajo, no en el fichero)'
         required: false
         default: ''
       email_base:
