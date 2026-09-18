@@ -5,10 +5,24 @@ name: Build iOS (App Store)
 # secreto de GitHub (ASC_API_KEY_P8) y se reconstruye aquí en tiempo de ejecución.
 on:
   workflow_dispatch:
+    inputs:
+      en_el_runner:
+        description: 'Compilar en un Mac de GitHub en vez de en EAS (no gasta créditos)'
+        type: boolean
+        default: true
 
+# El Mac solo cuando toca.
+#
+# Compilar en EAS no necesita Mac —lo pone Expo— y un runner de Ubuntu vale y
+# arranca en segundos. Compilar aquí sí lo necesita: un .ipa solo se firma con
+# Xcode, y Xcode solo existe en macOS.
+#
+# Los minutos de macOS cuestan diez veces más que los de Linux; en un
+# repositorio PÚBLICO como éste son gratis, pero si algún día se hiciera
+# privado, esta línea es la que hay que mirar.
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.en_el_runner && 'macos-latest' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       # Node 22, no 20.
@@ -48,7 +62,8 @@ jobs:
       #
       # El Team ID no es un secreto: va dentro de cada app publicada. El
       # secreto es la clave .p8, que sigue viniendo de los secretos del repo.
-      - name: Compilar y subir a App Store
+      - name: Compilar en EAS y subir a App Store
+        if: ${{ !inputs.en_el_runner }}
         env:
           EXPO_ASC_API_KEY_PATH: ./asc-key.p8
           EXPO_ASC_KEY_ID: MZPCDLQ2DV
@@ -56,6 +71,63 @@ jobs:
           EXPO_APPLE_TEAM_ID: 633UC6AVQJ
           EXPO_APPLE_TEAM_TYPE: INDIVIDUAL
         run: eas build --platform ios --profile production --non-interactive --auto-submit
+
+      # ================= COMPILAR AQUÍ, EN UN MAC DE GITHUB =================
+      #
+      # POR QUÉ EXISTE ESTE CAMINO. El 18 de septiembre la compilación se cayó
+      # en 73 segundos, sin compilar una línea:
+      #
+      #   This account has used its builds from the Free plan this month,
+      #   which will reset in 12 days (on Thu Oct 01 2026).
+      #
+      # Es la segunda vez que los créditos de EAS frenan una entrega —la
+      # primera fue en Android, y se resolvió igual—, y llegó justo con dos
+      # arreglos que Apple estaba esperando. Doce días parados por una cuota.
+      #
+      # Compilando aquí no se gasta ningún crédito: EAS pone las credenciales
+      # (`--local` las sigue bajando de su servidor con el EXPO_TOKEN) y el Mac
+      # pone el Xcode. Tarda más que en la nube de Expo, pero no depende de
+      # cuántas compilaciones queden este mes.
+      #
+      # Cuando vuelvan los créditos, se lanza con `en_el_runner` desmarcado y
+      # se vuelve a EAS sin tocar este fichero.
+      - name: Compilar aquí (sin gastar créditos)
+        if: ${{ inputs.en_el_runner }}
+        timeout-minutes: 90
+        env:
+          EXPO_ASC_API_KEY_PATH: ./asc-key.p8
+          EXPO_ASC_KEY_ID: MZPCDLQ2DV
+          EXPO_ASC_ISSUER_ID: b4f2d2f6-3485-4bb5-8d7c-5e89c09356d9
+          EXPO_APPLE_TEAM_ID: 633UC6AVQJ
+          EXPO_APPLE_TEAM_TYPE: INDIVIDUAL
+        run: eas build --platform ios --profile production --non-interactive --local --output ./udeca.ipa
+
+      # Subir va APARTE de compilar, y no con `--auto-submit`.
+      #
+      # Si la subida falla —App Store Connect caído, una versión duplicada, un
+      # acuerdo sin firmar— el .ipa ya está hecho y se guarda igual (el paso de
+      # abajo corre con `always()`). Con las dos cosas pegadas, un tropiezo al
+      # final tiraba a la basura una hora de compilación.
+      - name: Subir a App Store Connect
+        if: ${{ inputs.en_el_runner }}
+        env:
+          EXPO_ASC_API_KEY_PATH: ./asc-key.p8
+          EXPO_ASC_KEY_ID: MZPCDLQ2DV
+          EXPO_ASC_ISSUER_ID: b4f2d2f6-3485-4bb5-8d7c-5e89c09356d9
+          EXPO_APPLE_TEAM_ID: 633UC6AVQJ
+          EXPO_APPLE_TEAM_TYPE: INDIVIDUAL
+        run: eas submit --platform ios --profile production --path ./udeca.ipa --non-interactive
+
+      # Y se guarda pase lo que pase con la subida: con el .ipa en la mano,
+      # subirlo a mano desde Transporter es cuestión de minutos.
+      - name: Guardar el .ipa
+        if: ${{ always() && inputs.en_el_runner }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: udeca-ipa
+          path: ./udeca.ipa
+          if-no-files-found: ignore
+
       - name: Limpiar clave
         if: always()
         run: rm -f asc-key.p8
