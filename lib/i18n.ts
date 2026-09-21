@@ -223,6 +223,10 @@ export const EN: Record<string, string> = {
   // --- Cursos del alumno ---
   'Documento no disponible': 'Document not available',
   'E-book de la lección': 'Lesson e-book',
+  'Leer a pantalla completa': 'Read full screen',
+  'E-book': 'E-book',
+  'Marcar como leída': 'Mark as read',
+  'Leída · ir a la siguiente': 'Read · go to next',
   'Captura detectada': 'Screenshot detected',
   'Curso no encontrado': 'Course not found',
   vistas: 'watched',

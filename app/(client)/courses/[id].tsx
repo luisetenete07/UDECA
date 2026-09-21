@@ -16,6 +16,11 @@ import { VideoPlayer } from '../../../components/VideoPlayer';
 import { BotonAmpliar, VisorDeVideo } from '../../../components/VisorDeVideo';
 import { mereceAmpliar, tamanoDelVisor } from '../../../lib/visorDeVideo';
 import {
+  altoDeLaMuestra,
+  enlaceDeLectura,
+  esEbook,
+} from '../../../lib/visorDeEbook';
+import {
   MarcaDeAgua,
   useProteccionDePantalla,
   useSinCopiaEnWeb,
@@ -336,9 +341,11 @@ function ReproductorLeccion({
   onMarcar: () => void;
   profile: ReturnType<typeof useAuth>['profile'];
 }) {
-  const esPdf = contenido?.kind === 'pdf' || (!contenido?.videoUrl && !!contenido?.pdfUrl);
+  const esPdf = esEbook(contenido);
   const [pillado, setPillado] = useState(false);
   const [ampliado, setAmpliado] = useState(false);
+  /** El e-book de apoyo de una clase de vídeo, abierto a pantalla completa. */
+  const [leyendo, setLeyendo] = useState(false);
   // El vídeo ya no cabe en la columna de texto: se calcula el 16:9 más grande
   // que entra en esta pantalla (ver lib/visorDeVideo).
   const { width: ancho, height: alto } = useWindowDimensions();
@@ -354,6 +361,13 @@ function ReproductorLeccion({
   // Y el PDF de una lección también es material del curso: mientras esté
   // abierto, en el navegador no hay menú, ni selección, ni arrastrar fuera.
   useSinCopiaEnWeb(!!contenido);
+  // Al encadenar con la siguiente, lo que estuviera ampliado se cierra. Este
+  // reproductor no se desmonta entre lecciones —cambia lo que enseña—, así que
+  // sin esto la lección nueva se abriría con el visor de la anterior encima.
+  useEffect(() => {
+    setAmpliado(false);
+    setLeyendo(false);
+  }, [contenido?.id]);
   if (!contenido) return null;
   return (
     <Modal visible animationType="slide" onRequestClose={onCerrar} transparent={false}>
@@ -367,43 +381,70 @@ function ReproductorLeccion({
           </Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.repContenido}>
-          {esPdf ? (
-            contenido.pdfUrl ? (
-              <EmbeddedDoc url={contenido.pdfUrl} />
+        {/*
+         * CUANDO LA CLASE ES EL E-BOOK, EL E-BOOK ES LA PANTALLA.
+         *
+         * Antes caía dentro del mismo `ScrollView` que el texto, en una caja de
+         * 480 px, y debajo quedaba media pantalla negra vacía. El navegador
+         * encogía la página entera hasta que cabía en esa ranura: el documento
+         * salía recortado por arriba y por abajo, y lo que quedaba era
+         * demasiado pequeño para leerlo.
+         *
+         * Aquí no hay scroll nuestro, ni columna de texto, ni tarjeta: el
+         * documento ocupa todo lo que hay entre la cabecera y el pie, y quien
+         * pasa páginas es el visor. El título ya está arriba —repetirlo debajo
+         * era robarle sitio a lo único que importa— y del texto de la lección
+         * quedan dos líneas, que es lo que se lee antes de empezar.
+         */}
+        {esPdf ? (
+          <>
+            {contenido.pdfUrl ? (
+              <EmbeddedDoc url={contenido.pdfUrl} lleno />
             ) : (
-              <View style={styles.docPlaceholder}>
+              <View style={[styles.docPlaceholder, styles.docPlaceholderLleno]}>
                 <Ionicons name="document-text-outline" size={28} color={colors.textFaint} />
                 <Text style={styles.metaText}>Documento no disponible</Text>
               </View>
-            )
-          ) : (
-            /* El nombre de quien está viendo la clase, encima de la clase. No
-               impide copiar: hace que la copia lleve el nombre de quien la
-               filtró, que contra una cámara apuntando a la pantalla es lo
-               único que queda. */
-            <>
-              {/* El vídeo, tan ancho como caben 16:9 en esta pantalla y no
-                  atado a la columna de texto: en un ordenador esa columna
-                  dejaba la clase en un tercio de la pantalla, que para ver una
-                  técnica no da. */}
-              <View style={[styles.repVideo, { width: tamVideo.width, height: tamVideo.height }]}>
-                <MarcaDeAgua profile={profile}>
-                  <VideoPlayer url={contenido.videoUrl} protectedContent />
-                </MarcaDeAgua>
-              </View>
-              {mereceAmpliar(tamVideo.width, ancho, alto) ? (
-                <BotonAmpliar onPress={() => setAmpliado(true)} />
+            )}
+            <View style={styles.ebookPie}>
+              {leccion?.description ? (
+                <Text style={styles.ebookPieTexto} numberOfLines={2}>
+                  {leccion.description}
+                </Text>
               ) : null}
-              <VisorDeVideo
-                visible={ampliado}
-                url={contenido.videoUrl}
-                titulo={contenido.title}
-                profile={profile}
-                onCerrar={() => setAmpliado(false)}
-              />
-            </>
-          )}
+              {tieneContenido(contenido) ? (
+                <Button
+                  title={vista ? 'Quitar de vistas' : haySiguiente ? 'Leída · ir a la siguiente' : 'Marcar como leída'}
+                  variant={vista ? 'secondary' : 'primary'}
+                  onPress={onMarcar}
+                />
+              ) : null}
+            </View>
+          </>
+        ) : (
+        <ScrollView contentContainerStyle={styles.repContenido}>
+          {/* El nombre de quien está viendo la clase, encima de la clase. No
+              impide copiar: hace que la copia lleve el nombre de quien la
+              filtró, que contra una cámara apuntando a la pantalla es lo
+              único que queda. */}
+          {/* El vídeo, tan ancho como caben 16:9 en esta pantalla y no atado a
+              la columna de texto: en un ordenador esa columna dejaba la clase
+              en un tercio de la pantalla, que para ver una técnica no da. */}
+          <View style={[styles.repVideo, { width: tamVideo.width, height: tamVideo.height }]}>
+            <MarcaDeAgua profile={profile}>
+              <VideoPlayer url={contenido.videoUrl} protectedContent />
+            </MarcaDeAgua>
+          </View>
+          {mereceAmpliar(tamVideo.width, ancho, alto) ? (
+            <BotonAmpliar onPress={() => setAmpliado(true)} />
+          ) : null}
+          <VisorDeVideo
+            visible={ampliado}
+            url={contenido.videoUrl}
+            titulo={contenido.title}
+            profile={profile}
+            onCerrar={() => setAmpliado(false)}
+          />
 
           {/* El texto se queda en su columna legible aunque el vídeo sea muy
               ancho: una línea de 2.000 px no la lee nadie. */}
@@ -412,7 +453,7 @@ function ReproductorLeccion({
               deja grabar; en web no hay forma de impedirlo y prometerlo sería
               mentir. Lo que sí es verdad en las dos es que el vídeo lleva su
               nombre encima. */}
-          {!esPdf && contenido.videoUrl ? (
+          {contenido.videoUrl ? (
             <View style={styles.avisoProteccion}>
               <Ionicons name="shield-checkmark-outline" size={14} color={colors.textFaint} />
               <Text style={styles.avisoProteccionTexto}>{avisoDeProteccion(Platform.OS)}</Text>
@@ -442,18 +483,34 @@ function ReproductorLeccion({
           ) : null}
 
           {/* El e-book de apoyo de una lección de vídeo, dentro de la propia
-              lección: es material de ESA lección y fuera se perdía. */}
-          {!esPdf && contenido.videoUrl && contenido.pdfUrl ? (
+              lección: es material de ESA lección y fuera se perdía.
+              Aquí es una MUESTRA —debajo sigue habiendo página—, y para leerlo
+              está el botón: se abre a pantalla completa, igual que un e-book
+              que sea la clase entera. */}
+          {contenido.videoUrl && contenido.pdfUrl ? (
             <View style={styles.pdfBlock}>
               <View style={styles.pdfHead}>
                 <Ionicons name="document-text-outline" size={15} color={colors.primary} />
                 <Text style={styles.pdfTitle}>E-book de la lección</Text>
               </View>
+              {/* El botón va ENCIMA de la muestra, no debajo. Debajo hay que
+                  pasar por encima del documento para llegar, y el dedo que
+                  cruza un documento que se desplaza se queda dentro de él:
+                  quien quería abrirlo entero acaba pasando páginas de la
+                  muestra sin querer. */}
+              <BotonLeerEntero onPress={() => setLeyendo(true)} />
               <EmbeddedDoc url={contenido.pdfUrl} />
+              <LectorAPantallaCompleta
+                visible={leyendo}
+                url={contenido.pdfUrl}
+                titulo={contenido.title}
+                onCerrar={() => setLeyendo(false)}
+              />
             </View>
           ) : null}
           </View>
         </ScrollView>
+        )}
 
         {/* Se ha detectado una captura: se tapa la clase. Hay que destaparla a
             mano, y al hacerlo se lee de quién es la copia que se acaba de
@@ -509,7 +566,7 @@ function FilaDeContenido({
   onAbrir: () => void;
   onMarcar: () => void;
 }) {
-  const esPdf = contenido.kind === 'pdf' || (!contenido.videoUrl && !!contenido.pdfUrl);
+  const esPdf = esEbook(contenido);
   return (
     <Pressable onPress={onAbrir}>
       <Card
@@ -572,33 +629,45 @@ function FilaDeContenido({
   );
 }
 
-/** Convierte enlaces de Drive/Dropbox a su versión embebible. */
-function toEmbeddablePdf(url: string): string {
-  if (url.includes('drive.google.com')) return url.replace(/\/view.*$/, '/preview');
-  if (url.includes('dropbox.com')) return url.replace('?dl=0', '?raw=1');
-  return url;
-}
-
-/** Visor de PDF/e-book DENTRO de la app (iframe en web, WebView en nativo). */
-function EmbeddedDoc({ url }: { url: string }) {
-  const src = toEmbeddablePdf(url);
+/**
+ * El e-book, dentro de la app (iframe en web, WebView en nativo).
+ *
+ * `lleno` es la diferencia entre una MUESTRA y la LECTURA. Lleno ocupa todo lo
+ * que le den —que es toda la pantalla menos la cabecera y el pie— y es como se
+ * lee de verdad. Sin llenar es la portada del e-book de apoyo de una clase de
+ * vídeo, con la página siguiendo por debajo.
+ *
+ * La dirección la compone lib/visorDeEbook.ts: allí se decide si la página se
+ * encaja a lo ancho o entera, se quita la barra del navegador —que tapaba la
+ * primera y la última línea, y lleva el botón de descargar— y se mete el
+ * puente de Android, cuyo WebView no sabe pintar un PDF.
+ */
+function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
+  const { width, height } = useWindowDimensions();
+  const src = enlaceDeLectura(url, Platform.OS, width, height);
+  const altoMuestra = altoDeLaMuestra(height);
   if (Platform.OS === 'web') {
-    return React.createElement('iframe', {
+    const marco = React.createElement('iframe', {
       src,
-      style: {
-        width: '100%',
-        height: 480,
-        backgroundColor: '#000',
-        borderRadius: radius.md,
-        border: `1px solid ${colors.border}`,
-      },
+      style: lleno
+        ? { flex: 1, width: '100%', minHeight: 0, backgroundColor: '#000', border: 'none' }
+        : {
+            width: '100%',
+            height: altoMuestra,
+            backgroundColor: '#000',
+            borderRadius: radius.md,
+            border: `1px solid ${colors.border}`,
+          },
       onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
     });
+    // Llenando, el iframe necesita un padre con alto de verdad del que colgar:
+    // un porcentaje sobre un padre sin medida no es una medida.
+    return lleno ? <View style={styles.pdfLleno}>{marco}</View> : marco;
   }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { WebView } = require('react-native-webview');
   return (
-    <View style={styles.pdfNative}>
+    <View style={lleno ? styles.pdfLleno : [styles.pdfNative, { height: altoMuestra }]}>
       <WebView
         source={{ uri: src }}
         // Un e-book de un curso es material de pago igual que el vídeo. Fuera
@@ -608,9 +677,57 @@ function EmbeddedDoc({ url }: { url: string }) {
         suppressMenuItems={['copy', 'share', 'select', 'selectAll', 'lookup', 'translate']}
         setSupportMultipleWindows={false}
         javaScriptCanOpenWindowsAutomatically={false}
-        style={{ flex: 1, borderRadius: radius.md }}
+        // Para poder acercar con los dedos. Sin esto, en un móvil un PDF con
+        // letra pequeña no hay manera de leerlo: se ve, pero no se lee.
+        scalesPageToFit
+        style={{ flex: 1, borderRadius: lleno ? 0 : radius.md }}
       />
     </View>
+  );
+}
+
+/** El enlace que abre el e-book de apoyo a pantalla completa. */
+function BotonLeerEntero({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.leerEntero} hitSlop={8}>
+      <Ionicons name="expand-outline" size={14} color={colors.primary} />
+      <Text style={styles.leerEnteroTexto}>Leer a pantalla completa</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * El e-book de apoyo, a pantalla completa.
+ *
+ * Mismo trato que el de la clase que ES un e-book: cabecera con el título y
+ * salida, y debajo el documento y nada más. Un e-book no se lee en una ranura.
+ */
+function LectorAPantallaCompleta({
+  url,
+  titulo,
+  visible,
+  onCerrar,
+}: {
+  url: string;
+  titulo?: string;
+  visible: boolean;
+  onCerrar: () => void;
+}) {
+  if (!visible) return null;
+  return (
+    <Modal visible animationType="slide" onRequestClose={onCerrar} transparent={false}>
+      <View style={styles.repFondo}>
+        <View style={styles.repCabecera}>
+          <Pressable onPress={onCerrar} hitSlop={10} style={styles.repCerrar}>
+            <Ionicons name="chevron-down" size={24} color={colors.text} />
+          </Pressable>
+          <Text style={styles.repCabeceraTexto} numberOfLines={1}>
+            {titulo || 'E-book'}
+          </Text>
+        </View>
+        <EmbeddedDoc url={url} lleno />
+      </View>
+    </Modal>
   );
 }
 
@@ -675,10 +792,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
   },
+  docPlaceholderLleno: { flex: 1, aspectRatio: undefined, borderRadius: 0, borderWidth: 0 },
   pdfBlock: { marginTop: spacing.md },
   pdfHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
   pdfTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  pdfNative: { height: 480, borderRadius: radius.md, overflow: 'hidden' },
+  pdfNative: { borderRadius: radius.md, overflow: 'hidden' },
+  /*
+   * El documento, a pantalla completa. Sin esquinas redondeadas y sin margen a
+   * propósito: un e-book con marco parece una tarjeta dentro de una pantalla, y
+   * aquí no hay pantalla alrededor — el documento ES la pantalla. Cada píxel
+   * que se le quita al marco es página que se lee.
+   */
+  pdfLleno: { flex: 1, backgroundColor: '#000', overflow: 'hidden' },
+  ebookPie: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    // Sitio para el gesto de volver de iOS, que vive en el borde de abajo.
+    paddingBottom: Platform.OS === 'web' ? spacing.md : spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  ebookPieTexto: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
+  leerEntero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+  },
+  leerEnteroTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   privateBadge: {
     flexDirection: 'row',
     alignItems: 'center',

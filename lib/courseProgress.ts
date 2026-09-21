@@ -1,3 +1,4 @@
+import { esEbook } from './visorDeEbook';
 import type { ContenidoDeCurso, Course, Lesson } from './types';
 
 /**
@@ -21,8 +22,7 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 
 /** ¿Esto tiene algo que ver? Lo que está "Pronto" no cuenta. */
 export function tieneContenido(l: ContenidoDeCurso): boolean {
-  const esPdf = l.kind === 'pdf' || (!l.videoUrl && !!l.pdfUrl);
-  return esPdf ? !!l.pdfUrl : !!l.videoUrl;
+  return esEbook(l) ? !!l.pdfUrl : !!l.videoUrl;
 }
 
 /**

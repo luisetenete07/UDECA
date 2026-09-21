@@ -4,6 +4,7 @@ import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius, typography } from '../lib/theme';
 import { miniaturaDelEnlace, parseVimeoUrl, urlDeOEmbedVimeo } from '../lib/video';
+import { esEbook } from '../lib/visorDeEbook';
 import type { ContenidoDeCurso } from '../lib/types';
 
 /**
@@ -85,7 +86,7 @@ export function MiniaturaCurso({
   vista?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const esPdf = contenido.kind === 'pdf' || (!contenido.videoUrl && !!contenido.pdfUrl);
+  const esPdf = esEbook(contenido);
   const deVimeo = useMiniaturaDeVimeo(esPdf ? undefined : contenido.videoUrl);
   const imagen = thumbURL ?? miniaturaDelEnlace(contenido.videoUrl) ?? deVimeo;
   const medida =
