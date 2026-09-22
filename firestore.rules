@@ -100,11 +100,16 @@ service cloud.firestore {
           || userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
           || isUdecaAdmin()
         );
-      // Al crearse, nadie puede regalarse tiempo de suscripción. Única
-      // excepción: el ATLETA nace con su prueba gratuita, acotada aquí para que
-      // no pueda pedirse más de la que le corresponde (TRIAL_DAYS = 28, en
-      // lib/planBase.ts). El entrenador nace caducado (0) y se activa al pagar
-      // su cuota anual.
+      // Al crearse, nadie puede regalarse tiempo de suscripción. La excepción
+      // es la PRUEBA GRATUITA, que ahora tienen los dos roles: 14 días el
+      // entrenador y 7 el atleta (DIAS_DE_PRUEBA_*, en lib/planBase.ts). Aquí
+      // se acota para que nadie pueda pedir más de la que le toca.
+      //
+      // EL ENTRENADOR NO ESTABA AQUÍ, y habría roto el registro entero. Esta
+      // regla solo admitía prueba al atleta, así que un entrenador naciendo con
+      // sus 14 días se encontraba un "missing or insufficient permissions" al
+      // crear la cuenta y no podía entrar. No es un fallo que se vea probando
+      // la app contra el emulador con las reglas viejas: se ve contra ESTAS.
       //
       // LOS DOS DÍAS DE MÁS NO SON UN DESCUIDO. El fin de la prueba lo calcula
       // la app con el reloj DEL MÓVIL y lo comprueba esta regla con el reloj
@@ -124,7 +129,12 @@ service cloud.firestore {
           || (
             request.resource.data.role == 'athlete'
             && request.resource.data.subscriptionUntil
-                 <= request.time.toMillis() + (28 + 2) * 24 * 60 * 60 * 1000
+                 <= request.time.toMillis() + (7 + 2) * 24 * 60 * 60 * 1000
+          )
+          || (
+            request.resource.data.role == 'trainer'
+            && request.resource.data.subscriptionUntil
+                 <= request.time.toMillis() + (14 + 2) * 24 * 60 * 60 * 1000
           )
         );
       // El propio usuario edita su perfil (sin tocar su suscripción); el

@@ -28,8 +28,13 @@
 import { readFileSync } from 'node:fs';
 import {
   DAY_MS,
+  DIAS_DE_PRUEBA_ATLETA,
+  DIAS_DE_PRUEBA_ENTRENADOR,
   PRIMER_ANO_DIAS,
   TRIAL_DAYS,
+  needsEntryPayment,
+  subscriptionState,
+  suscripcionAlNacer,
   tocaElAvisoDelAtleta,
   trialUntil,
 } from '../lib/planBase.ts';
@@ -92,16 +97,112 @@ console.log('\nY el servidor escribe ese mismo año, para los dos roles');
   );
 }
 
-console.log('\nLa prueba vieja sigue durando lo mismo donde queda escrita');
-ok(`TRIAL_DAYS = ${TRIAL_DAYS}`, TRIAL_DAYS === 28, String(TRIAL_DAYS));
+console.log('\nLa prueba gratuita dura lo que toca a cada uno');
+{
+  ok(`el entrenador tiene ${DIAS_DE_PRUEBA_ENTRENADOR} días`, DIAS_DE_PRUEBA_ENTRENADOR === 14);
+  ok(`el atleta tiene ${DIAS_DE_PRUEBA_ATLETA} días`, DIAS_DE_PRUEBA_ATLETA === 7);
+  // El doble para el entrenador no es generosidad: su "ajá" es ver a un alumno
+  // suyo completar una sesión, y para eso tiene que invitarlo, montarle la
+  // rutina y esperar a que entrene.
+  ok('y el entrenador tiene más que el atleta', DIAS_DE_PRUEBA_ENTRENADOR > DIAS_DE_PRUEBA_ATLETA);
+
+  const nace = suscripcionAlNacer('trainer', AHORA);
+  ok('nace con fecha de fin', nace.subscriptionUntil === AHORA + 14 * DAY_MS);
+  /*
+   * LAS DOS FECHAS IGUALES. Es lo que marca que es una prueba y no un año
+   * pagado: `subscriptionState` mira si `subscriptionUntil <= trialEndsAt`. Si
+   * se separaran al nacer, la cuenta saldría como pagada desde el primer día —
+   * en el panel de administración y en los avisos— sin que nadie hubiera
+   * pagado nada.
+   */
+  ok('y las dos fechas iguales', nace.subscriptionUntil === nace.trialEndsAt);
+  ok('el atleta, siete', suscripcionAlNacer('athlete', AHORA).subscriptionUntil === AHORA + 7 * DAY_MS);
+}
+
+console.log('\nY durante la prueba NO sale el muro de pago');
+{
+  /*
+   * ESTA ES LA LÍNEA QUE HACE QUE LA PRUEBA EXISTA.
+   *
+   * `needsEntryPayment` decía `!estado.active || estado.trial`, de cuando la
+   * prueba venía detrás de un alta de 1 €. Con ese `|| estado.trial` puesto, la
+   * cuenta nacería con sus catorce días y el muro seguiría delante desde el
+   * primer segundo: la prueba no serviría de nada. Y no daría ningún error,
+   * porque nacer con prueba y no poder usarla se ve igual que no tener prueba.
+   */
+  /*
+   * Con el reloj de HOY, no con AHORA.
+   *
+   * `ENTRY_REQUIRED_FROM` exime a las cuentas anteriores al 3 de agosto de
+   * 2026: con la fecha fija de este fichero (15 de agosto), una cuenta "de
+   * hace trece días" nacía ANTES de ese corte y salía exenta por fundadora, no
+   * por estar de prueba. La comprobación pasaba por el motivo equivocado, que
+   * es peor que fallar.
+   */
+  const HOY = Date.now();
+  const dePrueba = (role, diasPasados) => {
+    const nacimiento = HOY - diasPasados * DAY_MS;
+    return {
+      uid: 'u1',
+      role,
+      name: 'X',
+      email: 'x@demo.test',
+      createdAt: nacimiento,
+      ...suscripcionAlNacer(role, nacimiento),
+    };
+  };
+  const muro = (p) => needsEntryPayment(p, HOY) || !subscriptionState(p, HOY).active;
+
+  ok('entrenador el primer día', !muro(dePrueba('trainer', 0)));
+  ok('entrenador a mitad de la prueba', !muro(dePrueba('trainer', 7)));
+  ok('entrenador el último día', !muro(dePrueba('trainer', 13)));
+  ok('atleta el primer día', !muro(dePrueba('athlete', 0)));
+  ok('atleta el último día', !muro(dePrueba('athlete', 6)));
+
+  // Y cuando se acaba, sale. Una prueba que no termina no es una prueba.
+  ok('al entrenador se le acaba a los 14', muro(dePrueba('trainer', 15)));
+  ok('al atleta a los 7', muro(dePrueba('athlete', 8)));
+}
+
+console.log('\nLas reglas de Firestore dejan nacer las dos pruebas');
 {
   const reglas = lee('firestore.rules');
+  /*
+   * ESTO HABRÍA ROTO EL REGISTRO ENTERO. La regla solo admitía prueba al
+   * ATLETA, así que un entrenador naciendo con sus 14 días se encontraba un
+   * "missing or insufficient permissions" al crear la cuenta. No se ve
+   * probando la app: se ve probándola contra ESTAS reglas.
+   */
   ok(
-    `firestore.rules topa en (${TRIAL_DAYS} + 2) días`,
-    reglas.includes(`(${TRIAL_DAYS} + 2) * 24 * 60 * 60 * 1000`),
+    `topa al atleta en (${DIAS_DE_PRUEBA_ATLETA} + 2) días`,
+    reglas.includes(`(${DIAS_DE_PRUEBA_ATLETA} + 2) * 24 * 60 * 60 * 1000`),
     'el margen de 2 días absorbe el desfase de reloj del móvil'
   );
+  ok(
+    `y al entrenador en (${DIAS_DE_PRUEBA_ENTRENADOR} + 2) días`,
+    reglas.includes(`(${DIAS_DE_PRUEBA_ENTRENADOR} + 2) * 24 * 60 * 60 * 1000`),
+    'sin esto el entrenador no puede ni crearse la cuenta'
+  );
+  ok('y nombra al entrenador', /role == 'trainer'[\s\S]{0,120}subscriptionUntil/.test(reglas));
 }
+
+console.log('\nY los DOS roles ven su contador');
+{
+  /*
+   * El atleta era el único que no se enteraba: el entrenador tenía el contador
+   * en su panel desde siempre y en el del atleta no lo pintaba nadie. Con
+   * siete días de prueba eso es usar la app una semana y encontrarse el muro
+   * una mañana, sin aviso. `TrialBanner` ya servía para los dos —lee el perfil
+   * y el estado, no el rol—: solo faltaba ponerlo.
+   */
+  for (const panel of ['app/(trainer)/dashboard.tsx', 'app/(client)/dashboard.tsx']) {
+    ok(`${panel} lo pinta`, /<TrialBanner profile=\{profile\} \/>/.test(lee(panel)));
+  }
+}
+
+console.log('\nLa prueba vieja sigue durando lo mismo donde queda escrita');
+// Quedan cuentas con una prueba de 28 días en marcha: hay que saber leerlas.
+ok(`TRIAL_DAYS = ${TRIAL_DAYS}`, TRIAL_DAYS === 28, String(TRIAL_DAYS));
 
 console.log('\nEl aviso a pantalla completa NO sale al crear la cuenta');
 ok('recién dado de alta', !tocaElAvisoDelAtleta(atleta(0), AHORA));

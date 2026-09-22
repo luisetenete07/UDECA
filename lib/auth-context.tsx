@@ -238,7 +238,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: Date.now(),
         inviteCode: codigo,
         ...foto,
-        subscriptionUntil: 0,
+        // Nace con sus 14 días de prueba, sin tarjeta (ver suscripcionAlNacer).
+        ...suscripcionAlNacer('trainer'),
       };
       await setDoc(doc(db, 'users', user.uid), nuevo);
       await registerTrainerInviteCode(codigo, user.uid);
@@ -254,11 +255,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       trainerId: user.uid,
       ...foto,
-      // Nace caducada y se abre al pagar, igual que la del entrenador. Sin
-      // `trialEndsAt`: ese campo es lo que hace que la app diga "estás de
-      // prueba" y que la tarea diaria mande avisos de prueba, y desde que el
-      // primer año se paga al entrar las dos cosas serían mentira.
-      ...suscripcionAlNacer(),
+      // Nace con sus 7 días de prueba, sin tarjeta (ver suscripcionAlNacer).
+      ...suscripcionAlNacer('athlete'),
     };
     await setDoc(doc(db, 'users', user.uid), nuevo);
     setProfile(nuevo);
@@ -277,9 +275,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       inviteCode,
       emailVerificationRequired: true,
-      // El plan de entrenador no tiene prueba: la cuenta nace pendiente de
-      // activación (0 = caducada) y se abre al contratar la cuota anual.
-      subscriptionUntil: 0,
+      // Nace con sus 14 días de prueba, sin tarjeta (ver suscripcionAlNacer).
+      ...suscripcionAlNacer('trainer'),
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     await registerTrainerInviteCode(inviteCode, credential.user.uid);
@@ -339,9 +336,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: Date.now(),
       trainerId: credential.user.uid,
       emailVerificationRequired: true,
-      // Nace pendiente de activación, como dice el comentario de arriba. Antes
-      // decía eso y escribía 28 días de prueba justo debajo.
-      ...suscripcionAlNacer(),
+      // Nace con sus 7 días de prueba, sin tarjeta (ver suscripcionAlNacer).
+      ...suscripcionAlNacer('athlete'),
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     sendEmailVerification(credential.user).catch(() => {});

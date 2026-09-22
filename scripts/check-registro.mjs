@@ -35,7 +35,11 @@ import { connectAuthEmulator, getAuth, signInWithEmailAndPassword } from 'fireba
 import { connectFirestoreEmulator, doc, getFirestore, setDoc } from 'firebase/firestore';
 // De planBase y no de subscription: ese lee Platform.OS y arrastra React
 // Native entera, que en Node pelado no arranca.
-import { TRIAL_DAYS, trialUntil } from '../lib/planBase.ts';
+import {
+  DIAS_DE_PRUEBA_ATLETA,
+  DIAS_DE_PRUEBA_ENTRENADOR,
+  suscripcionAlNacer,
+} from '../lib/planBase.ts';
 
 const AUTH_REST = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
 const DIA = 24 * 60 * 60 * 1000;
@@ -106,9 +110,12 @@ console.log('\nCrear cuenta: los tres roles');
     email,
     createdAt: Date.now(),
     inviteCode: 'ABC123',
-    subscriptionUntil: 0,
+    // Ya no nace a cero: nace con sus 14 días. La regla SOLO admitía prueba al
+    // atleta, así que sin ampliarla esto es un PERMISSION_DENIED y el
+    // entrenador no puede ni crearse la cuenta.
+    ...suscripcionAlNacer('trainer'),
   });
-  ok('un entrenador puede crear su perfil', r.permitido, r.error);
+  ok('un entrenador puede crear su perfil con su prueba', r.permitido, r.error);
 }
 
 // --- Atleta, con el reloj en hora ---
@@ -121,8 +128,7 @@ console.log('\nCrear cuenta: los tres roles');
     email,
     createdAt: Date.now(),
     trainerId: uid,
-    subscriptionUntil: trialUntil(),
-    trialEndsAt: trialUntil(),
+    ...suscripcionAlNacer('athlete'),
   });
   ok('un atleta puede crear su perfil con su prueba', r.permitido, r.error);
 }
@@ -149,8 +155,7 @@ for (const [texto, desfase] of [
     email,
     createdAt: Date.now() + desfase,
     trainerId: uid,
-    subscriptionUntil: trialUntil(Date.now() + desfase),
-    trialEndsAt: trialUntil(Date.now() + desfase),
+    ...suscripcionAlNacer('athlete', Date.now() + desfase),
   });
   ok(`el atleta entra con el reloj ${texto}`, r.permitido, r.error);
 }
@@ -180,7 +185,7 @@ console.log('\nLo que sigue sin poderse hacer');
     email,
     createdAt: Date.now(),
     trainerId: uid,
-    subscriptionUntil: Date.now() + (TRIAL_DAYS + 7) * DIA,
+    subscriptionUntil: Date.now() + (DIAS_DE_PRUEBA_ATLETA + 7) * DIA,
   });
   ok('ni una semana de más', !r.permitido);
 }
@@ -196,6 +201,21 @@ console.log('\nLo que sigue sin poderse hacer');
     subscriptionUntil: Date.now() + 365 * DIA,
   });
   ok('un entrenador NO se regala la suscripción anual', !r.permitido);
+}
+// Y su prueba tiene su propio tope, distinto del del atleta: catorce días,
+// no los que él diga.
+{
+  const { uid, email } = await cuentaNueva();
+  const r = await intenta({
+    uid,
+    role: 'trainer',
+    name: 'Listillo',
+    email,
+    createdAt: Date.now(),
+    inviteCode: 'ABC123',
+    subscriptionUntil: Date.now() + (DIAS_DE_PRUEBA_ENTRENADOR + 7) * DIA,
+  });
+  ok('ni una semana de prueba de más', !r.permitido);
 }
 
 // --- A recoger ---

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
+import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
 import { Card } from '../../components/Card';
 import { DashboardSkeleton } from '../../components/Skeleton';
@@ -392,10 +393,24 @@ export default function ClientDashboard() {
         </Pressable>
       </View>
 
-      {/* Solo al atleta que aún no paga, y solo el ÚLTIMO día de su prueba
-          (ver UpgradePopup): el día que se crea la cuenta acaba de pagar y no
-          hay nada que decidir todavía. Durante todo el mes la tarjeta está en
-          su perfil para quien la busque. */}
+      {/*
+       * El contador de la prueba, desde el primer día.
+       *
+       * FALTABA, y el atleta era el único que no se enteraba de nada: el
+       * entrenador lo tenía en su panel desde siempre y aquí no lo pintaba
+       * nadie. Con siete días de prueba eso significa usar la app una semana y
+       * encontrarse el muro una mañana sin que nadie lo hubiera avisado.
+       *
+       * No molesta a quien no le toca: `TrialBanner` no pinta nada si la
+       * suscripción está pagada, si renueva sola en Stripe, o si es un alumno
+       * de un coach (que no paga plataforma).
+       */}
+      <TrialBanner profile={profile} />
+
+      {/* El aviso a pantalla completa es otra cosa y sale solo el ÚLTIMO día
+          (ver UpgradePopup): el contador de arriba informa sin tapar, y esto
+          interrumpe. Interrumpir tiene sentido cuando queda un día y hay algo
+          que decidir; antes, no. */}
       <UpgradePopup />
 
       {paymentAlert ? (

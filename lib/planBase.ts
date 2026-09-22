@@ -17,13 +17,11 @@ import type { UserProfile } from './types';
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Días de prueba del atleta. HERENCIA: solo para las cuentas de antes.
+ * Días de prueba de las cuentas ANTIGUAS de atleta. Herencia.
  *
- * Con el modelo nuevo no hay prueba —se paga el primer año al entrar— pero
- * este número no se puede borrar: hay cuentas con una prueba en marcha, y está
- * escrito también en firestore.rules, que impide pedir más prueba de la que
- * toca al crear la cuenta. Mientras quede una sola cuenta vieja en pie, esto
- * se queda.
+ * Veintiocho días era la prueba del modelo de antes. No se puede borrar: hay
+ * cuentas con una de esas en marcha y hay que saber leerlas. Lo que se vende
+ * hoy son los números de abajo.
  */
 export const TRIAL_DAYS = 28;
 
@@ -33,32 +31,74 @@ export function trialUntil(from: number = Date.now()): number {
 }
 
 /**
+ * LA PRUEBA GRATUITA. Sin tarjeta, y esa es la decisión importante.
+ *
+ * Pedir la tarjeta convierte mucho mejor —eso es cierto en general y era mi
+ * primera recomendación—, pero aquí choca con una pared: EN iPHONE NO SE PUEDE
+ * PEDIR. La norma 3.1.1 de Apple prohíbe mandar a pagar fuera de sus compras
+ * integradas, y por eso `CAN_LINK_TO_PAYMENT` está apagada en iOS. Una prueba
+ * con tarjeta sería una prueba que en iPhone no se puede ni empezar: ese
+ * usuario se seguiría estrellando contra el muro el día cero y tendría que
+ * descubrir la web por su cuenta, que es justo el problema que la prueba
+ * existe para resolver.
+ *
+ * Así que sin tarjeta. Se paga en conversión y se cobra en que la app se pueda
+ * usar en los tres sitios.
+ *
+ * POR QUÉ EL ENTRENADOR TIENE EL DOBLE DE DÍAS
+ *
+ * No es generosidad, es cuánto tarda cada uno en ver de qué va esto.
+ *
+ * El atleta lo ve en una semana: entrena tres veces y mira su progreso. Eso
+ * cabe de sobra en siete días.
+ *
+ * El entrenador no. Lo suyo es ver a un alumno SUYO completar una sesión que
+ * él le mandó, y para llegar ahí tiene que invitar al alumno, montarle la
+ * rutina y esperar a que el alumno entrene. En siete días no llega casi nadie,
+ * y quien no llega no ha visto el producto: ha visto pantallas vacías.
+ */
+export const DIAS_DE_PRUEBA_ENTRENADOR = 14;
+export const DIAS_DE_PRUEBA_ATLETA = 7;
+
+/** Cuántos días de prueba le tocan a este rol. */
+export function diasDePrueba(role: string | undefined): number {
+  return role === 'trainer' ? DIAS_DE_PRUEBA_ENTRENADOR : DIAS_DE_PRUEBA_ATLETA;
+}
+
+/** Cuándo se le acaba la prueba a una cuenta que nace hoy. */
+export function finDeLaPrueba(role: string | undefined, from: number = Date.now()): number {
+  return from + diasDePrueba(role) * DAY_MS;
+}
+
+/**
  * Con qué suscripción nace una cuenta nueva que paga plataforma.
  *
- * CERO. Nace caducada y se abre al pagar, igual el atleta que el entrenador.
+ * CON SU PRUEBA: 14 días el entrenador, 7 el atleta, sin pedir tarjeta.
  *
- * ESTO ESTUVO MAL DESDE EL 11 DE SEPTIEMBRE y no dio un solo error. El
- * entrenador ya nacía con `subscriptionUntil: 0`, pero el atleta seguía
- * naciendo con 28 días de prueba y con `trialEndsAt` puesto, de cuando había
- * prueba. Tres cosas se torcían a la vez, todas en silencio:
+ * LAS DOS FECHAS SON LA MISMA, Y ESO ES LO QUE MARCA QUE ES UNA PRUEBA.
+ * `subscriptionState` mira si `subscriptionUntil <= trialEndsAt` para saberlo,
+ * así que al pagar —que empuja `subscriptionUntil` un año por delante— deja de
+ * ser prueba solo, sin borrar nada ni tocar `trialEndsAt`. El histórico de
+ * cuándo empezó cada uno se conserva.
  *
- *  - En el panel de administración salía "De prueba · hasta <fecha>" en vez de
- *    "SIN ACTIVAR". Es decir: la lista de atletas no decía quién ha pagado y
- *    quién no, que es exactamente para lo que se mira esa lista.
- *  - La tarea diaria le mandaba avisos de "se te acaba la prueba" por una
- *    prueba que ya no se vende.
- *  - Y `subscriptionUntil` guardaba una fecha que nadie había comprado.
- *
- * El acceso nunca llegó a abrirse de más —`needsEntryPayment` devuelve cierto
- * cuando el estado es de prueba, así que el muro de pago salía igual—, y por
- * eso no se notó: lo único roto era lo que se LEE, que es lo último que
- * alguien comprueba.
+ * OJO CON LO QUE PASÓ LA ÚLTIMA VEZ QUE ESTO DIO FECHA. Entre el 11 y el 18 de
+ * septiembre el atleta nacía con 28 días de prueba de un modelo que ya no se
+ * vendía, y no dio un solo error: en el panel de administración salía "De
+ * prueba" en vez de "SIN ACTIVAR", la tarea diaria mandaba avisos de una
+ * prueba inexistente, y `subscriptionUntil` guardaba una fecha que nadie había
+ * comprado. Ahora esas tres cosas vuelven a ser CIERTAS, porque la prueba
+ * existe de verdad. La diferencia entre un dato correcto y uno inventado no se
+ * ve en la pantalla: se ve sabiendo qué se está vendiendo.
  *
  * Está aquí, suelto y sin imports, para que el guardián pueda ejecutarlo en
  * vez de leer el texto de auth-context.tsx, que arrastra Firebase.
  */
-export function suscripcionAlNacer(): { subscriptionUntil: number } {
-  return { subscriptionUntil: 0 };
+export function suscripcionAlNacer(
+  role: string | undefined,
+  from: number = Date.now()
+): { subscriptionUntil: number; trialEndsAt: number } {
+  const hasta = finDeLaPrueba(role, from);
+  return { subscriptionUntil: hasta, trialEndsAt: hasta };
 }
 
 /**
@@ -382,7 +422,19 @@ export const ENTRY_REQUIRED_FROM = Date.parse('2026-08-03T00:00:00Z');
  * Solo a quien paga plataforma (entrenador y atleta) y solo si se registró
  * después de que existiera el alta. El alumno de un coach no paga nunca.
  */
-export function needsEntryPayment(profile: UserProfile | null): boolean {
+export function needsEntryPayment(
+  profile: UserProfile | null,
+  /*
+   * El reloj, como en `subscriptionState` y `clientIsLocked`.
+   *
+   * NO ESTABA, y por eso esta regla —la que decide si sale el muro de pago— no
+   * se podía comprobar a una fecha concreta: leía `Date.now()` por dentro, así
+   * que una prueba escrita para "el primer día" se ejecutaba realmente con la
+   * fecha de hoy y daba lo que le parecía. La única función de este fichero que
+   * decide si alguien entra o no era la única sin reloj.
+   */
+  now: number = Date.now()
+): boolean {
   if (!profile) return false;
   // Sin pagos no hay alta que cobrar: quien se registra entra y empieza su
   // prueba. Dejar el muro puesto con el cobro apagado sería una puerta que no
@@ -395,11 +447,21 @@ export function needsEntryPayment(profile: UserProfile | null): boolean {
   if (profile.entryPaidAt) return false;
   // Cuenta fundadora: existía antes de que hubiera alta.
   if ((profile.createdAt ?? 0) < ENTRY_REQUIRED_FROM) return false;
-  // Estar de prueba NO exime: la prueba es justo lo que compra el euro. Solo se
-  // salta el alta quien ya paga una suscripción de verdad (o a quien se le ha
-  // extendido el acceso a mano), porque a ese ya se le conoce la tarjeta.
-  const estado = subscriptionState(profile);
-  return !estado.active || estado.trial;
+  /*
+   * ESTAR DE PRUEBA SÍ EXIME. Es la línea que hace que la prueba exista.
+   *
+   * Antes decía `!estado.active || estado.trial`, de cuando la prueba venía
+   * detrás de un alta de 1 €: se estaba de prueba y el muro salía igual. Con
+   * ese `|| estado.trial` puesto, la prueba nueva no serviría absolutamente de
+   * nada — la cuenta nacería con sus catorce días y el muro seguiría delante
+   * desde el primer segundo. Y no daría ningún error: nacer con prueba y no
+   * poder usarla se ve exactamente igual que no tener prueba.
+   *
+   * Ahora el muro sale cuando el acceso se ha acabado, y punto. La prueba es
+   * acceso de verdad mientras dura.
+   */
+  const estado = subscriptionState(profile, now);
+  return !estado.active;
 }
 
 /**

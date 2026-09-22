@@ -2221,6 +2221,8 @@ export const EN: Record<string, string> = {
   'Último día de prueba': 'Last day of the trial',
   'Actívala y sigue con todo tu progreso y tus alumnos.':
     'Activate it and carry on with all your progress and your students.',
+  'Actívala y sigue con todo tu progreso y tus entrenos.':
+    'Activate it and carry on with all your progress and your training.',
   'Tu progreso se queda contigo pase lo que pase.':
     'Your progress stays with you whatever happens.',
   'Sin permanencia. Se cancela cuando quieras.': 'No lock-in. Cancel whenever you like.',
@@ -2314,6 +2316,8 @@ export const EN: Record<string, string> = {
   'Te quedan {0} días de acceso': '{0} days of access left',
   'Renueva y sigue con todo tu progreso y tus alumnos.':
     'Renew and carry on with all your progress and your students.',
+  'Renueva y sigue con todo tu progreso y tus entrenos.':
+    'Renew and carry on with all your progress and your training.',
   'Renovar': 'Renew',
 
   // --- El plan personalizado (lib/planPersonalizado.ts) ---
