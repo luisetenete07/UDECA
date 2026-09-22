@@ -33,6 +33,7 @@ import {
   comoSeEmbebe,
   enlaceDeLectura,
   esEbook,
+  puedeAbrirse,
 } from '../lib/visorDeEbook.ts';
 
 let fallos = 0;
@@ -114,6 +115,44 @@ console.log('\nLa dirección que se le da al visor');
   ok('y con espacios, tampoco revienta', enlaceDeLectura('  ', 'web', 1440, 900) === '');
 }
 
+console.log('\nEl e-book no sale de la app');
+{
+  /*
+   * POR QUÉ IMPORTA: un e-book abierto fuera —otra ventana, otra pestaña, el
+   * navegador del teléfono— deja de ser el e-book de la app y pasa a ser un
+   * archivo en el navegador de alguien, con su botón de descargar, su botón de
+   * compartir y su dirección a la vista para pegársela a quien sea. Todo lo
+   * demás que se hace para proteger el material da igual si queda una puerta.
+   */
+  const doc = 'https://f.example/a.pdf#view=Fit&toolbar=0';
+  ok('el documento se carga', puedeAbrirse('https://f.example/a.pdf', doc));
+  // Moverse por el documento no es irse a otro.
+  ok('y moverse por él también', puedeAbrirse('https://f.example/a.pdf#page=7', doc));
+  ok('otro documento no', !puedeAbrirse('https://f.example/otro.pdf', doc));
+  // Un e-book con enlaces dentro es de lo más normal, y cualquiera de ellos se
+  // lleva al alumno a un navegador dentro de la app.
+  ok('un enlace de dentro del PDF, no', !puedeAbrirse('https://otra.cosa/x', doc));
+  ok('ni nada vacío', !puedeAbrirse('', doc));
+
+  /*
+   * EL BOTÓN DE "ABRIR EN UNA VENTANA" DEL VISOR DE GOOGLE (Android). Es la
+   * puerta de verdad: quita el `embedded=true` y sirve el documento en su
+   * página completa, con descarga e impresión.
+   */
+  const puente = VISOR_DE_GOOGLE + encodeURIComponent('https://f.example/a.pdf');
+  ok('el visor empotrado se carga', puedeAbrirse(puente, puente));
+  ok(
+    'y una redirección suya, si sigue empotrada',
+    puedeAbrirse('https://docs.google.com/viewer?embedded=true&url=x', puente)
+  );
+  ok(
+    'pero el botón de abrir en una ventana, NO',
+    !puedeAbrirse('https://drive.google.com/viewerng/viewer?url=x', puente),
+    'se puede sacar el e-book de la app por ahí'
+  );
+  ok('ni irse a otro sitio', !puedeAbrirse('https://cualquier.cosa/x', puente));
+}
+
 console.log('\nLa muestra tiene suelo y techo');
 {
   // Sin suelo, en una ventana bajita se queda en nada. Sin techo, en un
@@ -174,6 +213,22 @@ console.log('\nEn la pantalla: el documento ES la pantalla');
     'la dirección la pone el módulo',
     /enlaceDeLectura\(url, Platform\.OS, width, height\)/.test(curso)
   );
+
+  /*
+   * Y LAS PUERTAS, CERRADAS. Ninguna de estas da error al soltarse: el e-book
+   * se sigue viendo igual, solo que además se puede sacar de la app.
+   */
+  ok(
+    'solo se carga el documento',
+    /onShouldStartLoadWithRequest=\{\(r[^)]*\) =>[\s\S]{0,140}puedeAbrirse\(r\.url, src\)/.test(curso),
+    'el visor vuelve a poder navegar a donde sea'
+  );
+  // Los marcos de dentro pasan: el visor de Google pinta el documento en un
+  // marco suyo, y cortarlo dejaría Android en blanco.
+  ok('sin cortar los marcos de dentro', /r\.isTopFrame === false \? true/.test(curso));
+  ok('no se abre ninguna ventana', /onOpenWindow=\{\(\) => \{\}\}/.test(curso));
+  ok('ni por varias ventanas', /setSupportMultipleWindows=\{false\}/.test(curso));
+  ok('ni desde el JavaScript de la página', /javaScriptCanOpenWindowsAutomatically=\{false\}/.test(curso));
 }
 
 console.log('\nY la regla de "esto es un e-book" sigue siendo una');

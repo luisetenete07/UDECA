@@ -145,3 +145,47 @@ export function altoDeLaMuestra(altoVentana: number): number {
   const querido = Math.round(Math.max(0, altoVentana) * PARTE_DE_LA_PANTALLA);
   return Math.min(ALTO_MAXIMO, Math.max(ALTO_MINIMO, querido));
 }
+
+/** Una dirección sin lo que va detrás de la almohadilla. */
+function sinAncla(url: string): string {
+  return url.split('#')[0];
+}
+
+/**
+ * EL E-BOOK NO SALE DE LA APP.
+ *
+ * Un e-book abierto fuera —en otra ventana, en otra pestaña, en el navegador
+ * del teléfono— deja de ser el e-book de la app y pasa a ser un archivo en el
+ * navegador de alguien: con su botón de descargar, su botón de compartir y su
+ * dirección a la vista para pegársela a quien sea. Todo lo demás que se hace
+ * aquí para proteger el material da igual si queda una puerta que lleva fuera.
+ *
+ * Las puertas son tres, y esta función cierra las tres en el móvil:
+ *
+ *  1. El botón de "abrir en una ventana" del visor de Google (Android). Quita
+ *     el `embedded=true` y sirve el documento en su página de verdad, con
+ *     descarga e impresión.
+ *  2. Un enlace dentro del propio PDF. Un e-book con enlaces es normal, y
+ *     cualquiera de ellos se lleva al alumno a un navegador dentro de la app.
+ *  3. Cualquier redirección a un sitio que no es el documento.
+ *
+ * LA REGLA: solo se carga EL DOCUMENTO. Lo que se pidió, o el visor de Google
+ * mientras siga siendo el empotrado. Nada más.
+ *
+ * Los marcos de dentro no se tocan (`esMarcoDeDentro`): el visor de Google
+ * pinta el documento en un marco suyo, y bloquearlo sería dejar la pantalla en
+ * blanco en Android — cerrar la puerta tirando la casa.
+ */
+export function puedeAbrirse(destino: string, documento: string): boolean {
+  if (!destino) return false;
+  // Lo que se pidió. La almohadilla no cuenta: cambiarla es moverse por el
+  // documento, no irse a otro.
+  if (sinAncla(destino) === sinAncla(documento)) return true;
+  // El visor de Google puede redirigir dentro de su propia casa, y eso sigue
+  // siendo nuestro visor MIENTRAS siga empotrado. En cuanto pierde el
+  // `embedded=true` es la otra página, la que tiene los botones.
+  if (esVisorDeGoogle(documento)) {
+    return esVisorDeGoogle(destino) && /[?&]embedded=(?:true|1)\b/.test(destino);
+  }
+  return false;
+}

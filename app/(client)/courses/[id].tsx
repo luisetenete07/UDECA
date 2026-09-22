@@ -19,6 +19,7 @@ import {
   altoDeLaMuestra,
   enlaceDeLectura,
   esEbook,
+  puedeAbrirse,
 } from '../../../lib/visorDeEbook';
 import {
   MarcaDeAgua,
@@ -677,6 +678,27 @@ function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
         suppressMenuItems={['copy', 'share', 'select', 'selectAll', 'lookup', 'translate']}
         setSupportMultipleWindows={false}
         javaScriptCanOpenWindowsAutomatically={false}
+        /*
+         * Y NO SE ABRE EN NINGUNA VENTANA APARTE.
+         *
+         * Aquí dentro solo se carga el documento (ver `puedeAbrirse`). El
+         * botón de "abrir en una ventana" del visor de Google, un enlace
+         * metido dentro del PDF y cualquier redirección quedan fuera: los
+         * tres acaban en el mismo sitio, que es el e-book servido en una
+         * página con su botón de descargar y su dirección a la vista.
+         *
+         * Los marcos de dentro pasan (`isTopFrame === false`): el visor de
+         * Google pinta el documento en un marco suyo, y cortarlo dejaría
+         * Android en blanco.
+         */
+        onShouldStartLoadWithRequest={(r: { url: string; isTopFrame?: boolean }) =>
+          r.isTopFrame === false ? true : puedeAbrirse(r.url, src)
+        }
+        // La otra puerta: una ventana nueva de verdad. No se abre ninguna.
+        onOpenWindow={() => {}}
+        allowsBackForwardNavigationGestures={false}
+        // Y que iOS no convierta en enlaces tocables lo que escriba el PDF.
+        dataDetectorTypes="none"
         // Para poder acercar con los dedos. Sin esto, en un móvil un PDF con
         // letra pequeña no hay manera de leerlo: se ve, pero no se lee.
         scalesPageToFit
