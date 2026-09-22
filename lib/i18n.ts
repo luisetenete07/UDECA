@@ -191,6 +191,7 @@ export const EN: Record<string, string> = {
 
   // --- Entrar, registrarse y completar el perfil ---
   'Tu nombre': 'Your name',
+  'Tu nombre (opcional)': 'Your name (optional)',
   'Ya casi': 'Almost there',
   '¿Cómo entrenas?': 'How do you train?',
   'Nombre y apellido': 'First and last name',

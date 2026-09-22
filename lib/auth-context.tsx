@@ -20,6 +20,7 @@ import { forgetAccount, proveedorDe, rememberAccount } from './rememberedAccount
 import { clearCache } from './screenCache';
 import { suscripcionAlNacer } from './subscription';
 import { marcaDe } from './marcaPropia';
+import { olvidarNombreDelProveedor } from './nombreDelProveedor';
 import { aplicarIdiomaDelPerfil } from './idioma';
 import type { UserProfile, UserRole } from './types';
 
@@ -352,6 +353,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     // Vacía la caché de pantallas para no mostrar datos de otra cuenta.
     clearCache();
+    // Y el nombre que acabara de dar el proveedor: es de quien se va, y si se
+    // queda, el siguiente en entrar con Apple sin nombre vería el del anterior
+    // puesto en su pantalla de completar cuenta.
+    olvidarNombreDelProveedor();
   };
 
   /**

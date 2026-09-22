@@ -6,6 +6,7 @@ import { Button } from '../../components/Button';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../lib/auth-context';
+import { nombreParaEmpezar, nombreRecordado } from '../../lib/nombreDelProveedor';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { UserRole } from '../../lib/types';
 
@@ -50,25 +51,42 @@ const OPCIONES: { valor: UserRole; titulo: string; icono: keyof typeof Ionicons.
 export default function CompletarCuentaScreen() {
   const { firebaseUser, completarPerfilDeGoogle, signOut } = useAuth();
   const [role, setRole] = useState<UserRole>('client');
-  const nombreDelProveedor = (firebaseUser?.displayName ?? '').trim();
-  const [name, setName] = useState(nombreDelProveedor);
   /*
-   * SI EL PROVEEDOR YA DIO EL NOMBRE, NO SE PIDE.
+   * EL NOMBRE NO SE PIDE. NUNCA. ES LA NORMA 4 DE APPLE.
    *
-   * Es la norma 4 de Apple, y es por lo que rechazaron la 1.1.2: "users are
-   * required to provide their name ... even though that information is already
-   * provided by the Authentication Services framework". Un campo obligatorio
-   * relleno con lo que acabas de darles sigue siendo pedirlo.
+   * Costó DOS rechazos, el de la 1.1.2 y el de la 1.1.3, con el mismo texto:
+   * "users are required to provide their name ... even though that information
+   * is already provided by the Authentication Services framework".
    *
-   * Se enseña quién eres y un enlace para cambiarlo, que es lo que hace falta
-   * de verdad: Apple deja ocultar el nombre real, y quien lo haga tiene que
-   * poder escribir el suyo sin tener que salir y volver a entrar.
+   * En la 1.1.3 se intentó arreglar enseñando el nombre en vez del campo
+   * cuando el proveedor lo daba. No bastó, porque había DOS agujeros distintos
+   * y los dos acaban en el mismo campo obligatorio:
    *
-   * Cuando NO llega nombre —Apple no lo manda en las entradas siguientes a la
-   * primera— el campo sale como siempre, porque entonces no se está pidiendo
-   * dos veces: se está pidiendo una.
+   *  1. UNA CARRERA. La pantalla se pintaba antes de que terminara de
+   *     escribirse el nombre, leía vacío, y su estado inicial no se recalcula.
+   *     (Cerrado en lib/appleAuth.ts, guardándolo antes de llamar a Firebase.)
+   *  2. APPLE SOLO LO MANDA UNA VEZ. En la primera autorización y nunca más:
+   *     ni al volver a entrar, ni después de borrar la cuenta en la app. El
+   *     revisor ya había entrado con esa cuenta al mirar la 1.1.2, así que en
+   *     la 1.1.3 llegó sin nombre — y NO HAY FORMA de volver a pedírselo a
+   *     Apple.
+   *
+   * Contra el segundo no vale "conseguir el nombre": hay que DEJAR DE
+   * NECESITARLO. Así que aquí se llega siempre con uno puesto (el del
+   * proveedor, o uno sacado del correo) y se enseña como un dato con un enlace
+   * para cambiarlo. Guardar no comprueba el nombre: no hay nada que se pueda
+   * rellenar mal y no hay forma de quedarse atrapado en esta pantalla.
+   *
+   * Si de todo eso no sale nada —correo escondido de Apple y sin nombre— sale
+   * el campo, pero OPCIONAL: se puede crear la cuenta sin tocarlo.
    */
-  const [editandoNombre, setEditandoNombre] = useState(!nombreDelProveedor);
+  const nombreDePartida = nombreParaEmpezar(
+    firebaseUser?.displayName,
+    nombreRecordado(),
+    firebaseUser?.email
+  );
+  const [name, setName] = useState(nombreDePartida);
+  const [editandoNombre, setEditandoNombre] = useState(false);
   const [codigo, setCodigo] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,10 +108,14 @@ export default function CompletarCuentaScreen() {
   };
 
   const guardar = async () => {
-    if (!name.trim()) {
-      setError('Pon tu nombre para que tu entrenador sepa quién eres.');
-      return;
-    }
+    /*
+     * NO SE COMPRUEBA EL NOMBRE. Antes esto cortaba con "Pon tu nombre", y era
+     * la cara visible de la norma 4: quien entraba con Apple sin que Apple
+     * mandara nombre no podía pasar de aquí sin escribirlo.
+     *
+     * El código del entrenador sí se comprueba, y no es lo mismo: eso Apple no
+     * lo da ni lo puede dar, y sin él no hay a quién apuntar al alumno.
+     */
     if (role === 'client' && !codigo.trim()) {
       setError('Hace falta el código de tu entrenador.');
       return;
@@ -101,7 +123,10 @@ export default function CompletarCuentaScreen() {
     setError(null);
     setGuardando(true);
     try {
-      await completarPerfilDeGoogle(role, name, codigo);
+      // Vacío no es un fallo: se guarda con el de partida, y si tampoco lo hay
+      // lo resuelve el contexto. Es un dato que se cambia en el perfil en dos
+      // toques; dejar a alguien fuera de su cuenta por él, no.
+      await completarPerfilDeGoogle(role, name.trim() || nombreDePartida, codigo);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se ha podido crear la cuenta.');
     } finally {
@@ -119,13 +144,16 @@ export default function CompletarCuentaScreen() {
         usar UDECA.
       </Text>
 
-      {editandoNombre ? (
+      {editandoNombre || !nombreDePartida ? (
         <TextField
-          label="Tu nombre"
+          // "Opcional" escrito donde se lee. Este campo solo sale cuando no ha
+          // habido forma de sacar un nombre de ningún sitio, y aun así no
+          // impide crear la cuenta.
+          label={nombreDePartida ? 'Tu nombre' : 'Tu nombre (opcional)'}
           value={name}
           onChangeText={setName}
           placeholder="Nombre y apellido"
-          autoFocus={!nombreDelProveedor ? undefined : true}
+          autoFocus={editandoNombre || undefined}
         />
       ) : (
         <View style={styles.nombreFila}>

@@ -26,10 +26,18 @@ const CARPETAS = ['app', 'components', 'lib'];
  * `lib/cardEngine.ts` es un script que se incrusta tal cual dentro de un
  * WebView para dibujar las tarjetas: allí no existen los imports de la app,
  * así que su copia es inevitable y está aislada.
+ *
+ * `lib/nombreDelProveedor.ts` no puede importar NADA por el mismo tipo de
+ * motivo, y el suyo salió caro: lo que decide si a un usuario de Apple se le
+ * pide el nombre tiene que poder ejecutarse desde Node para probarlo. Cuando
+ * vivía dentro de appleAuth.ts —que arrastra React Native— ningún guardián
+ * podía tocarlo, y así se colaron dos rechazos seguidos de la norma 4. Un
+ * import de lib/fechas lo devolvería a ser intocable.
  */
 const PERMITIDOS = {
   'lib/fechas.ts': 'es la casa de todas',
   'lib/cardEngine.ts': 'se ejecuta dentro de un WebView, sin imports',
+  'lib/nombreDelProveedor.ts': 'tiene que poder ejecutarse desde Node, sin imports',
 };
 
 const PATRONES = [

@@ -10,7 +10,7 @@ import {
   type UserCredential,
 } from 'firebase/auth';
 import { auth } from './firebase';
-import { nombreDeApple } from './nombreDelProveedor';
+import { nombreDeApple, recordarNombreDelProveedor } from './nombreDelProveedor';
 
 /**
  * Entrar con Apple.
@@ -120,6 +120,20 @@ function useAppleNativo(): EstadoApple {
           code: 'apple-sin-identidad',
         });
       }
+      /*
+       * EL NOMBRE SE GUARDA AQUÍ, ANTES DE LLAMAR A FIREBASE.
+       *
+       * En cuanto `signInWithCredential` resuelve, Firebase avisa de que hay
+       * sesión, el contexto reparte el usuario y la app salta a la pantalla de
+       * completar cuenta — todo eso ANTES de que termine el `updateProfile` de
+       * unas líneas más abajo. La pantalla leía un nombre vacío y enseñaba el
+       * campo, que es justo lo que Apple rechaza por la norma 4.
+       *
+       * Puesto antes, cuando la pantalla mira, el nombre ya está.
+       */
+      const nombre = nombreDeApple(credencial.fullName);
+      recordarNombreDelProveedor(nombre);
+
       const proveedor = new OAuthProvider('apple.com');
       const sesion = await signInWithCredential(
         auth,
@@ -147,8 +161,14 @@ function useAppleNativo(): EstadoApple {
        *
        * Si falla, se sigue. Quedarse sin nombre es un incordio; quedarse sin
        * entrar por no poder escribirlo, no.
+       *
+       * Y OJO CON LA OTRA MITAD DEL PROBLEMA: Apple manda el nombre en la
+       * PRIMERA autorización y nunca más. Quien vuelve a entrar —o quien borró
+       * su cuenta en la app y vuelve— llega sin nombre por mucho que el
+       * sistema se lo acabe de enseñar en su ventana, y no hay forma de
+       * pedírselo otra vez a Apple. Por eso la pantalla de completar cuenta NO
+       * PUEDE exigirlo: ver lib/nombreDelProveedor.ts.
        */
-      const nombre = nombreDeApple(credencial.fullName);
       if (nombre && !sesion.user.displayName) {
         await updateProfile(sesion.user, { displayName: nombre }).catch(() => {});
       }

@@ -25,7 +25,15 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-nombre-del-proveedor.mjs
  */
 import { readFileSync } from 'node:fs';
-import { nombreDeApple } from '../lib/nombreDelProveedor.ts';
+import {
+  esCorreoEscondido,
+  nombreDeApple,
+  nombreDeCorreo,
+  nombreParaEmpezar,
+  nombreRecordado,
+  olvidarNombreDelProveedor,
+  recordarNombreDelProveedor,
+} from '../lib/nombreDelProveedor.ts';
 
 let fallos = 0;
 const ok = (n, c, porQue = '') => {
@@ -78,23 +86,105 @@ console.log('\nY se guarda en el instante en que llega');
   ok('y sin romper la entrada si falla', /updateProfile\([^)]*\)[\s\S]{0,40}\.catch\(/.test(apple));
 }
 
-console.log('\nLa pantalla deja de pedirlo cuando ya lo tiene');
+console.log('\nApple solo manda el nombre UNA vez: se guarda al vuelo');
+{
+  /*
+   * LA CARRERA QUE PERDÍA EL NOMBRE, y que costó el segundo rechazo.
+   *
+   * En cuanto `signInWithCredential` resuelve, Firebase avisa de que hay
+   * sesión, el contexto reparte el usuario y la app salta a completar cuenta —
+   * todo ANTES de que termine el `updateProfile`. La pantalla leía vacío y su
+   * estado inicial no se recalcula nunca.
+   *
+   * Por eso el nombre se guarda en una caja suelta ANTES de llamar a Firebase.
+   */
+  olvidarNombreDelProveedor();
+  ok('empieza vacío', nombreRecordado() === '');
+  recordarNombreDelProveedor('  Luis Tena  ');
+  ok('se guarda limpio', nombreRecordado() === 'Luis Tena');
+  // Vacío NO pisa lo que ya había: en las entradas siguientes Apple manda
+  // vacío, y borrarlo sería tirar el único nombre que llegó a haber.
+  recordarNombreDelProveedor('');
+  ok('y lo vacío no lo borra', nombreRecordado() === 'Luis Tena');
+  olvidarNombreDelProveedor();
+  ok('al cerrar sesión se olvida', nombreRecordado() === '');
+
+  const apple = sinComentar(lee('lib/appleAuth.ts'));
+  ok('appleAuth lo guarda', /recordarNombreDelProveedor\(nombre\)/.test(apple));
+  ok(
+    'y ANTES de llamar a Firebase',
+    apple.indexOf('recordarNombreDelProveedor(nombre)') <
+      apple.indexOf('await signInWithCredential('),
+    'vuelve a perder la carrera contra la pantalla'
+  );
+  ok(
+    'y al cerrar sesión se olvida',
+    /olvidarNombreDelProveedor\(\)/.test(sinComentar(lee('lib/auth-context.tsx'))),
+    'el siguiente en entrar vería el nombre del anterior'
+  );
+}
+
+console.log('\nY siempre se llega con uno puesto');
+{
+  ok('manda el guardado', nombreParaEmpezar('Sara Vidal', 'Otro', 'x@y.es') === 'Sara Vidal');
+  ok('luego el que acaba de dar el proveedor', nombreParaEmpezar('', 'Luis Tena', 'x@y.es') === 'Luis Tena');
+  ok('y si no, el del correo', nombreParaEmpezar('', '', 'luis.tena@gmail.com') === 'Luis Tena');
+
+  ok('el correo se parte por los puntos', nombreDeCorreo('luis.tena@gmail.com') === 'Luis Tena');
+  ok('y por guiones y barras bajas', nombreDeCorreo('ana_gil-ruiz@x.es') === 'Ana Gil Ruiz');
+  // La etiqueta del correo no es parte del nombre de nadie.
+  ok('sin la etiqueta de detrás del +', nombreDeCorreo('udeca.app+coach@gmail.com') === 'Udeca App');
+  /*
+   * DEL CORREO ESCONDIDO DE APPLE NO SALE NADA. Son letras y números al azar:
+   * poner "X7k2m9" de nombre es peor que no poner ninguno, y ahí es donde la
+   * pantalla enseña el campo — opcional.
+   */
+  ok('el correo escondido se reconoce', esCorreoEscondido('x7k2m9@privaterelay.appleid.com'));
+  ok('y de él no sale nombre', nombreDeCorreo('x7k2m9@privaterelay.appleid.com') === '');
+  ok('sin correo, vacío', nombreParaEmpezar('', '', '') === '');
+  ok('y con nulos, vacío', nombreParaEmpezar(null, '', null) === '');
+}
+
+console.log('\nLa pantalla NO pide el nombre');
 {
   const pantalla = sinComentar(lee('app/(auth)/completar.tsx'));
   ok(
-    'mira si el proveedor dio nombre',
-    /const nombreDelProveedor = \(firebaseUser\?\.displayName \?\? ''\)\.trim\(\)/.test(pantalla)
+    'llega con uno puesto',
+    /const nombreDePartida = nombreParaEmpezar\(/.test(pantalla)
   );
-  // LO IMPORTANTE. Con nombre, el campo NO sale: un campo obligatorio relleno
-  // con lo que acabas de dar sigue siendo pedirlo.
+  /*
+   * LO MÁS IMPORTANTE DE TODO EL FICHERO. Dos rechazos de Apple han salido de
+   * aquí. El campo NO sale por defecto: se enseña el nombre con un enlace para
+   * cambiarlo, y solo aparece el campo si no ha habido forma de sacar ninguno.
+   */
   ok(
-    'y solo enseña el campo si no lo dio',
-    /useState\(!nombreDelProveedor\)/.test(pantalla)
+    'el campo no sale por defecto',
+    /const \[editandoNombre, setEditandoNombre\] = useState\(false\)/.test(pantalla),
+    'vuelve a salir el campo del nombre nada más entrar con Apple'
   );
+  ok(
+    'y solo si no hay ningún nombre',
+    /\{editandoNombre \|\| !nombreDePartida \?/.test(pantalla)
+  );
+  ok('marcado como opcional', /Tu nombre \(opcional\)/.test(pantalla));
+  // Apple deja cambiar el nombre en su ventana; quien quiera otro tiene que
+  // poder escribirlo sin salir y volver a entrar.
   ok('con una salida para cambiarlo', /setEditandoNombre\(true\)/.test(pantalla));
-  // Apple deja ocultar el nombre real; quien lo haga tiene que poder escribir
-  // el suyo sin salir y volver a entrar.
   ok('que se puede pulsar', /Cambiar</.test(pantalla));
+
+  /*
+   * Y GUARDAR NO LO COMPRUEBA. Esta era la cara visible de la norma 4: quien
+   * entraba con Apple sin que Apple mandara nombre no podía pasar de aquí.
+   */
+  ok(
+    'guardar no exige nombre',
+    !/if \(!name\.trim\(\)\)/.test(pantalla),
+    'vuelve a haber un nombre obligatorio: es el rechazo de la norma 4'
+  );
+  ok('y no queda el aviso de ponerlo', !/Pon tu nombre/.test(pantalla));
+  // El código del entrenador SÍ se sigue exigiendo, y no es lo mismo: eso
+  // Apple no lo da ni lo puede dar.
+  ok('pero el código del entrenador sí', /if \(role === 'client' && !codigo\.trim\(\)\)/.test(pantalla));
 
   // Y que el texto no diga "Google" a fuego: a esta pantalla se llega por los
   // dos, y decir el que no es hace dudar de si la cuenta es la correcta.
