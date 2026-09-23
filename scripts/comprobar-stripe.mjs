@@ -130,7 +130,14 @@ for (const [quien, enlace, centimosEsperados] of esperado) {
   const id = idDelEnlace(enlace);
   let link;
   try {
-    link = await leer(`payment_links/${id}?expand[]=line_items`);
+    // La API no busca un Payment Link por su dirección pública (la parte de
+    // buy.stripe.com NO es su id, que empieza por plink_): se listan y se
+    // busca el que tiene esta dirección.
+    const lista = await leer('payment_links?limit=100');
+    const base = enlace.split('?')[0];
+    const encontrado = (lista.data ?? []).find((l) => l.url === base);
+    if (!encontrado) throw new Error('no está entre los enlaces de esta cuenta');
+    link = await leer(`payment_links/${encontrado.id}?expand[]=line_items`);
   } catch (e) {
     ok(`el enlace ${id} existe`, false, e.message);
     continue;
