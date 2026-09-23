@@ -10,6 +10,19 @@ window.UDECA = {
   appUrl: 'https://app.udeca.app',
 
   /**
+   * Adónde lleva "Pruébalo gratis".
+   *
+   * FALSE HASTA QUE LA 1.1.5 ESTÉ PUBLICADA EN LAS DOS TIENDAS. La versión que
+   * hay hoy en App Store y Google Play NO tiene la prueba: quien se la bajara
+   * desde este botón se encontraría el muro de pago nada más entrar, justo
+   * después de leer "gratis". Mientras tanto va a la app web, que ya la tiene.
+   *
+   * Con la 1.1.5 aprobada en las dos, se pone a true: en iPhone lleva a la
+   * App Store, en Android a Google Play y en el ordenador a la app web.
+   */
+  pruebaEnTiendas: false,
+
+  /**
    * Los dos enlaces de pago. 240 €/año el entrenador, 60 €/año el atleta,
    * con la primera factura a mitad de precio (el cupón vive en Stripe).
    *

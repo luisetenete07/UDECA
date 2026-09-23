@@ -21,6 +21,25 @@
       .slice(0, 40);
   } catch (e) {}
 
+  /**
+   * "Pruébalo gratis": a donde se crea la cuenta, que es donde empieza la
+   * prueba. Ver `pruebaEnTiendas` en config.js: mientras las tiendas tengan la
+   * versión sin prueba, todo va a la app web.
+   */
+  (function () {
+    var d = C.descargas || {};
+    var ua = navigator.userAgent || '';
+    var destino = (C.appUrl || '') + '/register';
+    if (C.pruebaEnTiendas) {
+      if (/iPhone|iPad|iPod/.test(ua) && d.appStore) destino = d.appStore;
+      else if (/Android/.test(ua) && d.playStore) destino = d.playStore;
+    }
+    document.querySelectorAll('[data-prueba]').forEach(function (el) {
+      el.href = destino;
+      el.rel = 'noopener';
+    });
+  })();
+
   /** Enlaces de pago del alta. */
   document.querySelectorAll('[data-pago]').forEach(function (el) {
     var url = (C.pagos || {})[el.getAttribute('data-pago')];

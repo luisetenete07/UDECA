@@ -99,7 +99,7 @@
       <a href="#planes">Planes</a>
       <a href="#preguntas">Preguntas</a>
     </nav>
-    <a class="btn btn-primary btn-sm" href="#planes">Empezar</a>
+    <a class="btn btn-primary btn-sm" data-prueba href="#planes">Probar gratis</a>
   </div>
 </header>
 
@@ -126,12 +126,20 @@
       </span>
     </div>
 
+    <!-- LA PRUEBA, LO PRIMERO QUE SE LEE. Cada entrada cuenta más que cada
+         cobro ahora mismo: quien la usa una semana es quien paga después. -->
+    <span class="pildora prueba-pildora reveal">14 días gratis · sin tarjeta</span>
     <h1>Entrena con método.<br /><em>Mide lo que importa.</em></h1>
     <p class="lead">
       La calistenia deja de ser una libreta suelta: plan, marcas, progreso semana
       a semana e informes que se entienden de un vistazo. Para quien entrena solo
       y para quien entrena a otros.
     </p>
+
+    <div class="cta-prueba reveal">
+      <a class="btn btn-primary btn-lg" data-prueba href="#">Pruébalo gratis</a>
+      <p class="hero-note">Sin tarjeta. 14 días el entrenador, 7 el atleta. Si no te convence, no pagas nada.</p>
+    </div>
 
     <!-- Las insignias oficiales, en la portada: son la prueba más rápida de que
          esto es una app de verdad y no una página que promete una. -->
@@ -143,7 +151,7 @@
         <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
       </a>
     </div>
-    <p class="hero-note">Primer año a mitad de precio: 2,50 €/mes atleta · 10 €/mes entrenador · Alumnos de un entrenador, gratis</p>
+    <p class="hero-note">Después, el primer año a mitad de precio: 2,50 €/mes atleta · 10 €/mes entrenador · Alumnos de un entrenador, gratis</p>
 
     <div class="shots reveal">
       <div class="phone"><img src="/assets/app-entreno.webp" alt="Pantalla de entrenamiento de UDECA" loading="lazy" /></div>
@@ -173,7 +181,7 @@
       <div class="cifra reveal"><b>Sin tope</b><span>de alumnos por entrenador</span></div>
       <div class="cifra reveal"><b>3</b><span>formas de montar un plan</span></div>
       <div class="cifra reveal"><b>0 €</b><span>para los alumnos de un entrenador</span></div>
-      <div class="cifra reveal"><b>2,50 €</b><span>al mes el primer año</span></div>
+      <div class="cifra reveal"><b>14 días</b><span>gratis y sin tarjeta</span></div>
     </div>
   </div>
 </section>
@@ -230,8 +238,8 @@
     </ol>
 
     <div class="cta-centro reveal">
-      <a class="btn btn-primary btn-lg" href="#planes">Ver los planes</a>
-      <p class="hero-note">El primer año, a mitad de precio. Cancelas cuando quieras.</p>
+      <a class="btn btn-primary btn-lg" data-prueba href="#">Pruébalo gratis</a>
+      <p class="hero-note">Sin tarjeta. Después, el primer año a mitad de precio. <a href="#planes" style="color:var(--muted)">Ver los planes</a></p>
     </div>
   </div>
 </section>
@@ -359,9 +367,9 @@
     <p class="eyebrow">Planes</p>
     <h2 class="section-title big">Un plan por persona.<em> Sin topes y sin letra pequeña</em></h2>
     <p class="lead">
-      Una suscripción al año, la plataforma entera desde el primer día y ninguna
-      función guardada para un plan de más arriba. El primer año cuesta la mitad;
-      después se renueva sola al precio de siempre, y se cancela cuando quieras.
+      Empiezas gratis, sin tarjeta: 14 días el entrenador y 7 el atleta, con la
+      plataforma entera. Si te quedas, el primer año cuesta la mitad; después se
+      renueva sola al precio de siempre, y se cancela cuando quieras.
     </p>
 
     <div class="plans">
@@ -381,7 +389,8 @@
           <li>Informe en PDF de tu evolución</li>
           <li>Cursos y comunidad</li>
         </ul>
-        <a class="btn btn-ghost" data-pago="altaAtleta" href="#">Empezar · 30 € el primer año</a>
+        <a class="btn btn-primary" data-prueba href="#">Pruébalo 7 días gratis</a>
+        <a class="pagar-ya" data-pago="altaAtleta" href="#">o empieza ya · 30 € el primer año</a>
         <p class="after">
           Se renueva sola a 60 € al año. Cancelas cuando quieras desde tu cuenta,
           y lo que has registrado no se borra nunca.
@@ -409,7 +418,8 @@
           <li>Informes de progreso con tu marca</li>
           <li>Cursos, tablón y ranking del grupo</li>
         </ul>
-        <a class="btn btn-primary" data-pago="altaCoach" href="#">Empezar · 120 € el primer año</a>
+        <a class="btn btn-primary" data-prueba href="#">Pruébalo 14 días gratis</a>
+        <a class="pagar-ya" data-pago="altaCoach" href="#">o empieza ya · 120 € el primer año</a>
         <p class="after">
           Se renueva sola a 240 € al año. Cancelas cuando quieras, y tus alumnos,
           sus rutinas y su historial siguen ahí pase lo que pase.
@@ -557,6 +567,10 @@
     <h2 class="section-title big">Lo que todo el mundo<em> pregunta</em></h2>
 
     <div style="margin-top:26px">
+      <details open>
+        <summary>¿Puedo probarlo gratis?</summary>
+        <p>Sí, y sin tarjeta: 14 días el entrenador y 7 el atleta, con todo incluido. Creas tu cuenta y empiezas; no se te cobra nada. Al acabar decides si te quedas, y si no, no pasa nada.</p>
+      </details>
       <details>
         <summary>Soy alumno de un entrenador de UDECA, ¿tengo que pagar?</summary>
         <p>No. Los alumnos entran gratis con el código de su entrenador; quien paga la plataforma es él.</p>
@@ -611,9 +625,10 @@
       <span class="pildora">Universidad de Calistenia</span>
       <h2>Empieza a medir<br /><em>lo que ya estás haciendo</em></h2>
       <p>
-        Doce meses completos por el precio de un café al mes. Y si entrenas con un
-        entrenador de UDECA, ni eso.
+        Pruébalo gratis y sin tarjeta: 14 días si entrenas a otros, 7 si entrenas
+        por tu cuenta. Y si entrenas con un entrenador de UDECA, gratis siempre.
       </p>
+      <p><a class="btn btn-primary btn-lg" data-prueba href="#">Pruébalo gratis</a></p>
       <div class="badges centradas">
         <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar UDECA en la App Store">
           <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
@@ -623,6 +638,7 @@
         </a>
       </div>
       <ul class="garantias">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Sin tarjeta para probar</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Sin permanencia</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Cancelas cuando quieras</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Los alumnos entran gratis</li>

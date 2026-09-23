@@ -959,3 +959,21 @@ footer { border-top: 1px solid var(--border); padding: 54px 0 44px; position: re
 @media (prefers-reduced-motion: reduce) {
   .fn-shot { transition: none; }
 }
+
+/* ============ LA PRUEBA GRATUITA ============
+   Es el botón principal de toda la página: cada entrada vale más que cada
+   cobro, porque quien usa la app una semana es quien paga después. Pagar ya
+   sigue a un toque, pero como alternativa y no como la puerta. */
+.prueba-pildora { display: inline-block; margin-bottom: 18px; }
+.cta-prueba { margin: 26px 0 8px; }
+.cta-prueba .hero-note { margin-top: 12px; }
+.plan .pagar-ya {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.plan .pagar-ya:hover { color: var(--text); }
