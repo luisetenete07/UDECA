@@ -87,24 +87,36 @@ import type { UserProfile } from './types';
  */
 const PRIMER_ANO = '?prefilled_promo_code=PRIMERANO';
 
+/*
+ * LOS PAYMENT LINKS YA NO SON EL BOTÓN: SON LA RED.
+ *
+ * Mandar directamente aquí abría la pasarela enseñando 240 € y la repintaba a
+ * 120 € a los ocho segundos (ver payments-webhook/api/pagar.js). Ahora los
+ * botones van al endpoint, que crea la sesión con el descuento ya dentro, y
+ * solo si ese endpoint falla manda aquí. Por eso siguen llevando el código y
+ * siguen vigilados: son lo que cobra el día que algo se tuerce.
+ */
 export const COACH_LINK: string =
   `https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09${PRIMER_ANO}`;
 export const ATHLETE_LINK: string =
   `https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08${PRIMER_ANO}`;
 
+/** El endpoint de pago: la pasarela abre ya con el precio del primer año. */
+export const PAGAR_URL = 'https://udeca.vercel.app/api/pagar';
+export const COACH_PAGAR: string = `${PAGAR_URL}?rol=trainer`;
+export const ATHLETE_PAGAR: string = `${PAGAR_URL}?rol=athlete`;
+
 /*
- * Los cuatro nombres de antes, apuntando a los dos de ahora.
+ * Los cuatro nombres de siempre, apuntando al endpoint.
  *
- * No es pereza: `COACH_ENTRY_LINK` y `COACH_PAYMENT_LINK` están escritos en
- * media docena de sitios entre pantallas y guardianes, y renombrarlos en el
- * mismo cambio que mueve los precios mezclaría dos cosas que conviene poder
- * revisar por separado. Apuntan al mismo enlace porque AHORA SON EL MISMO
- * producto, que es justo lo que se quería conseguir.
+ * Entrar y renovar son el mismo producto, así que van al mismo sitio. Lo que
+ * NO puede pasar es que el entrenador y el atleta compartan uno: se cobrarían
+ * 60 € por lo que vale 240, o al revés (check-stripe.mjs lo vigila).
  */
-export const COACH_ENTRY_LINK = COACH_LINK;
-export const ATHLETE_ENTRY_LINK = ATHLETE_LINK;
-export const COACH_PAYMENT_LINK = COACH_LINK;
-export const ATHLETE_ANNUAL_LINK = ATHLETE_LINK;
+export const COACH_ENTRY_LINK = COACH_PAGAR;
+export const ATHLETE_ENTRY_LINK = ATHLETE_PAGAR;
+export const COACH_PAYMENT_LINK = COACH_PAGAR;
+export const ATHLETE_ANNUAL_LINK = ATHLETE_PAGAR;
 
 /**
  * Le pega al enlace el uid y el correo.
@@ -115,9 +127,11 @@ export const ATHLETE_ANNUAL_LINK = ATHLETE_LINK;
  */
 function conQuienPaga(base: string, profile: UserProfile): string {
   const sep = base.includes('?') ? '&' : '?';
+  // `uid` y `email` son los nombres que lee el endpoint, que los convierte en
+  // `client_reference_id` y `customer_email` al crear la sesión.
   return (
-    `${base}${sep}client_reference_id=${encodeURIComponent(profile.uid)}` +
-    `&prefilled_email=${encodeURIComponent(profile.email)}`
+    `${base}${sep}uid=${encodeURIComponent(profile.uid)}` +
+    `&email=${encodeURIComponent(profile.email)}`
   );
 }
 

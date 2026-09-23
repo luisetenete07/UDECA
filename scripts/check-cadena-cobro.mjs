@@ -32,6 +32,8 @@ import {
   ATHLETE_ENTRY_LINK,
   COACH_ENTRY_LINK,
   COACH_PAYMENT_LINK,
+  COACH_LINK,
+  ATHLETE_LINK,
   entryCheckoutUrl,
   subscriptionCheckoutUrl,
 } from '../lib/enlacesDeCobro.ts';
@@ -129,12 +131,17 @@ ok(
  * También se vigila que lo lleven LOS DOS. Con uno solo, la mitad de la gente
  * paga el doble que la otra mitad por lo mismo.
  */
+/*
+ * Ahora el descuento lo pone el ENDPOINT (payments-webhook/api/pagar.js, que
+ * lo vigila check-pagar.mjs) y los Payment Links son la red por si falla. La
+ * red tiene que seguir llevándolo: el día que se use, sin él se cobra entero.
+ */
 for (const [quien, enlace] of [
-  ['entrenador', COACH_ENTRY_LINK],
-  ['atleta', ATHLETE_ENTRY_LINK],
+  ['entrenador', COACH_LINK],
+  ['atleta', ATHLETE_LINK],
 ]) {
   ok(
-    `el ${quien} lleva el descuento del primer año en el enlace`,
+    `la red del ${quien} lleva el descuento del primer año`,
     !enlace || /[?&]prefilled_promo_code=[A-Z0-9]+/.test(enlace),
     `sin él se cobra el precio entero: ${enlace}`
   );
@@ -157,9 +164,11 @@ for (const [que, url] of casos) {
     ok(`${que}: pendiente, sin enlace que comprobar`, true);
     continue;
   }
+  // `uid` y `email` son los nombres del endpoint, que los pasa a Stripe como
+  // client_reference_id y customer_email (check-pagar.mjs).
   const bien =
-    url.includes(`client_reference_id=${atleta.uid}`) &&
-    url.includes('prefilled_email=quien%40ejemplo.com');
+    url.includes(`uid=${atleta.uid}`) &&
+    url.includes('email=quien%40ejemplo.com');
   // Sin el uid dentro, el pago entra y la cuenta no se activa nunca, sin dar
   // ningún error: es el fallo más caro posible de esta cadena.
   ok(`${que}: lleva el uid y el correo`, bien, String(url).slice(0, 90));

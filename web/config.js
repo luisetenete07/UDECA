@@ -32,8 +32,11 @@ window.UDECA = {
    * abierto en vez de cobrar un precio que no es el que anuncia la página.
    */
   pagos: {
-    altaAtleta: 'https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08?prefilled_promo_code=PRIMERANO',
-    altaCoach: 'https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09?prefilled_promo_code=PRIMERANO',
+    // Al endpoint de pago, no al Payment Link: así la pasarela abre ya con el
+    // precio del primer año, sin enseñar 240 € ocho segundos antes. Son los
+    // mismos que COACH_PAGAR y ATHLETE_PAGAR de lib/enlacesDeCobro.ts.
+    altaAtleta: 'https://udeca.vercel.app/api/pagar?rol=athlete',
+    altaCoach: 'https://udeca.vercel.app/api/pagar?rol=trainer',
   },
 
 

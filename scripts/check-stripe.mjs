@@ -144,12 +144,26 @@ const pendientes = Object.entries(ENLACES).filter(
 );
 const puestos = Object.entries(ENLACES).filter(([, u]) => u && u !== '/proximamente');
 
-console.log('\nLos enlaces que están puestos, están bien puestos');
+console.log('\nLos botones van al endpoint de pago');
+/*
+ * Los botones ya NO van al Payment Link: van a /api/pagar, que crea la sesión
+ * con el descuento dentro y la pasarela abre con 120 € en vez de enseñar 240 €
+ * y repintarlo. Cada botón con SU rol: `rol=trainer` en el del atleta cobra
+ * 240 € por lo que vale 60.
+ */
 for (const [nombre, url] of puestos) {
-  comprueba(nombre, url.startsWith('https://buy.stripe.com/'), String(url));
-  comprueba(`${nombre}: no se ha quedado a medias`, url.length > 30, String(url));
+  const rol = nombre.includes('entrenador') ? 'trainer' : 'athlete';
+  comprueba(nombre, url === `https://udeca.vercel.app/api/pagar?rol=${rol}`, String(url));
 }
 if (puestos.length === 0) console.log('  · ninguno todavía');
+
+console.log('\nY la red, si el endpoint falla, es el Payment Link de siempre');
+for (const [nombre, clave] of [['entrenador', 'COACH_LINK'], ['atleta', 'ATHLETE_LINK']]) {
+  const red = constante(app, clave);
+  comprueba(`red del ${nombre}: Payment Link`, (red ?? '').startsWith('https://buy.stripe.com/'), String(red));
+  // Sin el código, el día que el endpoint falle se cobra el precio entero.
+  comprueba(`red del ${nombre}: con el primer año`, /prefilled_promo_code=PRIMERANO/.test(red ?? ''), String(red));
+}
 
 console.log('\nLas dos copias del primer año dicen lo mismo');
 {
