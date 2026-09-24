@@ -35,6 +35,7 @@ import { conMiles } from '../lib/texto';
 import type { WeightLog } from '../lib/types';
 import { confirmar } from '../lib/confirmar';
 import { Sheet } from './Sheet';
+import { LectorAPantallaCompleta } from './LectorDePdf';
 import { esHoy, fechaCorta } from '../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../lib/theme';
 import {
@@ -85,7 +86,13 @@ export function PanelDeNutricion() {
    * 130 px eso son diez renglones que nadie lee. Se recorta en la tira y se
    * lee entero aquí, con la foto grande delante.
    */
-  const [zoomPhoto, setZoomPhoto] = useState<{ uri: string; comentario?: string } | null>(null);
+  const [zoomPhoto, setZoomPhoto] = useState<{
+    uri: string;
+    comentario?: string;
+    receta?: string;
+  } | null>(null);
+  // La receta en PDF que se está leyendo, a pantalla completa.
+  const [receta, setReceta] = useState<string | null>(null);
   const [calcOpen, setCalcOpen] = useState(false);
   // El peso vive aquí desde que se sacó de Progreso: no sube ni baja por lo
   // que levantas, sube y baja por lo que comes. Y de paso es lo que permite
@@ -448,15 +455,21 @@ export function PanelDeNutricion() {
           {books.map((book) => (
             <View key={book.id} style={styles.bookBlock}>
               <Text style={styles.bookTitle}>{book.title}</Text>
+              {/* Lo que el entrenador cuenta del álbum entero, antes de las
+                  fotos: cómo elegir entre ellas se lee antes de mirarlas. */}
+              {book.description ? (
+                <Text style={styles.bookDescripcion}>{book.description}</Text>
+              ) : null}
               {book.photos.length === 0 ? (
                 <Text style={styles.mutedText}>Sin fotos todavía.</Text>
               ) : (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {book.photos.map((p) => (
+                    <View key={p.id} style={styles.bookPhotoWrap}>
                     <Pressable
-                      key={p.id}
-                      style={styles.bookPhotoWrap}
-                      onPress={() => setZoomPhoto({ uri: p.imageURL, comentario: p.caption })}
+                      onPress={() =>
+                        setZoomPhoto({ uri: p.imageURL, comentario: p.caption, receta: p.recipeUrl })
+                      }
                     >
                       <Image source={{ uri: p.imageURL }} style={styles.bookPhoto} resizeMode="cover" />
                       {p.caption ? (
@@ -470,6 +483,20 @@ export function PanelDeNutricion() {
                         </>
                       ) : null}
                     </Pressable>
+                    {/* La receta, fuera del toque de la foto: son dos gestos
+                        distintos (ver el plato / leer cómo se hace), y metidos
+                        uno dentro del otro se pisan en el móvil. */}
+                    {p.recipeUrl ? (
+                      <Pressable
+                        onPress={() => setReceta(p.recipeUrl!)}
+                        style={styles.bookReceta}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="document-text-outline" size={13} color={colors.primary} />
+                        <Text style={styles.bookRecetaTexto}>Ver receta</Text>
+                      </Pressable>
+                    ) : null}
+                    </View>
                   ))}
                 </ScrollView>
               )}
@@ -548,6 +575,17 @@ export function PanelDeNutricion() {
                   <Text style={styles.zoomComentarioTexto}>{zoomPhoto.comentario}</Text>
                 </View>
               ) : null}
+              {zoomPhoto.receta ? (
+                <Button
+                  title="Ver la receta"
+                  onPress={() => {
+                    const url = zoomPhoto.receta!;
+                    setZoomPhoto(null);
+                    setReceta(url);
+                  }}
+                  style={styles.zoomReceta}
+                />
+              ) : null}
             </>
           ) : null}
           <Pressable style={styles.zoomClose} onPress={() => setZoomPhoto(null)} hitSlop={8}>
@@ -555,6 +593,15 @@ export function PanelDeNutricion() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* La receta, con el mismo lector que los e-books de los cursos: a
+          pantalla completa, sin recortes y sin poder sacarla a otra ventana. */}
+      <LectorAPantallaCompleta
+        visible={!!receta}
+        url={receta ?? ''}
+        titulo="Receta"
+        onCerrar={() => setReceta(null)}
+      />
 
       {/*
         LA FICHA NUTRICIONAL, EN EL MISMO PANEL QUE EL RESTO DE FORMULARIOS.
@@ -748,6 +795,16 @@ const styles = StyleSheet.create({
   bookPhoto: { width: 130, height: 165, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
   bookCaption: { ...typography.small, color: colors.textMuted, marginTop: 4, fontSize: 11, lineHeight: 14 },
   bookCaptionMas: { ...typography.small, color: colors.primary, fontSize: 10, marginTop: 2 },
+  bookDescripcion: {
+    ...typography.small,
+    color: colors.textMuted,
+    lineHeight: 19,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  bookReceta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  bookRecetaTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
+  zoomReceta: { marginTop: spacing.md, alignSelf: 'stretch' },
   /*
    * Se parte en dos filas antes que cortar una palabra.
    *

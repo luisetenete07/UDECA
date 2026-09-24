@@ -21,6 +21,12 @@ import {
   cuantasComentadas,
   limpiarComentario,
   seCorta,
+  LARGO_DE_LA_DESCRIPCION,
+  conDetalle,
+  cuantasConReceta,
+  enlaceDeRecetaNoVale,
+  limpiarDescripcion,
+  limpiarEnlaceDeReceta,
 } from '../lib/libretaDeComidas.ts';
 
 let fallos = 0;
@@ -106,8 +112,9 @@ console.log('\nLas dos mitades siguen enchufadas');
   const coach = lee('app/(trainer)/clients/meal-books.tsx');
   const alumno = lee('components/PanelDeNutricion.tsx');
 
-  comprueba('el entrenador puede escribirlo', /conComentario\(/.test(coach));
-  comprueba('desde un panel con la foto grande', /titulo="Comentario de la foto"/.test(coach));
+  // Comentario y receta en una sola escritura (ver conDetalle).
+  comprueba('el entrenador puede escribirlo', /conDetalle\(book\.photos, comentando\.foto, \{ comentario, receta \}\)/.test(coach));
+  comprueba('desde un panel con la foto grande', /titulo="Foto de la libreta"/.test(coach));
   comprueba(
     'y el campo tiene tope de verdad',
     /maxLength=\{LARGO_DEL_COMENTARIO\}/.test(coach)
@@ -117,9 +124,12 @@ console.log('\nLas dos mitades siguen enchufadas');
   comprueba('borrar sigue teniendo su propio botón', /handleRemovePhoto\(book, p\.id\)/.test(coach));
   // Con el campo vacío y sin comentario previo no hay nada que hacer: el botón
   // diría "Quitar el comentario" sobre una foto que no tiene ninguno.
+  // Guardar solo si algo ha cambiado: guardar lo mismo que había no es
+  // guardar, y un botón que no hace nada enseña a desconfiar de los demás.
   comprueba(
-    'y no se ofrece quitar lo que no existe',
-    /disabled=\{!limpiarComentario\(comentario\) && !fotoComentada\.caption\}/.test(coach)
+    'y no se ofrece guardar lo que no ha cambiado',
+    /limpiarComentario\(comentario\) === \(fotoComentada\.caption \?\? ''\)/.test(coach) &&
+      /limpiarEnlaceDeReceta\(receta\) === \(fotoComentada\.recipeUrl \?\? ''\)/.test(coach)
   );
 
   comprueba('el alumno lo ve', /p\.caption \? \(/.test(alumno));
@@ -131,7 +141,7 @@ console.log('\nLas dos mitades siguen enchufadas');
   comprueba('el aviso de leerlo se decide, no se pinta siempre', /seCorta\(p\.caption\)/.test(alumno));
   comprueba(
     'con el comentario viajando al visor',
-    /setZoomPhoto\(\{ uri: p\.imageURL, comentario: p\.caption \}\)/.test(alumno)
+    /setZoomPhoto\(\{ uri: p\.imageURL, comentario: p\.caption, receta: p\.recipeUrl \}\)/.test(alumno)
   );
 
   // El nombre del campo no se toca: hay libretas guardadas con él.
@@ -139,6 +149,56 @@ console.log('\nLas dos mitades siguen enchufadas');
     'el campo guardado se sigue llamando caption',
     /caption\?: string;/.test(lee('lib/types.ts'))
   );
+}
+
+console.log('\nLa descripción de cada álbum');
+{
+  comprueba('se limpia', limpiarDescripcion('  Elige   uno  ') === 'Elige uno');
+  comprueba(`con tope de ${LARGO_DE_LA_DESCRIPCION}`, limpiarDescripcion('x'.repeat(900)).length === LARGO_DE_LA_DESCRIPCION);
+  comprueba('los párrafos se respetan, sin huecos de más', limpiarDescripcion('A\n\n\n\nB') === 'A\n\nB');
+  const api = lee('lib/firestore/mealBooks.ts');
+  /*
+   * VACÍA LA BORRA. Con updateMealBook no se podía: stripUndefined quita lo
+   * vacío antes de escribir, así que "quitar la descripción" dejaba la vieja en
+   * Firestore y el alumno la seguía leyendo.
+   */
+  comprueba('vaciarla la borra de verdad', /description: limpio \? limpio : deleteField\(\)/.test(api));
+  const coach = lee('app/(trainer)/clients/meal-books.tsx');
+  const alumno = lee('components/PanelDeNutricion.tsx');
+  comprueba('el entrenador la escribe', /setMealBookDescription\(book\.id, limpio\)/.test(coach));
+  comprueba('con tope en el campo', /maxLength=\{LARGO_DE_LA_DESCRIPCION\}/.test(coach));
+  comprueba('y el alumno la lee, antes de las fotos', alumno.indexOf('book.description') > 0 && alumno.indexOf('book.description') < alumno.indexOf('book.photos.map'));
+}
+
+console.log('\nLa receta en PDF de cada foto');
+{
+  comprueba('un enlace de Drive vale', limpiarEnlaceDeReceta(' https://drive.google.com/file/d/x/view ') === 'https://drive.google.com/file/d/x/view');
+  comprueba('vacío es "sin receta", no un error', limpiarEnlaceDeReceta('') === '' && !enlaceDeRecetaNoVale('  '));
+  // Solo http(s): una ruta del móvil o un "javascript:" no es un documento que
+  // el alumno pueda abrir.
+  comprueba('un texto suelto no vale', enlaceDeRecetaNoVale('mi receta'));
+  comprueba('ni un javascript:', enlaceDeRecetaNoVale('javascript:alert(1)'));
+  comprueba('ni un archivo del móvil', enlaceDeRecetaNoVale('file:///receta.pdf'));
+
+  const fotos = [{ id: 'a', imageURL: 'x', caption: 'viejo', recipeUrl: 'https://v.es/a.pdf' }, { id: 'b', imageURL: 'y' }];
+  const puesta = conDetalle(fotos, 'b', { comentario: ' Arroz ', receta: 'https://d.es/r.pdf' });
+  comprueba('se ponen las dos cosas', puesta[1].caption === 'Arroz' && puesta[1].recipeUrl === 'https://d.es/r.pdf');
+  comprueba('sin tocar las otras fotos', puesta[0] === fotos[0]);
+  const quitada = conDetalle(fotos, 'a', { comentario: '', receta: '' });
+  // Vacío QUITA la clave, no la deja a '': mismo motivo que el comentario.
+  comprueba('vacío quita las claves', !('caption' in quitada[0]) && !('recipeUrl' in quitada[0]));
+  comprueba('un enlace malo no se guarda', !('recipeUrl' in conDetalle(fotos, 'b', { comentario: '', receta: 'hola' })[1]));
+  comprueba('sin mutar la lista de entrada', fotos[0].caption === 'viejo');
+  comprueba('se cuentan', cuantasConReceta(puesta) === 2);
+
+  const coach = lee('app/(trainer)/clients/meal-books.tsx');
+  const alumno = lee('components/PanelDeNutricion.tsx');
+  comprueba('el entrenador la enlaza en el panel de la foto', /label="Receta en PDF \(opcional\)"/.test(coach));
+  comprueba('y no puede guardar un enlace que no vale', /enlaceDeRecetaNoVale\(receta\) \|\|/.test(coach));
+  // El mismo lector que los e-books: sin recortes y sin salir a otra ventana.
+  comprueba('el alumno la abre con el lector de la app', /<LectorAPantallaCompleta/.test(alumno) && /from '\.\/LectorDePdf'/.test(alumno));
+  comprueba('desde la foto', /onPress=\{\(\) => setReceta\(p\.recipeUrl!\)\}/.test(alumno));
+  comprueba('y desde la foto ampliada', /title="Ver la receta"/.test(alumno));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

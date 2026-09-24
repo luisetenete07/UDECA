@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   query,
@@ -43,6 +44,20 @@ export async function createMealBook(
 
 export async function updateMealBook(id: string, data: Partial<MealBook>): Promise<void> {
   await updateDoc(doc(db, 'mealBooks', id), stripUndefined({ ...data, updatedAt: Date.now() }));
+}
+
+/**
+ * Pone o quita la descripción de un álbum.
+ *
+ * Vacía BORRA el campo. Con `updateMealBook` no se puede: `stripUndefined`
+ * quita lo que va vacío antes de escribir, así que "quitar la descripción"
+ * dejaba la vieja tal cual en Firestore — y al alumno se la seguía enseñando.
+ */
+export async function setMealBookDescription(id: string, limpio: string): Promise<void> {
+  await updateDoc(doc(db, 'mealBooks', id), {
+    description: limpio ? limpio : deleteField(),
+    updatedAt: Date.now(),
+  });
 }
 
 export async function deleteMealBook(id: string): Promise<void> {

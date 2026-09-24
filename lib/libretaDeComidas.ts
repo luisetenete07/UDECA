@@ -96,3 +96,92 @@ export function seCorta(comentario: string | undefined): boolean {
 export function cuantasComentadas(fotos: readonly MealBookPhoto[]): number {
   return fotos.filter((f) => (f.caption ?? '').trim().length > 0).length;
 }
+
+// ===========================================================================
+// LA DESCRIPCIÓN DE CADA ÁLBUM
+// ===========================================================================
+
+/**
+ * Lo que el entrenador cuenta de un álbum entero ("Desayunos", "Post-entreno"):
+ * cuándo se toman, cuántas calorías rondan, cómo elegir entre ellos.
+ *
+ * El comentario de cada foto habla de ESE plato; esto habla de todos a la vez,
+ * y es lo que faltaba para no repetir lo mismo debajo de doce fotos.
+ *
+ * Más largo que un comentario porque se lee a lo ancho de la tarjeta, no en
+ * una columna de 130 px; pero con tope por el mismo megabyte del documento.
+ */
+export const LARGO_DE_LA_DESCRIPCION = 400;
+
+export function limpiarDescripcion(texto: string): string {
+  return (texto ?? '')
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/ *\n */g, '\n')
+    .trim()
+    .slice(0, LARGO_DE_LA_DESCRIPCION)
+    .trim();
+}
+
+// ===========================================================================
+// LA RECETA EN PDF DE CADA FOTO (OPCIONAL)
+// ===========================================================================
+
+/**
+ * El enlace a la receta en PDF, tal y como se va a guardar, o '' si no vale.
+ *
+ * ES UN ENLACE, NO UN ARCHIVO SUBIDO. Las fotos van dentro del documento de la
+ * libreta y ahí un PDF no cabe; subirlo exigiría montar un almacén de
+ * archivos aparte. Con un enlace de Drive, Dropbox o cualquier web, funciona
+ * igual que los e-books de los cursos y se abre con el mismo lector.
+ *
+ * Solo http(s): cualquier otra cosa (un "javascript:", una ruta del móvil) no
+ * es un documento que el alumno pueda abrir, y guardarla sería prometerle una
+ * receta que no está.
+ */
+export function limpiarEnlaceDeReceta(texto: string): string {
+  const limpio = (texto ?? '').trim();
+  if (!limpio) return '';
+  let url: URL;
+  try {
+    url = new URL(limpio);
+  } catch {
+    return '';
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+  return limpio.slice(0, 1000);
+}
+
+/** ¿Lo escrito es un enlace que no sirve? Vacío no cuenta: vacío es "sin receta". */
+export function enlaceDeRecetaNoVale(texto: string): boolean {
+  return (texto ?? '').trim().length > 0 && !limpiarEnlaceDeReceta(texto);
+}
+
+/**
+ * Comentario y receta de una foto a la vez, en una sola escritura.
+ *
+ * Mismas reglas que `conComentario`: vacío QUITA la clave, no la deja a '', y
+ * la lista de entrada no se toca.
+ */
+export function conDetalle(
+  fotos: readonly MealBookPhoto[],
+  idDeLaFoto: string,
+  detalle: { comentario: string; receta: string }
+): MealBookPhoto[] {
+  const comentario = limpiarComentario(detalle.comentario);
+  const receta = limpiarEnlaceDeReceta(detalle.receta);
+  return fotos.map((foto) => {
+    if (foto.id !== idDeLaFoto) return foto;
+    const { caption: _c, recipeUrl: _r, ...resto } = foto;
+    return {
+      ...resto,
+      ...(comentario ? { caption: comentario } : {}),
+      ...(receta ? { recipeUrl: receta } : {}),
+    };
+  });
+}
+
+/** Cuántas fotos llevan receta. Para el contador del coach. */
+export function cuantasConReceta(fotos: readonly MealBookPhoto[]): number {
+  return fotos.filter((f) => !!f.recipeUrl).length;
+}

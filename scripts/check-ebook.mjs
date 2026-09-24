@@ -171,6 +171,12 @@ console.log('\nLa muestra tiene suelo y techo');
 console.log('\nEn la pantalla: el documento ES la pantalla');
 {
   const curso = sinComentar(lee('app/(client)/courses/[id].tsx'));
+  // El lector vive en su componente, compartido con las recetas de la libreta
+  // de comidas: un solo sitio donde están el recorte, el puente de Android y
+  // la cerradura de ventanas.
+  const lector = sinComentar(lee('components/LectorDePdf.tsx'));
+  ok('el curso usa el lector compartido', /from '\.\.\/\.\.\/\.\.\/components\/LectorDePdf'/.test(curso));
+  ok('y no lleva una copia suya', !/function EmbeddedDoc/.test(curso), 'dos lectores: el arreglo de uno no llega al otro');
 
   /*
    * LO QUE SE PROTEGE AQUÍ. El e-book tiene que quedar FUERA del `ScrollView`
@@ -187,7 +193,7 @@ console.log('\nEn la pantalla: el documento ES la pantalla');
     'el e-book ha vuelto dentro de la página que se desplaza'
   );
   ok('el documento va lleno', /<EmbeddedDoc url=\{contenido\.pdfUrl\} lleno \/>/.test(curso));
-  ok('y lleno es flex: 1', /pdfLleno: \{ flex: 1/.test(curso));
+  ok('y lleno es flex: 1', /pdfLleno: \{ flex: 1/.test(lector));
 
   // El alto de 480 px a fuego era el problema. Que no vuelva por ningún lado.
   ok('sin altos a fuego', !/height: 480/.test(curso), 'ha vuelto la caja de 480 px');
@@ -211,7 +217,7 @@ console.log('\nEn la pantalla: el documento ES la pantalla');
   // Android se queda sin puente sin que nadie lo note.
   ok(
     'la dirección la pone el módulo',
-    /enlaceDeLectura\(url, Platform\.OS, width, height\)/.test(curso)
+    /enlaceDeLectura\(url, Platform\.OS, width, height\)/.test(lector)
   );
 
   /*
@@ -220,15 +226,15 @@ console.log('\nEn la pantalla: el documento ES la pantalla');
    */
   ok(
     'solo se carga el documento',
-    /onShouldStartLoadWithRequest=\{\(r[^)]*\) =>[\s\S]{0,140}puedeAbrirse\(r\.url, src\)/.test(curso),
+    /onShouldStartLoadWithRequest=\{\(r[^)]*\) =>[\s\S]{0,140}puedeAbrirse\(r\.url, src\)/.test(lector),
     'el visor vuelve a poder navegar a donde sea'
   );
   // Los marcos de dentro pasan: el visor de Google pinta el documento en un
   // marco suyo, y cortarlo dejaría Android en blanco.
-  ok('sin cortar los marcos de dentro', /r\.isTopFrame === false \? true/.test(curso));
-  ok('no se abre ninguna ventana', /onOpenWindow=\{\(\) => \{\}\}/.test(curso));
-  ok('ni por varias ventanas', /setSupportMultipleWindows=\{false\}/.test(curso));
-  ok('ni desde el JavaScript de la página', /javaScriptCanOpenWindowsAutomatically=\{false\}/.test(curso));
+  ok('sin cortar los marcos de dentro', /r\.isTopFrame === false \? true/.test(lector));
+  ok('no se abre ninguna ventana', /onOpenWindow=\{\(\) => \{\}\}/.test(lector));
+  ok('ni por varias ventanas', /setSupportMultipleWindows=\{false\}/.test(lector));
+  ok('ni desde el JavaScript de la página', /javaScriptCanOpenWindowsAutomatically=\{false\}/.test(lector));
 }
 
 console.log('\nY la regla de "esto es un e-book" sigue siendo una');

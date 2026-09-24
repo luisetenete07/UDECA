@@ -1102,6 +1102,13 @@ export interface MealBookPhoto {
    * ese nombre: renombrarlo dejaría sin texto lo que ya está escrito.
    */
   caption?: string;
+  /**
+   * La receta de este plato en PDF, como ENLACE (Drive, Dropbox...). Opcional:
+   * el entrenador la pone si quiere. Se abre dentro de la app con el mismo
+   * lector que los e-books (components/LectorDePdf.tsx). Sin receta, la clave
+   * no existe (ver `conDetalle`).
+   */
+  recipeUrl?: string;
 }
 
 /**
@@ -1113,6 +1120,11 @@ export interface MealBook {
   id: string;
   trainerId: string;
   title: string;
+  /**
+   * Lo que el entrenador cuenta del álbum entero: cuándo se toman, cómo elegir
+   * entre ellos. Opcional; sin descripción, la clave no existe.
+   */
+  description?: string;
   photos: MealBookPhoto[];
   /**
    * Posición en la lista (menor primero). Las libretas creadas antes de que

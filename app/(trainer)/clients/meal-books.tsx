@@ -19,14 +19,20 @@ import {
   createMealBook,
   deleteMealBook,
   getMealBooksForTrainer,
+  setMealBookDescription,
   updateMealBook,
 } from '../../../lib/firestore/mealBooks';
 import { pickMealPhoto } from '../../../lib/image';
 import {
+  LARGO_DE_LA_DESCRIPCION,
   LARGO_DEL_COMENTARIO,
-  conComentario,
+  conDetalle,
   cuantasComentadas,
+  cuantasConReceta,
+  enlaceDeRecetaNoVale,
   limpiarComentario,
+  limpiarDescripcion,
+  limpiarEnlaceDeReceta,
 } from '../../../lib/libretaDeComidas';
 import { confirmar } from '../../../lib/confirmar';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
@@ -51,7 +57,12 @@ export default function MealBooksScreen() {
   // que lleva doce fotos dentro.
   const [comentando, setComentando] = useState<{ libro: string; foto: string } | null>(null);
   const [comentario, setComentario] = useState('');
+  // El enlace a la receta en PDF de esa misma foto: va en el mismo panel.
+  const [receta, setReceta] = useState('');
   const [guardandoComentario, setGuardandoComentario] = useState(false);
+  // Álbum cuya descripción se está escribiendo, y el texto en curso.
+  const [describiendo, setDescribiendo] = useState<string | null>(null);
+  const [descripcionTexto, setDescripcionTexto] = useState('');
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -87,6 +98,33 @@ export default function MealBooksScreen() {
     } catch {
       showToast('No se pudo renombrar');
       setBooks((prev) => prev.map((b) => (b.id === book.id ? { ...b, title: book.title } : b)));
+    }
+  };
+
+  /*
+   * La descripción del álbum. Se guarda al salir del campo, como el nombre: no
+   * en cada letra. Vacía la BORRA (ver setMealBookDescription).
+   */
+  const empezarDescripcion = (book: MealBook) => {
+    setDescribiendo(book.id);
+    setDescripcionTexto(book.description ?? '');
+  };
+  const guardarDescripcion = async () => {
+    const book = books.find((b) => b.id === describiendo);
+    setDescribiendo(null);
+    if (!book) return;
+    const limpio = limpiarDescripcion(descripcionTexto);
+    if (limpio === (book.description ?? '')) return;
+    const pon = (b: MealBook, d: string): MealBook => {
+      const { description: _vieja, ...resto } = b;
+      return d ? { ...resto, description: d } : resto;
+    };
+    setBooks((prev) => prev.map((b) => (b.id === book.id ? pon(b, limpio) : b)));
+    try {
+      await setMealBookDescription(book.id, limpio);
+    } catch {
+      setBooks((prev) => prev.map((b) => (b.id === book.id ? pon(b, book.description ?? '') : b)));
+      showToast('No se pudo guardar la descripción');
     }
   };
 
@@ -159,6 +197,7 @@ export default function MealBooksScreen() {
   const abrirComentario = (book: MealBook, foto: MealBookPhoto) => {
     setComentando({ libro: book.id, foto: foto.id });
     setComentario(foto.caption ?? '');
+    setReceta(foto.recipeUrl ?? '');
   };
 
   const fotoComentada = comentando
@@ -169,19 +208,22 @@ export default function MealBooksScreen() {
     if (!comentando) return;
     const book = books.find((b) => b.id === comentando.libro);
     if (!book) return;
-    const photos = conComentario(book.photos, comentando.foto, comentario);
+    // Comentario y receta en una sola escritura: son el mismo panel y la
+    // misma foto, y dos escrituras seguidas de un documento con doce fotos
+    // dentro son el doble de tiempo y de datos para nada.
+    const photos = conDetalle(book.photos, comentando.foto, { comentario, receta });
     const antes = book.photos;
     setBooks((prev) => prev.map((b) => (b.id === book.id ? { ...b, photos } : b)));
     setComentando(null);
     setGuardandoComentario(true);
     try {
       await updateMealBook(book.id, { photos });
-      showToast(limpiarComentario(comentario) ? 'Comentario guardado' : 'Comentario quitado');
+      showToast('Guardado');
     } catch {
       // Se deshace lo pintado: si no, la pantalla enseña un comentario que no
       // existe en ningún sitio y el entrenador cree que lo ha dicho.
       setBooks((prev) => prev.map((b) => (b.id === book.id ? { ...b, photos: antes } : b)));
-      showToast('No se pudo guardar el comentario');
+      showToast('No se pudo guardar');
     } finally {
       setGuardandoComentario(false);
     }
@@ -218,7 +260,8 @@ export default function MealBooksScreen() {
       <Text style={styles.subtitle}>
         Sube tus cuadernos de recetas y platos por foto. Los verán TODOS tus alumnos dentro
         de la app, al final de su pestaña de nutrición. Toca una foto para escribir tu
-        comentario: cantidades, cambios, cuándo tomarla.
+        comentario (cantidades, cambios, cuándo tomarla) y, si quieres, enlazar su receta en
+        PDF.
       </Text>
 
       <Card style={styles.createCard}>
@@ -283,6 +326,40 @@ export default function MealBooksScreen() {
               </Pressable>
             </View>
 
+            {/* La descripción del álbum: lo que vale para todas sus fotos.
+                Se toca para escribirla, igual que el nombre. */}
+            {describiendo === book.id ? (
+              <>
+                <TextInput
+                  value={descripcionTexto}
+                  onChangeText={setDescripcionTexto}
+                  onBlur={guardarDescripcion}
+                  autoFocus
+                  multiline
+                  maxLength={LARGO_DE_LA_DESCRIPCION}
+                  style={styles.descripcionCampo}
+                  placeholder="Ej. Elige uno cada mañana. Rondan las 450 kcal; si entrenas temprano, el de avena."
+                  placeholderTextColor={colors.textFaint}
+                />
+                <Text style={styles.comentarioCuenta}>
+                  {limpiarDescripcion(descripcionTexto).length}/{LARGO_DE_LA_DESCRIPCION}
+                </Text>
+              </>
+            ) : (
+              <Pressable onPress={() => empezarDescripcion(book)} style={styles.descripcionFila}>
+                <Ionicons
+                  name={book.description ? 'document-text-outline' : 'add'}
+                  size={14}
+                  color={book.description ? colors.textMuted : colors.primary}
+                />
+                <Text
+                  style={book.description ? styles.descripcionTexto : styles.descripcionVacia}
+                >
+                  {book.description || 'Añadir descripción del álbum'}
+                </Text>
+              </Pressable>
+            )}
+
             {book.photos.length === 0 ? (
               <Text style={styles.mutedText}>Aún no hay fotos en esta libreta.</Text>
             ) : (
@@ -315,6 +392,12 @@ export default function MealBooksScreen() {
                         {p.caption || 'Comentar'}
                       </Text>
                     </Pressable>
+                    {p.recipeUrl ? (
+                      <View style={styles.recetaMarca}>
+                        <Ionicons name="document-text" size={11} color={colors.primary} />
+                        <Text style={styles.recetaMarcaTexto}>Receta</Text>
+                      </View>
+                    ) : null}
                   </View>
                 ))}
               </ScrollView>
@@ -331,6 +414,9 @@ export default function MealBooksScreen() {
               {book.photos.length}/{MAX_PHOTOS} fotos
               {cuantasComentadas(book.photos) > 0
                 ? frase` · ${cuantasComentadas(book.photos)} con comentario`
+                : ''}
+              {cuantasConReceta(book.photos) > 0
+                ? frase` · ${cuantasConReceta(book.photos)} con receta`
                 : ''}
             </Text>
           </Card>
@@ -350,8 +436,8 @@ export default function MealBooksScreen() {
       {comentando && fotoComentada ? (
         <Sheet
           onClose={() => setComentando(null)}
-          titulo="Comentario de la foto"
-          descripcion="Lo verán todos tus alumnos debajo de esta foto, en su pestaña de nutrición."
+          titulo="Foto de la libreta"
+          descripcion="Lo verán todos tus alumnos con esta foto, en su pestaña de nutrición."
         >
           <Image
             source={{ uri: fotoComentada.imageURL }}
@@ -370,14 +456,35 @@ export default function MealBooksScreen() {
           <Text style={styles.comentarioCuenta}>
             {limpiarComentario(comentario).length}/{LARGO_DEL_COMENTARIO}
           </Text>
-          {/* Con el campo vacío solo hay algo que hacer si antes había texto:
-              quitarlo. Si la foto nunca tuvo comentario, el botón no promete
-              nada — guardar la nada no es guardar. */}
+          {/* La receta, opcional. Un enlace (Drive, Dropbox...) y no un
+              archivo: se abre dentro de la app con el mismo lector que los
+              e-books de los cursos. */}
+          <TextField
+            label="Receta en PDF (opcional)"
+            placeholder="Enlace de Drive, Dropbox…"
+            value={receta}
+            onChangeText={setReceta}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
+          {enlaceDeRecetaNoVale(receta) ? (
+            <Text style={styles.recetaError}>
+              Tiene que ser un enlace que empiece por https://
+            </Text>
+          ) : null}
+          {/* Solo se puede guardar si algo ha cambiado y el enlace vale. Un
+              botón que guarda lo mismo que había enseña a desconfiar de los
+              demás botones. */}
           <Button
-            title={limpiarComentario(comentario) ? 'Guardar comentario' : 'Quitar el comentario'}
+            title="Guardar"
             onPress={guardarComentario}
             loading={guardandoComentario}
-            disabled={!limpiarComentario(comentario) && !fotoComentada.caption}
+            disabled={
+              enlaceDeRecetaNoVale(receta) ||
+              (limpiarComentario(comentario) === (fotoComentada.caption ?? '') &&
+                limpiarEnlaceDeReceta(receta) === (fotoComentada.recipeUrl ?? ''))
+            }
           />
         </Sheet>
       ) : null}
@@ -450,4 +557,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   count: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.xs },
+  descripcionFila: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginBottom: spacing.sm,
+  },
+  descripcionTexto: { ...typography.small, color: colors.textMuted, lineHeight: 19, flex: 1 },
+  descripcionVacia: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  descripcionCampo: {
+    ...typography.small,
+    color: colors.text,
+    minHeight: 72,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: 4,
+  },
+  recetaMarca: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 },
+  recetaMarcaTexto: { ...typography.small, fontSize: 11, color: colors.primary, fontFamily: fonts.semiBold },
+  recetaError: { ...typography.small, color: colors.danger, marginTop: -spacing.xs, marginBottom: spacing.sm },
 });
