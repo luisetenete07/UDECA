@@ -609,6 +609,17 @@ export interface RoutineExercise {
   /** RIR objetivo (repeticiones en reserva), 0-5. */
   rir?: number;
   /**
+   * Lo que prescribe el entrenador en este ejercicio cuando su plan
+   * personalizado NO usa RIR: un RPE ("8"), un porcentaje ("75"), un tempo
+   * ("3-1-1-0") o lo que él llame a su variable. Texto, porque un tempo no es
+   * un número.
+   *
+   * Va aparte de `rir` a propósito: ese campo lo leen las medias de esfuerzo y
+   * los informes, y escribir ahí un "75" o una "B" las haría salir falsas (ver
+   * `diasParaGuardar` en lib/planPersonalizado.ts).
+   */
+  prescrito?: string;
+  /**
    * Agarre con el que se hace ESTE ejercicio en ESTE día del plan (prono,
    * neutro o supino). Lo elige el entrenador al montar el plan, no al crear el
    * ejercicio: así unas dominadas sirven para los tres agarres.
@@ -652,6 +663,12 @@ export interface RoutineDay {
    * el 90 %") de una forma que un 9/10 no consigue.
    */
   intensityPct?: number;
+  /**
+   * La intensidad del día con las etiquetas PROPIAS del entrenador ("Media",
+   * "B", lo que use), cuando su plan personalizado no mide en porcentaje. Solo
+   * una de las dos lleva valor (ver `diasParaGuardar`).
+   */
+  intensityLabel?: string;
   /**
    * En Sensaciones, esta "rutina" no es una sesión: es un día de grease the
    * groove, series sueltas repartidas por todo el día y ninguna al fallo.

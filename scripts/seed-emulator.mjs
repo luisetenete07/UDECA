@@ -418,8 +418,11 @@ await setDoc(
     uid: atleta, role: 'athlete', name: 'Sara Vidal', email: 'atleta@demo.test',
     createdAt: now - 40 * DAY, trainerId: atleta, emailVerificationRequired: false,
     weightKg: 62.0, heightCm: 168, goal: 'Front lever', level: 'Intermedio',
-    // Dentro de la prueba gratuita (las reglas topan el máximo: TRIAL_DAYS).
-    ...(yaExiste ? {} : { subscriptionUntil: now + 10 * DAY, trialEndsAt: now + 10 * DAY }),
+    // Dentro de la prueba gratuita, con cinco días por delante. Las reglas la
+    // topan en DIAS_DE_PRUEBA_ATLETA + 2 (7 + 2): con los 10 de antes, que
+    // valían cuando la prueba era de 28, Firestore rechazaba esta escritura y
+    // el sembrado entero se paraba aquí.
+    ...(yaExiste ? {} : { subscriptionUntil: now + 5 * DAY, trialEndsAt: now + 5 * DAY }),
     planPopupClosedAt: deleteField(),
   },
   { merge: true }

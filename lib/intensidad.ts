@@ -24,11 +24,18 @@ export const MAX_PCT = 100;
 
 /** Lo que se enseña, ya escrito. `null` si ese día no tiene intensidad. */
 export function textoIntensidad(
-  day: Pick<RoutineDay, 'intensity' | 'intensityPct' | 'isRest'> | null | undefined,
+  day:
+    | Pick<RoutineDay, 'intensity' | 'intensityPct' | 'intensityLabel' | 'isRest'>
+    | null
+    | undefined,
   schedule: RoutineSchedule | undefined
 ): string | null {
   if (!day || day.isRest) return null;
   if (schedule === 'flex') {
+    // La etiqueta propia del entrenador, si su plan mide así. Al guardar solo
+    // se queda una de las dos (ver diasParaGuardar), así que no hay que
+    // preguntarle al plan cuál manda.
+    if (day.intensityLabel?.trim()) return day.intensityLabel.trim();
     return day.intensityPct ? `${day.intensityPct} %` : null;
   }
   return day.intensity ? `${day.intensity}/10` : null;
@@ -81,4 +88,25 @@ export function pctCombinado(
 ): number | undefined {
   const valores = dias.map((d) => d.intensityPct).filter((v): v is number => !!v);
   return valores.length > 0 ? Math.max(...valores) : undefined;
+}
+
+/**
+ * La etiqueta de intensidad de varias rutinas encadenadas, con las etiquetas
+ * PROPIAS del entrenador.
+ *
+ * Con porcentajes manda el más alto (ver arriba). Con etiquetas no se puede:
+ * no se sabe cuál es "la más dura". Para uno, "A" es lo más fuerte; para otro,
+ * lo más suave. Inventarse el orden sería contarle al alumno algo que su
+ * entrenador no ha dicho. Así que se dicen todas, en el orden de la sesión y
+ * sin repetir: "Suave + Dura", igual que el nombre dice "Día 1 + Día 3".
+ */
+export function etiquetaCombinada(
+  dias: Pick<RoutineDay, 'intensityLabel'>[]
+): string | undefined {
+  const vistas: string[] = [];
+  for (const d of dias) {
+    const e = d.intensityLabel?.trim();
+    if (e && !vistas.includes(e)) vistas.push(e);
+  }
+  return vistas.length > 0 ? vistas.join(' + ') : undefined;
 }

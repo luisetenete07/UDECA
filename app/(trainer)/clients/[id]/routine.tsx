@@ -42,13 +42,26 @@ import { notifyUser } from '../../../../lib/notifications';
 import { flexLabel, nombreDelDia } from '../../../../lib/schedule';
 import { SERIES_POR_DEFECTO } from '../../../../lib/gtg';
 import {
+  diasParaGuardar,
+  ejemploDeLaVariable,
+  LARGO_DEL_NOMBRE_DE_VARIABLE,
   MAX_NIVELES,
+  MAX_NIVELES_INTENSIDAD,
+  NIVELES_DE_INTENSIDAD_POR_DEFECTO,
   NIVELES_POR_DEFECTO,
+  nivelesDeIntensidad,
   nivelesDeTexto,
+  nombreDeLaVariable,
   POR_DEFECTO,
+  prescripcionDe,
+  resumenDePrescripcion,
+  rirDeTexto,
+  textoDeIntensidadDelDia,
   type CuandoElEsfuerzo,
   type EscalaDeEsfuerzo,
+  type EscalaDeIntensidad,
   type PlanPersonalizado,
+  type VariableDeEjercicio,
 } from '../../../../lib/planPersonalizado';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
@@ -133,6 +146,10 @@ export default function RoutineEditorScreen() {
   const [perso, setPerso] = useState<PlanPersonalizado>(POR_DEFECTO);
   // Las etiquetas de la escala propia se teclean seguidas, separadas por comas.
   const [nivelesTexto, setNivelesTexto] = useState(NIVELES_POR_DEFECTO.join(', '));
+  // Y las de la intensidad propia de cada día, igual: seguidas, con comas.
+  const [nivelesIntensidadTexto, setNivelesIntensidadTexto] = useState(
+    NIVELES_DE_INTENSIDAD_POR_DEFECTO.join(', ')
+  );
   const [personalizacionAbierta, setPersonalizacionAbierta] = useState(false);
   /** Cambia una parte de la configuración sin pisar el resto. */
   const cambiaPerso = (parte: Partial<PlanPersonalizado>) =>
@@ -156,16 +173,41 @@ export default function RoutineEditorScreen() {
    * etiquetas colgando de un plan que mide en RIR son un ajuste invisible que
    * reaparece el día que alguien cambie de escala y no entiende de dónde sale.
    */
-  const configuracionAGuardar = (): PlanPersonalizado => ({
-    ...perso,
-    esfuerzo: {
-      escala: perso.esfuerzo?.escala ?? 'rir',
-      cuando: perso.esfuerzo?.cuando ?? 'ejercicio',
-      ...(perso.esfuerzo?.escala === 'propia'
-        ? { niveles: nivelesDeTexto(nivelesTexto) }
-        : {}),
-    },
-  });
+  const configuracionAGuardar = (): PlanPersonalizado => {
+    const { intensidad, variable } = prescripcionDe(perso);
+    const nombre = (variable.nombre ?? '').trim().slice(0, LARGO_DEL_NOMBRE_DE_VARIABLE);
+    return {
+      ...perso,
+      esfuerzo: {
+        escala: perso.esfuerzo?.escala ?? 'rir',
+        cuando: perso.esfuerzo?.cuando ?? 'ejercicio',
+        ...(perso.esfuerzo?.escala === 'propia'
+          ? { niveles: nivelesDeTexto(nivelesTexto) }
+          : {}),
+      },
+      // Igual que las etiquetas del esfuerzo: solo lo que se usa. Unas
+      // etiquetas de intensidad colgando de un plan en porcentaje reaparecen
+      // el día que alguien cambia de escala y no entiende de dónde salen.
+      prescripcion: {
+        intensidad: {
+          escala: intensidad.escala,
+          ...(intensidad.escala === 'propia'
+            ? { niveles: nivelesDeTexto(nivelesIntensidadTexto).slice(0, MAX_NIVELES_INTENSIDAD) }
+            : {}),
+        },
+        variable: {
+          tipo: variable.tipo,
+          ...(variable.tipo === 'propia' && nombre ? { nombre } : {}),
+        },
+      },
+    };
+  };
+  /** Cambia una parte de la prescripción sin pisar el resto. */
+  const cambiaPrescripcion = (parte: Partial<NonNullable<PlanPersonalizado['prescripcion']>>) =>
+    setPerso((prev) => ({ ...prev, prescripcion: { ...prescripcionDe(prev), ...parte } }));
+  /** Los días tal y como se guardan: cada valor en su sitio (ver diasParaGuardar). */
+  const diasAGuardar = () =>
+    schedule === 'flex' ? diasParaGuardar(days, configuracionAGuardar()) : days;
 
   const [restText, setRestText] = useState<Record<string, string>>({});
   // Ejercicio pendiente de mover/copiar a otro día (abre el selector de día).
@@ -229,9 +271,17 @@ export default function RoutineEditorScreen() {
         if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
         fechaAlAbrir.current = existing.cycleStartDate ?? null;
         if (existing.personalizado) {
-          setPerso({ ...POR_DEFECTO, ...existing.personalizado });
+          // La prescripción se resuelve aparte: la de POR_DEFECTO (RIR) pisaría la
+          // herencia de un plan guardado antes de que existiera (ver prescripcionDe).
+          setPerso({
+            ...POR_DEFECTO,
+            ...existing.personalizado,
+            prescripcion: prescripcionDe(existing.personalizado),
+          });
           const niveles = existing.personalizado.esfuerzo?.niveles;
           if (niveles?.length) setNivelesTexto(niveles.join(', '));
+          const deIntensidad = existing.personalizado.prescripcion?.intensidad?.niveles;
+          if (deIntensidad?.length) setNivelesIntensidadTexto(deIntensidad.join(', '));
         }
       } else {
         setDays([{ id: nuevoId(), name: 'Día 1', exercises: [] }]);
@@ -463,7 +513,16 @@ export default function RoutineEditorScreen() {
   const updateExerciseField = (
     dayId: string,
     exerciseRowId: string,
-    field: 'sets' | 'reps' | 'seconds' | 'side2' | 'restSeconds' | 'notes' | 'rir' | 'goal',
+    field:
+      | 'sets'
+      | 'reps'
+      | 'seconds'
+      | 'side2'
+      | 'restSeconds'
+      | 'notes'
+      | 'rir'
+      | 'goal'
+      | 'prescrito',
     value: string
   ) => {
     setDays((prev) =>
@@ -475,10 +534,15 @@ export default function RoutineEditorScreen() {
                 e.id === exerciseRowId
                   ? {
                       ...e,
+                      // El RIR vacío es "sin RIR" y no 0, que es "al fallo"
+                      // (ver rirDeTexto): borrar la casilla tiene que quitar
+                      // la indicación, no prescribir la más dura.
                       [field]:
-                        field === 'sets' || field === 'restSeconds' || field === 'rir'
-                          ? Number(value) || 0
-                          : value,
+                        field === 'rir'
+                          ? rirDeTexto(value)
+                          : field === 'sets' || field === 'restSeconds'
+                            ? Number(value) || 0
+                            : value,
                     }
                   : e
               ),
@@ -500,6 +564,16 @@ export default function RoutineEditorScreen() {
   };
 
   // Ajusta el porcentaje de intensidad de una rutina de Sensaciones.
+  const eligeIntensidad = (dayId: string, etiqueta: string) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? { ...d, intensityLabel: d.intensityLabel === etiqueta ? undefined : etiqueta }
+          : d
+      )
+    );
+  };
+
   const updateDayPct = (dayId: string, delta: number) => {
     setDays((prev) =>
       prev.map((d) => (d.id === dayId ? { ...d, intensityPct: ajustaPct(d.intensityPct, delta) } : d))
@@ -719,9 +793,17 @@ export default function RoutineEditorScreen() {
     setSchedule(t.schedule ?? 'weekly');
     if (t.scheduleLabel) setScheduleLabel(flexLabel(t.scheduleLabel));
     if (t.personalizado) {
-      setPerso({ ...POR_DEFECTO, ...t.personalizado });
+      // La prescripción se resuelve aparte: la de POR_DEFECTO (RIR) pisaría la
+          // herencia de un plan guardado antes de que existiera (ver prescripcionDe).
+          setPerso({
+            ...POR_DEFECTO,
+            ...t.personalizado,
+            prescripcion: prescripcionDe(t.personalizado),
+          });
       const niveles = t.personalizado.esfuerzo?.niveles;
       if (niveles?.length) setNivelesTexto(niveles.join(', '));
+      const deIntensidad = t.personalizado.prescripcion?.intensidad?.niveles;
+      if (deIntensidad?.length) setNivelesIntensidadTexto(deIntensidad.join(', '));
     }
     /*
      * La fecha de inicio del ciclo NO viene de la plantilla.
@@ -758,7 +840,7 @@ export default function RoutineEditorScreen() {
         schedule,
         scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
         personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
-        days,
+        days: diasAGuardar(),
       });
       setTemplates(await getRoutineTemplatesForTrainer(profile.uid));
       showToast('Guardada como plantilla');
@@ -788,15 +870,16 @@ export default function RoutineEditorScreen() {
         personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
       };
       if (cambioLaFecha) fechaAlAbrir.current = cycleStartDate;
+      const dias = diasAGuardar();
       if (routineId) {
-        await updateRoutine(routineId, { name, days, ...scheduleFields });
+        await updateRoutine(routineId, { name, days: dias, ...scheduleFields });
         await setActiveRoutine(clientId, routineId, profile.uid);
       } else {
         const newId = await createRoutine({
           trainerId: profile.uid,
           clientId,
           name,
-          days,
+          days: dias,
           active: true,
           ...scheduleFields,
         });
@@ -835,6 +918,9 @@ export default function RoutineEditorScreen() {
     cycleStartDate,
     perso,
     nivelesTexto,
+    // Mismo motivo: sin ella se guardarían las etiquetas de intensidad de
+    // cuando se abrió la pantalla, no las que se acaban de escribir.
+    nivelesIntensidadTexto,
     router,
   ]);
 
@@ -886,6 +972,13 @@ export default function RoutineEditorScreen() {
                     {t.days.length} {t.days.length === 1 ? 'día' : 'días'} · toca para
                     aplicar
                   </Text>
+                  {/* Una plantilla de plan personalizado trae su forma de
+                      trabajar; se dice, para saber qué se va a aplicar. */}
+                  {t.schedule === 'flex' ? (
+                    <Text style={styles.mutedText} numberOfLines={2}>
+                      {resumenDePrescripcion(t.personalizado)}
+                    </Text>
+                  ) : null}
                 </Pressable>
                 <Pressable onPress={() => removeTemplate(t.id)} hitSlop={8}>
                   <Ionicons name="trash-outline" size={18} color={colors.danger} />
@@ -990,10 +1083,85 @@ export default function RoutineEditorScreen() {
             </Pressable>
             {personalizacionAbierta ? (
               <View style={styles.persoCaja}>
+                {/* LA PRESCRIPCIÓN, LO PRIMERO. Es lo que ESCRIBE el entrenador
+                    al montar el plan, y es lo primero que piensa: con qué
+                    números programa, o sin ninguno. Lo de debajo es otra cosa
+                    —lo que APUNTA el alumno al entrenar— y va después. */}
+                <Text style={styles.persoTitulo}>Intensidad de cada rutina</Text>
+                <Segmented
+                  compacto
+                  valor={prescripcionDe(perso).intensidad.escala}
+                  opciones={[
+                    { valor: 'porcentaje' as EscalaDeIntensidad, texto: '%' },
+                    { valor: 'propia' as EscalaDeIntensidad, texto: 'La mía' },
+                    { valor: 'ninguna' as EscalaDeIntensidad, texto: 'Nada' },
+                  ]}
+                  onChange={(v) =>
+                    cambiaPrescripcion({
+                      intensidad: { ...prescripcionDe(perso).intensidad, escala: v },
+                    })
+                  }
+                />
+                {prescripcionDe(perso).intensidad.escala === 'propia' ? (
+                  <TextField
+                    label={frase`Tus niveles, separados por comas (máx. ${MAX_NIVELES_INTENSIDAD})`}
+                    containerStyle={{ marginTop: spacing.sm }}
+                    placeholder="Ej. Suave, Media, Dura · A, B, C · *, **, ***"
+                    value={nivelesIntensidadTexto}
+                    onChangeText={setNivelesIntensidadTexto}
+                    style={{ marginTop: spacing.xs, marginBottom: 0 }}
+                  />
+                ) : null}
+
+                <Text style={styles.persoTitulo}>Qué pones en cada ejercicio</Text>
+                <Text style={styles.persoAyuda}>
+                  Además de series y repeticiones. Si lo dejas vacío en un ejercicio, el alumno no ve
+                  nada en ese.
+                </Text>
+                <View style={styles.persoFichas}>
+                  {(
+                    [
+                      ['rir', 'RIR'],
+                      ['rpe', 'RPE'],
+                      ['porcentaje', '% RM'],
+                      ['tempo', 'Tempo'],
+                      ['propia', 'La mía'],
+                      ['ninguna', 'Nada'],
+                    ] as [VariableDeEjercicio, string][]
+                  ).map(([tipo, texto]) => (
+                    <Chip
+                      key={tipo}
+                      texto={texto}
+                      activo={prescripcionDe(perso).variable.tipo === tipo}
+                      compacto
+                      onPress={() =>
+                        cambiaPrescripcion({
+                          variable: { ...prescripcionDe(perso).variable, tipo },
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+                {prescripcionDe(perso).variable.tipo === 'propia' ? (
+                  <TextField
+                    label="Cómo se llama"
+                    containerStyle={{ marginTop: spacing.sm }}
+                    placeholder="Ej. Zona, Carga, Nivel"
+                    maxLength={LARGO_DEL_NOMBRE_DE_VARIABLE}
+                    value={prescripcionDe(perso).variable.nombre ?? ''}
+                    onChangeText={(v) =>
+                      cambiaPrescripcion({
+                        variable: { ...prescripcionDe(perso).variable, nombre: v },
+                      })
+                    }
+                    style={{ marginTop: spacing.xs, marginBottom: 0 }}
+                  />
+                ) : null}
+
                 {/* 1 · LA ESCALA. Lo que el entrenador usa para hablar de
                     esfuerzo con su gente. Si trabaja con letras, la app trabaja
                     con letras. */}
-                <Text style={styles.persoTitulo}>Cómo se mide el esfuerzo</Text>
+                <Text style={styles.persoTitulo}>Cómo apunta el alumno su esfuerzo</Text>
                 <Segmented
                   compacto
                   valor={perso.esfuerzo?.escala ?? 'rir'}
@@ -1053,7 +1221,7 @@ export default function RoutineEditorScreen() {
                 <View style={styles.persoFichas}>
                 {(
                   [
-                    ['intensidad', 'La intensidad en %'],
+                    ['intensidad', 'La intensidad'],
                     ['ejercicios', 'Cuántos ejercicios lleva'],
                     ['duracion', 'Cuánto dura, estimado'],
                     ['grupos', 'Qué grupos musculares toca'],
@@ -1172,9 +1340,14 @@ export default function RoutineEditorScreen() {
           else if (day.gtg) {
             summaryParts.push(frase`Todo el día · ${day.gtgSetsPerDay ?? SERIES_POR_DEFECTO} series`);
           }
-          else if (day.intensityPct) {
-            summaryParts.push(`${day.intensityPct} %`);
-            const palabra = esfuerzoDePct(day.intensityPct);
+          else if (textoDeIntensidadDelDia(day, perso)) {
+            summaryParts.push(textoDeIntensidadDelDia(day, perso)!);
+            // La palabra ("Exigente"...) solo acompaña al porcentaje: a una
+            // etiqueta del entrenador no se le pone otro nombre encima.
+            const palabra =
+              prescripcionDe(perso).intensidad.escala === 'porcentaje'
+                ? esfuerzoDePct(day.intensityPct)
+                : null;
             if (palabra) summaryParts.push(palabra);
           }
         } else if (day.weekday !== undefined) {
@@ -1329,7 +1502,27 @@ export default function RoutineEditorScreen() {
                   repeticiones va el objetivo de CADA serie.
                 </Text>
               ) : null}
-              {day.gtg ? null : (
+              {day.gtg || prescripcionDe(perso).intensidad.escala === 'ninguna' ? null : prescripcionDe(perso).intensidad.escala === 'propia' ? (
+              /* Con las etiquetas del entrenador: se toca la que va, y tocar
+                 la que ya está puesta la quita. Sin barra: una "B" no es un
+                 punto de una escala que se pueda dibujar. */
+              <View style={styles.dayIntensityRow}>
+                <Text style={styles.dayIntensityLabel}>
+                  Intensidad · {day.intensityLabel?.trim() || 'sin poner'}
+                </Text>
+                <View style={styles.persoFichas}>
+                  {nivelesDeIntensidad(configuracionAGuardar()).map((etiqueta) => (
+                    <Chip
+                      key={etiqueta}
+                      texto={etiqueta}
+                      activo={day.intensityLabel === etiqueta}
+                      compacto
+                      onPress={() => eligeIntensidad(day.id, etiqueta)}
+                    />
+                  ))}
+                </View>
+              </View>
+              ) : (
               <View style={styles.dayIntensityRow}>
                 <Text style={styles.dayIntensityLabel}>
                   Intensidad · {day.intensityPct ? `${day.intensityPct} %` : 'sin poner'}
@@ -1551,14 +1744,37 @@ export default function RoutineEditorScreen() {
                 ) : null}
               </View>
               <View style={styles.exerciseFields}>
-                <TextField
-                  label="RIR"
-                  keyboardType="number-pad"
-                  value={ex.rir !== undefined ? String(ex.rir) : ''}
-                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'rir', v)}
-                  placeholder="2"
-                  containerStyle={styles.smallInput}
-                />
+                {/*
+                 * LA VARIABLE DEL EJERCICIO. Fuera del plan personalizado,
+                 * RIR como siempre. Dentro, la que haya elegido el entrenador:
+                 * RIR, RPE, % RM, tempo, la suya... o ninguna, y entonces la
+                 * casilla desaparece. Vacía, el alumno no ve nada.
+                 */}
+                {schedule !== 'flex' || prescripcionDe(perso).variable.tipo === 'rir' ? (
+                  <TextField
+                    label="RIR"
+                    keyboardType="number-pad"
+                    value={ex.rir !== undefined ? String(ex.rir) : ''}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'rir', v)}
+                    placeholder="2"
+                    containerStyle={styles.smallInput}
+                  />
+                ) : nombreDeLaVariable(configuracionAGuardar()) ? (
+                  <TextField
+                    label={nombreDeLaVariable(configuracionAGuardar())!}
+                    keyboardType={
+                      prescripcionDe(perso).variable.tipo === 'rpe' ||
+                      prescripcionDe(perso).variable.tipo === 'porcentaje'
+                        ? 'numbers-and-punctuation'
+                        : 'default'
+                    }
+                    autoCapitalize="none"
+                    value={ex.prescrito ?? ''}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'prescrito', v)}
+                    placeholder={ejemploDeLaVariable(perso)}
+                    containerStyle={styles.smallInput}
+                  />
+                ) : null}
                 <TextField
                   label="Descanso (min:seg)"
                   keyboardType="numbers-and-punctuation"
@@ -1919,7 +2135,23 @@ export default function RoutineEditorScreen() {
       <Button title="+ Añadir día" variant="ghost" onPress={addDay} style={styles.addDayBtn} />
 
       {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
-      <Button title="Guardar rutina" onPress={handleSave} loading={saving} style={styles.saveBtn} />
+      <Button title="Guardar rutina" onPress={handleSave} loading={saving} />
+      {/*
+       * GUARDAR COMO PLANTILLA, AL LADO DE GUARDAR.
+       *
+       * Existía, pero escondido: había que abrir "Plantillas" arriba del todo
+       * para encontrar el botón, y un entrenador que acaba de montar su método
+       * no va a buscar arriba lo que quiere hacer abajo. Se guarda entero —los
+       * días, los ejercicios y, en el personalizado, cómo funciona por dentro y
+       * qué prescribe—, así que la próxima vez es aplicar y listo.
+       */}
+      <Button
+        title="Guardar también como plantilla"
+        variant="secondary"
+        onPress={saveAsTemplate}
+        loading={savingTemplate}
+        style={[styles.saveBtn, { marginTop: spacing.sm }]}
+      />
     </ScreenContainer>
   );
 }
@@ -1971,6 +2203,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
+  persoAyuda: { ...typography.small, color: colors.textFaint, marginBottom: spacing.xs },
   // En fila y envolviendo: son interruptores cortos, y en columna ocupaban
   // media pantalla para decir cuatro palabras.
   persoFichas: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

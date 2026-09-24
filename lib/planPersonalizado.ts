@@ -75,11 +75,52 @@ export interface PermisosDelAlumno {
   anadir?: boolean;
 }
 
+/**
+ * LO QUE EL ENTRENADOR PRESCRIBE, que no es lo mismo que lo que el alumno
+ * apunta.
+ *
+ * `esfuerzo` (arriba) es la pregunta que se le hace al ALUMNO al terminar:
+ * "¿cuántas te quedaban?". Esto es la otra mitad, la que escribe el
+ * ENTRENADOR al montar el plan: con qué intensidad va cada día y qué número
+ * acompaña a cada ejercicio además de series y repeticiones.
+ *
+ * Hasta ahora eso estaba fijado: intensidad en porcentaje y RIR en todos los
+ * ejercicios, lo usara el entrenador o no. Pero hay quien programa por RPE,
+ * quien por tempo, quien por porcentaje de su máximo, quien con sus propias
+ * letras, y quien no quiere ningún número: series, repeticiones y listo. Un
+ * campo de RIR en cada ejercicio de alguien que no trabaja con RIR es ruido en
+ * su pantalla y, peor, en la de su alumno.
+ */
+export type EscalaDeIntensidad = 'porcentaje' | 'propia' | 'ninguna';
+
+export type VariableDeEjercicio = 'rir' | 'rpe' | 'porcentaje' | 'tempo' | 'propia' | 'ninguna';
+
+export interface PrescripcionDelPlan {
+  intensidad?: {
+    escala: EscalaDeIntensidad;
+    /**
+     * Solo con 'propia': las etiquetas del entrenador para la intensidad de
+     * cada día, en su orden. Letras, palabras, símbolos: lo que use con su
+     * gente. Se elige una por día.
+     */
+    niveles?: string[];
+  };
+  variable?: {
+    tipo: VariableDeEjercicio;
+    /**
+     * Solo con 'propia': cómo se llama ("Zona", "Carga", "Nivel"...). Lo que
+     * se escriba en cada ejercicio es libre.
+     */
+    nombre?: string;
+  };
+}
+
 export interface PlanPersonalizado {
   esfuerzo?: EsfuerzoDelPlan;
   ficha?: FichaDeEleccion;
   vocabulario?: VocabularioDelPlan;
   permisos?: PermisosDelAlumno;
+  prescripcion?: PrescripcionDelPlan;
 }
 
 /** Lo que se guarda de un esfuerzo apuntado, sea cual sea la escala. */
@@ -101,6 +142,8 @@ export const POR_DEFECTO: PlanPersonalizado = {
   ficha: { intensidad: true, ejercicios: true, duracion: false, grupos: false },
   vocabulario: {},
   permisos: {},
+  // Porcentaje y RIR: lo que había. Quien no toque nada, lo de siempre.
+  prescripcion: { intensidad: { escala: 'porcentaje' }, variable: { tipo: 'rir' } },
 };
 
 /** Las etiquetas con las que arranca la escala propia, para no empezar en blanco. */
@@ -242,4 +285,199 @@ export function gruposDeLaRutina(ejercicios: { muscleGroup?: string }[]): string
     if (g && !vistos.includes(g)) vistos.push(g);
   }
   return vistos;
+}
+
+// ===========================================================================
+// LA PRESCRIPCIÓN
+// ===========================================================================
+
+/** Tope de etiquetas de intensidad: las mismas que caben en una fila de móvil. */
+export const MAX_NIVELES_INTENSIDAD = MAX_NIVELES;
+
+/** Con qué arrancan las etiquetas de intensidad propias, para no empezar en blanco. */
+export const NIVELES_DE_INTENSIDAD_POR_DEFECTO = ['Suave', 'Media', 'Dura'];
+
+/** Lo más largo que se acepta en el valor de un ejercicio ("3-1-1-0", "B+", "75"). */
+export const LARGO_DEL_PRESCRITO = 16;
+
+/** Lo más largo del nombre de una variable propia: tiene que caber en una etiqueta. */
+export const LARGO_DEL_NOMBRE_DE_VARIABLE = 14;
+
+/**
+ * La prescripción de un plan, con lo que falte rellenado por defecto.
+ *
+ * Un plan guardado antes de que esto existiera no trae `prescripcion`, y tiene
+ * que seguir comportándose exactamente igual: porcentaje y RIR.
+ */
+export function prescripcionDe(plan?: PlanPersonalizado): Required<PrescripcionDelPlan> {
+  return {
+    intensidad: plan?.prescripcion?.intensidad ?? { escala: 'porcentaje' },
+    /*
+     * La herencia de antes, respetada. Antes de que esto existiera, el "RIR 2"
+     * del alumno se escondía cuando su plan medía el esfuerzo en letras o en
+     * porcentaje (enseñar RIR a quien trabaja con letras es darle un objetivo
+     * en unidades que su plan no usa). Un plan guardado así, sin prescripción,
+     * tiene que seguir viéndose igual: sin variable. Y el entrenador lo ve
+     * igual en su editor, así que lo que se guarda es lo que se ve.
+     */
+    variable: plan?.prescripcion?.variable ?? {
+      tipo: (plan?.esfuerzo?.escala ?? 'rir') === 'rir' ? 'rir' : 'ninguna',
+    },
+  };
+}
+
+/** Las etiquetas de intensidad propias, limpias y acotadas. */
+export function nivelesDeIntensidad(plan?: PlanPersonalizado): string[] {
+  const puestos = (prescripcionDe(plan).intensidad.niveles ?? [])
+    .map((n) => n.trim())
+    .filter((n) => n.length > 0)
+    .slice(0, MAX_NIVELES_INTENSIDAD);
+  return puestos.length > 0 ? puestos : NIVELES_DE_INTENSIDAD_POR_DEFECTO;
+}
+
+/**
+ * Cómo se llama la variable de cada ejercicio, o null si no hay.
+ *
+ * "% RM" y no "%" a secas: un porcentaje suelto al lado de un ejercicio no dice
+ * de qué, y en calistenia hay quien lo lee como porcentaje de esfuerzo.
+ */
+export function nombreDeLaVariable(plan?: PlanPersonalizado): string | null {
+  const v = prescripcionDe(plan).variable;
+  switch (v.tipo) {
+    case 'rir':
+      return 'RIR';
+    case 'rpe':
+      return 'RPE';
+    case 'porcentaje':
+      return '% RM';
+    case 'tempo':
+      return 'Tempo';
+    case 'propia': {
+      const n = (v.nombre ?? '').trim().slice(0, LARGO_DEL_NOMBRE_DE_VARIABLE);
+      return n || 'Objetivo';
+    }
+    default:
+      return null;
+  }
+}
+
+/** Qué se sugiere en el campo vacío, para que se entienda qué va ahí. */
+export function ejemploDeLaVariable(plan?: PlanPersonalizado): string {
+  switch (prescripcionDe(plan).variable.tipo) {
+    case 'rir':
+      return '2';
+    case 'rpe':
+      return '8';
+    case 'porcentaje':
+      return '75';
+    case 'tempo':
+      return '3-1-1-0';
+    default:
+      return '';
+  }
+}
+
+/** El valor de un ejercicio tal y como se guarda: sin espacios de más y con tope. */
+export function limpiarPrescrito(texto: string): string {
+  return (texto ?? '').replace(/\s+/g, ' ').trim().slice(0, LARGO_DEL_PRESCRITO);
+}
+
+/**
+ * Lo que ve el ALUMNO junto a un ejercicio: "RIR 2", "RPE 8", "75 % RM",
+ * "Tempo 3-1-1-0", "Zona B". Null si no hay nada que enseñar.
+ *
+ * `plan` sin prescripción —los planes semanales, los ciclos y los
+ * personalizados de antes— se lee como RIR, que es lo que la app enseñaba.
+ */
+export function textoDePrescripcion(
+  ex: { rir?: number | null; prescrito?: string },
+  plan?: PlanPersonalizado
+): string | null {
+  const tipo = prescripcionDe(plan).variable.tipo;
+  if (tipo === 'ninguna') return null;
+  if (tipo === 'rir') {
+    return typeof ex.rir === 'number' ? `RIR ${ex.rir}` : null;
+  }
+  const valor = limpiarPrescrito(ex.prescrito ?? '');
+  if (!valor) return null;
+  if (tipo === 'porcentaje') return `${valor.replace(/\s*%$/, '')} % RM`;
+  return `${nombreDeLaVariable(plan)} ${valor}`;
+}
+
+/** La intensidad de un día tal y como se lee: "80 %", "Media", "B". Null si no hay. */
+export function textoDeIntensidadDelDia(
+  day: { intensityPct?: number; intensityLabel?: string },
+  plan?: PlanPersonalizado
+): string | null {
+  const escala = prescripcionDe(plan).intensidad.escala;
+  if (escala === 'ninguna') return null;
+  if (escala === 'propia') return day.intensityLabel?.trim() || null;
+  return day.intensityPct ? `${day.intensityPct} %` : null;
+}
+
+/**
+ * LOS DÍAS TAL Y COMO SE GUARDAN: cada valor en su sitio, y solo el que toca.
+ *
+ * EL RIR SE QUEDA COMO NÚMERO Y SOLO EN UN PLAN QUE PRESCRIBE RIR. Es lo mismo
+ * que protege `comoRir` con lo que apunta el alumno, desde el otro lado: media
+ * app lee ese campo —la media de esfuerzo del bloque, el plan de la semana,
+ * los informes—. Si el entrenador cambia su plan de RIR a tempo, los RIR que
+ * tuviera escritos se quedarían ahí escondidos... y seguirían entrando en
+ * todas esas medias, de un plan que ya no los usa. Se van al guardar.
+ *
+ * Lo mismo con la intensidad del día: un 80 % olvidado debajo de una "B"
+ * seguiría saliendo en el registro de la sesión.
+ *
+ * Mientras se edita no se borra nada —quien cambia de escala y vuelve no
+ * pierde lo escrito—; se limpia al guardar, que es cuando se decide.
+ */
+export function diasParaGuardar<
+  D extends {
+    intensityPct?: number;
+    intensityLabel?: string;
+    exercises: { rir?: number; prescrito?: string }[];
+  },
+>(dias: D[], plan?: PlanPersonalizado): D[] {
+  const { intensidad, variable } = prescripcionDe(plan);
+  return dias.map((d) => {
+    const dia = { ...d };
+    if (intensidad.escala !== 'porcentaje') delete dia.intensityPct;
+    if (intensidad.escala !== 'propia' || !dia.intensityLabel?.trim()) delete dia.intensityLabel;
+    dia.exercises = d.exercises.map((e) => {
+      const ex = { ...e };
+      if (variable.tipo !== 'rir') delete ex.rir;
+      const valor = limpiarPrescrito(ex.prescrito ?? '');
+      if (variable.tipo === 'rir' || variable.tipo === 'ninguna' || !valor) delete ex.prescrito;
+      else ex.prescrito = valor;
+      return ex;
+    });
+    return dia;
+  });
+}
+
+/**
+ * Lo que escribe el entrenador en la casilla de RIR, ya convertido.
+ *
+ * VACÍO ES "SIN RIR", NO ES CERO. Antes esto hacía `Number(texto) || 0`, así
+ * que borrar el RIR de un ejercicio no lo quitaba: lo dejaba en 0, que es
+ * "al fallo". El entrenador creía haber quitado la indicación y al alumno le
+ * llegaba la más dura de todas.
+ */
+export function rirDeTexto(texto: string): number | undefined {
+  const limpio = (texto ?? '').trim();
+  if (!limpio) return undefined;
+  const n = Number.parseInt(limpio, 10);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.max(0, Math.min(10, n));
+}
+
+/** Un resumen de la configuración, para la lista de plantillas. */
+export function resumenDePrescripcion(plan?: PlanPersonalizado): string {
+  const { intensidad } = prescripcionDe(plan);
+  const partes: string[] = [];
+  if (intensidad.escala === 'porcentaje') partes.push('Intensidad en %');
+  else if (intensidad.escala === 'propia') partes.push(`Intensidad: ${nivelesDeIntensidad(plan).join(' / ')}`);
+  const variable = nombreDeLaVariable(plan);
+  partes.push(variable ? `Por ejercicio: ${variable}` : 'Sin variable por ejercicio');
+  return partes.join(' · ');
 }

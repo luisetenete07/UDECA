@@ -26,7 +26,7 @@ import { getExerciseLibrary } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { applyWeekPlan } from '../../lib/weekPlan';
-import { esfuerzoDePct, pctCombinado, textoIntensidad } from '../../lib/intensidad';
+import { esfuerzoDePct, etiquetaCombinada, pctCombinado, textoIntensidad } from '../../lib/intensidad';
 import { SelectorDeEsfuerzo } from '../../components/SelectorDeEsfuerzo';
 import { diasDePausa, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
@@ -48,7 +48,10 @@ import {
   enTitulo,
   gruposDeLaRutina,
   minutosEstimados,
+  prescripcionDe,
   rirComoValor,
+  textoDeIntensidadDelDia,
+  textoDePrescripcion,
   tocaPreguntarEsfuerzo,
   type EsfuerzoApuntado,
 } from '../../lib/planPersonalizado';
@@ -723,6 +726,9 @@ export default function WorkoutScreen() {
       // Encadenando rutinas manda la más dura: un día suave ANTES de uno fuerte
       // no hace la sesión medio fuerte, la hace fuerte y con más fatiga.
       intensityPct: pctCombinado(chosen),
+      // Y la etiqueta, si el entrenador mide con las suyas. Sin esto, la
+      // sesión se quedaba sin intensidad en cuanto se empezaba.
+      intensityLabel: etiquetaCombinada(chosen),
     };
     setCombinedDay(combined);
     setLog(buildLog(combined));
@@ -1937,8 +1943,16 @@ export default function WorkoutScreen() {
                     ) : (
                       (() => {
                         const partes: string[] = [];
-                        if (ficha.intensidad && d.intensityPct) {
-                          partes.push(`${esfuerzoDePct(d.intensityPct)} · ${d.intensityPct} %`);
+                        // La intensidad en la escala del entrenador: el
+                        // porcentaje con su palabra ("Exigente · 80 %"), o su
+                        // etiqueta tal cual.
+                        const intensidad = textoDeIntensidadDelDia(d, perso);
+                        if (ficha.intensidad && intensidad) {
+                          partes.push(
+                            prescripcionDe(perso).intensidad.escala === 'porcentaje'
+                              ? `${esfuerzoDePct(d.intensityPct)} · ${intensidad}`
+                              : frase`Intensidad ${intensidad}`
+                          );
                         }
                         if (ficha.duracion) {
                           const min = minutosEstimados(d.exercises);
@@ -2421,15 +2435,13 @@ export default function WorkoutScreen() {
                     {isSeconds ? 's' : ''}
                   </Text>
                 </View>
-                {/* El objetivo de esfuerzo del coach, y solo si el plan mide
-                    en RIR: enseñar "RIR 1" a quien trabaja con letras o con
-                    porcentajes es darle un objetivo en unidades que su plan no
-                    usa. */}
-                {planned.rir !== undefined &&
-                planned.rir !== null &&
-                (esfuerzoDelPlan?.escala ?? 'rir') === 'rir' ? (
+                {/* Lo que el entrenador prescribe en este ejercicio, en SU
+                    variable: "RIR 2", "RPE 8", "Tempo 3-1-1-0", "Zona B"... o
+                    nada, si su plan no lleva o este ejercicio va vacío. Fuera
+                    del plan personalizado, RIR como siempre. */}
+                {textoDePrescripcion(planned, perso) ? (
                   <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText}>RIR {planned.rir}</Text>
+                    <Text style={styles.metaChipText}>{textoDePrescripcion(planned, perso)}</Text>
                   </View>
                 ) : null}
                 {planned.restSeconds ? (
