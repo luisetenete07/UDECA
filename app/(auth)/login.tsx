@@ -66,14 +66,15 @@ export default function LoginScreen() {
   const { signIn } = useAuth();
   const [password, setPassword] = useState('');
   /*
-   * ACCESO TEMPORAL CON CORREO — SE QUITA CUANDO APPLE ACEPTE LA VERSIÓN.
+   * PUERTA DE SERVICIO: CORREO Y CONTRASEÑA. SE QUEDA, Y DISCRETA.
    *
-   * En todo MENOS Android: en iPhone y iPad porque es lo que pide la revisión
-   * de Apple, y en la web para poder probarlo sin esperar a una compilación.
-   * En Android no, que es donde hay usuarios de verdad y donde enseñar una
-   * forma de entrar que vamos a quitar sería enseñarla para retirarla.
+   * Nació como temporal, para que la revisión de Apple pudiera entrar. Pero
+   * Apple revisa CADA actualización con esas mismas credenciales, y con solo
+   * Google y Apple no hay ninguna que darle: quitarla era garantizar el
+   * rechazo de la siguiente versión. Así que se queda, plegada al final.
    *
-   * Ver lib/accesoConCorreo.ts, que explica por qué existe y cómo retirarlo.
+   * En todo MENOS Android, como se decidió desde el principio.
+   * Ver lib/accesoConCorreo.ts.
    */
   const conCorreo = Platform.OS !== 'android';
   const [correoAbierto, setCorreoAbierto] = useState(false);
@@ -310,14 +311,14 @@ export default function LoginScreen() {
         ) : null}
 
         {/*
-          ======================= ACCESO TEMPORAL =======================
-          Correo y contraseña, SOLO en iPhone/iPad y solo hasta que Apple
-          acepte la versión. Está aquí porque la revisión pide unas
-          credenciales que abran la app, y con Google/Apple no se le pueden
-          dar. Cómo retirarlo: lib/accesoConCorreo.ts.
+          ====================== PUERTA DE SERVICIO ======================
+          Correo y contraseña, en iPhone, iPad y web (no en Android). La usa
+          la revisión de Apple en cada actualización: sin ella no hay
+          credenciales que darle y la versión se rechaza. NO SE QUITA.
+          Ver lib/accesoConCorreo.ts.
 
-          Va plegado y en último lugar a propósito: no es una forma de entrar
-          que queramos enseñar, es una puerta de servicio.
+          Plegado, en último lugar y en gris a propósito: no es una forma de
+          entrar que queramos enseñar a los usuarios.
           =============================================================== */}
         {conCorreo ? (
           correoAbierto ? (
@@ -353,7 +354,7 @@ export default function LoginScreen() {
               style={styles.hueco}
               accessibilityRole="button"
             >
-              <Text style={styles.forgot}>{t('Entrar con correo')}</Text>
+              <Text style={styles.correoDiscreto}>{t('Entrar con correo')}</Text>
             </Pressable>
           )
         ) : null}
@@ -451,6 +452,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   rescateCorreo: { color: colors.text, fontFamily: fonts.semiBold },
+  // Más apagado que cualquier otro texto de la pantalla: está para quien lo
+  // busca (la revisión de Apple), no para que lo encuentre nadie más.
+  correoDiscreto: { ...typography.small, fontSize: 12, color: colors.textFaint, textAlign: 'center' },
   forgot: {
     ...typography.small,
     color: colors.textMuted,

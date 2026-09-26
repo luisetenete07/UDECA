@@ -1,24 +1,20 @@
 /*
- * ACCESO TEMPORAL CON CORREO. ESTE GUARDIÁN SE BORRA CON ÉL.
+ * LA PUERTA DE SERVICIO CON CORREO. SE QUEDA, Y ESTE GUARDIÁN CON ELLA.
  *
  * Apple rechazó la 1.1.2 por la norma 2.1(a) pidiendo "a user name and
- * password" para revisar la app. Pero UDECA entra solo con Google o con Apple,
- * así que la cuenta de demostración que crea seed-test-accounts.mjs no abría
- * nada: se le estaban dando al revisor unas credenciales inservibles.
+ * password" para revisar la app, y UDECA solo entra con Google o Apple. Se
+ * añadió esta entrada para darle credenciales al revisor. Se iba a quitar al
+ * aprobarse, pero Apple revisa CADA actualización con esas mismas
+ * credenciales: quitarla es un rechazo garantizado en la siguiente versión.
  *
- * Lo que se vigila mientras esto viva son dos cosas, y la segunda es la que
- * importa de verdad:
+ * Lo que se vigila:
  *
  *  1. Que funcione: que el botón no mande peticiones vacías y que entre por
  *     `signIn`, el mismo camino de siempre.
- *  2. QUE SIGA SIENDO SOLO DE iOS Y SIGA MARCADO COMO TEMPORAL. Lo fácil, y lo
- *     que pasa siempre, es que una puerta de servicio se quede abierta para
- *     siempre porque nadie se acuerda de por qué se abrió. Aquí el porqué está
- *     escrito, y este guardián se cae si alguien lo borra o si lo extiende a
- *     Android.
- *
- * CUANDO APPLE ACEPTE LA VERSIÓN: borrar lib/accesoConCorreo.ts, este fichero
- * y el bloque marcado ACCESO TEMPORAL en app/(auth)/login.tsx.
+ *  2. QUE SIGA FUERA DE ANDROID, discreta y marcada, con el porqué escrito.
+ *     Una puerta de servicio sin cartel acaba o borrada por alguien que no
+ *     sabe para qué está —y entonces rechazan la siguiente versión— o
+ *     convertida en la entrada principal sin que nadie lo decida.
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-acceso-con-correo.mjs
  */
@@ -60,7 +56,7 @@ console.log('\nEstá puesto, y entra por donde entra todo el mundo');
   ok('los errores se traducen', /setError\(mensajeDeEntrada\(e\)\)/.test(login));
 }
 
-console.log('\nEn todo menos Android, y marcado para borrar');
+console.log('\nEn todo menos Android, discreta y con su porqué');
 {
   const login = lee('app/(auth)/login.tsx');
   /*
@@ -74,15 +70,19 @@ console.log('\nEn todo menos Android, y marcado para borrar');
   ok(
     'la puerta NO se abre en Android',
     /const conCorreo = Platform\.OS !== 'android';/.test(login),
-    'si esto se amplía a Android, deja de ser temporal sin que nadie lo decida'
+    'si esto se amplía a Android, se enseña donde nadie la ha pedido'
   );
   ok('y el bloque solo se pinta con eso', /\{conCorreo \? \(/.test(login));
   // El porqué, escrito donde se ve. Una puerta de servicio sin cartel se queda
   // abierta para siempre.
-  ok('el bloque va marcado como temporal', /ACCESO TEMPORAL/.test(login));
+  ok('el bloque va marcado como puerta de servicio', /PUERTA DE SERVICIO/.test(login));
+  // Y que NADIE la quite pensando que era temporal: sin ella, Apple no tiene
+  // con qué entrar a revisar la siguiente versión.
+  ok('y dice que no se quita', /NO SE QUITA/.test(login));
+  ok('discreta: en gris, no como un enlace más', /styles\.correoDiscreto/.test(login) && /correoDiscreto: \{[^}]*colors\.textFaint/.test(login));
   ok('y el módulo dice dónde se ve', /EN TODO MENOS ANDROID/.test(lee('lib/accesoConCorreo.ts')));
   const modulo = lee('lib/accesoConCorreo.ts');
-  ok('y el módulo explica cómo quitarlo', /CÓMO SE QUITA/.test(modulo));
+  ok('y el módulo explica por qué se queda', /POR QUÉ SE QUEDA/.test(modulo));
   ok('sin imports, para poder probarlo', !/^import /m.test(modulo));
 }
 
