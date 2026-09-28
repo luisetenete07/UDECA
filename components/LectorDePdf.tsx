@@ -2,7 +2,12 @@ import React from 'react';
 import { Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Texto';
-import { altoDeLaMuestra, enlaceDeLectura, puedeAbrirse } from '../lib/visorDeEbook';
+import {
+  altoDeLaMuestra,
+  enlaceDeLectura,
+  puedeAbrirse,
+  puedeCargarseDentro,
+} from '../lib/visorDeEbook';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /*
@@ -79,8 +84,20 @@ export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
          * Android en blanco.
          */
         onShouldStartLoadWithRequest={(r: { url: string; isTopFrame?: boolean }) =>
-          r.isTopFrame === false ? true : puedeAbrirse(r.url, src)
+          r.isTopFrame === false ? puedeCargarseDentro(r.url) : puedeAbrirse(r.url, src)
         }
+        /*
+         * TODAS LAS DIRECCIONES PASAN POR EL FILTRO DE ARRIBA. SIN ESTO, NO.
+         *
+         * La librería trae una lista propia (`http` y `https`), y lo que NO
+         * está en ella no llega al filtro: lo abre ella misma con el sistema
+         * (`Linking.openURL`). Con la 1.1.5, en Android el PDF pasa por el
+         * visor de Google, y su página intenta abrir la app de Drive con una
+         * dirección `intent://`. Resultado: el alumno tocaba el e-book y
+         * acababa FUERA de UDECA, en otra app. Con la lista abierta a todo,
+         * esa dirección llega al filtro y el filtro la rechaza.
+         */
+        originWhitelist={['*']}
         // La otra puerta: una ventana nueva de verdad. No se abre ninguna.
         onOpenWindow={() => {}}
         allowsBackForwardNavigationGestures={false}

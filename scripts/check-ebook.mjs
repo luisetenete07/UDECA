@@ -34,6 +34,7 @@ import {
   enlaceDeLectura,
   esEbook,
   puedeAbrirse,
+  puedeCargarseDentro,
 } from '../lib/visorDeEbook.ts';
 
 let fallos = 0;
@@ -151,6 +152,23 @@ console.log('\nEl e-book no sale de la app');
     'se puede sacar el e-book de la app por ahí'
   );
   ok('ni irse a otro sitio', !puedeAbrirse('https://cualquier.cosa/x', puente));
+
+  /*
+   * LAS APPS DE FUERA. Lo que sacó a los alumnos de UDECA con la 1.1.5: la
+   * página de Google intenta abrir su app con `intent://` (Android) o
+   * `googledrive://` (iPhone). Esas direcciones no se cargan, se le entregan
+   * al sistema. Y la de Android, con `embedded=true` dentro, se colaba por la
+   * regla del visor de Google, que solo miraba el dominio.
+   */
+  const intent = 'intent://drive.google.com/viewerng/viewer?embedded=true&url=x#Intent;scheme=https;package=com.google.android.apps.docs;end';
+  ok('un intent:// de Drive NO', !puedeAbrirse(intent, puente), 'abre la app de Drive y saca al alumno de UDECA');
+  ok('ni googledrive://', !puedeAbrirse('googledrive://open?id=x', puente));
+  ok('ni la App Store', !puedeAbrirse('itms-apps://apps.apple.com/app/id1', doc));
+  ok('ni un market:// de Google Play', !puedeAbrirse('market://details?id=com.google.android.apps.docs', puente));
+  // Los marcos de dentro: lo que se carga en una página sí; una app, no.
+  ok('un marco web se carga', puedeCargarseDentro('https://drive.google.com/x'));
+  ok('y lo que el visor crea en memoria', puedeCargarseDentro('about:blank') && puedeCargarseDentro('blob:https://x/1'));
+  ok('pero un marco no abre apps', !puedeCargarseDentro(intent) && !puedeCargarseDentro('googledrive://x'));
 }
 
 console.log('\nLa muestra tiene suelo y techo');
@@ -231,7 +249,21 @@ console.log('\nEn la pantalla: el documento ES la pantalla');
   );
   // Los marcos de dentro pasan: el visor de Google pinta el documento en un
   // marco suyo, y cortarlo dejaría Android en blanco.
-  ok('sin cortar los marcos de dentro', /r\.isTopFrame === false \? true/.test(lector));
+  ok(
+    'los marcos de dentro, solo lo que se carga en una página',
+    /r\.isTopFrame === false \? puedeCargarseDentro\(r\.url\)/.test(lector)
+  );
+  /*
+   * LO QUE CAUSÓ LA SALIDA DE LA APP. La librería del visor tiene su propia
+   * lista (http y https) y lo que no está en ella lo abre ella misma con el
+   * sistema, SIN preguntar a nuestro filtro. Abierta a todo, cualquier
+   * dirección llega al filtro, y el filtro decide.
+   */
+  ok(
+    'todas las direcciones pasan por el filtro',
+    /originWhitelist=\{\['\*'\]\}/.test(lector),
+    'la librería vuelve a abrir fuera de la app lo que no es http/https'
+  );
   ok('no se abre ninguna ventana', /onOpenWindow=\{\(\) => \{\}\}/.test(lector));
   ok('ni por varias ventanas', /setSupportMultipleWindows=\{false\}/.test(lector));
   ok('ni desde el JavaScript de la página', /javaScriptCanOpenWindowsAutomatically=\{false\}/.test(lector));

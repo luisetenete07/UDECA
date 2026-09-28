@@ -181,6 +181,15 @@ export function puedeAbrirse(destino: string, documento: string): boolean {
   // Lo que se pidió. La almohadilla no cuenta: cambiarla es moverse por el
   // documento, no irse a otro.
   if (sinAncla(destino) === sinAncla(documento)) return true;
+  /*
+   * NADA QUE NO SEA UNA PÁGINA WEB. Las páginas de Google intentan abrir su
+   * propia app con direcciones como `intent://drive.google.com/...` (Android)
+   * o `googledrive://` (iPhone). Esas direcciones no se cargan: se ENTREGAN al
+   * sistema, que abre la otra app y saca al alumno de UDECA — que es lo que
+   * pasó con la 1.1.5. Y una `intent://` de Drive con `embedded=true` dentro
+   * se colaba por la regla de abajo, que solo miraba el dominio.
+   */
+  if (!/^https?:\/\//i.test(destino)) return false;
   // El visor de Google puede redirigir dentro de su propia casa, y eso sigue
   // siendo nuestro visor MIENTRAS siga empotrado. En cuanto pierde el
   // `embedded=true` es la otra página, la que tiene los botones.
@@ -188,4 +197,16 @@ export function puedeAbrirse(destino: string, documento: string): boolean {
     return esVisorDeGoogle(destino) && /[?&]embedded=(?:true|1)\b/.test(destino);
   }
   return false;
+}
+
+/**
+ * ¿Se deja cargar esto en un marco DE DENTRO de la página del visor?
+ *
+ * El visor de Google pinta el documento en marcos suyos, y cortarlos deja la
+ * pantalla en blanco. Pero un marco tampoco puede ser la puerta a otra app:
+ * solo lo que se carga dentro de una página (web, y lo que el propio visor
+ * crea en memoria). Cualquier otra cosa se la entregaría al sistema.
+ */
+export function puedeCargarseDentro(destino: string): boolean {
+  return /^(?:https?:\/\/|about:|blob:|data:)/i.test(destino ?? '');
 }
