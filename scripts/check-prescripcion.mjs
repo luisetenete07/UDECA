@@ -157,7 +157,7 @@ console.log('\nEl editor guarda lo que se ve');
    * `useCallback` congela lo que no se declara: sin esto se guardarían las
    * etiquetas de intensidad de cuando se abrió la pantalla.
    */
-  ok('las etiquetas de intensidad, en las dependencias del guardado', /nivelesIntensidadTexto,\s*router,\s*\]\);/.test(editor));
+  ok('las etiquetas de intensidad, en las dependencias del guardado', /nivelesIntensidadTexto,[^\]]*router,\s*\]\);/.test(editor));
   ok('al abrir un plan viejo, respeta su herencia', (editor.match(/prescripcion: prescripcionDe\(/g) ?? []).length === 2);
   ok('se elige la intensidad', /'propia' as EscalaDeIntensidad/.test(editor) && /'ninguna' as EscalaDeIntensidad/.test(editor));
   ok('y la variable', /\['tempo', 'Tempo'\]/.test(editor) && /\['ninguna', 'Nada'\]/.test(editor));

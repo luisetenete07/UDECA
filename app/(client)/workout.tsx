@@ -27,6 +27,7 @@ import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { applyWeekPlan } from '../../lib/weekPlan';
 import { esfuerzoDePct, etiquetaCombinada, pctCombinado, textoIntensidad } from '../../lib/intensidad';
+import { queVeElAlumno } from '../../lib/visibilidad';
 import { SelectorDeEsfuerzo } from '../../components/SelectorDeEsfuerzo';
 import { diasDePausa, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
@@ -639,6 +640,12 @@ export default function WorkoutScreen() {
    * alumno que su entrenador haya marcado), y los días se llaman días.
    */
   const perso = isFlex ? routine?.personalizado : undefined;
+  /*
+   * Qué ha decidido el entrenador que se vea: la intensidad del día y el
+   * objetivo de cada ejercicio. Vale para los tres tipos de plan, y sin nada
+   * puesto se ve todo, como siempre (ver lib/visibilidad.ts).
+   */
+  const ve = queVeElAlumno(routine);
   const esfuerzoDelPlan = perso?.esfuerzo;
   /** Lo de siempre: a quién se le pregunta cuando el plan no dice nada. */
   const preguntaHeredada = profile?.role === 'athlete' || profile?.trackRir === true;
@@ -1730,7 +1737,9 @@ export default function WorkoutScreen() {
       <SessionHeader
         titulo={routine.name}
         dia={day && !showCompleted && !esModoGtg ? day.name : null}
-        intensidad={showCompleted || esModoGtg ? null : textoIntensidad(day, routine.schedule)}
+        intensidad={
+          showCompleted || esModoGtg || !ve.intensidad ? null : textoIntensidad(day, routine.schedule)
+        }
         hechas={doneSets}
         // En grease the groove el anillo del día lo lleva su propia pantalla,
         // con las series repartidas; dos anillos distintos en la misma pantalla
@@ -1947,7 +1956,7 @@ export default function WorkoutScreen() {
                         // porcentaje con su palabra ("Exigente · 80 %"), o su
                         // etiqueta tal cual.
                         const intensidad = textoDeIntensidadDelDia(d, perso);
-                        if (ficha.intensidad && intensidad) {
+                        if (ficha.intensidad && ve.intensidad && intensidad) {
                           partes.push(
                             prescripcionDe(perso).intensidad.escala === 'porcentaje'
                               ? `${esfuerzoDePct(d.intensityPct)} · ${intensidad}`
@@ -2439,7 +2448,7 @@ export default function WorkoutScreen() {
                     variable: "RIR 2", "RPE 8", "Tempo 3-1-1-0", "Zona B"... o
                     nada, si su plan no lleva o este ejercicio va vacío. Fuera
                     del plan personalizado, RIR como siempre. */}
-                {textoDePrescripcion(planned, perso) ? (
+                {ve.objetivo && textoDePrescripcion(planned, perso) ? (
                   <View style={styles.metaChip}>
                     <Text style={styles.metaChipText}>{textoDePrescripcion(planned, perso)}</Text>
                   </View>

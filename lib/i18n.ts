@@ -192,6 +192,10 @@ export const EN: Record<string, string> = {
   // --- Entrar, registrarse y completar el perfil ---
   'Tu nombre': 'Your name',
   'Tu nombre (opcional)': 'Your name (optional)',
+  'Qué ve el alumno al entrenar': "What the athlete sees while training",
+  'Intensidad del día': "The day's intensity",
+  '{0} objetivo': "Target {0}",
+  'Lo que apagues lo sigues viendo tú; el alumno no.': "Whatever you switch off, you still see; the athlete does not.",
   'Añadir descripción del álbum': 'Add album description',
   'Foto de la libreta': 'Meal book photo',
   'Lo verán todos tus alumnos con esta foto, en su pestaña de nutrición.': 'All your clients will see this with the photo, in their nutrition tab.',

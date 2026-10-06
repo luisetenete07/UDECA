@@ -1,6 +1,7 @@
 import type { MuscleId } from './muscles';
 import type { PausaPlan } from './pausa';
 import type { EsfuerzoApuntado, PlanPersonalizado } from './planPersonalizado';
+import type { QueVeElAlumno } from './visibilidad';
 
 // 'athlete' = usuario individual que se autoentrena (es su propio coach:
 // crea sus rutinas, sigue su progreso y nutrición). De pago mensual.
@@ -783,6 +784,12 @@ export interface Routine {
    * comportado siempre: ver POR_DEFECTO en lib/planPersonalizado.ts.
    */
   personalizado?: PlanPersonalizado;
+  /**
+   * Qué ve el alumno al entrenar: la intensidad del día y el objetivo de cada
+   * ejercicio (RIR, o la variable del personalizado). Vale para los TRES tipos
+   * de plan. Sin esto, todo visible, como siempre (ver lib/visibilidad.ts).
+   */
+  visibilidad?: QueVeElAlumno;
   /** (Obsoleto) intensidad global; ahora se define por día en RoutineDay. */
   intensity?: number;
   createdAt: number;
@@ -807,6 +814,8 @@ export interface RoutineTemplate {
    * entrenador no quiere volver a montar alumno por alumno.
    */
   personalizado?: PlanPersonalizado;
+  /** Qué ve el alumno al entrenar: también viaja con la plantilla. */
+  visibilidad?: QueVeElAlumno;
   days: RoutineDay[];
   createdAt: number;
 }

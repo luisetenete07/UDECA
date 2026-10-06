@@ -64,6 +64,11 @@ import {
   type VariableDeEjercicio,
 } from '../../../../lib/planPersonalizado';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
+import {
+  queVeElAlumno,
+  visibilidadAGuardar,
+  type QueVeElAlumno,
+} from '../../../../lib/visibilidad';
 import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
 import { nuevoId } from '../../../../lib/ids';
 import { medidaDelGrupo } from '../../../../lib/medidaDeGrupo';
@@ -151,6 +156,11 @@ export default function RoutineEditorScreen() {
     NIVELES_DE_INTENSIDAD_POR_DEFECTO.join(', ')
   );
   const [personalizacionAbierta, setPersonalizacionAbierta] = useState(false);
+  /*
+   * Qué ve el alumno al entrenar (intensidad del día y objetivo de cada
+   * ejercicio). Vale para los tres tipos de plan; ver lib/visibilidad.ts.
+   */
+  const [visibilidad, setVisibilidad] = useState<QueVeElAlumno>({});
   /** Cambia una parte de la configuración sin pisar el resto. */
   const cambiaPerso = (parte: Partial<PlanPersonalizado>) =>
     setPerso((prev) => ({ ...prev, ...parte }));
@@ -268,6 +278,7 @@ export default function RoutineEditorScreen() {
           );
         }
         if (existing.scheduleLabel) setScheduleLabel(flexLabel(existing.scheduleLabel));
+        setVisibilidad(queVeElAlumno(existing));
         if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
         fechaAlAbrir.current = existing.cycleStartDate ?? null;
         if (existing.personalizado) {
@@ -792,6 +803,7 @@ export default function RoutineEditorScreen() {
     setName(t.name);
     setSchedule(t.schedule ?? 'weekly');
     if (t.scheduleLabel) setScheduleLabel(flexLabel(t.scheduleLabel));
+    setVisibilidad(queVeElAlumno(t));
     if (t.personalizado) {
       // La prescripción se resuelve aparte: la de POR_DEFECTO (RIR) pisaría la
           // herencia de un plan guardado antes de que existiera (ver prescripcionDe).
@@ -840,6 +852,7 @@ export default function RoutineEditorScreen() {
         schedule,
         scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
         personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
+        visibilidad: visibilidadAGuardar(visibilidad),
         days: diasAGuardar(),
       });
       setTemplates(await getRoutineTemplatesForTrainer(profile.uid));
@@ -868,6 +881,8 @@ export default function RoutineEditorScreen() {
         // Solo el plan personalizado la lleva: en los otros dos no significa
         // nada, y guardarla ahí sería dejar escrito un ajuste que no se aplica.
         personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
+        // Los tres tipos de plan: se guarda siempre, con las dos claves.
+        visibilidad: visibilidadAGuardar(visibilidad),
       };
       if (cambioLaFecha) fechaAlAbrir.current = cycleStartDate;
       const dias = diasAGuardar();
@@ -921,6 +936,8 @@ export default function RoutineEditorScreen() {
     // Mismo motivo: sin ella se guardarían las etiquetas de intensidad de
     // cuando se abrió la pantalla, no las que se acaban de escribir.
     nivelesIntensidadTexto,
+    // Lo mismo: sin ella se guardaría lo que se veía al abrir la pantalla.
+    visibilidad,
     router,
   ]);
 
@@ -1319,6 +1336,50 @@ export default function RoutineEditorScreen() {
             Asigna cada día a un día de la semana con los botones L-D de abajo.
           </Text>
         )}
+
+        {/*
+         * QUÉ VE EL ALUMNO AL ENTRENAR. En los tres tipos de plan.
+         *
+         * Esconder no es borrar: tú lo sigues viendo aquí y en tus informes.
+         * Un interruptor que no aplica (un personalizado sin intensidad o sin
+         * variable por ejercicio) no se enseña: no habría nada que esconder.
+         */}
+        {(() => {
+          const ve = queVeElAlumno({ visibilidad });
+          const presc = schedule === 'flex' ? prescripcionDe(perso) : null;
+          const hayIntensidad = !presc || presc.intensidad.escala !== 'ninguna';
+          const nombreObjetivo =
+            schedule === 'flex' ? nombreDeLaVariable(configuracionAGuardar()) : 'RIR';
+          if (!hayIntensidad && !nombreObjetivo) return null;
+          return (
+            <>
+              <Text style={styles.persoTitulo}>Qué ve el alumno al entrenar</Text>
+              <View style={styles.persoFichas}>
+                {hayIntensidad ? (
+                  <Chip
+                    texto="Intensidad del día"
+                    icono={ve.intensidad ? 'eye' : 'eye-off-outline'}
+                    activo={ve.intensidad}
+                    compacto
+                    onPress={() => setVisibilidad({ ...ve, intensidad: !ve.intensidad })}
+                  />
+                ) : null}
+                {nombreObjetivo ? (
+                  <Chip
+                    texto={frase`${nombreObjetivo} objetivo`}
+                    icono={ve.objetivo ? 'eye' : 'eye-off-outline'}
+                    activo={ve.objetivo}
+                    compacto
+                    onPress={() => setVisibilidad({ ...ve, objetivo: !ve.objetivo })}
+                  />
+                ) : null}
+              </View>
+              <Text style={styles.persoAyuda}>
+                Lo que apagues lo sigues viendo tú; el alumno no.
+              </Text>
+            </>
+          );
+        })()}
       </Card>
 
       <DragList
