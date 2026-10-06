@@ -101,6 +101,39 @@ import {
 } from '../../../../lib/types';
 
 /** Variantes de carga elegibles al montar la rutina (por ejercicio del plan). */
+/**
+ * Una casilla de número de la ficha del ejercicio: etiqueta corta en una línea
+ * y campo bajo. Cuatro o cinco caben en una fila de móvil; con el TextField de
+ * siempre (52 de alto, etiqueta que se parte) cabían dos.
+ */
+function Casilla({
+  etiqueta,
+  ...resto
+}: { etiqueta: string } & React.ComponentProps<typeof TextField>) {
+  return (
+    <View style={styles.casilla}>
+      <Text style={styles.casillaEtiqueta} numberOfLines={1}>
+        {etiqueta}
+      </Text>
+      <TextField {...resto} containerStyle={styles.casillaCaja} style={styles.casillaCampo} />
+    </View>
+  );
+}
+
+/**
+ * Lo que hay puesto dentro de "más opciones", en una línea: así se sabe sin
+ * abrirlo. Vacío si no hay nada.
+ */
+function resumenDeOpciones(ex: RoutineExercise): string {
+  const partes: string[] = [];
+  if (ex.grip) partes.push(t(GRIP_LABEL[ex.grip]));
+  if (ex.cluster) partes.push(`${t('Clúster')} ${clusterBlocks(ex.cluster)}×${ex.cluster.restSeconds}s`);
+  if (ex.supersetWithPrevious) partes.push(t('Superserie'));
+  if (ex.goal) partes.push(`${t('Objetivo')}: ${ex.goal}`);
+  if (ex.notes?.trim()) partes.push(`"${ex.notes.trim()}"`);
+  return partes.join(' · ');
+}
+
 export default function RoutineEditorScreen() {
   const { id: clientId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -226,6 +259,8 @@ export default function RoutineEditorScreen() {
   );
   // Ejercicios con el recuadro de objetivo abierto (además de los que ya lo tienen).
   const [goalOpen, setGoalOpen] = useState<Record<string, boolean>>({});
+  // Qué fichas tienen abiertas las opciones de carga, agarre, notas...
+  const [detalleAbierto, setDetalleAbierto] = useState<Record<string, boolean>>({});
   // Qué días están desplegados en el editor. Todos cerrados al entrar: con la
   // lista compacta se ve el plan completo de un vistazo y se abre solo el día
   // que se va a tocar.
@@ -740,8 +775,15 @@ export default function RoutineEditorScreen() {
           exercises = exercises.filter((e) => e.id !== ex.id);
         }
         // Añadir al final del día de destino (id nuevo, sin superserie heredada).
+        // Duplicar en el mismo día lo deja justo debajo del original, que es
+        // donde se va a editar.
         if (d.id === targetDayId) {
-          exercises = [...exercises, { ...ex, id: nuevoId(), supersetWithPrevious: false }];
+          const copia = { ...ex, id: nuevoId(), supersetWithPrevious: false };
+          const junto = d.id === dayId ? exercises.findIndex((e) => e.id === ex.id) : -1;
+          exercises =
+            junto >= 0
+              ? [...exercises.slice(0, junto + 1), copia, ...exercises.slice(junto + 1)]
+              : [...exercises, copia];
         }
         return exercises === d.exercises ? d : { ...d, exercises };
       })
@@ -749,13 +791,27 @@ export default function RoutineEditorScreen() {
     // Deja el día de destino desplegado para verlo al instante.
     setExpandedDays((p) => ({ ...p, [targetDayId]: true }));
     setMovePicker(null);
-    showToast(keepOriginal ? 'Ejercicio copiado' : 'Ejercicio movido');
+    showToast(
+      !keepOriginal ? 'Ejercicio movido' : targetDayId === dayId ? 'Ejercicio duplicado' : 'Ejercicio copiado'
+    );
   };
 
   // Mueve un ejercicio una posición arriba o abajo dentro de su día.
+  // El primero de un día no puede ir "en superserie con el anterior": si sube
+  // a la cabeza, pierde la marca en vez de dejarla colgando.
   const reordenarEjercicios = (dayId: string, from: number, to: number) => {
     setDays((prev) =>
-      prev.map((d) => (d.id === dayId ? { ...d, exercises: moveItem(d.exercises, from, to) } : d))
+      prev.map((d) => {
+        if (d.id !== dayId) return d;
+        const exercises = moveItem(d.exercises, from, to);
+        if (exercises === d.exercises) return d;
+        return {
+          ...d,
+          exercises: exercises.map((e, i) =>
+            i === 0 && e.supersetWithPrevious ? { ...e, supersetWithPrevious: false } : e
+          ),
+        };
+      })
     );
   };
 
@@ -1695,55 +1751,187 @@ export default function RoutineEditorScreen() {
                   <Text style={styles.supersetTagText}>SUPERSERIE con el anterior</Text>
                 </View>
               ) : null}
+              {/*
+               * LA CABECERA: nombre y, a la derecha, todo lo que mueve.
+               *
+               * Ordenar era solo arrastrar, y arrastrar en un móvil, dentro de
+               * una lista con scroll y llena de campos de texto, es lo más
+               * lento que hay para "este va uno más arriba". Las flechas lo
+               * hacen de un toque; el asa se queda para los saltos largos.
+               */}
               <View style={styles.exerciseTitleRow}>
-                <Text style={styles.exerciseName}>
-                  {ex.name}
-                  {resolveLoad(ex) === 'assisted' ? (
-                    <Text style={styles.markAssisted}> · goma</Text>
-                  ) : resolveLoad(ex) === 'weighted' ? (
-                    <Text style={styles.markWeighted}> · lastre</Text>
+                <View style={styles.exerciseTitleText}>
+                  <Text style={styles.exerciseName} numberOfLines={2}>
+                    {ex.name}
+                    {resolveLoad(ex) === 'assisted' ? (
+                      <Text style={styles.markAssisted}> · goma</Text>
+                    ) : resolveLoad(ex) === 'weighted' ? (
+                      <Text style={styles.markWeighted}> · lastre</Text>
+                    ) : null}
+                  </Text>
+                  {/* La categoría, debajo del nombre: dos ejercicios que
+                      empiezan igual ("Front lever", "Front lever press") se
+                      distinguen aquí igual que en la pantalla del alumno. */}
+                  {ex.muscleGroup || ex.subgroup ? (
+                    <Text style={styles.exerciseGrupo} numberOfLines={1}>
+                      {ex.muscleGroup}
+                      {ex.muscleGroup && ex.subgroup ? ' · ' : ''}
+                      {ex.subgroup}
+                      {ex.measure === 'seconds' ? ' · isométrico' : ''}
+                    </Text>
                   ) : null}
-                </Text>
-                {days.length > 1 ? (
+                </View>
+                <View style={styles.ordenGrupo}>
                   <Pressable
-                    onPress={() => setMovePicker({ dayId: day.id, ex })}
-                    style={styles.moveBtn}
+                    onPress={() => reordenarEjercicios(day.id, exIndex, exIndex - 1)}
+                    disabled={exIndex === 0}
+                    style={[styles.ordenBtn, exIndex === 0 && styles.ordenBtnApagado]}
                     hitSlop={4}
+                    accessibilityLabel="Subir"
                   >
-                    <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
+                    <Ionicons name="chevron-up" size={18} color={colors.text} />
                   </Pressable>
-                ) : null}
-                {/* Asa: mantener pulsado aquí y mover arriba o abajo. Va
-                    aparte de la fila porque está llena de campos de texto y
-                    colocar el cursor no debe mover el ejercicio. */}
+                  <View style={styles.ordenSeparador} />
+                  <Pressable
+                    onPress={() => reordenarEjercicios(day.id, exIndex, exIndex + 1)}
+                    disabled={exIndex === day.exercises.length - 1}
+                    style={[
+                      styles.ordenBtn,
+                      exIndex === day.exercises.length - 1 && styles.ordenBtnApagado,
+                    ]}
+                    hitSlop={4}
+                    accessibilityLabel="Bajar"
+                  >
+                    <Ionicons name="chevron-down" size={18} color={colors.text} />
+                  </Pressable>
+                </View>
+                {/* Asa: mantener pulsado aquí y arrastrar. Va aparte porque la
+                    ficha está llena de campos y colocar el cursor no debe
+                    mover el ejercicio. */}
                 <View {...asa} style={styles.moveBtn}>
-                  <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
+                  <Ionicons name="reorder-three" size={20} color={colors.textMuted} />
                 </View>
                 <Pressable
-                  onPress={() => removeExercise(day.id, ex.id)}
-                  style={styles.deleteBtn}
+                  onPress={() => setMovePicker({ dayId: day.id, ex })}
+                  style={styles.moveBtn}
                   hitSlop={4}
+                  accessibilityLabel="Mover, copiar o duplicar"
                 >
-                  <Ionicons name="close" size={18} color={colors.danger} />
+                  <Ionicons name="ellipsis-horizontal" size={18} color={colors.primary} />
                 </Pressable>
               </View>
 
-              {/* La categoría del ejercicio, debajo del nombre.
-                  Estaba en el selector de la biblioteca y se perdía justo al
-                  añadirlo al día, que es donde el entrenador pasa el rato: dos
-                  ejercicios que empiezan igual ("Front lever", "Front lever
-                  press") quedaban indistinguibles aquí y sí se distinguían en
-                  la pantalla del alumno. El dato ya viajaba en el plan; solo
-                  faltaba enseñarlo. */}
-              {ex.muscleGroup || ex.subgroup ? (
-                <Text style={styles.exerciseGrupo} numberOfLines={1}>
-                  {ex.muscleGroup}
-                  {ex.muscleGroup && ex.subgroup ? ' · ' : ''}
-                  {ex.subgroup}
-                  {ex.measure === 'seconds' ? ' · isométrico' : ''}
-                </Text>
-              ) : null}
+              {/*
+               * LOS NÚMEROS, EN UNA SOLA FILA. Series, reps, la variable y el
+               * descanso son lo que se toca en cada ficha: antes eran dos
+               * filas de casillas grandes debajo de dos filas de botones.
+               */}
+              <View style={styles.exerciseFields}>
+                <Casilla
+                  etiqueta="Series"
+                  keyboardType="number-pad"
+                  value={String(ex.sets)}
+                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'sets', v)}
+                />
+                <Casilla
+                  etiqueta={
+                    isDualMeasure(ex.measure)
+                      ? isHoldMeasure(ex.measure)
+                        ? 'Seg. izq.'
+                        : 'Reps izq.'
+                      : isHoldMeasure(ex.measure)
+                        ? 'Segundos'
+                        : 'Reps'
+                  }
+                  value={ex.reps}
+                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
+                  placeholder={isHoldMeasure(ex.measure) ? '30' : '8-12'}
+                />
+                {/* Combo: además de las reps, el aguante de la misma serie. */}
+                {ex.measure === 'combo' ? (
+                  <Casilla
+                    etiqueta="Aguante"
+                    value={ex.seconds ?? ''}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'seconds', v)}
+                    placeholder="12"
+                  />
+                ) : isDualMeasure(ex.measure) ? (
+                  /* Por lados: el objetivo del lado derecho. Casi siempre será
+                     el mismo que el izquierdo, pero no siempre. */
+                  <Casilla
+                    etiqueta={isHoldMeasure(ex.measure) ? 'Seg. der.' : 'Reps der.'}
+                    value={ex.side2 ?? ''}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'side2', v)}
+                    placeholder={isHoldMeasure(ex.measure) ? '30' : '8-12'}
+                  />
+                ) : null}
+                {/*
+                 * LA VARIABLE DEL EJERCICIO. Fuera del plan personalizado,
+                 * RIR como siempre. Dentro, la que haya elegido el entrenador:
+                 * RIR, RPE, % RM, tempo, la suya... o ninguna, y entonces la
+                 * casilla desaparece. Vacía, el alumno no ve nada.
+                 */}
+                {schedule !== 'flex' || prescripcionDe(perso).variable.tipo === 'rir' ? (
+                  <Casilla
+                    etiqueta="RIR"
+                    keyboardType="number-pad"
+                    value={ex.rir !== undefined ? String(ex.rir) : ''}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'rir', v)}
+                    placeholder="2"
+                  />
+                ) : nombreDeLaVariable(configuracionAGuardar()) ? (
+                  <Casilla
+                    etiqueta={nombreDeLaVariable(configuracionAGuardar())!}
+                    keyboardType={
+                      prescripcionDe(perso).variable.tipo === 'rpe' ||
+                      prescripcionDe(perso).variable.tipo === 'porcentaje'
+                        ? 'numbers-and-punctuation'
+                        : 'default'
+                    }
+                    autoCapitalize="none"
+                    value={ex.prescrito ?? ''}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'prescrito', v)}
+                    placeholder={ejemploDeLaVariable(perso)}
+                  />
+                ) : null}
+                <Casilla
+                  etiqueta="Descanso"
+                  keyboardType="numbers-and-punctuation"
+                  value={restText[ex.id] ?? minutosSegundos(ex.restSeconds)}
+                  onChangeText={(v) => {
+                    setRestText((prev) => ({ ...prev, [ex.id]: v }));
+                    updateRestSeconds(day.id, ex.id, segundosDeTexto(v));
+                  }}
+                  placeholder="3:30"
+                />
+              </View>
 
+              {/*
+               * LO DEMÁS, PLEGADO. Carga, agarre, indicaciones, objetivo,
+               * clúster y superserie se ponen una vez y no se vuelven a mirar:
+               * no tienen por qué ocupar media pantalla en cada ficha. Plegado
+               * dice en una línea lo que hay puesto, para no tener que abrirlo
+               * para saberlo.
+               */}
+              <Pressable
+                onPress={() => setDetalleAbierto((p) => ({ ...p, [ex.id]: !p[ex.id] }))}
+                style={styles.masFila}
+                hitSlop={4}
+              >
+                <Ionicons
+                  name={detalleAbierto[ex.id] ? 'chevron-up' : 'options-outline'}
+                  size={14}
+                  color={colors.primary}
+                />
+                <Text style={styles.masTexto} numberOfLines={1}>
+                  {detalleAbierto[ex.id]
+                    ? 'Cerrar opciones'
+                    : resumenDeOpciones(ex) || 'Carga, agarre, indicaciones...'}
+                </Text>
+              </Pressable>
+
+              {detalleAbierto[ex.id] ? (
+              <View style={styles.masCaja}>
               <Text style={styles.loadLabel}>Carga</Text>
               <Opciones
                 opciones={LOAD_TYPES.map((l) => ({ valor: l, texto: LOAD_LABEL[l] }))}
@@ -1758,96 +1946,6 @@ export default function RoutineEditorScreen() {
                 desmarcable
                 onChange={(g) => g && setExerciseGrip(day.id, ex.id, g)}
               />
-
-              <View style={styles.exerciseFields}>
-                <TextField
-                  label="Series"
-                  keyboardType="number-pad"
-                  value={String(ex.sets)}
-                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'sets', v)}
-                  containerStyle={styles.smallInput}
-                />
-                <TextField
-                  label={
-                    isDualMeasure(ex.measure)
-                      ? isHoldMeasure(ex.measure)
-                        ? 'Aguante izq. (seg)'
-                        : 'Reps izq.'
-                      : isHoldMeasure(ex.measure)
-                        ? 'Aguante (seg)'
-                        : 'Reps'
-                  }
-                  value={ex.reps}
-                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'reps', v)}
-                  placeholder={isHoldMeasure(ex.measure) ? '30' : '8-12'}
-                  containerStyle={styles.smallInput}
-                />
-                {/* Combo: además de las reps, el aguante de la misma serie. */}
-                {ex.measure === 'combo' ? (
-                  <TextField
-                    label="Aguante (seg)"
-                    value={ex.seconds ?? ''}
-                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'seconds', v)}
-                    placeholder="12"
-                    containerStyle={styles.smallInput}
-                  />
-                ) : isDualMeasure(ex.measure) ? (
-                  /* Por lados: el objetivo del lado derecho. Casi siempre será
-                     el mismo que el izquierdo, pero no siempre, y ahí está la
-                     gracia de poder ponerlo aparte. */
-                  <TextField
-                    label={isHoldMeasure(ex.measure) ? 'Aguante der. (seg)' : 'Reps der.'}
-                    value={ex.side2 ?? ''}
-                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'side2', v)}
-                    placeholder={isHoldMeasure(ex.measure) ? '30' : '8-12'}
-                    containerStyle={styles.smallInput}
-                  />
-                ) : null}
-              </View>
-              <View style={styles.exerciseFields}>
-                {/*
-                 * LA VARIABLE DEL EJERCICIO. Fuera del plan personalizado,
-                 * RIR como siempre. Dentro, la que haya elegido el entrenador:
-                 * RIR, RPE, % RM, tempo, la suya... o ninguna, y entonces la
-                 * casilla desaparece. Vacía, el alumno no ve nada.
-                 */}
-                {schedule !== 'flex' || prescripcionDe(perso).variable.tipo === 'rir' ? (
-                  <TextField
-                    label="RIR"
-                    keyboardType="number-pad"
-                    value={ex.rir !== undefined ? String(ex.rir) : ''}
-                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'rir', v)}
-                    placeholder="2"
-                    containerStyle={styles.smallInput}
-                  />
-                ) : nombreDeLaVariable(configuracionAGuardar()) ? (
-                  <TextField
-                    label={nombreDeLaVariable(configuracionAGuardar())!}
-                    keyboardType={
-                      prescripcionDe(perso).variable.tipo === 'rpe' ||
-                      prescripcionDe(perso).variable.tipo === 'porcentaje'
-                        ? 'numbers-and-punctuation'
-                        : 'default'
-                    }
-                    autoCapitalize="none"
-                    value={ex.prescrito ?? ''}
-                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'prescrito', v)}
-                    placeholder={ejemploDeLaVariable(perso)}
-                    containerStyle={styles.smallInput}
-                  />
-                ) : null}
-                <TextField
-                  label="Descanso (min:seg)"
-                  keyboardType="numbers-and-punctuation"
-                  value={restText[ex.id] ?? minutosSegundos(ex.restSeconds)}
-                  onChangeText={(v) => {
-                    setRestText((prev) => ({ ...prev, [ex.id]: v }));
-                    updateRestSeconds(day.id, ex.id, segundosDeTexto(v));
-                  }}
-                  placeholder="3:30"
-                  containerStyle={styles.smallInput}
-                />
-              </View>
               {/* Clúster: la serie se parte en bloques con una pausa mínima.
                   Los números solo aparecen si está activado, para no meter dos
                   casillas más en la ficha de todos los ejercicios. */}
@@ -1937,6 +2035,8 @@ export default function RoutineEditorScreen() {
                   </Pressable>
                 ) : null}
               </View>
+              </View>
+              ) : null}
             </View>
             )}
           />
@@ -2152,13 +2252,48 @@ export default function RoutineEditorScreen() {
             )}
       </Sheet>
 
+      {/*
+       * MOVER, COPIAR O DUPLICAR. Un solo sitio para todo lo que se hace con
+       * un ejercicio entero: llevarlo a otro día, copiarlo, duplicarlo en el
+       * mismo, mandarlo arriba o abajo del todo de un toque y quitarlo.
+       */}
       <Sheet
         visible={movePicker !== null}
         onClose={() => setMovePicker(null)}
-        titulo="Mover o copiar"
+        titulo="Mover, copiar o duplicar"
         descripcion={movePicker?.ex.name}
       >
             <ScrollView style={styles.modalList}>
+              {(() => {
+                const origen = days.find((d) => d.id === movePicker?.dayId);
+                const pos = origen?.exercises.findIndex((e) => e.id === movePicker?.ex.id) ?? -1;
+                if (!origen || pos < 0 || origen.exercises.length < 2) return null;
+                const ultimo = origen.exercises.length - 1;
+                return (
+                  <View style={styles.moveExtremos}>
+                    <Button
+                      title="Al principio"
+                      variant="secondary"
+                      disabled={pos === 0}
+                      onPress={() => {
+                        reordenarEjercicios(origen.id, pos, 0);
+                        setMovePicker(null);
+                      }}
+                      style={styles.moveExtremoBtn}
+                    />
+                    <Button
+                      title="Al final"
+                      variant="secondary"
+                      disabled={pos === ultimo}
+                      onPress={() => {
+                        reordenarEjercicios(origen.id, pos, ultimo);
+                        setMovePicker(null);
+                      }}
+                      style={styles.moveExtremoBtn}
+                    />
+                  </View>
+                );
+              })()}
               {days.map((d, i) => {
                 const isSource = d.id === movePicker?.dayId;
                 return (
@@ -2174,22 +2309,44 @@ export default function RoutineEditorScreen() {
                         {d.isRest ? ' · descanso' : ''}
                       </Text>
                     </View>
-                    <Button
-                      title="Copiar"
-                      variant="secondary"
-                      onPress={() => moveOrCopyExercise(d.id, true)}
-                      style={styles.moveActionBtn}
-                    />
-                    {!isSource ? (
+                    {isSource ? (
                       <Button
-                        title="Mover"
-                        onPress={() => moveOrCopyExercise(d.id, false)}
+                        title="Duplicar"
+                        variant="secondary"
+                        onPress={() => moveOrCopyExercise(d.id, true)}
+                        compacto
                         style={styles.moveActionBtn}
                       />
-                    ) : null}
+                    ) : (
+                      <>
+                        <Button
+                          title="Copiar"
+                          variant="secondary"
+                          onPress={() => moveOrCopyExercise(d.id, true)}
+                          compacto
+                          style={styles.moveActionBtn}
+                        />
+                        <Button
+                          title="Mover"
+                          onPress={() => moveOrCopyExercise(d.id, false)}
+                          compacto
+                          style={styles.moveActionBtn}
+                        />
+                      </>
+                    )}
                   </View>
                 );
               })}
+              <Pressable
+                onPress={() => {
+                  if (movePicker) removeExercise(movePicker.dayId, movePicker.ex.id);
+                  setMovePicker(null);
+                }}
+                style={styles.moveEliminar}
+              >
+                <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                <Text style={styles.moveEliminarTexto}>Eliminar del día</Text>
+              </Pressable>
             </ScrollView>
       </Sheet>
 
@@ -2371,9 +2528,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    marginBottom: spacing.xs,
   },
-  exerciseFields: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginTop: spacing.xs },
+  exerciseTitleText: { flex: 1, minWidth: 0 },
+  // Subir y bajar, juntos en una pastilla: se leen como un solo control.
+  ordenGrupo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+  },
+  ordenBtn: { paddingHorizontal: 8, paddingVertical: 6 },
+  ordenBtnApagado: { opacity: 0.25 },
+  ordenSeparador: { width: 1, alignSelf: 'stretch', backgroundColor: colors.border },
+  exerciseFields: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginTop: spacing.sm },
+  casilla: { flex: 1, minWidth: 0 },
+  casillaEtiqueta: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.textMuted, marginBottom: 3 },
+  casillaCaja: { marginBottom: 0 },
+  casillaCampo: {
+    minHeight: 40,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    textAlign: 'center',
+    fontSize: 15,
+  },
+  masFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+  },
+  masTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, flexShrink: 1 },
+  masCaja: { marginTop: spacing.xs },
   // Va en `containerStyle`, no en `style`: `style` acaba en el TextInput de
   // dentro, así que el contenedor seguía midiendo lo que ocupase su etiqueta y
   // "Descanso (min:seg)" empujaba la fila fuera de la pantalla.
@@ -2410,7 +2599,6 @@ const styles = StyleSheet.create({
   },
   createNewText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, flex: 1 },
   moveBtn: { padding: spacing.xs },
-  deleteBtn: { padding: spacing.xs },
   moveDayRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2419,7 +2607,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  moveActionBtn: { paddingHorizontal: spacing.md, paddingVertical: 10 },
+  moveActionBtn: { paddingVertical: 10 },
+  moveExtremos: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  moveExtremoBtn: { flex: 1, paddingVertical: 10 },
+  moveEliminar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  moveEliminarTexto: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold },
   supersetTag: {
     flexDirection: 'row',
     alignItems: 'center',
