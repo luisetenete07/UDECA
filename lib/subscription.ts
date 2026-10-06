@@ -18,8 +18,6 @@ import {
  * —que es la que, cuando falla, falla cobrando.
  */
 export {
-  ATHLETE_ANNUAL_LINK,
-  ATHLETE_ENTRY_LINK,
   COACH_ENTRY_LINK,
   COACH_PAYMENT_LINK,
   entryCheckoutUrl,
@@ -27,17 +25,15 @@ export {
 } from './enlacesDeCobro';
 
 /**
- * Modelo de UDECA: paga quien usa la plataforma por su cuenta —el entrenador y
- * el atleta— y los alumnos de un entrenador entran gratis con su código.
+ * Modelo de UDECA: paga el entrenador, y sus alumnos entran gratis con su
+ * código.
  *
- *  - ENTRADA: el PRIMER AÑO ENTERO, pago único. 27 € el entrenador, 17 € el
- *    atleta. No es una prueba: son doce meses con la app completa. El pago con
+ *  - ENTRADA: el PRIMER AÑO ENTERO, pago único. No es una prueba: son doce meses con la app completa. El pago con
  *    tarjeta deja además una huella identificada, que es lo que impide que un
  *    entrenador se reparta en cuentas de cinco alumnos para no pagar el plan.
  *  - ENTRENADOR: su primer año incluye FREE_CLIENT_LIMIT alumnos. Para pasar
  *    de ahí, el plan anual de 180 €, que quita el tope y se puede contratar
  *    desde el primer día. Al terminar el año es la única forma de seguir.
- *  - ATLETA: al terminar su año, renueva por 95 € anuales.
  *  - ALUMNO de un coach: gratis siempre.
  *  - Cuentas sin `subscriptionUntil` = fundadoras (anteriores a la
  *    monetización): acceso completo para no romper nada.
@@ -53,21 +49,15 @@ export {
  *
  * EL MODELO, EN TRES FRASES
  *
- *  - Se entra pagando el PRIMER AÑO ENTERO, una sola vez: 27 € el entrenador,
- *    17 € el atleta. Doce meses por delante, sin nada más que decidir.
- *  - Al terminar ese año hay que renovar: 180 € el entrenador, 95 € el atleta.
- *    Sin renovar, la cuenta de entrenador no se puede usar.
+ *  - Se entra pagando el PRIMER AÑO ENTERO, una sola vez. Doce meses por
+ *    delante, sin nada más que decidir.
+ *  - Al terminar ese año hay que renovar. Sin renovar, la cuenta de entrenador no se puede usar.
  *  - El entrenador puede pasarse al plan de 180 € cuando quiera, también
  *    durante el primer año: es el que quita el tope de cinco alumnos.
  */
 export {
-  AHORRO_PRIMER_ANO_ATLETA_PCT,
   AHORRO_PRIMER_ANO_COACH_PCT,
   ANNUAL_PRICE_EUR,
-  ATHLETE_ANNUAL_EUR,
-  ATHLETE_FIRST_YEAR_EUR,
-  ATHLETE_FIRST_YEAR_MONTHLY_EUR,
-  ATHLETE_MONTHLY_EQUIV_EUR,
   COACH_FIRST_YEAR_EUR,
   COACH_FIRST_YEAR_MONTHLY_EUR,
   COACH_MONTHLY_EQUIV_EUR,
@@ -95,14 +85,11 @@ export {
   PRIMER_ANO_DESDE,
   PRIMER_ANO_DIAS,
   primerAnoHasta,
-  TRIAL_DAYS,
-  trialUntil,
   suscripcionAlNacer,
   CLIENT_GRACE_DAYS,
   CLIENT_REPORT_GRACE_DAYS,
   clientIsLocked,
   clientDaysUntilLock,
-  tocaElAvisoDelAtleta,
 } from './planBase';
 
 /** Endpoint de comprobación bajo demanda (Vercel). Activa la cuenta al momento. */

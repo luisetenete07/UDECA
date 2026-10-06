@@ -28,23 +28,17 @@ const ok = (n, c, porQue = '') => {
   console.log(`  ${c ? '✔' : '✖'} ${n}${!c && porQue ? ` — ${porQue}` : ''}`);
 };
 
-/** Los dos mostradores: uno por tipo de cuenta. */
+/** El mostrador de los entrenadores (el de atletas quedó del perfil retirado). */
 const DOCS = ['fundadores', 'fundadoresAtletas'];
 
-/**
- * Deja los dos mostradores como al principio y crea tres cuentas de prueba.
- *
- * `campana` es para la serie de ATLETAS, que es el rol de las cuentas de
- * prueba; `campanaCoach` para la de entrenadores, cuando el caso la necesita.
- */
-async function preparar(campana, campanaCoach) {
+/** Deja el mostrador como al principio y crea tres cuentas de entrenador. */
+async function preparar(campana) {
   for (const d of DOCS) await db.collection('config').doc(d).delete().catch(() => {});
-  if (campana) await db.collection('config').doc('fundadoresAtletas').set(campana);
-  if (campanaCoach) await db.collection('config').doc('fundadores').set(campanaCoach);
+  if (campana) await db.collection('config').doc('fundadores').set(campana);
   for (const id of ['f1', 'f2', 'f3']) {
     await db.collection('users').doc(id).set({
       uid: id,
-      role: 'athlete',
+      role: 'trainer',
       name: id.toUpperCase(),
       email: `${id}@demo.test`,
       createdAt: Date.now(),
@@ -86,38 +80,12 @@ ok('el 1 entra', (await altaDe('f1')) === 1);
 ok('el 2 entra', (await altaDe('f2')) === 2);
 ok('el tercero se queda fuera', (await altaDe('f3')) === null);
 
-/*
- * 6) Las dos series van por separado.
- *
- * Es la razón de que haya dos mostradores. Con uno solo, el primer atleta que
- * llegaba se encontraba con un #0043 porque antes se habían dado de alta
- * cuarenta y dos entrenadores: el número dejaba de decir "fuiste de los
- * primeros" para decir "llegaste tarde".
- */
-console.log('\n6) Entrenadores y atletas, cada uno con su serie');
-await preparar({ abierta: true }, { abierta: true });
-await db.collection('users').doc('c1').set({
-  uid: 'c1', role: 'trainer', name: 'C1', email: 'c1@demo.test', createdAt: Date.now(),
-});
-ok('el primer entrenador es el 1', (await altaDe('c1')) === 1);
-ok('y el primer atleta TAMBIÉN es el 1', (await altaDe('f1')) === 1);
-ok('el segundo atleta es el 2, no el 3', (await altaDe('f2')) === 2);
-
-console.log('\n7) Cada campaña se abre por su cuenta');
-// La de atletas cerrada, la de entrenadores abierta.
-await preparar({ abierta: false }, { abierta: true });
-await db.collection('users').doc('c1').set({
-  uid: 'c1', role: 'trainer', name: 'C1', email: 'c1@demo.test', createdAt: Date.now(),
-});
-ok('el entrenador recibe su número', (await altaDe('c1')) === 1);
-ok('y el atleta no, porque la suya está cerrada', (await altaDe('f1')) === null);
-
-console.log('\n8) Diez altas a la vez: ningún número repetido');
+console.log('\n6) Diez altas a la vez: ningún número repetido');
 await preparar({ abierta: true });
 const muchos = Array.from({ length: 10 }, (_, i) => `p${i}`);
 for (const id of muchos) {
   await db.collection('users').doc(id).set({
-    uid: id, role: 'athlete', name: id, email: `${id}@demo.test`, createdAt: Date.now(),
+    uid: id, role: 'trainer', name: id, email: `${id}@demo.test`, createdAt: Date.now(),
   });
 }
 await Promise.all(muchos.map((id) => aplicarAlta(db, id, {})));
@@ -128,7 +96,7 @@ ok('ninguno repetido', new Set(nums).size === nums.length, nums.join(', '));
 ok('y del 1 al 10, sin saltos', nums.join(',') === '1,2,3,4,5,6,7,8,9,10', nums.join(', '));
 
 // Limpieza: esto escribe en la misma base que se usa para revisar la app.
-for (const id of ['f1', 'f2', 'f3', 'c1', ...muchos]) {
+for (const id of ['f1', 'f2', 'f3', ...muchos]) {
   await db.collection('users').doc(id).delete().catch(() => {});
 }
 for (const d of DOCS) await db.collection('config').doc(d).delete().catch(() => {});

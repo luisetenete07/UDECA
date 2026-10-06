@@ -5,14 +5,15 @@ más problemas da— **dónde se puede enseñar un precio y dónde no**.
 
 ---
 
-## 1 · Los cuatro cobros
+## 1 · Los cobros
+
+> El perfil de **atleta** (quien se entrenaba solo) se quitó en octubre de 2026:
+> hoy solo paga el entrenador. Lo que queda abajo sobre el atleta es historia.
 
 | Qué | Cuánto | Quién | Dónde se cobra |
 | --- | --- | --- | --- |
 | **Primer año del entrenador** | 27 €, una vez | entrenador al entrar | web (`pagos.altaCoach`) o app (`COACH_ENTRY_LINK`) |
-| **Primer año del atleta** | 17 €, una vez | atleta al entrar | web (`pagos.altaAtleta`) o app (`ATHLETE_ENTRY_LINK`) |
 | **Plan anual del entrenador** | 180 €/año | para quitar el tope de 5 alumnos, y para seguir a partir del segundo año | app (`COACH_PAYMENT_LINK`) |
-| **Renovación del atleta** | 96 €/año | atleta a partir del segundo año | app (`ATHLETE_ANNUAL_LINK`) |
 
 El **alumno de un entrenador no le paga nada a UDECA**. Lo que le paga a su
 entrenador es cosa de los dos: la app solo lleva la cuenta.
@@ -75,28 +76,6 @@ Lo que ocurre ahora:
 
 Por eso la página de gracias insiste tanto en registrarse con el mismo correo:
 es lo único que une el pago con la cuenta.
-
-### Al atleta se le avisa antes de que se acabe
-
-A tres días del final y el último día, por notificación
-(`payments-webhook/api/cron-daily.js`). La app se lo promete por escrito en la
-tarjeta del plan, así que tiene que cumplirse: entrar el día 29 y encontrarse el
-muro de pago sin previo aviso convierte a alguien que iba a pagar en alguien que
-se va.
-
-El aviso guarda el **hito** enviado (3 o 1) y no la fecha, para que los dos
-puedan salir con un día de diferencia sin pisarse, y deja de aplicar solo en
-cuanto la persona paga.
-
-Sale por **notificación push y por correo**. Es el único aviso de la tarea
-diaria que va por los dos caminos, y con razón: el push solo existe si la
-persona tiene la app de móvil instalada y ha dado permiso, y quien usa UDECA
-desde el navegador no tendría forma de enterarse. Encontrarse el muro de pago el
-último día sin aviso, después de que la app lo prometiera por escrito, convierte a
-alguien que iba a pagar en alguien que se va.
-
-El hito se marca aunque no salga ningún aviso (ni push ni correo). Si no, se
-reintentaría a diario con quien no tiene ninguno de los dos.
 
 ### Cuándo empieza el primer año
 
@@ -162,7 +141,7 @@ En Android, web y APK no cambia nada: se cobra con normalidad.
 1. Si es una **suscripción**, extiende `subscriptionUntil` hasta el fin del
    periodo pagado y escribe `subscriptionPlan`.
 2. Si es un **pago suelto**, mira el rol de quien paga:
-   - entrenador o atleta → es el primer año: escribe `entryPaidAt`, guarda la
+   - entrenador → es el primer año: escribe `entryPaidAt`, guarda la
      huella de la tarjeta, reparte (o no) las plazas de alumno y pone
      `subscriptionUntil` a 365 días.
    - alumno → es la cuota que le paga a su entrenador.

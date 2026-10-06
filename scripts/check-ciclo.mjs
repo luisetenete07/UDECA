@@ -189,7 +189,6 @@ console.log('\nY está enganchado donde tiene que estar');
    */
   for (const [ruta, quien] of [
     ['app/(trainer)/clients/[id]/routine.tsx', 'el editor del coach'],
-    ['app/(client)/my-plan.tsx', 'el plan del atleta'],
   ]) {
     const t = lee(ruta);
     ok(`${quien}: solo anota la fecha si cambia`,

@@ -49,15 +49,13 @@ const sinComentarios = (s) =>
   s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const editorCoach = sinComentarios(lee('app/(trainer)/clients/[id]/routine.tsx'));
-const editorAtleta = sinComentarios(lee('app/(client)/my-plan.tsx'));
 const entreno = sinComentarios(lee('app/(client)/workout.tsx'));
 
 // =========================================================================
-console.log('\n1 · Tres modos, y el tercero se llama igual en los dos editores');
+console.log('\n1 · Tres modos, y el tercero se llama "Crear personalizado"');
 // =========================================================================
 for (const [quien, texto] of [
   ['el editor del entrenador', editorCoach],
-  ['el del atleta', editorAtleta],
 ]) {
   ok(
     `${quien}: sin "Grease the groove" como plan`,

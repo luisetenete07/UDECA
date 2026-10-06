@@ -7,12 +7,11 @@ export default function PrivacyPolicy() {
   return (
     <ScrollView contentContainerStyle={styles.container} style={{ backgroundColor: colors.background }}>
       <Text style={styles.title}>Política de privacidad de UDECA</Text>
-      <Text style={styles.updated}>Última actualización: septiembre 2026</Text>
+      <Text style={styles.updated}>Última actualización: octubre 2026</Text>
 
       <Text style={styles.intro}>
         UDECA (Universidad de Calistenia) es una aplicación de entrenamiento de calistenia que
-        conecta a entrenadores con sus alumnos y permite a atletas individuales gestionar su propio
-        plan. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes.
+        conecta a entrenadores con sus alumnos. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes.
         El responsable del tratamiento es el titular de UDECA; puedes contactar en cualquier momento
         en <Text style={styles.bold}>luistenaf@gmail.com</Text>.
       </Text>
@@ -37,8 +36,8 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="2. Para qué usamos tus datos">
-        Tratamos tus datos para: ofrecerte el servicio de entrenamiento y seguimiento con tu coach
-        (o gestionar tu propio plan si eres atleta individual); mostrarte tu progreso y estadísticas;
+        Tratamos tus datos para: ofrecerte el servicio de entrenamiento y seguimiento con tu coach;
+        mostrarte tu progreso y estadísticas;
         gestionar tu cuenta y la relación con tu entrenador; enviarte notificaciones relacionadas con
         tu entrenamiento y avisos de pago (solo si las activas); y gestionar el cobro de la
         cuota de tu entrenador. No usamos tus datos para publicidad ni para elaborar perfiles
@@ -80,8 +79,7 @@ export default function PrivacyPolicy() {
       <Section title="5. Proveedores y con quién se comparten">
         Tus datos de entrenamiento son visibles para tu <Text style={styles.bold}>entrenador
         asignado</Text> en UDECA (no lo son para otros alumnos, salvo la clasificación del grupo y tu
-        estado en línea, que puedes tratar con tu coach). Si eres atleta individual, tus datos no se
-        comparten con ningún entrenador.{'\n\n'}
+        estado en línea, que puedes tratar con tu coach).{'\n\n'}
         Para funcionar, la app se apoya en proveedores de infraestructura que actúan como encargados
         del tratamiento:{'\n'}
         • <Text style={styles.bold}>Firebase (Google):</Text> autenticación, base de datos y

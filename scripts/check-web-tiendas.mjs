@@ -35,7 +35,7 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-web-tiendas.mjs
  */
 import { readFileSync, statSync } from 'node:fs';
-import { ATHLETE_FIRST_YEAR_EUR, COACH_FIRST_YEAR_EUR } from '../lib/precios.ts';
+import { COACH_FIRST_YEAR_EUR } from '../lib/precios.ts';
 
 let fallos = 0;
 const ok = (n, c, porQue = '') => {
@@ -197,13 +197,8 @@ if (ld) {
     const ofertas = datos.offers || [];
     const precios = ofertas.map((o) => Number(o.price)).sort((a, b) => a - b);
     ok(
-      'el primer año del atleta coincide con lib/precios.ts',
-      precios.includes(ATHLETE_FIRST_YEAR_EUR),
-      `en los datos hay ${precios.join(', ')} y el del atleta es ${ATHLETE_FIRST_YEAR_EUR}`
-    );
-    ok(
-      'el del entrenador también',
-      precios.includes(COACH_FIRST_YEAR_EUR),
+      'el primer año del entrenador coincide con lib/precios.ts',
+      precios.length === 1 && precios.includes(COACH_FIRST_YEAR_EUR),
       `en los datos hay ${precios.join(', ')} y el del entrenador es ${COACH_FIRST_YEAR_EUR}`
     );
     ok(

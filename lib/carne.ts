@@ -21,11 +21,11 @@ import type { UserProfile } from './types';
  * el único dato de esta tarjeta que no se puede conseguir más tarde.
  */
 
-export type TipoDeCarne = 'coach' | 'atleta' | 'alumno' | 'formacion';
+export type TipoDeCarne = 'coach' | 'alumno' | 'formacion';
 
 export interface Carne {
   tipo: TipoDeCarne;
-  /** "ENTRENADOR", "ATLETA"... Va grande, debajo del nombre. */
+  /** "ENTRENADOR", "ALUMNO"... Va grande, debajo del nombre. */
   titulo: string;
   /** Una línea de qué significa ese tipo. Corta: se lee de lejos. */
   lema: string;
@@ -43,8 +43,8 @@ export interface Carne {
 /**
  * Cada tipo con su color, su monograma y su frase.
  *
- * Los cuatro colores salen del mismo oro: son el mismo material a distinta
- * temperatura, no cuatro colores de marcas distintas. Una tarjeta verde y otra
+ * Los tres colores salen del mismo oro: son el mismo material a distinta
+ * temperatura, no tres colores de marcas distintas. Una tarjeta verde y otra
  * azul se verían de dos empresas.
  */
 const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'fundador' | 'tipo'>> = {
@@ -53,12 +53,6 @@ const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'fundador' | '
     lema: 'Forma a otros dentro de UDECA',
     monograma: 'EN',
     acento: '#C9BDB0',
-  },
-  atleta: {
-    titulo: 'ATLETA',
-    lema: 'Se entrena a sí mismo',
-    monograma: 'AT',
-    acento: '#A2968B',
   },
   alumno: {
     titulo: 'ALUMNO',
@@ -93,7 +87,7 @@ export function tipoDeCarne(
 ): TipoDeCarne {
   if (p?.role === 'trainer') return 'coach';
   if (conCursos && !conPlan) return 'formacion';
-  return p?.role === 'athlete' ? 'atleta' : 'alumno';
+  return 'alumno';
 }
 
 /** Todo lo que va impreso en el carné, ya resuelto. */

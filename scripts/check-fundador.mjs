@@ -21,7 +21,16 @@ function comprueba(nombre, condicion, detalle = '') {
 
 const base = { uid: 'u', name: 'X', email: 'x@y.z', createdAt: 0 };
 const coach = (extra) => ({ ...base, role: 'trainer', founderNumber: 28, ...extra });
-const atleta = (extra) => ({ ...base, role: 'athlete', founderNumber: 28, ...extra });
+// Un entrenador del modelo del primer año: sin año pagado se queda fuera (a
+// los de antes se les respetan sus cinco alumnos gratis). Antes este papel lo
+// hacía el atleta, que se quitó.
+const nuevo = (extra) => ({
+  ...base,
+  role: 'trainer',
+  createdAt: Date.parse('2026-09-20T10:00:00Z'),
+  founderNumber: 28,
+  ...extra,
+});
 
 console.log('\nSin número, no hay insignia');
 comprueba('cuenta sin número', estadoInsignia(coach({ founderNumber: undefined })).activa === false);
@@ -33,7 +42,7 @@ comprueba(
 
 console.log('\nEl número NO se pierde nunca');
 const caducado = estadoInsignia(
-  atleta({ subscriptionUntil: AHORA - 30 * DIA, trialEndsAt: AHORA - 30 * DIA }),
+  nuevo({ subscriptionUntil: AHORA - 30 * DIA, trialEndsAt: AHORA - 30 * DIA }),
   AHORA
 );
 comprueba('con la cuenta caducada la insignia se apaga', caducado.activa === false);
@@ -42,17 +51,17 @@ comprueba('pero el número sigue ahí', caducado.numero === 28, String(caducado.
 console.log('\nAtleta: paga o se apaga');
 comprueba(
   'en prueba, encendida',
-  estadoInsignia(atleta({ subscriptionUntil: AHORA + 10 * DIA, trialEndsAt: AHORA + 10 * DIA }), AHORA)
+  estadoInsignia(nuevo({ subscriptionUntil: AHORA + 10 * DIA, trialEndsAt: AHORA + 10 * DIA }), AHORA)
     .activa === true
 );
 comprueba(
   'con el plan al día, encendida',
-  estadoInsignia(atleta({ subscriptionUntil: AHORA + 200 * DIA, trialEndsAt: AHORA - 5 * DIA }), AHORA)
+  estadoInsignia(nuevo({ subscriptionUntil: AHORA + 200 * DIA, trialEndsAt: AHORA - 5 * DIA }), AHORA)
     .activa === true
 );
 comprueba(
   'al expirar sin pagar, apagada',
-  estadoInsignia(atleta({ subscriptionUntil: AHORA - DIA, trialEndsAt: AHORA - DIA }), AHORA)
+  estadoInsignia(nuevo({ subscriptionUntil: AHORA - DIA, trialEndsAt: AHORA - DIA }), AHORA)
     .activa === false
 );
 
@@ -101,22 +110,22 @@ comprueba(
 
 console.log(`\nEl aviso, ${AVISO_DIAS} días antes`);
 const enAviso = estadoInsignia(
-  atleta({ subscriptionUntil: AHORA + 3 * DIA, trialEndsAt: AHORA + 3 * DIA }),
+  nuevo({ subscriptionUntil: AHORA + 3 * DIA, trialEndsAt: AHORA + 3 * DIA }),
   AHORA
 );
 comprueba('a 3 días avisa', enAviso.diasParaApagarse === 3, String(enAviso.diasParaApagarse));
 comprueba(
   'a 6 días todavía no',
-  estadoInsignia(atleta({ subscriptionUntil: AHORA + 6 * DIA }), AHORA).diasParaApagarse === null
+  estadoInsignia(nuevo({ subscriptionUntil: AHORA + 6 * DIA }), AHORA).diasParaApagarse === null
 );
 comprueba(
   'justo en el límite del aviso, sí',
-  estadoInsignia(atleta({ subscriptionUntil: AHORA + AVISO_DIAS * DIA }), AHORA).diasParaApagarse ===
+  estadoInsignia(nuevo({ subscriptionUntil: AHORA + AVISO_DIAS * DIA }), AHORA).diasParaApagarse ===
     AVISO_DIAS
 );
 comprueba(
   'ya apagada no cuenta atrás',
-  estadoInsignia(atleta({ subscriptionUntil: AHORA - DIA }), AHORA).diasParaApagarse === null
+  estadoInsignia(nuevo({ subscriptionUntil: AHORA - DIA }), AHORA).diasParaApagarse === null
 );
 
 console.log('\nY al coach no se le mete prisa con algo que no le va a pasar');
@@ -137,7 +146,7 @@ comprueba(
 // insignia apagada, o gente en el muro de pago con la insignia en oro.
 console.log('\nLa insignia y la puerta, siempre de acuerdo');
 {
-  const roles = ['trainer', 'athlete', 'client'];
+  const roles = ['trainer', 'client'];
   const fechas = [undefined, AHORA - 99 * DIA, AHORA - DIA, AHORA + DIA, AHORA + 99 * DIA];
   const alumnos = [0, 3, 5, 6, 40];
   const plazas = [undefined, 0, 5];

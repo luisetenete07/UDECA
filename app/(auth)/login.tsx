@@ -263,11 +263,7 @@ export default function LoginScreen() {
                         {acc.name}
                       </Text>
                       <Text style={styles.accMeta} numberOfLines={1}>
-                        {acc.role === 'trainer'
-                          ? 'Entrenador'
-                          : acc.role === 'athlete'
-                            ? 'Atleta'
-                            : 'Alumno'}{' '}
+                        {acc.role === 'trainer' ? 'Entrenador' : 'Alumno'}{' '}
                         · {NOMBRE_DEL_PROVEEDOR[acc.provider]}
                       </Text>
                     </View>

@@ -195,6 +195,12 @@ export const EN: Record<string, string> = {
   'Qué se usa en este plan': 'What this plan uses',
   'Intensidad del día': "The day's intensity",
   '{0} objetivo': "Target {0}",
+  // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
+  'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
+  'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':
+    'UDECA is now for coaches and their students. If you train with someone, ask them to invite you and sign in with a student account.',
+  'Si quieres, puedes eliminar esta cuenta y todos sus datos.':
+    'If you like, you can delete this account and all its data.',
   'Lo que apagues desaparece para ti y para el alumno hasta que lo vuelvas a encender. Lo que ya habías puesto se guarda.':
     'Whatever you switch off disappears for you and the athlete until you switch it back on. What you had entered is kept.',
   'Añadir descripción del álbum': 'Add album description',
@@ -909,8 +915,7 @@ export const EN: Record<string, string> = {
   'Cargando errores...': 'Loading errors...',
   'Ningún error registrado. Buena señal.': 'No errors logged. Good sign.',
   'Admin UDECA · cuentas': 'UDECA admin · accounts',
-  'Gestiona las suscripciones de quien paga: entrenadores y atletas.':
-    'Manage the subscriptions of those who pay: coaches and athletes.',
+  'Gestiona las suscripciones de los entrenadores.': 'Manage the coaches’ subscriptions.',
   'Cargando…': 'Loading…',
   Quitar: 'Remove',
   'Nuevo código (letras y números)': 'New code (letters and numbers)',
@@ -1798,9 +1803,9 @@ export const EN: Record<string, string> = {
   'Método, no improvisación': 'Method, not improvisation',
   'Planes con progresión medida. Cada serie, cada segundo de isométrico y cada récord quedan registrados.':
     'Plans with measured progression. Every set, every second of a hold and every PR is logged.',
-  'Solo o acompañado': 'Alone or with others',
-  'Entrena con tu entrenador y tu grupo, o crea tú mismo tu plan como atleta independiente.':
-    'Train with your coach and your group, or build your own plan as an independent athlete.',
+  'Con tu entrenador': 'With your coach',
+  'Entrena con tu entrenador y tu grupo: te manda el plan y lo sigues desde el móvil.':
+    'Train with your coach and your group: they send you the plan and you follow it on your phone.',
 
   // --- Cursos ---
   sección: 'section',

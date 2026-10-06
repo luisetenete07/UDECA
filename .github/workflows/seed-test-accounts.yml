@@ -1,6 +1,6 @@
 name: Cuentas de prueba
 
-# Crea (o resetea) las tres cuentas de prueba: coach, atleta y alumno.
+# Crea (o resetea) las dos cuentas de prueba: coach y alumno.
 #
 # Se lanza a mano desde Actions → "Cuentas de prueba" → Run workflow. Así no
 # hace falta tener el proyecto descargado, ni Node instalado, ni manejar la
@@ -28,7 +28,7 @@ on:
         required: false
         default: ''
       email_base:
-        description: 'Correo base (las cuentas serán correo+coach@, +atleta@, +alumno@)'
+        description: 'Correo base (las cuentas serán correo+coach@ y +alumno@)'
         required: false
         default: 'udeca.app@gmail.com'
 

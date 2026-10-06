@@ -58,8 +58,8 @@ jobs:
       #
       # Lo piden las DOS comprobaciones que no leen las reglas de Firestore
       # sino que las ejecutan: `check-registro` (crear cuenta, que es donde
-      # estaba el fallo de "missing or insufficient permissions" que dejaba
-      # fuera a los atletas) y `check-rules` (quién puede escribir qué). Son
+      # estaba el fallo de "missing or insufficient permissions" al crear
+      # cuenta) y `check-rules` (quién puede escribir qué). Son
       # las que cubren la parte del código que decide quién entra y quién
       # paga, y son justo las que no se pueden probar leyendo un fichero: una
       # regla mal escrita compila igual.

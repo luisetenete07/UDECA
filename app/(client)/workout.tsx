@@ -98,7 +98,6 @@ import {
 import { Sheet } from '../../components/Sheet';
 import { Chip, ChipRow } from '../../components/Chip';
 import { minutosSegundos } from '../../lib/duracion';
-import { idDeEjercicioPropio, nuevoId } from '../../lib/ids';
 import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
   clusterBlocks,
@@ -118,9 +117,6 @@ import {
 } from '../../lib/types';
 
 const DEFAULT_REST_SECONDS = 90;
-// Series con las que entra un ejercicio añadido a mitad de sesión. Se pueden
-// subir y bajar ahí mismo; tres es lo que casi siempre acaba haciéndose.
-const SERIES_AL_ANADIR = 3;
 // Una sesión a medias se conserva hasta 3 días: dentro del MISMO día se retoma
 // sola; si es de un día anterior, se ofrece el botón "Rellenar último entreno".
 const DRAFT_TTL_MS = 72 * 60 * 60 * 1000;
@@ -226,11 +222,6 @@ export default function WorkoutScreen() {
     useState<Record<string, import('../../lib/types').ExerciseMeasure>>({});
   // Grupo muscular de cada ejercicio (para el calentamiento sugerido del día).
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
-  // Biblioteca de ejercicios, para que el atleta pueda meter uno a mitad de
-  // sesión sin escribir el nombre entero.
-  const [libreria, setLibreria] = useState<import('../../lib/types').Exercise[]>([]);
-  const [anadirEjOpen, setAnadirEjOpen] = useState(false);
-  const [buscaEj, setBuscaEj] = useState('');
   const [warmupOpen, setWarmupOpen] = useState(false);
   const [intervalOpen, setIntervalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -326,7 +317,6 @@ export default function WorkoutScreen() {
               setVideoByExercise(map);
               setMeasureByExercise(measures);
               setMuscleByExercise(muscles);
-              setLibreria(library);
             })
             .catch(() => {});
         }
@@ -648,7 +638,7 @@ export default function WorkoutScreen() {
   const ve = queVeElAlumno(routine);
   const esfuerzoDelPlan = perso?.esfuerzo;
   /** Lo de siempre: a quién se le pregunta cuando el plan no dice nada. */
-  const preguntaHeredada = profile?.role === 'athlete' || profile?.trackRir === true;
+  const preguntaHeredada = profile?.trackRir === true;
   const pideEsfuerzoPorEjercicio = perso
     ? tocaPreguntarEsfuerzo(perso, 'ejercicio')
     : preguntaHeredada;
@@ -849,73 +839,6 @@ export default function WorkoutScreen() {
     startedAt.current = null;
     olvidarBorrador();
     stopRest();
-  };
-
-  /*
-   * El atleta mete un ejercicio a mitad de sesión.
-   *
-   * Se autoentrena: su plan es una guía suya, no el encargo de nadie, y a
-   * mitad de sesión decide que hoy también toca remo porque la barra está
-   * libre. Hasta ahora la única salida era salirse, editar el plan y volver a
-   * empezar la sesión, así que en la práctica ese ejercicio no se apuntaba.
-   *
-   * Al alumno de un entrenador no se le ofrece: su plan se lo pone otro, y
-   * dejar que lo cambie a mitad de sesión convierte el plan en una sugerencia
-   * y deja al entrenador sin saber qué se hizo de lo que mandó.
-   */
-  const esAtleta = profile?.role === 'athlete';
-
-  const anadirEjercicioSuelto = (nombre: string, id?: string, measure?: ExerciseMeasure) => {
-    const limpio = nombre.trim();
-    if (!limpio) return;
-    const base = combinedDay ?? routine?.days.find((d) => d.id === selectedDayId);
-    if (!base) return;
-    const exerciseId = id ?? idDeEjercicioPropio(limpio);
-    // Si ya está en la sesión, no se duplica: se salta a él, que es lo que se
-    // venía a hacer.
-    const yaEsta = log.findIndex((e) => e.exerciseId === exerciseId);
-    if (yaEsta >= 0) {
-      setViewIndex(yaEsta);
-      setAnadirEjOpen(false);
-      setBuscaEj('');
-      showToast('Ese ejercicio ya está en la sesión');
-      return;
-    }
-    const medida = measure ?? measureByExercise[exerciseId] ?? 'reps';
-    // El día pasa a ser uno propio de esta sesión: así el resto de la pantalla
-    // (descansos, objetivos, superseries) encuentra el ejercicio en su sitio.
-    setCombinedDay({
-      ...base,
-      exercises: [
-        ...base.exercises,
-        {
-          id: nuevoId(),
-          exerciseId,
-          name: limpio,
-          sets: SERIES_AL_ANADIR,
-          reps: '',
-          measure: medida,
-          load: 'none',
-        },
-      ],
-    });
-    setLog((prev) => [
-      ...prev,
-      {
-        exerciseId,
-        name: limpio,
-        measure: medida,
-        load: 'none',
-        sets: Array.from({ length: SERIES_AL_ANADIR }, () => ({
-          reps: '',
-          weight: '',
-          completed: false,
-        })),
-      },
-    ]);
-    setViewIndex(log.length);
-    setAnadirEjOpen(false);
-    setBuscaEj('');
   };
 
   // Sensaciones: alumno añade/quita una serie a un ejercicio según se sienta.
@@ -1383,16 +1306,6 @@ export default function WorkoutScreen() {
   // Lo que se toca una vez al mes vive detrás del punto de la cabecera, no
   // ocupando dos filas encima de la primera serie.
   const accionesSesion: AccionRapida[] = [
-    // El atleta se autoentrena: si hoy también hace remo, lo mete y ya.
-    ...(esAtleta && !showCompleted && !esModoGtg && day && !day.isRest
-      ? ([
-          {
-            icono: 'add-circle-outline' as const,
-            texto: 'Añadir un ejercicio a esta sesión',
-            onPress: () => setAnadirEjOpen(true),
-          },
-        ] satisfies AccionRapida[])
-      : []),
     ...(routine?.schedule === 'cycle'
       ? ([
           {
@@ -2011,59 +1924,6 @@ export default function WorkoutScreen() {
         </FadeIn>
       ) : null}
 
-      {/* El atleta mete un ejercicio a mitad de sesión: de su biblioteca si lo
-          tiene, o escribiendo el nombre si es la primera vez que lo hace. */}
-      <Sheet
-        visible={anadirEjOpen}
-        onClose={() => {
-          setAnadirEjOpen(false);
-          setBuscaEj('');
-        }}
-        titulo="Añadir un ejercicio"
-        descripcion="Se añade solo a la sesión de hoy. Tu plan se queda como está."
-      >
-        <TextField
-          value={buscaEj}
-          onChangeText={setBuscaEj}
-          placeholder="Busca o escribe el nombre"
-          autoFocus
-          onSubmitEditing={() => anadirEjercicioSuelto(buscaEj)}
-          returnKeyType="done"
-        />
-        {libreria
-          .filter((e) =>
-            buscaEj.trim()
-              ? e.name.toLowerCase().includes(buscaEj.trim().toLowerCase())
-              : true
-          )
-          .slice(0, 8)
-          .map((e) => (
-            <Pressable
-              key={e.id}
-              onPress={() => anadirEjercicioSuelto(e.name, e.id, e.measure)}
-              style={styles.filaBiblioteca}
-            >
-              <Ionicons name="barbell-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.filaBibliotecaTexto} numberOfLines={1}>
-                {e.name}
-              </Text>
-              <Text style={styles.filaBibliotecaGrupo} numberOfLines={1}>
-                {e.muscleGroup}
-              </Text>
-            </Pressable>
-          ))}
-        {/* Lo que se escribe vale aunque no esté en la biblioteca: la sesión no
-            es el sitio para dar de alta ejercicios con su ficha entera. */}
-        {buscaEj.trim() &&
-        !libreria.some((e) => e.name.toLowerCase() === buscaEj.trim().toLowerCase()) ? (
-          <Button
-            title={`Añadir "${buscaEj.trim()}"`}
-            onPress={() => anadirEjercicioSuelto(buscaEj)}
-            style={{ marginTop: spacing.sm }}
-          />
-        ) : null}
-      </Sheet>
-
       {/* Fijar qué día del ciclo es HOY (plan desactualizado o día pospuesto). */}
       <Sheet
         visible={dayPickerOpen}
@@ -2637,7 +2497,7 @@ export default function WorkoutScreen() {
                 </Text>
               </Pressable>
             ) : null}
-            {isFlex || esAtleta ? (
+            {isFlex ? (
               <View style={styles.setEditRow}>
                 <Pressable onPress={() => removeSet(exerciseIndex)} style={styles.setEditBtn} hitSlop={6}>
                   <Ionicons name="remove" size={16} color={colors.textMuted} />
@@ -2900,16 +2760,6 @@ const styles = StyleSheet.create({
   flexHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md, paddingVertical: 3 },
   flexHistoryDate: { ...typography.small, color: colors.textFaint, width: 74 },
   flexHistoryWhat: { ...typography.small, color: colors.textMuted, flex: 1, textAlign: 'right' },
-  filaBiblioteca: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  filaBibliotecaTexto: { ...typography.body, color: colors.text, flex: 1 },
-  filaBibliotecaGrupo: { ...typography.small, color: colors.textFaint, flexShrink: 0 },
   setEditRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

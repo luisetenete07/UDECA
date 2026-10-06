@@ -73,7 +73,6 @@ async function como(email) {
 }
 
 const coach = await ensure('coach@demo.test', 'Luis Tena');
-const atleta = await ensure('atleta@demo.test', 'Sara Vidal');
 
 /**
  * Borra lo sembrado antes por esta cuenta.
@@ -122,22 +121,43 @@ const alumnos = [
   [cli2, 'Ana Gil', 'alumno2@demo.test', 45, -3, 'pending'],
   [cli3, 'Iker Sanz', 'alumno3@demo.test', 40, 12, 'paid'],
 ];
+/*
+ * EL ALUMNO ENTRA COMO EN LA APP: pide entrar y el entrenador le acepta.
+ *
+ * Las reglas no dejan que nadie nazca con `trainerId` ni que se lo ponga él
+ * (sería colarse en un grupo sin que le acepten), así que la siembra hace lo
+ * mismo que la app: el alumno crea su perfil y su solicitud, y el entrenador
+ * pone el vínculo. Al resembrar, el vínculo ya existe y no se toca.
+ */
+const porAceptar = [];
 for (const [uid, name, email, fee, dias, estado] of alumnos) {
   const due = now + dias * DAY;
   await como(email);
+  const dentro = (await getDoc(doc(db, 'users', uid))).data()?.trainerId === coach;
   // Con `merge`: hay campos del perfil que el propio alumno NO puede tocar
   // (como `trackRir`, que decide su entrenador), y reescribir el documento
   // entero los borraría — que es exactamente lo que las reglas impiden.
   await setDoc(
     doc(db, 'users', uid),
     {
-      uid, role: 'client', name, email, createdAt: now - 120 * DAY, trainerId: coach,
+      uid, role: 'client', name, email, createdAt: now - 120 * DAY,
       emailVerificationRequired: false, monthlyFeeEur: fee, paymentStatus: estado,
       nextPaymentDate: due, billingAnchorDay: new Date(due).getDate(),
       weightKg: 74.5, heightCm: 178, goal: 'Muscle up estricto', level: 'Intermedio',
     },
     { merge: true }
   );
+  if (!dentro) {
+    await setDoc(doc(db, 'joinRequests', `${uid}_${coach}`), {
+      id: `${uid}_${coach}`, trainerId: coach, clientId: uid, name, email, createdAt: now,
+    });
+    porAceptar.push(uid);
+  }
+}
+await como('coach@demo.test');
+for (const uid of porAceptar) {
+  await setDoc(doc(db, 'users', uid), { trainerId: coach }, { merge: true });
+  await deleteDoc(doc(db, 'joinRequests', `${uid}_${coach}`));
 }
 
 // El esfuerzo (RIR) lo activa el ENTRENADOR, no el alumno: las reglas se lo
@@ -166,11 +186,6 @@ await limpiar('weightLogs', 'clientId', cli);
 await como('alumno2@demo.test');
 await limpiar('workoutLogs', 'clientId', cli2);
 await limpiar('weightLogs', 'clientId', cli2);
-await como('atleta@demo.test');
-await limpiar('workoutLogs', 'clientId', atleta);
-await limpiar('weightLogs', 'clientId', atleta);
-await limpiar('exercises', 'trainerId', atleta);
-await limpiar('routines', 'trainerId', atleta);
 
 await como('coach@demo.test');
 await limpiar('exercises', 'trainerId', coach);
@@ -404,62 +419,6 @@ for (const [uid, name, email, semana, racha, mesPasado, total, marcas, marcasPas
     monthKey: mesActual, weekKey: semanaActual, updatedAt: now,
   });
 }
-// ATLETA: se autoentrena (es su propio entrenador), con su plan y su
-// historial. Sirve para revisar el caso en el que quien entrena manda sobre
-// sus propias estadísticas.
-await como('atleta@demo.test');
-// La suscripción SOLO se escribe la primera vez: las reglas prohíben que uno
-// se cambie la suya, así que al resembrar hay que dejarla como está o el
-// guion falla con "permisos insuficientes". Es la regla haciendo su trabajo.
-const yaExiste = (await getDoc(doc(db, 'users', atleta))).exists();
-await setDoc(
-  doc(db, 'users', atleta),
-  {
-    uid: atleta, role: 'athlete', name: 'Sara Vidal', email: 'atleta@demo.test',
-    createdAt: now - 40 * DAY, trainerId: atleta, emailVerificationRequired: false,
-    weightKg: 62.0, heightCm: 168, goal: 'Front lever', level: 'Intermedio',
-    // Dentro de la prueba gratuita, con cinco días por delante. Las reglas la
-    // topan en DIAS_DE_PRUEBA_ATLETA + 2 (7 + 2): con los 10 de antes, que
-    // valían cuando la prueba era de 28, Firestore rechazaba esta escritura y
-    // el sembrado entero se paraba aquí.
-    ...(yaExiste ? {} : { subscriptionUntil: now + 5 * DAY, trialEndsAt: now + 5 * DAY }),
-    planPopupClosedAt: deleteField(),
-  },
-  { merge: true }
-);
-const idsAtleta = [];
-for (const [name, muscleGroup, measure] of [
-  ['Dominadas', 'Tirón', 'reps'],
-  ['Fondos', 'Empuje', 'reps'],
-  ['Front lever', 'Core', 'seconds'],
-]) {
-  const r = await addDoc(collection(db, 'exercises'), {
-    trainerId: atleta, name, muscleGroup, measure, createdAt: now,
-  });
-  idsAtleta.push({ id: r.id, name });
-}
-await addDoc(collection(db, 'routines'), {
-  clientId: atleta, trainerId: atleta, name: 'Mi plan', active: true,
-  createdAt: now - 30 * DAY, schedule: 'weekly',
-  days: [
-    { id: 'a1', name: 'Día A', weekday: 0, exercises: idsAtleta.map((e, i) => ({ id: 'x' + i, exerciseId: e.id, name: e.name, sets: 4, reps: '8', restSeconds: 120 })) },
-  ],
-});
-for (let d = 1; d <= 12; d++) {
-  if (d % 3 === 0) continue;
-  await addDoc(collection(db, 'workoutLogs'), {
-    clientId: atleta, trainerId: atleta, date: now - d * DAY,
-    dayName: 'Día A', durationMin: 45,
-    exercises: idsAtleta.slice(0, 2).map((e) => ({
-      exerciseId: e.id, name: e.name,
-      sets: [
-        { reps: String(7 + (d % 3)), weight: '0', completed: true },
-        { reps: '7', weight: '0', completed: true },
-      ],
-    })),
-  });
-}
-
 await como('coach@demo.test');
 // La selección de ejercicios de la tabla de progreso se borra al sembrar: es
 // estado del entrenador, no datos de ejemplo, y arrastrarla entre siembras
@@ -479,7 +438,7 @@ for (const uid of [cli, cli2]) {
  * Se siembra con SU correo de verdad (el de `ADMIN_EMAILS`) porque las reglas
  * miran el correo del token, no una casilla: sin esta cuenta el panel de
  * administración no se puede abrir ni probar en el emulador, que es
- * justamente donde interesa comprobar que un atleta caducado se puede
+ * justamente donde interesa comprobar que un entrenador caducado se puede
  * reactivar sin tocar la base de datos a mano.
  */
 const ceo = await ensure('luistenaf@gmail.com', 'Luis Tena');
@@ -508,7 +467,6 @@ console.log(`Emulador sembrado.
   alumno@demo.test  (alumno con rutina e historial)
   alumno2@demo.test (alumno con pago pendiente)
   alumno3@demo.test (alumno solo para la clasificación)
-  atleta@demo.test  (atleta autoentrenado, en prueba gratuita)
   luistenaf@gmail.com (el CEO, con panel de administración)
   contraseña: ${PW}`);
 process.exit(0);

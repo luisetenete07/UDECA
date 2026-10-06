@@ -140,7 +140,8 @@ console.log('\nY la política de privacidad dice lo que la app hace HOY');
     ok(`${quien}: descarta publicidad y venta`, /publicidad|advertising/i.test(t) && /(vende|sold|comparte con terceros)/i.test(t));
     ok(`${quien}: dice cómo retirar el permiso`, /retirar el permiso|withdraw the permission/i.test(t));
   }
-  ok('la fecha está al día', /Última actualización: septiembre/.test(lee('web/privacidad.html')));
+  // De septiembre de 2026 en adelante (cuando entraron los pasos).
+  ok('la fecha está al día', /Última actualización: (septiembre|octubre|noviembre|diciembre) de 2026/.test(lee('web/privacidad.html')));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

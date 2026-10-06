@@ -85,7 +85,6 @@ export default function AccountDeletionScreen() {
   const [avance, setAvance] = React.useState<string | null>(null);
 
   const esEntrenador = profile?.role === 'trainer';
-  const esAtleta = profile?.role === 'athlete';
 
   // La cuenta atrás del último paso: empieza al llegar, no antes.
   React.useEffect(() => {
@@ -196,7 +195,7 @@ export default function AccountDeletionScreen() {
                     'Tu perfil, tu foto y tus objetivos',
                     'Todos tus entrenamientos y tus marcas',
                     'Tu peso, tus fotos de progreso y tus tests de nivel',
-                    esAtleta ? 'Tu plan y tu nutrición' : 'Tu sitio en la clasificación del grupo',
+                    'Tu sitio en la clasificación del grupo',
                   ]
               ).map((t) => (
                 <View key={t} style={styles.punto}>

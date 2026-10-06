@@ -31,13 +31,8 @@
  */
 import { readFileSync } from 'node:fs';
 import {
-  AHORRO_PRIMER_ANO_ATLETA_PCT,
   AHORRO_PRIMER_ANO_COACH_PCT,
   ANNUAL_PRICE_EUR,
-  ATHLETE_ANNUAL_EUR,
-  ATHLETE_FIRST_YEAR_EUR,
-  ATHLETE_FIRST_YEAR_MONTHLY_EUR,
-  ATHLETE_MONTHLY_EQUIV_EUR,
   COACH_FIRST_YEAR_EUR,
   COACH_FIRST_YEAR_MONTHLY_EUR,
   COACH_MONTHLY_EQUIV_EUR,
@@ -64,24 +59,17 @@ const web = lee('web/index.html');
 const euros = (n) => `${(Number.isInteger(n) ? String(n) : n.toFixed(2)).replace('.', ',')} €`;
 
 // =========================================================================
-console.log('\n1 · Los cuatro precios del modelo');
+console.log('\n1 · Los dos precios del modelo');
 // =========================================================================
 ok('el primer año del entrenador son 120 €', COACH_FIRST_YEAR_EUR === 120, String(COACH_FIRST_YEAR_EUR));
-ok('el primer año del atleta son 30 €', ATHLETE_FIRST_YEAR_EUR === 30, String(ATHLETE_FIRST_YEAR_EUR));
 ok('la cuota del entrenador son 240 €', ANNUAL_PRICE_EUR === 240, String(ANNUAL_PRICE_EUR));
-ok('la cuota del atleta son 60 €', ATHLETE_ANNUAL_EUR === 60, String(ATHLETE_ANNUAL_EUR));
 // EXACTAMENTE la mitad, no "más o menos la mitad". Toda la web lo anuncia con
 // una sola frase —"el primer año, a mitad de precio"— y esa frase solo puede
 // escribirse si la cuenta sale. Con 119 o con 121 habría que redactar otra.
 ok('el primer año del entrenador es la mitad', COACH_FIRST_YEAR_EUR * 2 === ANNUAL_PRICE_EUR);
-ok('el primer año del atleta es la mitad', ATHLETE_FIRST_YEAR_EUR * 2 === ATHLETE_ANNUAL_EUR);
-// Un profesional no puede pagar casi lo mismo que un consumidor: si esto se
-// acerca, el escaparate deja de decir que son dos productos distintos.
-ok('el plan de entrenador vale bastante más que el de atleta', ANNUAL_PRICE_EUR >= ATHLETE_ANNUAL_EUR * 3);
 // Entrar tiene que costar menos que quedarse: es la promesa entera del primer
 // año. Si alguna vez dejara de cumplirse, la web estaría mintiendo sola.
 ok('entrar cuesta menos que renovar (entrenador)', COACH_FIRST_YEAR_EUR < ANNUAL_PRICE_EUR);
-ok('entrar cuesta menos que renovar (atleta)', ATHLETE_FIRST_YEAR_EUR < ATHLETE_ANNUAL_EUR);
 
 // =========================================================================
 console.log('\n2 · El precio por mes sale de dividir el año, no de la cabeza');
@@ -91,29 +79,16 @@ ok(
   COACH_FIRST_YEAR_MONTHLY_EUR === Math.round((COACH_FIRST_YEAR_EUR / 12) * 100) / 100,
   String(COACH_FIRST_YEAR_MONTHLY_EUR)
 );
-ok(
-  `el primer año del atleta son ${euros(ATHLETE_FIRST_YEAR_MONTHLY_EUR)} al mes`,
-  ATHLETE_FIRST_YEAR_MONTHLY_EUR === Math.round((ATHLETE_FIRST_YEAR_EUR / 12) * 100) / 100,
-  String(ATHLETE_FIRST_YEAR_MONTHLY_EUR)
-);
 // Los dos redondos no son casualidad: 180/12 son 15 y 96/12 son 8 exactos, y
 // un titular con decimales se lee peor. Si alguna vez dejan de serlo, la web
 // tendrá que escribir "7,92 € al mes" y conviene enterarse aquí.
 ok('la cuota del entrenador son 20 € al mes', COACH_MONTHLY_EQUIV_EUR === 20);
-ok(
-  `la cuota del atleta son ${euros(ATHLETE_MONTHLY_EQUIV_EUR)} al mes`,
-  ATHLETE_MONTHLY_EQUIV_EUR === 5 &&
-    ATHLETE_MONTHLY_EQUIV_EUR === Math.round((ATHLETE_ANNUAL_EUR / 12) * 100) / 100,
-  String(ATHLETE_MONTHLY_EQUIV_EUR)
-);
 // LOS CUATRO, SIN DECIMALES RAROS. 17/12 daba 1,4166… y la web enseñaba 1,42:
 // un precio con un redondeo así parece un fallo de la página justo donde
 // alguien decide pagar. Si un precio nuevo rompe esto, se elige otro precio.
 for (const [que, n] of [
   ['el primer año del entrenador', COACH_FIRST_YEAR_MONTHLY_EUR],
-  ['el primer año del atleta', ATHLETE_FIRST_YEAR_MONTHLY_EUR],
   ['la cuota del entrenador', COACH_MONTHLY_EQUIV_EUR],
-  ['la cuota del atleta', ATHLETE_MONTHLY_EQUIV_EUR],
 ]) {
   ok(`${que} cae en un mensual redondo (${euros(n)})`, Math.round(n * 2) === n * 2, String(n));
 }
@@ -123,13 +98,9 @@ console.log('\n3 · Y la web dice exactamente eso');
 // =========================================================================
 const enLaWeb = [
   [`${euros(COACH_FIRST_YEAR_MONTHLY_EUR)}`, 'el mensual del primer año del entrenador'],
-  [`${euros(ATHLETE_FIRST_YEAR_MONTHLY_EUR)}`, 'el mensual del primer año del atleta'],
   [`${COACH_FIRST_YEAR_EUR} €`, 'el total del primer año del entrenador'],
-  [`${ATHLETE_FIRST_YEAR_EUR} €`, 'el total del primer año del atleta'],
   [`${ANNUAL_PRICE_EUR} €`, 'la renovación del entrenador'],
-  [`${ATHLETE_ANNUAL_EUR} €`, 'la renovación del atleta'],
   [`${COACH_MONTHLY_EQUIV_EUR} €`, 'el mensual de la renovación del entrenador'],
-  [`${euros(ATHLETE_MONTHLY_EQUIV_EUR)}`, 'el mensual de la renovación del atleta'],
 ];
 for (const [texto, que] of enLaWeb) {
   ok(`${que} (${texto})`, web.includes(texto), 'no está escrito en web/index.html');
@@ -139,7 +110,7 @@ for (const [texto, que] of enLaWeb) {
 // número más fácil de dejar viejo: se escribe una vez y nadie lo recalcula.
 {
   const anunciados = [...web.matchAll(/(\d{1,2})\s*%/g)].map((m) => Number(m[1]));
-  const validos = new Set([AHORRO_PRIMER_ANO_ATLETA_PCT, AHORRO_PRIMER_ANO_COACH_PCT]);
+  const validos = new Set([AHORRO_PRIMER_ANO_COACH_PCT]);
   const raros = anunciados.filter((n) => !validos.has(n));
   ok(
     `los porcentajes de la web salen de los precios (${[...validos].join(' / ')})`,
@@ -179,11 +150,12 @@ console.log('\n5 · La renovación se dice ANTES del botón, no después');
  */
 {
   const tarjetas = [...web.matchAll(/<article class="plan[^"]*"[\s\S]*?<\/article>/g)].map((m) => m[0]);
-  ok('hay dos tarjetas de plan', tarjetas.length === 2, String(tarjetas.length));
+  // Una: el plan del entrenador. El del atleta que se entrenaba solo se quitó.
+  ok('hay una tarjeta de plan', tarjetas.length === 1, String(tarjetas.length));
+  ok('y ninguna del atleta', !/altaAtleta/.test(web));
   for (const tarjeta of tarjetas) {
-    const esAtleta = /data-pago="altaAtleta"/.test(tarjeta);
-    const quien = esAtleta ? 'atleta' : 'entrenador';
-    const cuota = esAtleta ? ATHLETE_ANNUAL_EUR : ANNUAL_PRICE_EUR;
+    const quien = 'entrenador';
+    const cuota = ANNUAL_PRICE_EUR;
     const antesDelBoton = tarjeta.slice(0, tarjeta.indexOf('data-pago='));
     ok(`${quien}: la cuota (${cuota} €) se dice antes de pulsar`, antesDelBoton.includes(`${cuota} €`));
     ok(`${quien}: y se avisa de que se renueva sola`, /se renueva sola/i.test(tarjeta));
@@ -217,13 +189,9 @@ console.log('\n6 · Y no hay NINGÚN importe que no salga de lib/precios.ts');
   const PERMITIDOS = new Set(
     [
       COACH_FIRST_YEAR_EUR,
-      ATHLETE_FIRST_YEAR_EUR,
       ANNUAL_PRICE_EUR,
-      ATHLETE_ANNUAL_EUR,
       COACH_FIRST_YEAR_MONTHLY_EUR,
-      ATHLETE_FIRST_YEAR_MONTHLY_EUR,
       COACH_MONTHLY_EQUIV_EUR,
-      ATHLETE_MONTHLY_EQUIV_EUR,
       // Lo que pagan los alumnos de un entrenador. No es un precio: es el
       // argumento de venta más fuerte que hay en la página.
       0,

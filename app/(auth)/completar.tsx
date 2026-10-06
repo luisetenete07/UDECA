@@ -31,12 +31,6 @@ const OPCIONES: { valor: UserRole; titulo: string; icono: keyof typeof Ionicons.
     texto: 'Entrenas con tu entrenador, que te manda el plan. Hace falta su código.',
   },
   {
-    valor: 'athlete',
-    titulo: 'Atleta',
-    icono: 'barbell-outline',
-    texto: 'Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición. Entras con un año entero por delante.',
-  },
-  {
     valor: 'trainer',
     titulo: 'Entrenador',
     icono: 'people-outline',

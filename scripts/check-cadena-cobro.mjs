@@ -28,12 +28,9 @@ import { readFileSync } from 'node:fs';
  * pudiera existir.
  */
 import {
-  ATHLETE_ANNUAL_LINK,
-  ATHLETE_ENTRY_LINK,
   COACH_ENTRY_LINK,
   COACH_PAYMENT_LINK,
   COACH_LINK,
-  ATHLETE_LINK,
   entryCheckoutUrl,
   subscriptionCheckoutUrl,
 } from '../lib/enlacesDeCobro.ts';
@@ -61,7 +58,7 @@ const perfil = (extra) => ({
   uid: 'u1',
   email: 'quien@ejemplo.com',
   name: 'Quien Sea',
-  role: 'athlete',
+  role: 'trainer',
   createdAt: 0,
   ...extra,
 });
@@ -69,7 +66,6 @@ const perfil = (extra) => ({
 // =========================================================================
 console.log('\n1 · Cada cuenta abre el enlace que le toca');
 // =========================================================================
-const atleta = perfil({ role: 'athlete' });
 const coach = perfil({ role: 'trainer' });
 
 /*
@@ -85,9 +81,7 @@ const coach = perfil({ role: 'trainer' });
  * llevar a cualquier otro sitio.
  */
 const casos = [
-  ['el primer año del atleta', entryCheckoutUrl(atleta), ATHLETE_ENTRY_LINK],
   ['el primer año del entrenador', entryCheckoutUrl(coach), COACH_ENTRY_LINK],
-  ['la cuota anual del atleta', subscriptionCheckoutUrl(atleta), ATHLETE_ANNUAL_LINK],
   ['la cuota anual del entrenador', subscriptionCheckoutUrl(coach), COACH_PAYMENT_LINK],
 ];
 for (const [que, url, esperado] of casos) {
@@ -99,25 +93,11 @@ for (const [que, url, esperado] of casos) {
 }
 
 /*
- * Los DOS ROLES no pueden compartir enlace. Dentro de un rol, sí.
- *
- * Con cuatro productos la regla era que los cuatro enlaces fueran distintos.
- * Ahora el alta y la cuota son el mismo producto —una suscripción anual con la
- * primera factura a mitad—, así que `COACH_ENTRY_LINK` y `COACH_PAYMENT_LINK`
- * apuntan al mismo sitio a propósito: es lo que hace imposible el fallo que
- * más miedo daba de este fichero, que la web cobrase un importe y la app otro.
- *
- * Lo que sigue siendo caro es cruzar los roles: ahí se cobran 60 € por lo que
- * vale 240, o se le cobran 240 a quien venía a por el de 60.
+ * Entrar y renovar son el mismo producto —una suscripción anual con la primera
+ * factura a mitad—, así que apuntan al mismo sitio a propósito: es lo que hace
+ * imposible que la web cobre un importe y la app otro.
  */
-ok(
-  'el entrenador y el atleta no comparten enlace',
-  !COACH_ENTRY_LINK || !ATHLETE_ENTRY_LINK || COACH_ENTRY_LINK !== ATHLETE_ENTRY_LINK
-);
-ok(
-  'y en cada rol, entrar y renovar van al mismo producto',
-  COACH_ENTRY_LINK === COACH_PAYMENT_LINK && ATHLETE_ENTRY_LINK === ATHLETE_ANNUAL_LINK
-);
+ok('entrar y renovar van al mismo producto', COACH_ENTRY_LINK === COACH_PAYMENT_LINK);
 
 /*
  * EL DESCUENTO DEL PRIMER AÑO VIAJA EN LA DIRECCIÓN, y si se cae no avisa nadie.
@@ -136,10 +116,7 @@ ok(
  * lo vigila check-pagar.mjs) y los Payment Links son la red por si falla. La
  * red tiene que seguir llevándolo: el día que se use, sin él se cobra entero.
  */
-for (const [quien, enlace] of [
-  ['entrenador', COACH_LINK],
-  ['atleta', ATHLETE_LINK],
-]) {
+for (const [quien, enlace] of [['entrenador', COACH_LINK]]) {
   ok(
     `la red del ${quien} lleva el descuento del primer año`,
     !enlace || /[?&]prefilled_promo_code=[A-Z0-9]+/.test(enlace),
@@ -148,12 +125,7 @@ for (const [quien, enlace] of [
 }
 
 /** Los que están puestos, para lo que se comprueba de todos por igual. */
-const enlaces = [
-  ATHLETE_ENTRY_LINK,
-  COACH_ENTRY_LINK,
-  ATHLETE_ANNUAL_LINK,
-  COACH_PAYMENT_LINK,
-].filter(Boolean);
+const enlaces = [COACH_ENTRY_LINK, COACH_PAYMENT_LINK].filter(Boolean);
 ok('ninguno es de prueba', !enlaces.some((l) => /\/test_[A-Za-z0-9]{6,}/.test(l)));
 
 console.log('\n2 · Y llevan dentro con qué activar la cuenta');
@@ -167,7 +139,7 @@ for (const [que, url] of casos) {
   // `uid` y `email` son los nombres del endpoint, que los pasa a Stripe como
   // client_reference_id y customer_email (check-pagar.mjs).
   const bien =
-    url.includes(`uid=${atleta.uid}`) &&
+    url.includes(`uid=${coach.uid}`) &&
     url.includes('email=quien%40ejemplo.com');
   // Sin el uid dentro, el pago entra y la cuenta no se activa nunca, sin dar
   // ningún error: es el fallo más caro posible de esta cadena.
@@ -209,27 +181,22 @@ console.log('\n5 · Las cuentas del escaparate cuadran');
 // texto porque lo único que hace falta comprobar es que las cuentas cuadren.
 const subs = sinComentarios(lee('lib/precios.ts'));
 const primerAnoCoach = numero(subs, 'COACH_FIRST_YEAR_EUR');
-const primerAnoAtleta = numero(subs, 'ATHLETE_FIRST_YEAR_EUR');
 const anualCoach = numero(subs, 'ANNUAL_PRICE_EUR');
-const anualAtleta = numero(subs, 'ATHLETE_ANNUAL_EUR');
 ok(
-  'los cuatro precios están escritos',
-  primerAnoCoach > 0 && primerAnoAtleta > 0 && anualCoach > 0 && anualAtleta > 0,
-  `${primerAnoCoach} / ${primerAnoAtleta} / ${anualCoach} / ${anualAtleta}`
+  'los dos precios están escritos',
+  primerAnoCoach > 0 && anualCoach > 0,
+  `${primerAnoCoach} / ${anualCoach}`
 );
 // El primer año es una entrada, no el precio de siempre: si dejara de ser más
 // barato que la renovación, la promesa de la web sería mentira.
 ok('el primer año del entrenador entra por debajo de su renovación',
   primerAnoCoach < anualCoach, `${primerAnoCoach} vs ${anualCoach}`);
-ok('y el del atleta también',
-  primerAnoAtleta < anualAtleta, `${primerAnoAtleta} vs ${anualAtleta}`);
 // El mensual y el ahorro se CALCULAN, nunca se escriben: son los números que
 // enseña la web, y una cifra a mano se queda vieja sin avisar el día que el
 // precio cambie (que es justo lo que acaba de pasar).
 ok('el precio por mes se calcula', /const alMes = \(anual: number\): number =>/.test(subs));
 ok('el ahorro del primer año también',
-  /AHORRO_PRIMER_ANO_COACH_PCT = Math\.round\(/.test(subs) &&
-  /AHORRO_PRIMER_ANO_ATLETA_PCT = Math\.round\(/.test(subs));
+  /AHORRO_PRIMER_ANO_COACH_PCT = Math\.round\(/.test(subs));
 
 // =========================================================================
 console.log('\n6 · Lo que se le promete al entrenador es verdad');

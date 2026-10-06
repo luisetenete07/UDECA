@@ -48,7 +48,6 @@ interface AuthContextValue {
     password: string,
     inviteCode: string
   ) => Promise<void>;
-  registerAthlete: (name: string, email: string, password: string) => Promise<void>;
   /**
    * Crea el perfil de quien ya ha entrado con Google pero todavía no tiene uno.
    *
@@ -187,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * Termina de crear la cuenta de quien entró con Google.
    *
    * Reutiliza a propósito las mismas piezas que el registro con correo —el
-   * código de invitación, la solicitud al entrenador, la prueba del atleta—
+   * código de invitación, la solicitud al entrenador, la prueba gratuita—
    * porque son las mismas reglas: entrar por Google no puede saltarse el
    * permiso del entrenador ni regalar una prueba que no toca.
    */
@@ -228,37 +227,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (role === 'trainer') {
-      const codigo = generateInviteCode();
-      const nuevo: UserProfile = {
-        uid: user.uid,
-        role: 'trainer',
-        name: limpio,
-        email,
-        createdAt: Date.now(),
-        inviteCode: codigo,
-        ...foto,
-        // Nace con sus 14 días de prueba, sin tarjeta (ver suscripcionAlNacer).
-        ...suscripcionAlNacer('trainer'),
-      };
-      await setDoc(doc(db, 'users', user.uid), nuevo);
-      await registerTrainerInviteCode(codigo, user.uid);
-      setProfile(nuevo);
-      return;
-    }
-
+    // Si no es alumno, es entrenador.
+    const codigo = generateInviteCode();
     const nuevo: UserProfile = {
       uid: user.uid,
-      role: 'athlete',
+      role: 'trainer',
       name: limpio,
       email,
       createdAt: Date.now(),
-      trainerId: user.uid,
+      inviteCode: codigo,
       ...foto,
-      // Nace con sus 7 días de prueba, sin tarjeta (ver suscripcionAlNacer).
-      ...suscripcionAlNacer('athlete'),
+      // Nace con sus 14 días de prueba, sin tarjeta (ver suscripcionAlNacer).
+      ...suscripcionAlNacer(),
     };
     await setDoc(doc(db, 'users', user.uid), nuevo);
+    await registerTrainerInviteCode(codigo, user.uid);
     setProfile(nuevo);
   };
 
@@ -276,7 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       inviteCode,
       emailVerificationRequired: true,
       // Nace con sus 14 días de prueba, sin tarjeta (ver suscripcionAlNacer).
-      ...suscripcionAlNacer('trainer'),
+      ...suscripcionAlNacer(),
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     await registerTrainerInviteCode(inviteCode, credential.user.uid);
@@ -319,27 +302,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     await sendJoinRequest(trainerId, newProfile);
-    sendEmailVerification(credential.user).catch(() => {});
-    setProfile(newProfile);
-  };
-
-  // Atleta individual: es su propio coach (trainerId = su uid), sin código.
-  // Nace con la suscripción pendiente (0 = caducada); paga cuota mensual.
-  const registerAthlete = async (name: string, email: string, password: string) => {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(credential.user, { displayName: name });
-    const newProfile: UserProfile = {
-      uid: credential.user.uid,
-      role: 'athlete' as UserRole,
-      name,
-      email,
-      createdAt: Date.now(),
-      trainerId: credential.user.uid,
-      emailVerificationRequired: true,
-      // Nace con sus 7 días de prueba, sin tarjeta (ver suscripcionAlNacer).
-      ...suscripcionAlNacer('athlete'),
-    };
-    await setDoc(doc(db, 'users', credential.user.uid), newProfile);
     sendEmailVerification(credential.user).catch(() => {});
     setProfile(newProfile);
   };
@@ -418,7 +380,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       registerTrainer,
       registerClient,
-      registerAthlete,
       completarPerfilDeGoogle,
       signOut,
       deleteAccount,

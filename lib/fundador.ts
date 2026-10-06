@@ -27,8 +27,6 @@ import type { UserProfile } from './types';
  *
  * De ahí sale, por rol:
  *
- * - ATLETA: mientras su plan o su prueba estén vigentes. Se autoentrena y paga
- *   por ello; si deja de pagar, deja de estar dentro.
  * - ENTRENADOR: mientras su cuenta tenga acceso, AUNQUE SEA GRATIS. El alta de
  *   1 € incluye cinco plazas y un coach con cinco alumnos o menos está usando
  *   el producto exactamente como está pensado: quitarle la insignia por no

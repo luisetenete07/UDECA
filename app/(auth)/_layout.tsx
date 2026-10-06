@@ -18,7 +18,7 @@ export default function AuthLayout() {
 
   /*
    * Sesión abierta y todavía sin perfil: es lo que deja Google la primera vez
-   * —da una identidad, pero no dice si quien entra es alumno, atleta o
+   * —da una identidad, pero no dice si quien entra es alumno o
    * entrenador— y hay que preguntarlo antes de poder mandarle a ninguna parte.
    *
    * La comprobación de la ruta no sobra: sin ella, la propia pantalla de

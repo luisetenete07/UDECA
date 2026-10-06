@@ -29,13 +29,11 @@ export const FUNNEL_EVENTS = [
   'register_ok', // la cuenta se crea
   'register_fail', // el alta falla (validación o error del servidor)
   'register_ok_trainer',
-  'register_ok_athlete',
   'register_ok_client',
   'login_ok',
   'entry_wall_view', // se topa con el alta de 1 € al entrar por primera vez
   'paywall_view', // un coach se topa con el muro de pago
   'checkout_start', // pulsa pagar (el mensual, o el único que haya)
-  'checkout_start_anual', // el atleta elige pagar el año en vez del mes
 ] as const;
 
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];

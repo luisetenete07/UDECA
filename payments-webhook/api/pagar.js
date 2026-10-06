@@ -13,7 +13,7 @@ import {
  * El botón de pagar: crea la sesión de Stripe con el descuento YA DENTRO y
  * manda al cliente allí.
  *
- *   GET /api/pagar?rol=trainer|athlete[&uid=...][&email=...][&codigo=CREADOR]
+ *   GET /api/pagar?rol=trainer[&uid=...][&email=...][&codigo=CREADOR]
  *
  * POR QUÉ EXISTE. Con el Payment Link y `?prefilled_promo_code=PRIMERANO`, la
  * pasarela abría enseñando 240 € y tardaba unos ocho segundos en bajar a 120 €:
@@ -68,7 +68,7 @@ async function promocion(stripe, codigo) {
 export default async function handler(req, res) {
   const q = req.query ?? {};
   const rol = rolValido(q.rol) ? q.rol : null;
-  if (!rol) return res.status(400).send('Falta el rol (trainer o athlete).');
+  if (!rol) return res.status(400).send('Falta el rol (trainer).');
 
   const uid = typeof q.uid === 'string' ? q.uid.slice(0, 128) : '';
   const email = typeof q.email === 'string' ? q.email.slice(0, 254) : '';

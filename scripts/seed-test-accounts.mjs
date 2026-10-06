@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Crea las tres cuentas de prueba de UDECA (coach, atleta y alumno) listas para
+ * Crea las dos cuentas de prueba de UDECA (coach y alumno) listas para
  * usar: correo ya verificado, alumno ya dentro del grupo del coach y código de
- * invitación creado. Evita la ronda de registrarse tres veces, abrir tres
+ * invitación creado. Evita la ronda de registrarse dos veces, abrir dos
  * correos de verificación y aprobar la solicitud a mano cada vez que hace falta
  * un entorno limpio.
  *
@@ -153,16 +153,16 @@ async function limpiar(coleccion, campo, valor) {
  * No es contenido bonito, es contenido SUFICIENTE: lo mínimo para que cada
  * pantalla importante tenga algo que enseñar.
  */
-async function sembrarContenido({ now, coachUid, clientUid, athleteUid }) {
+async function sembrarContenido({ now, coachUid, clientUid }) {
   const DIA = DAY_MS;
 
-  for (const uid of [coachUid, athleteUid]) {
+  for (const uid of [coachUid]) {
     await limpiar('exercises', 'trainerId', uid);
     await limpiar('routines', 'trainerId', uid);
     await limpiar('mealBooks', 'trainerId', uid);
     await limpiar('payments', 'trainerId', uid);
   }
-  for (const uid of [clientUid, athleteUid]) {
+  for (const uid of [clientUid]) {
     await limpiar('workoutLogs', 'clientId', uid);
   }
 
@@ -284,58 +284,15 @@ async function sembrarContenido({ now, coachUid, clientUid, athleteUid }) {
     },
     { merge: true }
   );
-
-  // Y el atleta, con su propia biblioteca y algo de historial: su cuenta es la
-  // otra mitad del producto y también se revisa.
-  const suyos = [];
-  for (const [name, muscleGroup, measure] of EJERCICIOS.slice(0, 3)) {
-    const ref = db.collection('exercises').doc();
-    await ref.set({
-      trainerId: athleteUid,
-      name,
-      muscleGroup,
-      measure,
-      createdAt: now,
-      description: 'Mi técnica.',
-    });
-    suyos.push({ id: ref.id, name });
-  }
-  await db.collection('routines').add({
-    clientId: athleteUid,
-    trainerId: athleteUid,
-    name: 'Mi plan',
-    active: true,
-    createdAt: now - 20 * DIA,
-    schedule: 'cycle',
-    days: [dia('a1', 'Día 1', 7, suyos.slice(0, 2), '10', 90), { id: 'a2', name: 'Descanso', isRest: true, exercises: [] }],
-  });
-  for (let i = 1; i <= 6; i++) {
-    const cuando = now - i * 3 * DIA;
-    await db.collection('workoutLogs').add({
-      clientId: athleteUid,
-      trainerId: athleteUid,
-      date: cuando,
-      createdAt: cuando,
-      dayName: 'Día 1',
-      durationMin: 40,
-      exercises: suyos.slice(0, 2).map((e) => ({
-        exerciseId: e.id,
-        name: e.name,
-        sets: [1, 2, 3].map((n) => ({ reps: String(8 + n), weightKg: 0 })),
-      })),
-    });
-  }
 }
 
 async function main() {
   const now = Date.now();
 
   const coachEmail = taggedEmail('coach');
-  const athleteEmail = taggedEmail('atleta');
   const clientEmail = taggedEmail('alumno');
 
   const coachUid = await ensureUser(coachEmail, 'Coach de prueba');
-  const athleteUid = await ensureUser(athleteEmail, 'Atleta de prueba');
   const clientUid = await ensureUser(clientEmail, 'Alumno de prueba');
 
   // COACH: con su primer año pagado, que es lo que compra quien entra.
@@ -368,19 +325,6 @@ async function main() {
     full: false,
   });
 
-  // ATLETA: es su propio entrenador y entra con su primer año pagado.
-  await db.collection('users').doc(athleteUid).set({
-    uid: athleteUid,
-    role: 'athlete',
-    name: 'Atleta de prueba',
-    email: athleteEmail,
-    createdAt: now,
-    trainerId: athleteUid,
-    emailVerificationRequired: false,
-    entryPaidAt: now,
-    subscriptionUntil: now + PRIMER_ANO_DIAS * DAY_MS,
-  });
-
   // ALUMNO: ya vinculado al coach, sin pasar por solicitud ni aprobación.
   await db.collection('users').doc(clientUid).set({
     uid: clientUid,
@@ -394,18 +338,17 @@ async function main() {
   // Por si quedó una solicitud de una ejecución anterior.
   await db.collection('joinRequests').doc(`${clientUid}_${coachUid}`).delete();
 
-  await sembrarContenido({ now, coachUid, clientUid, athleteUid });
+  await sembrarContenido({ now, coachUid, clientUid });
 
   console.log(`
 ✔ Cuentas de prueba listas
 
   Coach    ${coachEmail}
-  Atleta   ${athleteEmail}
   Alumno   ${clientEmail}   (ya en el grupo del coach)
 
   Código de invitación del coach: ${INVITE_CODE}
 
-  Las tres cuentas llevan CONTENIDO: biblioteca de ejercicios con vídeo,
+  Las dos cuentas llevan CONTENIDO: biblioteca de ejercicios con vídeo,
   rutina asignada, 12 entrenos registrados, tres cobros y una libreta de
   comidas con comentario. Es lo que pidió Apple al rechazar la 1.1.2 por la
   norma 2.1(a): sin contenido no hay función que se pueda comprobar.
@@ -416,7 +359,7 @@ ${
   CONTRASEÑA: no se muestra a propósito. Este script suele ejecutarse desde
   GitHub Actions y, en un repositorio público, esos registros los puede leer
   cualquiera. Para entrar, usa "¿Has olvidado tu contraseña?" en la pantalla de
-  acceso con cada uno de los correos de arriba: los tres avisos llegan a la
+  acceso con cada uno de los correos de arriba: los dos avisos llegan a la
   bandeja de ${EMAIL_BASE} y eliges tú la contraseña.`
 }
 

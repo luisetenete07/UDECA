@@ -17,20 +17,6 @@ import type { UserProfile } from './types';
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Días de prueba de las cuentas ANTIGUAS de atleta. Herencia.
- *
- * Veintiocho días era la prueba del modelo de antes. No se puede borrar: hay
- * cuentas con una de esas en marcha y hay que saber leerlas. Lo que se vende
- * hoy son los números de abajo.
- */
-export const TRIAL_DAYS = 28;
-
-/** Fin de la prueba de una cuenta de atleta antigua. */
-export function trialUntil(from: number = Date.now()): number {
-  return from + TRIAL_DAYS * DAY_MS;
-}
-
-/**
  * LA PRUEBA GRATUITA. Sin tarjeta, y esa es la decisión importante.
  *
  * Pedir la tarjeta convierte mucho mejor —eso es cierto en general y era mi
@@ -45,35 +31,25 @@ export function trialUntil(from: number = Date.now()): number {
  * Así que sin tarjeta. Se paga en conversión y se cobra en que la app se pueda
  * usar en los tres sitios.
  *
- * POR QUÉ EL ENTRENADOR TIENE EL DOBLE DE DÍAS
+ * POR QUÉ CATORCE DÍAS
  *
- * No es generosidad, es cuánto tarda cada uno en ver de qué va esto.
- *
- * El atleta lo ve en una semana: entrena tres veces y mira su progreso. Eso
- * cabe de sobra en siete días.
- *
- * El entrenador no. Lo suyo es ver a un alumno SUYO completar una sesión que
- * él le mandó, y para llegar ahí tiene que invitar al alumno, montarle la
- * rutina y esperar a que el alumno entrene. En siete días no llega casi nadie,
- * y quien no llega no ha visto el producto: ha visto pantallas vacías.
+ * Es lo que tarda un entrenador en ver de qué va esto: ver a un alumno SUYO
+ * completar una sesión que él le mandó. Para llegar ahí tiene que invitar al
+ * alumno, montarle la rutina y esperar a que entrene. En siete días no llega
+ * casi nadie, y quien no llega no ha visto el producto: ha visto pantallas
+ * vacías.
  */
 export const DIAS_DE_PRUEBA_ENTRENADOR = 14;
-export const DIAS_DE_PRUEBA_ATLETA = 7;
-
-/** Cuántos días de prueba le tocan a este rol. */
-export function diasDePrueba(role: string | undefined): number {
-  return role === 'trainer' ? DIAS_DE_PRUEBA_ENTRENADOR : DIAS_DE_PRUEBA_ATLETA;
-}
 
 /** Cuándo se le acaba la prueba a una cuenta que nace hoy. */
-export function finDeLaPrueba(role: string | undefined, from: number = Date.now()): number {
-  return from + diasDePrueba(role) * DAY_MS;
+export function finDeLaPrueba(from: number = Date.now()): number {
+  return from + DIAS_DE_PRUEBA_ENTRENADOR * DAY_MS;
 }
 
 /**
  * Con qué suscripción nace una cuenta nueva que paga plataforma.
  *
- * CON SU PRUEBA: 14 días el entrenador, 7 el atleta, sin pedir tarjeta.
+ * CON SU PRUEBA: 14 días, sin pedir tarjeta.
  *
  * LAS DOS FECHAS SON LA MISMA, Y ESO ES LO QUE MARCA QUE ES UNA PRUEBA.
  * `subscriptionState` mira si `subscriptionUntil <= trialEndsAt` para saberlo,
@@ -82,8 +58,8 @@ export function finDeLaPrueba(role: string | undefined, from: number = Date.now(
  * cuándo empezó cada uno se conserva.
  *
  * OJO CON LO QUE PASÓ LA ÚLTIMA VEZ QUE ESTO DIO FECHA. Entre el 11 y el 18 de
- * septiembre el atleta nacía con 28 días de prueba de un modelo que ya no se
- * vendía, y no dio un solo error: en el panel de administración salía "De
+ * septiembre hubo cuentas que nacían con 28 días de prueba de un modelo que ya
+ * no se vendía, y no dio un solo error: en el panel de administración salía "De
  * prueba" en vez de "SIN ACTIVAR", la tarea diaria mandaba avisos de una
  * prueba inexistente, y `subscriptionUntil` guardaba una fecha que nadie había
  * comprado. Ahora esas tres cosas vuelven a ser CIERTAS, porque la prueba
@@ -94,19 +70,17 @@ export function finDeLaPrueba(role: string | undefined, from: number = Date.now(
  * vez de leer el texto de auth-context.tsx, que arrastra Firebase.
  */
 export function suscripcionAlNacer(
-  role: string | undefined,
   from: number = Date.now()
 ): { subscriptionUntil: number; trialEndsAt: number } {
-  const hasta = finDeLaPrueba(role, from);
+  const hasta = finDeLaPrueba(from);
   return { subscriptionUntil: hasta, trialEndsAt: hasta };
 }
 
 /**
  * El primer año, que es lo que se compra al entrar.
  *
- * Antes esto eran 28 días de prueba del atleta y un alta simbólica de 1 €.
- * Ahora la entrada ES el primer año: se paga una vez —27 € el entrenador, 17 €
- * el atleta— y se entra doce meses enteros.
+ * Antes esto eran 28 días de prueba y un alta simbólica de 1 €. Ahora la
+ * entrada ES el primer año: se paga una vez y se entra doce meses enteros.
  *
  * El cambio no es de precio, es de promesa. Una prueba de 28 días obliga a
  * decidir justo cuando el trabajo empieza a dar resultados, que es el peor
@@ -128,8 +102,7 @@ export function primerAnoHasta(from: number = Date.now()): number {
  * Desde cuándo rige el modelo del primer año.
  *
  * Quien ya estaba dentro con las reglas viejas —el entrenador con sus cinco
- * alumnos gratis para siempre, el atleta en sus 28 días de prueba— sigue con
- * ellas. Cambiar las condiciones a mitad de partida y dejar fuera a quien ya
+ * alumnos gratis para siempre— sigue con ellas. Cambiar las condiciones a mitad de partida y dejar fuera a quien ya
  * había entrado es la forma más rápida de perder a los primeros, que son justo
  * los que menos merecen perderse.
  *
@@ -267,9 +240,8 @@ export function subscriptionState(
   profile: UserProfile | null,
   now: number = Date.now()
 ): SubscriptionState {
-  // Pagan plataforma: entrenadores (anual) y atletas individuales (mensual).
-  // Los alumnos vinculados a un coach entran gratis.
-  if (!profile || (profile.role !== 'trainer' && profile.role !== 'athlete')) {
+  // Paga plataforma el entrenador. Sus alumnos entran gratis.
+  if (!profile || profile.role !== 'trainer') {
     return { active: true, daysLeft: null, legacy: true, trial: false };
   }
   // Admins y cuentas de la casa: dentro siempre, sin cuenta atrás y sin
@@ -293,41 +265,6 @@ export function subscriptionState(
     legacy: false,
     trial,
   };
-}
-
-/**
- * ¿Le toca ya al ATLETA el aviso del plan a pantalla completa?
- *
- * Solo el último día, y aquí está el porqué: el atleta acaba de pagar. Ha
- * puesto su año hace cinco minutos y lo que ha comprado es justamente doce
- * meses sin que le pidan nada más. Recibirlo con una pantalla completa de
- * "renueva" es cobrar dos veces la misma conversación, y a quien lo ve le
- * queda la sensación de que el precio de entrada era el cebo.
- *
- * El aviso tiene un momento en el que sí sirve: cuando queda un día y la
- * decisión es de verdad. Antes de eso no hay nada que decidir, y decirlo igual
- * solo enseña que la app está pendiente de cobrar en vez de entrenar.
- *
- * Que exista un sitio donde mirarlo durante todo ese tiempo no está reñido con
- * esto: la tarjeta del plan vive en el perfil, y el aviso de las dos últimas
- * semanas sale en un banner que no tapa nada. La diferencia entre estar
- * disponible y salir a la cara es la diferencia entre una oferta y una
- * persecución.
- *
- * Vale igual para el año pagado y para la prueba de las cuentas antiguas: lo
- * que importa es que mañana se queda fuera, no cómo se llame el plazo.
- *
- * El entrenador es otro caso y no pasa por aquí: a él la tarjeta del plan le
- * habla del tope de alumnos, y ese se llena cuando se llena.
- */
-export function tocaElAvisoDelAtleta(
-  profile: UserProfile | null,
-  now: number = Date.now()
-): boolean {
-  if (profile?.role !== 'athlete') return false;
-  const estado = subscriptionState(profile, now);
-  if (estado.daysLeft === null || !estado.active) return false;
-  return estado.daysLeft <= 1;
 }
 
 /**
@@ -402,7 +339,6 @@ export function planIlimitado(profile: UserProfile | null): boolean {
 export function hasPlatformAccess(profile: UserProfile | null, now: number = Date.now()): boolean {
   if (!profile) return true;
   if (profile.role === 'trainer') return trainerHasAccess(profile, now);
-  if (profile.role === 'athlete') return subscriptionState(profile, now).active;
   // Alumno de un coach: entra gratis por definición.
   return true;
 }
@@ -419,7 +355,7 @@ export const ENTRY_REQUIRED_FROM = Date.parse('2026-08-03T00:00:00Z');
 /**
  * ¿Le falta pagar el alta a esta cuenta?
  *
- * Solo a quien paga plataforma (entrenador y atleta) y solo si se registró
+ * Solo a quien paga plataforma (el entrenador) y solo si se registró
  * después de que existiera el alta. El alumno de un coach no paga nunca.
  */
 export function needsEntryPayment(
@@ -440,7 +376,7 @@ export function needsEntryPayment(
   // prueba. Dejar el muro puesto con el cobro apagado sería una puerta que no
   // abre con ninguna llave (ver PAGOS_ACTIVOS).
   if (!PAGOS_ACTIVOS) return false;
-  if (profile.role !== 'trainer' && profile.role !== 'athlete') return false;
+  if (profile.role !== 'trainer') return false;
   // Las cuentas de la casa tampoco pagan el euro: no son clientes, son la
   // app enseñándose a sí misma.
   if (isAdmin(profile) || accesoIlimitado(profile)) return false;

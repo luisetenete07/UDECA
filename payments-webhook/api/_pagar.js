@@ -8,12 +8,12 @@
  */
 
 /**
- * Los precios, por rol. Son los del panel de Stripe: 240 €/año el entrenador
- * y 60 €/año el atleta, los dos RECURRENTES. No son secretos.
+ * El precio, por rol. Es el del panel de Stripe: 240 €/año el entrenador,
+ * RECURRENTE. No es secreto. (Solo paga el entrenador: el perfil de atleta se
+ * quitó.)
  */
 export const PRECIOS = {
   trainer: 'price_1UGeiXBGRboHaTA0BtyNZc4o',
-  athlete: 'price_1UGejuBGRboHaTA0l2DMHCIm',
 };
 
 /**
@@ -24,13 +24,12 @@ export const PRECIOS = {
  */
 export const ENLACES = {
   trainer: 'https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09',
-  athlete: 'https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08',
 };
 
 export const CODIGO_PRIMER_ANO = 'PRIMERANO';
 
 export function rolValido(rol) {
-  return rol === 'trainer' || rol === 'athlete';
+  return rol === 'trainer';
 }
 
 /** Un código de creador tal y como llega en la dirección, limpio. */

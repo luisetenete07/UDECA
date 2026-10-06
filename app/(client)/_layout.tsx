@@ -8,12 +8,11 @@ import { GlobalRestTimer } from '../../components/GlobalRestTimer';
 import { LinkTrainerScreen } from '../../components/LinkTrainerScreen';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { Onboarding } from '../../components/Onboarding';
-import { Paywall } from '../../components/Paywall';
-import { EntryWall } from '../../components/EntryWall';
+import { CuentaRetiradaScreen } from '../../components/CuentaRetiradaScreen';
 import { ClientLockScreen } from '../../components/ClientLockScreen';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
-import { clientIsLocked, hasPlatformAccess, needsEntryPayment } from '../../lib/subscription';
+import { clientIsLocked } from '../../lib/subscription';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { useTabScreenOptions } from '../../lib/navTheme';
@@ -69,34 +68,25 @@ export default function ClientLayout() {
 
   if (loading) return <LoadingScreen />;
   if (!firebaseUser || !profile) return <Redirect href="/(auth)/login" />;
-  // Aquí viven tanto alumnos (con coach) como atletas (autoentrenados).
-  const isAthlete = profile.role === 'athlete';
-  if (profile.role !== 'client' && !isAthlete) {
-    return <Redirect href="/(trainer)/dashboard" />;
-  }
+  if (profile.role === 'trainer') return <Redirect href="/(trainer)/dashboard" />;
+  // Un tipo de cuenta que ya no existe (el atleta que se entrenaba solo): ni
+  // aquí ni en el grupo del entrenador, que lo devolvería aquí en bucle.
+  if (profile.role !== 'client') return <CuentaRetiradaScreen />;
   // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
-  // Alta de 1 € del atleta: con ella arranca su prueba. El alumno de un
-  // coach no paga nada, así que `needsEntryPayment` ya lo descarta.
-  if (needsEntryPayment(profile)) return <EntryWall />;
-  // Atleta con la suscripción caducada: muro de pago (10 €/mes). Al alumno de
-  // un coach la misma puerta le deja pasar siempre: no paga plataforma.
-  if (!hasPlatformAccess(profile)) return <Paywall />;
   // Alumno con la cuota vencida más allá del margen: acceso en pausa hasta que
   // pague o su entrenador confirme el cobro. `clientIsLocked` ya descarta a
   // quien no tiene entrenador o no tiene cuota, así que no hay riesgo de
   // bloquear a alguien a quien nadie le cobra nada.
-  if (!isAthlete && clientIsLocked(profile)) return <ClientLockScreen />;
-  // Alumno sin entrenador: pantalla para enviar/esperar la solicitud. Los
-  // atletas son su propio coach (trainerId propio), así que no la ven.
-  if (!isAthlete && !profile.trainerId) return <LinkTrainerScreen />;
+  if (clientIsLocked(profile)) return <ClientLockScreen />;
+  // Alumno sin entrenador: pantalla para enviar/esperar la solicitud.
+  if (!profile.trainerId) return <LinkTrainerScreen />;
   // Bienvenida de primer uso (una vez por dispositivo).
   if (onboardingSeen === null) return <LoadingScreen />;
   if (!onboardingSeen) {
     return (
       <Onboarding
         name={profile.name}
-        role={profile.role}
         onDone={(targets, goal, mainGoal) => {
           doneRef.current = true;
           setOnboardingSeen(true);
@@ -156,41 +146,18 @@ export default function ClientLayout() {
           ),
         }}
       />
-      {/* El atleta monta sus propios entrenos, así que necesita su biblioteca
-          de ejercicios igual que un entrenador. El alumno no: los suyos se los
-          pone su coach, y una pestaña para mirar una lista que no puede tocar
-          sería una pestaña de menos para lo que sí usa. */}
-      <Tabs.Screen
-        name="exercises"
-        options={{
-          title: t('Ejercicios'),
-          href: isAthlete ? undefined : null,
-          // La pesa ya es "Entreno" en esta misma barra. Dos pestañas con el
-          // mismo icono se eligen mirando la letra, y entonces el icono no
-          // está haciendo su trabajo.
-          tabBarIcon: (props) => (
-            <TabIcon {...props} outline="list-outline" filled="list" />
-          ),
-        }}
-      />
-      {/* El atleta se autoentrena (sin grupo ni coach): no ve la sección Social. */}
       <Tabs.Screen
         name="social"
         options={{
           title: t('Social'),
-          href: isAthlete ? null : undefined,
           tabBarIcon: (props) => <TabIcon {...props} outline="people-outline" filled="people" />,
         }}
       />
       {/* El perfil se abre tocando el avatar en Inicio; lo ocultamos de la
           barra para no saturarla con demasiadas pestañas. */}
       <Tabs.Screen name="profile" options={{ href: null }} />
-      {/* Editor de plan del atleta (se abre desde Inicio, no es una pestaña). */}
-      <Tabs.Screen name="my-plan" options={{ href: null }} />
       {/* Registrar un entreno de otro día (se abre desde Entreno y Progreso). */}
       <Tabs.Screen name="registrar" options={{ href: null }} />
-      {/* Temporada del atleta: sus bloques y sus semanas (se abre desde Inicio). */}
-      <Tabs.Screen name="planning" options={{ href: null }} />
     </Tabs>
     {/* Crono de descanso global: sigue corriendo y visible en cualquier pestaña. */}
     <GlobalRestTimer />

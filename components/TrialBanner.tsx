@@ -39,7 +39,6 @@ export function TrialBanner({ profile }: { profile: UserProfile | null }) {
 
   const days = sub.daysLeft;
   if (!sub.trial && days > AVISO_DIAS) return null;
-  const esEntrenador = profile?.role === 'trainer';
   // El botón depende de si se puede enlazar a pagar (ver CAN_LINK_TO_PAYMENT):
   // el aviso se queda en informar de los días que quedan.
   const url = CAN_LINK_TO_PAYMENT ? subscriptionCheckoutUrl(profile) : null;
@@ -63,20 +62,11 @@ export function TrialBanner({ profile }: { profile: UserProfile | null }) {
               ? 'Hoy se te acaba el año'
               : frase`Te quedan ${days} días de acceso`}
         </Text>
-        {/* "Y tus alumnos" solo a quien tiene alumnos. Este aviso lo pintaba
-            únicamente el panel del entrenador, así que el texto se escribió
-            para él; al ponerlo también en el del atleta, le prometía algo que
-            no tiene. Un detalle, pero es de los que hacen dudar de si la app
-            sabe con quién está hablando. */}
         <Text style={styles.subtitle}>
           {url
-            ? esEntrenador
-              ? sub.trial
-                ? 'Actívala y sigue con todo tu progreso y tus alumnos.'
-                : 'Renueva y sigue con todo tu progreso y tus alumnos.'
-              : sub.trial
-                ? 'Actívala y sigue con todo tu progreso y tus entrenos.'
-                : 'Renueva y sigue con todo tu progreso y tus entrenos.'
+            ? sub.trial
+              ? 'Actívala y sigue con todo tu progreso y tus alumnos.'
+              : 'Renueva y sigue con todo tu progreso y tus alumnos.'
             : 'Tu progreso se queda contigo pase lo que pase.'}
         </Text>
       </View>

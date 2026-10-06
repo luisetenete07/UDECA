@@ -102,7 +102,7 @@ const euros = (centimos, moneda = 'eur') =>
  * repositorio para que esto compruebe LO QUE ESTÁ PUBLICADO y no lo que yo
  * creo que está publicado.
  */
-const { COACH_LINK, ATHLETE_LINK } = await import('../lib/enlacesDeCobro.ts');
+const { COACH_LINK } = await import('../lib/enlacesDeCobro.ts');
 
 /** De "https://buy.stripe.com/abc123?..." saca "abc123". */
 const idDelEnlace = (url) => (url.split('?')[0].split('/').pop() ?? '').trim();
@@ -115,7 +115,6 @@ console.log(
 
 const esperado = [
   ['Entrenador', COACH_LINK, 24000],
-  ['Atleta', ATHLETE_LINK, 6000],
 ];
 
 /** Los precios que hacen falta para el endpoint de pago, al final. */

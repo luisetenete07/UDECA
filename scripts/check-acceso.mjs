@@ -37,22 +37,26 @@ function comprueba(nombre, condicion, detalle = '') {
 const AHORA = Date.parse('2026-08-12T10:00:00Z');
 const NUEVA = ENTRY_REQUIRED_FROM + 5 * DAY_MS;
 
-/** Un atleta cualquiera, registrado después de que existiera el alta. */
-const atleta = (extra = {}) => ({
+/**
+ * Un entrenador cualquiera, del modelo del primer año (registrado después de
+ * que existieran el alta y el primer año pagado). Es la única cuenta que paga
+ * plataforma: el atleta que se entrenaba solo se quitó.
+ */
+const cuenta = (extra = {}) => ({
   uid: 'a1',
-  role: 'athlete',
+  role: 'trainer',
   email: 'alguien@ejemplo.test',
   name: 'Alguien',
-  createdAt: NUEVA,
+  createdAt: Math.max(NUEVA, PRIMER_ANO_DESDE + 5 * DAY_MS),
   ...extra,
 });
 
 console.log('\nLa cuenta de la casa');
 {
-  const casa = atleta({ email: 'udeca.app+atleta@gmail.com' });
+  const casa = cuenta({ email: 'udeca.app+atleta@gmail.com' });
   comprueba('está en la lista', accesoIlimitado(casa));
-  comprueba('con mayúsculas también', accesoIlimitado(atleta({ email: 'UDECA.app+Atleta@Gmail.com' })));
-  comprueba('con espacios de sobra también', accesoIlimitado(atleta({ email: '  udeca.app+atleta@gmail.com ' })));
+  comprueba('con mayúsculas también', accesoIlimitado(cuenta({ email: 'UDECA.app+Atleta@Gmail.com' })));
+  comprueba('con espacios de sobra también', accesoIlimitado(cuenta({ email: '  udeca.app+atleta@gmail.com ' })));
 
   // Lo que se le da: entrar siempre y no pagar. Ni un día menos.
   comprueba('entra en la app', hasPlatformAccess(casa, AHORA));
@@ -63,7 +67,7 @@ console.log('\nLa cuenta de la casa');
   comprueba('activa', e.active);
 
   // Con la suscripción caducada de hace un año sigue dentro: para eso está.
-  const caducada = atleta({
+  const caducada = cuenta({
     email: 'udeca.app+atleta@gmail.com',
     subscriptionUntil: AHORA - 365 * DAY_MS,
     trialEndsAt: AHORA - 380 * DAY_MS,
@@ -77,9 +81,9 @@ console.log('\nLa cuenta de la casa');
     CUENTAS_ILIMITADAS.every((c) => !ADMIN_EMAILS.includes(c)), CUENTAS_ILIMITADAS.join(','));
 }
 
-console.log('\nUn atleta normal, para comparar');
+console.log('\nUna cuenta de pago normal, para comparar');
 {
-  const enPrueba = atleta({
+  const enPrueba = cuenta({
     subscriptionUntil: AHORA + 5 * DAY_MS,
     trialEndsAt: AHORA + 5 * DAY_MS,
   });
@@ -103,14 +107,14 @@ console.log('\nUn atleta normal, para comparar');
     needsEntryPayment(enPrueba) === PAGOS_ACTIVOS
   );
 
-  const caducado = atleta({
+  const caducado = cuenta({
     subscriptionUntil: AHORA - DAY_MS,
     trialEndsAt: AHORA - DAY_MS,
     entryPaidAt: NUEVA,
   });
   comprueba('caducado, al muro', !hasPlatformAccess(caducado, AHORA));
 
-  const pagando = atleta({
+  const pagando = cuenta({
     subscriptionUntil: AHORA + 25 * DAY_MS,
     trialEndsAt: AHORA - 10 * DAY_MS,
     entryPaidAt: NUEVA,
@@ -122,7 +126,7 @@ console.log('\nUn atleta normal, para comparar');
 
 console.log('\nLos que nunca pagan');
 {
-  const admin = atleta({ email: ADMIN_EMAILS[0] });
+  const admin = cuenta({ email: ADMIN_EMAILS[0] });
   comprueba('el admin entra siempre', hasPlatformAccess(admin, AHORA));
   comprueba('y no paga alta', !needsEntryPayment(admin));
 
@@ -132,11 +136,11 @@ console.log('\nLos que nunca pagan');
   comprueba('y no paga nada', !needsEntryPayment(alumno));
 
   // Fundador: existía antes de que hubiera alta, no se le cambian las reglas.
-  const fundador = atleta({ createdAt: ENTRY_REQUIRED_FROM - DAY_MS, subscriptionUntil: AHORA - DAY_MS });
+  const fundador = cuenta({ createdAt: ENTRY_REQUIRED_FROM - DAY_MS, subscriptionUntil: AHORA - DAY_MS });
   comprueba('a un fundador no se le cobra el alta a posteriori', !needsEntryPayment(fundador));
 
   comprueba('sin perfil no se rompe nada', hasPlatformAccess(null) && !needsEntryPayment(null));
-  comprueba('sin correo, tampoco', !accesoIlimitado(atleta({ email: undefined })));
+  comprueba('sin correo, tampoco', !accesoIlimitado(cuenta({ email: undefined })));
 }
 
 console.log('\nEl entrenador del modelo nuevo: el primer año se paga');

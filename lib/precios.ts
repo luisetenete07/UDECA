@@ -21,8 +21,8 @@
  *
  * EL MODELO, EN DOS FRASES
  *
- *  - Hay UNA suscripción anual por rol: 240 € el entrenador, 60 € el atleta.
- *  - El primer año vale la mitad: 120 € y 30 €. Después se renueva sola al
+ *  - Hay UNA suscripción anual, la del entrenador: 240 €.
+ *  - El primer año vale la mitad: 120 €. Después se renueva sola al
  *    precio de siempre, y se cancela cuando se quiera.
  *
  * UN SOLO PRODUCTO POR ROL, Y ESO ES LO IMPORTANTE
@@ -73,9 +73,6 @@
 /** Entrenador: lo que se paga la primera vez (la mitad de la cuota). */
 export const COACH_FIRST_YEAR_EUR = 120;
 
-/** Atleta: lo que se paga la primera vez (la mitad de la cuota). */
-export const ATHLETE_FIRST_YEAR_EUR = 30;
-
 /**
  * Entrenador: la cuota anual. 20,00 € al mes.
  *
@@ -90,30 +87,6 @@ export const ATHLETE_FIRST_YEAR_EUR = 30;
 export const ANNUAL_PRICE_EUR = 240;
 
 /**
- * Atleta: la cuota anual. 5,00 € al mes.
- *
- * MÁS BARATO QUE ANTES, Y A PROPÓSITO.
- *
- * El atleta autoentrenado es lo más commoditizado que hay: compite con
- * Freeletics, con Thenx y con quinientas más. Por precio ahí no se gana dinero
- * y por funciones tampoco, con un solo desarrollador.
- *
- * Pero no es el negocio: es la puerta. Un atleta que se atasca en la muscle-up
- * es exactamente el futuro alumno de un entrenador de UDECA, y ya está dentro,
- * con su historial y su progreso. Y hay un segundo efecto que vale más: más
- * atletas es más gente en el tablón y en el ranking, y una app viva es lo que
- * hace que los alumnos de un coach no se caigan — que es lo que hace que el
- * coach renueve.
- *
- * O sea que este precio está pagando la retención del entrenador. Es de
- * alcance, no de margen; el coste marginal de un atleta más son céntimos.
- *
- * Por abajo tiene suelo: a 5 € al mes sigue siendo una decisión. Más barato
- * dejaría de significar compromiso, y quien no decide nada tampoco entrena.
- */
-export const ATHLETE_ANNUAL_EUR = 60;
-
-/**
  * Lo que sale al mes cada precio.
  *
  * CALCULADO, NUNCA ESCRITO A MANO. Un mensual escrito aparte se queda viejo el
@@ -124,9 +97,7 @@ export const ATHLETE_ANNUAL_EUR = 60;
 const alMes = (anual: number): number => Math.round((anual / 12) * 100) / 100;
 
 export const COACH_FIRST_YEAR_MONTHLY_EUR = alMes(COACH_FIRST_YEAR_EUR);
-export const ATHLETE_FIRST_YEAR_MONTHLY_EUR = alMes(ATHLETE_FIRST_YEAR_EUR);
 export const COACH_MONTHLY_EQUIV_EUR = alMes(ANNUAL_PRICE_EUR);
-export const ATHLETE_MONTHLY_EQUIV_EUR = alMes(ATHLETE_ANNUAL_EUR);
 
 /**
  * Lo que se ahorra el primer año frente a lo que costará después.
@@ -138,7 +109,4 @@ export const ATHLETE_MONTHLY_EQUIV_EUR = alMes(ATHLETE_ANNUAL_EUR);
  */
 export const AHORRO_PRIMER_ANO_COACH_PCT = Math.round(
   (1 - COACH_FIRST_YEAR_EUR / ANNUAL_PRICE_EUR) * 100
-);
-export const AHORRO_PRIMER_ANO_ATLETA_PCT = Math.round(
-  (1 - ATHLETE_FIRST_YEAR_EUR / ATHLETE_ANNUAL_EUR) * 100
 );

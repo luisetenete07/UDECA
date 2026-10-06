@@ -104,7 +104,6 @@ export default function ProgressScreen() {
   const [generatingReport, setGeneratingReport] = useState(false);
   // El atleta es su propio entrenador: puede elegir qué ejercicios sigue. El
   // alumno de un coach solo mira: su tabla la decide quien le entrena.
-  const isAthlete = profile?.role === 'athlete';
   const [planExercises, setPlanExercises] = useState<{ id: string; name: string }[]>([]);
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [cycles, setCycles] = useState<import('../../lib/types').TrainingCycle[]>([]);
@@ -490,9 +489,7 @@ export default function ProgressScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.navTitle}>Tu progreso completo</Text>
                 <Text style={styles.navHint}>
-                  {isAthlete
-                    ? 'La mejor serie de cada ejercicio, semana a semana.'
-                    : 'La misma tabla que ve tu entrenador.'}
+                  La misma tabla que ve tu entrenador.
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
@@ -911,11 +908,8 @@ export default function ProgressScreen() {
               <ProgressMatrix
                 logs={workoutLogs}
                 clientId={profile.uid}
-                // El atleta es su propio entrenador y manda sobre su tabla. El
-                // alumno de un coach no: la suya la decide quien le entrena, y
-                // las reglas de Firestore lo imponen igualmente.
-                ownerId={isAthlete ? profile.uid : undefined}
-                editable={isAthlete}
+                // La tabla la decide quien le entrena, no el alumno: las reglas
+                // de Firestore lo imponen igualmente.
                 planExercises={planExercises}
                 onViewChange={setMatrixView}
               />

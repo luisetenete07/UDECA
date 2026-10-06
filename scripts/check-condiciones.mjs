@@ -17,8 +17,6 @@
 import { readFileSync } from 'node:fs';
 import {
   ANNUAL_PRICE_EUR,
-  ATHLETE_ANNUAL_EUR,
-  ATHLETE_FIRST_YEAR_EUR,
   COACH_FIRST_YEAR_EUR,
 } from '../lib/precios.ts';
 
@@ -40,7 +38,7 @@ console.log('\nExiste y se puede llegar a ella');
   // Y desde donde se decide pagar, que es donde la ley la quiere y donde de
   // verdad la mira alguien.
   const tarjetas = [...inicio.matchAll(/<article class="plan[^"]*"[\s\S]*?<\/article>/g)].map((m) => m[0]);
-  ok('y desde las dos tarjetas de plan', tarjetas.length === 2 && tarjetas.every((t) => t.includes('/condiciones')));
+  ok('y desde la tarjeta del plan', tarjetas.length === 1 && tarjetas.every((t) => t.includes('/condiciones')));
   // Autocontenida, por lo mismo que privacidad.html: la abren revisores que
   // piden el HTML y no ejecutan nada.
   ok('sin depender de ningún fichero externo', !/<link[^>]+stylesheet|<script/i.test(doc));
@@ -65,8 +63,6 @@ console.log('\nEl derecho de desistimiento, dicho como hay que decirlo');
 console.log('\nLo que se cobra es lo que dice lib/precios.ts');
 {
   for (const [que, n] of [
-    ['la cuota del atleta', ATHLETE_ANNUAL_EUR],
-    ['el primer año del atleta', ATHLETE_FIRST_YEAR_EUR],
     ['la cuota del entrenador', ANNUAL_PRICE_EUR],
     ['el primer año del entrenador', COACH_FIRST_YEAR_EUR],
   ]) {

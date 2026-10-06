@@ -10,15 +10,12 @@ import { Card } from '../../components/Card';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
-import { RateApp } from '../../components/RateApp';
-import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { StatTile } from '../../components/StatTile';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import { updateUserProfile } from '../../lib/firestore/users';
-import { EditorDeMarca } from '../../components/EditorDeMarca';
 import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
@@ -58,7 +55,6 @@ export default function ClientProfileScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
   // Esta pantalla la comparten el alumno de un coach y el atleta autoentrenado.
-  const isAthlete = profile?.role === 'athlete';
   const [name, setName] = useState(profile?.name ?? '');
   const [savingName, setSavingName] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
@@ -216,8 +212,6 @@ export default function ClientProfileScreen() {
       {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
       <MemberCard />
 
-      {isAthlete ? <EditorDeMarca /> : null}
-
       <SelectorDeIdioma />
 
       {/* Aquí había tres cifras enormes —entrenos, racha, semanas— justo
@@ -364,14 +358,6 @@ export default function ClientProfileScreen() {
           {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
         </Text>
       </Card>
-
-      {/* El plan completo, hasta que den el paso (solo atleta, ver canUpgrade). */}
-      <UpgradeCard />
-
-      {/* Valorar la app: solo al atleta. El alumno de un coach no elige la
-          herramienta —se la pone su entrenador—, así que pedirle a él la
-          valoración es pedirla a quien no ha decidido nada. */}
-      {isAthlete ? <RateApp /> : null}
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={styles.signOut} />
 

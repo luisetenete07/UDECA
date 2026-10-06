@@ -56,81 +56,42 @@ function isIOSWeb(): boolean {
 
 export function Onboarding({
   name,
-  role,
   onDone,
 }: {
   name?: string;
-  /** Rol de la cuenta: el atleta se autoentrena (sin coach), el alumno tiene coach. */
-  role?: 'client' | 'athlete' | 'trainer';
   /**
    * Se llama al terminar; con los macros calculados (si los rellenó), el objetivo
    * de nutrición y el objetivo principal en texto libre (si lo definió).
    */
   onDone: (targets?: MacroResult, goal?: Goal, mainGoal?: string) => void;
 }) {
-  const isAthlete = role === 'athlete';
   const slides = useMemo<Slide[]>(() => {
-    const base: Slide[] = isAthlete
-      ? [
-          {
-            icon: 'flame',
-            title: name ? frase`Bienvenido a UDECA, ${name.split(' ')[0]}` : t('Bienvenido a UDECA'),
-            lines: [
-              'Aquí diriges tú: crea tu plan, registra tu progreso y controla tu nutrición, todo en un mismo sitio.',
-              'Este es tu campo base. Vamos a verlo en 20 segundos.',
-            ],
-          },
-          {
-            icon: 'construct',
-            title: 'Diseña tu propio plan',
-            lines: [
-              'En Mi plan eliges el método: por días de la semana, días sueltos en ciclo o a sensaciones.',
-              'Añade tus ejercicios con series, reps, descansos y superseries. Tú mandas.',
-            ],
-          },
-          {
-            icon: 'barbell',
-            title: 'Entrena con el modo enfocado',
-            lines: [
-              'En Entreno, dale al día que toca: un ejercicio por pantalla, marca cada serie con ✓ y el crono de descanso arranca solo.',
-              'Apunta reps o segundos según el ejercicio y deja notas para ti.',
-            ],
-          },
-          {
-            icon: 'trending-up',
-            title: 'Mide tu progreso',
-            lines: [
-              'Peso, fotos y tus entrenos quedan guardados en Progreso, mes a mes.',
-              'Tus récords y tu racha se actualizan solos para que veas tu evolución.',
-            ],
-          },
-        ]
-      : [
-          {
-            icon: 'flame',
-            title: name ? frase`Bienvenido a UDECA, ${name.split(' ')[0]}` : t('Bienvenido a UDECA'),
-            lines: [
-              'Tu entrenador te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.',
-              'Este es tu campo base. Vamos a verlo en 20 segundos.',
-            ],
-          },
-          {
-            icon: 'barbell',
-            title: 'Entrena con el modo enfocado',
-            lines: [
-              'En Entreno, dale al día que toca: un ejercicio por pantalla, marca cada serie con ✓ y el crono de descanso arranca solo.',
-              'Apunta reps o segundos según el ejercicio; si algo cambia, deja una nota al coach.',
-            ],
-          },
-          {
-            icon: 'trending-up',
-            title: 'Registra tu progreso',
-            lines: [
-              'Peso, fotos y tus entrenos quedan guardados en Progreso, mes a mes.',
-              'Tu coach ve cómo va tu semana y ajusta tu plan sin que tengas que pedírselo.',
-            ],
-          },
-        ];
+    const base: Slide[] = [
+      {
+        icon: 'flame',
+        title: name ? frase`Bienvenido a UDECA, ${name.split(' ')[0]}` : t('Bienvenido a UDECA'),
+        lines: [
+          'Tu entrenador te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.',
+          'Este es tu campo base. Vamos a verlo en 20 segundos.',
+        ],
+      },
+      {
+        icon: 'barbell',
+        title: 'Entrena con el modo enfocado',
+        lines: [
+          'En Entreno, dale al día que toca: un ejercicio por pantalla, marca cada serie con ✓ y el crono de descanso arranca solo.',
+          'Apunta reps o segundos según el ejercicio; si algo cambia, deja una nota al coach.',
+        ],
+      },
+      {
+        icon: 'trending-up',
+        title: 'Registra tu progreso',
+        lines: [
+          'Peso, fotos y tus entrenos quedan guardados en Progreso, mes a mes.',
+          'Tu coach ve cómo va tu semana y ajusta tu plan sin que tengas que pedírselo.',
+        ],
+      },
+    ];
     if (!isInstalled()) {
       base.push({
         icon: 'download',
@@ -147,7 +108,7 @@ export function Onboarding({
       });
     }
     return base;
-  }, [name, isAthlete]);
+  }, [name]);
 
   // Pasos finales: definir el objetivo principal y calcular los macros.
   const totalSteps = slides.length + 2;
@@ -199,9 +160,7 @@ export function Onboarding({
           </View>
           <Text style={styles.title}>¿Cuál es tu objetivo?</Text>
           <Text style={styles.line}>
-            {isAthlete
-              ? 'Defínelo para tenerlo siempre presente y medir tu avance. Podrás cambiarlo cuando quieras desde tu perfil.'
-              : 'Defínelo para que tu entrenador lo tenga presente. Podrás cambiarlo cuando quieras desde tu perfil.'}
+            Defínelo para que tu entrenador lo tenga presente. Podrás cambiarlo cuando quieras desde tu perfil.
           </Text>
           {Dots}
           <View style={{ alignSelf: 'stretch', maxWidth: 420, width: '100%' }}>

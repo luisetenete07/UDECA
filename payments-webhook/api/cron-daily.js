@@ -25,27 +25,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const INACTIVE_DAYS = 5;
 /** Días de antelación con los que se recuerda la cuota. */
 const PAYMENT_DUE_DAYS = 3;
-/**
- * Cuándo se avisa de que se acaba el acceso: dos semanas antes, a tres días y
- * el último día.
- *
- * Existe porque la app lo promete por escrito, y hasta ahora no se hacía:
- * quien entraba el día después se encontraba el muro de pago sin previo aviso.
- * Enterarse así, aunque el precio sea justo, es lo que convierte a alguien que
- * iba a renovar en alguien que se va.
- *
- * Los catorce días son del modelo nuevo: lo que vence es un AÑO pagado, no una
- * prueba de cuatro semanas, y una renovación anual merece verse venir con
- * tiempo de sobra para decidirla sin prisa.
- */
-const TRIAL_NUDGE_DAYS = [14, 3, 1];
-/** A dónde lleva el botón del correo. */
-const APP_URL = 'https://app.udeca.app';
-/**
- * Lo que cuesta renovar un año, por rol (los mismos que en lib/subscription.ts:
- * ATHLETE_ANNUAL_EUR y ANNUAL_PRICE_EUR).
- */
-const RENOVACION_EUR = { athlete: 96, trainer: 180 };
 /** No se repite el mismo tipo de aviso antes de este plazo. */
 const NUDGE_COOLDOWN_MS = 5 * DAY_MS;
 /** Ventana de entrenamientos que se lee (suficiente para semana, mes y racha). */
@@ -153,7 +132,7 @@ export default async function handler(req, res) {
       byClient.set(l.clientId, arr);
     });
 
-    // ---- 2. Alumnos y atletas ----
+    // ---- 2. Alumnos ----
     const usersSnap = await db.collection('users').get();
     const weekStart = startOfWeek(now);
     const monthStart = monthStartOf(now);
@@ -169,7 +148,7 @@ export default async function handler(req, res) {
 
     usersSnap.forEach((doc) => {
       const u = doc.data() || {};
-      if (u.role !== 'client' && u.role !== 'athlete') return;
+      if (u.role !== 'client') return;
       const dates = byClient.get(doc.id) ?? [];
       const dayStamps = [...new Set(dates.map(startOfDay))];
 
@@ -214,62 +193,6 @@ export default async function handler(req, res) {
           body: `Hace ${daysOff} días de tu último entreno. Retomarlo hoy cuesta menos que mañana.`,
         });
         nudged.push({ id: doc.id, data: { lastInactivityNudge: now } });
-      }
-
-      // --- Se acaba el año pagado (o la prueba de una cuenta antigua) ---
-      //
-      // NO depende de tener la app instalada: este aviso sale por push Y por
-      // correo. Es el único de la tarea que la app promete por escrito en la
-      // tarjeta del plan, y quien usa UDECA desde el navegador no tiene push:
-      // se encontraba el muro de pago sin haber sido avisado nunca.
-      //
-      // Se salta a quien tiene suscripción recurrente en Stripe
-      // (`stripeSubscriptionId`): a ese le renueva la tarjeta sola, y decirle
-      // "renueva o te quedas fuera" es asustar a quien ya ha pagado.
-      if (
-        (u.role === 'athlete' || u.role === 'trainer') &&
-        typeof u.subscriptionUntil === 'number' &&
-        u.subscriptionUntil > now &&
-        !u.stripeSubscriptionId
-      ) {
-        const restantes = Math.ceil((u.subscriptionUntil - now) / DAY_MS);
-        // El hito es el aviso que TOCA ahora; si ya se envió, no se repite.
-        const hito = TRIAL_NUDGE_DAYS.filter((d) => restantes <= d).pop() ?? null;
-        if (hito !== null && u.trialNudgeStage !== hito) {
-          // Cuenta antigua todavía en su prueba de 28 días: el aviso es otro,
-          // porque lo que se acaba no es un año pagado sino una prueba.
-          const esPrueba =
-            typeof u.trialEndsAt === 'number' && u.subscriptionUntil <= u.trialEndsAt;
-          const precio = RENOVACION_EUR[u.role];
-          const ultimoDia = hito === 1;
-          const titulo = esPrueba
-            ? ultimoDia
-              ? 'Hoy es tu último día de prueba'
-              : `Te quedan ${restantes} días de prueba`
-            : ultimoDia
-              ? 'Hoy se te acaba el año'
-              : `Te quedan ${restantes} días de acceso`;
-          const cuerpo = ultimoDia
-            ? `Para seguir sin cortes, renueva desde la app: ${precio} € al año. Tu progreso se queda contigo decidas lo que decidas.`
-            : `Cuando termine, seguir cuesta ${precio} € al año. Lo que has registrado no se borra pase lo que pase.`;
-
-          if (u.pushToken) messages.push({ to: u.pushToken, title: titulo, body: cuerpo });
-          if (u.email) {
-            correos.push({
-              to: u.email,
-              subject: titulo,
-              titulo,
-              parrafos: [
-                cuerpo,
-                'Si decides no seguir, no hay que hacer nada: el acceso se acaba solo y no se cobra.',
-              ],
-              boton: { texto: 'Abrir UDECA', url: APP_URL },
-            });
-          }
-          // El hito se marca aunque no haya salido ningún aviso: si no, se
-          // reintentaría cada día a alguien que no tiene ni push ni correo.
-          nudged.push({ id: doc.id, data: { trialNudgeStage: hito } });
-        }
       }
 
       // --- Recordatorio de cuota (vencida o a punto de vencer) ---

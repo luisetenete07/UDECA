@@ -103,19 +103,6 @@ export async function getAllCoaches(): Promise<UserProfile[]> {
   return cuentasPorRol('trainer');
 }
 
-/**
- * Admin UDECA: los atletas de la plataforma.
- *
- * Los atletas PAGAN igual que los coaches —mensual en vez de anual— y hasta
- * ahora el panel solo listaba entrenadores, así que a un atleta con la prueba
- * caducada no se le podía dar acceso desde ningún sitio: había que entrar a
- * mano en la base de datos. Las reglas ya permitían escribirle la suscripción
- * a cualquier cuenta (`isUdecaAdmin`), lo único que faltaba era la pantalla.
- */
-export async function getAllAthletes(): Promise<UserProfile[]> {
-  return cuentasPorRol('athlete');
-}
-
 async function cuentasPorRol(rol: UserProfile['role']): Promise<UserProfile[]> {
   const q = query(collection(db, 'users'), where('role', '==', rol));
   const snap = await getDocs(q);
@@ -126,12 +113,7 @@ async function cuentasPorRol(rol: UserProfile['role']): Promise<UserProfile[]> {
 
 /**
  * Admin UDECA: fija el fin de suscripción de una cuenta de pago (reglas: solo
- * admin). Vale para entrenadores y para atletas.
- *
- * El plan se pasa desde fuera porque no es el mismo: el entrenador paga al año
- * y el atleta al mes. Guardar 'annual' en un atleta no le rompía el acceso
- * —lo que manda es la fecha— pero dejaba escrito en su ficha un plan que no ha
- * contratado nunca, y eso reaparece en cuanto alguien mire las cuentas.
+ * admin).
  */
 export async function setCoachSubscription(
   coachId: string,

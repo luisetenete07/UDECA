@@ -167,7 +167,7 @@ export default async function handler(req, res) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       if (session.mode === 'subscription') {
-        // Suscripción de coach (anual) o atleta (mensual): activa la cuenta.
+        // Suscripción del entrenador: activa la cuenta.
         await activateSubscription(session);
       } else {
         const clientId = session.client_reference_id;
@@ -177,7 +177,7 @@ export default async function handler(req, res) {
           // por el mismo sitio: se distinguen por el rol de quien paga.
           const quien = await db.collection('users').doc(clientId).get();
           const rol = quien.exists ? quien.data().role : null;
-          if (rol === 'trainer' || rol === 'athlete') {
+          if (rol === 'trainer') {
             await activarAlta(session);
           } else {
             await markClientPaid(clientId, (session.amount_total || 0) / 100);
@@ -208,7 +208,7 @@ export default async function handler(req, res) {
   }
 }
 
-// --- Suscripciones de plataforma (coach anual / atleta mensual) ---
+// --- Suscripción de plataforma (la del entrenador) ---
 
 /**
  * Huella de la tarjeta con la que se ha pagado.
@@ -303,7 +303,7 @@ async function suscripcionSinCuenta(session, { until, plan }) {
   const q = await db.collection('users').where('email', '==', email).limit(1).get();
   if (!q.empty) {
     const perfil = q.docs[0].data();
-    if (perfil.role === 'trainer' || perfil.role === 'athlete') {
+    if (perfil.role === 'trainer') {
       await aplicarAlta(db, q.docs[0].id, {
         huella: await tarjetaDelPago(session),
         customerId: session.customer || null,
@@ -353,7 +353,7 @@ async function altaPagadaSinCuenta(session) {
   const q = await db.collection('users').where('email', '==', email).limit(1).get();
   if (!q.empty) {
     const perfil = q.docs[0].data();
-    if (perfil.role === 'trainer' || perfil.role === 'athlete') {
+    if (perfil.role === 'trainer') {
       await activarAlta(session, q.docs[0].id);
       return;
     }

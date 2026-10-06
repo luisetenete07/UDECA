@@ -3,9 +3,10 @@ import type { PausaPlan } from './pausa';
 import type { EsfuerzoApuntado, PlanPersonalizado } from './planPersonalizado';
 import type { QueVeElAlumno } from './visibilidad';
 
-// 'athlete' = usuario individual que se autoentrena (es su propio coach:
-// crea sus rutinas, sigue su progreso y nutrición). De pago mensual.
-export type UserRole = 'trainer' | 'client' | 'athlete';
+// Dos papeles: el entrenador, que paga la plataforma, y su alumno, que no.
+// (Hubo un tercero, el atleta que se entrenaba solo; se quitó para centrar el
+// producto en los entrenadores.)
+export type UserRole = 'trainer' | 'client';
 
 export interface UserProfile {
   uid: string;
@@ -17,7 +18,7 @@ export interface UserProfile {
   nameChangedAt?: number;
   /**
    * Pedirle el esfuerzo (RIR) al terminar cada ejercicio. Lo activa el
-   * entrenador por alumno; los atletas lo tienen siempre.
+   * entrenador por alumno.
    *
    * No se pide a todo el mundo porque a quien empieza el RIR no le suena: lo
    * rellenaría al azar, y un dato inventado es peor que no tener dato.
@@ -227,11 +228,8 @@ export interface UserProfile {
    */
   trialNudgeStage?: number;
   /**
-   * Plan contratado: el entrenador paga al año y el atleta al mes.
-   *
-   * No decide el acceso —eso lo decide `subscriptionUntil`— pero sí lo que se
-   * lee en la ficha, así que un atleta con 'annual' escrito dice que ha
-   * contratado algo que no existe para él.
+   * Plan contratado. No decide el acceso —eso lo decide `subscriptionUntil`—
+   * pero sí lo que se lee en la ficha. ('monthly' queda de cuentas antiguas.)
    */
   subscriptionPlan?: 'annual' | 'monthly';
   /**

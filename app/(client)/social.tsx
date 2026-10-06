@@ -1,7 +1,7 @@
 import { inicioDeLaSemana } from '../../lib/fechas';
 import { frase } from '../../lib/idioma';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Redirect, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
@@ -118,9 +118,6 @@ export default function SocialScreen() {
       );
     }, [profile?.trainerId, withMine])
   );
-
-  // El atleta individual no forma parte de ningún grupo: fuera de aquí.
-  if (profile?.role === 'athlete') return <Redirect href="/(client)/dashboard" />;
 
   if (loading) return <LoadingScreen />;
 

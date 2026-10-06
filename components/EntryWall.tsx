@@ -35,7 +35,6 @@ import { colors, fonts, spacing, typography } from '../lib/theme';
 export function EntryWall() {
   const { firebaseUser, profile, signOut, refreshProfile } = useAuth();
   const [comprobando, setComprobando] = React.useState(false);
-  const esAtleta = profile?.role === 'athlete';
   const url = entryCheckoutUrl(profile);
   // iOS: ni precio ni enlace de pago (ver comentario de arriba).
   const puedeCobrarAqui = CAN_LINK_TO_PAYMENT;
@@ -135,9 +134,7 @@ export function EntryWall() {
               web, que es donde el importe está siempre al día. Aquí solo se
               dice qué se lleva quien lo haga. */}
           <GateText>
-            {esAtleta
-              ? 'Entras con un año entero por delante. Al terminarlo decides si sigues.'
-              : frase`Tu primer año incluye ${FREE_CLIENT_LIMIT} alumnos con su propia cuenta. Si tu grupo crece, pasas al plan sin tope.`}
+            {frase`Tu primer año incluye ${FREE_CLIENT_LIMIT} alumnos con su propia cuenta. Si tu grupo crece, pasas al plan sin tope.`}
           </GateText>
           <Button
             title={url ? 'Activar mi cuenta en la web' : 'Contactar para activar'}

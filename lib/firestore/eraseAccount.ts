@@ -57,7 +57,10 @@ export async function eraseMyData(
   aviso?: (paso: PasoBorrado) => void
 ): Promise<void> {
   const uid = profile.uid;
-  const esEntrenador = profile.role === 'trainer' || profile.role === 'athlete';
+  // Todo lo que no es alumno se borra como entrenador. Incluye las cuentas
+  // antiguas de atleta (que ya no existe): eran su propio entrenador y tienen
+  // ejercicios y rutinas a su nombre que también hay que llevarse.
+  const esEntrenador = profile.role !== 'client';
 
   // 1) Los alumnos primero: si se borrase antes al entrenador, se quedarían
   //    apuntando a una cuenta que ya no existe y sin poder entrar en otro

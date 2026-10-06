@@ -19,7 +19,6 @@ import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import {
   deleteCoachAccount,
-  getAllAthletes,
   getAllCoaches,
   normalizeInviteCode,
   setCoachSubscription,
@@ -49,14 +48,11 @@ import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import type { SocialStats, UserProfile } from '../../lib/types';
 
 /**
- * Las dos clases de cuenta que pagan plataforma, en el orden en que se pintan.
- *
- * Van juntas aquí y no sueltas en el render para que añadir una tercera —si
- * algún día hay otro tipo de cuenta— sea una línea y no copiar un bloque.
+ * Las clases de cuenta que pagan plataforma, en el orden en que se pintan.
+ * Hoy solo el entrenador; va en lista para que otra sea una línea.
  */
 const GRUPOS_ADMIN = [
   { rol: 'trainer' as const, titulo: 'Entrenadores', vacio: 'Todavía no hay ningún entrenador registrado.' },
-  { rol: 'athlete' as const, titulo: 'Atletas', vacio: 'Todavía no hay ningún atleta registrado.' },
 ];
 
 export default function TrainerProfileScreen() {
@@ -80,18 +76,7 @@ export default function TrainerProfileScreen() {
   const [funnelExtra, setFunnelExtra] = useState<Record<string, number>>({});
   const [funnelDays, setFunnelDays] = useState(30);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
-  /**
-   * TODAS las cuentas que pagan plataforma: entrenadores y atletas juntos.
-   *
-   * En una sola lista a propósito, aunque se pinten en dos secciones separadas:
-   * así extender, revocar o borrar sigue siendo una operación sobre un array y
-   * no hay que acertar en cuál de los dos estaba la cuenta.
-   *
-   * Antes había un selector que enseñaba una lista O la otra. El problema no
-   * era encontrarlas, era que para saber cómo iba el negocio había que ir y
-   * volver: cuántos entrenadores hay, cuántos atletas, a quién se le acaba
-   * esta semana. Ahora se ven las dos de un vistazo.
-   */
+  /** Las cuentas que pagan plataforma: los entrenadores. */
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
   // Clasificación y presencia del grupo (socialStats de sus alumnos).
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
@@ -170,10 +155,7 @@ export default function TrainerProfileScreen() {
     setLoadingCoaches(true);
     setCoaches([]);
     try {
-      // Las dos a la vez: son dos consultas distintas porque en Firestore el
-      // rol es un campo, no una colección.
-      const [entrenadores, atletas] = await Promise.all([getAllCoaches(), getAllAthletes()]);
-      setCoaches([...entrenadores, ...atletas]);
+      setCoaches(await getAllCoaches());
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo cargar');
     } finally {
@@ -181,15 +163,7 @@ export default function TrainerProfileScreen() {
     }
   };
 
-  /**
-   * Qué plan queda escrito, según lo que se le está dando.
-   *
-   * Sale de los DÍAS y no del rol. Antes salía del rol —"el entrenador paga al
-   * año y el atleta al mes"—, y esa regla dejó de ser verdad el día que el
-   * atleta pudo pagar el año por delante: darle "+1 año" a un atleta le dejaba
-   * "mensual" escrito en la ficha. No le rompía el acceso, que lo manda la
-   * fecha, pero es lo que se lee al mirar la cuenta.
-   */
+  /** Qué plan queda escrito, según los días que se le dan. */
   const planPorDias = (dias: number): 'annual' | 'monthly' =>
     dias >= 365 ? 'annual' : 'monthly';
 
@@ -219,7 +193,7 @@ export default function TrainerProfileScreen() {
     try {
       // Al quitar la suscripción se conserva el plan que tuviera: lo que se le
       // retira es el acceso, no el recuerdo de lo que contrató.
-      const plan = coach.subscriptionPlan ?? (coach.role === 'athlete' ? 'monthly' : 'annual');
+      const plan = coach.subscriptionPlan ?? 'annual';
       await setCoachSubscription(coach.uid, 0, plan);
       setCoaches((prev) =>
         prev.map((c) =>
@@ -347,9 +321,7 @@ export default function TrainerProfileScreen() {
   /**
    * Una cuenta de la lista de administración, con su estado y sus acciones.
    *
-   * Sale de dentro del render porque ahora se pinta DOS veces —entrenadores y
-   * atletas van en secciones separadas— y tenerla duplicada era garantizar que
-   * un día se arreglara solo una de las dos.
+   * Va fuera del render para pintarse igual en cada sección de GRUPOS_ADMIN.
    */
   const filaCuenta = (c: UserProfile) => {
     const s = subscriptionState(c);
@@ -382,19 +354,6 @@ export default function TrainerProfileScreen() {
           </View>
           {!isAdmin(c) ? (
             <View style={styles.coachActions}>
-              {/* Al atleta se le puede dar el mes que le tocaría por su plan,
-                  o un año entero. El año hace falta desde que no se cobra: es
-                  como se cubre a quien paga por fuera, y antes solo se le
-                  podía dar de mes en mes o escribiendo 365 a mano. */}
-              {c.role === 'athlete' ? (
-                <Button
-                  title="+1 mes"
-                  variant="secondary"
-                  onPress={() => extendCoach(c, 30)}
-                  loading={updatingCoach === c.uid}
-                  style={styles.coachBtn}
-                />
-              ) : null}
               <Button
                 title="+1 año"
                 variant="secondary"
@@ -703,8 +662,7 @@ export default function TrainerProfileScreen() {
                 </View>
               ))}
               <Text style={styles.funnelFoot}>
-                Altas por tipo — coach {funnelExtra.register_ok_trainer ?? 0} · atleta{' '}
-                {funnelExtra.register_ok_athlete ?? 0} · alumno{' '}
+                Altas por tipo — coach {funnelExtra.register_ok_trainer ?? 0} · alumno{' '}
                 {funnelExtra.register_ok_client ?? 0}
               </Text>
               <Text style={styles.funnelFoot}>
@@ -770,16 +728,15 @@ export default function TrainerProfileScreen() {
           </View>
           {!adminOpen ? (
             <Text style={styles.helperText}>
-              Gestiona las suscripciones de quien paga: entrenadores y atletas.
+              Gestiona las suscripciones de los entrenadores.
             </Text>
           ) : (
             <>
               {loadingCoaches ? (
                 <Text style={styles.helperText}>Cargando…</Text>
               ) : (
-                /* Las dos secciones siempre, aunque una esté vacía: que ponga
-                   "Todavía no hay ningún atleta" es información, y esconder la
-                   sección haría dudar de si existe o si ha fallado algo. */
+                /* La sección siempre, aunque esté vacía: esconderla haría
+                   dudar de si existe o si ha fallado algo. */
                 GRUPOS_ADMIN.map(({ rol, titulo, vacio }) => {
                   const cuentas = coaches.filter((c) => c.role === rol);
                   return (
@@ -948,9 +905,8 @@ const styles = StyleSheet.create({
   coachEmail: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   coachSub: { ...typography.small, color: colors.primaryBright, fontSize: 11, marginTop: 2 },
   coachBtn: { paddingHorizontal: spacing.md },
-  // Con "flexWrap": la fila del atleta lleva un botón más (+1 mes y +1 año) y
-  // en pantalla estrecha tiene que poder bajar a la línea siguiente en vez de
-  // salirse o comerse los iconos de revocar y borrar.
+  // Con "flexWrap": en pantalla estrecha los botones bajan a la línea
+  // siguiente en vez de salirse o comerse los iconos de revocar y borrar.
   coachActions: {
     flexDirection: 'row',
     alignItems: 'center',

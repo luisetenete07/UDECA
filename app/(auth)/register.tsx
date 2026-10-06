@@ -29,7 +29,7 @@ import { colors, fonts, gradients, spacing, typography } from '../../lib/theme';
  * `app/(auth)/completar.tsx` pide el nombre, el rol y el código si hace falta.
  * Es el mismo trabajo, pero cuando ya se está dentro y no cuesta lo mismo.
  *
- * Los tres tipos de cuenta se cuentan aquí igualmente, sin poder elegirlos: no
+ * Los dos tipos de cuenta se cuentan aquí igualmente, sin poder elegirlos: no
  * es un formulario, es saber a qué vienes.
  */
 
@@ -38,11 +38,6 @@ const TIPOS: { titulo: string; icono: keyof typeof Ionicons.glyphMap; texto: str
     titulo: 'Alumno',
     icono: 'person-outline',
     texto: 'Entrenas con tu entrenador, que te manda el plan. Necesitas su código.',
-  },
-  {
-    titulo: 'Atleta',
-    icono: 'barbell-outline',
-    texto: 'Entrenas por tu cuenta. Entras con un año entero por delante.',
   },
   {
     titulo: 'Entrenador',

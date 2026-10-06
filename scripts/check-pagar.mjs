@@ -31,12 +31,13 @@ const ok = (n, c, porQue = '') => {
 };
 const lee = (ruta) => readFileSync(new URL(`../${ruta}`, import.meta.url), 'utf8');
 
-console.log('\nCada rol a su precio');
+console.log('\nEl entrenador, a su precio');
 {
   ok('entrenador', PRECIOS.trainer === 'price_1UGeiXBGRboHaTA0BtyNZc4o');
-  ok('atleta', PRECIOS.athlete === 'price_1UGejuBGRboHaTA0l2DMHCIm');
-  ok('y no son el mismo', PRECIOS.trainer !== PRECIOS.athlete);
-  ok('solo dos roles pagan', rolValido('trainer') && rolValido('athlete') && !rolValido('client') && !rolValido(''));
+  // El atleta que se entrenaba solo se quitó: su precio no puede seguir
+  // abriendo una pasarela que cobre un producto que ya no existe.
+  ok('solo paga el entrenador', rolValido('trainer') && !rolValido('athlete') && !rolValido('client') && !rolValido(''));
+  ok('y no queda precio de atleta', !('athlete' in PRECIOS) && !('athlete' in ENLACES));
   const s = sesionDePago({ rol: 'trainer' });
   ok('la sesión es una suscripción', s.mode === 'subscription', 'un pago único no se renueva nunca');
   ok('con el precio del entrenador', s.line_items[0].price === PRECIOS.trainer);
@@ -58,11 +59,11 @@ console.log('\nUn solo descuento');
 
 console.log('\nQuién paga llega al webhook');
 {
-  const s = sesionDePago({ rol: 'athlete', uid: 'U1', email: 'a@b.co' });
+  const s = sesionDePago({ rol: 'trainer', uid: 'U1', email: 'a@b.co' });
   // Sin client_reference_id el dinero entra y la cuenta no se activa nunca.
   ok('con su uid', s.client_reference_id === 'U1');
   ok('y su correo', s.customer_email === 'a@b.co');
-  ok('sin uid no se inventa uno', !('client_reference_id' in sesionDePago({ rol: 'athlete' })));
+  ok('sin uid no se inventa uno', !('client_reference_id' in sesionDePago({ rol: 'trainer' })));
 }
 
 console.log('\nSi algo falla, el Payment Link de siempre');
@@ -71,7 +72,7 @@ console.log('\nSi algo falla, el Payment Link de siempre');
   ok('al enlace del rol', r.startsWith(ENLACES.trainer + '?'));
   ok('con el primer año', r.includes(`prefilled_promo_code=${CODIGO_PRIMER_ANO}`));
   ok('y con quién paga', r.includes('client_reference_id=U1') && r.includes('prefilled_email=a%40b.co'));
-  ok('y el código del creador si lo trae', urlDeRespaldo('athlete', { codigo: 'ana65' }).includes('prefilled_promo_code=ANA65'));
+  ok('y el código del creador si lo trae', urlDeRespaldo('trainer', { codigo: 'ana65' }).includes('prefilled_promo_code=ANA65'));
   ok('el código se limpia', limpiarCodigo(' ana 65!<x> ') === 'ANA65X');
   const handler = lee('payments-webhook/api/pagar.js');
   ok('un error cae a la red', /catch \(e\)[\s\S]{0,160}redirect\(303, respaldo\)/.test(handler));
@@ -79,7 +80,6 @@ console.log('\nSi algo falla, el Payment Link de siempre');
   // Los mismos enlaces que la app: si se separan, la red cobra otro producto.
   const app = lee('lib/enlacesDeCobro.ts');
   ok('mismo enlace de entrenador que la app', app.includes(ENLACES.trainer));
-  ok('mismo enlace de atleta que la app', app.includes(ENLACES.athlete));
 }
 
 console.log('\nSe copia lo que el enlace tiene configurado');

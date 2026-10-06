@@ -53,7 +53,7 @@ for (const [es, en] of Object.entries(EN)) {
 
 // --- Lo que se guarda no se traduce ---
 // `newDay` y `addDay` escriben el nombre del día EN LOS DATOS del alumno.
-for (const f of ['app/(client)/my-plan.tsx', 'app/(trainer)/clients/[id]/routine.tsx']) {
+for (const f of ['app/(trainer)/clients/[id]/routine.tsx']) {
   const s = readFileSync(new URL('../' + f, import.meta.url), 'utf8');
   for (const linea of s.split('\n')) {
     if (/name:\s*frase`/.test(linea)) mal(`${f}: se traduce un nombre que se guarda — ${linea.trim()}`);

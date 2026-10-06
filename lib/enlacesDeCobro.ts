@@ -35,7 +35,6 @@ import type { UserProfile } from './types';
  * otro, que era la avería cara de este fichero.
  *
  *   - Entrenador: 240 €/año, primera factura 120 €
- *   - Atleta:      60 €/año, primera factura  30 €
  *
  * El descuento del primer año NO está aquí: vive en Stripe, como cupón de un
  * solo uso pegado al enlace. Así la app no tiene que saber nada de ofertas, y
@@ -98,25 +97,17 @@ const PRIMER_ANO = '?prefilled_promo_code=PRIMERANO';
  */
 export const COACH_LINK: string =
   `https://buy.stripe.com/3cI3cu8ezdGXacUbvC3sI09${PRIMER_ANO}`;
-export const ATHLETE_LINK: string =
-  `https://buy.stripe.com/7sY14mgL5dGX2KseHO3sI08${PRIMER_ANO}`;
 
 /** El endpoint de pago: la pasarela abre ya con el precio del primer año. */
 export const PAGAR_URL = 'https://udeca.vercel.app/api/pagar';
 export const COACH_PAGAR: string = `${PAGAR_URL}?rol=trainer`;
-export const ATHLETE_PAGAR: string = `${PAGAR_URL}?rol=athlete`;
 
 /*
- * Los cuatro nombres de siempre, apuntando al endpoint.
- *
- * Entrar y renovar son el mismo producto, así que van al mismo sitio. Lo que
- * NO puede pasar es que el entrenador y el atleta compartan uno: se cobrarían
- * 60 € por lo que vale 240, o al revés (check-stripe.mjs lo vigila).
+ * Los dos nombres de siempre, apuntando al endpoint. Entrar y renovar son el
+ * mismo producto, así que van al mismo sitio.
  */
 export const COACH_ENTRY_LINK = COACH_PAGAR;
-export const ATHLETE_ENTRY_LINK = ATHLETE_PAGAR;
 export const COACH_PAYMENT_LINK = COACH_PAGAR;
-export const ATHLETE_ANNUAL_LINK = ATHLETE_PAGAR;
 
 /**
  * Le pega al enlace el uid y el correo.
@@ -138,21 +129,17 @@ function conQuienPaga(base: string, profile: UserProfile): string {
 /** Enlace del alta con el uid dentro, para que el webhook sepa a quién activar. */
 export function entryCheckoutUrl(profile: UserProfile | null): string | null {
   if (!profile) return null;
-  const base = profile.role === 'athlete' ? ATHLETE_ENTRY_LINK : COACH_ENTRY_LINK;
-  if (!base) return null;
-  return conQuienPaga(base, profile);
+  if (!COACH_ENTRY_LINK) return null;
+  return conQuienPaga(COACH_ENTRY_LINK, profile);
 }
 
 /**
  * URL de la cuota anual, con su uid para la activación automática.
  *
- * Ya no hay nada que elegir: se paga por años. Antes el atleta tenía mensual o
- * anual y había que decirle a esta función cuál; ahora el atleta renueva a 95 €
- * al año y el entrenador a 180 €, y cada rol tiene un único enlace.
+ * Ya no hay nada que elegir: se paga por años, con un único enlace.
  */
 export function subscriptionCheckoutUrl(profile: UserProfile | null): string | null {
   if (!profile) return null;
-  const base = profile.role === 'athlete' ? ATHLETE_ANNUAL_LINK : COACH_PAYMENT_LINK;
-  if (!base) return null;
-  return conQuienPaga(base, profile);
+  if (!COACH_PAYMENT_LINK) return null;
+  return conQuienPaga(COACH_PAYMENT_LINK, profile);
 }

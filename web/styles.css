@@ -553,6 +553,8 @@ footer { border-top: 1px solid var(--border); padding: 54px 0 44px; position: re
   .section-title { font-size: 38px; }
   .grid { grid-template-columns: repeat(2, 1fr); gap: 22px; }
   .plans { grid-template-columns: repeat(2, 1fr); gap: 26px; }
+  /* Un solo plan: centrado y a un ancho que se lee. */
+  .plans-uno { grid-template-columns: minmax(0, 520px); justify-content: center; }
   /* A partir de tablet caben las seis a la vista y la tira sobra. */
   .galeria {
     grid-auto-flow: row;

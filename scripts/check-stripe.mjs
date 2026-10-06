@@ -46,8 +46,8 @@ const web = readFileSync('web/config.js', 'utf8');
  * El valor de una constante exportada, tal y como está escrito ('' = null).
  *
  * Sigue UN alias. Desde que el alta y la cuota son el mismo producto, los
- * cuatro nombres de siempre (`COACH_ENTRY_LINK`, `COACH_PAYMENT_LINK`…) apuntan
- * a las dos constantes de verdad (`COACH_LINK`, `ATHLETE_LINK`). Sin seguir el
+ * nombres de siempre (`COACH_ENTRY_LINK`, `COACH_PAYMENT_LINK`) apuntan a la
+ * constante de verdad (`COACH_PAGAR`). Sin seguir el
  * alias, esto leía `null` y daba por retirado un enlace que está puesto.
  */
 function constante(texto, nombre, saltos = 1) {
@@ -74,20 +74,14 @@ function claveWeb(texto, nombre) {
 }
 
 /**
- * Los cuatro productos del modelo nuevo.
- *
- *   - Primer año de entrenador:   27 €  (pago único)
- *   - Primer año de atleta:       17 €  (pago único)
- *   - Cuota anual de entrenador: 180 €/año  (el plan que quita el tope)
- *   - Cuota anual de atleta:      95 €/año
+ * Dónde se paga. Un solo producto, el del entrenador (240 €/año, el primero a
+ * mitad), con tres botones: entrar desde la app, entrar desde la web y
+ * renovar. El atleta que se entrenaba solo se quitó.
  */
 const ENLACES = {
   'primer año del entrenador (app)': constante(app, 'COACH_ENTRY_LINK'),
-  'primer año del atleta (app)': constante(app, 'ATHLETE_ENTRY_LINK'),
   'primer año del entrenador (web)': claveWeb(web, 'altaCoach'),
-  'primer año del atleta (web)': claveWeb(web, 'altaAtleta'),
   'cuota anual del entrenador': constante(app, 'COACH_PAYMENT_LINK'),
-  'cuota anual del atleta': constante(app, 'ATHLETE_ANNUAL_LINK'),
 };
 
 const esPruebas = (u) => /\/test_/.test(u ?? '');
@@ -148,17 +142,15 @@ console.log('\nLos botones van al endpoint de pago');
 /*
  * Los botones ya NO van al Payment Link: van a /api/pagar, que crea la sesión
  * con el descuento dentro y la pasarela abre con 120 € en vez de enseñar 240 €
- * y repintarlo. Cada botón con SU rol: `rol=trainer` en el del atleta cobra
- * 240 € por lo que vale 60.
+ * y repintarlo.
  */
 for (const [nombre, url] of puestos) {
-  const rol = nombre.includes('entrenador') ? 'trainer' : 'athlete';
-  comprueba(nombre, url === `https://udeca.vercel.app/api/pagar?rol=${rol}`, String(url));
+  comprueba(nombre, url === 'https://udeca.vercel.app/api/pagar?rol=trainer', String(url));
 }
 if (puestos.length === 0) console.log('  · ninguno todavía');
 
 console.log('\nY la red, si el endpoint falla, es el Payment Link de siempre');
-for (const [nombre, clave] of [['entrenador', 'COACH_LINK'], ['atleta', 'ATHLETE_LINK']]) {
+for (const [nombre, clave] of [['entrenador', 'COACH_LINK']]) {
   const red = constante(app, clave);
   comprueba(`red del ${nombre}: Payment Link`, (red ?? '').startsWith('https://buy.stripe.com/'), String(red));
   // Sin el código, el día que el endpoint falle se cobra el precio entero.
@@ -171,7 +163,7 @@ console.log('\nLas dos copias del primer año dicen lo mismo');
   // otro, y el webhook activa cuentas que no han pagado lo que cree. Con el
   // enlace pendiente la pareja también tiene que ir a la vez: vacío en la app
   // y /proximamente en la web, nunca uno de cada.
-  for (const rol of ['entrenador', 'atleta']) {
+  for (const rol of ['entrenador']) {
     const enApp = ENLACES[`primer año del ${rol} (app)`];
     const enWeb = ENLACES[`primer año del ${rol} (web)`];
     const coinciden = enApp === null ? enWeb === '/proximamente' : enApp === enWeb;
@@ -183,36 +175,17 @@ console.log('\nLas dos copias del primer año dicen lo mismo');
   }
 }
 
-console.log('\nNo hay enlaces cruzados');
+console.log('\nEntrar y renovar van al mismo producto');
 {
-  /*
-   * LA REGLA SE HA DADO LA VUELTA, Y CONVIENE ENTENDER POR QUÉ.
-   *
-   * Antes había cuatro productos y la regla era "cada uno con su enlace":
-   * poner el del alta en el botón de la cuota hacía que alguien pagase 27 €
-   * creyendo pagar 180 y se quedara sin plan.
-   *
-   * Ahora hay DOS. El alta y la cuota son el mismo producto —una suscripción
-   * anual con la primera factura a mitad—, así que los dos botones de un mismo
-   * rol tienen que apuntar al MISMO sitio: eso ya no es un cruce, es lo que se
-   * quería. Exigir cuatro enlaces distintos hoy obligaría a inventarse dos
-   * productos que no existen.
-   *
-   * Lo que sigue sin poder pasar es lo caro: que el entrenador y el atleta
-   * compartan enlace. Ahí sí se cobran 60 € por lo que vale 240, o al revés.
-   */
-  const coach = ENLACES['primer año del entrenador (app)'];
-  const atleta = ENLACES['primer año del atleta (app)'];
+  // El alta y la cuota son la misma suscripción anual con la primera factura a
+  // mitad: si se separan, la web y la app cobran cosas distintas.
   comprueba(
-    'el entrenador y el atleta no comparten enlace',
-    !coach || !atleta || coach !== atleta,
-    `${coach} vs ${atleta}`
+    'entrar y renovar, el mismo enlace',
+    ENLACES['cuota anual del entrenador'] === ENLACES['primer año del entrenador (app)']
   );
   comprueba(
-    'y en cada rol, entrar y renovar van al mismo producto',
-    ENLACES['cuota anual del entrenador'] === coach &&
-      ENLACES['cuota anual del atleta'] === atleta,
-    'si se separan, la web y la app cobran cosas distintas'
+    'y no queda ningún enlace del atleta',
+    !/ATHLETE_/.test(app) && !/altaAtleta/.test(web) && !/rol=athlete/.test(app + web)
   );
 }
 

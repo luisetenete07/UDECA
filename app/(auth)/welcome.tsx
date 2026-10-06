@@ -39,8 +39,8 @@ const SLIDES: Slide[] = [
   },
   {
     icon: 'people-outline',
-    title: 'Solo o acompañado',
-    body: 'Entrena con tu entrenador y tu grupo, o crea tú mismo tu plan como atleta independiente.',
+    title: 'Con tu entrenador',
+    body: 'Entrena con tu entrenador y tu grupo: te manda el plan y lo sigues desde el móvil.',
   },
 ];
 

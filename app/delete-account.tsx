@@ -15,7 +15,7 @@ export default function DeleteAccount() {
           final de la pantalla. Son cinco pasos: te explicamos qué se borra, tienes que
           escribir "ELIMINAR MI CUENTA" y volver a confirmar que eres tú con Google o con
           Apple, lo mismo con lo que entras. Al terminar, tu cuenta y tus datos desaparecen
-          en el momento. Vale para cualquier tipo de perfil: alumno, atleta y entrenador.
+          en el momento. Vale para cualquier tipo de perfil: alumno y entrenador.
         </Text>
       </View>
 

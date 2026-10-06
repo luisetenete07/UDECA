@@ -356,6 +356,18 @@ await comprobar('el alumno NO se apaga el RIR que le puso su entrenador', false,
 await comprobar('ni se lo borra del perfil', false, () =>
   setDoc(doc(db, 'users', otro.user.uid), { trackRir: deleteField() }, { merge: true })
 );
+// Quién es y con quién entrena no lo decide el alumno. Cambiarse el rol a
+// entrenador sería entrar gratis como cuenta de pago; ponerse de entrenador a
+// sí mismo era lo que hacía el atleta que se entrenaba solo, que ya no existe.
+await comprobar('el alumno NO se cambia el rol a entrenador', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { role: 'trainer' }, { merge: true })
+);
+await comprobar('ni se hace su propio entrenador', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { trainerId: otro.user.uid }, { merge: true })
+);
+await comprobar('ni se sale del grupo por su cuenta', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { trainerId: deleteField() }, { merge: true })
+);
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
 await comprobar('el entrenador SÍ se lo activa a su alumno', true, () =>
   setDoc(doc(db, 'users', alumno.id), { trackRir: true }, { merge: true })

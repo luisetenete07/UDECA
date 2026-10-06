@@ -101,15 +101,12 @@ service cloud.firestore {
           || isUdecaAdmin()
         );
       // Al crearse, nadie puede regalarse tiempo de suscripción. La excepción
-      // es la PRUEBA GRATUITA, que ahora tienen los dos roles: 14 días el
-      // entrenador y 7 el atleta (DIAS_DE_PRUEBA_*, en lib/planBase.ts). Aquí
-      // se acota para que nadie pueda pedir más de la que le toca.
+      // es la PRUEBA GRATUITA del entrenador: 14 días (DIAS_DE_PRUEBA_ENTRENADOR,
+      // en lib/planBase.ts). Aquí se acota para que nadie pida más.
       //
-      // EL ENTRENADOR NO ESTABA AQUÍ, y habría roto el registro entero. Esta
-      // regla solo admitía prueba al atleta, así que un entrenador naciendo con
-      // sus 14 días se encontraba un "missing or insufficient permissions" al
-      // crear la cuenta y no podía entrar. No es un fallo que se vea probando
-      // la app contra el emulador con las reglas viejas: se ve contra ESTAS.
+      // SOLO DOS ROLES, Y NADIE NACE CON ENTRENADOR. El atleta que se entrenaba
+      // solo ya no existe: era el único que nacía con `trainerId` (el suyo
+      // propio). Un alumno lo consigue cuando su entrenador le acepta.
       //
       // LOS DOS DÍAS DE MÁS NO SON UN DESCUIDO. El fin de la prueba lo calcula
       // la app con el reloj DEL MÓVIL y lo comprueba esta regla con el reloj
@@ -121,16 +118,13 @@ service cloud.firestore {
       // de reloj y lo único que concede en el peor de los casos es un par de
       // días de prueba a quien tenga la hora mal puesta a propósito.
       allow create: if request.auth != null && request.auth.uid == userId
+        && request.resource.data.role in ['trainer', 'client']
+        && !('trainerId' in request.resource.data)
         && (
           // Los alumnos entran gratis: no llevan suscripción.
-          (request.resource.data.role != 'trainer' && request.resource.data.role != 'athlete')
+          request.resource.data.role == 'client'
           || !('subscriptionUntil' in request.resource.data)
           || request.resource.data.subscriptionUntil <= request.time.toMillis()
-          || (
-            request.resource.data.role == 'athlete'
-            && request.resource.data.subscriptionUntil
-                 <= request.time.toMillis() + (7 + 2) * 24 * 60 * 60 * 1000
-          )
           || (
             request.resource.data.role == 'trainer'
             && request.resource.data.subscriptionUntil
@@ -152,6 +146,11 @@ service cloud.firestore {
           //    desmontaría el control de multicuentas entero.
           && !request.resource.data.diff(resource.data).affectedKeys()
             .hasAny([
+              // Quién es y con quién entrena. Cambiarse el rol a entrenador
+              // sería entrar gratis como cuenta de pago; ponerse un
+              // `trainerId` sería colarse en un grupo sin que le acepten (o
+              // hacerse su propio entrenador, que era cosa del atleta).
+              'role', 'trainerId',
               'subscriptionUntil', 'subscriptionPlan', 'clientCount',
               'clientSlots', 'entryPaidAt', 'payerFingerprint', 'sharedCardWith',
               // El número de fundador es correlativo y lo reparte el servidor.
@@ -160,8 +159,7 @@ service cloud.firestore {
               // Si a un alumno se le pregunta el esfuerzo (RIR) lo decide su
               // ENTRENADOR, más abajo. Si pudiera quitárselo él, el entrenador
               // seguiría creyendo que ese dato existe y se le quedaría la
-              // intensidad en blanco sin saber por qué. El atleta no lo
-              // necesita: se le pregunta por su rol, no por este campo.
+              // intensidad en blanco sin saber por qué.
               'trackRir',
               // El enlace con el que paga su cuota lo pone su ENTRENADOR, en
               // su ficha (más abajo). Poder cambiárselo uno mismo sería poder
@@ -279,9 +277,6 @@ service cloud.firestore {
     // Lo LEEN los dos: el entrenador y el propio alumno, porque ven la misma
     // tabla y hablar del progreso mirando cosas distintas no lleva a ningún
     // sitio. Lo ESCRIBE solo el entrenador: es él quien decide qué se vigila.
-    //
-    // El atleta se autoentrena (su trainerId es su propio uid), así que esta
-    // misma regla le deja editar la suya sin ninguna excepción especial.
     match /progressTrackers/{clientId} {
       // Quién puede leer se deduce del ALUMNO (el id del documento), no del
       // documento en sí: así funciona igual cuando todavía no existe, que es
@@ -303,9 +298,6 @@ service cloud.firestore {
       // fallo o por un cambio de entrenador), fiarse de lo guardado lo dejaría
       // bloqueado para siempre; así el entrenador de turno siempre puede
       // recuperarlo.
-      //
-      // El atleta pasa la comprobación sin ninguna excepción: su `trainerId` es
-      // su propio uid, así que es su propio entrenador.
       allow create: if request.auth != null
         && request.resource.data.trainerId == request.auth.uid
         && get(/databases/$(database)/documents/users/$(clientId)).data.trainerId
@@ -484,8 +476,7 @@ service cloud.firestore {
      * eso, un entrenador podría escribir la rutina de un alumno ajeno con solo
      * poner su uid en el campo.
      *
-     * La escribe SU entrenador, o el propio interesado cuando se entrena solo
-     * (el atleta es su propio entrenador: su `trainerId` es su uid).
+     * La escribe SU entrenador.
      */
     match /rutinasDiarias/{clientId} {
       allow read: if request.auth != null
@@ -498,10 +489,6 @@ service cloud.firestore {
        *
        * El entrenador del alumno, según el `trainerId` de su perfil — que solo
        * escribe el propio entrenador al aceptarlo.
-       *
-       * El atleta que se entrena solo entra por esa misma puerta sin ninguna
-       * excepción: al crearse su cuenta, su `trainerId` es su propio uid. Es su
-       * entrenador, literalmente.
        *
        * La segunda mitad es para quien NO tiene entrenador (un alumno al que
        * han sacado de un grupo): puede llevar la suya, porque no hay nadie más
@@ -680,8 +667,8 @@ service cloud.firestore {
         return [
           'intro_start', 'intro_done',
           'register_view', 'register_submit', 'register_ok', 'register_fail',
-          'register_ok_trainer', 'register_ok_athlete', 'register_ok_client',
-          'login_ok', 'paywall_view', 'checkout_start', 'checkout_start_anual',
+          'register_ok_trainer', 'register_ok_client',
+          'login_ok', 'paywall_view', 'checkout_start',
           'updatedAt'
         ];
       }

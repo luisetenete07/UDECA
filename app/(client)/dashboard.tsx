@@ -9,8 +9,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/Avatar';
-import { TrialBanner } from '../../components/TrialBanner';
-import { UpgradePopup } from '../../components/UpgradeCard';
 import { Card } from '../../components/Card';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -186,9 +184,6 @@ export default function ClientDashboard() {
       </ScreenContainer>
     );
 
-  // Atleta individual: se autoentrena (sin coach). Cambia el tono de varias
-  // tarjetas para que todo hable de "tú" en lugar de "tu entrenador".
-  const isAthlete = profile?.role === 'athlete';
   const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
   const sessions = weekSessions(workoutLogs);
   /*
@@ -282,9 +277,6 @@ export default function ClientDashboard() {
   const firstSteps = [
     { key: 'photo', label: 'Sube tu foto de perfil', done: Boolean(profile?.photoURL), go: '/(client)/profile' as const },
     { key: 'weight', label: 'Registra tu peso inicial', done: weightLogs.length > 0, go: '/(client)/progress?tab=nutricion' as const },
-    ...(isAthlete
-      ? [{ key: 'plan', label: 'Crea tu plan de entreno', done: Boolean(routine), go: '/(client)/my-plan' as const }]
-      : []),
     { key: 'workout', label: 'Completa tu primer entrenamiento', done: workoutLogs.length > 0, go: '/(client)/workout' as const },
   ] as const;
   const showFirstSteps = firstSteps.some((s) => !s.done);
@@ -383,7 +375,6 @@ export default function ClientDashboard() {
         load();
       }}
     >
-      {/* Solo aparece en cuentas de atleta durante su prueba gratuita. */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greetingLabel}>Bienvenido de nuevo</Text>
@@ -393,26 +384,6 @@ export default function ClientDashboard() {
           <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
         </Pressable>
       </View>
-
-      {/*
-       * El contador de la prueba, desde el primer día.
-       *
-       * FALTABA, y el atleta era el único que no se enteraba de nada: el
-       * entrenador lo tenía en su panel desde siempre y aquí no lo pintaba
-       * nadie. Con siete días de prueba eso significa usar la app una semana y
-       * encontrarse el muro una mañana sin que nadie lo hubiera avisado.
-       *
-       * No molesta a quien no le toca: `TrialBanner` no pinta nada si la
-       * suscripción está pagada, si renueva sola en Stripe, o si es un alumno
-       * de un coach (que no paga plataforma).
-       */}
-      <TrialBanner profile={profile} />
-
-      {/* El aviso a pantalla completa es otra cosa y sale solo el ÚLTIMO día
-          (ver UpgradePopup): el contador de arriba informa sin tapar, y esto
-          interrumpe. Interrumpir tiene sentido cuando queda un día y hay algo
-          que decidir; antes, no. */}
-      <UpgradePopup />
 
       {paymentAlert ? (
         <View style={[styles.payCard, paymentAlert.bad ? styles.payCardBad : styles.payCardWarn]}>
@@ -504,7 +475,7 @@ export default function ClientDashboard() {
       <FadeIn>
       <Pressable
         onPress={() =>
-          router.push(isAthlete && !routine ? '/(client)/my-plan' : '/(client)/workout')
+          router.push('/(client)/workout')
         }
       >
         <LinearGradient
@@ -565,11 +536,6 @@ export default function ClientDashboard() {
                   {nextDay.exercises.length} ejercicios · Empezar sesión
                 </Text>
               </>
-            ) : isAthlete ? (
-              <>
-                <Text style={styles.todayTitle}>Crea tu plan</Text>
-                <Text style={styles.todaySub}>Diseña tus días y empieza hoy. Toca para crearlo.</Text>
-              </>
             ) : (
               <>
                 <Text style={styles.todayTitle}>Sin rutina aún</Text>
@@ -579,14 +545,12 @@ export default function ClientDashboard() {
           </View>
           {(() => {
             const canTrain = !!routine && !restDay && (!!nextDay || routine.schedule === 'flex');
-            const createPlan = isAthlete && !routine;
-            const icon = canTrain ? 'play' : createPlan ? 'construct' : 'bed-outline';
             return (
-              <View style={canTrain || createPlan ? styles.todayPlay : styles.todayRest}>
+              <View style={canTrain ? styles.todayPlay : styles.todayRest}>
                 <Ionicons
-                  name={icon}
+                  name={canTrain ? 'play' : 'bed-outline'}
                   size={canTrain ? 26 : 24}
-                  color={canTrain || createPlan ? colors.onPrimary : colors.primaryBright}
+                  color={canTrain ? colors.onPrimary : colors.primaryBright}
                 />
               </View>
             );
@@ -604,41 +568,6 @@ export default function ClientDashboard() {
       <FadeIn delay={70}>
         <RutinaDiariaDelDia profile={profile} />
       </FadeIn>
-
-      {/* Atleta: acceso a gestionar su propio plan de entreno. */}
-      {profile?.role === 'athlete' ? (
-        <Pressable
-          onPress={() => router.push('/(client)/my-plan')}
-          style={styles.myPlanEntry}
-        >
-          <View style={styles.myPlanIcon}>
-            <Ionicons name="construct-outline" size={18} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.myPlanTitle}>Mi plan de entreno</Text>
-            <Text style={styles.myPlanSub}>Crea y edita tus días y ejercicios.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </Pressable>
-      ) : null}
-
-      {/* La temporada. El atleta no tiene a nadie que le diga cuándo apretar y
-          cuándo soltar: si no se lo reparte él, no se lo reparte nadie. */}
-      {profile?.role === 'athlete' ? (
-        <Pressable
-          onPress={() => router.push('/(client)/planning')}
-          style={styles.myPlanEntry}
-        >
-          <View style={styles.myPlanIcon}>
-            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.myPlanTitle}>Mi temporada</Text>
-            <Text style={styles.myPlanSub}>Bloques, semanas y descargas.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-        </Pressable>
-      ) : null}
 
       {showWeightReminder ? (
         <Pressable onPress={() => router.push('/(client)/progress')}>
@@ -763,9 +692,7 @@ export default function ClientDashboard() {
 
         {targetSessions > 0 ? null : (
           <Text style={styles.weekHint}>
-            {isAthlete
-              ? 'Crea tu plan para ver aquí tu semana y tu objetivo de sesiones.'
-              : 'Cuando tengas rutina asignada verás aquí tu plan y objetivo semanal.'}
+            Cuando tengas rutina asignada verás aquí tu plan y objetivo semanal.
           </Text>
         )}
 
@@ -942,29 +869,6 @@ const styles = StyleSheet.create({
   payReported: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
   payReportedText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },
-  myPlanEntry: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-    marginBottom: spacing.md,
-  },
-  myPlanIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  myPlanTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  myPlanSub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   streakInline: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   streakInlineText: {
     ...typography.small,

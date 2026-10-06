@@ -8,7 +8,7 @@
  *
  * QUIÉN VE QUÉ
  *
- *  - Entrenador y atleta: la suya, porque la han puesto ellos.
+ *  - Entrenador: la suya, porque la ha puesto él.
  *  - Alumno de un entrenador: LA DE SU ENTRENADOR. No tiene marca propia —no
  *    paga y no vende nada— y la app es, para él, la de su coach.
  *  - Sin sesión (entrar, registrarse): UDECA. Ahí todavía no se sabe de quién

@@ -77,18 +77,11 @@ if (yaTiene) {
 }
 
 /*
- * CADA ROL TIENE SU SERIE
- *
- * Entrenadores y atletas llevan campañas separadas, con su contador y su
- * interruptor (ver payments-webhook/api/_alta.js). Así que hay un entrenador
- * fundador #1 y un atleta fundador #1, y las dos cosas son correctas.
- *
- * Esto importa aquí por dos motivos, y los dos harían daño en silencio: el
- * número repetido hay que buscarlo SOLO dentro de su serie —si no, dar el #1 al
- * primer atleta sería imposible porque ya lo tiene un entrenador—, y el
- * contador que se mueve tiene que ser el de esa misma serie.
+ * LA SERIE DE CADA ROL. Hoy solo la de entrenadores (ver
+ * payments-webhook/api/_alta.js): el número repetido se busca SOLO dentro de su
+ * serie, y el contador que se mueve es el de esa misma serie.
  */
-const MOSTRADOR = { trainer: 'fundadores', athlete: 'fundadoresAtletas' };
+const MOSTRADOR = { trainer: 'fundadores' };
 const rol = datos.role;
 const mostrador = MOSTRADOR[rol];
 if (!mostrador) {

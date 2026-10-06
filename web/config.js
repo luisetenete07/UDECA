@@ -23,22 +23,20 @@ window.UDECA = {
   pruebaEnTiendas: false,
 
   /**
-   * Los dos enlaces de pago. 240 €/año el entrenador, 60 €/año el atleta,
-   * con la primera factura a mitad de precio (el cupón vive en Stripe).
+   * El enlace de pago del entrenador: 240 €/año, con la primera factura a
+   * mitad de precio (el cupón vive en Stripe).
    *
    * Son PRODUCCIÓN (`buy.stripe.com/…`, sin `test_`). Un enlace de prueba abre
    * la pasarela, acepta la tarjeta, da las gracias y no cobra nada: quien
    * pulsara se quedaría convencido de haber pagado.
    *
-   * Son los MISMOS dos que van en lib/enlacesDeCobro.ts: la web los usa para
+   * Es el MISMO que va en lib/enlacesDeCobro.ts: la web lo usa para
    * quien llega de fuera y la app para quien se registró sin pasar por ella.
    * Si cambias uno, cambia el otro — scripts/check-stripe.mjs se queja si se
-   * separan, y ese día la mitad de las altas irían a un producto y la otra
-   * mitad a otro.
+   * separan.
    *
    * Ya no hay un enlace distinto para renovar: es la misma suscripción, que se
-   * renueva sola. Los nombres `altaAtleta` y `altaCoach` se quedan porque son
-   * los que lee el HTML en `data-pago`.
+   * renueva sola. El nombre `altaCoach` es el que lee el HTML en `data-pago`.
    *
    * Si alguna vez hay que retirarlos, se dejan en '/proximamente' —nunca con
    * un enlace de otro importe—: esa página explica que el cobro no está
@@ -47,8 +45,7 @@ window.UDECA = {
   pagos: {
     // Al endpoint de pago, no al Payment Link: así la pasarela abre ya con el
     // precio del primer año, sin enseñar 240 € ocho segundos antes. Son los
-    // mismos que COACH_PAGAR y ATHLETE_PAGAR de lib/enlacesDeCobro.ts.
-    altaAtleta: 'https://udeca.vercel.app/api/pagar?rol=athlete',
+    // mismo que COACH_PAGAR de lib/enlacesDeCobro.ts.
     altaCoach: 'https://udeca.vercel.app/api/pagar?rol=trainer',
   },
 

@@ -48,11 +48,9 @@ console.log('\nEl texto se guarda limpio y con tope');
 console.log('\nQuién ve qué');
 {
   const coach = { role: 'trainer', brandName: 'IRON BOX' };
-  const atleta = { role: 'athlete', brandName: 'MI PLAN' };
   const alumno = { role: 'client' };
 
   ok('el entrenador ve la suya', marcaDe(coach) === 'IRON BOX');
-  ok('el atleta ve la suya', marcaDe(atleta) === 'MI PLAN');
   // LO IMPORTANTE. El alumno lee la de su coach, no la suya ni la de la casa.
   ok('el alumno ve la de su entrenador', marcaDe(alumno, coach) === 'IRON BOX');
   // Y un alumno que se pusiera una por su cuenta (las reglas no lo impiden, y
@@ -116,7 +114,7 @@ console.log('\nY se puede poner y quitar');
   ok('el entrenador lo tiene', /<EditorDeMarca \/>/.test(coach));
   // El ALUMNO no: lo que ve es la de su coach, así que un editor ahí sería un
   // campo que se guarda y no cambia nada.
-  ok('el atleta también, y solo él', /\{isAthlete \? <EditorDeMarca \/> : null\}/.test(cliente));
+  ok('y el alumno no', !/<EditorDeMarca/.test(cliente));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

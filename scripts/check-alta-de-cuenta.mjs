@@ -31,15 +31,10 @@
 import { readFileSync } from 'node:fs';
 import {
   DAY_MS,
-  DIAS_DE_PRUEBA_ATLETA,
   DIAS_DE_PRUEBA_ENTRENADOR,
-  PRIMER_ANO_DESDE,
-  TRIAL_DAYS,
-  conModeloDePrimerAno,
   needsEntryPayment,
   subscriptionState,
   suscripcionAlNacer,
-  trialUntil,
 } from '../lib/planBase.ts';
 
 let fallos = 0;
@@ -54,11 +49,8 @@ const HOY = Date.now();
 
 console.log('\nUna cuenta nueva nace con su prueba');
 {
-  for (const [rol, dias] of [
-    ['trainer', DIAS_DE_PRUEBA_ENTRENADOR],
-    ['athlete', DIAS_DE_PRUEBA_ATLETA],
-  ]) {
-    const nace = suscripcionAlNacer(rol, HOY);
+  for (const [rol, dias] of [['trainer', DIAS_DE_PRUEBA_ENTRENADOR]]) {
+    const nace = suscripcionAlNacer(HOY);
     ok(`${rol}: ${dias} días`, nace.subscriptionUntil === HOY + dias * DAY_MS);
     /*
      * LAS DOS FECHAS IGUALES. Es lo único que distingue una prueba de un año
@@ -72,8 +64,8 @@ console.log('\nUna cuenta nueva nace con su prueba');
 
 console.log('\nY eso es lo que se lee en el panel de administración');
 {
-  for (const rol of ['trainer', 'athlete']) {
-    const nuevo = { role: rol, email: 'a@b.c', createdAt: HOY, ...suscripcionAlNacer(rol, HOY) };
+  for (const rol of ['trainer']) {
+    const nuevo = { role: rol, email: 'a@b.c', createdAt: HOY, ...suscripcionAlNacer(HOY) };
     const s = subscriptionState(nuevo, HOY);
     ok(`${rol}: sale como activa`, s.active);
     ok(`${rol}: y como de prueba`, s.trial, 'el panel tiene que poder distinguir prueba de pagado');
@@ -93,50 +85,27 @@ console.log('\nY eso es lo que se lee en el panel de administración');
 
 console.log('\nPero la prueba se acaba');
 {
-  for (const [rol, dias] of [
-    ['trainer', DIAS_DE_PRUEBA_ENTRENADOR],
-    ['athlete', DIAS_DE_PRUEBA_ATLETA],
-  ]) {
+  for (const [rol, dias] of [['trainer', DIAS_DE_PRUEBA_ENTRENADOR]]) {
     const nacimiento = HOY - (dias + 1) * DAY_MS;
     const caducado = {
       role: rol,
       email: 'a@b.c',
       createdAt: nacimiento,
-      ...suscripcionAlNacer(rol, nacimiento),
+      ...suscripcionAlNacer(nacimiento),
     };
     ok(`${rol}: al día siguiente se le pide pagar`, needsEntryPayment(caducado, HOY));
     ok(`${rol}: y deja de estar activa`, !subscriptionState(caducado, HOY).active);
   }
 }
 
-console.log('\nLa prueba antigua sigue siendo prueba');
-{
-  // Las cuentas de antes conservan lo suyo: se les vendió una prueba de 28
-  // días y la tienen. Cambiar las condiciones a mitad de partida no se hace.
-  const viejo = {
-    role: 'athlete',
-    email: 'v@b.c',
-    createdAt: PRIMER_ANO_DESDE - 1,
-    subscriptionUntil: trialUntil(),
-    trialEndsAt: trialUntil(),
-  };
-  ok('sigue contando como prueba', subscriptionState(viejo).trial);
-  ok('y con acceso', subscriptionState(viejo).active);
-  ok('y no se rige por el modelo nuevo', !conModeloDePrimerAno(viejo));
-  ok(`los ${TRIAL_DAYS} días siguen definidos para ellas`, TRIAL_DAYS === 28);
-}
-
-console.log('\nY los cuatro caminos de alta escriben eso, no otra cosa');
+console.log('\nY los dos caminos de alta escriben eso, no otra cosa');
 {
   const auth = sinComentar(lee('lib/auth-context.tsx'));
-  /*
-   * CUATRO: entrenador y atleta, cada uno por proveedor y por correo. La
-   * primera vez, dos usaban la función y dos escribían el valor a mano; se
-   * arreglaron los que se miraron.
-   */
-  const conRol = (rol) => (auth.match(new RegExp(`\\.\\.\\.suscripcionAlNacer\\('${rol}'\\)`, 'g')) || []).length;
-  ok('dos caminos crean entrenadores', conRol('trainer') === 2, `aparece ${conRol('trainer')} vez/veces`);
-  ok('dos caminos crean atletas', conRol('athlete') === 2, `aparece ${conRol('athlete')} vez/veces`);
+  // DOS: el entrenador por proveedor y por correo. Cuando eran cuatro (con el
+  // atleta), dos usaban la función y dos escribían el valor a mano.
+  const veces = (auth.match(/\.\.\.suscripcionAlNacer\(\)/g) || []).length;
+  ok('dos caminos crean entrenadores', veces === 2, `aparece ${veces} vez/veces`);
+  ok('y ninguno crea atletas', !/role: 'athlete'/.test(auth));
   // Ni a mano, ni a cero. Un `subscriptionUntil: 0` suelto es una cuenta que
   // nace caducada: se ve perfecta y no deja usar nada.
   ok(

@@ -3,7 +3,7 @@
  *
  * Lo que hay que proteger: que una tarjeta que se comparte no diga "fundador"
  * de quien ahora mismo no está dentro (el número no se pierde, pero mientras
- * tanto no se enseña), y que los cuatro tipos de cuenta se distingan de
+ * tanto no se enseña), y que los tres tipos de carné se distingan de
  * verdad, que es justo para lo que existe la tarjeta.
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-carne.mjs
@@ -32,7 +32,9 @@ const perfil = (extra = {}) => ({
 console.log('\nQué tipo de carné le toca a cada uno');
 {
   comprueba('el entrenador', tipoDeCarne(perfil({ role: 'trainer' })) === 'coach');
-  comprueba('el atleta', tipoDeCarne(perfil({ role: 'athlete' })) === 'atleta');
+  // El atleta que se entrenaba solo ya no existe: una cuenta antigua de ese
+  // tipo no se queda sin carné, lleva el de alumno.
+  comprueba('una cuenta antigua de atleta, alumno', tipoDeCarne(perfil({ role: 'athlete' })) === 'alumno');
   comprueba('el alumno', tipoDeCarne(perfil()) === 'alumno');
   comprueba(
     'quien está por los cursos y no entrena',
@@ -51,19 +53,18 @@ console.log('\nQué tipo de carné le toca a cada uno');
   comprueba('sin perfil, no se inventa nada raro', tipoDeCarne(null) === 'alumno');
 }
 
-console.log('\nLos cuatro se distinguen');
+console.log('\nLos tres se distinguen');
 {
   const de = (p, o) => datosDelCarne(p, o);
   const coach = de(perfil({ role: 'trainer' }));
-  const atleta = de(perfil({ role: 'athlete' }));
   const alumno = de(perfil());
   const form = de(perfil(), { conCursos: true });
-  const todos = [coach, atleta, alumno, form];
+  const todos = [coach, alumno, form];
 
-  comprueba('cada uno con su título', new Set(todos.map((c) => c.titulo)).size === 4);
-  comprueba('cada uno con su monograma', new Set(todos.map((c) => c.monograma)).size === 4);
-  comprueba('cada uno con su color', new Set(todos.map((c) => c.acento)).size === 4);
-  comprueba('y con su frase', new Set(todos.map((c) => c.lema)).size === 4);
+  comprueba('cada uno con su título', new Set(todos.map((c) => c.titulo)).size === 3);
+  comprueba('cada uno con su monograma', new Set(todos.map((c) => c.monograma)).size === 3);
+  comprueba('cada uno con su color', new Set(todos.map((c) => c.acento)).size === 3);
+  comprueba('y con su frase', new Set(todos.map((c) => c.lema)).size === 3);
   comprueba('los colores son todos del mismo oro', todos.every((c) => /^#[0-9A-F]{6}$/i.test(c.acento)));
   comprueba('el título va en mayúsculas', todos.every((c) => c.titulo === c.titulo.toUpperCase()));
   comprueba('el nombre, tal cual', coach.nombre === 'Luis Tena');
@@ -80,20 +81,17 @@ console.log('\nEl número de fundador solo se enseña encendido');
   comprueba('el alumno fundador lo lleva', alumnoFundador.fundador === '#0028', alumnoFundador.fundador);
   comprueba('con cuatro cifras', /^#\d{4}$/.test(alumnoFundador.fundador));
 
-  const atletaAlDia = datosDelCarne(
-    perfil({ role: 'athlete', founderNumber: 7, subscriptionUntil: ahora + 30 * DIA }),
-    { ahora }
-  );
-  comprueba('el atleta al día también', atletaAlDia.fundador === '#0007');
+  // Un entrenador del modelo del primer año: sin su año pagado no está dentro.
+  const coachNuevo = (extra) =>
+    perfil({ role: 'trainer', founderNumber: 7, createdAt: Date.parse('2026-09-20T10:00:00Z'), ...extra });
+  const coachAlDia = datosDelCarne(coachNuevo({ subscriptionUntil: ahora + 30 * DIA }), { ahora });
+  comprueba('el entrenador al día también', coachAlDia.fundador === '#0007', coachAlDia.fundador);
 
   // Caducado: el número sigue siendo suyo, pero una tarjeta que se comparte no
   // puede decir "fundador" de quien ahora mismo no está dentro.
-  const atletaCaducado = datosDelCarne(
-    perfil({ role: 'athlete', founderNumber: 7, subscriptionUntil: ahora - 5 * DIA }),
-    { ahora }
-  );
-  comprueba('caducado, no se imprime', atletaCaducado.fundador === undefined, atletaCaducado.fundador);
-  comprueba('pero sigue teniendo su carné', atletaCaducado.titulo === 'ATLETA');
+  const coachCaducado = datosDelCarne(coachNuevo({ subscriptionUntil: ahora - 5 * DIA }), { ahora });
+  comprueba('caducado, no se imprime', coachCaducado.fundador === undefined, coachCaducado.fundador);
+  comprueba('pero sigue teniendo su carné', coachCaducado.titulo === 'ENTRENADOR');
 
   comprueba('quien no es fundador, sin número', datosDelCarne(perfil()).fundador === undefined);
   comprueba('un número de cero no cuenta', datosDelCarne(perfil({ founderNumber: 0 })).fundador === undefined);
@@ -105,8 +103,6 @@ console.log('\nEl rótulo de arriba a la izquierda dice qué eres');
   // que leía era un cargo que no es el suyo.
   comprueba('el entrenador, Entrenador', rotuloDelRol({ role: 'trainer' }) === 'Entrenador',
     rotuloDelRol({ role: 'trainer' }));
-  comprueba('el atleta, Atleta', rotuloDelRol({ role: 'athlete' }) === 'Atleta',
-    rotuloDelRol({ role: 'athlete' }));
   comprueba('el alumno, Alumno', rotuloDelRol({ role: 'client' }) === 'Alumno',
     rotuloDelRol({ role: 'client' }));
   comprueba('sin perfil no dice Entrenador', rotuloDelRol(null) !== 'Entrenador',

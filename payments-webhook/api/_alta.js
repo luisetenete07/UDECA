@@ -21,34 +21,19 @@ import admin from 'firebase-admin';
  * aparte (Vercel) y no comparte código con la app, así que el número vive en
  * los dos sitios. Aquí es donde se escribe de verdad la fecha de fin.
  *
- * Antes eran 28 días de prueba para el atleta y nada para el entrenador. Ahora
- * la entrada ES el primer año —27 € el entrenador, 17 € el atleta— y el reloj
- * de los dos empieza al pagar.
+ * La entrada ES el primer año, y el reloj empieza al pagar.
  */
 export const PRIMER_ANO_DIAS = 365;
 
 /**
- * DOS CAMPAÑAS DE FUNDADORES, UNA POR TIPO DE CUENTA
- *
- * Entrenadores y atletas tienen su propia serie, con su propio contador, su
- * propio interruptor y su propio tope. Hay un entrenador fundador #1 y un
- * atleta fundador #1, y no se pisan.
- *
- * Al principio compartían contador, y el resultado no era el que se quiere: el
- * primer atleta que llegaba se encontraba con un #0043 porque antes se habían
- * dado de alta cuarenta y dos entrenadores. El número dejaba de decir "fuiste
- * de los primeros" para decir "llegaste tarde", que es justo lo contrario de
- * para lo que existe.
- *
- * Son además dos productos que se venden por separado y en momentos distintos:
- * quien abre la campaña de atletas no tiene por qué abrir la de entrenadores el
- * mismo día, ni ponerle el mismo tope.
+ * LA CAMPAÑA DE FUNDADORES, POR TIPO DE CUENTA. Hoy solo la de entrenadores:
+ * hubo otra de atletas, con su propio contador para que el primer atleta no
+ * recibiera un #0043, y se quitó con ese perfil.
  *
  * Quien YA tiene número se lo queda tal cual. Los números repartidos no se
- * tocan nunca —ver el porqué en lib/fundador.ts—, así que las cuentas de antes
- * de esta separación conservan el suyo aunque venga de la cuenta compartida.
+ * tocan nunca —ver el porqué en lib/fundador.ts—.
  */
-const MOSTRADOR = { trainer: 'fundadores', athlete: 'fundadoresAtletas' };
+const MOSTRADOR = { trainer: 'fundadores' };
 
 /**
  * Reparte el número de fundador de su serie, si esa campaña sigue abierta.
@@ -119,7 +104,7 @@ export async function aplicarAlta(
   const snap = await db.collection('users').doc(uid).get();
   if (!snap.exists) return false;
   const perfil = snap.data();
-  if (perfil.role !== 'trainer' && perfil.role !== 'athlete') return false;
+  if (perfil.role !== 'trainer') return false;
 
   const datos = { entryPaidAt: Date.now(), stripeCustomerId: customerId };
   if (huella) datos.payerFingerprint = huella;
@@ -149,7 +134,7 @@ export async function aplicarAlta(
   }
 
   // Lo que se compra al entrar es el PRIMER AÑO, y vale para los dos roles: el
-  // entrenador y el atleta pagan su año por adelantado. El reloj empieza AQUÍ
+  // entrenador paga su año por adelantado. El reloj empieza AQUÍ
   // y no al registrarse: si tardó dos días en pagar, no los pierde. Solo la
   // primera vez, y sin acortar nunca un acceso mayor que ya tuviera
   // (cortesías, prórrogas dadas a mano, o un plus ya contratado).
