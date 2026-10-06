@@ -15,6 +15,7 @@ import { Chip, ChipRow } from './Chip';
 import { Sheet } from './Sheet';
 import { colors, fieldLabel, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { Routine, TrainingCycle, WeekPlanEntry } from '../lib/types';
+import { queVeElAlumno } from '../lib/visibilidad';
 
 /**
  * Programar UNA semana: series, repeticiones y RIR de cada ejercicio.
@@ -53,6 +54,9 @@ export function WeekPlanSheet({
   const [tambien, setTambien] = useState<string[]>([]);
 
   const nombres = exerciseNames(routine);
+  // Si el entrenador ha apagado el RIR en la rutina, aquí tampoco se pide: no
+  // se programa un número que nadie va a ver. Lo puesto se conserva.
+  const conRir = !routine || queVeElAlumno(routine).objetivo;
   const previa = semanaAnterior(cycles, micro);
   const yaProgramada = (micro.weekPlan ?? []).length > 0;
 
@@ -191,7 +195,7 @@ export function WeekPlanSheet({
             <Text style={[styles.colLabel, { flex: 1 }]}>Ejercicio</Text>
             <Text style={[styles.colLabel, styles.colNum]}>Series</Text>
             <Text style={[styles.colLabel, styles.colReps]}>Reps</Text>
-            <Text style={[styles.colLabel, styles.colNum]}>RIR</Text>
+            {conRir ? <Text style={[styles.colLabel, styles.colNum]}>RIR</Text> : null}
           </View>
 
           {entries.map((e) => (
@@ -216,6 +220,7 @@ export function WeekPlanSheet({
                 containerStyle={styles.colReps}
                 style={styles.cellInput}
               />
+              {conRir ? (
               <TextField
                 value={e.rir != null ? String(e.rir) : ''}
                 onChangeText={(v) =>
@@ -228,6 +233,7 @@ export function WeekPlanSheet({
                 containerStyle={styles.colNum}
                 style={styles.cellInput}
               />
+              ) : null}
             </View>
           ))}
 

@@ -194,6 +194,8 @@ export default function RoutineEditorScreen() {
    * ejercicio). Vale para los tres tipos de plan; ver lib/visibilidad.ts.
    */
   const [visibilidad, setVisibilidad] = useState<QueVeElAlumno>({});
+  // Lo mismo, ya resuelto: qué se enseña en el editor y en el entreno.
+  const seMuestra = queVeElAlumno({ visibilidad });
   /** Cambia una parte de la configuración sin pisar el resto. */
   const cambiaPerso = (parte: Partial<PlanPersonalizado>) =>
     setPerso((prev) => ({ ...prev, ...parte }));
@@ -1396,12 +1398,14 @@ export default function RoutineEditorScreen() {
         {/*
          * QUÉ VE EL ALUMNO AL ENTRENAR. En los tres tipos de plan.
          *
-         * Esconder no es borrar: tú lo sigues viendo aquí y en tus informes.
-         * Un interruptor que no aplica (un personalizado sin intensidad o sin
+         * Apagado, desaparece para los dos: del entreno del alumno y de este
+         * editor (casillas, barra de intensidad y resumen del día), hasta que
+         * se vuelva a encender. Esconder no es borrar: lo que ya estaba puesto
+         * se guarda y vuelve tal cual al encenderlo. Un interruptor que no aplica (un personalizado sin intensidad o sin
          * variable por ejercicio) no se enseña: no habría nada que esconder.
          */}
         {(() => {
-          const ve = queVeElAlumno({ visibilidad });
+          const ve = seMuestra;
           const presc = schedule === 'flex' ? prescripcionDe(perso) : null;
           const hayIntensidad = !presc || presc.intensidad.escala !== 'ninguna';
           const nombreObjetivo =
@@ -1409,7 +1413,7 @@ export default function RoutineEditorScreen() {
           if (!hayIntensidad && !nombreObjetivo) return null;
           return (
             <>
-              <Text style={styles.persoTitulo}>Qué ve el alumno al entrenar</Text>
+              <Text style={styles.persoTitulo}>Qué se usa en este plan</Text>
               <View style={styles.persoFichas}>
                 {hayIntensidad ? (
                   <Chip
@@ -1431,7 +1435,8 @@ export default function RoutineEditorScreen() {
                 ) : null}
               </View>
               <Text style={styles.persoAyuda}>
-                Lo que apagues lo sigues viendo tú; el alumno no.
+                Lo que apagues desaparece para ti y para el alumno hasta que lo vuelvas a
+                encender. Lo que ya habías puesto se guarda.
               </Text>
             </>
           );
@@ -1451,13 +1456,16 @@ export default function RoutineEditorScreen() {
         if (schedule === 'cycle') {
           if (day.optionalRest) summaryParts.push(frase`Día ${dayIndex + 1}`, 'Descanso opcional');
           else if (day.isRest) summaryParts.push(frase`Día ${dayIndex + 1}`, 'Descanso');
-          else summaryParts.push(frase`Día ${dayIndex + 1}`, `Intensidad ${day.intensity ?? 5}`);
+          else {
+            summaryParts.push(frase`Día ${dayIndex + 1}`);
+            if (seMuestra.intensidad) summaryParts.push(`Intensidad ${day.intensity ?? 5}`);
+          }
         } else if (schedule === 'flex') {
           if (day.isRest) summaryParts.push('Descanso');
           else if (day.gtg) {
             summaryParts.push(frase`Todo el día · ${day.gtgSetsPerDay ?? SERIES_POR_DEFECTO} series`);
           }
-          else if (textoDeIntensidadDelDia(day, perso)) {
+          else if (seMuestra.intensidad && textoDeIntensidadDelDia(day, perso)) {
             summaryParts.push(textoDeIntensidadDelDia(day, perso)!);
             // La palabra ("Exigente"...) solo acompaña al porcentaje: a una
             // etiqueta del entrenador no se le pone otro nombre encima.
@@ -1556,7 +1564,7 @@ export default function RoutineEditorScreen() {
                 reiniciar el ciclo entrenando el Día 1.
               </Text>
             ) : null}
-            {!day.isRest ? (
+            {!day.isRest && seMuestra.intensidad ? (
               <View style={styles.dayIntensityRow}>
                 <Text style={styles.dayIntensityLabel}>
                   Intensidad · {day.intensity ?? 5}/10
@@ -1619,7 +1627,7 @@ export default function RoutineEditorScreen() {
                   repeticiones va el objetivo de CADA serie.
                 </Text>
               ) : null}
-              {day.gtg || prescripcionDe(perso).intensidad.escala === 'ninguna' ? null : prescripcionDe(perso).intensidad.escala === 'propia' ? (
+              {day.gtg || !seMuestra.intensidad || prescripcionDe(perso).intensidad.escala === 'ninguna' ? null : prescripcionDe(perso).intensidad.escala === 'propia' ? (
               /* Con las etiquetas del entrenador: se toca la que va, y tocar
                  la que ya está puesta la quita. Sin barra: una "B" no es un
                  punto de una escala que se pueda dibujar. */
@@ -1871,7 +1879,7 @@ export default function RoutineEditorScreen() {
                  * RIR, RPE, % RM, tempo, la suya... o ninguna, y entonces la
                  * casilla desaparece. Vacía, el alumno no ve nada.
                  */}
-                {schedule !== 'flex' || prescripcionDe(perso).variable.tipo === 'rir' ? (
+                {!seMuestra.objetivo ? null : schedule !== 'flex' || prescripcionDe(perso).variable.tipo === 'rir' ? (
                   <Casilla
                     etiqueta="RIR"
                     keyboardType="number-pad"
