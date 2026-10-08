@@ -196,31 +196,39 @@ jobs:
       # ahora o lo de la semana pasada, que es la pregunta que de verdad
       # importa y la única que nadie se acuerda de hacerse.
       #
-      # Se mira el botón de alta: si los pagos están encendidos tiene que
-      # llevar a Stripe, y si están apagados a /proximamente. Es el sitio donde
-      # más caro sale equivocarse —un botón de pagar que no cobra, o un cobro
-      # ofrecido cuando no debería—, y se ve desde fuera sin entrar en Vercel.
+      # Se compara el config.js publicado con el del repositorio, línea a línea
+      # (sin comentarios ni espacios). Antes solo se buscaba "buy.stripe.com",
+      # que sale en un COMENTARIO del fichero: daba "al día" aunque la web
+      # llevara una semana sin desplegarse. Lo que manda —a qué tienda lleva
+      # "Pruébalo gratis", a dónde paga cada botón— está en los valores.
       #
       # No tumba el despliegue: la app ya está publicada y esto es un aviso
       # sobre OTRA web. Sale como warning, arriba del todo, para que se lea.
       - name: Comprobar la web pública (Vercel)
         continue-on-error: true
         run: |
-          if grep -q 'export const PAGOS_ACTIVOS = true;' lib/planBase.ts; then
-            espera='buy.stripe.com'; que='los enlaces de Stripe'
-          else
-            espera='/proximamente'; que='el aviso de que no se cobra'
-          fi
-
           codigo=$(curl -sL -o /tmp/web.js -w '%{http_code}' https://www.udeca.app/config.js || echo 000)
           if [ "$codigo" != "200" ]; then
             echo "::warning::www.udeca.app no responde (código $codigo). ¿Está desplegada?"
             exit 0
           fi
 
-          if grep -q "$espera" /tmp/web.js; then
-            echo "OK  www.udeca.app está al día: lleva $que."
+          # Solo lo que no es comentario: valores, claves y enlaces.
+          limpia() { sed -e '/^\s*\/\//d' -e '/^\s*\*/d' -e '/^\s*\/\*/d' "$1" | tr -d ' \t' | grep -v '^$'; }
+          if diff <(limpia web/config.js) <(limpia /tmp/web.js) > /tmp/dif.txt; then
+            echo "OK  www.udeca.app está al día: su config.js es el del repositorio."
           else
-            echo "::warning::www.udeca.app está DESFASADA: debería llevar $que y no lo lleva."
-            echo "::warning::Es Vercel y se despliega a mano. Conéctala a GitHub (Settings -> Git, Root Directory 'web') o lanza: cd web && npx vercel --prod"
+            echo "::warning::www.udeca.app está DESFASADA: su config.js no es el del repositorio."
+            echo "Diferencias (< repositorio, > publicada):"
+            cat /tmp/dif.txt
+            echo "::warning::Es Vercel. Conéctala a GitHub (Settings -> Git, Root Directory 'web') o lanza: cd web && npx vercel --prod"
+          fi
+          grep -n "pruebaEnTiendas" /tmp/web.js || true
+
+          # Y la portada: desde que se quitó el atleta lleva un solo plan.
+          curl -sL -o /tmp/web.html https://www.udeca.app/ || true
+          if grep -q 'plans-uno' /tmp/web.html && ! grep -q 'altaAtleta' /tmp/web.html; then
+            echo "OK  la portada publicada es la de un solo plan (sin atleta)."
+          else
+            echo "::warning::La portada publicada todavía enseña el plan de atleta: está sin desplegar."
           fi
