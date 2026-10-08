@@ -87,7 +87,6 @@ export {
   primerAnoHasta,
   suscripcionAlNacer,
   CLIENT_GRACE_DAYS,
-  CLIENT_REPORT_GRACE_DAYS,
   clientIsLocked,
   clientDaysUntilLock,
 } from './planBase';
@@ -213,10 +212,8 @@ export async function verifySubscriptionNow(
  * verdad (StoreKit + acuerdos de pago en App Store Connect), que es otro
  * proyecto. Las dos decisiones están cada una en UNA línea, a propósito.
  *
- * Esto NO afecta a lo que un alumno le paga a su entrenador: eso es un servicio
- * real entre dos personas, no contenido digital, y Apple lo deja fuera de las
- * compras integradas expresamente. Por eso el enlace de cobro del entrenador
- * (lib/enlaceDePago.ts) sigue igual en las tres plataformas.
+ * Esto NO afecta a lo que un alumno le paga a su entrenador: la app no lo lleva
+ * (solo el periodo de coaching, ver lib/coaching.ts).
  */
 export const CAN_LINK_TO_PAYMENT = PAGOS_ACTIVOS && Platform.OS !== 'ios';
 

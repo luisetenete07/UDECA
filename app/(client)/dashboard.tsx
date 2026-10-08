@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { t, frase  } from '../../lib/idioma';
-import { diaLargo, diaMes, diaYMes, esHoy, inicioDelDia } from '../../lib/fechas';
+import { diaLargo, diaMes, diaYMes, esHoy } from '../../lib/fechas';
 import { unido } from '../../lib/texto';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,9 +40,8 @@ import { queVeElAlumno } from '../../lib/visibilidad';
 import { entrenoDeHoy, esGtg, progresoGtg, textoDelDia } from '../../lib/gtg';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
-import { enlaceDePagoDe, urlDePago } from '../../lib/enlaceDePago';
+import { coachingDe } from '../../lib/coaching';
 import { kgCorto } from '../../lib/peso';
-import { clientDaysUntilLock } from '../../lib/subscription';
 import { notifyUser } from '../../lib/notifications';
 import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
@@ -281,13 +280,10 @@ export default function ClientDashboard() {
   ] as const;
   const showFirstSteps = firstSteps.some((s) => !s.done);
 
-  // Su enlace de cobro: el de SU ficha, con SU precio. Sale del propio perfil,
-  // que ya viene cargado, así que no hace falta ir a buscar el del entrenador
-  // cada vez que se abre el inicio.
-  const enlaceDelPago = enlaceDePagoDe(profile);
   const stepsDone = firstSteps.filter((s) => s.done).length;
 
-  // El alumno declara que ya ha pagado: lo registra y avisa al entrenador.
+  // El alumno pide renovar: queda apuntado en su ficha y le llega a su
+  // entrenador. No le abre la app: renovar lo decide su entrenador.
   const handleReportPayment = async () => {
     if (!profile) return;
     setReporting(true);
@@ -296,12 +292,12 @@ export default function ClientDashboard() {
       if (profile.trainerId) {
         notifyUser(
           profile.trainerId,
-          'Pago declarado',
-          frase`${profile.name?.split(' ')[0] ?? t('Un alumno')} dice que ya ha pagado su cuota. Revísalo y confírmalo.`
+          'Quiere renovar',
+          frase`${profile.name?.split(' ')[0] ?? t('Un alumno')} quiere renovar su periodo de coaching.`
         ).catch(() => {});
       }
       await refreshProfile();
-      showToast('Tu entrenador recibirá el aviso');
+      showToast('Se lo hemos dicho a tu entrenador');
     } catch {
       showToast('No se pudo enviar el aviso');
     } finally {
@@ -309,61 +305,40 @@ export default function ClientDashboard() {
     }
   };
 
-  // Aviso de pago para el alumno (dato en su propio perfil, lo fija el coach):
-  // cobro próximo (ámbar) o cobro pendiente/vencido (rojo). Ayuda a que el
-  // alumno renueve pronto y le facilita el trabajo al entrenador.
+  /*
+   * SU PERIODO DE COACHING, solo cuando hay algo que decir: la última semana y
+   * después de acabar. Sin euros: lo que se paga es cosa suya y de su
+   * entrenador. Lo que sí tiene que saber es que, si pasan unos días sin
+   * renovar, la app se pausa — avisar antes es lo que convierte la pausa en un
+   * recordatorio y no en un castigo.
+   */
+  const coaching = coachingDe(profile);
   const paymentAlert = (() => {
-    const fee = profile?.monthlyFeeEur ? `${profile.monthlyFeeEur} €` : 'tu cuota';
-    const fmt = (ts: number) => diaYMes(ts);
-    const due = profile?.nextPaymentDate;
-    const status = profile?.paymentStatus;
-    if (due) {
-      const days = Math.round((inicioDelDia(due) - inicioDelDia(Date.now())) / (24 * 60 * 60 * 1000));
-      if (days < 0) {
-        // Se avisa de cuántos días quedan antes de que se pause el acceso.
-        // Bloquear sin haber dicho antes que iba a pasar es lo que convierte un
-        // recordatorio en un castigo.
-        const restan = clientDaysUntilLock(profile);
-        const cola =
-          restan === null
-            ? ''
-            : restan === 0
-              ? ' Tu acceso queda en pausa hasta que se resuelva.'
-              : restan === 1
-                ? t(' Te queda 1 día antes de que el acceso se pause.')
-                : frase` Te quedan ${restan} días antes de que el acceso se pause.`;
-        return {
-          bad: true,
-          title: 'Cobro pendiente',
-          text: frase`Tu cuota de ${fee} venció el ${fmt(due)}.${cola}`,
-        };
-      }
-      if (days <= 5)
-        return {
-          bad: false,
-          title: 'Cobro próximo',
-          text:
-            days === 0
-              ? frase`Hoy vence tu cuota de ${fee}. Ponte al día con tu entrenador.`
-              : days === 1
-                ? frase`Tu cuota de ${fee} vence mañana (${fmt(due)}).`
-                : frase`Tu cuota de ${fee} vence en ${days} días (${fmt(due)}).`,
-        };
-      return null;
-    }
-    // Sin fecha, pero el coach marcó el estado a mano.
-    if (status === 'overdue')
-      return {
-        bad: true,
-        title: 'Cobro pendiente',
-        text: frase`Tienes un pago pendiente de ${fee}. Renueva con tu entrenador.`,
-      };
-    if (status === 'pending')
+    if (!coaching.hasta || coaching.dias === null) return null;
+    const fecha = diaYMes(coaching.hasta);
+    if (coaching.estado === 'acaba') {
       return {
         bad: false,
-        title: 'Cobro próximo',
-        text: frase`Tu entrenador espera el pago de ${fee}. Ponte al día cuando puedas.`,
+        title: 'Tu coaching',
+        text:
+          coaching.dias === 0
+            ? t('Tu periodo de coaching termina hoy.')
+            : coaching.dias === 1
+              ? frase`Tu periodo de coaching termina mañana (${fecha}).`
+              : frase`Tu periodo de coaching termina en ${coaching.dias} días (${fecha}).`,
       };
+    }
+    if (coaching.estado === 'terminado') {
+      const restan = coaching.diasParaPausa ?? 0;
+      return {
+        bad: true,
+        title: 'Tu coaching ha terminado',
+        text:
+          restan === 1
+            ? frase`Terminó el ${fecha}. Mañana se pausa la app si no lo renuevas con tu entrenador.`
+            : frase`Terminó el ${fecha}. En ${restan} días se pausa la app si no lo renuevas con tu entrenador.`,
+      };
+    }
     return null;
   })();
 
@@ -388,7 +363,7 @@ export default function ClientDashboard() {
       {paymentAlert ? (
         <View style={[styles.payCard, paymentAlert.bad ? styles.payCardBad : styles.payCardWarn]}>
           <Ionicons
-            name={paymentAlert.bad ? 'alert-circle' : 'card-outline'}
+            name={paymentAlert.bad ? 'alert-circle' : 'calendar-outline'}
             size={20}
             color={paymentAlert.bad ? colors.danger : colors.primaryBright}
           />
@@ -402,35 +377,17 @@ export default function ClientDashboard() {
             {profile?.paymentReportedAt ? (
               <View style={styles.payReported}>
                 <Ionicons name="checkmark-circle" size={15} color={colors.primaryBright} />
-                <Text style={styles.payReportedText}>Pago informado · pendiente de confirmar</Text>
+                <Text style={styles.payReportedText}>Tu entrenador ya sabe que quieres renovar</Text>
               </View>
             ) : (
               <View style={styles.payActions}>
-                {/* El enlace es SUYO, no del grupo: lo pone su entrenador en su
-                    ficha, con su precio. Sin enlace no hay botón, y se paga
-                    por donde se pagaba: no se ofrece uno común que cobraría
-                    otra cantidad. */}
-                {enlaceDelPago ? (
-                  <Pressable
-                    onPress={() =>
-                      Linking.openURL(urlDePago(enlaceDelPago, profile?.uid ?? '')).catch(() =>
-                        showToast('No se pudo abrir el pago')
-                      )
-                    }
-                    style={styles.payBtn}
-                  >
-                    <Ionicons name="card" size={15} color={colors.onPrimary} />
-                    <Text style={styles.payBtnText}>
-                      {profile?.monthlyFeeEur ? `Pagar ${profile.monthlyFeeEur} €` : 'Pagar ahora'}
-                    </Text>
-                  </Pressable>
-                ) : null}
                 <Pressable
                   onPress={handleReportPayment}
                   disabled={reporting}
-                  style={styles.payReportBtn}
+                  style={styles.payBtn}
                 >
-                  <Text style={styles.payReportBtnText}>Ya he pagado</Text>
+                  <Ionicons name="refresh" size={15} color={colors.onPrimary} />
+                  <Text style={styles.payBtnText}>Quiero renovar</Text>
                 </Pressable>
               </View>
             )}
@@ -858,14 +815,6 @@ const styles = StyleSheet.create({
   },
   payBtnText: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.heading },
   payActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  payReportBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  payReportBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   payReported: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
   payReportedText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
   reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },

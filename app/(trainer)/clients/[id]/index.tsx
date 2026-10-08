@@ -32,14 +32,8 @@ import { ConsistencyMap } from '../../../../components/ConsistencyMap';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getExerciseLibrary } from '../../../../lib/firestore/exercises';
-import {
-  billingAnchorOf,
-  fechaDeTexto,
-  importeDeTexto,
-  mensajeDeCobroUnico,
-  nextBillingDate,
-  validaCobroUnico,
-} from '../../../../lib/billing';
+import { alargar, ALARGAR_MESES, coachingDe, DIAS_DE_MARGEN, fechaEscrita } from '../../../../lib/coaching';
+import { PeriodoDeCoaching } from '../../../../components/PeriodoDeCoaching';
 import {
   createHabit,
   deleteHabit,
@@ -52,7 +46,6 @@ import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
 import { getCoachNote, saveCoachNote } from '../../../../lib/firestore/coachNotes';
-import { createPayment } from '../../../../lib/firestore/payments';
 import { notifyUser } from '../../../../lib/notifications';
 import {
   exerciseProgression,
@@ -62,20 +55,15 @@ import {
   weeklyVolume,
 } from '../../../../lib/stats';
 import {
-  clearClientNextPayment,
   getUserProfile,
   removeClientFromTrainer,
-  registerClientPayment,
-  setClientPaymentLink,
   setClientPlanPauses,
   setClientTrackRir,
   setClientStepGoal,
   setClientVip,
-  updateClientBilling,
-  updateClientPaymentStatus,
+  setCoachingHasta,
   updateClientStatus,
 } from '../../../../lib/firestore/users';
-import { enlaceValido, pistaDelEnlace } from '../../../../lib/enlaceDePago';
 import { useAuth } from '../../../../lib/auth-context';
 import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
@@ -86,10 +74,6 @@ import { fonts, colors, radius, spacing, tabularNums, typography } from '../../.
 import {
   CLIENT_STATUSES,
   CLIENT_STATUS_LABEL,
-  PAYMENT_STATUSES,
-  PAYMENT_STATUS_LABEL,
-  PAYMENT_STATUS_TONE,
-  type PaymentStatus,
   type ClientStatus,
   type NutritionPlan,
   type ProgressPhoto,
@@ -142,22 +126,12 @@ export default function ClientDetailScreen() {
   const [pasosSaved, setPasosSaved] = useState(false);
   const [pasosError, setPasosError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
-  const [feeInput, setFeeInput] = useState('');
-  // El enlace con el que paga ESTE alumno. Va por alumno y no por entrenador
-  // porque cada plan tiene su precio: con uno común el botón cobraría de más
-  // a unos y de menos a otros.
-  const [linkInput, setLinkInput] = useState('');
-  const [savingLink, setSavingLink] = useState(false);
-  const [linkSaved, setLinkSaved] = useState(false);
-  const [extendDaysInput, setExtendDaysInput] = useState('');
-  // Pago único: una fecha de fin y un importe (ver lib/billing.ts).
-  const [unicoAbierto, setUnicoAbierto] = useState(false);
-  const [unicoFecha, setUnicoFecha] = useState('');
-  const [unicoImporte, setUnicoImporte] = useState('');
-  const [unicoError, setUnicoError] = useState<string | null>(null);
-  const [savingUnico, setSavingUnico] = useState(false);
-  const [remindingPayment, setRemindingPayment] = useState(false);
-  const [paymentReminderSent, setPaymentReminderSent] = useState(false);
+  // El periodo de coaching (ver lib/coaching.ts): una fecha escrita a mano y
+  // el aviso de que se acaba.
+  const [fechaInput, setFechaInput] = useState('');
+  const [fechaError, setFechaError] = useState<string | null>(null);
+  const [avisando, setAvisando] = useState(false);
+  const [avisoEnviado, setAvisoEnviado] = useState(false);
   const [coachNote, setCoachNote] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
   const [pausaAbierta, setPausaAbierta] = useState(false);
@@ -193,11 +167,6 @@ export default function ClientDetailScreen() {
         );
         setCoachNote(noteData);
         setPasosInput(clientData?.stepGoal ? String(clientData.stepGoal) : '');
-        setFeeInput(clientData?.monthlyFeeEur ? String(clientData.monthlyFeeEur) : '');
-        // Si el alumno aún no tiene enlace propio y el entrenador guardaba el
-        // común de antes, se ofrece ya escrito: un toque en guardar y queda
-        // migrado, sin tener que ir a buscarlo otra vez.
-        setLinkInput(clientData?.paymentLink ?? profile?.paymentLink ?? '');
         setRoutines(routineData);
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
@@ -279,68 +248,33 @@ export default function ClientDetailScreen() {
     await updateClientStatus(id, status);
   };
 
-  const handleSetPayment = async (paymentStatus: PaymentStatus) => {
+  /**
+   * Fija hasta cuándo entrena con él (o lo quita con null). Se pinta antes de
+   * escribir: el toque tiene que verse al momento, y si falla se avisa.
+   */
+  const fijarPeriodo = async (hasta: number | null) => {
     if (!id || !client) return;
-    setClient({ ...client, paymentStatus });
-    await updateClientPaymentStatus(id, paymentStatus);
+    const antes = client;
+    setClient({ ...client, nextPaymentDate: hasta ?? undefined, paymentReportedAt: undefined });
+    setAvisoEnviado(false);
+    try {
+      await setCoachingHasta(id, hasta);
+      showToast(hasta ? frase`Coaching hasta el ${fechaCorta(hasta)}` : 'Fecha de fin quitada');
+    } catch {
+      setClient(antes);
+      showToast('No se pudo guardar');
+    }
   };
 
-  const handleSaveFee = async () => {
-    if (!id || !client) return;
-    const value = Number(feeInput.replace(',', '.'));
-    const monthlyFeeEur = Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
-    setClient({ ...client, monthlyFeeEur });
-    await updateClientBilling(id, { monthlyFeeEur });
-  };
-
-  const handleSaveLink = async () => {
-    if (!id || !client) return;
-    const url = linkInput.trim();
-    if (url && !enlaceValido(url)) {
-      showToast('El enlace debe empezar por https://');
+  const handleFechaEscrita = () => {
+    const hasta = fechaEscrita(fechaInput);
+    if (!hasta) {
+      setFechaError('Escribe la fecha así: 13/02/2027');
       return;
     }
-    setSavingLink(true);
-    try {
-      // Con enlace vacío BORRA el campo: si no, el antiguo reaparecería.
-      await setClientPaymentLink(id, url);
-      setClient({ ...client, paymentLink: url || undefined });
-      setLinkSaved(true);
-      setTimeout(() => setLinkSaved(false), 2500);
-    } catch {
-      showToast('No se pudo guardar el enlace');
-    } finally {
-      setSavingLink(false);
-    }
-  };
-
-  // Registra el pago: marca "Pagado" y empuja la fecha un mes desde la última
-  // renovación (o desde hoy si ya venció). Un solo toque = cobro al día.
-  const handleRegisterPayment = async () => {
-    if (!id || !client || !profile) return;
-    // Ver lib/billing.ts: el mes cobrado arranca en la fecha en que TOCABA
-    // pagar, no en la que se paga.
-    const anchor =
-      client.billingAnchorDay ??
-      (client.nextPaymentDate ? billingAnchorOf(client.nextPaymentDate) : undefined);
-    const nextPaymentDate = nextBillingDate(client.nextPaymentDate, anchor);
-    const billingAnchorDay = anchor ?? billingAnchorOf(nextPaymentDate);
-    setClient({
-      ...client,
-      paymentStatus: 'paid',
-      nextPaymentDate,
-      billingAnchorDay,
-      paymentReportedAt: undefined,
-    });
-    await registerClientPayment(id, nextPaymentDate, billingAnchorDay);
-    // Registro del cobro para el historial de ingresos (con la cuota actual).
-    createPayment({
-      trainerId: profile.uid,
-      clientId: id,
-      amountEur: client.monthlyFeeEur ?? 0,
-      date: Date.now(),
-    }).catch(() => {});
-    showToast('Pago registrado · próxima renovación en 1 mes');
+    setFechaError(null);
+    setFechaInput('');
+    fijarPeriodo(hasta);
   };
 
   /**
@@ -377,88 +311,25 @@ export default function ClientDetailScreen() {
     setTimeout(() => setNoteSaved(false), 2000);
   };
 
-  // Añade N días personalizados a la fecha del próximo pago.
-  const handleExtendDays = async () => {
+  /** Le avisa de que se le acaba (o se le ha acabado) el periodo. */
+  const handleAvisarFin = async () => {
     if (!id || !client) return;
-    const days = parseInt(extendDaysInput, 10);
-    if (!days || days <= 0) return;
-    const base =
-      client.nextPaymentDate && client.nextPaymentDate > Date.now()
-        ? client.nextPaymentDate
-        : Date.now();
-    const nextPaymentDate = base + days * DAY_MS;
-    setClient({ ...client, nextPaymentDate });
-    setExtendDaysInput('');
-    await updateClientBilling(id, { nextPaymentDate });
-    showToast(frase`+${days} días · próximo pago ${fechaCorta(nextPaymentDate)}`);
-  };
-
-  /**
-   * Registra un pago único: deja pagado hasta una fecha y apunta el importe
-   * como ingreso, entero y una sola vez.
-   *
-   * No se toca la cuota mensual a propósito: sigue siendo la que es, y el día
-   * que se acabe lo pagado el entrenador decide si renueva igual o de otra
-   * forma. Cambiársela aquí sería decidir por él.
-   */
-  const handleCobroUnico = async () => {
-    if (!id || !client || !profile) return;
-    const v = validaCobroUnico(fechaDeTexto(unicoFecha), importeDeTexto(unicoImporte));
-    if (!v.ok) {
-      setUnicoError(mensajeDeCobroUnico(v.error));
-      return;
-    }
-    setUnicoError(null);
-    setSavingUnico(true);
+    setAvisando(true);
     try {
-      const billingAnchorDay = billingAnchorOf(v.cobro.hasta);
-      setClient({
-        ...client,
-        paymentStatus: 'paid',
-        nextPaymentDate: v.cobro.hasta,
-        billingAnchorDay,
-        paymentReportedAt: undefined,
-      });
-      await registerClientPayment(id, v.cobro.hasta, billingAnchorDay);
-      await createPayment({
-        trainerId: profile.uid,
-        clientId: id,
-        amountEur: v.cobro.importe,
-        date: Date.now(),
-      });
-      setUnicoFecha('');
-      setUnicoImporte('');
-      setUnicoAbierto(false);
-      showToast(frase`${v.cobro.importe} € · pagado hasta ${fechaCorta(v.cobro.hasta)}`);
-    } catch {
-      setUnicoError('No se pudo registrar el pago.');
-    } finally {
-      setSavingUnico(false);
-    }
-  };
-
-  const handleClearNextPayment = async () => {
-    if (!id || !client) return;
-    const { nextPaymentDate, ...rest } = client;
-    setClient(rest as UserProfile);
-    await clearClientNextPayment(id);
-  };
-
-  const handleRemindPayment = async () => {
-    if (!id || !client) return;
-    setRemindingPayment(true);
-    try {
+      const nombre = client.name.split(' ')[0];
       await notifyUser(
         id,
-        'Recordatorio de pago',
-        frase`Hola ${client.name.split(' ')[0]}, tienes un pago pendiente de tu suscripción. ¡Gracias!`
+        'Tu coaching',
+        client.nextPaymentDate && client.nextPaymentDate >= Date.now()
+          ? frase`Hola ${nombre}, tu periodo de coaching termina el ${fechaCorta(client.nextPaymentDate)}. Háblalo con tu entrenador para renovarlo.`
+          : frase`Hola ${nombre}, tu periodo de coaching ha terminado. Háblalo con tu entrenador para renovarlo.`
       );
-      setPaymentReminderSent(true);
-      showToast('Recordatorio de pago enviado');
+      setAvisoEnviado(true);
+      showToast('Aviso enviado');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo enviar');
     } finally {
-      setRemindingPayment(false);
+      setAvisando(false);
     }
   };
 
@@ -522,6 +393,8 @@ export default function ClientDetailScreen() {
   );
   const isoOther = Math.max(0, isoTotals.total - isoTotals.push - isoTotals.pull);
 
+  const coaching = coachingDe(client);
+
   return (
     <ScreenContainer>
       <Stack.Screen options={{ headerLeft: backToClients }} />
@@ -548,217 +421,91 @@ export default function ClientDetailScreen() {
         onChange={handleSetStatus}
       />
 
+      {/*
+       * EL PERIODO DE COACHING. Es lo único de la relación con el alumno que
+       * lleva la app: hasta cuándo entrena contigo. El dinero —cuánto, por
+       * dónde, si ya ha pagado— es cosa vuestra, fuera de UDECA. Si pasan
+       * unos días sin renovar, al alumno se le pausa la app hasta que lo hagas.
+       */}
       <Card style={styles.section}>
         <View style={styles.titleRow}>
-          <Ionicons name="card-outline" size={16} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Pagos</Text>
+          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Coaching</Text>
         </View>
 
         {client.paymentReportedAt ? (
           <View style={styles.reportedBanner}>
             <Ionicons name="notifications" size={16} color={colors.primaryBright} />
             <Text style={styles.reportedText}>
-              {client.name.split(' ')[0]} declaró que ya ha pagado ({fechaCorta(client.paymentReportedAt)}).
-              Confírmalo con "Registrar pago".
+              {frase`${client.name.split(' ')[0]} te ha pedido renovar (${fechaCorta(client.paymentReportedAt)}).`}
             </Text>
           </View>
         ) : null}
 
-        <Text style={styles.paymentLabel}>Estado de pago</Text>
-        <View style={styles.paymentRow}>
-          {PAYMENT_STATUSES.map((p) => {
-            const active = client.paymentStatus === p;
-            const tone = PAYMENT_STATUS_TONE[p];
-            return (
-              <Pressable
-                key={p}
-                onPress={() => handleSetPayment(p)}
-                style={[
-                  styles.payChip,
-                  active && styles.payChipActive,
-                  active && tone === 'good' && styles.payGood,
-                  active && tone === 'warn' && styles.payWarn,
-                  active && tone === 'bad' && styles.payBad,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.payChipText,
-                    active && styles.payChipTextActive,
-                    active && tone === 'good' && { color: colors.success },
-                    active && tone === 'warn' && { color: colors.warning },
-                    active && tone === 'bad' && { color: colors.danger },
-                  ]}
-                >
-                  {PAYMENT_STATUS_LABEL[p]}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <PeriodoDeCoaching coaching={coaching} />
+
+        {/* Alargar de un toque: desde el final si aún no ha llegado, desde hoy
+            si ya pasó (ver `alargar`). Es lo que se hace casi siempre. */}
+        <Text style={styles.alargarRotulo}>Alargar</Text>
+        <View style={styles.alargarFila}>
+          {ALARGAR_MESES.map((meses) => (
+            <Button
+              key={meses}
+              title={meses === 1 ? '1 mes' : frase`${meses} meses`}
+              variant={meses === 1 ? 'primary' : 'secondary'}
+              compacto
+              onPress={() => fijarPeriodo(alargar(client.nextPaymentDate, meses))}
+              style={{ flex: 1 }}
+            />
+          ))}
         </View>
 
-        <Text style={styles.paymentLabel}>Cuota mensual</Text>
-        <View style={styles.feeRow}>
-          <TextField
-            value={feeInput}
-            onChangeText={setFeeInput}
-            onBlur={handleSaveFee}
-            onEndEditing={handleSaveFee}
-            keyboardType="number-pad"
-            placeholder="0"
-            style={styles.feeField}
-          />
-          <Text style={styles.euroLabel}>€ / mes</Text>
-        </View>
-
-        {/* El enlace de pago, justo debajo de la cuota: son la misma decisión.
-            Lo que se cobra y por dónde se cobra van juntos, y así se ve de un
-            vistazo si el importe del enlace y la cuota cuadran. */}
-        <Text style={styles.paymentLabel}>Enlace de pago de {client.name.split(' ')[0]}</Text>
-        <TextField
-          value={linkInput}
-          onChangeText={setLinkInput}
-          placeholder="https://buy.stripe.com/…"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          style={{ marginBottom: spacing.xs }}
-        />
-        <Text style={styles.payHint}>{pistaDelEnlace(linkInput, client.monthlyFeeEur)}</Text>
-        {linkSaved ? <Text style={styles.guardado}>Enlace guardado</Text> : null}
-        <Button
-          title="Guardar enlace"
-          variant="secondary"
-          onPress={handleSaveLink}
-          loading={savingLink}
-          disabled={linkInput.trim() === (client.paymentLink ?? '')}
-          style={{ marginTop: spacing.xs, marginBottom: spacing.md }}
-        />
-
-        <Text style={styles.paymentLabel}>Próximo pago</Text>
-        <View style={styles.nextPayRow}>
-          <Ionicons
-            name="calendar-outline"
-            size={16}
-            color={
-              client.nextPaymentDate && client.nextPaymentDate < Date.now()
-                ? colors.danger
-                : colors.primary
-            }
-          />
-          <Text
-            style={[
-              styles.nextPayText,
-              client.nextPaymentDate != null &&
-                client.nextPaymentDate < Date.now() &&
-                styles.nextPayOverdue,
-            ]}
-          >
-            {client.nextPaymentDate
-              ? `${fechaCorta(client.nextPaymentDate)}${
-                  client.nextPaymentDate < Date.now() ? ' · vencido' : ''
-                }`
-              : 'Sin fecha establecida'}
-          </Text>
-        </View>
-
-        <Button
-          title="Registrar pago"
-          onPress={handleRegisterPayment}
-          style={{ marginTop: spacing.sm }}
-        />
-        {/* Lo que hace el botón, debajo del botón: metido entre paréntesis en
-            el propio rótulo partía el texto en dos líneas y se leía peor. */}
-        <Text style={styles.payHint}>Suma un mes a la fecha de arriba.</Text>
-        {/* Dos piezas en la fila y no tres. Quitar la fecha estaba metido aquí
-            como un botón cuadrado, y además de dejar la fila a tres alturas
-            distintas ponía una acción destructiva a un dedo de una que se usa
-            a diario. Ahora va abajo, como enlace, igual que el resto de lo
-            destructivo en la app. */}
+        {/* Y para lo que no son meses redondos: hasta una fecha concreta. */}
         <View style={styles.payBtnRow}>
           <TextField
-            value={extendDaysInput}
-            onChangeText={setExtendDaysInput}
-            keyboardType="number-pad"
-            placeholder="Días"
-            containerStyle={styles.daysField}
+            value={fechaInput}
+            onChangeText={(v) => {
+              setFechaInput(v);
+              setFechaError(null);
+            }}
+            placeholder="Hasta (13/02/2027)"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="numbers-and-punctuation"
+            containerStyle={{ flex: 1, marginBottom: 0 }}
+            style={{ marginBottom: 0 }}
+            onSubmitEditing={handleFechaEscrita}
           />
-          {/* Compacto: al lado del campo de días, la caja se queda en 134
-              píxeles en un móvil estrecho, y con el aire de un botón normal
-              —24 a cada lado— la etiqueta se quedaba en "Añadir dí…". */}
           <Button
-            title="Añadir días"
+            title="Fijar"
             variant="secondary"
             compacto
-            onPress={handleExtendDays}
-            disabled={!(parseInt(extendDaysInput, 10) > 0)}
-            style={{ flex: 1 }}
+            onPress={handleFechaEscrita}
+            disabled={!fechaInput.trim()}
           />
         </View>
+        {fechaError ? <Text style={styles.confirmText}>{fechaError}</Text> : null}
 
-        {/* Pago único: 180 € por seis meses el primer día, por ejemplo. Antes
-            se apañaba con "añadir días" y luego había que acordarse de que ese
-            importe no era la cuota, así que el ingreso más grande del año era
-            justo el peor apuntado. */}
-        <Pressable onPress={() => setUnicoAbierto((v) => !v)} style={styles.unicoCabecera} hitSlop={6}>
-          <Ionicons
-            name={unicoAbierto ? 'chevron-down' : 'chevron-forward'}
-            size={15}
-            color={colors.primary}
-          />
-          <Text style={styles.unicoTitulo}>Pago único hasta una fecha</Text>
-        </Pressable>
-        {unicoAbierto ? (
-          <View style={styles.unicoCaja}>
-            <Text style={styles.payHint}>
-              Paga de una vez y queda cubierto hasta el día que pongas. El importe entra en tus
-              ingresos tal cual, sin partirlo en cuotas.
-            </Text>
-            <View style={styles.payBtnRow}>
-              <TextField
-                value={unicoFecha}
-                onChangeText={setUnicoFecha}
-                placeholder="Hasta (13/02/2027)"
-                autoCapitalize="none"
-                autoCorrect={false}
-                containerStyle={{ flex: 1, marginBottom: 0 }}
-                style={{ marginBottom: 0 }}
-              />
-              <TextField
-                value={unicoImporte}
-                onChangeText={setUnicoImporte}
-                placeholder="180 €"
-                keyboardType="decimal-pad"
-                containerStyle={styles.daysField}
-                style={{ marginBottom: 0 }}
-              />
-            </View>
-            {unicoError ? <Text style={styles.confirmText}>{unicoError}</Text> : null}
-            <Button
-              title="Registrar pago único"
-              variant="secondary"
-              onPress={handleCobroUnico}
-              loading={savingUnico}
-              style={{ marginTop: spacing.sm }}
-            />
-          </View>
-        ) : null}
-        {client.nextPaymentDate ? (
-          <Pressable onPress={handleClearNextPayment} style={styles.quitarFecha} hitSlop={8}>
-            <Ionicons name="close-circle-outline" size={14} color={colors.textFaint} />
-            <Text style={styles.quitarFechaTexto}>Quitar la fecha de próximo pago</Text>
-          </Pressable>
-        ) : null}
-
-        {client.paymentStatus === 'pending' || client.paymentStatus === 'overdue' ? (
+        {coaching.estado === 'acaba' || coaching.estado === 'terminado' || coaching.estado === 'pausado' ? (
           <Button
-            title={paymentReminderSent ? 'Recordatorio enviado ✓' : 'Recordar pago al alumno'}
+            title={avisoEnviado ? 'Aviso enviado' : 'Avisarle de que se acaba'}
             variant="secondary"
-            onPress={handleRemindPayment}
-            loading={remindingPayment}
-            disabled={paymentReminderSent}
+            onPress={handleAvisarFin}
+            loading={avisando}
+            disabled={avisoEnviado}
             style={{ marginTop: spacing.sm }}
           />
+        ) : null}
+
+        <Text style={styles.payHint}>
+          {frase`Si pasan ${DIAS_DE_MARGEN} días sin renovar, se le pausa la app hasta que lo hagas.`}
+        </Text>
+
+        {client.nextPaymentDate ? (
+          <Pressable onPress={() => fijarPeriodo(null)} style={styles.quitarFecha} hitSlop={8}>
+            <Ionicons name="close-circle-outline" size={14} color={colors.textFaint} />
+            <Text style={styles.quitarFechaTexto}>Quitar la fecha de fin</Text>
+          </Pressable>
         ) : null}
       </Card>
 
@@ -1346,20 +1093,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   reportedText: { ...typography.small, color: colors.primaryBright, flex: 1, lineHeight: 18 },
-  paymentLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  paymentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  feeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  feeField: { width: 110, marginBottom: 0 },
-  euroLabel: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold },
-  nextPayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  nextPayText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  nextPayOverdue: { color: colors.danger },
   cursoFila: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1382,16 +1115,11 @@ const styles = StyleSheet.create({
     ...tabularNums,
   },
   payHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.xs, textAlign: 'center' },
-  guardado: {
-    ...typography.small,
-    color: colors.primaryBright,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
   // `stretch` para que el campo y el botón midan lo mismo: sus alturas
   // naturales no coinciden y centrados quedaban desalineados.
+  alargarFila: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  alargarRotulo: { ...typography.label, color: colors.textMuted, marginBottom: spacing.xs },
   payBtnRow: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm, marginTop: spacing.sm },
-  daysField: { width: 84, marginBottom: 0 },
   /*
    * 52 de alto, como el campo y el botón que tiene al lado.
    *
@@ -1407,23 +1135,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   quitarFechaTexto: { ...typography.small, color: colors.textFaint },
-  payChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  payChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   // Relleno apagado y borde de color, no un bloque de color liso: en una
   // pantalla de negros reales un verde saturado se lleva la vista entera, y lo
   // que importa aquí no es el estado del cobro sino el alumno.
-  payGood: { backgroundColor: colors.successMuted, borderColor: colors.successBorder },
-  payWarn: { backgroundColor: colors.warningMuted, borderColor: colors.warning },
-  payBad: { backgroundColor: colors.dangerMuted, borderColor: colors.danger },
-  payChipText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  payChipTextActive: { color: colors.white },
   miniLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   objetivoFila: {
     flexDirection: 'row',
@@ -1433,16 +1147,6 @@ const styles = StyleSheet.create({
   },
   objetivoPlazo: { ...typography.small, color: colors.textFaint, fontSize: 11, width: 78, paddingTop: 2 },
   pasosFila: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.md },
-  unicoCabecera: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  unicoTitulo: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  unicoCaja: { marginTop: spacing.xs },
   objetivoTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },

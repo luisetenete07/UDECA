@@ -74,10 +74,9 @@ export default function ClientLayout() {
   if (profile.role !== 'client') return <CuentaRetiradaScreen />;
   // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
-  // Alumno con la cuota vencida más allá del margen: acceso en pausa hasta que
-  // pague o su entrenador confirme el cobro. `clientIsLocked` ya descarta a
-  // quien no tiene entrenador o no tiene cuota, así que no hay riesgo de
-  // bloquear a alguien a quien nadie le cobra nada.
+  // Se le acabó el periodo de coaching hace más de los días de margen: la app
+  // en pausa hasta que su entrenador lo renueve (ver lib/coaching.ts). Sin
+  // fecha de fin no se pausa nunca.
   if (clientIsLocked(profile)) return <ClientLockScreen />;
   // Alumno sin entrenador: pantalla para enviar/esperar la solicitud.
   if (!profile.trainerId) return <LinkTrainerScreen />;

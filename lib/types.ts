@@ -965,8 +965,8 @@ export interface Payment {
   /**
    * A quién se le cobró. Normalmente el uid de un alumno, pero también puede
    * ser un identificador de pagador SIN CUENTA (`externo:ana-gil`), para el
-   * que ya paga al entrenador pero todavía no ha entrado en la app. Ver
-   * lib/cobrosExternos.ts.
+   * que ya paga al entrenador pero todavía no ha entrado en la app. (Datos
+   * antiguos: la app ya no registra cobros.)
    */
   clientId: string;
   /**

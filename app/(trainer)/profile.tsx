@@ -453,8 +453,8 @@ export default function TrainerProfileScreen() {
 
       {/* De aquí abajo, todo son ajustes: cosas que se tocan una vez y no se
           vuelven a mirar. Plegadas, el perfil pasa de tres pantallas y media a
-          una; y el dato que importa de cada una —el código, si los cobros
-          están activos, hasta cuándo va la suscripción— se lee sin abrirlas.
+          una; y el dato que importa de cada una —el código, hasta cuándo va
+          la suscripción— se lee sin abrirlas.
           Se abre solo lo que pide acción. */}
       <CollapsibleCard
         id="coach-invitacion"

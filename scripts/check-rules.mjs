@@ -365,6 +365,14 @@ await comprobar('el alumno NO se cambia el rol a entrenador', false, () =>
 await comprobar('ni se hace su propio entrenador', false, () =>
   setDoc(doc(db, 'users', otro.user.uid), { trainerId: otro.user.uid }, { merge: true })
 );
+// Su periodo de coaching lo pone su entrenador. Si el alumno pudiera tocarlo,
+// se lo alargaría él solo y la pausa al acabar no pararía a nadie.
+await comprobar('el alumno NO se alarga su periodo de coaching', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { nextPaymentDate: Date.now() + 365 * 86400000 }, { merge: true })
+);
+await comprobar('ni se pone "al día"', false, () =>
+  setDoc(doc(db, 'users', otro.user.uid), { paymentStatus: 'free' }, { merge: true })
+);
 await comprobar('ni se sale del grupo por su cuenta', false, () =>
   setDoc(doc(db, 'users', otro.user.uid), { trainerId: deleteField() }, { merge: true })
 );

@@ -156,20 +156,6 @@ export async function setBrandName(uid: string, marca: string) {
   });
 }
 
-/**
- * Fija (o BORRA) el enlace de pago de UN ALUMNO, desde su ficha.
- *
- * Va por alumno y no por entrenador porque los precios no son uno solo: cada
- * plan tiene el suyo. Con enlace vacío elimina el campo de verdad
- * (deleteField), porque `updateUserProfile` descarta los `undefined` y el
- * enlace antiguo volvería a aparecer al recargar el perfil.
- */
-export async function setClientPaymentLink(clientId: string, link: string) {
-  await updateDoc(doc(db, 'users', clientId), {
-    paymentLink: link ? link : deleteField(),
-  });
-}
-
 /** El entrenador cambia el estado (activo/pausa/inactivo) de un cliente suyo. */
 export async function updateClientStatus(
   clientId: string,
@@ -201,25 +187,6 @@ export async function updateClientStatus(
 export async function removeClientFromTrainer(clientId: string) {
   await deleteDoc(doc(db, 'socialStats', clientId)).catch(() => {});
   await updateDoc(doc(db, 'users', clientId), { trainerId: deleteField() });
-}
-
-/** El entrenador clasifica el estado de pago de un cliente suyo. */
-export async function updateClientPaymentStatus(
-  clientId: string,
-  paymentStatus: UserProfile['paymentStatus']
-) {
-  await setDoc(doc(db, 'users', clientId), { paymentStatus }, { merge: true });
-}
-
-/**
- * El entrenador actualiza los datos de cobro de un cliente (estado de pago,
- * cuota mensual y/o fecha de próximo pago). Solo escribe los campos indicados.
- */
-export async function updateClientBilling(
-  clientId: string,
-  data: Pick<UserProfile, 'paymentStatus' | 'monthlyFeeEur' | 'nextPaymentDate'>
-) {
-  await setDoc(doc(db, 'users', clientId), stripUndefined(data), { merge: true });
 }
 
 /**
@@ -279,33 +246,24 @@ export async function setClientPlanPauses(clientId: string, planPauses: PausaPla
   await setDoc(doc(db, 'users', clientId), { planPauses }, { merge: true });
 }
 
-/** Quita la fecha de próximo pago de un cliente. */
-export async function clearClientNextPayment(clientId: string) {
-  await updateDoc(doc(db, 'users', clientId), { nextPaymentDate: deleteField() });
-}
-
 /**
- * El entrenador confirma el cobro: marca "Pagado", fija la próxima renovación y
- * limpia el aviso de "pago declarado" del alumno (todo en una escritura).
+ * El entrenador fija hasta cuándo entrena ese alumno con él (ver
+ * lib/coaching.ts), o lo quita con `null`. Limpia de paso el aviso de "quiero
+ * renovar" del alumno: renovar es justo la respuesta a ese aviso.
+ *
+ * Deja `paymentStatus` en 'paid' porque es lo que leían las versiones de la app
+ * que siguen instaladas en los móviles: con eso entienden "al día".
  */
-export async function registerClientPayment(
-  clientId: string,
-  nextPaymentDate: number,
-  billingAnchorDay?: number
-) {
-  await setDoc(
+export async function setCoachingHasta(clientId: string, hasta: number | null) {
+  await updateDoc(
     doc(db, 'users', clientId),
-    {
-      paymentStatus: 'paid',
-      nextPaymentDate,
-      ...(billingAnchorDay ? { billingAnchorDay } : {}),
-      paymentReportedAt: deleteField(),
-    },
-    { merge: true }
+    hasta
+      ? { nextPaymentDate: hasta, paymentStatus: 'paid', paymentReportedAt: deleteField() }
+      : { nextPaymentDate: deleteField(), paymentReportedAt: deleteField() }
   );
 }
 
-/** El alumno declara que ya ha pagado (pendiente de que el coach lo confirme). */
+/** El alumno pide renovar su periodo: avisa a su entrenador, no abre la app. */
 export async function reportClientPayment(clientId: string) {
   await setDoc(doc(db, 'users', clientId), { paymentReportedAt: Date.now() }, { merge: true });
 }

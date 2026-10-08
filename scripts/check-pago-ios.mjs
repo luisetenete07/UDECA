@@ -20,10 +20,8 @@
  *   1. Que la constante sigue apagada en iOS.
  *   2. Que todo el que sepa construir una URL de pago de UDECA la mire antes.
  *
- * Lo que un ALUMNO le paga a su ENTRENADOR queda fuera a propósito: es un
- * servicio real entre dos personas, no contenido digital, y Apple lo excluye
- * expresamente de las compras integradas. Por eso `lib/enlaceDePago.ts` no
- * entra aquí.
+ * Lo que un ALUMNO le paga a su ENTRENADOR queda fuera: la app ya no lo lleva
+ * (solo el periodo de coaching, ver lib/coaching.ts).
  *
  *   node scripts/check-pago-ios.mjs
  */

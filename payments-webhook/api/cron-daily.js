@@ -13,7 +13,7 @@ import { correoConfigurado, enviarCorreos } from './_correo.js';
  *     entrenamientos, para que el entrenador vea el grupo al día aunque nadie
  *     haya abierto la app.
  *  2. Avisa por push a quien lleva días sin entrenar.
- *  3. Avisa por push de la cuota vencida o a punto de vencer.
+ *  3. Avisa por push de que se acaba (o se acabó) el periodo de coaching.
  *  4. Avisa de que el año pagado se acaba, ANTES de que se acabe.
  *
  * Variables de entorno: FIREBASE_SERVICE_ACCOUNT (JSON de la cuenta de
@@ -23,7 +23,7 @@ import { correoConfigurado, enviarCorreos } from './_correo.js';
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Días sin entrenar a partir de los cuales se envía el toque de atención. */
 const INACTIVE_DAYS = 5;
-/** Días de antelación con los que se recuerda la cuota. */
+/** Días de antelación con los que se recuerda el fin del periodo de coaching. */
 const PAYMENT_DUE_DAYS = 3;
 /** No se repite el mismo tipo de aviso antes de este plazo. */
 const NUDGE_COOLDOWN_MS = 5 * DAY_MS;
@@ -195,7 +195,9 @@ export default async function handler(req, res) {
         nudged.push({ id: doc.id, data: { lastInactivityNudge: now } });
       }
 
-      // --- Recordatorio de cuota (vencida o a punto de vencer) ---
+      // --- Fin del periodo de coaching (ya pasado o a punto) ---
+      // Sin euros: lo que se paga es cosa del alumno y su entrenador. La fecha
+      // la pone el entrenador (lib/coaching.ts); el campo es el de siempre.
       const due = u.nextPaymentDate;
       const lastPayNudge = u.lastPaymentNudge ?? 0;
       if (
@@ -207,10 +209,10 @@ export default async function handler(req, res) {
         const overdue = due < now;
         messages.push({
           to: u.pushToken,
-          title: overdue ? 'Cuota vencida' : 'Tu cuota vence pronto',
+          title: overdue ? 'Tu coaching ha terminado' : 'Tu coaching termina pronto',
           body: overdue
-            ? 'Tu cuota con tu entrenador está pendiente. Puedes pagarla desde la app.'
-            : `Tu cuota vence el ${new Date(due).toLocaleDateString('es-ES')}.`,
+            ? 'Háblalo con tu entrenador para renovarlo. Si pasan unos días, la app se pausa hasta que lo haga.'
+            : `Tu periodo de coaching termina el ${new Date(due).toLocaleDateString('es-ES')}. Háblalo con tu entrenador para renovarlo.`,
         });
         nudged.push({ id: doc.id, data: { lastPaymentNudge: now } });
       }

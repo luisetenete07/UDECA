@@ -151,6 +151,10 @@ service cloud.firestore {
               // `trainerId` sería colarse en un grupo sin que le acepten (o
               // hacerse su propio entrenador, que era cosa del atleta).
               'role', 'trainerId',
+              // Hasta cuándo entrena con su entrenador. Si el alumno pudiera
+              // tocarlo, se alargaría el periodo él solo y la pausa al acabar
+              // no pararía a nadie. Lo pone su ENTRENADOR (más abajo).
+              'nextPaymentDate', 'paymentStatus', 'monthlyFeeEur', 'billingAnchorDay',
               'subscriptionUntil', 'subscriptionPlan', 'clientCount',
               'clientSlots', 'entryPaidAt', 'payerFingerprint', 'sharedCardWith',
               // El número de fundador es correlativo y lo reparte el servidor.

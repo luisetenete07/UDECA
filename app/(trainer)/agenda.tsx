@@ -56,7 +56,7 @@ const TONE: Record<EventType, string> = {
   task: colors.textMuted,
 };
 const TYPE_ICON: Record<EventType, keyof typeof Ionicons.glyphMap> = {
-  payment: 'card-outline',
+  payment: 'calendar-outline',
   'cycle-start': 'play-outline',
   'cycle-end': 'flag-outline',
   task: 'checkbox-outline',
@@ -254,8 +254,8 @@ export default function CoachCalendarScreen() {
         add({
           day: inicioDelDia(c.nextPaymentDate),
           type: 'payment',
-          title: `Cobro · ${c.name}`,
-          subtitle: c.monthlyFeeEur ? `${c.monthlyFeeEur} €` : 'Renovación',
+          title: frase`Fin del coaching · ${c.name}`,
+          subtitle: frase`Renovar`,
           onPress: () => router.push(`/(trainer)/clients/${c.uid}`),
         });
       }
@@ -515,7 +515,7 @@ export default function CoachCalendarScreen() {
       )}
 
       <View style={styles.legend}>
-        <Legend tone={TONE.payment} label="Cobro" />
+        <Legend tone={TONE.payment} label="Fin del coaching" />
         <Legend tone={TONE['cycle-start']} label="Empieza ciclo" />
         <Legend tone={TONE['cycle-end']} label="Termina ciclo" />
         <Legend tone={TONE.task} label="Tareas" />
@@ -628,7 +628,7 @@ export default function CoachCalendarScreen() {
       <View style={styles.screenHeader}>
         <Text style={styles.screenTitle}>Calendario</Text>
         <Text style={styles.screenSubtitle}>
-          Cobros, ciclos y tus tareas. Toca un día y apunta lo que quieras.
+          Fin de coaching, ciclos y tus tareas. Toca un día y apunta lo que quieras.
         </Text>
       </View>
 

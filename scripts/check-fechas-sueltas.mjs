@@ -38,6 +38,7 @@ const PERMITIDOS = {
   'lib/fechas.ts': 'es la casa de todas',
   'lib/cardEngine.ts': 'se ejecuta dentro de un WebView, sin imports',
   'lib/nombreDelProveedor.ts': 'tiene que poder ejecutarse desde Node, sin imports',
+  'lib/coaching.ts': 'decide cuándo se pausa la app de un alumno: se ejecuta desde Node, sin imports',
 };
 
 const PATRONES = [

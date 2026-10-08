@@ -116,10 +116,11 @@ await setDoc(
 );
 await setDoc(doc(db, 'trainerCodes', 'DEMO01'), { trainerId: coach, full: false });
 
+/** [uid, nombre, correo, días que le quedan de coaching] */
 const alumnos = [
-  [cli, 'Marcos Ruiz', 'alumno@demo.test', 45, 4, 'paid'],
-  [cli2, 'Ana Gil', 'alumno2@demo.test', 45, -3, 'pending'],
-  [cli3, 'Iker Sanz', 'alumno3@demo.test', 40, 12, 'paid'],
+  [cli, 'Marcos Ruiz', 'alumno@demo.test', 40],
+  [cli2, 'Ana Gil', 'alumno2@demo.test', -3],
+  [cli3, 'Iker Sanz', 'alumno3@demo.test', 5],
 ];
 /*
  * EL ALUMNO ENTRA COMO EN LA APP: pide entrar y el entrenador le acepta.
@@ -130,8 +131,7 @@ const alumnos = [
  * pone el vínculo. Al resembrar, el vínculo ya existe y no se toca.
  */
 const porAceptar = [];
-for (const [uid, name, email, fee, dias, estado] of alumnos) {
-  const due = now + dias * DAY;
+for (const [uid, name, email] of alumnos) {
   await como(email);
   const dentro = (await getDoc(doc(db, 'users', uid))).data()?.trainerId === coach;
   // Con `merge`: hay campos del perfil que el propio alumno NO puede tocar
@@ -141,8 +141,7 @@ for (const [uid, name, email, fee, dias, estado] of alumnos) {
     doc(db, 'users', uid),
     {
       uid, role: 'client', name, email, createdAt: now - 120 * DAY,
-      emailVerificationRequired: false, monthlyFeeEur: fee, paymentStatus: estado,
-      nextPaymentDate: due, billingAnchorDay: new Date(due).getDate(),
+      emailVerificationRequired: false,
       weightKg: 74.5, heightCm: 178, goal: 'Muscle up estricto', level: 'Intermedio',
     },
     { merge: true }
@@ -158,6 +157,16 @@ await como('coach@demo.test');
 for (const uid of porAceptar) {
   await setDoc(doc(db, 'users', uid), { trainerId: coach }, { merge: true });
   await deleteDoc(doc(db, 'joinRequests', `${uid}_${coach}`));
+}
+// El periodo de coaching lo pone el ENTRENADOR (las reglas se lo prohíben al
+// alumno). Marcos con más de un mes, Ana con el suyo acabado hace 3 días —sale en "Por
+// renovar"— e Iker con cinco días por delante (se acaba esta semana).
+for (const [uid, , , dias] of alumnos) {
+  await setDoc(
+    doc(db, 'users', uid),
+    { nextPaymentDate: now + dias * DAY, paymentStatus: 'paid', paymentReportedAt: deleteField() },
+    { merge: true }
+  );
 }
 
 // El esfuerzo (RIR) lo activa el ENTRENADOR, no el alumno: las reglas se lo
@@ -455,17 +464,10 @@ await setDoc(
 );
 await setDoc(doc(db, 'trainerCodes', 'CEO001'), { trainerId: ceo, full: false });
 
-await como('coach@demo.test');
-for (const dias of [10, 40, 70]) {
-  await addDoc(collection(db, 'payments'), {
-    trainerId: coach, clientId: cli, amountEur: 45, date: now - dias * DAY, createdAt: now - dias * DAY,
-  });
-}
-
 console.log(`Emulador sembrado.
   coach@demo.test   (entrenador, 3 alumnos)
   alumno@demo.test  (alumno con rutina e historial)
-  alumno2@demo.test (alumno con pago pendiente)
+  alumno2@demo.test (alumno con el coaching terminado)
   alumno3@demo.test (alumno solo para la clasificación)
   luistenaf@gmail.com (el CEO, con panel de administración)
   contraseña: ${PW}`);

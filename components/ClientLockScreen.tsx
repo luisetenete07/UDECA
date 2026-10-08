@@ -1,45 +1,41 @@
 import React from 'react';
-import { t, frase  } from '../lib/idioma';
-import { Linking, StyleSheet, View } from 'react-native';
+import { t, frase } from '../lib/idioma';
+import { StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { GateScreen } from './GateScreen';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
-import { enlaceDePagoDe, urlDePago } from '../lib/enlaceDePago';
+import { diaYMes } from '../lib/fechas';
 import { getUserProfile, reportClientPayment } from '../lib/firestore/users';
 import { notifyUser } from '../lib/notifications';
 import { colors, spacing, typography } from '../lib/theme';
 
 /**
- * Bloqueo del alumno por impago.
+ * La app en pausa porque se acabó el periodo de coaching.
  *
- * Aparece cuando se le ha pasado la cuota más de los días de margen (ver
- * `clientIsLocked`). Se sale de aquí de dos maneras: pagando, o diciendo que ya
- * se ha pagado para que el coach lo confirme. Nunca se pierde nada: el plan, el
- * historial y las marcas siguen ahí y vuelven en cuanto se resuelve.
+ * Aparece cuando han pasado más de los días de margen desde el final del
+ * periodo que puso su entrenador (ver `clientIsLocked` y lib/coaching.ts). Se
+ * sale cuando el entrenador lo renueva. Desde aquí, lo único que el alumno
+ * puede hacer es decírselo: pedirlo no abre la app, porque si la abriera
+ * bastaría con pulsar el botón para no renovar nunca.
  *
- * El tono es el de un recordatorio entre dos personas que se conocen, no el de
- * una máquina cortando el suministro: quien está al otro lado es el alumno de
- * alguien, no un moroso anónimo.
+ * Sin euros: lo que se paga es cosa suya y de su entrenador, fuera de UDECA.
+ * Y nunca se pierde nada: el plan, el historial y las marcas siguen ahí.
  */
 export function ClientLockScreen() {
   const { profile, signOut, refreshProfile } = useAuth();
-  const [paying, setPaying] = React.useState(false);
-  const [reporting, setReporting] = React.useState(false);
+  const [pidiendo, setPidiendo] = React.useState(false);
   const [trainerName, setTrainerName] = React.useState<string | null>(null);
-  // Su enlace, el de su ficha, con su precio. Del entrenador solo hace falta
-  // el nombre: quien está al otro lado es una persona, no una pasarela.
-  const payLink = enlaceDePagoDe(profile);
 
   React.useEffect(() => {
     if (!profile?.trainerId) return;
     let vivo = true;
     getUserProfile(profile.trainerId)
-      .then((t) => {
-        if (!vivo || !t) return;
-        setTrainerName(t.name?.split(' ')[0] ?? null);
+      .then((tr) => {
+        if (!vivo || !tr) return;
+        setTrainerName(tr.name?.split(' ')[0] ?? null);
       })
       .catch(() => {});
     return () => {
@@ -47,92 +43,66 @@ export function ClientLockScreen() {
     };
   }, [profile?.trainerId]);
 
-  const cuota = profile?.monthlyFeeEur ? `${profile.monthlyFeeEur} €` : 'tu cuota';
-
-  const pagar = async () => {
-    if (!profile || !payLink) return;
-    setPaying(true);
-    try {
-      await Linking.openURL(urlDePago(payLink, profile.uid));
-    } catch {
-      showToast('No se pudo abrir el pago. Reinténtalo.');
-    } finally {
-      setPaying(false);
-    }
-  };
-
-  const yaHePagado = async () => {
+  const pedirRenovar = async () => {
     if (!profile) return;
-    setReporting(true);
+    setPidiendo(true);
     try {
       await reportClientPayment(profile.uid);
       if (profile.trainerId) {
         notifyUser(
           profile.trainerId,
-          'Pago declarado',
-          frase`${profile.name?.split(' ')[0] ?? t('Un alumno')} dice que ya ha pagado su cuota. Revísalo y confírmalo.`
+          'Quiere renovar',
+          frase`${profile.name?.split(' ')[0] ?? t('Un alumno')} quiere renovar su periodo de coaching.`
         ).catch(() => {});
       }
       await refreshProfile();
-      showToast('Avisado. Recuperas el acceso mientras tu entrenador lo confirma.');
+      showToast('Se lo hemos dicho a tu entrenador');
     } catch {
       showToast('No se pudo enviar el aviso');
     } finally {
-      setReporting(false);
+      setPidiendo(false);
     }
   };
 
+  const pedido = !!profile?.paymentReportedAt;
+
   return (
     <GateScreen
-      icono="lock-closed-outline"
-      titulo="Tu acceso está en pausa"
+      icono="pause-circle-outline"
+      titulo="Tu coaching ha terminado"
       texto={
-        trainerName
-          ? frase`Tienes pendiente la cuota con ${trainerName}. En cuanto se resuelva, sigues justo donde lo dejaste.`
-          : 'Tienes la cuota pendiente. En cuanto se resuelva, sigues justo donde lo dejaste.'
+        trainerName && profile?.nextPaymentDate
+          ? frase`Tu periodo con ${trainerName} terminó el ${diaYMes(profile.nextPaymentDate)}. En cuanto lo renueve, sigues justo donde lo dejaste.`
+          : 'Tu periodo de coaching ha terminado. En cuanto tu entrenador lo renueve, sigues justo donde lo dejaste.'
       }
-      nota="Si has pagado por otra vía, avisa a tu entrenador y recuperas el acceso mientras lo confirma."
       onSalir={signOut}
     >
-      <Text style={styles.cuotaEtiqueta}>CUOTA PENDIENTE</Text>
-      <Text style={styles.cuota}>{cuota}</Text>
       <View style={styles.aviso}>
         <Ionicons name="shield-checkmark-outline" size={15} color={colors.success} />
         <Text style={styles.avisoTexto}>
           No pierdes nada: tu plan, tu historial y tus marcas siguen guardados.
         </Text>
       </View>
-      {/* Sin enlace no hay botón, y no pasa nada: hay entrenadores que cobran
-          en mano o por transferencia. Lo que nunca falta es "Ya he pagado",
-          que es la salida de esta pantalla venga el dinero por donde venga. */}
-      {payLink ? (
-        <Button
-          title={paying ? 'Abriendo...' : 'Pagar ahora'}
-          onPress={pagar}
-          loading={paying}
-          style={{ marginTop: spacing.md }}
-        />
-      ) : null}
       <Button
-        title={reporting ? 'Avisando...' : 'Ya he pagado'}
-        variant={payLink ? 'secondary' : 'primary'}
-        onPress={yaHePagado}
-        loading={reporting}
-        style={{ marginTop: payLink ? spacing.sm : spacing.md }}
+        title={pedido ? 'Tu entrenador ya lo sabe' : 'Quiero renovar'}
+        onPress={pedirRenovar}
+        loading={pidiendo}
+        disabled={pedido}
+        style={{ marginTop: spacing.md }}
+      />
+      <Button
+        title="Ya lo ha renovado · Actualizar"
+        variant="secondary"
+        onPress={() => {
+          refreshProfile().catch(() => {});
+        }}
+        style={{ marginTop: spacing.sm }}
       />
     </GateScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  cuotaEtiqueta: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-    marginTop: spacing.md,
-  },
-  cuota: { ...typography.h1, color: colors.primaryBright, textAlign: 'center', marginTop: 2 },
   aviso: {
     flexDirection: 'row',
     alignItems: 'center',

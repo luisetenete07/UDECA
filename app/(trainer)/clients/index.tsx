@@ -28,24 +28,21 @@ import { getCached, setCached } from '../../../lib/screenCache';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { fechaNumerica, inicioDeLaSemana, inicioDelDia, masDias } from '../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
+import { coachingDe } from '../../../lib/coaching';
+import { colorDelPeriodo, textoDelPeriodo } from '../../../components/PeriodoDeCoaching';
+
+/** Por renovar: el periodo se acaba esta semana o ya se acabó (lib/coaching.ts). */
+const porRenovar = (c: UserProfile) => {
+  const e = coachingDe(c).estado;
+  return e === 'acaba' || e === 'terminado' || e === 'pausado';
+};
 import {
   CLIENT_STATUS_LABEL,
-  PAYMENT_STATUSES,
-  PAYMENT_STATUS_LABEL,
-  PAYMENT_STATUS_TONE,
   todayWeekday,
-  type PaymentStatus,
   type Routine,
   type UserProfile,
   type WorkoutLog,
 } from '../../../lib/types';
-
-const PAY_TONE_COLOR: Record<'good' | 'warn' | 'bad' | 'muted', string> = {
-  good: colors.success,
-  warn: '#C9902B',
-  bad: colors.danger,
-  muted: colors.textFaint,
-};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -101,7 +98,7 @@ export default function ClientsScreen() {
   const [loading, setLoading] = useState(() => getCached(cacheKey) === undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [payFilter, setPayFilter] = useState<PaymentStatus | 'all'>('all');
+  const [soloRenovar, setSoloRenovar] = useState(false);
   // Orden: alfabético o por actividad (los que llevan más tiempo sin entrenar
   // primero, para actuar rápido con grupos grandes).
   const [sortMode, setSortMode] = useState<'name' | 'activity'>('name');
@@ -218,32 +215,26 @@ export default function ClientsScreen() {
     .filter(
       (c) =>
         (c.name ?? '').toLowerCase().includes(search.toLowerCase().trim()) &&
-        (payFilter === 'all' || c.paymentStatus === payFilter)
+        (!soloRenovar || porRenovar(c))
     )
     .sort((a, b) =>
       sortMode === 'activity'
         ? (lastTrained[a.uid] ?? 0) - (lastTrained[b.uid] ?? 0)
         : (a.name ?? '').localeCompare(b.name ?? '')
     );
-  // Cuántos alumnos hay en cada estado de pago (para las pastillas de filtro).
-  const payCounts = PAYMENT_STATUSES.reduce(
-    (acc, p) => ({ ...acc, [p]: clients.filter((c) => c.paymentStatus === p).length }),
-    {} as Record<PaymentStatus, number>
-  );
+  const cuantosPorRenovar = clients.filter(porRenovar).length;
 
   const handleExportCsv = () => {
     const fmt = (ts?: number) => (ts ? fechaNumerica(ts) : '');
     const rows = clients.map((c) => [
       c.name,
       c.email,
-      c.paymentStatus ? PAYMENT_STATUS_LABEL[c.paymentStatus] : '',
-      c.monthlyFeeEur ?? '',
       fmt(c.nextPaymentDate),
       fmt(lastTrained[c.uid]),
       c.goal ?? '',
     ]);
     const csv = buildCsv(
-      ['Nombre', 'Email', 'Pago', 'Cuota (€)', 'Próximo pago', 'Última sesión', 'Objetivo'],
+      ['Nombre', 'Email', 'Coaching hasta', 'Última sesión', 'Objetivo'],
       rows
     );
     const stamp = new Date().toISOString().slice(0, 10);
@@ -302,18 +293,15 @@ export default function ClientsScreen() {
           />
           <Chip
             texto={`Todos (${clients.length})`}
-            activo={payFilter === 'all'}
-            onPress={() => setPayFilter('all')}
+            activo={!soloRenovar}
+            onPress={() => setSoloRenovar(false)}
           />
-          {PAYMENT_STATUSES.map((p) => (
-            <Chip
-              key={p}
-              texto={`${PAYMENT_STATUS_LABEL[p]} (${payCounts[p]})`}
-              punto={PAY_TONE_COLOR[PAYMENT_STATUS_TONE[p]]}
-              activo={payFilter === p}
-              onPress={() => setPayFilter((cur) => (cur === p ? 'all' : p))}
-            />
-          ))}
+          <Chip
+            texto={frase`Por renovar (${cuantosPorRenovar})`}
+            punto={colors.warning}
+            activo={soloRenovar}
+            onPress={() => setSoloRenovar((v) => !v)}
+          />
         </ChipRow>
       ) : null}
 
@@ -353,17 +341,13 @@ export default function ClientsScreen() {
                   <Text style={[styles.payBadgeText, { color: activity.color }]}>
                     {activity.label}
                   </Text>
-                  {client.paymentStatus ? (
+                  {/* El periodo de coaching, solo si tiene fecha: lo que se
+                      lee es cuánto le queda, en el color de su estado. */}
+                  {client.nextPaymentDate ? (
                     <>
                       <Text style={styles.badgeSep}>·</Text>
-                      <View
-                        style={[
-                          styles.dot,
-                          { backgroundColor: PAY_TONE_COLOR[PAYMENT_STATUS_TONE[client.paymentStatus]] },
-                        ]}
-                      />
-                      <Text style={styles.payBadgeText}>
-                        {PAYMENT_STATUS_LABEL[client.paymentStatus]}
+                      <Text style={[styles.payBadgeText, { color: colorDelPeriodo(coachingDe(client)) }]}>
+                        {textoDelPeriodo(coachingDe(client))}
                       </Text>
                     </>
                   ) : null}
