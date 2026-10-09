@@ -77,5 +77,14 @@ console.log('\nAl guardar');
     objetivosDe(g).corto === 'uno dos' && objetivosDe(g).largo === 'tres');
 }
 
+console.log('\nEl inicio ya no los enseña');
+{
+  // Se quitaron de la pestaña de inicio: cerraban la pantalla con algo que no
+  // cambia de un día para otro. Siguen en su perfil.
+  const { readFileSync } = await import('node:fs');
+  const inicio = readFileSync(new URL('../app/(client)/dashboard.tsx', import.meta.url), 'utf8');
+  comprueba('sin "Mis objetivos" en el inicio', !/Mis objetivos|objetivosVisibles/.test(inicio));
+}
+
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);

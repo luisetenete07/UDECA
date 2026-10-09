@@ -37,6 +37,25 @@ export async function getStepLogsForClient(
     .sort((a, b) => b.date - a.date);
 }
 
+/**
+ * Los pasos guardados de un día, leídos ahora (null si no hay).
+ *
+ * Por consulta y no por `getDoc` con la clave: las reglas solo dejan leer un
+ * documento que exista, así que el día que aún no tiene pasos `getDoc` no
+ * devolvería "nada", devolvería un error de permisos.
+ */
+export async function getStepLogDelDia(clientId: string, dia: number): Promise<StepLog | null> {
+  const snap = await getDocs(
+    query(
+      collection(db, 'stepLogs'),
+      where('clientId', '==', clientId),
+      where('date', '==', inicioDelDia(dia))
+    )
+  );
+  const d = snap.docs[0];
+  return d ? ({ id: d.id, ...d.data() } as StepLog) : null;
+}
+
 /** Guarda (o pisa) los pasos de un día. */
 export async function setStepLog(
   clientId: string,

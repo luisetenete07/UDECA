@@ -108,14 +108,15 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
      * estuviera fea: es que esto se hace TODOS los días, y lo que se hace
      * todos los días es justo lo que se olvida cuando no se ve.
      *
-     * Lleva el mismo tratamiento que la tarjeta de la sesión de hoy: el
-     * degradado dorado y el filo del sistema. Las dos responden a la misma
-     * pregunta —"¿qué hago hoy?"— y ahora se parecen entre sí y no al resto.
+     * Lleva degradado propio, pero NO el de la sesión de hoy. Con el mismo
+     * dorado en diagonal las dos tarjetas se leían como una sola, y no lo son:
+     * una es la sesión y esta lo que se reparte por el día. Plata, desde la
+     * esquina contraria, y el oro solo en lo que se marca.
      */
     <LinearGradient
-      colors={gradients.goldSubtle}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      colors={gradients.diario}
+      start={{ x: 1, y: 0 }}
+      end={{ x: 0, y: 1 }}
       style={styles.tarjeta}
     >
       <View style={styles.cabecera}>
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.hairline,
+    borderColor: colors.hairlineSilver,
     padding: spacing.lg,
   },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },

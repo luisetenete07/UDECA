@@ -3,11 +3,12 @@ import { frase } from '../lib/idioma';
 import { AppState, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
+import { ProgressBar } from './ProgressBar';
 import { ProgressRing } from './ProgressRing';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { Dialogo } from './Dialogo';
-import { setStepLog, type StepLog } from '../lib/firestore/steps';
+import { getStepLogDelDia, setStepLog, type StepLog } from '../lib/firestore/steps';
 import { updateUserProfile } from '../lib/firestore/users';
 import { useAuth } from '../lib/auth-context';
 import { inicioDelDia } from '../lib/fechas';
@@ -22,6 +23,7 @@ import {
   sinElPasoFantasma,
   textoDePasos,
   ultimosSieteDias,
+  type RegistroDePasos,
 } from '../lib/pasos';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { UserProfile } from '../lib/types';
@@ -45,6 +47,21 @@ const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const ESPERA_ENTRE_LECTURAS_MS = 60 * 1000;
 
 /**
+ * Una lectura a la vez, y no más de una por minuto sin pedirlo.
+ *
+ * En referencias y no en estado a propósito: son dos cosas que deciden si se
+ * lee, no cosas que se pinten. En estado, cada una haría repintar la tarjeta
+ * justo en el momento en el que se está intentando que no repinte tanto.
+ *
+ * Y FUERA DEL COMPONENTE, COMPARTIDAS: el contador está en dos sitios a la vez
+ * —el inicio y Nutrición— y las dos pestañas siguen montadas. Al volver a la
+ * app se enteran las dos; con una referencia cada una, las dos leerían el
+ * sensor, y en Android cada una SUMARÍA lo suyo: los mismos pasos, dos veces.
+ */
+const leyendoRef = { current: false };
+const ultimaAutomaticaRef = { current: 0 };
+
+/**
  * Los pasos del día, DENTRO de la tarjeta de hoy.
  *
  * Aquí y no en Progreso a propósito: los pasos no son entrenamiento, son el
@@ -65,12 +82,19 @@ const ESPERA_ENTRE_LECTURAS_MS = 60 * 1000;
  * La cifra puede venir del contador del propio teléfono o escribirse a mano.
  * Lo segundo no es el plan B de lo primero: mucha gente lleva reloj, y un
  * contador que solo acepte lo que mide él deja fuera justo a quien más anda.
+ *
+ * `compacto` es la fila del inicio: la cifra del día y su barra, encima del
+ * peso. Lee del móvil igual que la grande —es lo que hace que los pasos estén
+ * puestos al abrir la app— y al tocarla lleva a Nutrición, que es donde se
+ * elige de dónde salen y se apuntan a mano.
  */
 export function ContadorDePasos({
   profile,
   pesoKg,
   registros,
   onCambio,
+  compacto,
+  onAbrir,
 }: {
   profile: UserProfile;
   /** Último peso registrado, para estimar el gasto. Sin él no se estima nada. */
@@ -78,18 +102,11 @@ export function ContadorDePasos({
   registros: StepLog[];
   /** Se llama tras guardar, para que el padre recargue y recalcule el día. */
   onCambio: () => void | Promise<void>;
+  compacto?: boolean;
+  onAbrir?: () => void;
 }) {
   const [aMano, setAMano] = useState('');
   const [leyendo, setLeyendo] = useState(false);
-  /**
-   * Una lectura a la vez, y no más de una por minuto sin pedirlo.
-   *
-   * En referencias y no en estado a propósito: son dos cosas que deciden si se
-   * lee, no cosas que se pinten. En estado, cada una haría repintar la tarjeta
-   * justo en el momento en el que se está intentando que no repinte tanto.
-   */
-  const leyendoRef = useRef(false);
-  const ultimaAutomaticaRef = useRef(0);
   const [cambiando, setCambiando] = useState(false);
   const { refreshProfile } = useAuth();
   /** De dónde salen sus pasos. Vacío = todavía no lo ha elegido. */
@@ -125,6 +142,26 @@ export function ContadorDePasos({
   const guardar = async (pasos: number, origen: 'telefono' | 'mano') => {
     await setStepLog(profile.uid, Date.now(), pasos, origen, profile.trainerId);
     await cargar();
+  };
+
+  /**
+   * Lo guardado hoy, PREGUNTADO A LA BASE DE DATOS y no a la lista del padre.
+   *
+   * Con el contador en dos pantallas, la lista de una puede ir atrasada: los
+   * 9.000 que se apuntan a mano en Nutrición no los ve el inicio hasta que
+   * recarga. Decidir con esa lista sería pisar esos 9.000 con los 3.500 del
+   * iPhone. Sin red, se tira de la lista, que es lo que había.
+   */
+  const guardadoHoy = async () => {
+    const fresco = await getStepLogDelDia(profile.uid, Date.now()).catch(() => undefined);
+    return fresco === undefined ? pasosDeHoy(registrosRef.current) : fresco;
+  };
+
+  /** Si no hay nada que escribir pero esta pantalla iba atrasada, se pone al día. */
+  const ponerAlDia = (guardado: StepLog | RegistroDePasos | null) => {
+    if ((guardado?.steps ?? 0) !== (pasosDeHoy(registrosRef.current)?.steps ?? 0)) {
+      Promise.resolve(cargar()).catch(() => {});
+    }
   };
 
   /**
@@ -214,11 +251,11 @@ export function ContadorDePasos({
           }
           return;
         }
-        const deHoy = pasosDeHoy(registrosRef.current);
+        const deHoy = await guardadoHoy();
         const aGuardar = pasosAGuardar(deHoy, leidos, { acumulativo: false });
         // En la lectura automática, si no cambia nada no se escribe: cada
         // escritura hace recargar la pantalla entera al padre.
-        if (enSilencio && aGuardar === (deHoy?.steps ?? 0)) return;
+        if (enSilencio && aGuardar === (deHoy?.steps ?? 0)) return ponerAlDia(deHoy);
         await guardar(aGuardar, 'telefono');
         if (!enSilencio) showToast(frase`Traídos ${conMiles(leidos)} pasos de tu iPhone`);
         return;
@@ -260,11 +297,11 @@ export function ContadorDePasos({
         }
         return;
       }
-      const deHoyAndroid = pasosDeHoy(registrosRef.current);
+      const deHoyAndroid = await guardadoHoy();
       const sumado = pasosAGuardar(deHoyAndroid, contados, { acumulativo: true });
       // Igual que en iPhone: en la lectura automática, si el número no cambia
       // no se escribe. Cada escritura hace recargar la sección entera al padre.
-      if (enSilencio && sumado === (deHoyAndroid?.steps ?? 0)) return;
+      if (enSilencio && sumado === (deHoyAndroid?.steps ?? 0)) return ponerAlDia(deHoyAndroid);
       await guardar(sumado, 'telefono');
       if (!enSilencio) {
         showToast(frase`Sumados ${conMiles(contados)} pasos andados con la app abierta`);
@@ -359,6 +396,30 @@ export function ContadorDePasos({
   };
 
   const maximo = Math.max(objetivo, ...semana.map((d) => d.steps), 1);
+
+  if (compacto) {
+    // Sin elegir de dónde salen y sin nada apuntado, un "0 / 10.000" se lee
+    // como "no has andado". Es otra cosa: aún no está puesto.
+    const sinNada = !origen && !hoy;
+    return (
+      <Pressable onPress={onAbrir} style={styles.fila}>
+        <View style={styles.filaArriba}>
+          <Ionicons name="footsteps-outline" size={17} color={colors.textMuted} />
+          <Text style={styles.filaEtiqueta}>Pasos</Text>
+          {sinNada ? (
+            <Text style={styles.filaConectar}>Conectar</Text>
+          ) : (
+            <Text style={[styles.filaValor, p.cumplido && styles.filaCumplida]}>
+              {conMiles(p.pasos)}
+              <Text style={styles.filaDe}>{` / ${conMiles(p.objetivo)}`}</Text>
+            </Text>
+          )}
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </View>
+        {sinNada ? null : <ProgressBar progress={p.ratio} height={4} />}
+      </Pressable>
+    );
+  }
 
   return (
     <View style={styles.bloque}>
@@ -623,4 +684,21 @@ const styles = StyleSheet.create({
   },
   botonManoTexto: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   origen: { ...typography.small, color: colors.textFaint, fontSize: 11, marginTop: spacing.sm },
+  // La fila del inicio: misma caja que la del peso, que va justo debajo.
+  fila: {
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.sm,
+  },
+  filaArriba: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  filaEtiqueta: { ...typography.body, color: colors.textMuted, flex: 1 },
+  filaValor: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  filaCumplida: { color: colors.primaryBright },
+  filaDe: { ...typography.small, color: colors.textFaint, fontFamily: fonts.body },
+  filaConectar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
 });

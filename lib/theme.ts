@@ -41,6 +41,8 @@ export const colors = {
   /** Línea fina dorada translúcida para bordes premium. */
   hairline: 'rgba(162, 150, 139, 0.35)',
   hairlineFaint: 'rgba(162, 150, 139, 0.18)',
+  /** El filo de la tarjeta de cada día, a juego con su degradado (`gradients.diario`). */
+  hairlineSilver: 'rgba(150, 160, 170, 0.30)',
   onPrimary: '#0A0A0A',
   /**
    * El velo detrás de cualquier cosa que se abre encima. Estaba escrito a mano
@@ -79,6 +81,13 @@ export const gradients = {
     'rgba(162,150,139,0)',
   ] as const,
   surface: ['#141414', '#0A0A0A'] as const,
+  /**
+   * La rutina de cada día (grease the groove): PLATA, y en la diagonal
+   * contraria. El oro es de la sesión de hoy; con el mismo degradado las dos
+   * tarjetas parecían una sola partida en dos. La plata la separa sin salirse
+   * de la marca: sigue siendo metal, solo que el segundo.
+   */
+  diario: ['rgba(150,160,170,0.20)', 'rgba(150,160,170,0.04)'] as const,
   /**
    * Fondo de toda la app. Negro, pero no plano: se aclara muy poco arriba y
    * cae a negro puro abajo, como luz cenital sobre una superficie oscura. El

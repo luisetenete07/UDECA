@@ -155,7 +155,7 @@ console.log('\nSe conecta UNA VEZ y se lee solo');
   // (El dato de hoy se lee de la referencia, no de la prop: ver más abajo, en
   // "La lectura automática no puede llamarse a sí misma".)
   comprueba('y no escribe si el número no cambia',
-    /if \(enSilencio && aGuardar === \(deHoy\?\.steps \?\? 0\)\) return;/.test(contador));
+    /if \(enSilencio && aGuardar === \(deHoy\?\.steps \?\? 0\)\) return( ponerAlDia\(deHoy\))?;/.test(contador));
   // Y se puede cambiar de fuente cuando se quiera.
   comprueba('se puede cambiar de fuente', /setCambiando\(true\)/.test(contador));
   // Escribirlos a mano sigue estando con el móvil conectado: se sale a andar
@@ -270,6 +270,30 @@ console.log('\nLa lectura automática no puede llamarse a sí misma');
    * enfermedad con otro nombre.
    */
   comprueba('ni depende de la función que lee', !/\[origen, leerDelTelefono\]/.test(c));
+}
+
+console.log('\nTambién en el inicio, y sin contar dos veces');
+{
+  /*
+   * Los pasos del día salen en el inicio, encima del peso, y se leen solos del
+   * móvil igual que en Nutrición. Eso deja DOS contadores montados a la vez
+   * (las pestañas no se desmontan), y al volver a la app se enteran los dos.
+   */
+  const sinComentarios = (x) =>
+    x.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const c = sinComentarios(readFileSync(new URL('../components/ContadorDePasos.tsx', import.meta.url), 'utf8'));
+  const inicio = sinComentarios(readFileSync(new URL('../app/(client)/dashboard.tsx', import.meta.url), 'utf8'));
+  const enInicio = inicio.search(/<ContadorDePasos\s+compacto/);
+  comprueba('el inicio enseña los pasos', enInicio > 0);
+  comprueba('justo encima del peso', enInicio > 0 && enInicio < inicio.indexOf('styles.weightRow'));
+  // Con una referencia por contador, en Android cada uno SUMARÍA su lectura:
+  // los mismos pasos, dos veces.
+  comprueba('una lectura a la vez entre los dos', /^const leyendoRef = \{ current: false \};/m.test(c));
+  comprueba('y un minuto de espera compartido', /^const ultimaAutomaticaRef = \{ current: 0 \};/m.test(c));
+  // Y se decide con lo que hay guardado AHORA, no con la lista de la pantalla:
+  // la del inicio no ve lo que se acaba de apuntar a mano en Nutrición.
+  comprueba('lo de hoy se pregunta a la base de datos (iPhone y Android)',
+    (c.match(/= await guardadoHoy\(\);/g) ?? []).length === 2);
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

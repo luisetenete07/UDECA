@@ -20,6 +20,7 @@ import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
 import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { RutinaDiariaDelDia } from '../../components/RutinaDiariaDelDia';
+import { ContadorDePasos } from '../../components/ContadorDePasos';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import {
@@ -30,8 +31,8 @@ import {
   unlogHabit,
 } from '../../lib/firestore/habits';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
+import { getStepLogsForClient, type StepLog } from '../../lib/firestore/steps';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
-import { hayObjetivos, objetivosDe, objetivosVisibles } from '../../lib/objetivos';
 import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
@@ -71,6 +72,7 @@ interface ClientDashData {
   workoutLogs: WorkoutLog[];
   habits: Habit[];
   habitLogs: HabitLog[];
+  stepLogs: StepLog[];
   cycleAnchor: AnclaDelAlumno | null;
 }
 
@@ -86,6 +88,7 @@ export default function ClientDashboard() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
   const [habits, setHabits] = useState<Habit[]>(cached?.habits ?? []);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>(cached?.habitLogs ?? []);
+  const [stepLogs, setStepLogs] = useState<StepLog[]>(cached?.stepLogs ?? []);
   const [cycleAnchor, setCycleAnchor] = useState<AnclaDelAlumno | null>(cached?.cycleAnchor ?? null);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
@@ -100,13 +103,15 @@ export default function ClientDashboard() {
       if (!profile) return;
       // Sube entrenos que quedaron pendientes por falta de conexión.
       await flushPendingWorkouts().catch(() => {});
-      const [routineData, weightData, workoutData, habitData, habitLogData] =
+      const [routineData, weightData, workoutData, habitData, habitLogData, stepData] =
         await Promise.all([
           getActiveRoutineForClient(profile.uid),
           getWeightLogsForClient(profile.uid),
           getWorkoutLogsForClient(profile.uid),
           getHabitsForClient(profile.uid),
           getHabitLogsForClient(profile.uid),
+          // Los pasos no pueden tumbar el inicio: sin ellos, la fila sale a cero.
+          getStepLogsForClient(profile.uid).catch(() => [] as StepLog[]),
         ]);
       const anchor = routineData ? await anclaDelAlumno(routineData.id, profile) : null;
       if (isActive && !isActive()) return;
@@ -116,12 +121,14 @@ export default function ClientDashboard() {
       setWorkoutLogs(workoutData);
       setHabits(habitData);
       setHabitLogs(habitLogData);
+      setStepLogs(stepData);
       setCached(cacheKey, {
         routine: routineData,
         weightLogs: weightData,
         workoutLogs: workoutData,
         habits: habitData,
         habitLogs: habitLogData,
+        stepLogs: stepData,
         cycleAnchor: anchor,
       } satisfies ClientDashData);
       setLoading(false);
@@ -150,6 +157,14 @@ export default function ClientDashboard() {
     },
     [profile, cacheKey]
   );
+
+  // Al leer pasos del móvil solo cambian los pasos: recargar el inicio entero
+  // por eso serían seis consultas y la pantalla repintándose cada minuto.
+  const recargarPasos = useCallback(async () => {
+    if (!profile) return;
+    const pasos = await getStepLogsForClient(profile.uid).catch(() => null);
+    if (pasos) setStepLogs(pasos);
+  }, [profile]);
 
   useFocusEffect(
     useCallback(() => {
@@ -268,7 +283,6 @@ export default function ClientDashboard() {
     }
   };
 
-  const objetivos = objetivosDe(profile);
   const targetSessions = routine?.days.length ?? 0;
   const weekProgress = targetSessions > 0 ? Math.min(sessions / targetSessions, 1) : 0;
 
@@ -682,10 +696,23 @@ export default function ClientDashboard() {
       </FadeIn>
 
       {/* La racha y las sesiones ya están en el anillo de arriba: repetirlas
-          aquí en tres cuadros iguales le quitaba peso a las dos. Queda el peso,
-          que no está en ningún otro sitio de esta pantalla. Lleva a la pestaña
-          de Nutrición de Progreso, que es donde se apunta. */}
+          aquí en tres cuadros iguales le quitaba peso a las dos. Quedan los
+          pasos y el peso, que no están en ningún otro sitio de esta pantalla.
+          Los dos llevan a la pestaña de Nutrición de Progreso, que es donde se
+          apuntan.
+
+          Los pasos, encima: cambian cada día y el peso cada semana. Y se leen
+          solos del móvil al abrir la app, así que la cifra ya está puesta. */}
       <FadeIn delay={210}>
+      {profile ? (
+        <ContadorDePasos
+          compacto
+          profile={profile}
+          registros={stepLogs}
+          onCambio={recargarPasos}
+          onAbrir={() => router.push('/(client)/progress?tab=nutricion')}
+        />
+      ) : null}
       <Pressable
         onPress={() => router.push('/(client)/progress?tab=nutricion')}
         style={styles.weightRow}
@@ -750,24 +777,6 @@ export default function ClientDashboard() {
               </Pressable>
             );
           })}
-        </Card>
-      ) : null}
-
-      {/* Los tres objetivos, uno por línea y en el orden en que se viven:
-          esta semana, este trimestre, algún día. Pequeño a propósito —cierra
-          la pantalla, no la abre— pero de un vistazo se ve si lo de hoy lleva
-          a lo de dentro de tres años. */}
-      {hayObjetivos(objetivos) ? (
-        <Card style={styles.section}>
-          <Text style={styles.sectionLabel}>Mis objetivos</Text>
-          {objetivosVisibles(objetivos).map((o) => (
-            <View key={o.etiqueta} style={styles.objetivoFila}>
-              <Text style={styles.objetivoPlazo}>{o.etiqueta}</Text>
-              <Text style={styles.objetivoTexto} numberOfLines={2}>
-                {o.texto}
-              </Text>
-            </View>
-          ))}
         </Card>
       ) : null}
     </ScreenContainer>
@@ -958,22 +967,6 @@ const styles = StyleSheet.create({
   legendPlanned: { backgroundColor: colors.surfaceAlt, borderColor: colors.hairline },
   legendTodayDot: { backgroundColor: colors.surfaceAlt, borderColor: colors.primaryBright, borderWidth: 2 },
   legendText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
-  objetivoFila: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  // El plazo, a un ancho fijo: así las tres líneas quedan alineadas y se leen
-  // como una tabla de tres filas y no como tres frases sueltas.
-  objetivoPlazo: {
-    ...typography.small,
-    color: colors.textFaint,
-    fontSize: 11,
-    width: 78,
-    paddingTop: 2,
-  },
-  objetivoTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   habitRow: {
     flexDirection: 'row',
     alignItems: 'center',

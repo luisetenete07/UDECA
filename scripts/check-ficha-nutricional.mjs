@@ -77,11 +77,11 @@ ok(
 );
 ok(
   'si el número no cambia, no se escribe (iPhone)',
-  /if \(enSilencio && aGuardar === \(deHoy\?\.steps \?\? 0\)\) return;/.test(pasos)
+  /if \(enSilencio && aGuardar === \(deHoy\?\.steps \?\? 0\)\) return( ponerAlDia\(deHoy\))?;/.test(pasos)
 );
 ok(
   'si el número no cambia, no se escribe (Android)',
-  /if \(enSilencio && sumado === \(deHoyAndroid\?\.steps \?\? 0\)\) return;/.test(pasos),
+  /if \(enSilencio && sumado === \(deHoyAndroid\?\.steps \?\? 0\)\) return( ponerAlDia\(deHoyAndroid\))?;/.test(pasos),
   'esta rama escribía siempre, y cada escritura recarga la sección entera'
 );
 // El motivo por el que existe `registrosRef`: sin él, guardar hacía recargar al
