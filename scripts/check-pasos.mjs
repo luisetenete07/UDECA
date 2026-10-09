@@ -286,6 +286,12 @@ console.log('\nTambién en el inicio, y sin contar dos veces');
   const enInicio = inicio.search(/<ContadorDePasos\s+compacto/);
   comprueba('el inicio enseña los pasos', enInicio > 0);
   comprueba('justo encima del peso', enInicio > 0 && enInicio < inicio.indexOf('styles.weightRow'));
+  // Y los dos dentro de la tarjeta de la semana: después de la tira de días y
+  // antes de que se cierre (lo siguiente es "Registrar un entreno de otro día").
+  const tira = inicio.indexOf('<WeekStrip');
+  const cierre = inicio.indexOf('</Card>', inicio.indexOf('styles.weightRow'));
+  comprueba('pasos y peso, dentro de la tarjeta de la semana',
+    tira > 0 && tira < enInicio && cierre > 0 && cierre < inicio.indexOf('<RegistrarOtroDia'));
   // Con una referencia por contador, en Android cada uno SUMARÍA su lectura:
   // los mismos pasos, dos veces.
   comprueba('una lectura a la vez entre los dos', /^const leyendoRef = \{ current: false \};/m.test(c));

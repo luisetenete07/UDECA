@@ -83,8 +83,8 @@ const ultimaAutomaticaRef = { current: 0 };
  * Lo segundo no es el plan B de lo primero: mucha gente lleva reloj, y un
  * contador que solo acepte lo que mide él deja fuera justo a quien más anda.
  *
- * `compacto` es la fila del inicio: la cifra del día y su barra, encima del
- * peso. Lee del móvil igual que la grande —es lo que hace que los pasos estén
+ * `compacto` es la fila del inicio, dentro de la tarjeta de la semana: la
+ * cifra del día y su barra, encima del peso. Lee del móvil igual que la grande —es lo que hace que los pasos estén
  * puestos al abrir la app— y al tocarla lleva a Nutrición, que es donde se
  * elige de dónde salen y se apuntan a mano.
  */
@@ -684,16 +684,14 @@ const styles = StyleSheet.create({
   },
   botonManoTexto: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   origen: { ...typography.small, color: colors.textFaint, fontSize: 11, marginTop: spacing.sm },
-  // La fila del inicio: misma caja que la del peso, que va justo debajo.
+  // La fila del inicio, dentro de la tarjeta de la semana: sin caja propia,
+  // separada por una raya como la del peso, que va justo debajo.
   fila: {
     gap: spacing.sm,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   filaArriba: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   filaEtiqueta: { ...typography.body, color: colors.textMuted, flex: 1 },

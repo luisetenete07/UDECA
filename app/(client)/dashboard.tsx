@@ -681,6 +681,37 @@ export default function ClientDashboard() {
             <Text style={styles.legendText}>Hoy</Text>
           </View>
         </View>
+
+        {/* PASOS Y PESO, DENTRO DE LA SEMANA.
+            Eran dos cajas sueltas debajo, con su borde cada una, contando
+            cosas de la misma semana por separado. Aquí son dos filas de la
+            misma tarjeta: lo entrenado, lo andado y lo que pesas, de un
+            vistazo. La racha y las sesiones no se repiten: ya están en el
+            anillo de arriba.
+
+            Los pasos, encima: cambian cada día y el peso cada semana. Se leen
+            solos del móvil al abrir la app, así que la cifra ya está puesta.
+            Las dos filas llevan a Nutrición, que es donde se apuntan. */}
+        {profile ? (
+          <ContadorDePasos
+            compacto
+            profile={profile}
+            registros={stepLogs}
+            onCambio={recargarPasos}
+            onAbrir={() => router.push('/(client)/progress?tab=nutricion')}
+          />
+        ) : null}
+        <Pressable
+          onPress={() => router.push('/(client)/progress?tab=nutricion')}
+          style={styles.weightRow}
+        >
+          <Ionicons name="body-outline" size={17} color={colors.textMuted} />
+          <Text style={styles.weightLabel}>Peso</Text>
+          <Text style={styles.weightValue}>
+            {currentWeight != null ? `${kgCorto(currentWeight)} kg` : 'Sin registrar'}
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </Pressable>
       </Card>
       </FadeIn>
 
@@ -693,37 +724,6 @@ export default function ClientDashboard() {
           se acuerda de que el martes entrenó sin el móvil delante. */}
       <FadeIn delay={208}>
         <RegistrarOtroDia />
-      </FadeIn>
-
-      {/* La racha y las sesiones ya están en el anillo de arriba: repetirlas
-          aquí en tres cuadros iguales le quitaba peso a las dos. Quedan los
-          pasos y el peso, que no están en ningún otro sitio de esta pantalla.
-          Los dos llevan a la pestaña de Nutrición de Progreso, que es donde se
-          apuntan.
-
-          Los pasos, encima: cambian cada día y el peso cada semana. Y se leen
-          solos del móvil al abrir la app, así que la cifra ya está puesta. */}
-      <FadeIn delay={210}>
-      {profile ? (
-        <ContadorDePasos
-          compacto
-          profile={profile}
-          registros={stepLogs}
-          onCambio={recargarPasos}
-          onAbrir={() => router.push('/(client)/progress?tab=nutricion')}
-        />
-      ) : null}
-      <Pressable
-        onPress={() => router.push('/(client)/progress?tab=nutricion')}
-        style={styles.weightRow}
-      >
-        <Ionicons name="body-outline" size={17} color={colors.textMuted} />
-        <Text style={styles.weightLabel}>Peso</Text>
-        <Text style={styles.weightValue}>
-          {currentWeight != null ? `${kgCorto(currentWeight)} kg` : 'Sin registrar'}
-        </Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-      </Pressable>
       </FadeIn>
 
       {showFirstSteps ? (
@@ -833,17 +833,14 @@ const styles = StyleSheet.create({
     color: colors.primaryBright,
     fontFamily: fonts.semiBold,
   },
+  // Última fila de la tarjeta de la semana: sin caja propia, solo la raya.
   weightRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    marginBottom: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   weightLabel: { ...typography.body, color: colors.textMuted, flex: 1 },
   weightValue: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
