@@ -267,6 +267,9 @@ export const EN: Record<string, string> = {
   // Los pasos en el inicio del alumno (components/ContadorDePasos.tsx, compacto).
   Pasos: 'Steps',
   Conectar: 'Connect',
+  // Los meses anteriores, dentro de "Hace 3 meses → hoy" (app/(client)/progress.tsx).
+  'Meses anteriores': 'Previous months',
+  'Aún no has entrenado este mes.': "You haven't trained yet this month.",
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

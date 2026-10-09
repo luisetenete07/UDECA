@@ -411,6 +411,160 @@ export default function ProgressScreen() {
   const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
   const muscleMax = muscleMap.length > 0 ? muscleMap[0].sets : 0;
 
+  const mesActual = months.find((m) => m.key === monthKeyOf()) ?? null;
+  const mesesAnteriores = months.filter((m) => m.key !== monthKeyOf());
+
+  /** Un mes: su cabecera, su resumen y, abierto, sus entrenamientos. */
+  const pintarMes = (m: (typeof months)[number]) => (
+    <>
+      <Pressable style={styles.monthHeader} onPress={() => toggleMonth(m.key)}>
+        <Text style={styles.monthTitle}>{mayusculaInicial(m.label)}</Text>
+        <Text style={styles.monthCount}>
+          {m.sessions.length} {m.sessions.length === 1 ? 'sesión' : 'sesiones'}
+        </Text>
+        <Ionicons
+          name={isMonthOpen(m.key) ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={colors.textFaint}
+        />
+      </Pressable>
+      <View style={styles.monthStats}>
+        <MonthStat value={String(m.totalSets)} label="series" />
+        {m.totalReps > 0 ? <MonthStat value={String(m.totalReps)} label="reps" /> : null}
+        {m.totalSeconds > 0 ? (
+          <MonthStat value={`${m.totalSeconds}s`} label="isom." />
+        ) : null}
+        {m.volumeKg > 0 ? (
+          <MonthStat value={m.volumeKg.toLocaleString('es-ES')} label="kg vol." />
+        ) : null}
+      </View>
+
+      {!isMonthOpen(m.key) ? (
+        <Pressable onPress={() => toggleMonth(m.key)} style={styles.monthExpand}>
+          <Ionicons name="list-outline" size={14} color={colors.primary} />
+          <Text style={styles.monthExpandText}>
+            Ver los {m.sessions.length} entrenamientos
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {isMonthOpen(m.key) && m.sessions.map((s) => {
+        const t = sessionTotals(s.exercises, measureByExercise);
+        const open = expandedSessions[s.id];
+        const d = new Date(s.date);
+        const meta = unido(
+          frase`${t.sets} series`,
+          t.reps > 0 && `${t.reps} reps`,
+          t.seconds > 0 && `${t.seconds}s`,
+          t.volumeKg > 0 && `${t.volumeKg.toLocaleString('es-ES')} kg`
+        );
+        return (
+          <View key={s.id}>
+            <View style={styles.sessionRow}>
+              <Pressable style={styles.sessionMain} onPress={() => toggleSession(s.id)}>
+                <View style={styles.sessionDateBox}>
+                  <Text style={styles.sessionDay}>{d.getDate()}</Text>
+                  <Text style={styles.sessionMon}>
+                    {mesCorto(d)}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sessionName} numberOfLines={1}>
+                    {s.dayName}
+                  </Text>
+                  <Text style={styles.sessionMeta}>{meta}</Text>
+                </View>
+                <Ionicons
+                  name={open ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={colors.textFaint}
+                />
+              </Pressable>
+              {t.sets > 0 || t.seconds > 0 ? (
+                <Pressable
+                  onPress={() => handleShareSession(s)}
+                  hitSlop={8}
+                  style={styles.sessionShare}
+                >
+                  <Ionicons name="share-outline" size={16} color={colors.primary} />
+                </Pressable>
+              ) : null}
+            </View>
+            {open ? (
+              <View style={styles.sessionDetail}>
+                {s.exercises.map((ex, i) => {
+                  const isSec = isIsometricExercise(ex, measureByExercise);
+                  const isCombo = isComboExercise(ex, measureByExercise);
+                  // Cada serie va en su propia marca en vez de en una
+                  // lista separada por comas: "12, 10, 8" obliga a
+                  // leer, y tres marcas seguidas se ven de un golpe.
+                  const marcas = ex.sets
+                    .filter((st) => st.completed && st.reps)
+                    .map((st) => {
+                      // Un lastre de 0 kg no es lastre: escribirlo
+                      // ("7 × 0 kg") es ruido en cada serie de peso
+                      // corporal, que son casi todas.
+                      const kg = toNum(st.weight);
+                      return {
+                        // En clúster, la serie fueron varios bloques:
+                        // se enseñan todos ("3+3+3"), que es lo que de
+                        // verdad se hizo.
+                        texto:
+                          `${setMarks(st).join('+')}${isSec ? ' s' : ''}` +
+                          `${isCombo && st.seconds ? ` + ${st.seconds}s` : ''}` +
+                          `${kg > 0 ? ` × ${kg} kg` : ''}`,
+                        cluster: (st.clusters?.length ?? 0) > 0,
+                      };
+                    });
+                  return (
+                    <View key={i} style={styles.detailBlock}>
+                      <Text style={styles.detailName} numberOfLines={1}>
+                        {ex.name}
+                      </Text>
+                      {marcas.length > 0 ? (
+                        <View style={styles.detailMarks}>
+                          {marcas.map((m, j) => (
+                            <View key={j} style={styles.detailMark}>
+                              {m.cluster ? (
+                                <Ionicons
+                                  name="layers-outline"
+                                  size={11}
+                                  color={colors.textMuted}
+                                />
+                              ) : null}
+                              <Text style={styles.detailMarkText}>{m.texto}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <Text style={styles.detailDone}>Completado</Text>
+                      )}
+                    </View>
+                  );
+                })}
+
+                {/* Borrar vive DENTRO de la sesión abierta, no en la
+                    fila. Una papelera en cada línea de una lista es
+                    un accidente esperando su turno: así solo se
+                    puede borrar lo que se está mirando. */}
+                <Pressable
+                  onPress={() => requestDeleteWorkout(s.id)}
+                  hitSlop={8}
+                  style={styles.borrarSesion}
+                >
+                  <Ionicons name="trash-outline" size={14} color={colors.textFaint} />
+                  <Text style={styles.borrarSesionTexto}>
+                    Eliminar este entrenamiento
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        );
+      })}
+    </>
+  );
+
   return (
     <ScreenContainer
       refreshing={refreshing}
@@ -495,14 +649,36 @@ export default function ProgressScreen() {
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
             </Pressable>
 
-            {comparison ? (
+            {/* EL MES EN CURSO, a la vista. Los anteriores van dentro de
+                "Hace 3 meses → hoy": son lo que se mira para comparar, no lo que
+                se viene a ver cada día, y abiertos aquí eran un rollo de meses
+                por el que había que bajar para llegar a todo lo demás. */}
+            {mesActual ? (
+              <FadeIn>
+                <Card style={styles.section}>{pintarMes(mesActual)}</Card>
+              </FadeIn>
+            ) : (
+              <Card style={styles.section}>
+                <Text style={styles.photoHint}>Aún no has entrenado este mes.</Text>
+              </Card>
+            )}
+
+            {comparison || mesesAnteriores.length > 0 ? (
               <CollapsibleCard
                 id="progreso-comparativa"
                 icon="git-compare-outline"
-                title="Hace 3 meses → hoy"
-                hint={`${comparison.now.sessions} vs ${comparison.then.sessions} sesiones`}
+                title={comparison ? 'Hace 3 meses → hoy' : 'Meses anteriores'}
+                hint={
+                  comparison
+                    ? `${comparison.now.sessions} vs ${comparison.then.sessions} sesiones`
+                    : mesesAnteriores.length === 1
+                      ? '1 mes'
+                      : frase`${mesesAnteriores.length} meses`
+                }
                 defaultOpen={false}
               >
+                {comparison ? (
+                <>
                 <Text style={styles.photoHint}>
                   Tus últimos 28 días frente a los mismos días de hace 3 meses.
                 </Text>
@@ -531,160 +707,26 @@ export default function ProgressScreen() {
                     neutral
                   />
                 ) : null}
+                </>
+                ) : null}
+
+                {/* Los entrenamientos de los meses anteriores, aquí dentro:
+                    cada uno con su resumen y su detalle a un toque. */}
+                {mesesAnteriores.length > 0 ? (
+                  <>
+                    {comparison ? (
+                      <Text style={styles.mesesAnterioresTitulo}>Meses anteriores</Text>
+                    ) : null}
+                    {mesesAnteriores.map((m) => (
+                      <View key={m.key} style={styles.mesDentro}>
+                        {pintarMes(m)}
+                      </View>
+                    ))}
+                  </>
+                ) : null}
               </CollapsibleCard>
             ) : null}
 
-            {months.map((m, mi) => (
-              <FadeIn key={m.key} delay={Math.min(mi * 60, 240)}>
-              <Card style={styles.section}>
-                <Pressable style={styles.monthHeader} onPress={() => toggleMonth(m.key)}>
-                  <Text style={styles.monthTitle}>{mayusculaInicial(m.label)}</Text>
-                  <Text style={styles.monthCount}>
-                    {m.sessions.length} {m.sessions.length === 1 ? 'sesión' : 'sesiones'}
-                  </Text>
-                  <Ionicons
-                    name={isMonthOpen(m.key) ? 'chevron-up' : 'chevron-down'}
-                    size={18}
-                    color={colors.textFaint}
-                  />
-                </Pressable>
-                <View style={styles.monthStats}>
-                  <MonthStat value={String(m.totalSets)} label="series" />
-                  {m.totalReps > 0 ? <MonthStat value={String(m.totalReps)} label="reps" /> : null}
-                  {m.totalSeconds > 0 ? (
-                    <MonthStat value={`${m.totalSeconds}s`} label="isom." />
-                  ) : null}
-                  {m.volumeKg > 0 ? (
-                    <MonthStat value={m.volumeKg.toLocaleString('es-ES')} label="kg vol." />
-                  ) : null}
-                </View>
-
-                {!isMonthOpen(m.key) ? (
-                  <Pressable onPress={() => toggleMonth(m.key)} style={styles.monthExpand}>
-                    <Ionicons name="list-outline" size={14} color={colors.primary} />
-                    <Text style={styles.monthExpandText}>
-                      Ver los {m.sessions.length} entrenamientos
-                    </Text>
-                  </Pressable>
-                ) : null}
-
-                {isMonthOpen(m.key) && m.sessions.map((s) => {
-                  const t = sessionTotals(s.exercises, measureByExercise);
-                  const open = expandedSessions[s.id];
-                  const d = new Date(s.date);
-                  const meta = unido(
-                    frase`${t.sets} series`,
-                    t.reps > 0 && `${t.reps} reps`,
-                    t.seconds > 0 && `${t.seconds}s`,
-                    t.volumeKg > 0 && `${t.volumeKg.toLocaleString('es-ES')} kg`
-                  );
-                  return (
-                    <View key={s.id}>
-                      <View style={styles.sessionRow}>
-                        <Pressable style={styles.sessionMain} onPress={() => toggleSession(s.id)}>
-                          <View style={styles.sessionDateBox}>
-                            <Text style={styles.sessionDay}>{d.getDate()}</Text>
-                            <Text style={styles.sessionMon}>
-                              {mesCorto(d)}
-                            </Text>
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.sessionName} numberOfLines={1}>
-                              {s.dayName}
-                            </Text>
-                            <Text style={styles.sessionMeta}>{meta}</Text>
-                          </View>
-                          <Ionicons
-                            name={open ? 'chevron-up' : 'chevron-down'}
-                            size={18}
-                            color={colors.textFaint}
-                          />
-                        </Pressable>
-                        {t.sets > 0 || t.seconds > 0 ? (
-                          <Pressable
-                            onPress={() => handleShareSession(s)}
-                            hitSlop={8}
-                            style={styles.sessionShare}
-                          >
-                            <Ionicons name="share-outline" size={16} color={colors.primary} />
-                          </Pressable>
-                        ) : null}
-                      </View>
-                      {open ? (
-                        <View style={styles.sessionDetail}>
-                          {s.exercises.map((ex, i) => {
-                            const isSec = isIsometricExercise(ex, measureByExercise);
-                            const isCombo = isComboExercise(ex, measureByExercise);
-                            // Cada serie va en su propia marca en vez de en una
-                            // lista separada por comas: "12, 10, 8" obliga a
-                            // leer, y tres marcas seguidas se ven de un golpe.
-                            const marcas = ex.sets
-                              .filter((st) => st.completed && st.reps)
-                              .map((st) => {
-                                // Un lastre de 0 kg no es lastre: escribirlo
-                                // ("7 × 0 kg") es ruido en cada serie de peso
-                                // corporal, que son casi todas.
-                                const kg = toNum(st.weight);
-                                return {
-                                  // En clúster, la serie fueron varios bloques:
-                                  // se enseñan todos ("3+3+3"), que es lo que de
-                                  // verdad se hizo.
-                                  texto:
-                                    `${setMarks(st).join('+')}${isSec ? ' s' : ''}` +
-                                    `${isCombo && st.seconds ? ` + ${st.seconds}s` : ''}` +
-                                    `${kg > 0 ? ` × ${kg} kg` : ''}`,
-                                  cluster: (st.clusters?.length ?? 0) > 0,
-                                };
-                              });
-                            return (
-                              <View key={i} style={styles.detailBlock}>
-                                <Text style={styles.detailName} numberOfLines={1}>
-                                  {ex.name}
-                                </Text>
-                                {marcas.length > 0 ? (
-                                  <View style={styles.detailMarks}>
-                                    {marcas.map((m, j) => (
-                                      <View key={j} style={styles.detailMark}>
-                                        {m.cluster ? (
-                                          <Ionicons
-                                            name="layers-outline"
-                                            size={11}
-                                            color={colors.textMuted}
-                                          />
-                                        ) : null}
-                                        <Text style={styles.detailMarkText}>{m.texto}</Text>
-                                      </View>
-                                    ))}
-                                  </View>
-                                ) : (
-                                  <Text style={styles.detailDone}>Completado</Text>
-                                )}
-                              </View>
-                            );
-                          })}
-
-                          {/* Borrar vive DENTRO de la sesión abierta, no en la
-                              fila. Una papelera en cada línea de una lista es
-                              un accidente esperando su turno: así solo se
-                              puede borrar lo que se está mirando. */}
-                          <Pressable
-                            onPress={() => requestDeleteWorkout(s.id)}
-                            hitSlop={8}
-                            style={styles.borrarSesion}
-                          >
-                            <Ionicons name="trash-outline" size={14} color={colors.textFaint} />
-                            <Text style={styles.borrarSesionTexto}>
-                              Eliminar este entrenamiento
-                            </Text>
-                          </Pressable>
-                        </View>
-                      ) : null}
-                    </View>
-                  );
-                })}
-              </Card>
-              </FadeIn>
-            ))}
 
             <CollapsibleCard
               id="progreso-series"
@@ -1110,6 +1152,20 @@ const styles = StyleSheet.create({
   compareNow: { ...typography.body, color: colors.text, fontFamily: fonts.heading },
   compareDelta: { ...typography.small, fontFamily: fonts.semiBold, width: 52, textAlign: 'right' },
   // ----- Registro de entrenamiento mensual -----
+  // Los meses anteriores, dentro de "Hace 3 meses → hoy": separados por una
+  // raya en vez de tarjeta dentro de tarjeta.
+  mesesAnterioresTitulo: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginTop: spacing.lg,
+  },
+  mesDentro: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   monthHeader: {
     flexDirection: 'row',
     alignItems: 'center',
