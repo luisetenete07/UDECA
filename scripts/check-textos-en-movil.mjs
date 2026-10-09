@@ -63,9 +63,10 @@ console.log('\nLas pantallas donde se cortaba algo');
   // "INTENSIFICACIÓN" y "Semana 6 de 8" no caben juntas en 222 px.
   ok('la fase y la semana pueden ir en dos filas', /cycleTop: \{[\s\S]{0,500}?flexWrap: 'wrap',/.test(inicio));
 
-  const inicioCoach = lee('app/(trainer)/dashboard.tsx');
-  // El título de una tarea lo escribe el entrenador y suele ser una frase.
-  ok('la tarea del día, a dos líneas', /styles\.taskTitle\}[\s\S]{0,40}numberOfLines=\{2\}/.test(inicioCoach));
+  // El título de una tarea lo escribe el entrenador y suele ser una frase. Las
+  // tareas del inicio viven ahora en la semana (components/SemanaDelCoach.tsx).
+  const semanaCoach = lee('components/SemanaDelCoach.tsx');
+  ok('la tarea del día, a dos líneas', /styles\.filaHecha\][\s\S]{0,20}\}\s*numberOfLines=\{2\}/.test(semanaCoach));
 
   const rutina = lee('app/(trainer)/clients/[id]/routine.tsx');
   ok('el campo de series baja si no cabe', /gtgFila: \{[\s\S]{0,500}?flexWrap: 'wrap',/.test(rutina));

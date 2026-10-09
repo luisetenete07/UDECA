@@ -13,7 +13,9 @@ import { ScreenHeader } from '../../components/ScreenHeader';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { TrialBanner } from '../../components/TrialBanner';
 import { UpgradePopup } from '../../components/UpgradeCard';
-import { getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
+import { createCoachTask, getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
+import { getCyclesForTrainer } from '../../lib/firestore/cycles';
+import { SemanaDelCoach } from '../../components/SemanaDelCoach';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { PressableScale } from '../../components/PressableScale';
 import { FadeIn } from '../../components/FadeIn';
@@ -64,6 +66,7 @@ export default function TrainerDashboard() {
   const [clients, setClients] = useState<UserProfile[]>(cached?.clients ?? []);
   const [logs, setLogs] = useState<WorkoutLog[]>(cached?.logs ?? []);
   const [tasks, setTasks] = useState<import('../../lib/types').CoachTask[]>([]);
+  const [cycles, setCycles] = useState<import('../../lib/types').TrainingCycle[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>(cached?.requests ?? []);
   const [processingReq, setProcessingReq] = useState<string | null>(null);
   const [loading, setLoading] = useState(cached === undefined);
@@ -78,16 +81,19 @@ export default function TrainerDashboard() {
       let cancelled = false;
       (async () => {
         try {
-          const [clientData, logData, requestData, taskData] = await Promise.all([
+          const [clientData, logData, requestData, taskData, cycleData] = await Promise.all([
             getClientsForTrainer(profile.uid),
             getWorkoutLogsForTrainer(profile.uid),
             getJoinRequestsForTrainer(profile.uid),
             getCoachTasks(profile.uid).catch(() => []),
+            // Para la semana del inicio: los ciclos que empiezan o acaban.
+            getCyclesForTrainer(profile.uid).catch(() => []),
           ]);
           if (cancelled) return;
           setClients(clientData);
           setLogs(logData);
           setTasks(taskData);
+          setCycles(cycleData);
           setRequests(requestData);
           setCached(cacheKey, {
             clients: clientData,
@@ -136,15 +142,9 @@ export default function TrainerDashboard() {
   const now = Date.now();
 
   const wk = weekComparison(logs);
-  // Tareas de hoy: las del día sin terminar. Estaban solo en la agenda, y una
-  // tarea que hay que ir a buscar es una tarea que se olvida.
   const hoyCero = inicioDelDia(now);
-  const tareasHoy = tasks
-    .filter((t) => !t.done && t.scope === 'day' && (t.dueDate ?? hoyCero) <= hoyCero)
-    .sort((a, b) => Number(b.flagged ?? false) - Number(a.flagged ?? false))
-    .slice(0, 4);
   const byId = (id: string) => clients.find((c) => c.uid === id);
-  // Alumnos distintos que ya han entrenado HOY (para el panel "Hoy").
+  // Alumnos distintos que ya han entrenado HOY (va en el pulso del grupo).
   const trainedToday = new Set(
     logs.filter((l) => l.date >= hoyCero).map((l) => l.clientId)
   ).size;
@@ -179,6 +179,53 @@ export default function TrainerDashboard() {
       showToast('No se pudo renovar');
     } finally {
       setRenovandoId(null);
+    }
+  };
+
+  /*
+   * Las tareas de la semana del inicio: tachar (y destachar) y apuntar una
+   * nueva. Se pinta al momento y se guarda detrás: esperar a la red para ver un
+   * tic es lo que hace que una app parezca lenta.
+   */
+  const handleToggleTask = async (t: import('../../lib/types').CoachTask) => {
+    const done = !t.done;
+    const doneAt = done ? Date.now() : undefined;
+    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, done, doneAt } : x)));
+    try {
+      await updateCoachTask(t.id, { done, doneAt: doneAt ?? 0 });
+    } catch {
+      setTasks((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+      showToast('No se pudo marcar');
+    }
+  };
+
+  const handleAddTask = async (title: string, dueDate: number) => {
+    if (!profile) return;
+    const temp: import('../../lib/types').CoachTask = {
+      id: `tmp-${Date.now()}`,
+      trainerId: profile.uid,
+      title,
+      scope: 'day',
+      dueDate,
+      done: false,
+      order: Date.now(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setTasks((prev) => [...prev, temp]);
+    try {
+      const id = await createCoachTask({
+        trainerId: profile.uid,
+        title,
+        scope: 'day',
+        dueDate,
+        done: false,
+        order: temp.order,
+      });
+      setTasks((prev) => prev.map((x) => (x.id === temp.id ? { ...x, id } : x)));
+    } catch {
+      setTasks((prev) => prev.filter((x) => x.id !== temp.id));
+      showToast('No se pudo guardar');
     }
   };
 
@@ -323,19 +370,6 @@ export default function TrainerDashboard() {
         </FadeIn>
       ) : null}
 
-      {/* Lo bueno no es una alerta: se cuenta en una línea tranquila. */}
-      {trainedToday > 0 ? (
-        <View style={styles.goodNews}>
-          <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-          <Text style={styles.goodNewsText}>
-            {trainedToday} alumno{trainedToday === 1 ? '' : 's'} ha
-            {trainedToday === 1 ? '' : 'n'} entrenado hoy
-          </Text>
-        </View>
-      ) : null}
-
-      {/* Atajos: lo más usado, a un toque */}
-
       {/* Primeros pasos: guía para el coach recién llegado (sin alumnos todavía). */}
       {clients.length === 0 && requests.length === 0 ? (
         <Card accent style={styles.section}>
@@ -412,57 +446,21 @@ export default function TrainerDashboard() {
                     : frase` · ${wk.lastWeek - wk.thisWeek} menos que la semana pasada`
                   : ''}
               </Text>
+              {/* Lo bueno no es una alerta: se cuenta en una línea tranquila,
+                  dentro del pulso y no suelto por la pantalla. */}
+              {trainedToday > 0 ? (
+                <View style={styles.goodNews}>
+                  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                  <Text style={styles.goodNewsText}>
+                    {trainedToday === 1
+                      ? '1 ha entrenado hoy'
+                      : frase`${trainedToday} han entrenado hoy`}
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </View>
         </Card>
-        </FadeIn>
-      ) : null}
-
-      {/* Las tareas de hoy, aquí y no solo en la agenda: una tarea que hay que
-          ir a buscar es una tarea que se olvida. Se marcan desde aquí mismo. */}
-      {tareasHoy.length > 0 ? (
-        <FadeIn delay={175}>
-          <Card style={styles.section}>
-            <View style={styles.titleRow}>
-              <Ionicons name="checkbox-outline" size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Hoy</Text>
-            </View>
-            {tareasHoy.map((t) => (
-              <PressableScale
-                key={t.id}
-                haptic
-                style={styles.taskRow}
-                onPress={async () => {
-                  // Se tacha al momento y se guarda detrás: esperar a la red
-                  // para ver un tic es lo que hace que una app parezca lenta.
-                  setTasks((prev) =>
-                    prev.map((x) => (x.id === t.id ? { ...x, done: true } : x))
-                  );
-                  try {
-                    await updateCoachTask(t.id, { done: true, doneAt: Date.now() });
-                  } catch {
-                    setTasks((prev) =>
-                      prev.map((x) => (x.id === t.id ? { ...x, done: false } : x))
-                    );
-                    showToast('No se pudo marcar');
-                  }
-                }}
-              >
-                <View style={styles.taskCheck} />
-                {/* Dos líneas: el título de una tarea lo escribe el entrenador
-                    y suele ser una frase entera —"Llamar a María para revisar
-                    la dieta"—. En una sola línea caben veinticuatro letras en
-                    un móvil estrecho, y lo que queda cortado es justo el final,
-                    que es donde está lo que hay que hacer. */}
-                <Text style={styles.taskTitle} numberOfLines={2}>
-                  {t.title}
-                </Text>
-                {t.flagged ? (
-                  <Ionicons name="flag" size={13} color={colors.primary} />
-                ) : null}
-              </PressableScale>
-            ))}
-          </Card>
         </FadeIn>
       ) : null}
 
@@ -470,10 +468,6 @@ export default function TrainerDashboard() {
           y una herramienta antes del diagnóstico se usa a ciegas. */}
       <FadeIn delay={140}>
       <View style={styles.quickRow}>
-        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/agenda')}>
-          <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Calendario y tareas</Text>
-        </Pressable>
         <Pressable
           style={styles.quickBtn}
           onPress={() => router.push('/(trainer)/exercises/new')}
@@ -499,6 +493,21 @@ export default function TrainerDashboard() {
       </View>
       </FadeIn>
 
+
+      {/* La semana: tareas, fines de coaching y ciclos, día a día. Va encima de
+          la actividad porque es lo que hay que HACER; la actividad es lo que
+          ya pasó. El mes entero, en "Ver mes". */}
+      <FadeIn delay={210}>
+        <SemanaDelCoach
+          clients={clients}
+          cycles={cycles}
+          tasks={tasks}
+          onToggleTask={handleToggleTask}
+          onAddTask={handleAddTask}
+          onOpen={(ruta) => router.push(ruta as never)}
+          onVerMes={() => router.push('/(trainer)/agenda')}
+        />
+      </FadeIn>
 
       <FadeIn delay={280}>
       <View style={styles.section}>
@@ -584,22 +593,6 @@ export default function TrainerDashboard() {
 
 const styles = StyleSheet.create({
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    paddingVertical: spacing.sm + 2,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  taskCheck: {
-    width: 19,
-    height: 19,
-    borderRadius: radius.sm,
-    borderWidth: 1.5,
-    borderColor: colors.borderStrong,
-  },
-  taskTitle: { ...typography.body, color: colors.text, flex: 1 },
   pulseBig: { ...typography.h2, color: colors.text, marginTop: 2, marginBottom: 2 },
   quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   stepRow: {
@@ -641,7 +634,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: spacing.md,
+    marginTop: 4,
   },
   goodNewsText: { ...typography.small, color: colors.textMuted },
   quickBtn: {

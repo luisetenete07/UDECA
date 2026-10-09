@@ -195,6 +195,14 @@ export const EN: Record<string, string> = {
   'Qué se usa en este plan': 'What this plan uses',
   'Intensidad del día': "The day's intensity",
   '{0} objetivo': "Target {0}",
+  // La semana del inicio del entrenador (components/SemanaDelCoach.tsx).
+  'Ver mes': 'See month',
+  'Nada para este día.': 'Nothing for this day.',
+  'Apuntar algo para hoy': 'Jot something down for today',
+  'Apuntar algo para este día': 'Jot something down for this day',
+  'Del {0}': 'From {0}',
+  '1 ha entrenado hoy': '1 has trained today',
+  '{0} han entrenado hoy': '{0} have trained today',
   // El periodo de coaching (lib/coaching.ts): sustituye a los cobros.
   'Coaching': 'Coaching',
   'Sin fecha de fin': 'No end date',

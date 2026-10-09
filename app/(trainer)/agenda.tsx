@@ -1,5 +1,10 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { nombreDeCiclo } from '../../lib/cyclePlan';
+import {
+  eventosPorDia,
+  ICONO_DEL_EVENTO,
+  TONO_DEL_EVENTO,
+  type EventoDelCalendario,
+} from '../../lib/calendarioCoach';
 import { frase } from '../../lib/idioma';
 import { diaLargo, inicioDelDia, mesLargo } from '../../lib/fechas';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -26,7 +31,6 @@ import { Segmented } from '../../components/Segmented';
 import { Dialogo } from '../../components/Dialogo';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
-  CYCLE_LEVEL_LABEL,
   type CoachTask,
   type TaskScope,
   type TrainingCycle,
@@ -41,26 +45,13 @@ function animate() {
   LayoutAnimation.configureNext(LayoutAnimation.create(220, 'easeInEaseOut', 'opacity'));
 }
 
-type EventType = 'payment' | 'cycle-start' | 'cycle-end' | 'task';
-interface CalEvent {
-  day: number;
-  type: EventType;
-  title: string;
-  subtitle?: string;
+// Los eventos y sus colores son los mismos que los de la semana del inicio
+// (ver lib/calendarioCoach.ts).
+interface CalEvent extends EventoDelCalendario {
   onPress?: () => void;
 }
-const TONE: Record<EventType, string> = {
-  payment: colors.danger,
-  'cycle-start': colors.primary,
-  'cycle-end': colors.primaryBright,
-  task: colors.textMuted,
-};
-const TYPE_ICON: Record<EventType, keyof typeof Ionicons.glyphMap> = {
-  payment: 'calendar-outline',
-  'cycle-start': 'play-outline',
-  'cycle-end': 'flag-outline',
-  task: 'checkbox-outline',
-};
+const TONE = TONO_DEL_EVENTO;
+const TYPE_ICON = ICONO_DEL_EVENTO;
 
 export default function CoachCalendarScreen() {
   const { profile } = useAuth();
@@ -248,45 +239,18 @@ export default function CoachCalendarScreen() {
   const dayTasks = useMemo(() => tasks.filter((t) => t.scope === 'day' && !t.done), [tasks]);
   const eventsByDay = useMemo(() => {
     const map = new Map<number, CalEvent[]>();
-    const add = (e: CalEvent) => map.set(e.day, [...(map.get(e.day) ?? []), e]);
-    for (const c of clients) {
-      if (c.nextPaymentDate) {
-        add({
-          day: inicioDelDia(c.nextPaymentDate),
-          type: 'payment',
-          title: frase`Fin del coaching · ${c.name}`,
-          subtitle: frase`Renovar`,
-          onPress: () => router.push(`/(trainer)/clients/${c.uid}`),
-        });
-      }
-    }
-    for (const cy of cycles) {
-      const who = clients.find((c) => c.uid === cy.clientId)?.name ?? 'alumno';
-      if (cy.startDate)
-        add({
-          day: inicioDelDia(cy.startDate),
-          type: 'cycle-start',
-          title: frase`Empieza ${nombreDeCiclo(cy.name)}`,
-          subtitle: `${CYCLE_LEVEL_LABEL[cy.level]} · ${who}`,
-          onPress: () => router.push(`/(trainer)/clients/${cy.clientId}/cycles/${cy.id}`),
-        });
-      if (cy.endDate)
-        add({
-          day: inicioDelDia(cy.endDate),
-          type: 'cycle-end',
-          title: frase`Termina ${nombreDeCiclo(cy.name)}`,
-          subtitle: `${CYCLE_LEVEL_LABEL[cy.level]} · ${who}`,
-          onPress: () => router.push(`/(trainer)/clients/${cy.clientId}/cycles/${cy.id}`),
-        });
-    }
-    for (const t of dayTasks) {
-      add({
-        day: inicioDelDia(t.dueDate ?? Date.now()),
-        type: 'task',
-        title: t.title,
-        subtitle: 'Tarea · toca para mover de día',
-        onPress: () => setMovingTask(t),
-      });
+    for (const [dia, eventos] of eventosPorDia(clients, cycles, dayTasks)) {
+      map.set(
+        dia,
+        eventos.map((e) => ({
+          ...e,
+          onPress: e.tarea
+            ? () => setMovingTask(e.tarea!)
+            : e.ruta
+              ? () => router.push(e.ruta as never)
+              : undefined,
+        }))
+      );
     }
     return map;
   }, [clients, cycles, dayTasks, router]);
