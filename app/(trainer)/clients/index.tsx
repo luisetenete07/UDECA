@@ -19,7 +19,11 @@ import { TextField } from '../../../components/TextField';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
 import { syncClientCountOnServer } from '../../../lib/join';
-import { getClientsForTrainer, subscribeClientsForTrainer } from '../../../lib/firestore/users';
+import {
+  getClientsForTrainer,
+  setCoachingHasta,
+  subscribeClientsForTrainer,
+} from '../../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
 import { QuickSheet } from '../../../components/QuickSheet';
 import { getActiveRoutinesForTrainer } from '../../../lib/firestore/routines';
@@ -28,7 +32,7 @@ import { getCached, setCached } from '../../../lib/screenCache';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { fechaNumerica, inicioDeLaSemana, inicioDelDia, masDias } from '../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
-import { coachingDe } from '../../../lib/coaching';
+import { alargar, coachingDe } from '../../../lib/coaching';
 import { colorDelPeriodo, textoDelPeriodo } from '../../../components/PeriodoDeCoaching';
 
 /** Por renovar: el periodo se acaba esta semana o ya se acabó (lib/coaching.ts). */
@@ -411,6 +415,30 @@ export default function ClientsScreen() {
               texto: 'Abrir ficha',
               onPress: () => router.push(`/(trainer)/clients/${rapidas.uid}`),
             },
+            // Renovar sin abrir la ficha: es lo que se hace casi siempre con
+            // quien está en "Por renovar", y desde aquí son dos toques.
+            ...(porRenovar(rapidas)
+              ? [
+                  {
+                    icono: 'refresh-outline' as const,
+                    texto: 'Renovar 1 mes',
+                    onPress: async () => {
+                      const c = rapidas;
+                      const hasta = alargar(c.nextPaymentDate, 1);
+                      setClients((prev) =>
+                        prev.map((x) => (x.uid === c.uid ? { ...x, nextPaymentDate: hasta } : x))
+                      );
+                      try {
+                        await setCoachingHasta(c.uid, hasta);
+                        showToast(frase`${c.name.split(' ')[0]} · coaching hasta el ${fechaNumerica(hasta)}`);
+                      } catch {
+                        setClients((prev) => prev.map((x) => (x.uid === c.uid ? c : x)));
+                        showToast('No se pudo renovar');
+                      }
+                    },
+                  },
+                ]
+              : []),
           ]}
         />
       ) : null}

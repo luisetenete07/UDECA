@@ -37,7 +37,7 @@ import {
   deleteRoutineTemplate,
   getRoutineTemplatesForTrainer,
 } from '../../../../lib/firestore/routineTemplates';
-import { getClientsForTrainer, getUserProfile } from '../../../../lib/firestore/users';
+import { getClientsForTrainer, getUserProfile, setClientTrackRir } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
 import { flexLabel, nombreDelDia } from '../../../../lib/schedule';
 import { SERIES_POR_DEFECTO } from '../../../../lib/gtg';
@@ -196,6 +196,19 @@ export default function RoutineEditorScreen() {
   const [visibilidad, setVisibilidad] = useState<QueVeElAlumno>({});
   // Lo mismo, ya resuelto: qué se enseña en el editor y en el entreno.
   const seMuestra = queVeElAlumno({ visibilidad });
+  /*
+   * PEDIRLE EL ESFUERZO (RIR) AL TERMINAR CADA EJERCICIO, en los planes por
+   * semana y por ciclo. Es parte de cómo se entrena este plan, así que se
+   * decide aquí y no en la ficha del alumno, donde ocupaba una tarjeta para
+   * un solo interruptor. En el personalizado lo decide "Cuándo se le
+   * pregunta".
+   *
+   * Se sigue guardando donde siempre (`trackRir` en el perfil del alumno):
+   * así lo leen igual las versiones de la app que ya están instaladas. Se
+   * escribe al guardar, y solo si ha cambiado.
+   */
+  const [pedirEsfuerzo, setPedirEsfuerzo] = useState(false);
+  const pedirEsfuerzoAlAbrir = useRef(false);
   /** Cambia una parte de la configuración sin pisar el resto. */
   const cambiaPerso = (parte: Partial<PlanPersonalizado>) =>
     setPerso((prev) => ({ ...prev, ...parte }));
@@ -287,6 +300,8 @@ export default function RoutineEditorScreen() {
       ]);
       setExercises(library);
       setClientLevel(clientProfile?.level);
+      setPedirEsfuerzo(clientProfile?.trackRir === true);
+      pedirEsfuerzoAlAbrir.current = clientProfile?.trackRir === true;
       if (existing) {
         setRoutineId(existing.id);
         setName(existing.name);
@@ -958,6 +973,10 @@ export default function RoutineEditorScreen() {
         });
         await setActiveRoutine(clientId, newId, profile.uid);
       }
+      if (schedule !== 'flex' && pedirEsfuerzo !== pedirEsfuerzoAlAbrir.current) {
+        await setClientTrackRir(clientId, pedirEsfuerzo);
+        pedirEsfuerzoAlAbrir.current = pedirEsfuerzo;
+      }
       notifyUser(
         clientId,
         routineId ? 'Rutina actualizada' : 'Nueva rutina asignada',
@@ -996,6 +1015,7 @@ export default function RoutineEditorScreen() {
     nivelesIntensidadTexto,
     // Lo mismo: sin ella se guardaría lo que se veía al abrir la pantalla.
     visibilidad,
+    pedirEsfuerzo,
     router,
   ]);
 
@@ -1433,11 +1453,26 @@ export default function RoutineEditorScreen() {
                     onPress={() => setVisibilidad({ ...ve, objetivo: !ve.objetivo })}
                   />
                 ) : null}
+                {schedule !== 'flex' ? (
+                  <Chip
+                    texto="Pedirle el esfuerzo"
+                    icono={pedirEsfuerzo ? 'speedometer' : 'speedometer-outline'}
+                    activo={pedirEsfuerzo}
+                    compacto
+                    onPress={() => setPedirEsfuerzo((v) => !v)}
+                  />
+                ) : null}
               </View>
               <Text style={styles.persoAyuda}>
                 Lo que apagues desaparece para ti y para el alumno hasta que lo vuelvas a
                 encender. Lo que ya habías puesto se guarda.
               </Text>
+              {schedule !== 'flex' && pedirEsfuerzo ? (
+                <Text style={styles.persoAyuda}>
+                  Al terminar cada ejercicio le preguntamos cuántas repeticiones le quedaban.
+                  Actívalo solo si entiende lo que es: un dato inventado es peor que no tenerlo.
+                </Text>
+              ) : null}
             </>
           );
         })()}

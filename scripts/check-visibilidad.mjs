@@ -49,7 +49,7 @@ console.log('\nEl editor lo guarda en los tres tipos de plan');
   ok('en la rutina', /visibilidad: visibilidadAGuardar\(visibilidad\),\s*\};/.test(editor));
   ok('y en la plantilla', /visibilidad: visibilidadAGuardar\(visibilidad\),\s*days: diasAGuardar\(\)/.test(editor));
   // useCallback congela lo que no se declara.
-  ok('en las dependencias del guardado', /visibilidad,\s*router,\s*\]\);/.test(editor));
+  ok('en las dependencias del guardado', /visibilidad,[^\]]*router,\s*\]\);/.test(editor));
   ok('se lee al abrir', /setVisibilidad\(queVeElAlumno\(existing\)\)/.test(editor));
   ok('y al aplicar una plantilla', /setVisibilidad\(queVeElAlumno\(t\)\)/.test(editor));
   ok('los interruptores', /texto="Intensidad del día"/.test(editor) && /objetivo`/.test(editor));

@@ -58,7 +58,6 @@ import {
   getUserProfile,
   removeClientFromTrainer,
   setClientPlanPauses,
-  setClientTrackRir,
   setClientStepGoal,
   setClientVip,
   setCoachingHasta,
@@ -283,9 +282,12 @@ export default function ClientDetailScreen() {
    * trae UDECA este alumno se quedaría con el viejo escrito a fuego.
    */
   const handleSaveStepGoal = async () => {
-    if (!id) return;
+    if (!id || savingPasos) return;
     const limpio = pasosInput.trim();
     const meta = limpio ? objetivoDeTexto(limpio) : undefined;
+    // Al salir del campo sin tocar nada no se guarda (ni se avisa) nada.
+    if (limpio && meta !== undefined && meta === client?.stepGoal) return;
+    if (!limpio && !client?.stepGoal) return;
     if (limpio && meta === undefined) {
       setPasosError(frase`Escribe entre ${conMiles(OBJETIVO_MINIMO)} y ${conMiles(OBJETIVO_MAXIMO)} pasos.`);
       return;
@@ -656,23 +658,25 @@ export default function ClientDetailScreen() {
         {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
       </CollapsibleCard>
 
-      {/* VIP: qué plan tiene contratado, en la práctica. Va aquí arriba —con
-          los pagos y la rutina— y no escondido entre los ajustes, porque es
-          una decisión de negocio: es lo que separa al que paga el plan de
-          arriba del que paga el normal. */}
+      {/*
+       * AJUSTES DEL ALUMNO: lo que se decide una vez y no se vuelve a mirar.
+       * Eran tres tarjetas —VIP, pasos y pedirle el esfuerzo— con un solo
+       * control cada una. El esfuerzo se fue a la rutina, que es donde se
+       * decide cómo se entrena; VIP y pasos van juntos, y plegados dicen lo
+       * que hay puesto sin abrirlos.
+       */}
       <CollapsibleCard
-        id="alumno-vip"
-        icon="lock-closed-outline"
-        title="Alumno VIP"
-        hint={client?.vip === true ? 'Sí' : 'No'}
+        id="alumno-ajustes"
+        icon="options-outline"
+        title="Ajustes del alumno"
+        hint={`${client?.vip === true ? 'VIP · ' : ''}${frase`${conMiles(client?.stepGoal ?? OBJETIVO_POR_DEFECTO)} pasos`}`}
         defaultOpen={false}
       >
         <View style={styles.rirRow}>
           <View style={{ flex: 1 }}>
+            <Text style={styles.ajusteTitulo}>Alumno VIP</Text>
             <Text style={styles.mutedText}>
-              Los alumnos VIP ven además las clases que hayas marcado como VIP dentro de tus
-              cursos. Para el resto, esas clases no existen: no se les enseña un candado ni un
-              anuncio de lo que no tienen.
+              Ve también las clases que hayas marcado como VIP en tus cursos. El resto ni las ve.
             </Text>
           </View>
           <Switch
@@ -691,77 +695,30 @@ export default function ClientDetailScreen() {
             thumbColor={colors.white}
           />
         </View>
-      </CollapsibleCard>
 
-      {/* Los pasos al día que le pide. Va junto a lo demás que decide el
-          entrenador sobre este alumno, no en un ajuste general: no es lo mismo
-          un repartidor que alguien que pasa ocho horas sentado. */}
-      <CollapsibleCard
-        id="alumno-pasos"
-        icon="walk-outline"
-        title="Pasos al día"
-        hint={client?.stepGoal ? conMiles(client.stepGoal) : frase`${conMiles(OBJETIVO_POR_DEFECTO)} (por defecto)`}
-        defaultOpen={false}
-      >
+        {/* Los pasos se guardan solos al salir del campo, como las notas: un
+            botón de "Guardar" para un número era un toque de más. */}
+        <Text style={[styles.ajusteTitulo, { marginTop: spacing.md }]}>Pasos al día</Text>
         <Text style={styles.mutedText}>
-          Los que le pides cada día. Los ve en su pestaña de nutrición, y lo que ande le suma
-          calorías al plan del día. Si lo dejas vacío, se le piden{' '}
-          {conMiles(OBJETIVO_POR_DEFECTO)}.
+          Los ve en su nutrición, y lo que ande suma calorías al día. Vacío: {conMiles(OBJETIVO_POR_DEFECTO)}.
         </Text>
-        <View style={styles.pasosFila}>
-          <TextField
-            value={pasosInput}
-            onChangeText={setPasosInput}
-            placeholder={String(OBJETIVO_POR_DEFECTO)}
-            keyboardType="number-pad"
-            containerStyle={{ flex: 1, marginBottom: 0 }}
-            style={{ marginBottom: 0 }}
-          />
-          <Button
-            title="Guardar"
-            variant="secondary"
-            onPress={handleSaveStepGoal}
-            loading={savingPasos}
-            style={{ minWidth: 110 }}
-          />
-        </View>
+        <TextField
+          value={pasosInput}
+          onChangeText={(v) => {
+            setPasosInput(v);
+            setPasosError(null);
+          }}
+          onBlur={handleSaveStepGoal}
+          onSubmitEditing={handleSaveStepGoal}
+          placeholder={String(OBJETIVO_POR_DEFECTO)}
+          keyboardType="number-pad"
+          returnKeyType="done"
+          containerStyle={{ marginTop: spacing.sm, marginBottom: 0 }}
+          style={{ marginBottom: 0 }}
+        />
         {pasosError ? <Text style={styles.confirmText}>{pasosError}</Text> : null}
         {pasosSaved ? <Text style={styles.confirmSavedText}>Objetivo guardado</Text> : null}
       </CollapsibleCard>
-
-      <CollapsibleCard
-        id="alumno-rir"
-        icon="speedometer-outline"
-        title="Pedirle el esfuerzo (RIR)"
-        hint={client?.trackRir === true ? 'Sí' : 'No'}
-        defaultOpen={false}
-      >
-        <View style={styles.rirRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.mutedText}>
-              Al terminar cada ejercicio le preguntamos cuántas repeticiones le quedaban. Actívalo
-              solo si entiende lo que es: quien empieza lo rellena al azar, y un dato inventado es
-              peor que no tenerlo.
-            </Text>
-          </View>
-          <Switch
-            value={client?.trackRir === true}
-            onValueChange={async (v) => {
-              if (!id || !client) return;
-              setClient({ ...client, trackRir: v });
-              try {
-                await setClientTrackRir(id, v);
-              } catch {
-                setClient({ ...client, trackRir: !v });
-                showToast('No se pudo guardar');
-              }
-            }}
-            trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
-            thumbColor={colors.white}
-          />
-        </View>
-      </CollapsibleCard>
-
 
       <CollapsibleCard
         id="alumno-nutricion"
@@ -1146,7 +1103,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   objetivoPlazo: { ...typography.small, color: colors.textFaint, fontSize: 11, width: 78, paddingTop: 2 },
-  pasosFila: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: spacing.md },
+  ajusteTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: 2 },
   objetivoTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },

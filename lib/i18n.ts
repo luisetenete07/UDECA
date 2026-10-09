@@ -195,6 +195,14 @@ export const EN: Record<string, string> = {
   'Qué se usa en este plan': 'What this plan uses',
   'Intensidad del día': "The day's intensity",
   '{0} objetivo': "Target {0}",
+  // Ficha del alumno y editor de rutina: ajustes juntos y el esfuerzo en la rutina.
+  'Pedirle el esfuerzo': 'Ask for effort',
+  'Al terminar cada ejercicio le preguntamos cuántas repeticiones le quedaban. Actívalo solo si entiende lo que es: un dato inventado es peor que no tenerlo.': 'After each exercise we ask how many reps they had left. Turn it on only if they understand it: made-up data is worse than none.',
+  'Renovar 1 mes': 'Renew 1 month',
+  '{0} pasos': '{0} steps',
+  'Ajustes del alumno': 'Student settings',
+  'Ve también las clases que hayas marcado como VIP en tus cursos. El resto ni las ve.': 'Also sees the lessons you marked as VIP in your courses. Everyone else does not even see them.',
+  'Los ve en su nutrición, y lo que ande suma calorías al día. Vacío: ': 'They see it in their nutrition, and what they walk adds calories to the day. Empty: ',
   // La semana del inicio del entrenador (components/SemanaDelCoach.tsx).
   'Ver mes': 'See month',
   'Nada para este día.': 'Nothing for this day.',
