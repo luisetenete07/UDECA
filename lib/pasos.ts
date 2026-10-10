@@ -179,9 +179,10 @@ export function pasosAGuardar(
 }
 
 /**
- * Los días de atrás que hay que rellenar con lo que guarda el iPhone.
+ * Los días de atrás que hay que rellenar con lo que guarda el móvil.
  *
- * El iPhone guarda los pasos de los últimos siete días, abras la app o no. Sin
+ * El iPhone (y Android con la grabación de Google) guarda los pasos de los
+ * últimos días, abras la app o no. Sin
  * esto, el día que no se abría UDECA se quedaba a cero para siempre, aunque el
  * teléfono supiera perfectamente cuánto se había andado: la semana salía con
  * huecos que no eran de verdad y la media, por los suelos.
@@ -205,8 +206,11 @@ export function diasPorRellenar(
   return cambios;
 }
 
-/** Cuántos días de atrás guarda el iPhone (sin contar hoy). */
-export const DIAS_QUE_GUARDA_EL_IPHONE = 6;
+/**
+ * Cuántos días de atrás se rellenan (sin contar hoy). El iPhone guarda siete
+ * días y la grabación de Google en Android, diez: seis vale para los dos.
+ */
+export const DIAS_DE_ATRAS = 6;
 
 /** La frase que acompaña al anillo. Ni felicita de más ni riñe. */
 export function textoDePasos(p: ProgresoDePasos): string {

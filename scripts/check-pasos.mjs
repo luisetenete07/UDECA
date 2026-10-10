@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import {
   balanceDelDia,
   caloriasDePasos,
-  DIAS_QUE_GUARDA_EL_IPHONE,
+  DIAS_DE_ATRAS,
   diasPorRellenar,
   objetivoDeTexto,
   OBJETIVO_MAXIMO,
@@ -299,11 +299,36 @@ console.log('\nLos días en que no se abrió la app (iPhone)');
   comprueba('lo escrito a mano (reloj) no se pisa con menos', de(anteayer) === undefined);
   comprueba('una lectura mayor que la guardada, sí', de(hace3) === 5200);
   comprueba('un día a cero no se escribe', cambios.length === 2, String(cambios.length));
-  comprueba('se preguntan los seis días de atrás', DIAS_QUE_GUARDA_EL_IPHONE === 6);
+  comprueba('se preguntan los seis días de atrás', DIAS_DE_ATRAS === 6);
   const c = readFileSync(new URL('../components/ContadorDePasos.tsx', import.meta.url), 'utf8');
-  comprueba('en iPhone se rellenan antes de leer hoy, sin bloquearlo',
-    /if \(Platform\.OS === 'ios'\) \{\s*\/\/[^\n]*\n\s*await rellenarDiasDeAtras\(Pedometer\)\.catch\(\(\) => \{\}\);/.test(c));
-  comprueba('y una sola vez al día', /if \(rellenadoRef\.current === hoy\) return;/.test(c));
+  comprueba('se rellenan antes de leer hoy, sin bloquearlo',
+    /if \(Platform\.OS === 'ios' \|\| hayPasosDelSistema\(\)\) \{\s*\/\/[^\n]*\n\s*await rellenarDiasDeAtras\(Pedometer\)\.catch\(\(\) => \{\}\);/.test(c));
+  comprueba('y no más de una vez cada media hora',
+    /if \(ahora - rellenadoRef\.current < ESPERA_ENTRE_RELLENOS_MS\) return;/.test(c) && /ESPERA_ENTRE_RELLENOS_MS = 30 \* 60 \* 1000/.test(c));
+}
+
+console.log('\nLos pasos del sistema: Salud en iPhone, la grabación de Google en Android');
+{
+  /*
+   * El contador del iPhone no sabe nada del Apple Watch, y el sensor de
+   * Android solo cuenta con la app delante. El módulo nativo
+   * (modules/udeca-pasos) lee lo bueno de cada uno.
+   */
+  const c = readFileSync(new URL('../components/ContadorDePasos.tsx', import.meta.url), 'utf8');
+  const nativo = readFileSync(new URL('../lib/pasosNativos.ts', import.meta.url), 'utf8');
+  const swift = readFileSync(new URL('../modules/udeca-pasos/ios/UdecaPasosModule.swift', import.meta.url), 'utf8');
+  const kt = readFileSync(new URL('../modules/udeca-pasos/android/src/main/java/expo/modules/udecapasos/UdecaPasosModule.kt', import.meta.url), 'utf8');
+  const gradle = readFileSync(new URL('../modules/udeca-pasos/android/build.gradle', import.meta.url), 'utf8');
+  comprueba('el módulo es opcional: sin él, la app sigue como antes', /requireOptionalNativeModule<ModuloDePasos>\('UdecaPasos'\)/.test(nativo));
+  comprueba('iPhone: Salud, solo lectura de pasos', /requestAuthorization\(toShare: nil, read: \[pasos\]\)/.test(swift) && /\.stepCount/.test(swift));
+  comprueba('iPhone: la suma de Salud, que no cuenta dos veces lo del reloj', /options: \.cumulativeSum/.test(swift));
+  comprueba('iPhone: se queda con el mayor entre Salud y el propio iPhone',
+    /Math\.max\(Math\.max\(0, Math\.round\(Number\(steps\) \|\| 0\)\), delSistema \?\? 0\)/.test(c));
+  comprueba('Android: la grabación de Google, sin Health Connect',
+    /FitnessLocal\.getLocalRecordingClient/.test(kt) && /LocalDataType\.TYPE_STEP_COUNT_DELTA/.test(kt) && !/healthconnect|HealthConnect/.test(kt + gradle));
+  comprueba('Android: se suscribe antes de leer', /if \(Platform\.OS === 'android'\) \{\s*await prepararPasosDelSistema\(\);/.test(c));
+  comprueba('Android sin Google Play al día: sigue el sensor', /watchStepCount/.test(c));
+  comprueba('Salud se pregunta sola una única vez por móvil', /if \(enSilencio && yaPedido\) return;/.test(c));
 }
 
 console.log('\nTambién en el inicio, y sin contar dos veces');

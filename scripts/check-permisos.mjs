@@ -40,6 +40,10 @@ const plist = introspect.ios?.infoPlist ?? {};
 const NECESARIOS = [
   ['NSPhotoLibraryUsageDescription', 'foto de perfil y libretas de comida'],
   ['NSMotionUsageDescription', 'contador de pasos'],
+  // Salud (HealthKit): los pasos con el Apple Watch incluido. Solo se leen,
+  // pero Apple pide también el texto de escritura en cuanto la app usa Salud.
+  ['NSHealthShareUsageDescription', 'leer los pasos de Salud'],
+  ['NSHealthUpdateUsageDescription', 'decir que no se escribe nada en Salud'],
 ];
 
 /** Lo que NO se usa: si aparece, alguien añadió un plugin sin mirar. */

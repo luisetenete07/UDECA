@@ -47,13 +47,16 @@ export default function PrivacyPolicy() {
         Si activas el contador de pasos, UDECA lee los pasos que cuenta tu propio teléfono. Es
         opcional: la app funciona igual sin ello, y siempre puedes escribir tus pasos a mano.
         {'\n\n'}
-        • <Text style={styles.bold}>Qué leemos:</Text> únicamente el número de pasos del día en
-        curso. Nada más: ni ritmo cardiaco, ni sueño, ni entrenamientos, ni ubicación.{'\n'}
+        • <Text style={styles.bold}>Qué leemos:</Text> únicamente el número de pasos de cada día
+        (el de hoy y los anteriores que guarde tu móvil, hasta una semana). Nada más: ni ritmo
+        cardiaco, ni sueño, ni entrenamientos, ni ubicación.{'\n'}
         • <Text style={styles.bold}>En iPhone:</Text> se le piden a la app{' '}
-        <Text style={styles.bold}>Salud</Text> los pasos del día, y solo eso. UDECA no escribe ni
-        modifica nada en Salud.{'\n'}
-        • <Text style={styles.bold}>En Android:</Text> los cuenta el sensor del móvil mientras
-        tienes UDECA abierta. No usamos Health Connect ni ningún otro almacén de datos de salud.
+        <Text style={styles.bold}>Salud</Text> los pasos (los del iPhone y, si lo llevas, tu Apple
+        Watch), y solo eso. UDECA no escribe ni modifica nada en Salud.{'\n'}
+        • <Text style={styles.bold}>En Android:</Text> los cuenta el propio móvil con la API de
+        grabación de Google Play services, que los guarda en el dispositivo, también con UDECA
+        cerrada; si tu móvil no la tiene, el sensor mientras tienes UDECA abierta.
+        No usamos Health Connect ni ningún otro almacén de datos de salud.
         {'\n'}
         • <Text style={styles.bold}>Dónde acaba:</Text> la cifra diaria se guarda en tu cuenta para
         calcular tu gasto calórico y tu objetivo de pasos. La veis tu entrenador y tú, nadie más.

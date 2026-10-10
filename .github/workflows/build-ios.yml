@@ -10,6 +10,12 @@ on:
         description: 'Compilar en un Mac de GitHub en vez de en EAS (no gasta créditos)'
         type: boolean
         default: true
+      # Para comprobar que el código nativo compila sin mandar nada a App
+      # Store Connect: se compila, se guarda el .ipa y ahí se queda.
+      subir:
+        description: 'Subir el .ipa a App Store Connect al terminar'
+        type: boolean
+        default: true
 
 # El Mac solo cuando toca.
 #
@@ -109,7 +115,7 @@ jobs:
       # abajo corre con `always()`). Con las dos cosas pegadas, un tropiezo al
       # final tiraba a la basura una hora de compilación.
       - name: Subir a App Store Connect
-        if: ${{ inputs.en_el_runner }}
+        if: ${{ inputs.en_el_runner && inputs.subir }}
         env:
           EXPO_ASC_API_KEY_PATH: ./asc-key.p8
           EXPO_ASC_KEY_ID: MZPCDLQ2DV

@@ -288,6 +288,14 @@ export const EN: Record<string, string> = {
   'Tu rutina de cada día': 'Your daily routine',
   'Mientras te quede algo por marcar, te aviso a las 10, 13, 16 y 19 h. Cuando lo terminas, paran.':
     "While something is left to tick, I'll remind you at 10, 13, 16 and 19 h. Once you finish, they stop.",
+  // Los pasos del sistema: Salud en iPhone, la grabación de Google en Android.
+  'Se leen solos de Salud: iPhone y Apple Watch': 'Read automatically from Health: iPhone and Apple Watch',
+  'Se cuentan solos, también con la app cerrada': 'Counted automatically, even with the app closed',
+  'Conectado. Desde ahora tus pasos se cuentan solos, también con la app cerrada.':
+    'Connected. From now on your steps are counted automatically, even with the app closed.',
+  'Traídos {0} pasos de este móvil': '{0} steps brought over from this phone',
+  'En este móvil los pasos solo se cuentan con la app abierta. Escribe los del día a mano y quedan guardados igual.':
+    'On this phone steps are only counted with the app open. Type in the day\'s steps by hand and they are saved just the same.',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

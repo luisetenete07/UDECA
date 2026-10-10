@@ -1,6 +1,8 @@
 {
   "ios": {
     "NSPhotoLibraryUsageDescription": "To choose your profile photo and, if you are a coach, the photos in your meal books.",
-    "NSMotionUsageDescription": "To count the steps you take each day and add them to your nutrition plan, so you don't have to log them by hand."
+    "NSMotionUsageDescription": "To count the steps you take each day and add them to your nutrition plan, so you don't have to log them by hand.",
+    "NSHealthShareUsageDescription": "To read the steps you take each day, including those from your Apple Watch, and add them to your nutrition plan so you don't have to log them by hand.",
+    "NSHealthUpdateUsageDescription": "UDECA only reads your steps from Health for your nutrition plan. It never writes or changes any Health data."
   }
 }

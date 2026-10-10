@@ -9,13 +9,15 @@ import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { Dialogo } from './Dialogo';
 import { getStepLogDelDia, getStepLogsForClient, setStepLog, type StepLog } from '../lib/firestore/steps';
+import { hayPasosDelSistema, pasosDelSistema, prepararPasosDelSistema } from '../lib/pasosNativos';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateUserProfile } from '../lib/firestore/users';
 import { useAuth } from '../lib/auth-context';
 import { inicioDelDia, masDias } from '../lib/fechas';
 import { conMiles } from '../lib/texto';
 import {
   caloriasDePasos,
-  DIAS_QUE_GUARDA_EL_IPHONE,
+  DIAS_DE_ATRAS,
   diasPorRellenar,
   mediaSemanal,
   OBJETIVO_POR_DEFECTO,
@@ -62,8 +64,10 @@ const ESPERA_ENTRE_LECTURAS_MS = 60 * 1000;
  */
 const leyendoRef = { current: false };
 const ultimaAutomaticaRef = { current: 0 };
-/** El día (a medianoche) en que ya se rellenaron los días de atrás. Una vez basta. */
+/** Cuándo se rellenaron por última vez los días de atrás. */
 const rellenadoRef = { current: 0 };
+/** Cada cuánto, como mucho, se vuelven a preguntar los días de atrás. */
+const ESPERA_ENTRE_RELLENOS_MS = 30 * 60 * 1000;
 
 /**
  * Los pasos del día, DENTRO de la tarjeta de hoy.
@@ -162,30 +166,61 @@ export function ContadorDePasos({
   };
 
   /**
-   * IPHONE: LOS DÍAS EN QUE NO SE ABRIÓ LA APP.
+   * LOS PASOS DE UN DÍA, CON LO MEJOR QUE HAYA.
    *
-   * El iPhone guarda una semana de pasos. Una vez al día se le preguntan los
-   * seis de atrás y se apunta lo que falte (ver `diasPorRellenar`). Se compara
-   * con lo guardado de verdad, no con la lista de la pantalla, por lo mismo que
-   * `guardadoHoy`. Si algo falla, no pasa nada: se intenta en la siguiente.
+   *  - iPhone: el mayor entre Salud (iPhone y Apple Watch juntos, sin contar
+   *    dos veces lo mismo) y el contador del propio iPhone. El segundo está
+   *    por si a Salud se le dijo que no: Apple no avisa de eso, solo devuelve
+   *    cero, y quedarse con el cero sería perder los pasos del bolsillo.
+   *  - Android: la grabación de Google Play (lib/pasosNativos.ts), que cuenta
+   *    con la app cerrada. `null` si este móvil no la tiene.
+   */
+  const pasosDelDia = async (
+    Pedometer: { getStepCountAsync: (a: Date, b: Date) => Promise<{ steps: number }> },
+    dia: number
+  ): Promise<number | null> => {
+    const fin = Math.min(masDias(dia, 1), Date.now());
+    const delSistema = await pasosDelSistema(dia, fin);
+    if (Platform.OS === 'ios') {
+      const { steps } = await Pedometer.getStepCountAsync(new Date(dia), new Date(fin)).catch(() => ({
+        steps: 0,
+      }));
+      return Math.max(Math.max(0, Math.round(Number(steps) || 0)), delSistema ?? 0);
+    }
+    return delSistema;
+  };
+
+  /**
+   * LOS DÍAS EN QUE NO SE ABRIÓ LA APP.
+   *
+   * El iPhone (y la grabación de Google en Android) guardan los pasos de los
+   * últimos días, abras UDECA o no. Se preguntan los de atrás y se apunta lo
+   * que falte (ver `diasPorRellenar`), comparando con lo guardado de verdad y
+   * no con la lista de la pantalla, por lo mismo que `guardadoHoy`.
+   *
+   * Cada media hora como mucho, y no una vez al día: el Apple Watch le pasa al
+   * iPhone los pasos de ayer cuando le da la gana, y lo de ayer también tiene
+   * que acabar bien puesto.
    */
   const rellenarDiasDeAtras = async (Pedometer: {
     getStepCountAsync: (a: Date, b: Date) => Promise<{ steps: number }>;
   }) => {
-    const hoy = inicioDelDia(Date.now());
-    if (rellenadoRef.current === hoy) return;
+    const ahora = Date.now();
+    if (ahora - rellenadoRef.current < ESPERA_ENTRE_RELLENOS_MS) return;
+    const hoy = inicioDelDia(ahora);
     const lecturas: { date: number; steps: number }[] = [];
-    for (let i = 1; i <= DIAS_QUE_GUARDA_EL_IPHONE; i++) {
-      const desde = masDias(hoy, -i);
-      const { steps } = await Pedometer.getStepCountAsync(new Date(desde), new Date(masDias(desde, 1)));
-      lecturas.push({ date: desde, steps: Math.max(0, Math.round(Number(steps) || 0)) });
+    for (let i = 1; i <= DIAS_DE_ATRAS; i++) {
+      const dia = masDias(hoy, -i);
+      const steps = await pasosDelDia(Pedometer, dia);
+      if (steps !== null) lecturas.push({ date: dia, steps });
     }
+    if (lecturas.length === 0) return;
     const guardados = await getStepLogsForClient(profile.uid);
     const cambios = diasPorRellenar(guardados, lecturas);
     for (const c of cambios) {
       await setStepLog(profile.uid, c.date, c.steps, 'telefono', profile.trainerId);
     }
-    rellenadoRef.current = hoy;
+    rellenadoRef.current = ahora;
     if (cambios.length > 0) await cargar();
   };
 
@@ -199,25 +234,25 @@ export function ContadorDePasos({
   /**
    * Lee del contador del teléfono.
    *
-   * En iPhone se le pregunta al propio teléfono por el día entero, con la app
-   * cerrada incluida: esa cifra es la buena y sustituye a lo que hubiera.
+   * Con lectura del sistema (Salud en iPhone, la grabación de Google en
+   * Android) se pregunta por el día entero, con la app cerrada incluida: esa
+   * cifra es la buena y manda sobre lo que hubiera (salvo que sea menor, ver
+   * `pasosAGuardar`).
    *
-   * EN ANDROID NO HAY EQUIVALENTE, Y NO ES UN DESCUIDO
+   * EN ANDROID, SIN HEALTH CONNECT, Y NO ES UN DESCUIDO
    *
-   * Los pasos del día entero en Android viven en Health Connect, y leerlos
-   * exige el permiso `READ_STEPS`, que Google trata como dato de salud y
-   * revisa a mano. Se implementó, se envió, y la revisión lo tumbó: no
-   * consideró que la app tuviera una función que justificara ese permiso.
-   *
-   * Se podía pelear —sacar el contador a la portada, grabar un vídeo de
-   * demostración, otra ronda de revisión— o quitarlo y publicar. Para lo que
-   * da de sí (ahorrarle a alguien escribir un número al día) no compensaba
-   * tener la app parada, así que se quitó entero: el módulo, el permiso y la
+   * Los pasos de Health Connect exigen el permiso `READ_STEPS`, que Google
+   * trata como dato de salud y revisa a mano. Se implementó, se envió, y la
+   * revisión lo tumbó: no consideró que la app tuviera una función que
+   * justificara ese permiso. Se quitó entero: el módulo, el permiso y la
    * declaración.
    *
-   * Lo que queda en Android es el sensor, que solo cuenta con la app delante y
-   * por eso SUMA en vez de sustituir, y escribir la cifra a mano. Escribirla a
-   * mano no es el plan B: mucha gente lleva reloj y su cifra buena está ahí.
+   * Lo que hay ahora es la API de grabación de Google Play: pasos del propio
+   * móvil, en segundo plano, con el permiso normal de actividad física. Si el
+   * móvil no la tiene (Google Play sin actualizar, móviles sin Google), queda
+   * el sensor, que solo cuenta con la app delante y por eso SUMA en vez de
+   * sustituir. Y siempre, escribir la cifra a mano: mucha gente lleva reloj y
+   * su cifra buena está ahí.
    */
   const leerDelTelefono = async ({ enSilencio = false } = {}) => {
     if (Platform.OS === 'web') {
@@ -261,26 +296,21 @@ export function ContadorDePasos({
         if (!enSilencio) showToast('Sin permiso de actividad no se pueden leer los pasos');
         return;
       }
-      if (Platform.OS === 'ios') {
+      await prepararSistema(enSilencio);
+
+      if (Platform.OS === 'ios' || hayPasosDelSistema()) {
         // Los días de atrás primero, y sin que un fallo ahí impida leer hoy.
         await rellenarDiasDeAtras(Pedometer).catch(() => {});
-        /*
-         * En iPhone se le puede preguntar al teléfono por el día entero, con
-         * la app cerrada incluida: esta cifra es la buena y manda sobre lo que
-         * hubiera (salvo que sea menor, ver `pasosAGuardar`).
-         */
-        const { steps } = await Pedometer.getStepCountAsync(
-          new Date(inicioDelDia(Date.now())),
-          new Date()
-        );
-        const leidos = Math.max(0, Math.round(Number(steps) || 0));
+        const leidos = (await pasosDelDia(Pedometer, inicioDelDia(Date.now()))) ?? 0;
         // Cero no es un éxito: o no se ha andado, o el teléfono no lo está
         // guardando. Decir "actualizado" ahí es lo que hace que alguien se
         // quede pensando que la app cuenta mal.
         if (leidos === 0) {
           if (!enSilencio) {
             showToast(
-              'Tu iPhone no tiene pasos guardados de hoy. Comprueba en Ajustes › Privacidad › Movimiento y forma física.'
+              Platform.OS === 'ios'
+                ? 'Tu iPhone no tiene pasos guardados de hoy. Comprueba en Ajustes › Privacidad › Movimiento y forma física.'
+                : 'Conectado. Desde ahora tus pasos se cuentan solos, también con la app cerrada.'
             );
           }
           return;
@@ -291,12 +321,18 @@ export function ContadorDePasos({
         // escritura hace recargar la pantalla entera al padre.
         if (enSilencio && aGuardar === (deHoy?.steps ?? 0)) return ponerAlDia(deHoy);
         await guardar(aGuardar, 'telefono');
-        if (!enSilencio) showToast(frase`Traídos ${conMiles(leidos)} pasos de tu iPhone`);
+        if (!enSilencio) {
+          showToast(
+            Platform.OS === 'ios'
+              ? frase`Traídos ${conMiles(leidos)} pasos de tu iPhone`
+              : frase`Traídos ${conMiles(leidos)} pasos de este móvil`
+          );
+        }
         return;
       }
 
       /*
-       * ANDROID: SOLO EL SENSOR, Y SOLO CON LA APP DELANTE
+       * ANDROID SIN LA GRABACIÓN DE GOOGLE: SOLO EL SENSOR, Y CON LA APP DELANTE
        *
        * `expo-sensors` no sabe dar los pasos de un día entero en Android —el
        * módulo contesta literalmente "Getting step count for date range is not
@@ -326,7 +362,7 @@ export function ContadorDePasos({
         // día como si viniera del teléfono.
         if (!enSilencio) {
           showToast(
-            'En Android los pasos solo se cuentan con la app abierta. Escribe los del día a mano y quedan guardados igual.'
+            'En este móvil los pasos solo se cuentan con la app abierta. Escribe los del día a mano y quedan guardados igual.'
           );
         }
         return;
@@ -346,6 +382,29 @@ export function ContadorDePasos({
       leyendoRef.current = false;
       if (!enSilencio) setLeyendo(false);
     }
+  };
+
+  /**
+   * DEJAR LISTA LA LECTURA DEL SISTEMA.
+   *
+   *  - Android: suscribirse a la grabación de Google. Se hace en cada lectura
+   *    porque repetirlo no cuesta nada y así nunca se queda sin grabar.
+   *  - iPhone: la hoja de permisos de Salud. Cuando lo pide el alumno, siempre
+   *    (Apple solo la enseña si aún no ha contestado). Sola, una única vez por
+   *    móvil: así quien ya tenía el iPhone conectado de antes recibe la
+   *    pregunta y empieza a sumar su Apple Watch, sin que salga cada vez.
+   */
+  const prepararSistema = async (enSilencio: boolean) => {
+    if (!hayPasosDelSistema()) return;
+    if (Platform.OS === 'android') {
+      await prepararPasosDelSistema();
+      return;
+    }
+    const clave = `udeca-salud-pedido-${profile.uid}`;
+    const yaPedido = await AsyncStorage.getItem(clave).catch(() => '1');
+    if (enSilencio && yaPedido) return;
+    await prepararPasosDelSistema();
+    AsyncStorage.setItem(clave, '1').catch(() => {});
   };
 
   /**
@@ -525,15 +584,19 @@ export function ContadorDePasos({
               ? 'Leyendo…'
               : origen === 'telefono'
                 ? Platform.OS === 'ios'
-                  ? 'Se leen solos de tu iPhone'
+                  ? hayPasosDelSistema()
+                    ? 'Se leen solos de Salud: iPhone y Apple Watch'
+                    : 'Se leen solos de tu iPhone'
                   /*
-                   * En Android se dice lo que de verdad pasa: el sensor cuenta
-                   * mientras la app está delante. "Se leen solos de este móvil"
-                   * daba a entender que contaba con la app cerrada —eso lo hacía
-                   * Health Connect, que ya no está— y quien saliera a andar sin
-                   * abrir UDECA volvería creyendo que el contador falla.
+                   * En Android se dice lo que de verdad pasa. Con la grabación
+                   * de Google, cuenta con la app cerrada. Sin ella, el sensor
+                   * solo cuenta mientras la app está delante, y decir otra cosa
+                   * haría que quien sale a andar sin abrir UDECA volviera
+                   * creyendo que el contador falla.
                    */
-                  : 'Se cuentan con la app abierta'
+                  : hayPasosDelSistema()
+                    ? 'Se cuentan solos, también con la app cerrada'
+                    : 'Se cuentan con la app abierta'
                 : 'Los escribes tú'}
           </Text>
           <Pressable onPress={() => setCambiando(true)} hitSlop={8}>
