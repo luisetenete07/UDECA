@@ -28,6 +28,7 @@ import {
   ALTO_MAXIMO,
   ALTO_MINIMO,
   VISOR_DE_GOOGLE,
+  GUION_SIN_VENTANA,
   ajusteDeLectura,
   altoDeLaMuestra,
   comoSeEmbebe,
@@ -267,6 +268,25 @@ console.log('\nEn la pantalla: el documento ES la pantalla');
   ok('no se abre ninguna ventana', /onOpenWindow=\{\(\) => \{\}\}/.test(lector));
   ok('ni por varias ventanas', /setSupportMultipleWindows=\{false\}/.test(lector));
   ok('ni desde el JavaScript de la página', /javaScriptCanOpenWindowsAutomatically=\{false\}/.test(lector));
+}
+
+console.log('\nEl botón de "abrir en una ventana" del visor de Google');
+{
+  /*
+   * Ese cuadrado con la flecha, arriba a la derecha, abre el PDF en una página
+   * con descargar y compartir: la forma más fácil de filtrar un e-book de pago.
+   * Se esconde por dentro, se tapa por fuera y, en la web, el marco no puede
+   * abrir ventanas ni cambiar de página.
+   */
+  const lector = sinComentar(lee('components/LectorDePdf.tsx'));
+  ok('se esconde por dentro', /injectedJavaScript=\{conVisorDeGoogle \? GUION_SIN_VENTANA : undefined\}/.test(lector));
+  ok('buscándolo por lo que dice, en inglés y en español',
+    /pop\.\?out/.test(GUION_SIN_VENTANA) && /ventana/.test(GUION_SIN_VENTANA) && /MutationObserver/.test(GUION_SIN_VENTANA));
+  ok('y se tapa su esquina, también en nativo y en la web', (lector.match(/\{tapa\}/g) ?? []).length === 3);
+  ok('la tapa no deja pasar el dedo', /tapaVentana: \{[\s\S]{0,120}position: 'absolute'[\s\S]{0,80}top: 0,\s*right: 0/.test(lector));
+  ok('en la web, el marco del visor sin ventanas ni saltos',
+    /sandbox: 'allow-scripts allow-same-origin'/.test(lector) && !/allow-popups|allow-top-navigation/.test(lector));
+  ok('solo con el visor de Google (un PDF directo no lo lleva)', /const conVisorDeGoogle = esVisorDeGoogle\(src\);/.test(lector));
 }
 
 console.log('\nY la regla de "esto es un e-book" sigue siendo una');

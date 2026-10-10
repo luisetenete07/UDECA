@@ -140,6 +140,35 @@ export function enlaceDeLectura(
   return `${limpio}#view=${ajuste}&toolbar=0&navpanes=0&pagemode=none`;
 }
 
+/**
+ * Lo que se le mete al visor de Google para quitar su botón de "abrir en una
+ * ventana nueva" (el cuadrado con la flecha, arriba a la derecha).
+ *
+ * Ese botón saca el PDF del visor empotrado y lo enseña en una página con
+ * descargar y compartir: la forma más fácil de filtrar un e-book de pago. La
+ * app ya no le deja navegar (ver `puedeAbrirse`), pero un botón que está y no
+ * hace nada parece roto. Así que se esconde, y por si Google cambia sus
+ * nombres, la app además tapa esa esquina (ver components/LectorDePdf.tsx).
+ *
+ * Se busca por lo que el botón dice de sí mismo (su etiqueta), no por sus
+ * clases, que Google cambia cada poco. Y se vuelve a mirar cada vez que la
+ * página cambia: el visor pinta la barra un rato después de cargar.
+ */
+export const GUION_SIN_VENTANA = `(function () {
+  var dice = /pop.?out|ventana|new window|nueva pesta|new tab|abrir en|open in|emergente/i;
+  function quitar() {
+    var cosas = document.querySelectorAll('[aria-label],[data-tooltip],[title]');
+    for (var i = 0; i < cosas.length; i++) {
+      var el = cosas[i];
+      var texto = [el.getAttribute('aria-label'), el.getAttribute('data-tooltip'), el.getAttribute('title')].join(' ');
+      if (dice.test(texto)) el.style.setProperty('display', 'none', 'important');
+    }
+  }
+  quitar();
+  new MutationObserver(quitar).observe(document.documentElement, { childList: true, subtree: true });
+})();
+true;`;
+
 /** El alto de la muestra, con suelo y techo (ver PARTE_DE_LA_PANTALLA). */
 export function altoDeLaMuestra(altoVentana: number): number {
   const querido = Math.round(Math.max(0, altoVentana) * PARTE_DE_LA_PANTALLA);

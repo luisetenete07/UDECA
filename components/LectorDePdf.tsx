@@ -5,6 +5,8 @@ import { Text } from './Texto';
 import {
   altoDeLaMuestra,
   enlaceDeLectura,
+  esVisorDeGoogle,
+  GUION_SIN_VENTANA,
   puedeAbrirse,
   puedeCargarseDentro,
 } from '../lib/visorDeEbook';
@@ -39,9 +41,26 @@ export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
   const { width, height } = useWindowDimensions();
   const src = enlaceDeLectura(url, Platform.OS, width, height);
   const altoMuestra = altoDeLaMuestra(height);
+  /*
+   * EL BOTÓN DE "ABRIR EN UNA VENTANA" DEL VISOR DE GOOGLE, FUERA.
+   *
+   * Con el visor de Google (Android, y los enlaces de Drive en todas partes)
+   * sale un botón arriba a la derecha que abre el PDF en una página con
+   * descargar y compartir. Se esconde por dentro (`GUION_SIN_VENTANA`), y
+   * además se tapa esa esquina: si Google cambia el botón, sigue sin poder
+   * tocarse. En la web, el marco va además sin permiso para abrir ventanas ni
+   * para cambiar de página.
+   */
+  const conVisorDeGoogle = esVisorDeGoogle(src);
+  const tapa = conVisorDeGoogle ? (
+    <View style={styles.tapaVentana}>
+      <Ionicons name="lock-closed-outline" size={14} color={colors.textFaint} />
+    </View>
+  ) : null;
   if (Platform.OS === 'web') {
     const marco = React.createElement('iframe', {
       src,
+      ...(conVisorDeGoogle ? { sandbox: 'allow-scripts allow-same-origin' } : null),
       style: lleno
         ? { flex: 1, width: '100%', minHeight: 0, backgroundColor: '#000', border: 'none' }
         : {
@@ -55,7 +74,17 @@ export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
     });
     // Llenando, el iframe necesita un padre con alto de verdad del que colgar:
     // un porcentaje sobre un padre sin medida no es una medida.
-    return lleno ? <View style={styles.pdfLleno}>{marco}</View> : marco;
+    return lleno ? (
+      <View style={styles.pdfLleno}>
+        {marco}
+        {tapa}
+      </View>
+    ) : (
+      <View>
+        {marco}
+        {tapa}
+      </View>
+    );
   }
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { WebView } = require('react-native-webview');
@@ -63,6 +92,7 @@ export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
     <View style={lleno ? styles.pdfLleno : [styles.pdfNative, { height: altoMuestra }]}>
       <WebView
         source={{ uri: src }}
+        injectedJavaScript={conVisorDeGoogle ? GUION_SIN_VENTANA : undefined}
         // Un e-book de un curso es material de pago igual que el vídeo. Fuera
         // el menú de mantener pulsado (copiar, compartir, "abrir en...") y la
         // vista previa, que son las formas de sacarlo de la app sin descargarlo.
@@ -108,6 +138,7 @@ export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
         scalesPageToFit
         style={{ flex: 1, borderRadius: lleno ? 0 : radius.md }}
       />
+      {tapa}
     </View>
   );
 }
@@ -172,6 +203,19 @@ const styles = StyleSheet.create({
   repCerrar: { padding: 2 },
   repCabeceraTexto: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
   pdfNative: { borderRadius: radius.md, overflow: 'hidden' },
+  // La esquina del botón de "abrir en una ventana" del visor de Google: tapada
+  // y sin dejar pasar el dedo. El candado dice por qué no hay nada ahí.
+  tapaVentana: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 60,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderBottomLeftRadius: radius.md,
+  },
   /*
    * El documento, a pantalla completa. Sin esquinas redondeadas y sin margen a
    * propósito: un documento con marco parece una tarjeta dentro de una
