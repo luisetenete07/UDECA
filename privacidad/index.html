@@ -132,12 +132,16 @@
       opcional: la app funciona igual sin ello, y siempre puedes escribir tus pasos a mano.
     </p>
     <ul>
-      <li><b>Qué leemos:</b> únicamente el <b>número de pasos</b> del día en curso. Nada más. No
-        leemos ritmo cardiaco, sueño, entrenamientos, ubicación ni ningún otro dato de salud.</li>
-      <li><b>En iPhone:</b> se le pregunta a la app <b>Salud</b> por los pasos del día, y solo por
-        eso. UDECA no escribe ni modifica nada en Salud.</li>
-      <li><b>En Android:</b> los cuenta el sensor del móvil mientras tienes UDECA abierta. No
-        usamos Health Connect ni ningún otro almacén de datos de salud.</li>
+      <li><b>Qué leemos:</b> únicamente el <b>número de pasos</b> de cada día (el de hoy y los de
+        los días anteriores que guarde tu móvil, hasta una semana). Nada más. No leemos ritmo
+        cardiaco, sueño, entrenamientos, ubicación ni ningún otro dato de salud.</li>
+      <li><b>En iPhone:</b> se le pregunta a la app <b>Salud</b> por los pasos (los de tu iPhone y,
+        si lo llevas, tu Apple Watch), y solo por eso. UDECA no escribe ni modifica nada en
+        Salud.</li>
+      <li><b>En Android:</b> los cuenta el propio móvil con la API de grabación de Google Play
+        services, que los guarda en el dispositivo, también con UDECA cerrada. Si tu móvil no la
+        tiene, los cuenta el sensor mientras tienes UDECA abierta. No usamos Health Connect ni
+        ningún otro almacén de datos de salud.</li>
       <li><b>Dónde acaba:</b> la cifra diaria se guarda en tu cuenta de UDECA para calcular tu gasto
         calórico y tu progreso hacia el objetivo de pasos. La ven tu entrenador y tú, nadie más.</li>
       <li><b>Para qué NO se usa:</b> no se usa para publicidad, no se vende, no se comparte con
@@ -265,12 +269,16 @@
       the app works without it, and you can always type your steps by hand.
     </p>
     <ul>
-      <li><b>What we read:</b> only the <b>step count</b> for the current day. Nothing else. We do
-        not read heart rate, sleep, workouts, location or any other health data.</li>
-      <li><b>On iPhone:</b> we ask the <b>Health</b> app for the day's steps, and for nothing else.
-        UDECA never writes to or changes anything in Health.</li>
-      <li><b>On Android:</b> the phone's sensor counts them while you have UDECA open. We do not
-        use Health Connect or any other health data store.</li>
+      <li><b>What we read:</b> only the <b>step count</b> for each day (today and the previous
+        days your phone keeps, up to a week). Nothing else. We do not read heart rate, sleep,
+        workouts, location or any other health data.</li>
+      <li><b>On iPhone:</b> we ask the <b>Health</b> app for your steps (from your iPhone and, if
+        you wear one, your Apple Watch), and for nothing else. UDECA never writes to or changes
+        anything in Health.</li>
+      <li><b>On Android:</b> the phone itself counts them with the Google Play services Recording
+        API, which keeps them on the device, even with UDECA closed. If your phone doesn't have it,
+        the sensor counts them while you have UDECA open. We do not use Health Connect or any
+        other health data store.</li>
       <li><b>Where it ends up:</b> the daily figure is stored in your UDECA account to estimate your
         calorie expenditure and your progress towards your step goal. Only you and your coach see it.</li>
       <li><b>What it is NOT used for:</b> not for advertising, not sold, not shared with third
