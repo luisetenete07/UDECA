@@ -265,20 +265,6 @@ export default function ClientsScreen() {
         }
       />
 
-      <Pressable
-        onPress={() => router.push('/(trainer)/clients/meal-books')}
-        style={styles.navEntry}
-      >
-        <View style={styles.navEntryIcon}>
-          <Ionicons name="book-outline" size={18} color={colors.primary} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.navEntryTitle}>Libretas de comida</Text>
-          <Text style={styles.navEntrySub}>Recetas y platos por foto para todos tus alumnos</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-      </Pressable>
-
       {clients.length > 0 ? (
         <TextField
           placeholder="Buscar cliente..."
@@ -388,6 +374,22 @@ export default function ClientsScreen() {
         })}
         </Grid>
       )}
+
+      {/* Las libretas de comida, debajo de los alumnos y no encima: se abren
+          de vez en cuando, y la lista es a lo que se entra cada vez. */}
+      <Pressable
+        onPress={() => router.push('/(trainer)/clients/meal-books')}
+        style={styles.navEntry}
+      >
+        <View style={styles.navEntryIcon}>
+          <Ionicons name="book-outline" size={18} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.navEntryTitle}>Libretas de comida</Text>
+          <Text style={styles.navEntrySub}>Recetas y platos por foto para todos tus alumnos</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </Pressable>
 
       {/* La clasificación del grupo, al final de la lista: estaba en el perfil
           del entrenador, que es el último sitio donde se busca a los alumnos. */}
