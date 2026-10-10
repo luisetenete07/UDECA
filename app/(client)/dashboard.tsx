@@ -32,6 +32,11 @@ import {
 } from '../../lib/firestore/habits';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getStepLogsForClient, type StepLog } from '../../lib/firestore/steps';
+import { getActiveNutritionPlanForClient, getMealLogsForClient } from '../../lib/firestore/nutrition';
+import { objetivosDelDia } from '../../lib/macrosDelDia';
+import { balanceDelDia, caloriasDePasos, pasosDeHoy } from '../../lib/pasos';
+import { conMiles } from '../../lib/texto';
+import { FilaDelDia } from '../../components/FilaDelDia';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
@@ -58,6 +63,8 @@ import {
   WEEKDAY_NAMES,
   type Habit,
   type HabitLog,
+  type MealLog,
+  type NutritionPlan,
   type Routine,
   type TrainingCycle,
   type WeightLog,
@@ -73,6 +80,8 @@ interface ClientDashData {
   habits: Habit[];
   habitLogs: HabitLog[];
   stepLogs: StepLog[];
+  nutritionPlan: NutritionPlan | null;
+  mealLogs: MealLog[];
   cycleAnchor: AnclaDelAlumno | null;
 }
 
@@ -89,6 +98,8 @@ export default function ClientDashboard() {
   const [habits, setHabits] = useState<Habit[]>(cached?.habits ?? []);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>(cached?.habitLogs ?? []);
   const [stepLogs, setStepLogs] = useState<StepLog[]>(cached?.stepLogs ?? []);
+  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(cached?.nutritionPlan ?? null);
+  const [mealLogs, setMealLogs] = useState<MealLog[]>(cached?.mealLogs ?? []);
   const [cycleAnchor, setCycleAnchor] = useState<AnclaDelAlumno | null>(cached?.cycleAnchor ?? null);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
@@ -103,7 +114,7 @@ export default function ClientDashboard() {
       if (!profile) return;
       // Sube entrenos que quedaron pendientes por falta de conexión.
       await flushPendingWorkouts().catch(() => {});
-      const [routineData, weightData, workoutData, habitData, habitLogData, stepData] =
+      const [routineData, weightData, workoutData, habitData, habitLogData, stepData, planData, mealData] =
         await Promise.all([
           getActiveRoutineForClient(profile.uid),
           getWeightLogsForClient(profile.uid),
@@ -112,6 +123,9 @@ export default function ClientDashboard() {
           getHabitLogsForClient(profile.uid),
           // Los pasos no pueden tumbar el inicio: sin ellos, la fila sale a cero.
           getStepLogsForClient(profile.uid).catch(() => [] as StepLog[]),
+          // Lo mismo con la nutrición: sin ella, la fila de calorías no sale.
+          getActiveNutritionPlanForClient(profile.uid).catch(() => null),
+          getMealLogsForClient(profile.uid).catch(() => [] as MealLog[]),
         ]);
       const anchor = routineData ? await anclaDelAlumno(routineData.id, profile) : null;
       if (isActive && !isActive()) return;
@@ -122,6 +136,8 @@ export default function ClientDashboard() {
       setHabits(habitData);
       setHabitLogs(habitLogData);
       setStepLogs(stepData);
+      setNutritionPlan(planData);
+      setMealLogs(mealData);
       setCached(cacheKey, {
         routine: routineData,
         weightLogs: weightData,
@@ -129,6 +145,8 @@ export default function ClientDashboard() {
         habits: habitData,
         habitLogs: habitLogData,
         stepLogs: stepData,
+        nutritionPlan: planData,
+        mealLogs: mealData,
         cycleAnchor: anchor,
       } satisfies ClientDashData);
       setLoading(false);
@@ -199,6 +217,19 @@ export default function ClientDashboard() {
     );
 
   const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
+  /*
+   * Las calorías de hoy, con la misma cuenta que Nutrición: lo del plan más lo
+   * ganado andando, contra lo comido (lib/pasos.ts). Solo si tiene objetivos:
+   * a quien no lleva plan no se le enseña una fila vacía.
+   */
+  const objetivosHoy = objetivosDelDia(nutritionPlan, profile?.nutritionTargets);
+  const balanceHoy = objetivosHoy
+    ? balanceDelDia(
+        objetivosHoy.dailyCalories,
+        mealLogs.filter((m) => esHoy(m.date)).reduce((t, m) => t + (m.calories || 0), 0),
+        caloriasDePasos(pasosDeHoy(stepLogs)?.steps ?? 0, currentWeight ?? undefined)
+      )
+    : null;
   const sessions = weekSessions(workoutLogs);
   /*
    * Pausa del plan (lesión, viaje, una semana imposible). Toca tres cosas:
@@ -682,16 +713,17 @@ export default function ClientDashboard() {
           </View>
         </View>
 
-        {/* PASOS Y PESO, DENTRO DE LA SEMANA.
-            Eran dos cajas sueltas debajo, con su borde cada una, contando
-            cosas de la misma semana por separado. Aquí son dos filas de la
-            misma tarjeta: lo entrenado, lo andado y lo que pesas, de un
+        {/* PASOS, CALORÍAS Y PESO, DENTRO DE LA SEMANA.
+            Eran cajas sueltas debajo, con su borde cada una, contando cosas
+            de la misma semana por separado. Aquí son filas de la misma
+            tarjeta: lo entrenado, lo andado, lo comido y lo que pesas, de un
             vistazo. La racha y las sesiones no se repiten: ya están en el
             anillo de arriba.
 
-            Los pasos, encima: cambian cada día y el peso cada semana. Se leen
-            solos del móvil al abrir la app, así que la cifra ya está puesta.
-            Las dos filas llevan a Nutrición, que es donde se apuntan. */}
+            Los pasos, encima: cambian cada día y suman a las calorías, que van
+            justo debajo. Se leen solos del móvil al abrir la app, así que la
+            cifra ya está puesta. Las calorías, solo con objetivos puestos. Las
+            tres filas llevan a Nutrición, que es donde se apuntan. */}
         {profile ? (
           <ContadorDePasos
             compacto
@@ -701,17 +733,23 @@ export default function ClientDashboard() {
             onAbrir={() => router.push('/(client)/progress?tab=nutricion')}
           />
         ) : null}
-        <Pressable
+        {balanceHoy && balanceHoy.disponibles > 0 ? (
+          <FilaDelDia
+            icono="restaurant-outline"
+            etiqueta="Calorías"
+            valor={conMiles(balanceHoy.consumidas)}
+            de={frase`${conMiles(balanceHoy.disponibles)} kcal`}
+            progreso={balanceHoy.consumidas / balanceHoy.disponibles}
+            tono={balanceHoy.pasado ? 'pasado' : 'normal'}
+            onPress={() => router.push('/(client)/progress?tab=nutricion')}
+          />
+        ) : null}
+        <FilaDelDia
+          icono="body-outline"
+          etiqueta="Peso"
+          valor={currentWeight != null ? `${kgCorto(currentWeight)} kg` : 'Sin registrar'}
           onPress={() => router.push('/(client)/progress?tab=nutricion')}
-          style={styles.weightRow}
-        >
-          <Ionicons name="body-outline" size={17} color={colors.textMuted} />
-          <Text style={styles.weightLabel}>Peso</Text>
-          <Text style={styles.weightValue}>
-            {currentWeight != null ? `${kgCorto(currentWeight)} kg` : 'Sin registrar'}
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-        </Pressable>
+        />
       </Card>
       </FadeIn>
 
@@ -833,17 +871,6 @@ const styles = StyleSheet.create({
     color: colors.primaryBright,
     fontFamily: fonts.semiBold,
   },
-  // Última fila de la tarjeta de la semana: sin caja propia, solo la raya.
-  weightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  weightLabel: { ...typography.body, color: colors.textMuted, flex: 1 },
-  weightValue: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   cycleCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,

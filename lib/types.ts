@@ -190,6 +190,12 @@ export interface UserProfile {
    * Apagado por omisión: son muchos avisos y hay que pedirlos.
    */
   missedWorkoutRemindersEnabled?: boolean;
+  /**
+   * Avisos de la rutina de cada día (grease the groove): a horas fijas,
+   * mientras quede algo por marcar. Encendidos por omisión —sin avisos el GTG
+   * se olvida—, y se apagan desde el perfil.
+   */
+  dailyRoutineRemindersEnabled?: boolean;
   /** Estado del alumno gestionado por el entrenador. */
   status?: ClientStatus;
   /** Estado de pago del alumno, gestionado por el entrenador. */

@@ -3,18 +3,20 @@ import { frase } from '../lib/idioma';
 import { AppState, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
-import { ProgressBar } from './ProgressBar';
+import { FilaDelDia } from './FilaDelDia';
 import { ProgressRing } from './ProgressRing';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { Dialogo } from './Dialogo';
-import { getStepLogDelDia, setStepLog, type StepLog } from '../lib/firestore/steps';
+import { getStepLogDelDia, getStepLogsForClient, setStepLog, type StepLog } from '../lib/firestore/steps';
 import { updateUserProfile } from '../lib/firestore/users';
 import { useAuth } from '../lib/auth-context';
-import { inicioDelDia } from '../lib/fechas';
+import { inicioDelDia, masDias } from '../lib/fechas';
 import { conMiles } from '../lib/texto';
 import {
   caloriasDePasos,
+  DIAS_QUE_GUARDA_EL_IPHONE,
+  diasPorRellenar,
   mediaSemanal,
   OBJETIVO_POR_DEFECTO,
   pasosAGuardar,
@@ -60,6 +62,8 @@ const ESPERA_ENTRE_LECTURAS_MS = 60 * 1000;
  */
 const leyendoRef = { current: false };
 const ultimaAutomaticaRef = { current: 0 };
+/** El día (a medianoche) en que ya se rellenaron los días de atrás. Una vez basta. */
+const rellenadoRef = { current: 0 };
 
 /**
  * Los pasos del día, DENTRO de la tarjeta de hoy.
@@ -157,6 +161,34 @@ export function ContadorDePasos({
     return fresco === undefined ? pasosDeHoy(registrosRef.current) : fresco;
   };
 
+  /**
+   * IPHONE: LOS DÍAS EN QUE NO SE ABRIÓ LA APP.
+   *
+   * El iPhone guarda una semana de pasos. Una vez al día se le preguntan los
+   * seis de atrás y se apunta lo que falte (ver `diasPorRellenar`). Se compara
+   * con lo guardado de verdad, no con la lista de la pantalla, por lo mismo que
+   * `guardadoHoy`. Si algo falla, no pasa nada: se intenta en la siguiente.
+   */
+  const rellenarDiasDeAtras = async (Pedometer: {
+    getStepCountAsync: (a: Date, b: Date) => Promise<{ steps: number }>;
+  }) => {
+    const hoy = inicioDelDia(Date.now());
+    if (rellenadoRef.current === hoy) return;
+    const lecturas: { date: number; steps: number }[] = [];
+    for (let i = 1; i <= DIAS_QUE_GUARDA_EL_IPHONE; i++) {
+      const desde = masDias(hoy, -i);
+      const { steps } = await Pedometer.getStepCountAsync(new Date(desde), new Date(masDias(desde, 1)));
+      lecturas.push({ date: desde, steps: Math.max(0, Math.round(Number(steps) || 0)) });
+    }
+    const guardados = await getStepLogsForClient(profile.uid);
+    const cambios = diasPorRellenar(guardados, lecturas);
+    for (const c of cambios) {
+      await setStepLog(profile.uid, c.date, c.steps, 'telefono', profile.trainerId);
+    }
+    rellenadoRef.current = hoy;
+    if (cambios.length > 0) await cargar();
+  };
+
   /** Si no hay nada que escribir pero esta pantalla iba atrasada, se pone al día. */
   const ponerAlDia = (guardado: StepLog | RegistroDePasos | null) => {
     if ((guardado?.steps ?? 0) !== (pasosDeHoy(registrosRef.current)?.steps ?? 0)) {
@@ -230,6 +262,8 @@ export function ContadorDePasos({
         return;
       }
       if (Platform.OS === 'ios') {
+        // Los días de atrás primero, y sin que un fallo ahí impida leer hoy.
+        await rellenarDiasDeAtras(Pedometer).catch(() => {});
         /*
          * En iPhone se le puede preguntar al teléfono por el día entero, con
          * la app cerrada incluida: esta cifra es la buena y manda sobre lo que
@@ -402,22 +436,16 @@ export function ContadorDePasos({
     // como "no has andado". Es otra cosa: aún no está puesto.
     const sinNada = !origen && !hoy;
     return (
-      <Pressable onPress={onAbrir} style={styles.fila}>
-        <View style={styles.filaArriba}>
-          <Ionicons name="footsteps-outline" size={17} color={colors.textMuted} />
-          <Text style={styles.filaEtiqueta}>Pasos</Text>
-          {sinNada ? (
-            <Text style={styles.filaConectar}>Conectar</Text>
-          ) : (
-            <Text style={[styles.filaValor, p.cumplido && styles.filaCumplida]}>
-              {conMiles(p.pasos)}
-              <Text style={styles.filaDe}>{` / ${conMiles(p.objetivo)}`}</Text>
-            </Text>
-          )}
-          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-        </View>
-        {sinNada ? null : <ProgressBar progress={p.ratio} height={4} />}
-      </Pressable>
+      <FilaDelDia
+        icono="footsteps-outline"
+        etiqueta="Pasos"
+        valor={sinNada ? undefined : conMiles(p.pasos)}
+        de={conMiles(p.objetivo)}
+        progreso={sinNada ? undefined : p.ratio}
+        tono={p.cumplido ? 'cumplido' : 'normal'}
+        accion="Conectar"
+        onPress={onAbrir}
+      />
     );
   }
 
@@ -684,19 +712,4 @@ const styles = StyleSheet.create({
   },
   botonManoTexto: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   origen: { ...typography.small, color: colors.textFaint, fontSize: 11, marginTop: spacing.sm },
-  // La fila del inicio, dentro de la tarjeta de la semana: sin caja propia,
-  // separada por una raya como la del peso, que va justo debajo.
-  fila: {
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    marginTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  filaArriba: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  filaEtiqueta: { ...typography.body, color: colors.textMuted, flex: 1 },
-  filaValor: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  filaCumplida: { color: colors.primaryBright },
-  filaDe: { ...typography.small, color: colors.textFaint, fontFamily: fonts.body },
-  filaConectar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
 });

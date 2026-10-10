@@ -12,6 +12,8 @@ import { readFileSync } from 'node:fs';
 import {
   balanceDelDia,
   caloriasDePasos,
+  DIAS_QUE_GUARDA_EL_IPHONE,
+  diasPorRellenar,
   objetivoDeTexto,
   OBJETIVO_MAXIMO,
   OBJETIVO_MINIMO,
@@ -272,6 +274,38 @@ console.log('\nLa lectura automática no puede llamarse a sí misma');
   comprueba('ni depende de la función que lee', !/\[origen, leerDelTelefono\]/.test(c));
 }
 
+console.log('\nLos días en que no se abrió la app (iPhone)');
+{
+  /*
+   * El iPhone guarda una semana de pasos. Sin rellenar, el día que no se abría
+   * UDECA se quedaba a cero aunque el teléfono supiera cuánto se anduvo.
+   */
+  const hoy = inicioDelDia(Date.now());
+  const ayer = masDias(hoy, -1);
+  const anteayer = masDias(hoy, -2);
+  const hace3 = masDias(hoy, -3);
+  const guardados = [
+    { date: anteayer, steps: 12000, source: 'mano' },
+    { date: hace3, steps: 3000, source: 'telefono' },
+  ];
+  const cambios = diasPorRellenar(guardados, [
+    { date: ayer, steps: 7400 },
+    { date: anteayer, steps: 6000 },
+    { date: hace3, steps: 5200 },
+    { date: masDias(hoy, -4), steps: 0 },
+  ]);
+  const de = (d) => cambios.find((c) => c.date === d)?.steps;
+  comprueba('el día sin nada se rellena', de(ayer) === 7400, JSON.stringify(cambios));
+  comprueba('lo escrito a mano (reloj) no se pisa con menos', de(anteayer) === undefined);
+  comprueba('una lectura mayor que la guardada, sí', de(hace3) === 5200);
+  comprueba('un día a cero no se escribe', cambios.length === 2, String(cambios.length));
+  comprueba('se preguntan los seis días de atrás', DIAS_QUE_GUARDA_EL_IPHONE === 6);
+  const c = readFileSync(new URL('../components/ContadorDePasos.tsx', import.meta.url), 'utf8');
+  comprueba('en iPhone se rellenan antes de leer hoy, sin bloquearlo',
+    /if \(Platform\.OS === 'ios'\) \{\s*\/\/[^\n]*\n\s*await rellenarDiasDeAtras\(Pedometer\)\.catch\(\(\) => \{\}\);/.test(c));
+  comprueba('y una sola vez al día', /if \(rellenadoRef\.current === hoy\) return;/.test(c));
+}
+
 console.log('\nTambién en el inicio, y sin contar dos veces');
 {
   /*
@@ -285,11 +319,11 @@ console.log('\nTambién en el inicio, y sin contar dos veces');
   const inicio = sinComentarios(readFileSync(new URL('../app/(client)/dashboard.tsx', import.meta.url), 'utf8'));
   const enInicio = inicio.search(/<ContadorDePasos\s+compacto/);
   comprueba('el inicio enseña los pasos', enInicio > 0);
-  comprueba('justo encima del peso', enInicio > 0 && enInicio < inicio.indexOf('styles.weightRow'));
+  comprueba('justo encima del peso', enInicio > 0 && enInicio < inicio.indexOf('etiqueta="Peso"'));
   // Y los dos dentro de la tarjeta de la semana: después de la tira de días y
   // antes de que se cierre (lo siguiente es "Registrar un entreno de otro día").
   const tira = inicio.indexOf('<WeekStrip');
-  const cierre = inicio.indexOf('</Card>', inicio.indexOf('styles.weightRow'));
+  const cierre = inicio.indexOf('</Card>', inicio.indexOf('etiqueta="Peso"'));
   comprueba('pasos y peso, dentro de la tarjeta de la semana',
     tira > 0 && tira < enInicio && cierre > 0 && cierre < inicio.indexOf('<RegistrarOtroDia'));
   // Con una referencia por contador, en Android cada uno SUMARÍA su lectura:

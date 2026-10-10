@@ -29,6 +29,8 @@ import {
 } from '../../lib/firestore/users';
 import { FREE_CLIENT_LIMIT, trainerAtFreeLimit } from '../../lib/subscription';
 import { alargar, coachingDe } from '../../lib/coaching';
+import { alumnosSinEntrenar, DIAS_SIN_ENTRENAR } from '../../lib/sinEntrenar';
+import { haceCuanto } from '../../lib/ultimoEntreno';
 import { colorDelPeriodo, textoDelPeriodo } from '../../components/PeriodoDeCoaching';
 import { approveClientOnServer } from '../../lib/join';
 import {
@@ -73,6 +75,7 @@ export default function TrainerDashboard() {
   // Los periodos de coaching que se acaban o ya se acabaron (ver lib/coaching.ts).
   const [renovarOpen, setRenovarOpen] = useState(false);
   const [renovandoId, setRenovandoId] = useState<string | null>(null);
+  const [sinEntrenarOpen, setSinEntrenarOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -162,6 +165,9 @@ export default function TrainerDashboard() {
   const terminados = porRenovar.filter(
     ({ coaching }) => coaching.estado === 'terminado' || coaching.estado === 'pausado'
   );
+
+  /** Quién lleva días sin entrenar (ver lib/sinEntrenar.ts). */
+  const sinEntrenar = alumnosSinEntrenar(clients, logs, now);
 
   /** +1 mes desde la lista, sin abrir la ficha: es lo que se hace casi siempre. */
   const handleRenovar = async (c: UserProfile) => {
@@ -308,7 +314,7 @@ export default function TrainerDashboard() {
           milisegundos por detrás del anterior. Es lo que hace que la pantalla
           se sienta viva sin que nada se mueva mientras se usa — una animación
           que sigue en marcha cuando ya estás leyendo, molesta. */}
-      {requests.length > 0 || terminados.length > 0 ? (
+      {requests.length > 0 || terminados.length > 0 || sinEntrenar.length > 0 ? (
         <FadeIn>
         <Card accent style={styles.section}>
           <View style={styles.titleRow}>
@@ -327,6 +333,30 @@ export default function TrainerDashboard() {
                   {terminados.length === 1
                     ? frase`1 periodo de coaching terminado`
                     : frase`${terminados.length} periodos de coaching terminados`}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
+          {/* Quién lleva días sin entrenar: antes era solo un número en "Tu
+              grupo esta semana", y un número no dice a quién escribir. */}
+          {sinEntrenar.length > 0 ? (
+            <Pressable style={styles.attentionRow} onPress={() => setSinEntrenarOpen(true)}>
+              <View style={[styles.attentionIcon, { backgroundColor: colors.warningMuted }]}>
+                <Ionicons name="time-outline" size={17} color={colors.warning} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.attentionTitle}>
+                  {sinEntrenar.length === 1
+                    ? frase`1 alumno sin entrenar`
+                    : frase`${sinEntrenar.length} alumnos sin entrenar`}
+                </Text>
+                <Text style={styles.attentionSub} numberOfLines={1}>
+                  {sinEntrenar
+                    .slice(0, 3)
+                    .map((x) => x.alumno.name.split(' ')[0])
+                    .join(', ')}
+                  {sinEntrenar.length > 3 ? '…' : ''}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
@@ -544,6 +574,35 @@ export default function TrainerDashboard() {
       {/* Los periodos que se acaban esta semana o ya se acabaron, con +1 mes
           a un toque. Para otra fecha, la ficha del alumno. */}
       <Sheet
+        visible={sinEntrenarOpen}
+        onClose={() => setSinEntrenarOpen(false)}
+        titulo={frase`Sin entrenar (${sinEntrenar.length})`}
+        descripcion={frase`${DIAS_SIN_ENTRENAR} días o más sin registrar un entreno. No salen los que tienen el plan en pausa.`}
+      >
+        <ScrollView style={{ maxHeight: 460 }}>
+          {sinEntrenar.map(({ alumno, dias }) => (
+            <Pressable
+              key={alumno.uid}
+              onPress={() => {
+                setSinEntrenarOpen(false);
+                router.push(`/(trainer)/clients/${alumno.uid}`);
+              }}
+              style={styles.payRow}
+            >
+              <Avatar name={alumno.name} photoURL={alumno.photoURL} size={38} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.logClient}>{alumno.name}</Text>
+                <Text style={[styles.payMeta, { color: colors.warning }]}>
+                  {dias === null ? frase`Aún no ha entrenado` : frase`Último entreno ${haceCuanto(dias)}`}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </Pressable>
+          ))}
+        </ScrollView>
+      </Sheet>
+
+      <Sheet
         visible={renovarOpen}
         onClose={() => setRenovarOpen(false)}
         titulo={frase`Por renovar (${porRenovar.length})`}
@@ -630,6 +689,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   attentionTitle: { ...typography.h3, color: colors.text },
+  attentionSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   goodNews: {
     flexDirection: 'row',
     alignItems: 'center',

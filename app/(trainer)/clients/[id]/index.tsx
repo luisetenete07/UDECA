@@ -86,6 +86,14 @@ import {
 
 /** Suma `n` meses a un timestamp (Date gestiona el desbordamiento de mes). */
 const DAY_MS = 24 * 60 * 60 * 1000;
+type Pestana = 'resumen' | 'entreno' | 'nutricion';
+/**
+ * La última pestaña abierta, para la siguiente ficha. Fuera del componente a
+ * propósito: quien va revisando los entrenos de sus alumnos uno detrás de otro
+ * no quiere volver a pulsar "Entreno" en cada ficha.
+ */
+let ultimaPestana: Pestana = 'resumen';
+
 export default function ClientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -119,6 +127,11 @@ export default function ClientDetailScreen() {
   const [courseSeen, setCourseSeen] = useState<LessonsSeen>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [pestana, setPestana] = useState<Pestana>(ultimaPestana);
+  const cambiarPestana = (p: Pestana) => {
+    ultimaPestana = p;
+    setPestana(p);
+  };
   // Los pasos al día que le pide su entrenador (ver lib/pasos.ts).
   const [pasosInput, setPasosInput] = useState('');
   const [savingPasos, setSavingPasos] = useState(false);
@@ -415,160 +428,608 @@ export default function ClientDetailScreen() {
 
       {client.bio ? <Text style={styles.bio}>{client.bio}</Text> : null}
 
-      {/* Activo / En pausa / Inactivo: tres opciones excluyentes, o sea el
-          mismo control que en el resto de la app. */}
+      {/*
+       * LA FICHA, EN TRES PESTAÑAS. Eran trece bloques uno debajo de otro, y
+       * para llegar al historial había que pasar por el coaching, la rutina,
+       * los cursos, las notas, los ajustes, la nutrición, el peso y las fotos.
+       * Ahora cada cosa vive con las de su tipo, y la pestaña se recuerda al
+       * pasar de un alumno a otro: quien está revisando entrenos sigue en
+       * entrenos.
+       */}
       <Segmented
-        opciones={CLIENT_STATUSES.map((s) => ({ valor: s, texto: CLIENT_STATUS_LABEL[s] }))}
-        valor={currentStatus}
-        onChange={handleSetStatus}
+        opciones={[
+          { valor: 'resumen' as const, texto: 'Resumen', icono: 'person-outline' },
+          { valor: 'entreno' as const, texto: 'Entreno', icono: 'barbell-outline' },
+          { valor: 'nutricion' as const, texto: 'Nutrición', icono: 'nutrition-outline' },
+        ]}
+        valor={pestana}
+        onChange={cambiarPestana}
       />
 
-      {/*
-       * EL PERIODO DE COACHING. Es lo único de la relación con el alumno que
-       * lleva la app: hasta cuándo entrena contigo. El dinero —cuánto, por
-       * dónde, si ya ha pagado— es cosa vuestra, fuera de UDECA. Si pasan
-       * unos días sin renovar, al alumno se le pausa la app hasta que lo hagas.
-       */}
-      <Card style={styles.section}>
-        <View style={styles.titleRow}>
-          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-          <Text style={styles.sectionTitle}>Coaching</Text>
-        </View>
+      {pestana === 'resumen' ? (
+        <>
+          {/*
+           * EL PERIODO DE COACHING. Es lo único de la relación con el alumno que
+           * lleva la app: hasta cuándo entrena contigo. El dinero —cuánto, por
+           * dónde, si ya ha pagado— es cosa vuestra, fuera de UDECA. Si pasan
+           * unos días sin renovar, al alumno se le pausa la app hasta que lo hagas.
+           */}
+          <Card style={styles.section}>
+            <View style={styles.titleRow}>
+              <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Coaching</Text>
+            </View>
 
-        {client.paymentReportedAt ? (
-          <View style={styles.reportedBanner}>
-            <Ionicons name="notifications" size={16} color={colors.primaryBright} />
-            <Text style={styles.reportedText}>
-              {frase`${client.name.split(' ')[0]} te ha pedido renovar (${fechaCorta(client.paymentReportedAt)}).`}
+            {client.paymentReportedAt ? (
+              <View style={styles.reportedBanner}>
+                <Ionicons name="notifications" size={16} color={colors.primaryBright} />
+                <Text style={styles.reportedText}>
+                  {frase`${client.name.split(' ')[0]} te ha pedido renovar (${fechaCorta(client.paymentReportedAt)}).`}
+                </Text>
+              </View>
+            ) : null}
+
+            <PeriodoDeCoaching coaching={coaching} />
+
+            {/* Alargar de un toque: desde el final si aún no ha llegado, desde hoy
+                si ya pasó (ver `alargar`). Es lo que se hace casi siempre. */}
+            <Text style={styles.alargarRotulo}>Alargar</Text>
+            <View style={styles.alargarFila}>
+              {ALARGAR_MESES.map((meses) => (
+                <Button
+                  key={meses}
+                  title={meses === 1 ? '1 mes' : frase`${meses} meses`}
+                  variant={meses === 1 ? 'primary' : 'secondary'}
+                  compacto
+                  onPress={() => fijarPeriodo(alargar(client.nextPaymentDate, meses))}
+                  style={{ flex: 1 }}
+                />
+              ))}
+            </View>
+
+            {/* Y para lo que no son meses redondos: hasta una fecha concreta. */}
+            <View style={styles.payBtnRow}>
+              <TextField
+                value={fechaInput}
+                onChangeText={(v) => {
+                  setFechaInput(v);
+                  setFechaError(null);
+                }}
+                placeholder="Hasta (13/02/2027)"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="numbers-and-punctuation"
+                containerStyle={{ flex: 1, marginBottom: 0 }}
+                style={{ marginBottom: 0 }}
+                onSubmitEditing={handleFechaEscrita}
+              />
+              <Button
+                title="Fijar"
+                variant="secondary"
+                compacto
+                onPress={handleFechaEscrita}
+                disabled={!fechaInput.trim()}
+              />
+            </View>
+            {fechaError ? <Text style={styles.confirmText}>{fechaError}</Text> : null}
+
+            {coaching.estado === 'acaba' || coaching.estado === 'terminado' || coaching.estado === 'pausado' ? (
+              <Button
+                title={avisoEnviado ? 'Aviso enviado' : 'Avisarle de que se acaba'}
+                variant="secondary"
+                onPress={handleAvisarFin}
+                loading={avisando}
+                disabled={avisoEnviado}
+                style={{ marginTop: spacing.sm }}
+              />
+            ) : null}
+
+            <Text style={styles.payHint}>
+              {frase`Si pasan ${DIAS_DE_MARGEN} días sin renovar, se le pausa la app hasta que lo hagas.`}
             </Text>
-          </View>
-        ) : null}
 
-        <PeriodoDeCoaching coaching={coaching} />
+            {client.nextPaymentDate ? (
+              <Pressable onPress={() => fijarPeriodo(null)} style={styles.quitarFecha} hitSlop={8}>
+                <Ionicons name="close-circle-outline" size={14} color={colors.textFaint} />
+                <Text style={styles.quitarFechaTexto}>Quitar la fecha de fin</Text>
+              </Pressable>
+            ) : null}
+          </Card>
 
-        {/* Alargar de un toque: desde el final si aún no ha llegado, desde hoy
-            si ya pasó (ver `alargar`). Es lo que se hace casi siempre. */}
-        <Text style={styles.alargarRotulo}>Alargar</Text>
-        <View style={styles.alargarFila}>
-          {ALARGAR_MESES.map((meses) => (
-            <Button
-              key={meses}
-              title={meses === 1 ? '1 mes' : frase`${meses} meses`}
-              variant={meses === 1 ? 'primary' : 'secondary'}
-              compacto
-              onPress={() => fijarPeriodo(alargar(client.nextPaymentDate, meses))}
-              style={{ flex: 1 }}
+          {hayObjetivos(metas) || client.targetWeightKg ? (
+            <Card style={styles.section}>
+              {hayObjetivos(metas) ? (
+                <>
+                  <Text style={styles.miniLabel}>Sus objetivos</Text>
+                  {objetivosVisibles(metas).map((o) => (
+                    <View key={o.etiqueta} style={styles.objetivoFila}>
+                      <Text style={styles.objetivoPlazo}>{o.etiqueta}</Text>
+                      <Text style={styles.objetivoTexto}>{o.texto}</Text>
+                    </View>
+                  ))}
+                </>
+              ) : null}
+              {client.targetWeightKg ? (
+                <Text style={[styles.miniValue, { marginTop: hayObjetivos(metas) ? spacing.md : 0 }]}>
+                  Peso objetivo: {client.targetWeightKg} kg
+                </Text>
+              ) : null}
+            </Card>
+          ) : null}
+
+          <CollapsibleCard
+            id="alumno-notas"
+            icon="lock-closed-outline"
+            title="Notas privadas"
+            hint={coachNote.trim() ? coachNote.trim().slice(0, 40) : 'Sin notas'}
+            defaultOpen={false}
+          >
+            <Text style={styles.mutedText}>Solo tú las ves (lesiones, preferencias, objetivos…).</Text>
+            <TextField
+              value={coachNote}
+              onChangeText={setCoachNote}
+              onBlur={handleSaveNote}
+              placeholder="Escribe aquí tus notas sobre este alumno..."
+              multiline
+              numberOfLines={4}
+              style={{ height: 96, textAlignVertical: 'top', marginTop: spacing.sm, marginBottom: 0 }}
             />
-          ))}
-        </View>
+            {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
+          </CollapsibleCard>
 
-        {/* Y para lo que no son meses redondos: hasta una fecha concreta. */}
-        <View style={styles.payBtnRow}>
-          <TextField
-            value={fechaInput}
-            onChangeText={(v) => {
-              setFechaInput(v);
-              setFechaError(null);
-            }}
-            placeholder="Hasta (13/02/2027)"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="numbers-and-punctuation"
-            containerStyle={{ flex: 1, marginBottom: 0 }}
-            style={{ marginBottom: 0 }}
-            onSubmitEditing={handleFechaEscrita}
-          />
-          <Button
-            title="Fijar"
-            variant="secondary"
-            compacto
-            onPress={handleFechaEscrita}
-            disabled={!fechaInput.trim()}
-          />
-        </View>
-        {fechaError ? <Text style={styles.confirmText}>{fechaError}</Text> : null}
+          {/*
+           * AJUSTES DEL ALUMNO: lo que se decide una vez y no se vuelve a mirar.
+           * Eran tres tarjetas —VIP, pasos y pedirle el esfuerzo— con un solo
+           * control cada una. El esfuerzo se fue a la rutina, que es donde se
+           * decide cómo se entrena; VIP y pasos van juntos, y plegados dicen lo
+           * que hay puesto sin abrirlos.
+           */}
+          <CollapsibleCard
+            id="alumno-ajustes"
+            icon="options-outline"
+            title="Ajustes del alumno"
+            hint={`${currentStatus !== 'active' ? `${CLIENT_STATUS_LABEL[currentStatus]} · ` : ''}${client?.vip === true ? 'VIP · ' : ''}${frase`${conMiles(client?.stepGoal ?? OBJETIVO_POR_DEFECTO)} pasos`}`}
+            defaultOpen={false}
+          >
+            {/* Activo / En pausa / Inactivo: tres opciones excluyentes, o sea el
+                mismo control que en el resto de la app. Estaba arriba del todo,
+                encima del coaching, y es de lo que menos se toca. */}
+            <Segmented
+              opciones={CLIENT_STATUSES.map((s) => ({ valor: s, texto: CLIENT_STATUS_LABEL[s] }))}
+              valor={currentStatus}
+              onChange={handleSetStatus}
+            />
 
-        {coaching.estado === 'acaba' || coaching.estado === 'terminado' || coaching.estado === 'pausado' ? (
-          <Button
-            title={avisoEnviado ? 'Aviso enviado' : 'Avisarle de que se acaba'}
-            variant="secondary"
-            onPress={handleAvisarFin}
-            loading={avisando}
-            disabled={avisoEnviado}
-            style={{ marginTop: spacing.sm }}
-          />
-        ) : null}
+            <View style={[styles.rirRow, { marginTop: spacing.md }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ajusteTitulo}>Alumno VIP</Text>
+                <Text style={styles.mutedText}>
+                  Ve también las clases que hayas marcado como VIP en tus cursos. El resto ni las ve.
+                </Text>
+              </View>
+              <Switch
+                value={client?.vip === true}
+                onValueChange={async (v) => {
+                  if (!id || !client) return;
+                  setClient({ ...client, vip: v });
+                  try {
+                    await setClientVip(id, v);
+                  } catch {
+                    setClient({ ...client, vip: !v });
+                    showToast('No se pudo guardar');
+                  }
+                }}
+                trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
+                thumbColor={colors.white}
+              />
+            </View>
 
-        <Text style={styles.payHint}>
-          {frase`Si pasan ${DIAS_DE_MARGEN} días sin renovar, se le pausa la app hasta que lo hagas.`}
-        </Text>
-
-        {client.nextPaymentDate ? (
-          <Pressable onPress={() => fijarPeriodo(null)} style={styles.quitarFecha} hitSlop={8}>
-            <Ionicons name="close-circle-outline" size={14} color={colors.textFaint} />
-            <Text style={styles.quitarFechaTexto}>Quitar la fecha de fin</Text>
-          </Pressable>
-        ) : null}
-      </Card>
-
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Rutina asignada</Text>
-        {activeRoutine ? (
-          <>
-            <Text style={styles.routineName}>{activeRoutine.name}</Text>
-            <Text style={styles.routineMeta}>
-              {activeRoutine.days.length}{' '}
-              {activeRoutine.days.length === 1 ? 'día' : 'días'} de entrenamiento
+            {/* Los pasos se guardan solos al salir del campo, como las notas: un
+                botón de "Guardar" para un número era un toque de más. */}
+            <Text style={[styles.ajusteTitulo, { marginTop: spacing.md }]}>Pasos al día</Text>
+            <Text style={styles.mutedText}>
+              Los ve en su nutrición, y lo que ande suma calorías al día. Vacío: {conMiles(OBJETIVO_POR_DEFECTO)}.
             </Text>
-          </>
-        ) : (
-          <Text style={styles.mutedText}>Este cliente no tiene una rutina activa.</Text>
-        )}
-        <Button
-          title={activeRoutine ? 'Editar rutina' : 'Crear rutina'}
-          variant="secondary"
-          onPress={() => router.push(`/(trainer)/clients/${id}/routine`)}
-          style={{ marginTop: spacing.md }}
-        />
+            <TextField
+              value={pasosInput}
+              onChangeText={(v) => {
+                setPasosInput(v);
+                setPasosError(null);
+              }}
+              onBlur={handleSaveStepGoal}
+              onSubmitEditing={handleSaveStepGoal}
+              placeholder={String(OBJETIVO_POR_DEFECTO)}
+              keyboardType="number-pad"
+              returnKeyType="done"
+              containerStyle={{ marginTop: spacing.sm, marginBottom: 0 }}
+              style={{ marginBottom: 0 }}
+            />
+            {pasosError ? <Text style={styles.confirmText}>{pasosError}</Text> : null}
+            {pasosSaved ? <Text style={styles.confirmSavedText}>Objetivo guardado</Text> : null}
+          </CollapsibleCard>
 
-        {/* La planificación por ciclos, aquí dentro. Era una tarjeta suya con
-            un título, un párrafo y una flecha: el sitio de la temporada es
-            junto a la rutina que se entrena en ella, no en un cajón aparte. */}
-        <Pressable
-          style={styles.pausaFila}
-          onPress={() => router.push(`/(trainer)/clients/${id}/planning`)}
-        >
-          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.navTitle}>Planificación por ciclos</Text>
-            <Text style={styles.navHint}>
-              La temporada en bloques y semanas, su cumplimiento y el progreso ejercicio a
-              ejercicio.
+          <CollapsibleCard
+            id="alumno-gestion"
+            icon="person-remove-outline"
+            title="Gestión del alumno"
+            defaultOpen={false}
+            style={styles.ultimaTarjeta}
+          >
+            <Text style={styles.mutedText}>
+              Sácalo de tu grupo para que deje de aparecer en tus clientes. No se
+              borra su cuenta ni su historial; podrá vincularse a otro entrenador
+              con un código.
             </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-        </Pressable>
+            {confirmRemove ? (
+              <Text style={styles.confirmText}>
+                ¿Seguro? Pulsa de nuevo para confirmar.
+              </Text>
+            ) : null}
+            <Button
+              title={confirmRemove ? 'Confirmar: sacar del grupo' : 'Sacar del grupo'}
+              variant="danger"
+              onPress={handleRemoveFromGroup}
+              loading={removing}
+              style={{ marginTop: spacing.md }}
+            />
+            {confirmRemove ? (
+              <Button
+                title="Cancelar"
+                variant="secondary"
+                onPress={() => setConfirmRemove(false)}
+                style={{ marginTop: spacing.sm }}
+              />
+            ) : null}
+          </CollapsibleCard>
+        </>
+      ) : null}
 
-        {/* Cambio de urgencia: unos días sin entrenar sin tocar la rutina.
-            Va dentro de esta tarjeta porque es lo que se hace cuando la rutina
-            asignada no encaja con la semana que tiene el alumno delante. */}
-        <Pressable style={styles.pausaFila} onPress={() => setPausaAbierta(true)}>
-          <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.navTitle}>
-              {pausaDelCliente ? 'Plan en pausa' : 'Pausar el plan unos días'}
+      {pestana === 'entreno' ? (
+        <>
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Rutina asignada</Text>
+            {activeRoutine ? (
+              <>
+                <Text style={styles.routineName}>{activeRoutine.name}</Text>
+                <Text style={styles.routineMeta}>
+                  {activeRoutine.days.length}{' '}
+                  {activeRoutine.days.length === 1 ? 'día' : 'días'} de entrenamiento
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.mutedText}>Este cliente no tiene una rutina activa.</Text>
+            )}
+            <Button
+              title={activeRoutine ? 'Editar rutina' : 'Crear rutina'}
+              variant="secondary"
+              onPress={() => router.push(`/(trainer)/clients/${id}/routine`)}
+              style={{ marginTop: spacing.md }}
+            />
+
+            {/* La planificación por ciclos, aquí dentro. Era una tarjeta suya con
+                un título, un párrafo y una flecha: el sitio de la temporada es
+                junto a la rutina que se entrena en ella, no en un cajón aparte. */}
+            <Pressable
+              style={styles.pausaFila}
+              onPress={() => router.push(`/(trainer)/clients/${id}/planning`)}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.navTitle}>Planificación por ciclos</Text>
+                <Text style={styles.navHint}>
+                  La temporada en bloques y semanas, su cumplimiento y el progreso ejercicio a
+                  ejercicio.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </Pressable>
+
+            {/* Cambio de urgencia: unos días sin entrenar sin tocar la rutina.
+                Va dentro de esta tarjeta porque es lo que se hace cuando la rutina
+                asignada no encaja con la semana que tiene el alumno delante. */}
+            <Pressable style={styles.pausaFila} onPress={() => setPausaAbierta(true)}>
+              <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.navTitle}>
+                  {pausaDelCliente ? 'Plan en pausa' : 'Pausar el plan unos días'}
+                </Text>
+                <Text style={styles.navHint}>
+                  {pausaDelCliente
+                    ? `${textoRango(pausaDelCliente)}${
+                        pausaDelCliente.motivo ? ` · ${pausaDelCliente.motivo}` : ''
+                      }${pausaDelCliente.porQuien === 'alumno' ? ' · la puso el alumno' : ''}`
+                    : 'Lesión, viaje o una semana imposible: no se le pide nada, no pierde la racha y el plan le espera donde lo dejó.'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </Pressable>
+          </Card>
+
+          <CollapsibleCard
+            id="alumno-historial"
+            icon="time-outline"
+            title="Historial de entrenamientos"
+            hint={workoutLogs.length > 0 ? `${workoutLogs.length}` : 'Vacío'}
+            defaultOpen={false}
+          >
+            {workoutLogs.length === 0 ? (
+              <Text style={styles.mutedText}>Todavía no ha registrado entrenamientos.</Text>
+            ) : (
+              workoutLogs.slice(0, 10).map((log) => (
+                <Pressable
+                  key={log.id}
+                  onPress={() => router.push(`/(trainer)/clients/${id}/session?logId=${log.id}`)}
+                >
+                  <View style={styles.logRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.logTitle}>{log.dayName}</Text>
+                      <Text style={styles.logDate}>
+                        {fechaNumerica(log.date)}
+                      </Text>
+                    </View>
+                    <Text style={styles.logExercises}>{log.exercises.length} ejercicios</Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+                  </View>
+                </Pressable>
+              ))
+            )}
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="alumno-actividad"
+            icon="pulse-outline"
+            title="Actividad (12 semanas)"
+            hint={`${workoutLogs.length}`}
+            defaultOpen={false}
+          >
+            <Text style={styles.mutedText}>Cada punto dorado es un día entrenado.</Text>
+            <View style={{ marginTop: spacing.sm }}>
+              <ConsistencyMap days={trainingDays(workoutLogs)} />
+            </View>
+            <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Volumen semanal (kg)</Text>
+            <LineChart
+              points={weekly.map((w) => ({ date: w.weekStart, value: w.volumeKg }))}
+              unit="kg"
+              emptyMessage="Sin entrenamientos con peso registrados todavía."
+            />
+
+            <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+              Isométricos: segundos por semana
             </Text>
-            <Text style={styles.navHint}>
-              {pausaDelCliente
-                ? `${textoRango(pausaDelCliente)}${
-                    pausaDelCliente.motivo ? ` · ${pausaDelCliente.motivo}` : ''
-                  }${pausaDelCliente.porQuien === 'alumno' ? ' · la puso el alumno' : ''}`
-                : 'Lesión, viaje o una semana imposible: no se le pide nada, no pierde la racha y el plan le espera donde lo dejó.'}
+            <Text style={styles.mutedText}>
+              Segundos totales de aguante (ejercicios por tiempo), separados por
+              empuje y tirón.
             </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-        </Pressable>
-      </Card>
+            <View style={styles.isoTotalsRow}>
+              <View style={styles.isoStat}>
+                <Text style={styles.isoStatValue}>{isoTotals.push.toLocaleString('es-ES')}s</Text>
+                <Text style={styles.isoStatLabel}>Empuje</Text>
+              </View>
+              <View style={styles.isoStat}>
+                <Text style={styles.isoStatValue}>{isoTotals.pull.toLocaleString('es-ES')}s</Text>
+                <Text style={styles.isoStatLabel}>Tirón</Text>
+              </View>
+              <View style={styles.isoStat}>
+                <Text style={styles.isoStatValue}>{isoOther.toLocaleString('es-ES')}s</Text>
+                <Text style={styles.isoStatLabel}>Otros</Text>
+              </View>
+            </View>
+            <LineChart
+              points={weekly.map((w) => ({ date: w.weekStart, value: w.isoSeconds }))}
+              unit="s"
+              emptyMessage="Sin ejercicios isométricos (por segundos) registrados todavía."
+            />
+
+            {(() => {
+              // Ritmo de progreso proyectado de sus ejercicios más recientes.
+              const trends = listExercisesInLogs(workoutLogs)
+                .slice(0, 4)
+                .map((e) => exerciseProgression(workoutLogs, e.exerciseId))
+                .filter((prog): prog is NonNullable<typeof prog> => prog !== null)
+                .map((prog) => ({
+                  name: prog.name,
+                  unit: prog.measure === 'seconds' ? 's' : prog.hasWeight ? 'kg' : 'reps',
+                  slope: trendPerMonth(
+                    prog.points.map((p) => ({
+                      date: p.date,
+                      value: prog.hasWeight ? p.weight : p.reps,
+                    }))
+                  ),
+                }))
+                .filter((t) => t.slope !== null);
+              if (trends.length === 0) return null;
+              return (
+                <>
+                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+                    Ritmo de progreso
+                  </Text>
+                  <Text style={styles.mutedText}>Tendencia al mes según sus últimas sesiones.</Text>
+                  {trends.map((t) => {
+                    const v = t.slope as number;
+                    const flat = Math.abs(v) < 0.3;
+                    const color = flat ? colors.textMuted : v > 0 ? colors.success : colors.danger;
+                    const label = flat
+                      ? 'estable'
+                      : `${v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} ${t.unit}/mes`;
+                    return (
+                      <View key={t.name} style={styles.trendRow}>
+                        <Text style={styles.trendName} numberOfLines={1}>
+                          {t.name}
+                        </Text>
+                        <Ionicons
+                          name={flat ? 'remove' : v > 0 ? 'trending-up' : 'trending-down'}
+                          size={14}
+                          color={color}
+                        />
+                        <Text style={[styles.trendValue, { color }]}>{label}</Text>
+                      </View>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="alumno-habitos"
+            icon="checkmark-done-outline"
+            title="Hábitos diarios"
+            hint={habits.length > 0 ? `${habits.length}` : 'Ninguno'}
+            defaultOpen={false}
+          >
+            <Text style={styles.mutedText}>
+              Asigna hábitos que el alumno marcará cada día desde su inicio.
+            </Text>
+            {habits.map((h) => {
+              const weekCount = habitLogs.filter((l) => l.habitId === h.id).length;
+              return (
+                <View key={h.id} style={styles.habitManageRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.logTitle}>{h.name}</Text>
+                    <Text style={styles.logDate}>{weekCount}/7 días esta semana</Text>
+                  </View>
+                  <Pressable onPress={() => handleDeleteHabit(h.id)} hitSlop={6}>
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                  </Pressable>
+                </View>
+              );
+            })}
+            <View style={styles.habitAddRow}>
+              <TextField
+                placeholder="Ej: Dormir 8 horas"
+                value={newHabit}
+                onChangeText={setNewHabit}
+                style={{ flex: 1, marginBottom: 0 }}
+              />
+              <Button
+                title="Añadir"
+                variant="secondary"
+                onPress={handleAddHabit}
+                loading={addingHabit}
+                disabled={!newHabit.trim()}
+              />
+            </View>
+          </CollapsibleCard>
+
+          {/* Por dónde va en cada curso. Solo los publicados: los borradores no ha
+              podido verlos y saldrían siempre a cero, como si el alumno fallara. */}
+          {(() => {
+            const publicados = courses.filter((c) => c.published);
+            if (publicados.length === 0) return null;
+            const dias = diasDeAlta(client.createdAt);
+            const estados = publicados
+              .map((c) => estadoDeCurso(c, courseSeen[c.id], dias))
+              .filter((e) => e.total > 0);
+            if (estados.length === 0) return null;
+            return (
+              <Card style={styles.section}>
+                <View style={styles.titleRow}>
+                  <Ionicons name="school-outline" size={16} color={colors.primary} />
+                  <Text style={styles.sectionTitle}>Cursos</Text>
+                </View>
+                {estados.map((e) => (
+                  <View key={e.courseId} style={styles.cursoFila}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cursoNombre} numberOfLines={1}>
+                        {e.titulo}
+                      </Text>
+                      <View style={styles.cursoBarra}>
+                        <View
+                          style={[styles.cursoBarraFill, { width: `${e.ratio * 100}%` }]}
+                        />
+                      </View>
+                    </View>
+                    <Text style={styles.cursoPct}>
+                      {e.terminado ? 'Hecho' : `${e.hechas}/${e.total}`}
+                    </Text>
+                  </View>
+                ))}
+              </Card>
+            );
+          })()}
+        </>
+      ) : null}
+
+      {pestana === 'nutricion' ? (
+        <>
+          <CollapsibleCard
+            id="alumno-nutricion"
+            icon="nutrition-outline"
+            title="Plan nutricional"
+            hint={
+              nutritionPlan
+                ? `${nutritionPlan.dailyCalories} kcal`
+                : client.nutritionTargets
+                  ? `${client.nutritionTargets.dailyCalories} kcal`
+                  : 'Sin plan'
+            }
+            defaultOpen={false}
+          >
+            {nutritionPlan ? (
+              <>
+                <Text style={styles.routineName}>{nutritionPlan.name}</Text>
+                <Text style={styles.routineMeta}>
+                  {nutritionPlan.dailyCalories} kcal · P{nutritionPlan.proteinG}g C
+                  {nutritionPlan.carbsG}g G{nutritionPlan.fatG}g
+                </Text>
+              </>
+            ) : client.nutritionTargets ? (
+              <>
+                <Text style={styles.routineName}>Plan del alumno (onboarding)</Text>
+                <Text style={styles.routineMeta}>
+                  {client.nutritionTargets.dailyCalories} kcal · P{client.nutritionTargets.proteinG}g C
+                  {client.nutritionTargets.carbsG}g G{client.nutritionTargets.fatG}g
+                </Text>
+                <Text style={[styles.mutedText, { marginTop: spacing.xs }]}>
+                  Plan oficial calculado por el alumno en el onboarding. Puedes ajustarlo si lo ves
+                  necesario.
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.mutedText}>Este cliente no tiene un plan nutricional activo.</Text>
+            )}
+            <Button
+              title={nutritionPlan ? 'Editar plan' : client.nutritionTargets ? 'Ver plan' : 'Crear plan'}
+              variant="secondary"
+              onPress={() => router.push(`/(trainer)/clients/${id}/nutrition`)}
+              style={{ marginTop: spacing.md }}
+            />
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="alumno-peso"
+            icon="trending-down-outline"
+            title="Evolución del peso"
+            hint={weightLogs.length > 0 ? `${weightLogs[0].weightKg} kg` : 'Sin registros'}
+            defaultOpen={false}
+          >
+            <WeightChart logs={weightLogs} />
+          </CollapsibleCard>
+
+          <CollapsibleCard
+            id="alumno-fotos"
+            icon="camera-outline"
+            title="Fotos de progreso"
+            hint={photos.length > 0 ? `${photos.length}` : 'Ninguna'}
+            defaultOpen={false}
+          >
+            {photos.length === 0 ? (
+              <Text style={styles.mutedText}>El cliente todavía no ha subido fotos.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoStrip}>
+                {photos.slice(0, 12).map((p) => (
+                  <View key={p.id} style={styles.photoItem}>
+                    <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
+                    <Text style={styles.photoDate}>
+                      {diaMes(p.date)}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </CollapsibleCard>
+        </>
+      ) : null}
 
       <PausaPlanSheet
         visible={pausaAbierta}
@@ -579,423 +1040,6 @@ export default function ClientDetailScreen() {
         guardando={guardandoPausa}
         onGuardar={guardarPausa}
       />
-
-      {hayObjetivos(metas) || client.targetWeightKg ? (
-        <Card style={styles.section}>
-          {hayObjetivos(metas) ? (
-            <>
-              <Text style={styles.miniLabel}>Sus objetivos</Text>
-              {objetivosVisibles(metas).map((o) => (
-                <View key={o.etiqueta} style={styles.objetivoFila}>
-                  <Text style={styles.objetivoPlazo}>{o.etiqueta}</Text>
-                  <Text style={styles.objetivoTexto}>{o.texto}</Text>
-                </View>
-              ))}
-            </>
-          ) : null}
-          {client.targetWeightKg ? (
-            <Text style={[styles.miniValue, { marginTop: hayObjetivos(metas) ? spacing.md : 0 }]}>
-              Peso objetivo: {client.targetWeightKg} kg
-            </Text>
-          ) : null}
-        </Card>
-      ) : null}
-
-      {/* Por dónde va en cada curso. Solo los publicados: los borradores no ha
-          podido verlos y saldrían siempre a cero, como si el alumno fallara. */}
-      {(() => {
-        const publicados = courses.filter((c) => c.published);
-        if (publicados.length === 0) return null;
-        const dias = diasDeAlta(client.createdAt);
-        const estados = publicados
-          .map((c) => estadoDeCurso(c, courseSeen[c.id], dias))
-          .filter((e) => e.total > 0);
-        if (estados.length === 0) return null;
-        return (
-          <Card style={styles.section}>
-            <View style={styles.titleRow}>
-              <Ionicons name="school-outline" size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Cursos</Text>
-            </View>
-            {estados.map((e) => (
-              <View key={e.courseId} style={styles.cursoFila}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cursoNombre} numberOfLines={1}>
-                    {e.titulo}
-                  </Text>
-                  <View style={styles.cursoBarra}>
-                    <View
-                      style={[styles.cursoBarraFill, { width: `${e.ratio * 100}%` }]}
-                    />
-                  </View>
-                </View>
-                <Text style={styles.cursoPct}>
-                  {e.terminado ? 'Hecho' : `${e.hechas}/${e.total}`}
-                </Text>
-              </View>
-            ))}
-          </Card>
-        );
-      })()}
-
-      <CollapsibleCard
-        id="alumno-notas"
-        icon="lock-closed-outline"
-        title="Notas privadas"
-        hint={coachNote.trim() ? coachNote.trim().slice(0, 40) : 'Sin notas'}
-        defaultOpen={false}
-      >
-        <Text style={styles.mutedText}>Solo tú las ves (lesiones, preferencias, objetivos…).</Text>
-        <TextField
-          value={coachNote}
-          onChangeText={setCoachNote}
-          onBlur={handleSaveNote}
-          placeholder="Escribe aquí tus notas sobre este alumno..."
-          multiline
-          numberOfLines={4}
-          style={{ height: 96, textAlignVertical: 'top', marginTop: spacing.sm, marginBottom: 0 }}
-        />
-        {noteSaved ? <Text style={styles.confirmSavedText}>Nota guardada</Text> : null}
-      </CollapsibleCard>
-
-      {/*
-       * AJUSTES DEL ALUMNO: lo que se decide una vez y no se vuelve a mirar.
-       * Eran tres tarjetas —VIP, pasos y pedirle el esfuerzo— con un solo
-       * control cada una. El esfuerzo se fue a la rutina, que es donde se
-       * decide cómo se entrena; VIP y pasos van juntos, y plegados dicen lo
-       * que hay puesto sin abrirlos.
-       */}
-      <CollapsibleCard
-        id="alumno-ajustes"
-        icon="options-outline"
-        title="Ajustes del alumno"
-        hint={`${client?.vip === true ? 'VIP · ' : ''}${frase`${conMiles(client?.stepGoal ?? OBJETIVO_POR_DEFECTO)} pasos`}`}
-        defaultOpen={false}
-      >
-        <View style={styles.rirRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.ajusteTitulo}>Alumno VIP</Text>
-            <Text style={styles.mutedText}>
-              Ve también las clases que hayas marcado como VIP en tus cursos. El resto ni las ve.
-            </Text>
-          </View>
-          <Switch
-            value={client?.vip === true}
-            onValueChange={async (v) => {
-              if (!id || !client) return;
-              setClient({ ...client, vip: v });
-              try {
-                await setClientVip(id, v);
-              } catch {
-                setClient({ ...client, vip: !v });
-                showToast('No se pudo guardar');
-              }
-            }}
-            trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
-            thumbColor={colors.white}
-          />
-        </View>
-
-        {/* Los pasos se guardan solos al salir del campo, como las notas: un
-            botón de "Guardar" para un número era un toque de más. */}
-        <Text style={[styles.ajusteTitulo, { marginTop: spacing.md }]}>Pasos al día</Text>
-        <Text style={styles.mutedText}>
-          Los ve en su nutrición, y lo que ande suma calorías al día. Vacío: {conMiles(OBJETIVO_POR_DEFECTO)}.
-        </Text>
-        <TextField
-          value={pasosInput}
-          onChangeText={(v) => {
-            setPasosInput(v);
-            setPasosError(null);
-          }}
-          onBlur={handleSaveStepGoal}
-          onSubmitEditing={handleSaveStepGoal}
-          placeholder={String(OBJETIVO_POR_DEFECTO)}
-          keyboardType="number-pad"
-          returnKeyType="done"
-          containerStyle={{ marginTop: spacing.sm, marginBottom: 0 }}
-          style={{ marginBottom: 0 }}
-        />
-        {pasosError ? <Text style={styles.confirmText}>{pasosError}</Text> : null}
-        {pasosSaved ? <Text style={styles.confirmSavedText}>Objetivo guardado</Text> : null}
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        id="alumno-nutricion"
-        icon="nutrition-outline"
-        title="Plan nutricional"
-        hint={
-          nutritionPlan
-            ? `${nutritionPlan.dailyCalories} kcal`
-            : client.nutritionTargets
-              ? `${client.nutritionTargets.dailyCalories} kcal`
-              : 'Sin plan'
-        }
-        defaultOpen={false}
-      >
-        {nutritionPlan ? (
-          <>
-            <Text style={styles.routineName}>{nutritionPlan.name}</Text>
-            <Text style={styles.routineMeta}>
-              {nutritionPlan.dailyCalories} kcal · P{nutritionPlan.proteinG}g C
-              {nutritionPlan.carbsG}g G{nutritionPlan.fatG}g
-            </Text>
-          </>
-        ) : client.nutritionTargets ? (
-          <>
-            <Text style={styles.routineName}>Plan del alumno (onboarding)</Text>
-            <Text style={styles.routineMeta}>
-              {client.nutritionTargets.dailyCalories} kcal · P{client.nutritionTargets.proteinG}g C
-              {client.nutritionTargets.carbsG}g G{client.nutritionTargets.fatG}g
-            </Text>
-            <Text style={[styles.mutedText, { marginTop: spacing.xs }]}>
-              Plan oficial calculado por el alumno en el onboarding. Puedes ajustarlo si lo ves
-              necesario.
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.mutedText}>Este cliente no tiene un plan nutricional activo.</Text>
-        )}
-        <Button
-          title={nutritionPlan ? 'Editar plan' : client.nutritionTargets ? 'Ver plan' : 'Crear plan'}
-          variant="secondary"
-          onPress={() => router.push(`/(trainer)/clients/${id}/nutrition`)}
-          style={{ marginTop: spacing.md }}
-        />
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        id="alumno-peso"
-        icon="trending-down-outline"
-        title="Evolución del peso"
-        hint={weightLogs.length > 0 ? `${weightLogs[0].weightKg} kg` : 'Sin registros'}
-        defaultOpen={false}
-      >
-        <WeightChart logs={weightLogs} />
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        id="alumno-fotos"
-        icon="camera-outline"
-        title="Fotos de progreso"
-        hint={photos.length > 0 ? `${photos.length}` : 'Ninguna'}
-        defaultOpen={false}
-      >
-        {photos.length === 0 ? (
-          <Text style={styles.mutedText}>El cliente todavía no ha subido fotos.</Text>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoStrip}>
-            {photos.slice(0, 12).map((p) => (
-              <View key={p.id} style={styles.photoItem}>
-                <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
-                <Text style={styles.photoDate}>
-                  {diaMes(p.date)}
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-        )}
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        id="alumno-habitos"
-        icon="checkmark-done-outline"
-        title="Hábitos diarios"
-        hint={habits.length > 0 ? `${habits.length}` : 'Ninguno'}
-        defaultOpen={false}
-      >
-        <Text style={styles.mutedText}>
-          Asigna hábitos que el alumno marcará cada día desde su inicio.
-        </Text>
-        {habits.map((h) => {
-          const weekCount = habitLogs.filter((l) => l.habitId === h.id).length;
-          return (
-            <View key={h.id} style={styles.habitManageRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.logTitle}>{h.name}</Text>
-                <Text style={styles.logDate}>{weekCount}/7 días esta semana</Text>
-              </View>
-              <Pressable onPress={() => handleDeleteHabit(h.id)} hitSlop={6}>
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-              </Pressable>
-            </View>
-          );
-        })}
-        <View style={styles.habitAddRow}>
-          <TextField
-            placeholder="Ej: Dormir 8 horas"
-            value={newHabit}
-            onChangeText={setNewHabit}
-            style={{ flex: 1, marginBottom: 0 }}
-          />
-          <Button
-            title="Añadir"
-            variant="secondary"
-            onPress={handleAddHabit}
-            loading={addingHabit}
-            disabled={!newHabit.trim()}
-          />
-        </View>
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        id="alumno-actividad"
-        icon="pulse-outline"
-        title="Actividad (12 semanas)"
-        hint={`${workoutLogs.length}`}
-        defaultOpen={false}
-      >
-        <Text style={styles.mutedText}>Cada punto dorado es un día entrenado.</Text>
-        <View style={{ marginTop: spacing.sm }}>
-          <ConsistencyMap days={trainingDays(workoutLogs)} />
-        </View>
-        <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Volumen semanal (kg)</Text>
-        <LineChart
-          points={weekly.map((w) => ({ date: w.weekStart, value: w.volumeKg }))}
-          unit="kg"
-          emptyMessage="Sin entrenamientos con peso registrados todavía."
-        />
-
-        <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-          Isométricos: segundos por semana
-        </Text>
-        <Text style={styles.mutedText}>
-          Segundos totales de aguante (ejercicios por tiempo), separados por
-          empuje y tirón.
-        </Text>
-        <View style={styles.isoTotalsRow}>
-          <View style={styles.isoStat}>
-            <Text style={styles.isoStatValue}>{isoTotals.push.toLocaleString('es-ES')}s</Text>
-            <Text style={styles.isoStatLabel}>Empuje</Text>
-          </View>
-          <View style={styles.isoStat}>
-            <Text style={styles.isoStatValue}>{isoTotals.pull.toLocaleString('es-ES')}s</Text>
-            <Text style={styles.isoStatLabel}>Tirón</Text>
-          </View>
-          <View style={styles.isoStat}>
-            <Text style={styles.isoStatValue}>{isoOther.toLocaleString('es-ES')}s</Text>
-            <Text style={styles.isoStatLabel}>Otros</Text>
-          </View>
-        </View>
-        <LineChart
-          points={weekly.map((w) => ({ date: w.weekStart, value: w.isoSeconds }))}
-          unit="s"
-          emptyMessage="Sin ejercicios isométricos (por segundos) registrados todavía."
-        />
-
-        {(() => {
-          // Ritmo de progreso proyectado de sus ejercicios más recientes.
-          const trends = listExercisesInLogs(workoutLogs)
-            .slice(0, 4)
-            .map((e) => exerciseProgression(workoutLogs, e.exerciseId))
-            .filter((prog): prog is NonNullable<typeof prog> => prog !== null)
-            .map((prog) => ({
-              name: prog.name,
-              unit: prog.measure === 'seconds' ? 's' : prog.hasWeight ? 'kg' : 'reps',
-              slope: trendPerMonth(
-                prog.points.map((p) => ({
-                  date: p.date,
-                  value: prog.hasWeight ? p.weight : p.reps,
-                }))
-              ),
-            }))
-            .filter((t) => t.slope !== null);
-          if (trends.length === 0) return null;
-          return (
-            <>
-              <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                Ritmo de progreso
-              </Text>
-              <Text style={styles.mutedText}>Tendencia al mes según sus últimas sesiones.</Text>
-              {trends.map((t) => {
-                const v = t.slope as number;
-                const flat = Math.abs(v) < 0.3;
-                const color = flat ? colors.textMuted : v > 0 ? colors.success : colors.danger;
-                const label = flat
-                  ? 'estable'
-                  : `${v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} ${t.unit}/mes`;
-                return (
-                  <View key={t.name} style={styles.trendRow}>
-                    <Text style={styles.trendName} numberOfLines={1}>
-                      {t.name}
-                    </Text>
-                    <Ionicons
-                      name={flat ? 'remove' : v > 0 ? 'trending-up' : 'trending-down'}
-                      size={14}
-                      color={color}
-                    />
-                    <Text style={[styles.trendValue, { color }]}>{label}</Text>
-                  </View>
-                );
-              })}
-            </>
-          );
-        })()}
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        id="alumno-historial"
-        icon="time-outline"
-        title="Historial de entrenamientos"
-        hint={workoutLogs.length > 0 ? `${workoutLogs.length}` : 'Vacío'}
-        defaultOpen={false}
-      >
-        {workoutLogs.length === 0 ? (
-          <Text style={styles.mutedText}>Todavía no ha registrado entrenamientos.</Text>
-        ) : (
-          workoutLogs.slice(0, 10).map((log) => (
-            <Pressable
-              key={log.id}
-              onPress={() => router.push(`/(trainer)/clients/${id}/session?logId=${log.id}`)}
-            >
-              <View style={styles.logRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.logTitle}>{log.dayName}</Text>
-                  <Text style={styles.logDate}>
-                    {fechaNumerica(log.date)}
-                  </Text>
-                </View>
-                <Text style={styles.logExercises}>{log.exercises.length} ejercicios</Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-              </View>
-            </Pressable>
-          ))
-        )}
-      </CollapsibleCard>
-
-      <CollapsibleCard
-        id="alumno-gestion"
-        icon="person-remove-outline"
-        title="Gestión del alumno"
-        defaultOpen={false}
-        style={styles.ultimaTarjeta}
-      >
-        <Text style={styles.mutedText}>
-          Sácalo de tu grupo para que deje de aparecer en tus clientes. No se
-          borra su cuenta ni su historial; podrá vincularse a otro entrenador
-          con un código.
-        </Text>
-        {confirmRemove ? (
-          <Text style={styles.confirmText}>
-            ¿Seguro? Pulsa de nuevo para confirmar.
-          </Text>
-        ) : null}
-        <Button
-          title={confirmRemove ? 'Confirmar: sacar del grupo' : 'Sacar del grupo'}
-          variant="danger"
-          onPress={handleRemoveFromGroup}
-          loading={removing}
-          style={{ marginTop: spacing.md }}
-        />
-        {confirmRemove ? (
-          <Button
-            title="Cancelar"
-            variant="secondary"
-            onPress={() => setConfirmRemove(false)}
-            style={{ marginTop: spacing.sm }}
-          />
-        ) : null}
-      </CollapsibleCard>
     </ScreenContainer>
   );
 }

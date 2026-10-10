@@ -19,8 +19,11 @@ import { updateUserProfile } from '../../lib/firestore/users';
 import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { getRutinaDiaria } from '../../lib/firestore/rutinaDiaria';
+import { hayRutinaDiaria } from '../../lib/rutinaDiaria';
 import { pickAvatar } from '../../lib/image';
 import {
+  cancelarAvisosGtg,
   cancelarAvisosOlvido,
   cancelWorkoutReminder,
 } from '../../lib/notifications';
@@ -73,6 +76,20 @@ export default function ClientProfileScreen() {
   const reminderMinute = profile?.reminderMinute ?? 0;
 
   const [missedOn, setMissedOn] = useState(Boolean(profile?.missedWorkoutRemindersEnabled));
+  // Los avisos de la rutina de cada día: encendidos salvo que se apaguen, y el
+  // interruptor solo sale a quien tiene una (no se apaga lo que no existe).
+  const [gtgOn, setGtgOn] = useState(profile?.dailyRoutineRemindersEnabled !== false);
+  const [tieneRutinaDiaria, setTieneRutinaDiaria] = useState(false);
+  const toggleGtg = async () => {
+    if (!profile) return;
+    const next = !gtgOn;
+    setGtgOn(next);
+    // Al apagarlos se quitan ya; al encenderlos los pone el inicio la próxima
+    // vez que se abra, con lo que quede por hacer ese día.
+    if (!next) await cancelarAvisosGtg();
+    await updateUserProfile(profile.uid, { dailyRoutineRemindersEnabled: next });
+    await refreshProfile();
+  };
 
   /**
    * Insistir cada hora es mucho ruido, así que se pide expresamente y se puede
@@ -112,6 +129,9 @@ export default function ClientProfileScreen() {
     ]);
     setAchievements(computeAchievements(workoutLogs, weightLogs));
     setLoading(false);
+    getRutinaDiaria(profile.uid)
+      .then((r) => setTieneRutinaDiaria(hayRutinaDiaria(r)))
+      .catch(() => {});
   }, [profile]);
 
   useFocusEffect(
@@ -357,6 +377,25 @@ export default function ClientProfileScreen() {
           22:00. En cuanto la registres, paran.
           {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
         </Text>
+
+        {tieneRutinaDiaria ? (
+          <>
+            <View style={[styles.reminderTopRow, styles.reminderSegunda]}>
+              <Text style={styles.reminderSubtitulo}>Tu rutina de cada día</Text>
+              <Pressable
+                onPress={toggleGtg}
+                style={[styles.switch, gtgOn && styles.switchOn]}
+                hitSlop={6}
+              >
+                <View style={[styles.switchKnob, gtgOn && styles.switchKnobOn]} />
+              </Pressable>
+            </View>
+            <Text style={styles.reminderHint}>
+              Mientras te quede algo por marcar, te aviso a las 10, 13, 16 y 19 h.
+              Cuando lo terminas, paran.
+            </Text>
+          </>
+        ) : null}
       </Card>
 
       <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={styles.signOut} />
@@ -438,6 +477,8 @@ const styles = StyleSheet.create({
   nameHint: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 17 },
   reminderTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reminderHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  reminderSegunda: { paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
+  reminderSubtitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   reminderHint: { ...typography.small, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.md },
   switch: {
     width: 48,

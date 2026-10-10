@@ -7,6 +7,7 @@ import { frase } from '../lib/idioma';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from './ProgressBar';
 import { VisorDeVideo } from './VisorDeVideo';
+import { cancelarAvisosGtg, programarAvisosGtg } from '../lib/notifications';
 import {
   getDiaDeRutinaDiaria,
   getRutinaDiaria,
@@ -93,6 +94,28 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
     },
     [uid, rutina, dia]
   );
+
+  /*
+   * LOS AVISOS DEL DÍA (lib/avisosDiarios.ts). Se rehacen al abrir y cada vez
+   * que se marca algo, con lo que de verdad queda; un momento después y no al
+   * instante, para que marcar tres casillas seguidas no los rehaga tres veces.
+   * Sin rutina, o con los avisos apagados en el perfil, se quitan.
+   */
+  const avisosOn = profile?.dailyRoutineRemindersEnabled !== false;
+  useEffect(() => {
+    if (!uid) return;
+    if (!rutina || !hayRutinaDiaria(rutina) || !avisosOn) {
+      cancelarAvisosGtg().catch(() => {});
+      return;
+    }
+    const pr = progresoDiario(rutina, dia);
+    const t = setTimeout(() => {
+      programarAvisosGtg(rutina.nombre || NOMBRE_POR_DEFECTO, pr.total - pr.hechos, pr.total).catch(
+        () => {}
+      );
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [uid, rutina, dia, avisosOn]);
 
   if (!hayRutinaDiaria(rutina) || !rutina) return null;
 

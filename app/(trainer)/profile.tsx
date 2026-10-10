@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { t, frase  } from '../../lib/idioma';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Alert, Linking, Modal, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,7 +32,6 @@ import {
   isAdmin,
   subscriptionState,
 } from '../../lib/subscription';
-import { deleteSocialStats, subscribeSocialLeaderboard } from '../../lib/firestore/social';
 import { getRecentErrorLogs, groupErrors, type ErrorGroup } from '../../lib/firestore/errorLogs';
 import {
   buildFunnel,
@@ -40,12 +39,10 @@ import {
   sumCounters,
   type FunnelStep,
 } from '../../lib/firestore/analytics';
-import { isOnline } from '../../lib/presence';
 import { Chip, ChipRow } from '../../components/Chip';
 import { fechaCorta } from '../../lib/fechas';
-import { Dialogo } from '../../components/Dialogo';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
-import type { SocialStats, UserProfile } from '../../lib/types';
+import type { UserProfile } from '../../lib/types';
 
 /**
  * Las clases de cuenta que pagan plataforma, en el orden en que se pintan.
@@ -78,34 +75,6 @@ export default function TrainerProfileScreen() {
   const [loadingFunnel, setLoadingFunnel] = useState(false);
   /** Las cuentas que pagan plataforma: los entrenadores. */
   const [coaches, setCoaches] = useState<UserProfile[]>([]);
-  // Clasificación y presencia del grupo (socialStats de sus alumnos).
-  const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
-  const [deleteTarget, setDeleteTarget] = useState<SocialStats | null>(null);
-  // Clasificación en vivo: rachas, entrenos y presencia se refrescan solos, y
-  // un alumno recién incorporado aparece al instante. Solo escucha mientras la
-  // pantalla está delante: los alumnos refrescan su presencia cada pocos
-  // minutos y no queremos recibir esos latidos en segundo plano.
-  useFocusEffect(
-    useCallback(() => {
-      if (!profile) return;
-      return subscribeSocialLeaderboard(profile.uid, setLeaderboard);
-    }, [profile])
-  );
-
-  const confirmDeleteEntry = async () => {
-    if (!deleteTarget) return;
-    const uid = deleteTarget.uid;
-    setLeaderboard((prev) => prev.filter((s) => s.uid !== uid));
-    setDeleteTarget(null);
-    try {
-      await deleteSocialStats(uid);
-      showToast('Perfil eliminado de la clasificación');
-    } catch {
-      // La suscripción en vivo devuelve la fila a su sitio por sí sola.
-      showToast('No se pudo eliminar');
-    }
-  };
-  const onlineCount = leaderboard.filter((s) => isOnline(s.lastSeen)).length;
   const [loadingCoaches, setLoadingCoaches] = useState(false);
   const [updatingCoach, setUpdatingCoach] = useState<string | null>(null);
   const [daysInput, setDaysInput] = useState<Record<string, string>>({});
@@ -519,66 +488,8 @@ export default function TrainerProfileScreen() {
         )}
       </CollapsibleCard>
 
-      <CollapsibleCard
-        id="coach-clasificacion"
-        icon="trophy-outline"
-        title="Clasificación"
-        hint={
-          onlineCount > 0
-            ? `${onlineCount} en línea`
-            : leaderboard.length > 0
-              ? `${leaderboard.length} ${leaderboard.length === 1 ? 'alumno' : 'alumnos'}`
-              : undefined
-        }
-        defaultOpen={false}
-      >
-        {leaderboard.length === 0 ? (
-          <Text style={styles.mutedSmall}>
-            Aparecerá cuando tus alumnos empiecen a entrenar con la app.
-          </Text>
-        ) : (
-          leaderboard.slice(0, 10).map((s, i) => (
-            <View key={s.uid} style={styles.rankRow}>
-              <Text style={styles.rankPos}>{i + 1}</Text>
-              <Avatar name={s.name} photoURL={s.photoURL} size={34} />
-              <View style={{ flex: 1 }}>
-                <View style={styles.rankNameRow}>
-                  <Text style={styles.rankName} numberOfLines={1}>
-                    {s.name}
-                  </Text>
-                  {isOnline(s.lastSeen) ? <View style={styles.onlineDot} /> : null}
-                </View>
-                <Text style={styles.rankMeta}>
-                  {s.sessionsThisWeek} esta semana · {s.totalWorkouts} totales
-                  {s.currentStreak > 1 ? ` · racha ${s.currentStreak}` : ''}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => setDeleteTarget(s)}
-                hitSlop={8}
-                style={styles.rankDelete}
-              >
-                <Ionicons name="trash-outline" size={17} color={colors.textFaint} />
-              </Pressable>
-            </View>
-          ))
-        )}
-        {leaderboard.length > 0 ? (
-          <Text style={styles.rankHint}>
-            Mantén la lista limpia: elimina perfiles antiguos o de prueba con la papelera.
-          </Text>
-        ) : null}
-      </CollapsibleCard>
-
-      <Dialogo
-        visible={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        icono="trash-outline"
-        titulo="¿Quitar de la clasificación?"
-        texto={frase`Se eliminará a ${deleteTarget?.name ?? ''} de la tabla. Sus entrenos e historial no se tocan. Si sigue usando la app y entrena, volverá a aparecer.`}
-        accion="Eliminar"
-        onAccion={confirmDeleteEntry}
-      />
+      {/* La clasificación del grupo se fue a Clientes
+          (components/ClasificacionDelGrupo.tsx): es donde se mira al grupo. */}
 
       <CollapsibleCard
         id="coach-suscripcion"
@@ -807,22 +718,6 @@ const styles = StyleSheet.create({
   email: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
-  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
-  mutedSmall: { ...typography.small, color: colors.textFaint },
-  rankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  rankPos: { ...typography.h3, color: colors.primaryBright, width: 24, textAlign: 'center' },
-  rankNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  rankName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flexShrink: 1 },
-  rankMeta: { ...typography.small, color: colors.textMuted, marginTop: 1 },
-  rankDelete: { padding: 6 },
-  rankHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm, lineHeight: 17 },
   subHeader: {
     flexDirection: 'row',
     alignItems: 'center',

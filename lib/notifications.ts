@@ -3,9 +3,10 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { t } from './idioma';
+import { frase, t } from './idioma';
 import { getUserProfile } from './firestore/users';
 import { DIAS_VISTA, diasPendientes, horasDeAviso, textoDeAviso, TOPE_AVISOS } from './olvido';
+import { avisosDelGtg } from './avisosDiarios';
 import type { ContextoDelCiclo } from './schedule';
 import type { Routine } from './types';
 
@@ -236,6 +237,70 @@ export async function cancelarAvisosOlvido(): Promise<void> {
     await Promise.all(
       puestos
         .filter((n) => n.identifier.startsWith(OLVIDO_PREFIJO))
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+    );
+  } catch {
+    // Si no había ninguno, no pasa nada.
+  }
+}
+
+const GTG_PREFIJO = 'rutina-diaria-';
+
+/**
+ * Los avisos de la rutina de cada día (ver lib/avisosDiarios.ts).
+ *
+ * Se rehacen enteros cada vez: al abrir el inicio y al marcar algo. Así el de
+ * las 16:00 dice lo que de verdad queda, y si a las 15:00 ya está todo hecho,
+ * no suena. Devuelve cuántos quedaron puestos.
+ */
+export async function programarAvisosGtg(
+  nombre: string,
+  quedanHoy: number,
+  total: number,
+  ahora = Date.now()
+): Promise<number> {
+  if (Platform.OS === 'web') return 0;
+  try {
+    const existing = await Notifications.getPermissionsAsync();
+    let granted = existing.status === 'granted';
+    if (!granted && existing.status !== 'denied') {
+      const req = await Notifications.requestPermissionsAsync();
+      granted = req.status === 'granted';
+    }
+    if (!granted) return 0;
+    await cancelarAvisosGtg();
+    const avisos = avisosDelGtg(quedanHoy, ahora);
+    for (const { cuando, esHoy } of avisos) {
+      await Notifications.scheduleNotificationAsync({
+        identifier: `${GTG_PREFIJO}${cuando}`,
+        content: {
+          title: nombre,
+          body: esHoy
+            ? quedanHoy === 1
+              ? t('Te queda 1. Un momento y está.')
+              : frase`Te quedan ${quedanHoy} de ${total}. Una ahora, que son cortas.`
+            : frase`Hoy toca: ${total} cosas cortas repartidas por el día.`,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: new Date(cuando),
+        },
+      });
+    }
+    return avisos.length;
+  } catch {
+    return 0;
+  }
+}
+
+/** Quita los avisos de la rutina de cada día (apagados, o ya sin rutina). */
+export async function cancelarAvisosGtg(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    const puestos = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      puestos
+        .filter((n) => n.identifier.startsWith(GTG_PREFIJO))
         .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
     );
   } catch {

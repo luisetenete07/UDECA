@@ -15,10 +15,20 @@ import { useAuth } from '../../lib/auth-context';
 import { clientIsLocked } from '../../lib/subscription';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
+import { getPublishedCourses } from '../../lib/firestore/courses';
+import { getSocialLeaderboard } from '../../lib/firestore/social';
+import { cursosParaMi, esVip } from '../../lib/vip';
 import { useTabScreenOptions } from '../../lib/navTheme';
 import { t, useT  } from '../../lib/idioma';
 
 const onboardingKey = (uid: string) => `udeca-onboarding-${uid}`;
+const pestanasKey = (uid: string) => `udeca-pestanas-${uid}`;
+
+/** Qué pestañas tienen algo dentro. `null` mientras no se sabe: se enseñan. */
+interface PestanasConAlgo {
+  cursos: boolean;
+  social: boolean;
+}
 
 export default function ClientLayout() {
   const { loading, firebaseUser, profile, emailVerified, refreshProfile } = useAuth();
@@ -45,6 +55,54 @@ export default function ClientLayout() {
       clearInterval(tick);
     };
   }, [profile]);
+
+  /*
+   * LAS PESTAÑAS VACÍAS NO SE ENSEÑAN.
+   *
+   * "Cursos" sin cursos y "Social" sin compañeros eran dos de las cinco
+   * pestañas llevando a una pantalla que dice "aún no hay nada". Se miran al
+   * entrar y al volver a la app (así aparecen en cuanto el entrenador publica
+   * un curso o llega un compañero), y lo último que se supo se guarda para que
+   * al abrir no salgan y se vayan. Si la consulta falla, se enseñan: esconder
+   * algo que sí existe es peor que enseñar algo vacío.
+   */
+  const [pestanas, setPestanas] = useState<PestanasConAlgo | null>(null);
+  const uid = profile?.uid;
+  const trainerId = profile?.trainerId;
+  const vip = esVip(profile);
+  useEffect(() => {
+    if (!uid || !trainerId) return;
+    let vivo = true;
+    let mirado = false;
+    AsyncStorage.getItem(pestanasKey(uid))
+      .then((v) => {
+        if (vivo && !mirado && v) setPestanas(JSON.parse(v) as PestanasConAlgo);
+      })
+      .catch(() => {});
+    const mirar = () =>
+      Promise.all([
+        getPublishedCourses(trainerId)
+          .then((cs) => cursosParaMi(cs, vip).length > 0)
+          .catch(() => true),
+        getSocialLeaderboard(trainerId)
+          .then((filas) => filas.some((f) => f.uid !== uid))
+          .catch(() => true),
+      ]).then(([cursos, social]) => {
+        if (!vivo) return;
+        mirado = true;
+        const nuevas = { cursos, social };
+        setPestanas(nuevas);
+        AsyncStorage.setItem(pestanasKey(uid), JSON.stringify(nuevas)).catch(() => {});
+      });
+    mirar();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') mirar();
+    });
+    return () => {
+      vivo = false;
+      sub.remove();
+    };
+  }, [uid, trainerId, vip]);
 
   useEffect(() => {
     if (!profile || doneRef.current) return;
@@ -130,6 +188,7 @@ export default function ClientLayout() {
       <Tabs.Screen
         name="courses"
         options={{
+          href: pestanas?.cursos === false ? null : undefined,
           title: t('Cursos'),
           tabBarIcon: (props) => (
             <TabIcon {...props} outline="school-outline" filled="school" />
@@ -148,6 +207,7 @@ export default function ClientLayout() {
       <Tabs.Screen
         name="social"
         options={{
+          href: pestanas?.social === false ? null : undefined,
           title: t('Social'),
           tabBarIcon: (props) => <TabIcon {...props} outline="people-outline" filled="people" />,
         }}

@@ -270,6 +270,25 @@ export const EN: Record<string, string> = {
   // Los meses anteriores, dentro de "Hace 3 meses → hoy" (app/(client)/progress.tsx).
   'Meses anteriores': 'Previous months',
   'Aún no has entrenado este mes.': "You haven't trained yet this month.",
+  // Quién lleva días sin entrenar, en el panel del coach (lib/sinEntrenar.ts).
+  '1 alumno sin entrenar': '1 student not training',
+  '{0} alumnos sin entrenar': '{0} students not training',
+  'Sin entrenar ({0})': 'Not training ({0})',
+  '{0} días o más sin registrar un entreno. No salen los que tienen el plan en pausa.':
+    '{0} days or more without logging a workout. Students with a paused plan are left out.',
+  'Aún no ha entrenado': "Hasn't trained yet",
+  'Último entreno {0}': 'Last workout {0}',
+  // La ficha del alumno, en pestañas.
+  Resumen: 'Overview',
+  // Las calorías en el inicio del alumno.
+  '{0} kcal': '{0} kcal',
+  // Los avisos de la rutina de cada día (lib/notifications.ts, perfil del alumno).
+  'Te queda 1. Un momento y está.': 'Just 1 left. One moment and done.',
+  'Te quedan {0} de {1}. Una ahora, que son cortas.': '{0} of {1} left. Do one now, they are short.',
+  'Hoy toca: {0} cosas cortas repartidas por el día.': 'Today: {0} short things spread through the day.',
+  'Tu rutina de cada día': 'Your daily routine',
+  'Mientras te quede algo por marcar, te aviso a las 10, 13, 16 y 19 h. Cuando lo terminas, paran.':
+    "While something is left to tick, I'll remind you at 10, 13, 16 and 19 h. Once you finish, they stop.",
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

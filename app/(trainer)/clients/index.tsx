@@ -26,6 +26,7 @@ import {
 } from '../../../lib/firestore/users';
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
 import { QuickSheet } from '../../../components/QuickSheet';
+import { ClasificacionDelGrupo } from '../../../components/ClasificacionDelGrupo';
 import { getActiveRoutinesForTrainer } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
@@ -388,6 +389,13 @@ export default function ClientsScreen() {
         })}
         </Grid>
       )}
+
+      {/* La clasificación del grupo, al final de la lista: estaba en el perfil
+          del entrenador, que es el último sitio donde se busca a los alumnos. */}
+      {profile && clients.length > 0 ? (
+        <ClasificacionDelGrupo trainerId={profile.uid} />
+      ) : null}
+
         {rapidas ? (
         <QuickSheet
           visible

@@ -178,6 +178,36 @@ export function pasosAGuardar(
   return previo.steps + n;
 }
 
+/**
+ * Los días de atrás que hay que rellenar con lo que guarda el iPhone.
+ *
+ * El iPhone guarda los pasos de los últimos siete días, abras la app o no. Sin
+ * esto, el día que no se abría UDECA se quedaba a cero para siempre, aunque el
+ * teléfono supiera perfectamente cuánto se había andado: la semana salía con
+ * huecos que no eran de verdad y la media, por los suelos.
+ *
+ * Con la misma regla que hoy (`pasosAGuardar`): una lectura nunca baja lo que
+ * ya había —lo escrito a mano desde un reloj se respeta— y un día a cero no se
+ * escribe. Devuelve solo los que cambian.
+ */
+export function diasPorRellenar(
+  guardados: RegistroDePasos[],
+  lecturas: { date: number; steps: number }[]
+): { date: number; steps: number }[] {
+  const cambios: { date: number; steps: number }[] = [];
+  for (const l of lecturas) {
+    if (!(l.steps > 0)) continue;
+    const dia = inicioDelDia(l.date);
+    const previo = guardados.find((r) => inicioDelDia(r.date) === dia) ?? null;
+    const steps = pasosAGuardar(previo, l.steps, { acumulativo: false });
+    if (steps !== (previo?.steps ?? 0)) cambios.push({ date: dia, steps });
+  }
+  return cambios;
+}
+
+/** Cuántos días de atrás guarda el iPhone (sin contar hoy). */
+export const DIAS_QUE_GUARDA_EL_IPHONE = 6;
+
 /** La frase que acompaña al anillo. Ni felicita de más ni riñe. */
 export function textoDePasos(p: ProgresoDePasos): string {
   if (p.pasos === 0) return frase`Hoy aún no has andado. El objetivo son ${conMiles(p.objetivo)} pasos.`;
