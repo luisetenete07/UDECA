@@ -70,7 +70,7 @@ if (!bundle) {
 }
 
 // 1. La capacidad.
-const caps = await asc('GET', `/bundleIds/${bundle.id}/bundleIdCapabilities?limit=200`);
+const caps = await asc('GET', `/bundleIds/${bundle.id}/bundleIdCapabilities`);
 const tiene = caps.data.some((c) => c.attributes.capabilityType === 'HEALTHKIT');
 if (tiene) {
   console.log('HealthKit ya estaba activado en el App ID.');
@@ -86,10 +86,8 @@ if (tiene) {
 }
 
 // 2. Los perfiles de App Store que no lo llevan.
-const perfiles = await asc(
-  'GET',
-  `/bundleIds/${bundle.id}/profiles?limit=200&fields[profiles]=name,profileType,profileState,profileContent`
-);
+// Sin `limit` ni `fields`: las relaciones de un App ID no los admiten (400).
+const perfiles = await asc('GET', `/bundleIds/${bundle.id}/profiles`);
 let retirados = 0;
 for (const p of perfiles.data) {
   const { name, profileType, profileState, profileContent } = p.attributes;
