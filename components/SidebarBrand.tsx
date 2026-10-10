@@ -25,12 +25,13 @@ export const BRAND_HEIGHT = 96;
  * arriba a la izquierda era un cargo que no es el suyo.
  */
 export function SidebarBrand() {
-  const { profile, marca } = useAuth();
+  const { profile, marca, logo } = useAuth();
   return (
     <View style={styles.fill} pointerEvents="none">
       <View style={styles.row}>
+        {/* El logo del entrenador, si su plan lo incluye; si no, el emblema. */}
         <Image
-          source={require('../assets/android-icon-foreground.png')}
+          source={logo ? { uri: logo } : require('../assets/android-icon-foreground.png')}
           style={styles.emblem}
           resizeMode="contain"
         />

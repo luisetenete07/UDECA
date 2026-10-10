@@ -2,6 +2,7 @@ import { diaMes, fechaLegible, inicioDeLaSemana, masDias, mayusculaInicial } fro
 import { frase } from './idioma';
 import { setsByMuscleGroup, weeklyExerciseMatrix, workoutsByMonth, type MatrixCell, type MatrixRow } from './stats';
 import { UDECA_LOGO_DATA_URI } from './udecaLogo';
+import { marcaActual } from './marcaActual';
 import type { Routine, UserProfile, WeightLog, WorkoutLog } from './types';
 
 /**
@@ -196,6 +197,15 @@ const ARROW: Record<Direction, string> = {
 };
 
 const fmtKg = (n: number) => `${n.toFixed(1).replace('.', ',')} kg`;
+
+/**
+ * Quién firma el informe: la marca del entrenador ("IRON BOX · con UDECA") o
+ * la de la casa. El logo de arriba sigue la misma regla (ver lib/marcaActual.ts).
+ */
+function firmaDelInforme(): string {
+  const { marca } = marcaActual();
+  return marca ? `${marca} · con UDECA` : 'UDECA · Universidad de Calistenia';
+}
 
 /**
  * Informe de progreso con la identidad de UDECA: resumen del periodo, mejoría
@@ -474,9 +484,9 @@ export function buildClientReportHtml(data: ClientReportData): string {
   <body>
     <div class="sheet">
       <div class="head">
-        <img src="${UDECA_LOGO_DATA_URI}" alt="" />
+        <img src="${marcaActual().logo ?? UDECA_LOGO_DATA_URI}" alt="" />
         <div class="who">
-          <div class="brand">UDECA · Universidad de Calistenia</div>
+          <div class="brand">${escapeHtml(firmaDelInforme())}</div>
           <h1>${escapeHtml(client.name)}</h1>
           <div class="sub">Informe de progreso${
             client.level ? ` · ${escapeHtml(client.level)}` : ''
@@ -628,7 +638,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
       }
 
       <div class="foot">
-        <span>UDECA · Universidad de Calistenia</span>
+        <span>${escapeHtml(firmaDelInforme())}</span>
         <span>www.udeca.app</span>
       </div>
     </div>

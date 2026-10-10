@@ -156,6 +156,16 @@ export async function setBrandName(uid: string, marca: string) {
   });
 }
 
+/**
+ * El logo del entrenador. `null` lo quita (y vuelve el emblema de UDECA).
+ * Se guarda tal cual llega de `pickLogo`, ya pequeño.
+ */
+export async function setBrandLogo(uid: string, logo: string | null) {
+  await updateDoc(doc(db, 'users', uid), {
+    brandLogo: logo ? logo : deleteField(),
+  });
+}
+
 /** El entrenador cambia el estado (activo/pausa/inactivo) de un cliente suyo. */
 export async function updateClientStatus(
   clientId: string,

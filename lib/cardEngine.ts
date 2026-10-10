@@ -25,6 +25,12 @@ export type CardKind = 'session' | 'record' | 'report' | 'member';
  * no la decisión.
  */
 export interface CardTextos {
+  /**
+   * La marca del entrenador ("IRON BOX"), o vacía para la de UDECA. Con marca
+   * propia, el rótulo de debajo pasa a "con UDECA": la tarjeta es del
+   * entrenador, y quien la ve en redes sabe con qué está hecha.
+   */
+  marca?: string;
   sesionCompletada: string;
   duracion: string;
   series: string;
@@ -166,10 +172,10 @@ function drawFrame(ctx, logo) {
   if (logo) ctx.drawImage(logo, W / 2 - 52, 44, 104, 104);
   ctx.fillStyle = GOLD_SOFT;
   ctx.font = '600 54px ' + DISPLAY;
-  ctx.fillText('U D E C A', W / 2, 198);
+  ctx.fillText(marcaGrande(ctx), W / 2, 198);
   ctx.fillStyle = MUTED;
   ctx.font = '600 23px sans-serif';
-  ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 238);
+  ctx.fillText(subMarca(), W / 2, 238);
   ctx.fillStyle = GOLD;
   ctx.fillRect(W / 2 - 40, 262, 80, 3);
 }
@@ -291,10 +297,10 @@ function drawRecord(ctx, data, logo) {
   if (logo) ctx.drawImage(logo, W / 2 - 52, 44, 104, 104);
   ctx.fillStyle = GOLD_SOFT;
   ctx.font = '600 54px ' + DISPLAY;
-  ctx.fillText('U D E C A', W / 2, 198);
+  ctx.fillText(marcaGrande(ctx), W / 2, 198);
   ctx.fillStyle = MUTED;
   ctx.font = '600 26px sans-serif';
-  ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 240);
+  ctx.fillText(subMarca(), W / 2, 240);
   ctx.fillStyle = GOLD;
   ctx.fillRect(W / 2 - 44, 272, 88, 4);
 
@@ -414,10 +420,10 @@ function drawMember(ctx, data, logo) {
   if (logo) ctx.drawImage(logo, W / 2 - 46, 96, 92, 92);
   ctx.fillStyle = GOLD_SOFT;
   ctx.font = '600 46px ' + DISPLAY;
-  ctx.fillText('U D E C A', W / 2, 244);
+  ctx.fillText(marcaGrande(ctx), W / 2, 244);
   ctx.fillStyle = MUTED;
   ctx.font = '600 21px sans-serif';
-  ctx.fillText('U N I V E R S I D A D   D E   C A L I S T E N I A', W / 2, 282);
+  ctx.fillText(subMarca(), W / 2, 282);
 
   // El sello: dos anillas y el monograma del tipo de cuenta. Al fundador se le
   // cambia el monograma por su número, que es lo que de verdad viene a enseñar.
@@ -516,6 +522,16 @@ function hexA(hex, a) {
   var n = parseInt(h, 16);
   if (isNaN(n)) return 'rgba(162, 150, 139, ' + a + ')';
   return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + a + ')';
+}
+
+/** La marca grande y espaciada: la del entrenador, o UDECA. */
+function marcaGrande(ctx) {
+  return fit(ctx, espaciado(String(T.marca || 'UDECA').toUpperCase()), W - 200);
+}
+
+/** Debajo: "Universidad de Calistenia", o "con UDECA" si la marca es otra. */
+function subMarca() {
+  return T.marca ? 'C O N   U D E C A' : 'U N I V E R S I D A D   D E   C A L I S T E N I A';
 }
 
 /** "ATLETA" -> "A T L E T A". Separado se lee como un sello, no como texto. */

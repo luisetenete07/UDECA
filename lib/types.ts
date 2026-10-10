@@ -85,6 +85,13 @@ export interface UserProfile {
    */
   brandName?: string;
   /**
+   * El logo del entrenador (imagen en `data:`, pequeña), que sustituye al
+   * emblema de UDECA para él y para sus alumnos. Solo se ENSEÑA si su plan lo
+   * incluye (`puedeLlevarLogo` en lib/planBase.ts): si deja de pagarlo, se deja
+   * de ver sin tener que borrar nada.
+   */
+  brandLogo?: string;
+  /**
    * Enlace de cobro de ESTE alumno (Stripe Payment Link, Bizum, PayPal.me…):
    * el que abre para pagar su cuota de un toque desde el aviso de cobro. Lo
    * pone su entrenador en su ficha, junto a la cuota.

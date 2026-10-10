@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
@@ -7,7 +7,9 @@ import { Card } from './Card';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
-import { setBrandName } from '../lib/firestore/users';
+import { setBrandLogo, setBrandName } from '../lib/firestore/users';
+import { pickLogo } from '../lib/image';
+import { puedeLlevarLogo } from '../lib/subscription';
 import { frase } from '../lib/idioma';
 import {
   LARGO_DE_LA_MARCA,
@@ -34,6 +36,7 @@ export function EditorDeMarca() {
   const { profile, refreshProfile } = useAuth();
   const [texto, setTexto] = useState(profile?.brandName ?? '');
   const [guardando, setGuardando] = useState(false);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
 
   if (!profile) return null;
   const esEntrenador = profile.role === 'trainer';
@@ -61,6 +64,44 @@ export function EditorDeMarca() {
     }
   };
 
+  /*
+   * EL LOGO, solo para entrenadores y solo con el plan sin tope (ver
+   * `puedeLlevarLogo`). Con el de entrada se enseña qué incluye y nada más.
+   */
+  const puedeLogo = esEntrenador && puedeLlevarLogo(profile);
+  const logo = puedeLogo ? (profile.brandLogo ?? null) : null;
+
+  const subirLogo = async () => {
+    setSubiendoLogo(true);
+    try {
+      const nuevo = await pickLogo();
+      if (!nuevo) return;
+      // Lo leen todos sus alumnos al entrar: uno de varios cientos de KB se
+      // notaría en cada arranque. A 320 px y en PNG sobra con mucho menos.
+      if (nuevo.length > 400_000) {
+        showToast('Ese logo pesa demasiado. Prueba con uno más sencillo.');
+        return;
+      }
+      await setBrandLogo(profile.uid, nuevo);
+      await refreshProfile();
+      showToast('Logo guardado');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo guardar el logo');
+    } finally {
+      setSubiendoLogo(false);
+    }
+  };
+
+  const quitarLogo = async () => {
+    try {
+      await setBrandLogo(profile.uid, null);
+      await refreshProfile();
+      showToast('Vuelve a verse el emblema de UDECA');
+    } catch {
+      showToast('No se pudo quitar el logo');
+    }
+  };
+
   return (
     <Card style={styles.card}>
       <View style={styles.cabecera}>
@@ -75,6 +116,7 @@ export function EditorDeMarca() {
 
       <View style={styles.muestra}>
         <Text style={styles.muestraRotulo}>Así se verá</Text>
+        {logo ? <Image source={{ uri: logo }} style={styles.muestraLogo} resizeMode="contain" /> : null}
         <Text style={styles.muestraTexto} numberOfLines={1}>
           {muestra}
         </Text>
@@ -102,6 +144,43 @@ export function EditorDeMarca() {
         <Text style={styles.pie}>
           Déjalo vacío y guarda para volver a UDECA.
         </Text>
+      ) : null}
+
+      {esEntrenador ? (
+        <View style={styles.logoBloque}>
+          <Text style={styles.logoTitulo}>Tu logo</Text>
+          {puedeLogo ? (
+            <>
+              <Text style={styles.ayuda}>
+                Sustituye al emblema de UDECA en tu app y en la de tus alumnos, también en las
+                imágenes que comparten. Mejor un PNG con el fondo transparente.
+              </Text>
+              <View style={styles.logoFila}>
+                <Button
+                  title={logo ? 'Cambiar logo' : 'Subir logo'}
+                  variant="secondary"
+                  compacto
+                  onPress={subirLogo}
+                  loading={subiendoLogo}
+                  style={{ flex: 1 }}
+                />
+                {logo ? (
+                  <Pressable onPress={quitarLogo} hitSlop={8} style={styles.quitarLogo}>
+                    <Text style={styles.quitarLogoTexto}>Quitar</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </>
+          ) : (
+            <View style={styles.logoCerrado}>
+              <Ionicons name="lock-closed-outline" size={15} color={colors.textMuted} />
+              <Text style={styles.logoCerradoTexto}>
+                Incluido en el plan sin tope: tu logo en lugar del de UDECA, para ti y para tus
+                alumnos.
+              </Text>
+            </View>
+          )}
+        </View>
       ) : null}
     </Card>
   );
@@ -148,4 +227,24 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   pie: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm, textAlign: 'center' },
+  muestraLogo: { width: 64, height: 64, marginBottom: spacing.sm },
+  logoBloque: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  logoTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: spacing.xs },
+  logoFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  quitarLogo: { paddingVertical: spacing.sm },
+  quitarLogoTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  logoCerrado: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+  },
+  logoCerradoTexto: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 19 },
 });

@@ -82,6 +82,7 @@ export {
   FREE_CLIENT_LIMIT,
   needsEntryPayment,
   planIlimitado,
+  puedeLlevarLogo,
   PRIMER_ANO_DESDE,
   PRIMER_ANO_DIAS,
   primerAnoHasta,

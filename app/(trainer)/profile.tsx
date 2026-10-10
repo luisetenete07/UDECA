@@ -17,6 +17,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
+import { MARCA_POR_DEFECTO } from '../../lib/marcaPropia';
 import {
   deleteCoachAccount,
   getAllCoaches,
@@ -53,7 +54,7 @@ const GRUPOS_ADMIN = [
 ];
 
 export default function TrainerProfileScreen() {
-  const { profile, signOut, refreshProfile } = useAuth();
+  const { profile, signOut, refreshProfile, marca, logo } = useAuth();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -677,6 +678,9 @@ export default function TrainerProfileScreen() {
 
       {/* Sin el rojo de lo peligroso: cerrar sesión no borra nada. */}
       <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={{ marginTop: spacing.lg }} />
+      {/* Con marca propia, una firma pequeña al final: la app es suya, pero se
+          sabe con qué está hecha. */}
+      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conUdeca}>con UDECA</Text> : null}
 
       {/* Ver el comentario del mismo botón en el perfil del alumno. */}
       <Pressable onPress={() => router.push('/account-deletion')} style={styles.borrarCuenta}>
@@ -687,6 +691,7 @@ export default function TrainerProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  conUdeca: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.md, fontSize: 11 },
   borrarCuenta: { alignSelf: 'center', paddingVertical: spacing.lg },
   borrarCuentaTexto: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
   backBtn: {

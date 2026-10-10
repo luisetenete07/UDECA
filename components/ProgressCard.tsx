@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, PanResponder, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Image, PanResponder, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, {
@@ -83,7 +83,7 @@ export function ProgressCard({
    */
   fundador?: string;
 }) {
-  const { marca } = useAuth();
+  const { marca, logo } = useAuth();
   const [i, setI] = useState(0);
   const [caja, setCaja] = useState({ w: 0, h: 0 });
   const giroX = useRef(new Animated.Value(0)).current;
@@ -363,9 +363,12 @@ export function ProgressCard({
       <View style={styles.arriba}>
         {/* La tarjeta se comparte fuera de la app: aquí la marca importa el
             doble, porque es lo que ve quien todavía no es cliente de nadie. */}
-        <Text style={styles.marca} numberOfLines={1}>
-          {marca}
-        </Text>
+        <View style={styles.marcaFila}>
+          {logo ? <Image source={{ uri: logo }} style={styles.marcaLogo} resizeMode="contain" /> : null}
+          <Text style={styles.marca} numberOfLines={1}>
+            {marca}
+          </Text>
+        </View>
         <Text style={styles.rol}>{rol.toUpperCase()}</Text>
       </View>
 
@@ -455,6 +458,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   arriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  marcaFila: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
+  marcaLogo: { width: 26, height: 26 },
   marca: {
     fontSize: 15,
     fontFamily: fonts.display,

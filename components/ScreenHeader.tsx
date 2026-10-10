@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { useLayout } from '../lib/responsive';
 import { colors, spacing, typography } from '../lib/theme';
@@ -11,6 +11,8 @@ interface ScreenHeaderProps {
   eyebrow?: string;
   /** Botones de la cabecera, alineados a la derecha del título. */
   actions?: React.ReactNode;
+  /** El logo del entrenador, encima de todo (solo en los inicios). */
+  logo?: string | null;
 }
 
 /**
@@ -24,13 +26,14 @@ interface ScreenHeaderProps {
  * El título crece con la pantalla: 28 px mandan en un móvil, pero en un monitor
  * se quedan pequeños y la cabecera pierde el peso que debe tener.
  */
-export function ScreenHeader({ title, subtitle, eyebrow, actions }: ScreenHeaderProps) {
+export function ScreenHeader({ title, subtitle, eyebrow, actions, logo }: ScreenHeaderProps) {
   const layout = useLayout();
   const size = layout.isPhone ? 28 : layout.bp === 'tablet' ? 32 : 36;
 
   return (
     <View style={styles.row}>
       <View style={styles.textCol}>
+        {logo ? <Image source={{ uri: logo }} style={styles.logo} resizeMode="contain" /> : null}
         {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text style={[styles.title, { fontSize: size, lineHeight: Math.round(size * 1.24) }]}>
           {title}
@@ -56,6 +59,8 @@ const styles = StyleSheet.create({
   // palabra por la mitad ("Bibliot / eca"), que es de las cosas que más barata
   // hacen parecer una pantalla.
   textCol: { flex: 1, minWidth: 150 },
+  // A la izquierda y bajito: firma la pantalla sin quitarle el sitio al saludo.
+  logo: { width: 120, height: 32, alignSelf: 'flex-start', marginBottom: spacing.sm },
   eyebrow: {
     ...typography.label,
     color: colors.textMuted,

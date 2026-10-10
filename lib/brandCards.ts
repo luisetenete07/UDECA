@@ -28,6 +28,7 @@ import {
 } from './cardEngine';
 import { canRenderCardNatively, renderCardBase64 } from '../components/CardRendererHost';
 import { UDECA_LOGO_DATA_URI } from './udecaLogo';
+import { marcaActual } from './marcaActual';
 import { getIdioma } from './idioma';
 import { t } from './idioma';
 
@@ -45,6 +46,11 @@ type DrawCard = (
   textos: CardTextos
 ) => Promise<HTMLCanvasElement>;
 
+/** El logo del entrenador si lo tiene (y su plan lo incluye), si no el de UDECA. */
+function logoDeLaTarjeta(): string {
+  return marcaActual().logo ?? UDECA_LOGO_DATA_URI;
+}
+
 /**
  * Los rótulos de la tarjeta en el idioma de quien la comparte.
  *
@@ -55,6 +61,7 @@ type DrawCard = (
  */
 function textosDeLaTarjeta(): CardTextos {
   return {
+    marca: marcaActual().marca,
     sesionCompletada: t('SESIÓN COMPLETADA'),
     duracion: t('Duración'),
     series: t('Series'),
@@ -104,7 +111,7 @@ async function shareOnWeb(
 ): Promise<ShareResult> {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
-  await getDrawCard()(canvas, kind, data, UDECA_LOGO_DATA_URI, textosDeLaTarjeta());
+  await getDrawCard()(canvas, kind, data, logoDeLaTarjeta(), textosDeLaTarjeta());
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob((b) => resolve(b), 'image/png')
   );
@@ -143,7 +150,7 @@ async function shareOnNative(
   if (!canRenderCardNatively()) return null;
   if (!(await Sharing.isAvailableAsync())) return null;
 
-  const base64 = await renderCardBase64(buildCardHtml(kind, data, UDECA_LOGO_DATA_URI, textosDeLaTarjeta()));
+  const base64 = await renderCardBase64(buildCardHtml(kind, data, logoDeLaTarjeta(), textosDeLaTarjeta()));
   // La caché es el sitio correcto: es un archivo desechable que el sistema
   // puede limpiar cuando quiera, y basta con que exista mientras se comparte.
   const target = new File(Paths.cache, filename);

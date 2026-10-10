@@ -61,7 +61,7 @@ interface DashboardData {
 export default function TrainerDashboard() {
   // refreshProfile: tras aceptar a un alumno, el servidor actualiza el recuento
   // del perfil y hay que releerlo para que el acceso quede al día.
-  const { profile, refreshProfile } = useAuth();
+  const { profile, refreshProfile, logo } = useAuth();
   const router = useRouter();
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
   const cacheKey = `trainer-dash-${profile?.uid ?? ''}`;
@@ -133,6 +133,7 @@ export default function TrainerDashboard() {
     return (
       <ScreenContainer>
         <ScreenHeader
+          logo={logo}
           eyebrow="Panel del entrenador"
           title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
         />
@@ -298,6 +299,7 @@ export default function TrainerDashboard() {
           saberlo antes de necesitarlo. Se cierra y no vuelve en una semana. */}
       <UpgradePopup />
       <ScreenHeader
+        logo={logo}
         eyebrow="Panel del entrenador"
         title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
         actions={

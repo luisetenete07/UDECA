@@ -19,7 +19,9 @@ import { registerForPushNotificationsAsync } from './notifications';
 import { forgetAccount, proveedorDe, rememberAccount } from './rememberedAccounts';
 import { clearCache } from './screenCache';
 import { suscripcionAlNacer } from './subscription';
-import { marcaDe } from './marcaPropia';
+import { MARCA_POR_DEFECTO, marcaDe } from './marcaPropia';
+import { fijarMarcaActual } from './marcaActual';
+import { puedeLlevarLogo } from './planBase';
 import { olvidarNombreDelProveedor } from './nombreDelProveedor';
 import { aplicarIdiomaDelPerfil } from './idioma';
 import type { UserProfile, UserRole } from './types';
@@ -40,6 +42,12 @@ interface AuthContextValue {
    * pantalla en vez de una por sesión.
    */
   marca: string;
+  /**
+   * El logo que sustituye al de UDECA: el suyo si es entrenador, el de su
+   * entrenador si es alumno. `null` si no hay, o si su plan no lo incluye
+   * (`puedeLlevarLogo`): entonces se ve el emblema de siempre.
+   */
+  logo: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   registerTrainer: (name: string, email: string, password: string) => Promise<void>;
   registerClient: (
@@ -99,6 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // necesita de él aquí, y guardar el resto invitaría a usarlo para otras cosas
   // sin darse cuenta de que puede estar sin cargar.
   const [marcaDelCoach, setMarcaDelCoach] = useState<string | null>(null);
+  // Su logo, ya filtrado por su plan: aquí solo llega si se puede enseñar.
+  const [logoDelCoach, setLogoDelCoach] = useState<string | null>(null);
 
   /**
    * Lee el perfil de la cuenta y lo devuelve además de guardarlo en el estado.
@@ -131,11 +141,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (p.role === 'client' && p.trainerId) {
           getDoc(doc(db, 'users', p.trainerId))
             .then((coach) => {
-              setMarcaDelCoach(coach.exists() ? ((coach.data() as UserProfile).brandName ?? '') : '');
+              const datos = coach.exists() ? (coach.data() as UserProfile) : null;
+              setMarcaDelCoach(datos?.brandName ?? '');
+              setLogoDelCoach(datos && puedeLlevarLogo(datos) ? (datos.brandLogo ?? null) : null);
             })
-            .catch(() => setMarcaDelCoach(''));
+            .catch(() => {
+              setMarcaDelCoach('');
+              setLogoDelCoach(null);
+            });
         } else {
           setMarcaDelCoach(null);
+          setLogoDelCoach(null);
         }
         return p;
       }
@@ -369,6 +385,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (auth.currentUser) await sendEmailVerification(auth.currentUser);
   };
 
+  const marca = marcaDe(profile, marcaDelCoach === null ? null : { brandName: marcaDelCoach });
+  const logo =
+    profile?.role === 'client'
+      ? logoDelCoach
+      : puedeLlevarLogo(profile)
+        ? (profile?.brandLogo ?? null)
+        : null;
+  // Las tarjetas que se comparten se pintan fuera de React: se les deja aquí.
+  fijarMarcaActual({ marca: marca === MARCA_POR_DEFECTO ? '' : marca, logo });
+
   const value = useMemo(
     () => ({
       firebaseUser,
@@ -376,7 +402,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       isFirebaseConfigured,
       emailVerified,
-      marca: marcaDe(profile, marcaDelCoach === null ? null : { brandName: marcaDelCoach }),
+      marca,
+      logo,
       signIn,
       registerTrainer,
       registerClient,
@@ -388,7 +415,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       reloadUser,
       resendVerification,
     }),
-    [firebaseUser, profile, loading, emailVerified, marcaDelCoach]
+    [firebaseUser, profile, loading, emailVerified, marca, logo]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

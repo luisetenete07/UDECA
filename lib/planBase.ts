@@ -328,6 +328,26 @@ export function planIlimitado(profile: UserProfile | null): boolean {
 }
 
 /**
+ * ¿Puede este entrenador poner SU LOGO en lugar del de UDECA?
+ *
+ * Es del plan sin tope, no del de entrada: es lo que el entrenador enseña a sus
+ * alumnos cada día, y por eso es la razón más visible para dar el salto. Los
+ * fundadores lo tienen (entraron antes de que hubiera planes) y las cuentas de
+ * la casa también.
+ *
+ * Se mira con campos que solo escribe el servidor (`subscriptionPlan`,
+ * `subscriptionUntil`): poner un logo en el perfil lo puede cualquiera, pero
+ * que SE VEA depende de esto. Y si el plan caduca, el logo deja de verse solo.
+ */
+export function puedeLlevarLogo(profile: UserProfile | null, now: number = Date.now()): boolean {
+  if (!profile || profile.role !== 'trainer') return false;
+  if (isAdmin(profile) || accesoIlimitado(profile)) return true;
+  const sub = subscriptionState(profile, now);
+  if (sub.legacy) return true;
+  return profile.subscriptionPlan === 'annual' && sub.active;
+}
+
+/**
  * ¿Ve esta cuenta la app, o ve el muro de pago?
  *
  * Es LA puerta, y por eso está escrita una sola vez. Antes vivía repartida

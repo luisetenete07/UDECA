@@ -308,6 +308,20 @@ export const EN: Record<string, string> = {
   ' El esfuerzo se le pregunta al terminar cada ejercicio.': ' Effort is asked after each exercise.',
   '1 ejercicio': '1 exercise',
   '{0} ejercicios': '{0} exercises',
+  // El logo del entrenador (components/EditorDeMarca.tsx) y la firma de UDECA.
+  'con UDECA': 'with UDECA',
+  'Tu logo': 'Your logo',
+  'Subir logo': 'Upload logo',
+  'Cambiar logo': 'Change logo',
+  'Logo guardado': 'Logo saved',
+  'Vuelve a verse el emblema de UDECA': "UDECA's emblem is back",
+  'No se pudo guardar el logo': "Couldn't save the logo",
+  'No se pudo quitar el logo': "Couldn't remove the logo",
+  'Ese logo pesa demasiado. Prueba con uno más sencillo.': 'That logo is too heavy. Try a simpler one.',
+  'Sustituye al emblema de UDECA en tu app y en la de tus alumnos, también en las imágenes que comparten. Mejor un PNG con el fondo transparente.':
+    "Replaces UDECA's emblem in your app and your students', including the images they share. A PNG with a transparent background works best.",
+  'Incluido en el plan sin tope: tu logo en lugar del de UDECA, para ti y para tus alumnos.':
+    "Included in the unlimited plan: your logo instead of UDECA's, for you and your students.",
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

@@ -8,6 +8,13 @@ interface PickOptions {
   compress: number;
   /** Relación de aspecto para el recorte (opcional). */
   aspect?: [number, number];
+  /**
+   * PNG en vez de JPEG. Para el logo: un JPEG no tiene transparencia, y un
+   * logo con fondo blanco sobre la app negra se ve como una pegatina.
+   */
+  png?: boolean;
+  /** Sin el recorte del sistema (que en iPhone es siempre cuadrado). */
+  sinRecorte?: boolean;
 }
 
 async function pickImage(options: PickOptions): Promise<string | null> {
@@ -18,7 +25,7 @@ async function pickImage(options: PickOptions): Promise<string | null> {
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: 'images',
-    allowsEditing: true,
+    allowsEditing: !options.sinRecorte,
     aspect: options.aspect,
     quality: 0.8,
     base64: true,
@@ -31,10 +38,10 @@ async function pickImage(options: PickOptions): Promise<string | null> {
     const manipulated = await manipulateAsync(
       asset.uri,
       [{ resize: { width: options.maxSize } }],
-      { compress: options.compress, format: SaveFormat.JPEG, base64: true }
+      { compress: options.compress, format: options.png ? SaveFormat.PNG : SaveFormat.JPEG, base64: true }
     );
     if (manipulated.base64) {
-      return `data:image/jpeg;base64,${manipulated.base64}`;
+      return `data:image/${options.png ? 'png' : 'jpeg'};base64,${manipulated.base64}`;
     }
   } catch {
     // En web el redimensionado puede fallar; usamos el base64 original.
@@ -42,6 +49,15 @@ async function pickImage(options: PickOptions): Promise<string | null> {
 
   if (asset.base64) return `data:image/jpeg;base64,${asset.base64}`;
   return asset.uri;
+}
+
+/**
+ * El logo del entrenador: PNG (con su transparencia), sin recortar y a 320 px de
+ * ancho como mucho. Se guarda en su perfil y lo leen todos sus alumnos al
+ * entrar, así que tiene que ser ligero.
+ */
+export function pickLogo(): Promise<string | null> {
+  return pickImage({ maxSize: 320, compress: 1, png: true, sinRecorte: true });
 }
 
 /** Avatar cuadrado, pequeño y ligero (se guarda en el perfil). */

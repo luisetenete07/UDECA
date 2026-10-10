@@ -14,7 +14,10 @@ import { colors, fonts, spacing } from '../lib/theme';
  * entrenador o la del atleta.
  */
 export function Logo({ compact, sinSesion }: { compact?: boolean; sinSesion?: boolean }) {
-  const { marca } = useAuth();
+  const { marca, logo } = useAuth();
+  // Con sesión y logo propio, el emblema es el del entrenador.
+  const suyo = !sinSesion && !!logo;
+  const propia = !sinSesion && (marca !== MARCA_POR_DEFECTO || suyo);
   return (
     <View style={compact ? styles.containerCompact : styles.container}>
       {/* El logo, y nada más. Aquí había un halo dorado redondo por detrás, y
@@ -23,7 +26,7 @@ export function Logo({ compact, sinSesion }: { compact?: boolean; sinSesion?: bo
           macizo detrás del emblema. El fondo de la marca es negro; lo que hace
           que el logo destaque es el propio negro, no un aro. */}
       <Image
-        source={require('../assets/android-icon-foreground.png')}
+        source={suyo ? { uri: logo! } : require('../assets/android-icon-foreground.png')}
         style={compact ? styles.emblemCompact : styles.emblem}
         resizeMode="contain"
       />
@@ -34,12 +37,16 @@ export function Logo({ compact, sinSesion }: { compact?: boolean; sinSesion?: bo
       {/* "Universidad de Calistenia" y la firma son de UDECA, no de quien haya
           puesto su palabra: debajo de "IRON BOX" dirían algo que no es verdad.
           Con marca propia, el logo se queda en la marca y ya. */}
-      {sinSesion || marca === MARCA_POR_DEFECTO ? (
+      {/* Y con marca propia, un "con UDECA" pequeño: la app es del
+          entrenador, pero quien la mira sabe con qué está hecha. */}
+      {!propia ? (
         <>
           <Text style={styles.subtitle}>Universidad de Calistenia</Text>
           {!compact ? <Text style={styles.credit}>by Luis Tena</Text> : null}
         </>
-      ) : null}
+      ) : (
+        <Text style={styles.credit}>con UDECA</Text>
+      )}
     </View>
   );
 }
