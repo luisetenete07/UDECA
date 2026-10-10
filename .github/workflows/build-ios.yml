@@ -54,6 +54,16 @@ jobs:
       # Reconstruye la clave .p8 desde el secreto (nunca se commitea).
       - name: Preparar clave de App Store Connect
         run: printf '%s' "${{ secrets.ASC_API_KEY_P8 }}" > asc-key.p8
+
+      # HealthKit en el App ID y en el perfil de firma (los pasos del Apple
+      # Watch). EAS solo lo activa en modo interactivo; desde aquí lo deja
+      # listo este paso. Con todo en orden no toca nada.
+      - name: Dejar el App ID listo para Salud (HealthKit)
+        env:
+          EXPO_ASC_API_KEY_PATH: ./asc-key.p8
+          EXPO_ASC_KEY_ID: MZPCDLQ2DV
+          EXPO_ASC_ISSUER_ID: b4f2d2f6-3485-4bb5-8d7c-5e89c09356d9
+        run: node scripts/apple-healthkit.mjs
       # Con la ASC API key, EAS crea los certificados/perfiles de iOS solo, sin
       # login interactivo de Apple, y al terminar sube el build a App Store Connect.
       # EXPO_APPLE_TEAM_ID y EXPO_APPLE_TEAM_TYPE no son un adorno: sin ellos,
