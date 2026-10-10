@@ -191,6 +191,24 @@ jobs:
           fi
           ls -lh ./udeca.aab 2>/dev/null || true
 
+      # Qué permisos pide de verdad el .aab, después de que Gradle junte los de
+      # todas las librerías. Una de Google Play (la de los pasos) podría traer
+      # alguno de propina, y un permiso de Salud (Health Connect) es lo que ya
+      # paró una vez la revisión de Google: si aparece, la compilación falla.
+      - name: Permisos del .aab
+        if: ${{ always() && inputs.en_el_runner }}
+        run: |
+          set -uo pipefail
+          if [ ! -s ./udeca.aab ]; then echo "No hay .aab que mirar."; exit 0; fi
+          curl -fsSL --retry 3 -o bundletool.jar \
+            https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar
+          java -jar bundletool.jar dump manifest --bundle ./udeca.aab \
+            | grep -E "uses-permission" | sed 's/^ *//' | tee permisos.txt
+          if grep -q "android.permission.health" permisos.txt; then
+            echo "::error::El .aab pide permisos de Salud (Health Connect)."
+            exit 1
+          fi
+
       - name: Guardar el .aab
         if: ${{ always() && inputs.en_el_runner }}
         uses: actions/upload-artifact@v4
