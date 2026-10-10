@@ -1463,16 +1463,14 @@ export default function RoutineEditorScreen() {
                   />
                 ) : null}
               </View>
+              {/* Una línea, no dos párrafos: lo que hace cada pastilla ya se
+                  ve al tocarla, y lo que hay que saber es que apagar no borra. */}
               <Text style={styles.persoAyuda}>
-                Lo que apagues desaparece para ti y para el alumno hasta que lo vuelvas a
-                encender. Lo que ya habías puesto se guarda.
+                Apagado no lo ve nadie; lo ya puesto se guarda.
+                {schedule !== 'flex' && pedirEsfuerzo
+                  ? ' El esfuerzo se le pregunta al terminar cada ejercicio.'
+                  : ''}
               </Text>
-              {schedule !== 'flex' && pedirEsfuerzo ? (
-                <Text style={styles.persoAyuda}>
-                  Al terminar cada ejercicio le preguntamos cuántas repeticiones le quedaban.
-                  Actívalo solo si entiende lo que es: un dato inventado es peor que no tenerlo.
-                </Text>
-              ) : null}
             </>
           );
         })()}

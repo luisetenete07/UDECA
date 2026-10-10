@@ -675,7 +675,8 @@ export default function TrainerProfileScreen() {
 
       <RateApp />
 
-      <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={{ marginTop: spacing.lg }} />
+      {/* Sin el rojo de lo peligroso: cerrar sesión no borra nada. */}
+      <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={{ marginTop: spacing.lg }} />
 
       {/* Ver el comentario del mismo botón en el perfil del alumno. */}
       <Pressable onPress={() => router.push('/account-deletion')} style={styles.borrarCuenta}>

@@ -274,9 +274,16 @@ export default function ClientProfileScreen() {
       {/* Tarjeta de cambio de nombre: solo visible si NO se ha consumido el
           límite de una vez cada 90 días. Al gastarlo, desaparece hasta que
           expire el plazo. */}
+      {/* Plegado: se cambia una vez cada 90 días, y abierto ocupaba media
+          pantalla con un campo, un aviso y un botón apagado. */}
       {canChangeName ? (
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Tu nombre</Text>
+        <CollapsibleCard
+          id="alumno-nombre"
+          icon="create-outline"
+          title="Tu nombre"
+          hint={profile?.name}
+          defaultOpen={false}
+        >
           <TextField
             label="Nombre"
             value={name}
@@ -297,7 +304,7 @@ export default function ClientProfileScreen() {
             loading={savingName}
             disabled={!nameChanged}
           />
-        </Card>
+        </CollapsibleCard>
       ) : null}
 
       <CollapsibleCard
@@ -398,7 +405,9 @@ export default function ClientProfileScreen() {
         ) : null}
       </Card>
 
-      <Button title="Cerrar sesión" variant="danger" onPress={signOut} style={styles.signOut} />
+      {/* Cerrar sesión no borra nada: sin el rojo de lo peligroso, que se
+          reserva para eliminar la cuenta. */}
+      <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={styles.signOut} />
 
       {/* Eliminar la cuenta: discreto, pero SIEMPRE presente. Las tiendas
           exigen que se pueda hacer desde dentro de la app, y el proceso en sí

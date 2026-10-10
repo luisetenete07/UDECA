@@ -4,7 +4,6 @@ import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { Card } from './Card';
-import { EmptyState } from './EmptyState';
 import { TextField } from './TextField';
 import { WeightChart } from './WeightChart';
 import { showToast } from './Toast';
@@ -100,12 +99,14 @@ export function BloqueDePeso({
       <Card style={styles.tarjeta}>
         {conTitulo ? <Text style={styles.titulo}>Mi peso</Text> : null}
 
+        {/* Sin peso todavía: una línea, no un cartel con icono. El campo de
+            justo debajo ya dice qué hacer, y el cartel empujaba la tarjeta de
+            Hoy medio móvil más abajo. */}
         {resumen.actual === undefined ? (
-          <EmptyState
-            icon="scale-outline"
-            title="Todavía no has apuntado tu peso"
-            subtitle="Pésate a la misma hora, mejor en ayunas. Lo que importa no es el número de hoy: es hacia dónde va."
-          />
+          <Text style={styles.vacio}>
+            Pésate a la misma hora, mejor en ayunas. Lo que importa no es el número de hoy: es
+            hacia dónde va.
+          </Text>
         ) : (
           <>
             <View style={styles.cifraFila}>
@@ -191,6 +192,7 @@ function Cambio({ etiqueta, kg }: { etiqueta: string; kg?: number }) {
 }
 
 const styles = StyleSheet.create({
+  vacio: { ...typography.small, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.md },
   tarjeta: { marginBottom: spacing.md },
   titulo: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   grafica: { marginTop: spacing.lg },

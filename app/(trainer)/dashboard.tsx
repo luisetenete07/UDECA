@@ -1,5 +1,5 @@
 import { frase } from '../../lib/idioma';
-import { diaMes, fechaNumerica, inicioDelDia } from '../../lib/fechas';
+import { diaMes, diasEntre, inicioDelDia } from '../../lib/fechas';
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -31,6 +31,7 @@ import { FREE_CLIENT_LIMIT, trainerAtFreeLimit } from '../../lib/subscription';
 import { alargar, coachingDe } from '../../lib/coaching';
 import { alumnosSinEntrenar, DIAS_SIN_ENTRENAR } from '../../lib/sinEntrenar';
 import { haceCuanto } from '../../lib/ultimoEntreno';
+import { unido } from '../../lib/texto';
 import { colorDelPeriodo, textoDelPeriodo } from '../../components/PeriodoDeCoaching';
 import { approveClientOnServer } from '../../lib/join';
 import {
@@ -41,7 +42,7 @@ import {
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
-import { weekComparison } from '../../lib/stats';
+import { sessionTotals, weekComparison } from '../../lib/stats';
 import { Sheet } from '../../components/Sheet';
 import { fonts, colors, radius, spacing, typography, tabularNums } from '../../lib/theme';
 import {
@@ -463,17 +464,22 @@ export default function TrainerDashboard() {
             />
             <View style={{ flex: 1 }}>
               <Text style={styles.sectionTitle}>Tu grupo esta semana</Text>
+              {/* La cifra grande son los entrenos de la semana: quién no
+                  entrena ya lo dice "Necesita tu atención", con nombres. Aquí
+                  se cuenta el volumen y si va a más o a menos. */}
               <Text style={styles.pulseBig}>
-                {wk.activeClients === clients.length
-                  ? 'Han entrenado todos'
-                  : frase`${clients.length - wk.activeClients} sin entrenar`}
+                {wk.thisWeek === 1 ? frase`1 entreno` : frase`${wk.thisWeek} entrenos`}
               </Text>
               <Text style={styles.subtleHint}>
-                {wk.thisWeek} entreno{wk.thisWeek === 1 ? '' : 's'} en total
+                {wk.activeClients === clients.length
+                  ? 'Han entrenado todos'
+                  : frase`${clients.length - wk.activeClients} aún sin entrenar`}
                 {wk.lastWeek > 0
-                  ? wk.thisWeek >= wk.lastWeek
-                    ? frase` · ${wk.thisWeek - wk.lastWeek} más que la semana pasada`
-                    : frase` · ${wk.lastWeek - wk.thisWeek} menos que la semana pasada`
+                  ? wk.thisWeek === wk.lastWeek
+                    ? frase` · igual que la semana pasada`
+                    : wk.thisWeek > wk.lastWeek
+                      ? frase` · ${wk.thisWeek - wk.lastWeek} más que la semana pasada`
+                      : frase` · ${wk.lastWeek - wk.thisWeek} menos que la semana pasada`
                   : ''}
               </Text>
               {/* Lo bueno no es una alerta: se cuenta en una línea tranquila,
@@ -558,8 +564,14 @@ export default function TrainerDashboard() {
                 <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
-                  <Text style={styles.logDetail}>
-                    {log.dayName} · {fechaNumerica(log.date)}
+                  {/* Cuándo, en palabras ("ayer", "hace 3 días"), y cuánto:
+                      la fecha en números obligaba a hacer la cuenta. */}
+                  <Text style={styles.logDetail} numberOfLines={1}>
+                    {unido(
+                      log.dayName,
+                      haceCuanto(diasEntre(log.date, now)),
+                      frase`${sessionTotals(log.exercises).sets} series`
+                    )}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />

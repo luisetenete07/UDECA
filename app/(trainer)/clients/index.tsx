@@ -348,15 +348,14 @@ export default function ClientsScreen() {
                   </Text>
                   {/* El periodo de coaching, solo si tiene fecha: lo que se
                       lee es cuánto le queda, en el color de su estado. */}
-                  {client.nextPaymentDate ? (
-                    <>
-                      <Text style={styles.badgeSep}>·</Text>
-                      <Text style={[styles.payBadgeText, { color: colorDelPeriodo(coachingDe(client)) }]}>
-                        {textoDelPeriodo(coachingDe(client))}
-                      </Text>
-                    </>
-                  ) : null}
                 </View>
+                {/* El periodo en su propia línea: al lado de la actividad no
+                    cabía, y al partirse dejaba un punto colgando. */}
+                {client.nextPaymentDate ? (
+                  <Text style={[styles.payBadgeText, styles.periodoLinea, { color: colorDelPeriodo(coachingDe(client)) }]}>
+                    {textoDelPeriodo(coachingDe(client))}
+                  </Text>
+                ) : null}
                 {skipped[client.uid] ? (
                   <View style={styles.skipRow}>
                     <Ionicons name="close-circle" size={13} color={colors.danger} />
@@ -496,7 +495,7 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4 },
   payBadgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 4 },
   payBadgeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.medium, fontSize: 11 },
-  badgeSep: { color: colors.textFaint, fontSize: 11 },
+  periodoLinea: { marginTop: 2 },
   skipRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   skipText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold, fontSize: 11 },
   clientCard: {

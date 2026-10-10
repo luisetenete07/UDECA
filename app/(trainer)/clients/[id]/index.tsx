@@ -49,6 +49,7 @@ import { notifyUser } from '../../../../lib/notifications';
 import {
   exerciseProgression,
   listExercisesInLogs,
+  sessionTotals,
   trainingDays,
   trendPerMonth,
   weeklyVolume,
@@ -67,7 +68,8 @@ import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
 import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
-import { fechaCorta, fechaNumerica } from '../../../../lib/fechas';
+import { diasEntre, fechaCorta, fechaNumerica } from '../../../../lib/fechas';
+import { haceCuanto } from '../../../../lib/ultimoEntreno';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
 import {
   CLIENT_STATUSES,
@@ -712,8 +714,7 @@ export default function ClientDetailScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.navTitle}>Planificación por ciclos</Text>
                 <Text style={styles.navHint}>
-                  La temporada en bloques y semanas, su cumplimiento y el progreso ejercicio a
-                  ejercicio.
+                  Bloques, semanas y si los está cumpliendo.
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
@@ -733,7 +734,7 @@ export default function ClientDetailScreen() {
                     ? `${textoRango(pausaDelCliente)}${
                         pausaDelCliente.motivo ? ` · ${pausaDelCliente.motivo}` : ''
                       }${pausaDelCliente.porQuien === 'alumno' ? ' · la puso el alumno' : ''}`
-                    : 'Lesión, viaje o una semana imposible: no se le pide nada, no pierde la racha y el plan le espera donde lo dejó.'}
+                    : 'Lesión o viaje: no pierde la racha y retoma donde lo dejó.'}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
@@ -744,8 +745,14 @@ export default function ClientDetailScreen() {
             id="alumno-historial"
             icon="time-outline"
             title="Historial de entrenamientos"
-            hint={workoutLogs.length > 0 ? `${workoutLogs.length}` : 'Vacío'}
-            defaultOpen={false}
+            hint={
+              workoutLogs.length > 0
+                ? frase`${workoutLogs.length} entrenos · último ${haceCuanto(diasEntre(workoutLogs[0].date, Date.now()))}`
+                : 'Vacío'
+            }
+            // Abierto: en la pestaña Entreno, lo primero que se viene a ver es
+            // qué ha hecho últimamente.
+            defaultOpen
           >
             {workoutLogs.length === 0 ? (
               <Text style={styles.mutedText}>Todavía no ha registrado entrenamientos.</Text>
@@ -758,11 +765,15 @@ export default function ClientDetailScreen() {
                   <View style={styles.logRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.logTitle}>{log.dayName}</Text>
+                      {/* Cuándo en palabras, con la fecha al lado para quien
+                          la busque; y a la derecha lo que se hizo. */}
                       <Text style={styles.logDate}>
-                        {fechaNumerica(log.date)}
+                        {haceCuanto(diasEntre(log.date, Date.now()))} · {fechaNumerica(log.date)}
                       </Text>
                     </View>
-                    <Text style={styles.logExercises}>{log.exercises.length} ejercicios</Text>
+                    <Text style={styles.logExercises}>
+                      {frase`${sessionTotals(log.exercises).sets} series`}
+                    </Text>
                     <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
                   </View>
                 </Pressable>
@@ -774,7 +785,7 @@ export default function ClientDetailScreen() {
             id="alumno-actividad"
             icon="pulse-outline"
             title="Actividad (12 semanas)"
-            hint={`${workoutLogs.length}`}
+            hint={frase`Volumen y constancia`}
             defaultOpen={false}
           >
             <Text style={styles.mutedText}>Cada punto dorado es un día entrenado.</Text>

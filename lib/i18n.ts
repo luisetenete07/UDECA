@@ -296,6 +296,18 @@ export const EN: Record<string, string> = {
   'Traídos {0} pasos de este móvil': '{0} steps brought over from this phone',
   'En este móvil los pasos solo se cuentan con la app abierta. Escribe los del día a mano y quedan guardados igual.':
     'On this phone steps are only counted with the app open. Type in the day\'s steps by hand and they are saved just the same.',
+  // Pulido de diseño: panel del coach, ficha, editor y entreno del alumno.
+  '1 entreno': '1 workout',
+  '{0} aún sin entrenar': '{0} yet to train',
+  ' · igual que la semana pasada': ' · same as last week',
+  '{0} entrenos · último {1}': '{0} workouts · last {1}',
+  'Volumen y constancia': 'Volume and consistency',
+  'Bloques, semanas y si los está cumpliendo.': "Blocks, weeks and whether they're on track.",
+  'Lesión o viaje: no pierde la racha y retoma donde lo dejó.': "Injury or travel: the streak is kept and they pick up where they left off.",
+  'Apagado no lo ve nadie; lo ya puesto se guarda.': "Switched off, nobody sees it; what you entered is kept.",
+  ' El esfuerzo se le pregunta al terminar cada ejercicio.': ' Effort is asked after each exercise.',
+  '1 ejercicio': '1 exercise',
+  '{0} ejercicios': '{0} exercises',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

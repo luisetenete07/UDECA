@@ -98,7 +98,7 @@ import {
 import { Sheet } from '../../components/Sheet';
 import { Chip, ChipRow } from '../../components/Chip';
 import { minutosSegundos } from '../../lib/duracion';
-import { fonts, colors, radius, shadows, spacing, typography } from '../../lib/theme';
+import { fonts, colors, radius, shadows, spacing, tabularNums, typography } from '../../lib/theme';
 import {
   clusterBlocks,
   EXERCISE_MEASURES,
@@ -2156,6 +2156,32 @@ export default function WorkoutScreen() {
           No sale en un día de descanso ni con el entreno ya terminado: ahí no
           hay nada que empezar. Y no vuelve a salir al recuperar un borrador,
           porque quien vuelve a una sesión a medias ya la empezó. */}
+      {/* LO QUE TOCA, antes de empezar: nombre y series de cada ejercicio, una
+          línea cada uno. Sin esto la portada solo decía "Empezar entreno", y
+          para saber si hacía falta la barra o la goma había que entrar. */}
+      {!enMarcha && day && !day.isRest && !showCompleted && day.exercises.length > 0 ? (
+        <View style={styles.previa}>
+          <Text style={styles.previaTitulo}>
+            {day.exercises.length === 1 ? frase`1 ejercicio` : frase`${day.exercises.length} ejercicios`}
+          </Text>
+          {day.exercises.map((ex, i) => {
+            const enSegundos = isHoldMeasure(ex.measure ?? measureByExercise[ex.exerciseId]);
+            const cuanto = enSegundos ? `${ex.seconds || ex.reps} s` : ex.reps;
+            return (
+              <View key={ex.id ?? i} style={styles.previaFila}>
+                <Text style={styles.previaNombre} numberOfLines={1}>
+                  {ex.supersetWithPrevious ? '+ ' : ''}
+                  {ex.name}
+                </Text>
+                <Text style={styles.previaSeries}>
+                  {cuanto ? `${ex.sets} × ${cuanto}` : frase`${ex.sets} series`}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
+
       {!enMarcha && day && !day.isRest && !showCompleted && log.length > 0 ? (
         <Button
           title="Empezar entreno"
@@ -2698,6 +2724,32 @@ export default function WorkoutScreen() {
 }
 
 const styles = StyleSheet.create({
+  // La lista de lo que toca, antes de empezar.
+  previa: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  previaTitulo: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    paddingVertical: spacing.xs,
+  },
+  previaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  previaNombre: { ...typography.body, color: colors.text, flex: 1 },
+  previaSeries: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold, ...tabularNums },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   // Hueco al pie para que el crono flotante de descanso no tape la navegación.
   restSpacer: { paddingBottom: 210 },

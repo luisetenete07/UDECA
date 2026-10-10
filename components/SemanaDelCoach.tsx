@@ -255,6 +255,9 @@ const styles = StyleSheet.create({
   apuntar: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   apuntarCampo: {
     flex: 1,
+    // Sin esto, en la web el campo no encoge por debajo de su ancho propio y
+    // empujaba el botón "+" fuera de la tarjeta.
+    minWidth: 0,
     minHeight: 42,
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
