@@ -1428,20 +1428,3 @@ export interface Course {
   updatedAt: number;
 }
 
-export type PhotoPose = 'front' | 'side' | 'back';
-
-export const PHOTO_POSES: { key: PhotoPose; label: string }[] = [
-  { key: 'front', label: 'Frente' },
-  { key: 'side', label: 'Perfil' },
-  { key: 'back', label: 'Espalda' },
-];
-
-export interface ProgressPhoto {
-  id: string;
-  trainerId: string;
-  clientId: string;
-  pose: PhotoPose;
-  imageURL: string;
-  date: number;
-  createdAt: number;
-}

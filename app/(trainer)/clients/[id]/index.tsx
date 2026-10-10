@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { t, frase  } from '../../../../lib/idioma';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import { Text } from '../../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../../components/Avatar';
@@ -41,7 +41,6 @@ import {
   getHabitsForClient,
 } from '../../../../lib/firestore/habits';
 import { getActiveNutritionPlanForClient } from '../../../../lib/firestore/nutrition';
-import { getProgressPhotosForClient } from '../../../../lib/firestore/progressPhotos';
 import { getRoutinesForClient } from '../../../../lib/firestore/routines';
 import { getWeightLogsForClient } from '../../../../lib/firestore/weightLogs';
 import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
@@ -68,14 +67,13 @@ import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
 import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
-import { diaMes, fechaCorta, fechaNumerica } from '../../../../lib/fechas';
+import { fechaCorta, fechaNumerica } from '../../../../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
 import {
   CLIENT_STATUSES,
   CLIENT_STATUS_LABEL,
   type ClientStatus,
   type NutritionPlan,
-  type ProgressPhoto,
   type Routine,
   type Habit,
   type HabitLog,
@@ -117,7 +115,6 @@ export default function ClientDetailScreen() {
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
-  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
   const [newHabit, setNewHabit] = useState('');
@@ -156,14 +153,13 @@ export default function ClientDetailScreen() {
       const uid = profile.uid;
       (async () => {
         try {
-        const [clientData, routineData, weightData, workoutData, planData, photoData, habitData, habitLogData, noteData, exerciseData] =
+        const [clientData, routineData, weightData, workoutData, planData, habitData, habitLogData, noteData, exerciseData] =
           await Promise.all([
             getUserProfile(id),
             getRoutinesForClient(id, uid),
             getWeightLogsForClient(id, uid),
             getWorkoutLogsForClient(id, uid),
             getActiveNutritionPlanForClient(id, uid),
-            getProgressPhotosForClient(id, uid),
             getHabitsForClient(id, uid),
             getHabitLogsForClient(id, uid),
             getCoachNote(id),
@@ -183,7 +179,6 @@ export default function ClientDetailScreen() {
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
         setNutritionPlan(planData);
-        setPhotos(photoData);
         setHabits(habitData);
         setHabitLogs(habitLogData);
         // Los cursos van detrás y sin bloquear: la ficha se abre para mirar
@@ -1005,29 +1000,6 @@ export default function ClientDetailScreen() {
           >
             <WeightChart logs={weightLogs} />
           </CollapsibleCard>
-
-          <CollapsibleCard
-            id="alumno-fotos"
-            icon="camera-outline"
-            title="Fotos de progreso"
-            hint={photos.length > 0 ? `${photos.length}` : 'Ninguna'}
-            defaultOpen={false}
-          >
-            {photos.length === 0 ? (
-              <Text style={styles.mutedText}>El cliente todavía no ha subido fotos.</Text>
-            ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoStrip}>
-                {photos.slice(0, 12).map((p) => (
-                  <View key={p.id} style={styles.photoItem}>
-                    <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
-                    <Text style={styles.photoDate}>
-                      {diaMes(p.date)}
-                    </Text>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </CollapsibleCard>
         </>
       ) : null}
 
@@ -1203,17 +1175,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
   },
-  photoStrip: { marginTop: spacing.xs },
-  photoItem: { marginRight: spacing.sm, alignItems: 'center' },
-  photo: {
-    width: 96,
-    height: 128,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  photoDate: { ...typography.small, color: colors.textFaint, marginTop: 4, fontSize: 11 },
   logRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

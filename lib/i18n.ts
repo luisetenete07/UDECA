@@ -134,7 +134,6 @@ export const EN: Record<string, string> = {
   'Apuntar a mano': 'Enter manually',
   'Comidas de hoy': "Today's meals",
   'Calcular mis macros': 'Calculate my macros',
-  'Fotos de progreso': 'Progress photos',
   Calorías: 'Calories',
   Proteína: 'Protein',
   Carbohidratos: 'Carbs',
@@ -1287,7 +1286,6 @@ export const EN: Record<string, string> = {
   'Sin fotos todavía.': 'No photos yet.',
   'Sube fotos de frente, perfil y espalda. Solo tú y tu entrenador las veréis.':
     'Upload front, side and back photos. Only you and your coach will see them.',
-  'Todavía no has subido fotos de progreso.': "You haven't uploaded any progress photos yet.",
   'Mantén pulsada una foto para borrarla.': 'Press and hold a photo to delete it.',
   'Aún no tienes objetivos': 'No targets yet',
   'Calcula tus calorías y macros en 30 segundos, o espera a que tu entrenador te asigne un plan.':
@@ -1302,7 +1300,6 @@ export const EN: Record<string, string> = {
   'No se pudieron guardar los macros': "Couldn't save the macros",
   'Foto subida': 'Photo uploaded',
   'Foto borrada': 'Photo deleted',
-  '¿Borrar esta foto de progreso?': 'Delete this progress photo?',
   'Esta rutina no tiene ningún ejercicio todavía.': 'This routine has no exercises yet.',
   'Que salga fácil: si la última cuesta, has hecho de más.':
     "Keep it easy: if the last one is a grind, you've done too many.",
@@ -2162,8 +2159,7 @@ export const EN: Record<string, string> = {
   'El historial de cobros de tus alumnos': "Your students' payment history",
   'Tu perfil, tu foto y tus objetivos': 'Your profile, your photo and your goals',
   'Todos tus entrenamientos y tus marcas': 'All your workouts and your PRs',
-  'Tu peso, tus fotos de progreso y tus tests de nivel':
-    'Your weight, your progress photos and your level tests',
+  'Tu peso y tus tests de nivel': 'Your weight and your level tests',
   'Tu plan y tu nutrición': 'Your plan and your nutrition',
   'Tu sitio en la clasificación del grupo': "Your place in the group's leaderboard",
   'Eliminar mi cuenta para siempre': 'Delete my account forever',
@@ -2315,7 +2311,6 @@ export const EN: Record<string, string> = {
     'Set it so your coach has it in mind. You can change it whenever you like from your profile.',
   'Definir mi objetivo': 'Set my goal',
   'Indica un nombre y las calorías de la comida.': 'Give it a name and the calories of the meal.',
-  'Foto de progreso': 'Progress photo',
   'kcal de más': 'kcal over',
   'Unos días sin entrenar que no rompen nada. Al terminar, el plan sigue donde se quedó.':
     'A few days off that break nothing. When it ends, the plan carries on where it stopped.',

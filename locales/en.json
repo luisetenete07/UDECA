@@ -1,6 +1,6 @@
 {
   "ios": {
-    "NSPhotoLibraryUsageDescription": "To choose your profile photo, upload your progress photos and, if you are a coach, the photos in your meal books.",
+    "NSPhotoLibraryUsageDescription": "To choose your profile photo and, if you are a coach, the photos in your meal books.",
     "NSMotionUsageDescription": "To count the steps you take each day and add them to your nutrition plan, so you don't have to log them by hand."
   }
 }

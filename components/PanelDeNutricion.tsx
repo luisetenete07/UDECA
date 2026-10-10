@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
@@ -15,16 +15,10 @@ import {
   getActiveNutritionPlanForClient,
   getMealLogsForClient,
 } from '../lib/firestore/nutrition';
-import {
-  createProgressPhoto,
-  deleteProgressPhoto,
-  getProgressPhotosForClient,
-} from '../lib/firestore/progressPhotos';
 import { getMealBooksForTrainer } from '../lib/firestore/mealBooks';
 import { seCorta } from '../lib/libretaDeComidas';
 import { objetivosDelDia } from '../lib/macrosDelDia';
 import { updateUserProfile } from '../lib/firestore/users';
-import { pickProgressPhoto } from '../lib/image';
 import { MacroCalculator } from './MacroCalculator';
 import { ContadorDePasos } from './ContadorDePasos';
 import { BloqueDePeso } from './BloqueDePeso';
@@ -33,23 +27,16 @@ import { getStepLogsForClient, type StepLog } from '../lib/firestore/steps';
 import { balanceDelDia, caloriasDePasos, pasosDeHoy, textoDelBalance } from '../lib/pasos';
 import { conMiles } from '../lib/texto';
 import type { WeightLog } from '../lib/types';
-import { confirmar } from '../lib/confirmar';
 import { Sheet } from './Sheet';
 import { LectorAPantallaCompleta } from './LectorDePdf';
-import { esHoy, fechaCorta } from '../lib/fechas';
+import { esHoy } from '../lib/fechas';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../lib/theme';
-import {
-  PHOTO_POSES,
-  type MealBook,
-  type MealLog,
-  type NutritionPlan,
-  type PhotoPose,
-  type ProgressPhoto,
-} from '../lib/types';
+import { type MealBook, type MealLog, type NutritionPlan } from '../lib/types';
 
 /**
- * Toda la nutrición: el peso, los pasos, los macros, las comidas, las libretas
- * del coach y las fotos de progreso.
+ * Toda la nutrición: el peso, los pasos, los macros, las comidas y las
+ * libretas del coach. Las fotos de progreso se quitaron: fotos y vídeos van por
+ * WhatsApp o Telegram, y UDECA se centra en lo que solo hace ella.
  *
  * Era una pestaña propia de la app y ahora vive dentro de Progreso, en la
  * pestaña de Nutrición. El motivo es que las dos cosas se miran juntas: lo que
@@ -64,7 +51,6 @@ export function PanelDeNutricion() {
   const { profile, refreshProfile } = useAuth();
   const [plan, setPlan] = useState<NutritionPlan | null>(null);
   const [meals, setMeals] = useState<MealLog[]>([]);
-  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [books, setBooks] = useState<MealBook[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +62,6 @@ export function PanelDeNutricion() {
   const [fat, setFat] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [uploadingPose, setUploadingPose] = useState<PhotoPose | null>(null);
   /*
    * El visor guarda la foto Y lo que el entrenador escribió en ella.
    *
@@ -127,17 +112,15 @@ export function PanelDeNutricion() {
 
   const load = useCallback(async () => {
     if (!uid) return;
-    const [planData, mealData, photoData, bookData, pesoData, pasoData] = await Promise.all([
+    const [planData, mealData, bookData, pesoData, pasoData] = await Promise.all([
       getActiveNutritionPlanForClient(uid),
       getMealLogsForClient(uid),
-      getProgressPhotosForClient(uid),
       trainerId ? getMealBooksForTrainer(trainerId).catch(() => []) : Promise.resolve([]),
       getWeightLogsForClient(uid).catch(() => []),
       getStepLogsForClient(uid).catch(() => [] as StepLog[]),
     ]);
     setPlan(planData);
     setMeals(mealData);
-    setPhotos(photoData);
     setBooks(bookData);
     setPesos(pesoData);
     setPasos(pasoData);
@@ -225,44 +208,6 @@ export function PanelDeNutricion() {
       await load();
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleAddPhoto = async (pose: PhotoPose) => {
-    if (!profile) return;
-    setUploadingPose(pose);
-    try {
-      const imageURL = await pickProgressPhoto();
-      if (imageURL) {
-        await createProgressPhoto({
-          trainerId: profile.trainerId ?? '',
-          clientId: profile.uid,
-          pose,
-          imageURL,
-          date: Date.now(),
-        });
-        await load();
-        showToast('Foto subida');
-      }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : 'No se pudo subir la foto.';
-      if (Platform.OS !== 'web') Alert.alert('Foto de progreso', message);
-      else showToast(message);
-    } finally {
-      setUploadingPose(null);
-    }
-  };
-
-
-  const handleDeletePhoto = async (id: string) => {
-    if (!(await confirmar('¿Borrar esta foto de progreso?'))) return;
-    setPhotos((prev) => prev.filter((p) => p.id !== id));
-    try {
-      await deleteProgressPhoto(id);
-      showToast('Foto borrada');
-    } catch (e) {
-      await load();
-      showToast(e instanceof Error ? e.message : 'No se pudo borrar');
     }
   };
 
@@ -504,60 +449,6 @@ export function PanelDeNutricion() {
           ))}
         </Card>
       ) : null}
-
-      {/* Fotos de progreso (antes en la pestaña Progreso). */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Fotos de progreso</Text>
-        <Text style={styles.hint}>
-          Sube fotos de frente, perfil y espalda. Solo tú y tu entrenador las veréis.
-        </Text>
-        <View style={styles.poseRow}>
-          {PHOTO_POSES.map((pose) => (
-            <Button
-              key={pose.key}
-              title={pose.label}
-              variant="secondary"
-              onPress={() => handleAddPhoto(pose.key)}
-              loading={uploadingPose === pose.key}
-              /*
-               * `compacto` no es un adorno: son tres botones en una fila de
-               * móvil. Con el relleno normal (24 a cada lado) al texto le
-               * quedaban 52 px para una palabra que mide 68, y "Frente",
-               * "Perfil" y "Espalda" salían como "F…", "P…" y "E…".
-               */
-              compacto
-              style={styles.poseBtn}
-            />
-          ))}
-        </View>
-        {photos.length === 0 ? (
-          <Text style={styles.mutedText}>Todavía no has subido fotos de progreso.</Text>
-        ) : (
-          <View style={styles.photoGrid}>
-            {photos.map((p) => (
-              <Pressable
-                key={p.id}
-                style={styles.photoCard}
-                onLongPress={() => handleDeletePhoto(p.id)}
-                delayLongPress={350}
-              >
-                <Image source={{ uri: p.imageURL }} style={styles.photo} resizeMode="cover" />
-                <View style={styles.photoInfo}>
-                  <Text style={styles.photoPose}>
-                    {PHOTO_POSES.find((x) => x.key === p.pose)?.label ?? p.pose}
-                  </Text>
-                  <Text style={styles.photoDate}>
-                    {fechaCorta(p.date)}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
-        {photos.length > 0 ? (
-          <Text style={styles.deleteHint}>Mantén pulsada una foto para borrarla.</Text>
-        ) : null}
-      </Card>
 
       {/* Foto ampliada (lightbox): pulsa fuera o la X para cerrar. */}
       <Modal visible={!!zoomPhoto} transparent animationType="fade" onRequestClose={() => setZoomPhoto(null)}>
@@ -813,18 +704,9 @@ const styles = StyleSheet.create({
    * envolver, ahí se colocan dos arriba y uno abajo y se leen los tres. Es el
    * mismo criterio que ya usan las otras filas de botones de la app.
    */
-  poseRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   /*
    * Sin `paddingHorizontal`: este estilo va al ENVOLTORIO del botón, no a su
    * interior, así que ponerlo aquí no quitaba ni un píxel de relleno. Lo que
    * de verdad lo cambia es la propiedad `compacto`.
    */
-  poseBtn: { flexGrow: 1, flexBasis: 92, minWidth: 92 },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.md },
-  photoCard: { width: '31%' },
-  photo: { width: '100%', aspectRatio: 0.8, borderRadius: radius.md, backgroundColor: colors.surfaceAlt },
-  photoInfo: { marginTop: 4 },
-  photoPose: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, fontSize: 11 },
-  photoDate: { ...typography.small, color: colors.textFaint, fontSize: 10 },
-  deleteHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm, textAlign: 'center' },
 });

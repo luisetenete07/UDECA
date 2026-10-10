@@ -51,7 +51,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Para elegir tu foto de perfil, subir tus fotos de progreso y, si eres entrenador, las fotos de tus libretas de comida.",
+          "photosPermission": "Para elegir tu foto de perfil y, si eres entrenador, las fotos de tus libretas de comida.",
           "cameraPermission": false,
           "microphonePermission": false
         }

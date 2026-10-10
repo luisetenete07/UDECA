@@ -194,7 +194,7 @@ export default function AccountDeletionScreen() {
                 : [
                     'Tu perfil, tu foto y tus objetivos',
                     'Todos tus entrenamientos y tus marcas',
-                    'Tu peso, tus fotos de progreso y tus tests de nivel',
+                    'Tu peso y tus tests de nivel',
                     'Tu sitio en la clasificación del grupo',
                   ]
               ).map((t) => (

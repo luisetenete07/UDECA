@@ -38,7 +38,7 @@ const plist = introspect.ios?.infoPlist ?? {};
 
 /** Lo que la app usa de verdad, y por qué. */
 const NECESARIOS = [
-  ['NSPhotoLibraryUsageDescription', 'foto de perfil, fotos de progreso y libretas'],
+  ['NSPhotoLibraryUsageDescription', 'foto de perfil y libretas de comida'],
   ['NSMotionUsageDescription', 'contador de pasos'],
 ];
 

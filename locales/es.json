@@ -1,6 +1,6 @@
 {
   "ios": {
-    "NSPhotoLibraryUsageDescription": "Para elegir tu foto de perfil, subir tus fotos de progreso y, si eres entrenador, las fotos de tus libretas de comida.",
+    "NSPhotoLibraryUsageDescription": "Para elegir tu foto de perfil y, si eres entrenador, las fotos de tus libretas de comida.",
     "NSMotionUsageDescription": "Para contar los pasos que das cada día y sumarlos a tu plan de nutrición, sin que tengas que apuntarlos a mano."
   }
 }

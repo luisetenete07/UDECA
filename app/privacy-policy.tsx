@@ -25,8 +25,7 @@ export default function PrivacyPolicy() {
         • <Text style={styles.bold}>Datos de entrenamiento y forma física:</Text> rutinas, series,
         repeticiones, cargas (lastre), peso corporal, sensaciones, hábitos, retos y estadísticas de
         progreso.{'\n'}
-        • <Text style={styles.bold}>Nutrición:</Text> macros y datos que introduzcas, y fotos de
-        progreso (opcionales).{'\n'}
+        • <Text style={styles.bold}>Nutrición:</Text> macros y datos que introduzcas.{'\n'}
         • <Text style={styles.bold}>Comunicación:</Text> mensajes con tu entrenador, y
         anuncios del grupo.{'\n'}
         • <Text style={styles.bold}>Pasos:</Text> el número de pasos que das al día, solo si
