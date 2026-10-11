@@ -1,32 +1,39 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Texto';
 import { Avatar } from './Avatar';
-import { CollapsibleCard } from './CollapsibleCard';
+import { Card } from './Card';
 import { Dialogo } from './Dialogo';
+import { Sheet } from './Sheet';
 import { showToast } from './Toast';
 import { frase } from '../lib/idioma';
 import { deleteSocialStats, subscribeSocialLeaderboard } from '../lib/firestore/social';
 import { isOnline } from '../lib/presence';
-import { colors, fonts, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { SocialStats } from '../lib/types';
 
+/** Oro, plata y bronce, en los tonos apagados de la marca. */
+const MEDALLA = ['#C9BDB0', '#A7AEB6', '#A07C5B'];
+
 /**
- * La clasificación del grupo: quién entrena más, quién está en línea.
+ * La clasificación del grupo, al final de Clientes.
  *
- * Vivía en el perfil del entrenador, entre el código de invitación y la
- * suscripción, que es el último sitio donde se busca algo sobre los alumnos.
- * Ahora va al final de Clientes, que es donde se mira al grupo.
+ * ERA UN DESPLEGABLE CERRADO con "Clasificación · 3 alumnos": nada que mirar
+ * hasta abrirlo, y abierto, una lista gris con papeleras. Ahora el podio está a
+ * la vista —los tres que más se superan este mes, con lo que lleva cada uno—, y
+ * la lista entera y el borrado de perfiles viejos, en su panel ("Ver todos").
  *
- * En vivo: rachas, entrenos y presencia se refrescan solos, y un alumno recién
- * incorporado aparece al instante. Solo escucha mientras la pantalla está
- * delante: los alumnos refrescan su presencia cada pocos minutos y no queremos
- * recibir esos latidos en segundo plano.
+ * Se ordena igual que la ve el alumno en Social (marcas superadas este mes, ver
+ * `compareLeaderboard`): el coach y su grupo miran la misma tabla.
+ *
+ * En vivo y solo mientras la pantalla está delante: los alumnos refrescan su
+ * presencia cada pocos minutos y no queremos esos latidos en segundo plano.
  */
 export function ClasificacionDelGrupo({ trainerId }: { trainerId: string }) {
   const [leaderboard, setLeaderboard] = useState<SocialStats[]>([]);
+  const [todos, setTodos] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SocialStats | null>(null);
 
   useFocusEffect(
@@ -48,54 +55,96 @@ export function ClasificacionDelGrupo({ trainerId }: { trainerId: string }) {
   };
   const onlineCount = leaderboard.filter((s) => isOnline(s.lastSeen)).length;
 
+  /** Una fila: puesto, cara (con su punto si está en línea), nombre y cifra. */
+  const fila = (s: SocialStats, i: number, conBorrar: boolean) => {
+    const medalla = MEDALLA[i];
+    const marcas = s.prsThisMonth ?? 0;
+    return (
+      <View key={s.uid} style={[styles.fila, i === 0 && !conBorrar && styles.filaPrimera]}>
+        <View
+          style={[
+            styles.puesto,
+            medalla ? { borderColor: medalla, backgroundColor: `${medalla}22` } : null,
+          ]}
+        >
+          <Text style={[styles.puestoTexto, medalla ? { color: medalla } : null]}>{i + 1}</Text>
+        </View>
+        <View>
+          <Avatar name={s.name} photoURL={s.photoURL} size={38} />
+          {isOnline(s.lastSeen) ? <View style={styles.enLinea} /> : null}
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.nombre} numberOfLines={1}>
+            {s.name}
+          </Text>
+          <Text style={styles.meta} numberOfLines={1}>
+            {/* "Este mes" ya lo dice la cabecera: repetirlo cortaba la racha. */}
+            {(s.workoutsThisMonth ?? 0) === 1 ? frase`1 entreno` : frase`${s.workoutsThisMonth ?? 0} entrenos`}
+            {s.currentStreak > 1 ? frase` · racha ${s.currentStreak}` : ''}
+          </Text>
+        </View>
+        {conBorrar ? (
+          <Pressable onPress={() => setDeleteTarget(s)} hitSlop={8} style={styles.borrar}>
+            <Ionicons name="trash-outline" size={17} color={colors.textFaint} />
+          </Pressable>
+        ) : (
+          <View style={styles.cifra}>
+            <Text style={[styles.cifraNumero, i === 0 && { color: colors.primaryBright }]}>{marcas}</Text>
+            <Text style={styles.cifraEtiqueta}>{marcas === 1 ? 'marca' : 'marcas'}</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   return (
     <>
-      <CollapsibleCard
-        id="coach-clasificacion"
-        icon="trophy-outline"
-        title="Clasificación"
-        hint={
-          onlineCount > 0
-            ? `${onlineCount} en línea`
-            : leaderboard.length > 0
-              ? `${leaderboard.length} ${leaderboard.length === 1 ? 'alumno' : 'alumnos'}`
-              : undefined
-        }
-        defaultOpen={false}
-      >
+      <Card style={styles.card}>
+        <View style={styles.cabecera}>
+          <View style={styles.icono}>
+            <Ionicons name="trophy" size={17} color={colors.primaryBright} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.titulo}>Clasificación</Text>
+            <Text style={styles.sub}>Quién más se supera este mes</Text>
+          </View>
+          {onlineCount > 0 ? (
+            <View style={styles.pastilla}>
+              <View style={styles.pastillaPunto} />
+              <Text style={styles.pastillaTexto}>{frase`${onlineCount} en línea`}</Text>
+            </View>
+          ) : null}
+        </View>
+
         {leaderboard.length === 0 ? (
-          <Text style={styles.mutedSmall}>
+          <Text style={styles.vacio}>
             Aparecerá cuando tus alumnos empiecen a entrenar con la app.
           </Text>
         ) : (
-          leaderboard.slice(0, 10).map((s, i) => (
-            <View key={s.uid} style={styles.rankRow}>
-              <Text style={styles.rankPos}>{i + 1}</Text>
-              <Avatar name={s.name} photoURL={s.photoURL} size={34} />
-              <View style={{ flex: 1 }}>
-                <View style={styles.rankNameRow}>
-                  <Text style={styles.rankName} numberOfLines={1}>
-                    {s.name}
-                  </Text>
-                  {isOnline(s.lastSeen) ? <View style={styles.onlineDot} /> : null}
-                </View>
-                <Text style={styles.rankMeta}>
-                  {s.sessionsThisWeek} esta semana · {s.totalWorkouts} totales
-                  {s.currentStreak > 1 ? ` · racha ${s.currentStreak}` : ''}
-                </Text>
-              </View>
-              <Pressable onPress={() => setDeleteTarget(s)} hitSlop={8} style={styles.rankDelete}>
-                <Ionicons name="trash-outline" size={17} color={colors.textFaint} />
-              </Pressable>
-            </View>
-          ))
+          <>
+            {leaderboard.slice(0, 3).map((s, i) => fila(s, i, false))}
+            <Pressable onPress={() => setTodos(true)} style={styles.verTodos} hitSlop={6}>
+              <Text style={styles.verTodosTexto}>
+                {leaderboard.length > 3
+                  ? frase`Ver los ${leaderboard.length}`
+                  : 'Ver y gestionar la lista'}
+              </Text>
+              <Ionicons name="chevron-forward" size={15} color={colors.primary} />
+            </Pressable>
+          </>
         )}
-        {leaderboard.length > 0 ? (
-          <Text style={styles.rankHint}>
-            Mantén la lista limpia: elimina perfiles antiguos o de prueba con la papelera.
-          </Text>
-        ) : null}
-      </CollapsibleCard>
+      </Card>
+
+      <Sheet
+        visible={todos}
+        onClose={() => setTodos(false)}
+        titulo={frase`Clasificación (${leaderboard.length})`}
+        descripcion="Mantén la lista limpia: quita con la papelera los perfiles antiguos o de prueba."
+      >
+        <ScrollView style={{ maxHeight: 480 }}>
+          {leaderboard.map((s, i) => fila(s, i, true))}
+        </ScrollView>
+      </Sheet>
 
       <Dialogo
         visible={!!deleteTarget}
@@ -111,20 +160,84 @@ export function ClasificacionDelGrupo({ trainerId }: { trainerId: string }) {
 }
 
 const styles = StyleSheet.create({
-  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
-  mutedSmall: { ...typography.small, color: colors.textFaint },
-  rankRow: {
+  card: { marginBottom: spacing.md },
+  cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, marginBottom: spacing.sm },
+  icono: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titulo: { ...typography.h3, color: colors.text },
+  sub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  pastilla: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
+    gap: 5,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    backgroundColor: colors.successMuted,
+  },
+  pastillaPunto: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
+  pastillaTexto: { ...typography.small, color: colors.success, fontFamily: fonts.semiBold, fontSize: 11 },
+  vacio: { ...typography.small, color: colors.textFaint, lineHeight: 19 },
+  fila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: spacing.sm + 2,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  rankPos: { ...typography.h3, color: colors.primaryBright, width: 24, textAlign: 'center' },
-  rankNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  rankName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flexShrink: 1 },
-  rankMeta: { ...typography.small, color: colors.textMuted, marginTop: 1 },
-  rankDelete: { padding: 6 },
-  rankHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm, lineHeight: 17 },
+  // El primero, con un fondo apenas dorado: el podio se lee de un vistazo.
+  filaPrimera: {
+    backgroundColor: colors.primaryMuted,
+    borderTopColor: 'transparent',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    marginHorizontal: -spacing.sm,
+  },
+  puesto: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  puestoTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.heading, fontSize: 12 },
+  enLinea: {
+    position: 'absolute',
+    right: -1,
+    bottom: -1,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: colors.success,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  nombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  meta: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  cifra: { alignItems: 'flex-end' },
+  cifraNumero: { ...typography.h3, color: colors.text, ...tabularNums },
+  cifraEtiqueta: { ...typography.small, color: colors.textFaint, fontSize: 10 },
+  borrar: { padding: 6 },
+  verTodos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingTop: spacing.md,
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  verTodosTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
 });

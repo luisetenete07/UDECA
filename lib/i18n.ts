@@ -322,6 +322,20 @@ export const EN: Record<string, string> = {
     "Replaces UDECA's emblem in your app and your students', including the images they share. A PNG with a transparent background works best.",
   'Incluido en el plan sin tope: tu logo en lugar del de UDECA, para ti y para tus alumnos.':
     "Included in the unlimited plan: your logo instead of UDECA's, for you and your students.",
+  // Tu grupo, en Clientes (components/ClasificacionDelGrupo.tsx y AccesoALibretas.tsx).
+  'Tu grupo': 'Your group',
+  'Quién más se supera este mes': 'Who is improving most this month',
+  'Ver y gestionar la lista': 'View and manage the list',
+  'Ver los {0}': 'View all {0}',
+  'Clasificación ({0})': 'Leaderboard ({0})',
+  'Mantén la lista limpia: quita con la papelera los perfiles antiguos o de prueba.':
+    'Keep the list tidy: remove old or test profiles with the bin.',
+  'marca': 'PR',
+  '{0} en línea': '{0} online',
+  '1 libreta para todo tu grupo': '1 book for your whole group',
+  '{0} libretas para todo tu grupo': '{0} books for your whole group',
+  'Recetas y platos por foto para tu grupo': 'Recipes and dishes by photo for your group',
+  'Crea la primera: recetas y platos por foto para tu grupo': 'Create the first one: recipes and dishes by photo for your group',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

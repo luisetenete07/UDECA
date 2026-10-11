@@ -27,6 +27,7 @@ import {
 import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
 import { QuickSheet } from '../../../components/QuickSheet';
 import { ClasificacionDelGrupo } from '../../../components/ClasificacionDelGrupo';
+import { AccesoALibretas } from '../../../components/AccesoALibretas';
 import { getActiveRoutinesForTrainer } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
@@ -375,27 +376,16 @@ export default function ClientsScreen() {
         </Grid>
       )}
 
-      {/* Las libretas de comida, debajo de los alumnos y no encima: se abren
-          de vez en cuando, y la lista es a lo que se entra cada vez. */}
-      <Pressable
-        onPress={() => router.push('/(trainer)/clients/meal-books')}
-        style={styles.navEntry}
-      >
-        <View style={styles.navEntryIcon}>
-          <Ionicons name="book-outline" size={18} color={colors.primary} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.navEntryTitle}>Libretas de comida</Text>
-          <Text style={styles.navEntrySub}>Recetas y platos por foto para todos tus alumnos</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
-      </Pressable>
-
-      {/* La clasificación del grupo, al final de la lista: estaba en el perfil
-          del entrenador, que es el último sitio donde se busca a los alumnos. */}
+      {/* TU GRUPO: lo que es de todos a la vez, debajo de la lista. La
+          clasificación primero —se mira a menudo y tiene algo que enseñar— y
+          las libretas de comida después, que se abren de vez en cuando. */}
       {profile && clients.length > 0 ? (
-        <ClasificacionDelGrupo trainerId={profile.uid} />
+        <>
+          <Text style={styles.grupoRotulo}>Tu grupo</Text>
+          <ClasificacionDelGrupo trainerId={profile.uid} />
+        </>
       ) : null}
+      {profile ? <AccesoALibretas trainerId={profile.uid} /> : null}
 
         {rapidas ? (
         <QuickSheet
@@ -470,30 +460,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   exportText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
-  navEntry: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    marginBottom: spacing.md,
-  },
-  navEntryIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navEntryTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  navEntrySub: { ...typography.small, color: colors.textFaint, marginTop: 1 },
   search: { marginBottom: spacing.sm },
+  grupoRotulo: {
+    ...typography.label,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
   dot: { width: 8, height: 8, borderRadius: 4 },
   payBadgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 4 },
   payBadgeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.medium, fontSize: 11 },

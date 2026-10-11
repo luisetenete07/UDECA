@@ -4,6 +4,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getCountFromServer,
   getDocs,
   query,
   updateDoc,
@@ -14,6 +15,17 @@ import { db } from '../firebase';
 import type { MealBook } from '../types';
 
 const booksRef = () => collection(db, 'mealBooks');
+
+/**
+ * Cuántas libretas tiene un entrenador, sin bajarse ninguna.
+ *
+ * Las libretas llevan sus fotos dentro y pesan: para poner "3 libretas" en la
+ * lista de clientes no hace falta traerlas, basta con contarlas en el servidor.
+ */
+export async function contarLibretas(trainerId: string): Promise<number> {
+  const snap = await getCountFromServer(query(booksRef(), where('trainerId', '==', trainerId)));
+  return snap.data().count;
+}
 
 /**
  * Libretas de comida de un entrenador. Las pantallas del alumno pasan el
