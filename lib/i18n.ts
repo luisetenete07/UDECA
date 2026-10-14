@@ -336,6 +336,8 @@ export const EN: Record<string, string> = {
   '{0} libretas para todo tu grupo': '{0} books for your whole group',
   'Recetas y platos por foto para tu grupo': 'Recipes and dishes by photo for your group',
   'Crea la primera: recetas y platos por foto para tu grupo': 'Create the first one: recipes and dishes by photo for your group',
+  // La biblioteca de ejercicios (components/TarjetaDeEjercicio.tsx).
+  'Sin vídeo': 'No video',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

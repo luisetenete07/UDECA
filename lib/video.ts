@@ -230,10 +230,12 @@ function conNuestroOrigen(embedUrl: string): string {
  */
 
 /** La miniatura pública de un vídeo de YouTube. Se deduce del id, sin pedir nada. */
-export function miniaturaDeYouTube(id: string): string {
+export function miniaturaDeYouTube(id: string, tamano: 'hq' | 'mq' = 'hq'): string {
   // `hqdefault` y no `maxresdefault`: esta existe para TODOS los vídeos, y la
   // otra falta en los subidos en baja resolución y deja el hueco en gris.
-  return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+  // `mqdefault` (320×180, ya en 16:9 y sin franjas) para las listas largas,
+  // como la biblioteca de ejercicios: cien miniaturas grandes son megas.
+  return `https://img.youtube.com/vi/${id}/${tamano}default.jpg`;
 }
 
 /**
@@ -255,10 +257,13 @@ export function urlDeOEmbedVimeo(ref: VimeoRef): string {
  * ver `urlDeOEmbedVimeo`) y un .mp4 suelto tampoco: un archivo de vídeo no
  * trae portada, y sacarla habría que descargarlo entero.
  */
-export function miniaturaDelEnlace(url: string | undefined): string | null {
+export function miniaturaDelEnlace(
+  url: string | undefined,
+  tamano: 'hq' | 'mq' = 'hq'
+): string | null {
   if (!url) return null;
   const yt = parseYouTubeId(url);
-  return yt ? miniaturaDeYouTube(yt) : null;
+  return yt ? miniaturaDeYouTube(yt, tamano) : null;
 }
 
 /*

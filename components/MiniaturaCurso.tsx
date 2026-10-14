@@ -34,7 +34,7 @@ import type { ContenidoDeCurso } from '../lib/types';
  */
 const vimeoCache = new Map<string, string | null>();
 
-function useMiniaturaDeVimeo(url: string | undefined): string | null {
+export function useMiniaturaDeVimeo(url: string | undefined): string | null {
   const ref = url ? parseVimeoUrl(url) : null;
   const clave = ref ? `${ref.id}:${ref.hash ?? ''}` : null;
   const [imagen, setImagen] = useState<string | null>(() =>

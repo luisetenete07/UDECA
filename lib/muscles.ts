@@ -106,6 +106,25 @@ export function weightsOfExercise(ex: {
   return null;
 }
 
+/**
+ * Los músculos principales de un ejercicio, por su nombre en pantalla: los que
+ * trabajan a la mitad o más, de más a menos y hasta tres. Es lo que dice la
+ * biblioteca del coach debajo de cada ejercicio; un cuarto ya es ruido.
+ */
+export function musculosPrincipales(ex: {
+  name: string;
+  muscleGroup?: string;
+  muscles?: MuscleId[];
+  muscleWeights?: Partial<Record<MuscleId, number>>;
+}): string[] {
+  const pesos = weightsOfExercise(ex) ?? musclesForExercise(ex.name, ex.muscleGroup);
+  return (Object.entries(pesos) as [MuscleId, number][])
+    .filter(([, w]) => w >= 0.5)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([m]) => MUSCLE_LABEL[m]);
+}
+
 /** Músculos que trabaja un ejercicio, por nombre (y grupo opcional de apoyo). */
 export function musclesForExercise(name: string, group?: string): Weights {
   const n = (name || '').toLowerCase();

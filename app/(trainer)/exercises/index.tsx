@@ -9,8 +9,7 @@ import { FadeIn } from '../../../components/FadeIn';
 import { Grid } from '../../../components/Grid';
 import { DragList } from '../../../components/DragList';
 import { moveItem } from '../../../lib/useDragReorder';
-import { CardButton } from '../../../components/CardButton';
-import { Card } from '../../../components/Card';
+import { TarjetaDeEjercicio } from '../../../components/TarjetaDeEjercicio';
 import { EmptyState } from '../../../components/EmptyState';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ListSkeleton } from '../../../components/Skeleton';
@@ -39,7 +38,7 @@ import { showToast } from '../../../components/Toast';
 import { Dialogo } from '../../../components/Dialogo';
 import { QuickSheet } from '../../../components/QuickSheet';
 import { Chip, ChipRow } from '../../../components/Chip';
-import { fonts, colors, radius, spacing, typography } from '../../../lib/theme';
+import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../lib/theme';
 import {
   CATEGORY_PALETTE,
   MEASURE_SHORT,
@@ -61,6 +60,8 @@ export default function ExercisesScreen() {
   const [search, setSearch] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
   const [subFilter, setSubFilter] = useState<string | null>(null);
+  // Solo los que aún no tienen vídeo: para completar la biblioteca de una vez.
+  const [soloSinVideo, setSoloSinVideo] = useState(false);
   const [importing, setImporting] = useState(false);
   const [template, setTemplate] = useState<TemplateExercise[]>([]);
   // Import/export de plantillas entre entrenadores.
@@ -481,9 +482,10 @@ export default function ExercisesScreen() {
         (e) =>
           e.name.toLowerCase().includes(search.toLowerCase().trim()) &&
           (!muscleFilter || e.muscleGroup === muscleFilter) &&
-          (!subFilter || (e.subgroup ?? '') === subFilter)
+          (!subFilter || (e.subgroup ?? '') === subFilter) &&
+          (!soloSinVideo || !e.videoUrl)
       ),
-    [exercises, search, muscleFilter, subFilter]
+    [exercises, search, muscleFilter, subFilter, soloSinVideo]
   );
 
   // Subgrupos disponibles en la categoría filtrada: los definidos por el coach
@@ -497,19 +499,6 @@ export default function ExercisesScreen() {
     return Array.from(new Set([...base, ...used]));
   }, [muscleFilter, profile?.categorySubgroups, exercises]);
 
-  // Lista agrupada por subgrupo, para que cada bloque se lea aparte.
-  const grouped = useMemo(() => {
-    const map = new Map<string, Exercise[]>();
-    for (const e of filtered) {
-      const k = e.subgroup ?? '';
-      map.set(k, [...(map.get(k) ?? []), e]);
-    }
-    // Los que no tienen subgrupo van al final, bajo "Sin subgrupo".
-    return [...map.entries()].sort((a, b) =>
-      a[0] === '' ? 1 : b[0] === '' ? -1 : a[0].localeCompare(b[0])
-    );
-  }, [filtered]);
-
   // Filtros: las categorías del coach (o las de por defecto) más cualquier otra
   // que ya use algún ejercicio, para no ocultar ninguno.
   const filterCategories = useMemo(() => {
@@ -520,6 +509,37 @@ export default function ExercisesScreen() {
     const extra = exercises.map((e) => e.muscleGroup).filter((g) => g && !base.includes(g));
     return [...base, ...Array.from(new Set(extra))];
   }, [profile?.exerciseCategories, exercises]);
+
+  // Cuántos hay en cada categoría (para las pastillas) y cuántos con vídeo.
+  const porCategoria = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const e of exercises) m.set(e.muscleGroup, (m.get(e.muscleGroup) ?? 0) + 1);
+    return m;
+  }, [exercises]);
+  const sinVideo = useMemo(() => exercises.filter((e) => !e.videoUrl).length, [exercises]);
+
+  /*
+   * La lista, en bloques.
+   *
+   * Con "Todos", por CATEGORÍA y en el orden del coach: cien ejercicios
+   * seguidos no se leen, y cada bloque con su color es lo que se busca al
+   * planificar ("un tirón más"). Con una categoría elegida, por SUBGRUPO, que
+   * es el siguiente nivel; los que no tienen van al final.
+   */
+  const grouped = useMemo(() => {
+    const map = new Map<string, Exercise[]>();
+    for (const e of filtered) {
+      const k = muscleFilter ? (e.subgroup ?? '') : e.muscleGroup;
+      map.set(k, [...(map.get(k) ?? []), e]);
+    }
+    const entradas = [...map.entries()];
+    if (!muscleFilter) {
+      return entradas.sort((a, b) => filterCategories.indexOf(a[0]) - filterCategories.indexOf(b[0]));
+    }
+    return entradas.sort((a, b) =>
+      a[0] === '' ? 1 : b[0] === '' ? -1 : a[0].localeCompare(b[0])
+    );
+  }, [filtered, muscleFilter, filterCategories]);
 
   if (loading) {
     return (
@@ -699,6 +719,7 @@ export default function ExercisesScreen() {
         <ChipRow scroll>
           <Chip
             texto="Todos"
+            cuenta={exercises.length}
             activo={muscleFilter === null}
             onPress={() => {
               setMuscleFilter(null);
@@ -706,10 +727,23 @@ export default function ExercisesScreen() {
               setSubEdit(false);
             }}
           />
+          {/* Va junto a "Todos" y no al final: al final se queda fuera de la
+              pantalla, y es el filtro que dice qué falta por hacer. */}
+          {sinVideo > 0 || soloSinVideo ? (
+            <Chip
+              texto="Sin vídeo"
+              icono="videocam-off-outline"
+              cuenta={sinVideo}
+              activo={soloSinVideo}
+              onPress={() => setSoloSinVideo((v) => !v)}
+            />
+          ) : null}
           {filterCategories.map((group) => (
             <Chip
               key={group}
               texto={group}
+              punto={categoryColor(group)}
+              cuenta={porCategoria.get(group) ?? 0}
               activo={muscleFilter === group}
               onPress={() => {
                 setMuscleFilter(group);
@@ -782,56 +816,49 @@ export default function ExercisesScreen() {
           }
         />
       ) : (
-        grouped.map(([sg, list]) => (
-          <View key={sg || '__none__'}>
-            {/* Solo se rotula si hay más de un bloque: con uno solo, la
-                cabecera sobra y añade ruido. */}
-            {grouped.length > 1 ? (
-              <View style={styles.subgroupHeadRow}>
-                <Text style={styles.subgroupHead}>{sg || 'Sin subgrupo'}</Text>
-                {/* La medida del grupo solo se puede nombrar con la categoría
-                    delante: "Aguantes" existe en varias y cada una decide la
-                    suya. Sin filtro de categoría no se sabe de cuál es este
-                    bloque, así que no se dice nada. */}
-                {muscleFilter && medidaDelGrupo(profile?.subgroupMeasures, muscleFilter, sg) ? (
-                  <Text style={styles.subgroupMedida}>
-                    {MEASURE_SHORT[
-                      medidaDelGrupo(profile?.subgroupMeasures, muscleFilter, sg)!
-                    ].toLowerCase()}
+        grouped.map(([clave, list]) => {
+          // Sin filtro, cada bloque es una categoría (con su color); con
+          // filtro, un subgrupo de la elegida.
+          const color = muscleFilter ? null : categoryColor(clave);
+          const medida = muscleFilter
+            ? medidaDelGrupo(profile?.subgroupMeasures, muscleFilter, clave)
+            : undefined;
+          return (
+            <View key={clave || '__none__'} style={styles.bloque}>
+              {/* Con un solo subgrupo, la cabecera sobra: ya lo dice la pastilla.
+                  Las categorías se rotulan siempre: su color es la guía. */}
+              {!muscleFilter || grouped.length > 1 ? (
+                <View style={styles.bloqueCab}>
+                  {color ? <View style={[styles.bloquePunto, { backgroundColor: color }]} /> : null}
+                  <Text style={styles.bloqueTitulo} numberOfLines={1}>
+                    {clave || 'Sin subgrupo'}
                   </Text>
-                ) : null}
-              </View>
-            ) : null}
-            <Grid>
-            {list.map((exercise, index) => (
-          <FadeIn key={exercise.id} delay={Math.min(index * 30, 240)}>
-          <CardButton
-            onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}
-            style={styles.exerciseCard}
-          >
-              {/* Franja del color de su categoría: distingue de un vistazo a
-                  qué grupo pertenece cada ejercicio de la lista. */}
-              <View
-                style={[styles.catStripe, { backgroundColor: categoryColor(exercise.muscleGroup) }]}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <View style={styles.exerciseMetaRow}>
-                  <Text style={styles.exerciseGroup}>{exercise.muscleGroup}</Text>
-                </View>
-              </View>
-              {exercise.videoUrl ? (
-                <View style={styles.videoBadge}>
-                  <Ionicons name="play-circle-outline" size={16} color={colors.primary} />
-                  <Text style={styles.videoBadgeText}>Vídeo</Text>
+                  {/* La medida del grupo solo se puede nombrar con la categoría
+                      delante: "Aguantes" existe en varias y cada una decide la
+                      suya. Sin filtro de categoría no se dice nada. */}
+                  {medida ? (
+                    <Text style={styles.bloqueMedida}>{MEASURE_SHORT[medida].toLowerCase()}</Text>
+                  ) : null}
+                  <View style={styles.bloqueLinea} />
+                  <Text style={styles.bloqueCuenta}>{list.length}</Text>
                 </View>
               ) : null}
-          </CardButton>
-          </FadeIn>
-            ))}
-            </Grid>
-          </View>
-        ))
+              <Grid>
+                {list.map((exercise, index) => (
+                  <FadeIn key={exercise.id} delay={Math.min(index * 30, 240)}>
+                    <TarjetaDeEjercicio
+                      ejercicio={exercise}
+                      color={categoryColor(exercise.muscleGroup)}
+                      // Con una categoría elegida, el subgrupo ya es la cabecera.
+                      conSubgrupo={!muscleFilter}
+                      onPress={() => router.push(`/(trainer)/exercises/${exercise.id}`)}
+                    />
+                  </FadeIn>
+                ))}
+              </Grid>
+            </View>
+          );
+        })
       )}
 
       {/* Confirmación previa de "Actualizar a pack UDECA" (destructivo) */}
@@ -1014,27 +1041,25 @@ const styles = StyleSheet.create({
   paletteDot: { width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: 'transparent' },
   paletteDotOn: { borderColor: colors.text },
   customRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  subgroupHeadRow: {
+  bloque: { marginBottom: spacing.sm },
+  bloqueCab: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  subgroupHead: {
+  bloquePunto: { width: 9, height: 9, borderRadius: 5 },
+  bloqueTitulo: {
     ...typography.label,
-    color: colors.textMuted,
+    color: colors.text,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    flexShrink: 1,
   },
-  subgroupMedida: {
-    ...typography.small,
-    color: colors.primaryBright,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  catStripe: { width: 4, alignSelf: 'stretch', borderRadius: 2, marginRight: spacing.sm },
-  exerciseMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+  bloqueMedida: { ...typography.small, color: colors.primaryBright },
+  bloqueLinea: { flex: 1, height: 1, backgroundColor: colors.border },
+  bloqueCuenta: { ...typography.small, color: colors.textFaint, ...tabularNums },
   catRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1086,10 +1111,4 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlignVertical: 'top',
   },
-  // La separación entre tarjetas la pone la rejilla, no la tarjeta.
-  exerciseCard: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  exerciseName: { ...typography.h3, color: colors.text },
-  exerciseGroup: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  videoBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  videoBadgeText: { ...typography.small, color: colors.primary, fontFamily: fonts.heading, },
 });

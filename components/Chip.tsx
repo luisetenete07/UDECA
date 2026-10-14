@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 
 /**
  * La pastilla que se enciende al elegirla, y una sola forma de encenderla.
@@ -30,6 +30,7 @@ export function Chip({
   compacto = false,
   /** Tono discreto para acciones que no son "elegir" (renombrar, editar). */
   suave = false,
+  cuenta,
 }: {
   texto: string;
   activo?: boolean;
@@ -48,6 +49,8 @@ export function Chip({
   /** Menos alta, para filas apretadas dentro de una ficha. */
   compacto?: boolean;
   suave?: boolean;
+  /** Cuántos hay detrás del filtro, en pequeño tras el nombre. */
+  cuenta?: number;
 }) {
   const colorIcono = suave ? colors.primary : activo ? colors.onPrimary : colors.textMuted;
   return (
@@ -62,6 +65,9 @@ export function Chip({
       <Text style={[styles.texto, activo && styles.textoActivo, suave && styles.textoSuave]}>
         {texto}
       </Text>
+      {cuenta !== undefined ? (
+        <Text style={[styles.cuenta, activo && styles.cuentaActiva]}>{cuenta}</Text>
+      ) : null}
       {accion ? (
         <Pressable onPress={onAccion} hitSlop={8} style={styles.accion}>
           <Ionicons name={accion} size={15} color={colorAccion ?? colorIcono} />
@@ -125,6 +131,8 @@ const styles = StyleSheet.create({
   texto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   textoActivo: { color: colors.onPrimary },
   textoSuave: { color: colors.primary },
+  cuenta: { ...typography.small, color: colors.textFaint, fontSize: 11, ...tabularNums },
+  cuentaActiva: { color: colors.onPrimary, opacity: 0.65 },
   fila: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   filaEnvuelta: { flexWrap: 'wrap' },
   filaScroll: { marginBottom: spacing.md },
