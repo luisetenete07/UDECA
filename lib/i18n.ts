@@ -338,6 +338,24 @@ export const EN: Record<string, string> = {
   'Crea la primera: recetas y platos por foto para tu grupo': 'Create the first one: recipes and dishes by photo for your group',
   // La biblioteca de ejercicios (components/TarjetaDeEjercicio.tsx).
   'Sin vídeo': 'No video',
+  // La superserie por rondas (app/(client)/workout.tsx, lib/superserie.ts).
+  'Superserie · {0} ejercicios': 'Superset · {0} exercises',
+  'Seguidos, sin descanso entre ellos. Descansa {0} al acabar cada ronda.':
+    'Back to back, no rest between them. Rest {0} after each round.',
+  'Superserie · sin descanso entre ellos': 'Superset · no rest between them',
+  Ronda: 'Round',
+  'Ronda {0}': 'Round {0}',
+  'RONDA {0} DE {1}': 'ROUND {0} OF {1}',
+  'después de {0} de descanso': 'after {0} rest',
+  'Ahora · sin descanso': 'Now · no rest',
+  Plegar: 'Collapse',
+  'Quitar ronda': 'Remove round',
+  'Añadir ronda': 'Add round',
+  'Nota {0}': 'Note {0}',
+  'Entre bloques · {0}s': 'Between blocks · {0}s',
+  'Clúster {0} bloques · {1}s': 'Cluster {0} blocks · {1}s',
+  'Objetivo: {0}': 'Target: {0}',
+  Agarre: 'Grip',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

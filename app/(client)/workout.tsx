@@ -86,6 +86,15 @@ import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
 import { shareRecordImage, shareSessionImage } from '../../lib/brandCards';
 import { startRest, stopRest, useActiveRest } from '../../lib/restTimerStore';
 import {
+  bloqueDe,
+  descansoDelBloque,
+  esSuperserie,
+  miembros as miembrosDelBloque,
+  rondasDe,
+  siguienteDelBloque,
+  trasMarcarSerie,
+} from '../../lib/superserie';
+import {
   computeAchievements,
   currentStreak,
   detectNewPRs,
@@ -242,6 +251,7 @@ export default function WorkoutScreen() {
   const activeRest = useActiveRest();
   // Índice del ejercicio que se muestra en el modo enfocado (1 por pantalla).
   const [viewIndex, setViewIndex] = useState(0);
+  const [rondasAbiertas, setRondasAbiertas] = useState<Set<string>>(() => new Set());
   // Índice del ejercicio con el vídeo de técnica desplegado (null = ninguno).
   // El vídeo de técnica se abre en el visor, a casi toda la pantalla y con
   // las mismas protecciones que los cursos (ver components/VisorDeVideo). En
@@ -1100,34 +1110,66 @@ export default function WorkoutScreen() {
           setPrVivo(record);
         }
       }
-      // En superserie no hay descanso: se encadena con el siguiente ejercicio.
-      const nextIsLinked = day?.exercises[exerciseIndex + 1]?.supersetWithPrevious === true;
-      if (!nextIsLinked) {
-        const rest = day?.exercises[exerciseIndex]?.restSeconds || DEFAULT_REST_SECONDS;
-        // Qué toca al terminar el descanso: otra serie del mismo ejercicio o el siguiente.
-        const setsInEx = log[exerciseIndex]?.sets.length ?? 0;
-        const exName = log[exerciseIndex]?.name ?? '';
-        const nextEx = day?.exercises[exerciseIndex + 1];
-        const nextLabel =
-          setIndex + 1 < setsInEx
-            ? `${frase`Ahora`}: ${enTitulo(palabraSerie)} ${setIndex + 2} · ${exName}`
-            : nextEx
-              ? `Ahora: ${nextEx.name}`
-              : 'Última serie hecha · guarda la sesión';
-        startRest(rest, nextLabel);
-      }
+      /*
+       * QUÉ TOCA AHORA (lib/superserie.ts), con la serie ya marcada: el estado
+       * de React todavía no la tiene.
+       *
+       * En superserie, si a la ronda le queda otro ejercicio no hay descanso:
+       * su serie ya está debajo, en la misma tarjeta, y se enciende como la
+       * siguiente. El descanso llega al acabar la ronda entera.
+       */
+      const plan = day?.exercises ?? [];
+      const conLaMarca = log.map((ex, i) =>
+        i === exerciseIndex
+          ? { ...ex, sets: ex.sets.map((s2, j) => (j === setIndex ? { ...s2, completed: true } : s2)) }
+          : ex
+      );
+      const despues = trasMarcarSerie(conLaMarca, plan, exerciseIndex, setIndex);
+      const bloque = bloqueDe(plan, exerciseIndex, log.length);
+      if (despues.tipo === 'encadenar') {
+        // Un segundo toque, más suave: "y ahora el otro".
+        if (Platform.OS !== 'web') {
+          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), 180);
+        }
+      } else {
+        const rest = descansoDelBloque(plan, bloque) || DEFAULT_REST_SECONDS;
+        startRest(rest, queTocaTrasDescansar(conLaMarca, plan, despues.siguiente, exerciseIndex));
 
-      // Autoavance: si al marcar esta serie el ejercicio queda COMPLETO, pasa
-      // solo al siguiente (deja ver el ✓ un instante). El último no avanza.
-      const exSets = log[exerciseIndex]?.sets ?? [];
-      const nowAllDone =
-        exSets.length > 0 && exSets.every((s, j) => (j === setIndex ? true : s.completed));
-      if (nowAllDone && exerciseIndex < log.length - 1) {
-        setTimeout(() => {
-          setViewIndex((cur) => (cur === exerciseIndex ? exerciseIndex + 1 : cur));
-        }, 900);
+        // Autoavance: con el bloque COMPLETO (el ejercicio, o la superserie
+        // entera) pasa solo a lo siguiente, dejando ver el ✓ un instante.
+        if (despues.bloqueTerminado && bloque.fin < log.length - 1) {
+          const destino =
+            despues.siguiente && despues.siguiente.ejercicio > bloque.fin
+              ? despues.siguiente.ejercicio
+              : bloque.fin + 1;
+          setTimeout(() => {
+            setViewIndex((cur) => (cur >= bloque.inicio && cur <= bloque.fin ? destino : cur));
+          }, 900);
+        }
       }
     }
+  };
+
+  /** El rótulo del descanso: qué viene cuando acabe. */
+  const queTocaTrasDescansar = (
+    sesion: LoggedExercise[],
+    plan: RoutineExercise[],
+    siguiente: { ejercicio: number; serie: number } | null,
+    desde: number
+  ): string => {
+    if (!siguiente) return 'Última serie hecha · guarda la sesión';
+    const b = bloqueDe(plan, siguiente.ejercicio, sesion.length);
+    if (esSuperserie(b)) {
+      const nombres = miembrosDelBloque(b)
+        .filter((i) => !sesion[i]?.saltado)
+        .map((i) => sesion[i]?.name ?? '')
+        .join(' + ');
+      return `${frase`Ahora`}: ${t('Ronda')} ${siguiente.serie + 1} · ${nombres}`;
+    }
+    const nombre = sesion[siguiente.ejercicio]?.name ?? '';
+    return siguiente.ejercicio === desde
+      ? `${frase`Ahora`}: ${enTitulo(palabraSerie)} ${siguiente.serie + 1} · ${nombre}`
+      : `Ahora: ${nombre}`;
   };
 
   /**
@@ -1205,7 +1247,12 @@ export default function WorkoutScreen() {
   const doneSets = log.reduce((acc, ex) => acc + ex.sets.filter((s) => s.completed).length, 0);
   // Índice visible en el modo enfocado (acotado por si la lista cambió).
   const safeIndex = Math.min(viewIndex, Math.max(0, log.length - 1));
-  const isLastExercise = safeIndex >= log.length - 1;
+  // Lo que se ve es un BLOQUE: un ejercicio suelto, o la superserie entera en
+  // una tarjeta. Anterior y Siguiente saltan de bloque en bloque.
+  const bloqueVisible = bloqueDe(day?.exercises ?? [], safeIndex, log.length);
+  const isLastExercise = bloqueVisible.fin >= log.length - 1;
+  // Rondas de superserie ya hechas que el alumno ha vuelto a abrir para corregir.
+  const rondaAbierta = (b: { inicio: number }, r: number) => rondasAbiertas.has(`${b.inicio}:${r}`);
 
   // ¿Ya se ha entrenado HOY (rutina semanal, ciclo o Sensaciones)? Si hay una
   // sesión guardada hoy y no hay otra en curso, mostramos "entrenamiento
@@ -1634,6 +1681,423 @@ export default function WorkoutScreen() {
     );
   }
 
+  /*
+   * LA SUPERSERIE, EN UNA TARJETA Y POR RONDAS.
+   *
+   * Arriba, los ejercicios del bloque (A, B…) con lo que pide cada uno. Debajo,
+   * las rondas: en cada una, una serie de cada ejercicio, una debajo de otra,
+   * que es como se hacen. La serie que toca se enciende; al marcarla, se
+   * enciende la del siguiente ejercicio —"ahora · sin descanso"— y solo al
+   * cerrar la ronda arranca el descanso. Las rondas hechas se pliegan en una
+   * línea, para que la que toca quede siempre arriba.
+   */
+  const tarjetaDeSuperserie = (b: { inicio: number; fin: number }) => {
+    const plan = day?.exercises ?? [];
+    const ids = miembrosDelBloque(b);
+    const activos = ids.filter((i) => !log[i]?.saltado);
+    const rondas = rondasDe(log, b);
+    const siguiente = siguienteDelBloque(log, b);
+    const hecho = activos.length > 0 && siguiente === null;
+    const descanso = descansoDelBloque(plan, b) || DEFAULT_REST_SECONDS;
+    const letra = (i: number) => String.fromCharCode(65 + (i - b.inicio));
+
+    const info = (i: number) => {
+      const exercise = log[i];
+      const planned = plan[i];
+      const medida =
+        planned?.measure ?? exercise?.measure ?? measureByExercise[exercise?.exerciseId ?? ''];
+      const isSeconds = isHoldMeasure(medida);
+      return {
+        exercise,
+        planned,
+        prev: exercise ? lastPerf[exercise.exerciseId] : undefined,
+        load: planned ? resolveLoad(planned) : ('none' as const),
+        isSeconds,
+        isCombo: medida === 'combo',
+        isDual: isDualMeasure(medida),
+        cluster: planned?.cluster,
+        bloques: planned?.cluster ? clusterBlocks(planned.cluster) : 1,
+      };
+    };
+
+    /** Una casilla con su rótulo debajo: en una ronda cada fila es de un ejercicio distinto. */
+    const campo = (
+      key: string,
+      value: string,
+      onChange: (v: string) => void,
+      placeholder: string,
+      rotulo: string,
+      decimal = false
+    ) => (
+      <View key={key} style={styles.ssCampo}>
+        <TextField
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          keyboardType={decimal ? 'decimal-pad' : 'numeric'}
+          style={[styles.setFieldInput, styles.ssCampoCasilla]}
+        />
+        <Text style={styles.ssCampoRotulo}>{rotulo}</Text>
+      </View>
+    );
+
+    const fila = (i: number, r: number) => {
+      const d = info(i);
+      const set = d.exercise?.sets[r];
+      if (!d.exercise || !set) return null;
+      const objetivo = d.planned?.reps || (d.isSeconds ? 'seg' : 'reps');
+      const campos = [
+        campo(
+          'reps',
+          set.reps,
+          (v) => updateSet(i, r, 'reps', v),
+          objetivo,
+          d.cluster ? 'BLOQUE 1' : d.isDual ? (d.isSeconds ? 'IZQ. S' : 'IZQ.') : d.isSeconds ? 'SEG.' : 'REPS'
+        ),
+        ...(d.cluster
+          ? Array.from({ length: d.bloques - 1 }, (_, k) =>
+              campo(
+                `bloque-${k}`,
+                set.clusters?.[k] ?? '',
+                (v) => updateCluster(i, r, k, v),
+                objetivo,
+                `BLOQUE ${k + 2}`
+              )
+            )
+          : []),
+        ...(d.isCombo
+          ? [
+              campo(
+                'aguante',
+                set.seconds ?? '',
+                (v) => updateSet(i, r, 'seconds', v),
+                d.planned?.seconds ? String(d.planned.seconds) : 'seg',
+                'AGUANTE S'
+              ),
+            ]
+          : d.isDual
+            ? [
+                campo(
+                  'der',
+                  set.side2 ?? '',
+                  (v) => updateSet(i, r, 'side2', v),
+                  d.planned?.side2 || objetivo,
+                  d.isSeconds ? 'DER. S' : 'DER.'
+                ),
+              ]
+            : []),
+        ...(d.load !== 'none'
+          ? [
+              campo(
+                'kg',
+                set.weight ?? '',
+                (v) => updateSet(i, r, 'weight', v),
+                d.prev?.weight || '—',
+                d.load === 'assisted' ? 'GOMA KG' : 'KG',
+                true
+              ),
+            ]
+          : []),
+      ];
+      const esLaSiguiente = siguiente?.ejercicio === i && siguiente.serie === r;
+      // "Sin descanso": la de antes en esta misma ronda ya está hecha.
+      const encadenada =
+        esLaSiguiente &&
+        activos.some((j) => j < i && r < (log[j]?.sets.length ?? 0) && log[j]?.sets[r].completed);
+      // Con tres casillas o más, el nombre no cabe al lado: va encima.
+      const apilada = campos.length >= 3;
+      const marca = (
+        <PressableScale
+          haptic
+          onPress={() => updateSet(i, r, 'completed', !set.completed)}
+          style={styles.setToggle}
+          hitSlop={6}
+        >
+          <View
+            style={[
+              styles.checkButton,
+              esLaSiguiente && styles.ssCheckSiguiente,
+              set.completed && styles.checkButtonDone,
+            ]}
+          >
+            <Ionicons
+              name="checkmark"
+              size={20}
+              color={set.completed ? colors.onPrimary : esLaSiguiente ? colors.primary : colors.textFaint}
+            />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.setLabel, set.completed && styles.setLabelDone]} numberOfLines={2}>
+              <Text style={styles.ssLetraEnFila}>{letra(i)} </Text>
+              {d.exercise.name}
+            </Text>
+            {esLaSiguiente ? (
+              <Text style={styles.ssPista}>{encadenada ? 'Ahora · sin descanso' : 'Ahora'}</Text>
+            ) : null}
+          </View>
+        </PressableScale>
+      );
+      return (
+        <View key={i} style={[styles.ssFila, esLaSiguiente && styles.ssFilaSiguiente]}>
+          {apilada ? (
+            <>
+              {marca}
+              <View style={styles.ssCamposApilados}>{campos}</View>
+            </>
+          ) : (
+            <View style={styles.ssFilaEnLinea}>
+              {marca}
+              {campos}
+            </View>
+          )}
+        </View>
+      );
+    };
+
+    /** Lo apuntado en una serie, en corto, para la línea de la ronda plegada. */
+    const enCorto = (i: number, r: number) => {
+      const d = info(i);
+      const s = d.exercise?.sets[r];
+      if (!s) return '';
+      const marca = s.reps ? `${s.reps}${d.isSeconds ? ' s' : ''}` : '✓';
+      return `${letra(i)} ${marca}${s.weight ? ` · ${s.weight} kg` : ''}`;
+    };
+
+    return (
+      <FadeIn key={`superserie-${b.inicio}`}>
+        <Card accent style={[styles.exerciseCard, hecho && styles.exerciseCardDone]}>
+          <View style={styles.ssCab}>
+            <View style={styles.ssIcono}>
+              <Ionicons name="link" size={15} color={colors.primaryBright} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.ssTitulo}>{frase`Superserie · ${ids.length} ejercicios`}</Text>
+              <Text style={styles.ssSub}>
+                {frase`Seguidos, sin descanso entre ellos. Descansa ${minutosSegundos(descanso, false)} al acabar cada ronda.`}
+              </Text>
+            </View>
+            {hecho ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+          </View>
+
+          {ids.map((i) => {
+            const d = info(i);
+            if (!d.exercise) return null;
+            const pres = ve.objetivo && d.planned ? textoDePrescripcion(d.planned, perso) : '';
+            const meta = unido(
+              d.planned ? `${d.planned.sets} × ${d.planned.reps}${d.isSeconds ? 's' : ''}` : undefined,
+              pres || undefined,
+              d.load === 'assisted' ? t('Con goma') : d.load === 'weighted' ? t('Lastrado') : undefined,
+              d.planned?.grip ? `${t('Agarre')} ${GRIP_LABEL[d.planned.grip].toLowerCase()}` : undefined,
+              d.cluster ? frase`Clúster ${d.bloques} bloques · ${d.cluster.restSeconds}s` : undefined
+            );
+            return (
+              <View key={i} style={styles.ssEjercicio}>
+                <View style={styles.ssLetra}>
+                  <Text style={styles.ssLetraTexto}>{letra(i)}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={[styles.ssNombre, d.exercise.saltado && styles.ssNombreSaltado]}
+                    numberOfLines={2}
+                  >
+                    {d.exercise.name}
+                  </Text>
+                  {meta ? <Text style={styles.ssMeta}>{meta}</Text> : null}
+                  {d.planned?.goal ? (
+                    <Text style={styles.ssMeta}>{frase`Objetivo: ${d.planned.goal}`}</Text>
+                  ) : null}
+                  {d.prev ? (
+                    <Text style={styles.ssUltima}>
+                      Última vez: {d.load !== 'none' && d.prev.weight ? `${d.prev.weight} kg × ` : ''}
+                      {d.prev.reps ?? '—'} {d.isSeconds ? 's' : 'reps'}
+                    </Text>
+                  ) : null}
+                  {d.planned?.notes ? <Text style={styles.coachNotes}>{d.planned.notes}</Text> : null}
+                  {d.exercise.saltado ? (
+                    <Text style={styles.saltadoAviso}>
+                      Saltado hoy. Se guarda así para que tu entrenador lo sepa.
+                    </Text>
+                  ) : null}
+                  <View style={styles.ssAcciones}>
+                    {videoByExercise[d.exercise.exerciseId] ? (
+                      <Pressable
+                        onPress={() =>
+                          setVideoAbierto({
+                            url: videoByExercise[d.exercise!.exerciseId],
+                            titulo: d.exercise!.name,
+                          })
+                        }
+                        style={styles.ssAccion}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="play-circle-outline" size={15} color={colors.primary} />
+                        <Text style={styles.videoLinkText}>Ver técnica</Text>
+                      </Pressable>
+                    ) : null}
+                    {d.cluster ? (
+                      <Pressable
+                        onPress={() => descansoDeBloque(d.cluster!.restSeconds, d.exercise!.name)}
+                        style={styles.ssAccion}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="timer-outline" size={15} color={colors.primary} />
+                        <Text style={styles.videoLinkText}>
+                          {frase`Entre bloques · ${d.cluster.restSeconds}s`}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    {puedeSaltar ? (
+                      <Pressable onPress={() => alternarSaltado(i)} style={styles.ssAccion} hitSlop={6}>
+                        <Ionicons
+                          name={d.exercise.saltado ? 'play-skip-forward' : 'play-skip-forward-outline'}
+                          size={14}
+                          color={d.exercise.saltado ? colors.primary : colors.textMuted}
+                        />
+                        <Text style={styles.permisoTexto}>{d.exercise.saltado ? 'Saltado' : 'Saltar'}</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+
+          {Array.from({ length: rondas }, (_, r) => {
+            const enLaRonda = activos.filter((i) => r < (log[i]?.sets.length ?? 0));
+            if (enLaRonda.length === 0) return null;
+            const hecha = enLaRonda.every((i) => log[i]?.sets[r].completed);
+            const actual = siguiente?.serie === r;
+            // Desplegada solo la que toca: las hechas y las que faltan, en una
+            // línea cada una. Se abren con un toque (corregir una hecha, o
+            // adelantar una). Así la ronda de ahora queda siempre a la vista.
+            if (!actual && !rondaAbierta(b, r)) {
+              return (
+                <Pressable
+                  key={r}
+                  onPress={() => setRondasAbiertas((prev) => new Set(prev).add(`${b.inicio}:${r}`))}
+                  style={[styles.ssRondaPlegada, hecha && styles.ssRondaPlegadaHecha]}
+                  hitSlop={4}
+                >
+                  <Ionicons
+                    name={hecha ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={16}
+                    color={hecha ? colors.primary : colors.textFaint}
+                  />
+                  <Text style={[styles.ssRondaPlegadaTitulo, !hecha && styles.ssRondaPlegadaPendiente]}>
+                    {frase`Ronda ${r + 1}`}
+                  </Text>
+                  <Text style={styles.ssRondaResumen} numberOfLines={1}>
+                    {hecha
+                      ? enLaRonda.map((i) => enCorto(i, r)).join('  ·  ')
+                      : enLaRonda
+                          .map((i) => `${letra(i)} ${plan[i]?.reps ?? ''}${info(i).isSeconds ? ' s' : ''}`)
+                          .join('  ·  ')}
+                  </Text>
+                  <Ionicons
+                    name={hecha ? 'create-outline' : 'chevron-down'}
+                    size={14}
+                    color={colors.textFaint}
+                  />
+                </Pressable>
+              );
+            }
+            return (
+              <View key={r} style={[styles.ssRonda, actual && styles.ssRondaActual]}>
+                <View style={styles.ssRondaCab}>
+                  <Text style={[styles.ssRondaTitulo, actual && styles.ssRondaTituloActual]}>
+                    {frase`RONDA ${r + 1} DE ${rondas}`}
+                  </Text>
+                  {!actual ? (
+                    <Pressable
+                      onPress={() =>
+                        setRondasAbiertas((prev) => {
+                          const n = new Set(prev);
+                          n.delete(`${b.inicio}:${r}`);
+                          return n;
+                        })
+                      }
+                      hitSlop={8}
+                    >
+                      <Text style={styles.ssPlegar}>Plegar</Text>
+                    </Pressable>
+                  ) : r > 0 ? (
+                    <Text style={styles.ssRondaDescanso}>
+                      {frase`después de ${minutosSegundos(descanso, false)} de descanso`}
+                    </Text>
+                  ) : null}
+                </View>
+                {enLaRonda.map((i) => fila(i, r))}
+              </View>
+            );
+          })}
+
+          {isFlex ? (
+            <View style={styles.setEditRow}>
+              <Pressable
+                onPress={() => activos.forEach((i) => (log[i]?.sets.length ?? 0) > 1 && removeSet(i))}
+                style={styles.setEditBtn}
+                hitSlop={6}
+              >
+                <Ionicons name="remove" size={16} color={colors.textMuted} />
+                <Text style={styles.setEditText}>Quitar ronda</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => activos.forEach((i) => addSet(i))}
+                style={styles.setEditBtn}
+                hitSlop={6}
+              >
+                <Ionicons name="add" size={16} color={colors.primary} />
+                <Text style={[styles.setEditText, { color: colors.primary }]}>Añadir ronda</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {pideEsfuerzoPorEjercicio
+            ? activos.map((i) => (
+                <SelectorDeEsfuerzo
+                  key={i}
+                  esfuerzo={esfuerzoDelPlan}
+                  etiqueta={`${letra(i)} · ${log[i]?.name ?? ''}`}
+                  value={log[i]?.esfuerzo?.valor ?? rirComoValor(log[i]?.rir)}
+                  onChange={(v) => updateExerciseEsfuerzo(i, v)}
+                />
+              ))
+            : null}
+
+          {ids.map((i) =>
+            noteOpenIndex === i || log[i]?.notes ? (
+              <TextField
+                key={`nota-${i}`}
+                label={`${letra(i)} · ${log[i]?.name ?? ''}`}
+                value={log[i]?.notes ?? ''}
+                onChangeText={(v) => updateExerciseNote(i, v)}
+                placeholder="Ej. Hice la variante con goma, molestia en hombro..."
+                style={styles.noteField}
+              />
+            ) : null
+          )}
+          <View style={styles.ssAcciones}>
+            {ids.map((i) => (
+              <Pressable
+                key={i}
+                onPress={() => setNoteOpenIndex(noteOpenIndex === i ? null : i)}
+                style={styles.noteBtn}
+                hitSlop={6}
+              >
+                <Ionicons
+                  name={log[i]?.notes ? 'create' : 'create-outline'}
+                  size={13}
+                  color={colors.textMuted}
+                />
+                <Text style={styles.noteBtnText}>{frase`Nota ${letra(i)}`}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Card>
+      </FadeIn>
+    );
+  };
+
   // ---------- Modo entreno ----------
   return (
     <ScreenContainer contentStyle={activeRest ? styles.restSpacer : undefined}>
@@ -2043,7 +2507,7 @@ export default function WorkoutScreen() {
         <View style={styles.exDotsRow}>
           {log.map((ex, i) => {
             const exDone = ex.sets.length > 0 && ex.sets.every((s) => s.completed);
-            const current = i === safeIndex;
+            const current = i >= bloqueVisible.inicio && i <= bloqueVisible.fin;
             return (
               <Pressable
                 key={i}
@@ -2167,16 +2631,28 @@ export default function WorkoutScreen() {
           {day.exercises.map((ex, i) => {
             const enSegundos = isHoldMeasure(ex.measure ?? measureByExercise[ex.exerciseId]);
             const cuanto = enSegundos ? `${ex.seconds || ex.reps} s` : ex.reps;
+            // La superserie se ve como lo que es desde antes de empezar: un
+            // bloque, con su rótulo, y no un "+" delante de un nombre.
+            const b = bloqueDe(day.exercises, i);
+            const enlazado = esSuperserie(b);
             return (
-              <View key={ex.id ?? i} style={styles.previaFila}>
-                <Text style={styles.previaNombre} numberOfLines={1}>
-                  {ex.supersetWithPrevious ? '+ ' : ''}
-                  {ex.name}
-                </Text>
-                <Text style={styles.previaSeries}>
-                  {cuanto ? `${ex.sets} × ${cuanto}` : frase`${ex.sets} series`}
-                </Text>
-              </View>
+              <React.Fragment key={ex.id ?? i}>
+                {enlazado && i === b.inicio ? (
+                  <View style={styles.previaSuperserie}>
+                    <Ionicons name="link" size={12} color={colors.primaryBright} />
+                    <Text style={styles.previaSuperserieTexto}>Superserie · sin descanso entre ellos</Text>
+                  </View>
+                ) : null}
+                <View style={[styles.previaFila, enlazado && styles.previaFilaEnlazada]}>
+                  <Text style={styles.previaNombre} numberOfLines={1}>
+                    {enlazado ? `${String.fromCharCode(65 + i - b.inicio)} · ` : ''}
+                    {ex.name}
+                  </Text>
+                  <Text style={styles.previaSeries}>
+                    {cuanto ? `${ex.sets} × ${cuanto}` : frase`${ex.sets} series`}
+                  </Text>
+                </View>
+              </React.Fragment>
             );
           })}
         </View>
@@ -2194,6 +2670,7 @@ export default function WorkoutScreen() {
         // Los ejercicios, solo con el entreno en marcha. Es lo que hace que la
         // pantalla de antes de empezar sea corta y diga una sola cosa.
         if (!enMarcha) return null;
+        if (esSuperserie(bloqueVisible)) return tarjetaDeSuperserie(bloqueVisible);
         const exerciseIndex = safeIndex;
         const exercise = log[exerciseIndex];
         if (!exercise) return null;
@@ -2226,12 +2703,6 @@ export default function WorkoutScreen() {
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
-            {planned?.supersetWithPrevious ? (
-              <View style={styles.supersetRow}>
-                <Ionicons name="link" size={12} color={colors.primaryBright} />
-                <Text style={styles.supersetText}>SUPERSERIE con el anterior — sin descanso</Text>
-              </View>
-            ) : null}
             <View style={styles.exerciseHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>
@@ -2626,17 +3097,21 @@ export default function WorkoutScreen() {
       {enMarcha ? (
       <View style={styles.navRow}>
         <Pressable
-          onPress={() => setViewIndex((i) => Math.max(0, i - 1))}
-          disabled={safeIndex === 0}
-          style={[styles.navBtn, safeIndex === 0 && styles.navBtnDisabled]}
+          onPress={() =>
+            setViewIndex(
+              bloqueDe(day?.exercises ?? [], Math.max(0, bloqueVisible.inicio - 1), log.length).inicio
+            )
+          }
+          disabled={bloqueVisible.inicio === 0}
+          style={[styles.navBtn, bloqueVisible.inicio === 0 && styles.navBtnDisabled]}
           hitSlop={6}
         >
           <Ionicons
             name="chevron-back"
             size={22}
-            color={safeIndex === 0 ? colors.textFaint : colors.text}
+            color={bloqueVisible.inicio === 0 ? colors.textFaint : colors.text}
           />
-          <Text style={[styles.navBtnText, safeIndex === 0 && styles.navBtnTextDisabled]}>
+          <Text style={[styles.navBtnText, bloqueVisible.inicio === 0 && styles.navBtnTextDisabled]}>
             Anterior
           </Text>
         </Pressable>
@@ -2661,7 +3136,7 @@ export default function WorkoutScreen() {
           />
         ) : (
           <Pressable
-            onPress={() => setViewIndex((i) => Math.min(log.length - 1, i + 1))}
+            onPress={() => setViewIndex(Math.min(log.length - 1, bloqueVisible.fin + 1))}
             style={[styles.navBtn, styles.navNext]}
             hitSlop={6}
           >
@@ -2749,6 +3224,152 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   previaNombre: { ...typography.body, color: colors.text, flex: 1 },
+  previaSuperserie: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingTop: spacing.sm,
+    paddingBottom: 2,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  previaSuperserieTexto: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
+  // Los de una superserie, cosidos por el filo dorado de la izquierda.
+  previaFilaEnlazada: {
+    borderTopWidth: 0,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.primary,
+    paddingLeft: spacing.sm,
+    marginLeft: 2,
+  },
+  // ----- Superserie, en una tarjeta por rondas -----
+  ssCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  ssIcono: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  ssTitulo: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  ssSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  ssEjercicio: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  ssLetra: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    marginTop: 1,
+  },
+  ssLetraTexto: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.heading, fontSize: 12 },
+  ssNombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  ssNombreSaltado: { color: colors.textFaint, textDecorationLine: 'line-through' },
+  ssMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  ssUltima: { ...typography.small, color: colors.primary, marginTop: 2, fontSize: 12 },
+  ssAcciones: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.md },
+  ssAccion: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: spacing.xs },
+  ssRonda: {
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  // La ronda que toca: con el filo dorado, para que se encuentre sin buscar.
+  ssRondaActual: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  ssRondaCab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  ssRondaTitulo: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+  ssRondaTituloActual: { color: colors.primaryBright },
+  ssRondaDescanso: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  ssPlegar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
+  ssRondaPlegada: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs + 2,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  ssRondaPlegadaHecha: { backgroundColor: colors.surfaceAlt, borderColor: 'transparent' },
+  ssRondaPlegadaTitulo: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  ssRondaPlegadaPendiente: { color: colors.textMuted },
+  ssRondaResumen: { ...typography.small, color: colors.textMuted, flex: 1, ...tabularNums },
+  ssFila: { paddingVertical: 4 },
+  // La serie que toca: un fondo apenas más claro y el círculo con filo dorado.
+  ssFilaSiguiente: {
+    marginHorizontal: -spacing.xs,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
+  },
+  ssFilaEnLinea: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  ssCamposApilados: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  ssCheckSiguiente: { borderColor: colors.primary, borderWidth: 2 },
+  ssLetraEnFila: { color: colors.primaryBright, fontFamily: fonts.heading },
+  ssPista: {
+    ...typography.small,
+    color: colors.primaryBright,
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  ssCampo: { alignItems: 'center' },
+  // Algo más estrechas que las de un ejercicio suelto: aquí comparten fila
+  // con el nombre del ejercicio, que es lo que dice de quién es la serie.
+  ssCampoCasilla: { width: 58 },
+  ssCampoRotulo: {
+    ...typography.small,
+    color: colors.textFaint,
+    fontSize: 9,
+    letterSpacing: 0.6,
+    fontFamily: fonts.semiBold,
+    marginTop: 2,
+  },
   previaSeries: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold, ...tabularNums },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   // Hueco al pie para que el crono flotante de descanso no tape la navegación.
@@ -2906,18 +3527,6 @@ const styles = StyleSheet.create({
   exerciseNameCurrent: { color: colors.primaryBright },
   prevRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm },
   prevText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
-  supersetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: spacing.xs,
-  },
-  supersetText: {
-    fontSize: 10,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 1,
-    color: colors.primaryBright,
-  },
   restoredBanner: {
     flexDirection: 'row',
     alignItems: 'center',
