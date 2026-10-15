@@ -35,6 +35,7 @@ const DEL_ENTRENADOR: { coleccion: string; campo: string }[] = [
   { coleccion: 'courses', campo: 'trainerId' },
   { coleccion: 'trainingCycles', campo: 'trainerId' },
   { coleccion: 'routineTemplates', campo: 'trainerId' },
+  { coleccion: 'bibliotecas', campo: 'trainerId' },
   { coleccion: 'payments', campo: 'trainerId' },
 ];
 

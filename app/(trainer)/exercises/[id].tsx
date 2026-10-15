@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { frase } from '../../../lib/idioma';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { frase, t } from '../../../lib/idioma';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
@@ -19,9 +19,16 @@ import {
 } from '../../../lib/firestore/exercises';
 import { propagarNombreDeEjercicio } from '../../../lib/firestore/renombrarEjercicio';
 import { showToast } from '../../../components/Toast';
-import { ListaRadio } from '../../../components/ListaRadio';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { Dialogo } from '../../../components/Dialogo';
+import { Card } from '../../../components/Card';
+import { VisorDeVideo } from '../../../components/VisorDeVideo';
+import { ICONO_DE_MEDIDA } from '../../../components/TarjetaDeEjercicio';
+import { useMiniaturaDeVimeo } from '../../../components/MiniaturaCurso';
+import { colorDeCategoria } from '../../../lib/colorDeCategoria';
+import { musculosPrincipales, type MuscleId } from '../../../lib/muscles';
+import { miniaturaDelEnlace, parseVimeoUrl, parseYouTubeId } from '../../../lib/video';
+import { unido } from '../../../lib/texto';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
   claveGrupo,
@@ -32,8 +39,8 @@ import {
 } from '../../../lib/medidaDeGrupo';
 import {
   EXERCISE_MEASURES,
-  isDualMeasure,
   MEASURE_LABEL,
+  MEASURE_SHORT,
   MUSCLE_GROUPS,
   type ExerciseMeasure,
   type MuscleGroup,
@@ -76,6 +83,14 @@ export default function ExerciseEditorScreen() {
   // Nombres ya usados en la biblioteca, para no crear duplicados.
   const [takenNames, setTakenNames] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  // Los músculos del ejercicio guardado (vienen del pack): para la vista previa.
+  const [pesos, setPesos] = useState<{
+    muscles?: MuscleId[];
+    muscleWeights?: Partial<Record<MuscleId, number>>;
+  }>({});
+  const [nuevoSubAbierto, setNuevoSubAbierto] = useState(false);
+  const [verVideo, setVerVideo] = useState(false);
+  const miniaturaVimeo = useMiniaturaDeVimeo(videoUrl.trim() || undefined);
   /*
    * Cómo se llamaba y qué vídeo tenía al abrir.
    *
@@ -103,6 +118,7 @@ export default function ExerciseEditorScreen() {
         setVideoUrl(exercise.videoUrl ?? '');
         setMeasure(exercise.measure ?? 'reps');
         setSubgroup(exercise.subgroup ?? '');
+        setPesos({ muscles: exercise.muscles, muscleWeights: exercise.muscleWeights });
       }
       setLoading(false);
     })();
@@ -403,149 +419,303 @@ export default function ExerciseEditorScreen() {
 
   if (loading) return <LoadingScreen />;
 
+  // La categoría del ejercicio aunque ya no esté en la lista del coach (un
+  // ejercicio antiguo, o importado): si no, ninguna pastilla saldría elegida.
+  const categoriasVisibles = categories.includes(muscleGroup)
+    ? categories
+    : [...categories, muscleGroup];
+  const color = colorDeCategoria(profile?.categoryColors, categories, muscleGroup);
+  const enlace = videoUrl.trim();
+  const deYouTube = enlace ? parseYouTubeId(enlace) : null;
+  const deVimeo = enlace && !deYouTube ? parseVimeoUrl(enlace) : null;
+  const miniatura = miniaturaDelEnlace(enlace, 'mq') ?? miniaturaVimeo;
+  const enlaceRaro = !!enlace && !/^https?:\/\//i.test(enlace);
+  // Sin nombre no se sabe qué trabaja: se deduciría solo de la categoría.
+  const musculos = name.trim() ? musculosPrincipales({ name: name.trim(), muscleGroup, ...pesos }) : [];
+
   return (
     <ScreenContainer>
+      <Stack.Screen options={{ title: isNew ? t('Nuevo ejercicio') : t('Editar ejercicio') }} />
+
+      {/*
+       * ASÍ SE VERÁ. La tarjeta de arriba es el ejercicio tal y como sale en la
+       * biblioteca y en el entreno del alumno: su vídeo (o su color y cómo se
+       * mide), su nombre y lo que trabaja. Se va rellenando mientras se
+       * escribe, así que lo que falta se ve sin buscarlo.
+       */}
+      <View style={styles.vista}>
+        <Pressable
+          onPress={() => (enlace && !enlaceRaro ? setVerVideo(true) : undefined)}
+          style={[styles.vistaMedia, { backgroundColor: `${color}1F` }]}
+        >
+          {miniatura ? (
+            <>
+              <Image source={{ uri: miniatura }} style={styles.vistaImagen} resizeMode="cover" />
+              <View style={styles.vistaPlay}>
+                <Ionicons name="play" size={18} color={colors.text} style={{ marginLeft: 2 }} />
+              </View>
+            </>
+          ) : enlace && !enlaceRaro ? (
+            <Ionicons name="play-circle-outline" size={36} color={color} />
+          ) : (
+            <>
+              <Ionicons name={ICONO_DE_MEDIDA[measure]} size={30} color={color} />
+              <Text style={styles.vistaSinVideo}>Sin vídeo todavía</Text>
+            </>
+          )}
+          <View style={[styles.vistaFilo, { backgroundColor: color }]} />
+        </Pressable>
+        <View style={styles.vistaTexto}>
+          <Text style={[styles.vistaNombre, !name.trim() && styles.vistaNombreVacio]} numberOfLines={2}>
+            {name.trim() || (isNew ? 'Nuevo ejercicio' : 'Sin nombre')}
+          </Text>
+          <View style={styles.vistaMetaFila}>
+            <View style={[styles.vistaPunto, { backgroundColor: color }]} />
+            <Text style={styles.vistaMeta} numberOfLines={1}>
+              {unido(muscleGroup, subgroup || undefined, MEASURE_SHORT[measure])}
+            </Text>
+          </View>
+          {musculos.length > 0 ? (
+            <Text style={styles.vistaMusculos} numberOfLines={1}>
+              {frase`Trabaja ${musculos.join(' · ')}`}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
       <TextField
-        label="Nombre del ejercicio"
+        label="Nombre"
         value={name}
-        onChangeText={setName}
+        onChangeText={(v) => {
+          setName(v);
+          setError(null);
+        }}
         placeholder="Ej. Dominadas estrictas"
+        autoFocus={isNew}
       />
 
-      <View style={styles.catHeader}>
-        <Text style={styles.label}>Categoría</Text>
-        <Pressable onPress={() => setEditCats((v) => !v)} hitSlop={6}>
-          <Text style={styles.catEdit}>{editCats ? 'Listo' : 'Editar categorías'}</Text>
-        </Pressable>
-      </View>
-      <ChipRow scroll>
-        {categories.map((group) => (
-          <Chip
-            key={group}
-            texto={group}
-            activo={muscleGroup === group && !editCats}
-            onPress={() => !editCats && setMuscleGroup(group)}
-            accion={editCats ? 'close-circle' : undefined}
-            colorAccion={colors.danger}
-            onAccion={() => removeCategory(group)}
-          />
-        ))}
-      </ChipRow>
-      {editCats ? (
-        <View style={styles.addCatRow}>
-          <TextInput
-            value={newCat}
-            onChangeText={setNewCat}
-            placeholder="Nueva categoría…"
-            placeholderTextColor={colors.textFaint}
-            style={styles.addCatInput}
-            onSubmitEditing={addCategory}
-            returnKeyType="done"
-          />
-          <Pressable onPress={addCategory} style={styles.addCatBtn} hitSlop={6}>
-            <Ionicons name="add" size={16} color={colors.primary} />
-            <Text style={styles.addCatText}>Añadir</Text>
+      {/* DÓNDE VA: categoría y, dentro, su subgrupo. */}
+      <Card style={styles.seccion}>
+        <View style={styles.seccionCab}>
+          <Ionicons name="albums-outline" size={16} color={colors.primary} />
+          <Text style={styles.seccionTitulo}>Dónde va</Text>
+          <View style={{ flex: 1 }} />
+          <Pressable onPress={() => setEditCats((v) => !v)} hitSlop={6}>
+            <Text style={styles.catEdit}>{editCats ? 'Listo' : 'Editar categorías'}</Text>
           </Pressable>
         </View>
-      ) : null}
-
-      <Text style={styles.label}>Subgrupo</Text>
-      <ChipRow scroll>
-        <Chip texto="Sin subgrupo" activo={subgroup === ''} onPress={() => setSubgroup('')} />
-        {subgroups.map((sg) => (
-          <Chip
-            key={sg}
-            texto={sg}
-            activo={subgroup === sg}
-            onPress={() => setSubgroup(sg)}
-            /* Lápiz para renombrarlo sin salir del editor. */
-            accion="pencil"
-            onAccion={() => {
-              setRenameSub(sg);
-              setRenameText(sg);
-            }}
-          />
-        ))}
-      </ChipRow>
-      <View style={styles.addCatRow}>
-        <TextInput
-          value={newSub}
-          onChangeText={setNewSub}
-          placeholder={frase`Nuevo subgrupo de ${muscleGroup}…`}
-          placeholderTextColor={colors.textFaint}
-          style={styles.addCatInput}
-          onSubmitEditing={addSubgroup}
-          returnKeyType="done"
-        />
-        <Pressable onPress={addSubgroup} style={styles.addCatBtn} hitSlop={6}>
-          <Ionicons name="add" size={16} color={colors.primary} />
-          <Text style={styles.addCatText}>Añadir</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.catHeader}>
-        <Text style={[styles.label, { flexShrink: 1 }]}>
-          {subgroup ? frase`Se mide en · grupo «${subgroup}»` : 'Se mide en'}
-        </Text>
-        {medidaGrupo ? (
-          <Pressable onPress={soltarMedidaDelGrupo} hitSlop={6}>
-            <Text style={styles.catEdit}>Por ejercicio</Text>
-          </Pressable>
+        <Text style={styles.label}>Categoría</Text>
+        {/* En varias líneas y no deslizando: así se ven todas, también la
+            elegida, que deslizando podía quedarse fuera de la pantalla. */}
+        <ChipRow>
+          {categoriasVisibles.map((group) => (
+            <Chip
+              key={group}
+              texto={group}
+              punto={colorDeCategoria(profile?.categoryColors, categories, group)}
+              activo={muscleGroup === group && !editCats}
+              onPress={() => {
+                if (editCats) return;
+                setMuscleGroup(group);
+                if (group !== muscleGroup) setSubgroup('');
+              }}
+              accion={editCats ? 'close-circle' : undefined}
+              colorAccion={colors.danger}
+              onAccion={() => removeCategory(group)}
+            />
+          ))}
+        </ChipRow>
+        {editCats ? (
+          <View style={styles.addCatRow}>
+            <TextInput
+              value={newCat}
+              onChangeText={setNewCat}
+              placeholder="Nueva categoría…"
+              placeholderTextColor={colors.textFaint}
+              style={styles.addCatInput}
+              onSubmitEditing={addCategory}
+              returnKeyType="done"
+            />
+            <Pressable onPress={addCategory} style={styles.addCatBtn} hitSlop={6}>
+              <Ionicons name="add" size={16} color={colors.primary} />
+              <Text style={styles.addCatText}>Añadir</Text>
+            </Pressable>
+          </View>
         ) : null}
-      </View>
-      {/* Con un subgrupo elegido, la medida es del GRUPO: se decide una vez y
-          vale para todo lo que haya dentro y para lo que se meta después. Sin
-          subgrupo no hay grupo que decida, así que es de este ejercicio. */}
-      <Text style={styles.measureHint}>
-        {subgroup
-          ? medidaGrupo
-            ? frase`Lo que elijas aquí vale para ${cuantosEnGrupoTexto} de este grupo y para los que añadas después. No hay que ponerlo uno a uno.`
-            : frase`Elige una y se aplicará a ${cuantosEnGrupoTexto} de «${subgroup}» y a todos los que metas ahí a partir de ahora.`
-          : 'Solo para este ejercicio. Si lo metes en un grupo, la medida la decide el grupo.'}
-      </Text>
-      {/* Lista vertical y no una fila de botones: con cinco opciones, cada
-          etiqueta necesita leerse entera ("Aguante por lado" no se distingue
-          de "Aguante" recortado a dos palabras). */}
-      <ListaRadio
-        opciones={EXERCISE_MEASURES.map((m) => ({ valor: m, texto: MEASURE_LABEL[m] }))}
-        valor={measure}
-        onChange={subgroup ? aplicarMedidaAlGrupo : setMeasure}
-        deshabilitado={aplicandoGrupo}
-      />
-      {measure === 'combo' ? (
-        <Text style={styles.measureHint}>
-          Cada serie combina repeticiones y aguante en una sola tarjeta. Ej.: Muscle
-          Up + Front Lever → 5 repeticiones y 12 s.
-        </Text>
-      ) : isDualMeasure(measure) ? (
-        <Text style={styles.measureHint}>
-          Cada serie se anota por separado para el lado izquierdo y el derecho. Para
-          trabajo a un brazo, donde saber cuál va por detrás es justo el dato que
-          importa.
-        </Text>
-      ) : null}
 
-      <TextField
-        label="Descripción / técnica"
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Indicaciones de ejecución..."
-        multiline
-        numberOfLines={4}
-        style={styles.textarea}
-      />
+        <Text style={[styles.label, { marginTop: spacing.md }]}>{frase`Subgrupo de ${muscleGroup}`}</Text>
+        <ChipRow>
+          <Chip texto="Ninguno" activo={subgroup === ''} onPress={() => setSubgroup('')} />
+          {subgroups.map((sg) => (
+            <Chip
+              key={sg}
+              texto={sg}
+              activo={subgroup === sg}
+              onPress={() => setSubgroup(sg)}
+              /* Lápiz para renombrarlo sin salir del editor. */
+              accion="pencil"
+              onAccion={() => {
+                setRenameSub(sg);
+                setRenameText(sg);
+              }}
+            />
+          ))}
+          {/* Crear uno es lo raro: va como una pastilla más, no como un campo
+              siempre abierto en mitad de la ficha. */}
+          <Chip
+            texto="Nuevo"
+            icono={nuevoSubAbierto ? 'close' : 'add'}
+            suave
+            onPress={() => setNuevoSubAbierto((v) => !v)}
+          />
+        </ChipRow>
+        {nuevoSubAbierto ? (
+          <View style={styles.addCatRow}>
+            <TextInput
+              value={newSub}
+              onChangeText={setNewSub}
+              placeholder={frase`Nuevo subgrupo de ${muscleGroup}…`}
+              placeholderTextColor={colors.textFaint}
+              style={styles.addCatInput}
+              onSubmitEditing={() => {
+                addSubgroup();
+                setNuevoSubAbierto(false);
+              }}
+              returnKeyType="done"
+              autoFocus
+            />
+            <Pressable
+              onPress={() => {
+                addSubgroup();
+                setNuevoSubAbierto(false);
+              }}
+              style={styles.addCatBtn}
+              hitSlop={6}
+            >
+              <Ionicons name="add" size={16} color={colors.primary} />
+              <Text style={styles.addCatText}>Crear</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </Card>
 
-      <TextField
-        label="URL del vídeo"
-        value={videoUrl}
-        onChangeText={setVideoUrl}
-        placeholder="https://..."
-        autoCapitalize="none"
-      />
+      {/* CÓMO SE ANOTA: cinco formas, cada una con su ejemplo. Con el ejemplo
+          al lado no hay que imaginar qué casillas verá el alumno. */}
+      <Card style={styles.seccion}>
+        <View style={styles.seccionCab}>
+          <Ionicons name="create-outline" size={16} color={colors.primary} />
+          <Text style={styles.seccionTitulo}>Cómo se anota</Text>
+          <View style={{ flex: 1 }} />
+          {medidaGrupo ? (
+            <Pressable onPress={soltarMedidaDelGrupo} hitSlop={6}>
+              <Text style={styles.catEdit}>Por ejercicio</Text>
+            </Pressable>
+          ) : null}
+        </View>
+        {/* Con un subgrupo elegido, la medida es del GRUPO: se decide una vez y
+            vale para todo lo que haya dentro y para lo que se meta después. Sin
+            subgrupo no hay grupo que decida, así que es de este ejercicio. */}
+        <Text style={styles.measureHint}>
+          {subgroup
+            ? medidaGrupo
+              ? frase`La decide el grupo «${subgroup}»: vale para ${cuantosEnGrupoTexto} y para los que añadas después.`
+              : frase`Se aplicará a ${cuantosEnGrupoTexto} de «${subgroup}» y a los que metas ahí después.`
+            : 'Solo para este ejercicio.'}
+        </Text>
+        <View style={styles.medidas}>
+          {EXERCISE_MEASURES.map((m) => {
+            const activa = measure === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => (subgroup ? aplicarMedidaAlGrupo(m) : setMeasure(m))}
+                disabled={aplicandoGrupo}
+                style={[styles.medida, activa && styles.medidaActiva]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: activa }}
+              >
+                <Ionicons
+                  name={ICONO_DE_MEDIDA[m]}
+                  size={18}
+                  color={activa ? colors.primaryBright : colors.textMuted}
+                />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.medidaTexto, activa && styles.medidaTextoActiva]}>
+                    {MEASURE_SHORT[m]}
+                  </Text>
+                  <Text style={styles.medidaEjemplo}>{EJEMPLO_DE_MEDIDA[m]}</Text>
+                </View>
+                {activa ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Card>
+
+      {/* TÉCNICA: el vídeo (con su comprobación al momento) y la explicación. */}
+      <Card style={styles.seccion}>
+        <View style={styles.seccionCab}>
+          <Ionicons name="videocam-outline" size={16} color={colors.primary} />
+          <Text style={styles.seccionTitulo}>Técnica</Text>
+        </View>
+        <TextField
+          label="Vídeo"
+          value={videoUrl}
+          onChangeText={setVideoUrl}
+          placeholder="Enlace de YouTube, Vimeo o del vídeo"
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          containerStyle={{ marginBottom: spacing.xs }}
+        />
+        {enlace ? (
+          <View style={styles.videoEstado}>
+            <Ionicons
+              name={enlaceRaro ? 'alert-circle-outline' : 'checkmark-circle'}
+              size={14}
+              color={enlaceRaro ? colors.danger : colors.primary}
+            />
+            <Text style={[styles.videoEstadoTexto, enlaceRaro && { color: colors.danger }]}>
+              {enlaceRaro
+                ? 'Tiene que empezar por https://'
+                : deYouTube
+                  ? 'Vídeo de YouTube'
+                  : deVimeo
+                    ? 'Vídeo de Vimeo'
+                    : 'Enlace directo al vídeo'}
+            </Text>
+            {!enlaceRaro ? (
+              <Pressable onPress={() => setVerVideo(true)} hitSlop={8}>
+                <Text style={styles.catEdit}>Ver</Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => setVideoUrl('')} hitSlop={8}>
+              <Text style={styles.videoQuitar}>Quitar</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text style={styles.measureHint}>Con vídeo, el alumno puede ver la técnica en mitad del entreno.</Text>
+        )}
+        <TextField
+          label="Indicaciones"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Ej. Escápulas atrás, sin balanceo, bajada controlada."
+          multiline
+          numberOfLines={4}
+          style={styles.textarea}
+          containerStyle={{ marginTop: spacing.sm, marginBottom: 0 }}
+        />
+      </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <Button title="Guardar" onPress={handleSave} loading={saving} style={{ marginTop: spacing.sm }} />
+      <Button
+        title={isNew ? 'Crear ejercicio' : 'Guardar cambios'}
+        onPress={handleSave}
+        loading={saving}
+        style={{ marginTop: spacing.sm }}
+      />
 
       {!isNew ? (
         <Pressable
@@ -556,7 +726,18 @@ export default function ExerciseEditorScreen() {
           <Ionicons name="trash-outline" size={14} color={colors.textFaint} />
           <Text style={styles.borrarEnlaceTexto}>Eliminar ejercicio</Text>
         </Pressable>
-      ) : null}
+      ) : (
+        <View style={{ height: spacing.xl }} />
+      )}
+
+      <VisorDeVideo
+        visible={verVideo}
+        url={enlace}
+        titulo={name.trim() || undefined}
+        profile={profile}
+        onCerrar={() => setVerVideo(false)}
+        protegido={false}
+      />
 
       <Dialogo
         visible={confirmarBorrado}
@@ -597,7 +778,77 @@ export default function ExerciseEditorScreen() {
   );
 }
 
+/** Lo que verá el alumno en cada serie, según cómo se anote. */
+const EJEMPLO_DE_MEDIDA: Record<ExerciseMeasure, string> = {
+  reps: '8 reps',
+  seconds: '20 s de aguante',
+  combo: '5 reps + 12 s',
+  repsDual: '8 izq. · 8 der.',
+  secondsDual: '20 s izq. · 20 s der.',
+};
+
 const styles = StyleSheet.create({
+  vista: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.sm + 2,
+    marginBottom: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  // 16:9, la forma de un vídeo.
+  vistaMedia: {
+    width: 128,
+    height: 72,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  vistaImagen: { ...StyleSheet.absoluteFill },
+  vistaPlay: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.scrim,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vistaSinVideo: { ...typography.small, color: colors.textFaint, fontSize: 10 },
+  vistaFilo: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 3 },
+  vistaTexto: { flex: 1, minWidth: 0, gap: 3 },
+  vistaNombre: { ...typography.h3, color: colors.text },
+  vistaNombreVacio: { color: colors.textFaint },
+  vistaMetaFila: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  vistaPunto: { width: 8, height: 8, borderRadius: 4 },
+  vistaMeta: { ...typography.small, color: colors.textMuted, flexShrink: 1 },
+  vistaMusculos: { ...typography.small, color: colors.textFaint, fontSize: 12 },
+  seccion: { marginBottom: spacing.md },
+  seccionCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  seccionTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  medidas: { gap: spacing.xs },
+  medida: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  medidaActiva: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  medidaTexto: { ...typography.body, color: colors.text },
+  medidaTextoActiva: { fontFamily: fonts.semiBold, color: colors.primaryBright },
+  medidaEjemplo: { ...typography.small, color: colors.textFaint, fontSize: 12 },
+  videoEstado: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs },
+  videoEstadoTexto: { ...typography.small, color: colors.textMuted, flex: 1 },
+  videoQuitar: { ...typography.small, color: colors.textFaint },
   borrarEnlace: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -609,12 +860,6 @@ const styles = StyleSheet.create({
   },
   borrarEnlaceTexto: { ...typography.small, color: colors.textFaint },
   label: fieldLabel,
-  catHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
   catEdit: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   addCatRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   addCatInput: {
@@ -644,7 +889,6 @@ const styles = StyleSheet.create({
   measureHint: {
     ...typography.small,
     color: colors.textMuted,
-    marginTop: spacing.xs,
     marginBottom: spacing.sm,
     lineHeight: 18,
   },

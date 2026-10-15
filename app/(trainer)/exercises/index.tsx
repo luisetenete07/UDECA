@@ -26,14 +26,17 @@ import {
 } from '../../../lib/firestore/exercises';
 import { getTemplateExercises } from '../../../lib/firestore/templateExercises';
 import { updateUserProfile } from '../../../lib/firestore/users';
+import { type ExportedExercise } from '../../../lib/exerciseTemplateIO';
 import {
-  buildExerciseTemplate,
-  parseExerciseTemplate,
-  type ExportedExercise,
-} from '../../../lib/exerciseTemplateIO';
+  compartirBiblioteca,
+  leerBiblioteca,
+  queLeFaltan,
+  type BibliotecaCompartida,
+} from '../../../lib/firestore/bibliotecas';
 import { grupoRenombrado, medidaDelGrupo } from '../../../lib/medidaDeGrupo';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
+import { colorDeCategoria } from '../../../lib/colorDeCategoria';
 import { showToast } from '../../../components/Toast';
 import { Dialogo } from '../../../components/Dialogo';
 import { QuickSheet } from '../../../components/QuickSheet';
@@ -67,9 +70,14 @@ export default function ExercisesScreen() {
   // Import/export de plantillas entre entrenadores.
   const [pendingImport, setPendingImport] = useState<ExportedExercise[] | null>(null);
   const [replacing, setReplacing] = useState(false);
-  // Importar por pegado de texto (móvil, donde no hay selector de archivos).
-  const [pasteOpen, setPasteOpen] = useState(false);
-  const [pasteText, setPasteText] = useState('');
+  // Compartir e importar con un código.
+  const [compartiendo, setCompartiendo] = useState(false);
+  const [codigoMostrado, setCodigoMostrado] = useState<string | null>(null);
+  const [importarAbierto, setImportarAbierto] = useState(false);
+  const [codigoEscrito, setCodigoEscrito] = useState('');
+  const [buscando, setBuscando] = useState(false);
+  const [encontrada, setEncontrada] = useState<BibliotecaCompartida | null>(null);
+  const [anadiendo, setAnadiendo] = useState(false);
   // Gestión de categorías del entrenador (Tren superior, Empuje…).
   const [editCats, setEditCats] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -80,7 +88,6 @@ export default function ExercisesScreen() {
   // Confirmación previa de "Actualizar a pack UDECA": es destructivo (sustituye
   // toda la biblioteca), así que nunca se ejecuta a la primera pulsación.
   const [confirmPack, setConfirmPack] = useState(false);
-  const [customColor, setCustomColor] = useState('');
   // Renombrar subgrupos dentro de la categoría filtrada.
   const [subEdit, setSubEdit] = useState(false);
   const [renameSub, setRenameSub] = useState<{ group: string; from: string } | null>(null);
@@ -100,8 +107,7 @@ export default function ExercisesScreen() {
   // reparte la paleta de forma estable por posición, para que dos categorías
   // nunca salgan del mismo color por accidente.
   const categoryColor = (group: string) =>
-    profile?.categoryColors?.[group] ??
-    CATEGORY_PALETTE[Math.max(0, myCategories.indexOf(group)) % CATEGORY_PALETTE.length];
+    colorDeCategoria(profile?.categoryColors, myCategories, group);
 
   const setCategoryColor = async (group: string, color: string) => {
     if (!profile) return;
@@ -114,18 +120,6 @@ export default function ExercisesScreen() {
     } catch {
       showToast('No se pudo guardar el color');
     }
-  };
-
-  // Color escrito a mano (#RRGGBB). Se valida antes de guardar para no dejar
-  // una categoría con un color que la app no sepa pintar.
-  const applyCustomColor = () => {
-    const hex = normalizeHex(customColor);
-    if (!colorTarget) return;
-    if (!hex) {
-      showToast('Escribe un color tipo #FF9900');
-      return;
-    }
-    setCategoryColor(colorTarget, hex);
   };
 
   const saveCategories = async (list: string[]) => {
@@ -351,77 +345,96 @@ export default function ExercisesScreen() {
     }
   };
 
-  // Exporta la biblioteca actual como archivo JSON (web) o texto (nativo) para
-  // pasársela a otro entrenador.
-  const handleExport = async () => {
+  /*
+   * COMPARTIR E IMPORTAR CON UN CÓDIGO (lib/firestore/bibliotecas.ts).
+   *
+   * Sustituye al archivo y al texto para pegar: un código de seis letras se
+   * dicta o se manda por mensaje, y al otro lado basta con escribirlo.
+   */
+  const handleCompartir = async () => {
+    if (!profile) return;
     if (exercises.length === 0) {
-      showToast('No tienes ejercicios que exportar');
+      showToast('No tienes ejercicios que compartir');
       return;
     }
-    const json = buildExerciseTemplate(exercises);
-    const filename = `plantilla-ejercicios-udeca-${new Date().toISOString().slice(0, 10)}.json`;
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Plantilla exportada');
-    } else {
-      try {
-        await Share.share({ message: json });
-      } catch {
-        showToast('No se pudo exportar');
+    setCompartiendo(true);
+    try {
+      const codigo = await compartirBiblioteca(
+        profile.uid,
+        profile.name ?? '',
+        exercises,
+        profile.codigoBiblioteca
+      );
+      if (codigo !== profile.codigoBiblioteca) {
+        await updateUserProfile(profile.uid, { codigoBiblioteca: codigo });
+        await refreshProfile();
       }
+      setCodigoMostrado(codigo);
+    } catch {
+      showToast('No se pudo compartir');
+    } finally {
+      setCompartiendo(false);
     }
   };
 
-  // Elige un archivo .json en la web y lo lee como texto.
-  const pickJsonFile = (): Promise<string | null> =>
-    new Promise((resolve) => {
-      if (typeof document === 'undefined') return resolve(null);
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'application/json,.json';
-      input.onchange = () => {
-        const file = input.files?.[0];
-        if (!file) return resolve(null);
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => resolve(null);
-        reader.readAsText(file);
-      };
-      input.click();
-    });
-
-  const handleImportTemplate = async () => {
-    // Móvil: sin selector de archivos, se pega el texto de la plantilla.
-    if (Platform.OS !== 'web') {
-      setPasteText('');
-      setPasteOpen(true);
-      return;
+  const handleBuscarCodigo = async () => {
+    setBuscando(true);
+    setEncontrada(null);
+    try {
+      const b = await leerBiblioteca(codigoEscrito);
+      if (!b) {
+        showToast('No hay ninguna biblioteca con ese código');
+        return;
+      }
+      setEncontrada(b);
+    } catch {
+      showToast('No se pudo buscar el código');
+    } finally {
+      setBuscando(false);
     }
-    const text = await pickJsonFile();
-    if (!text) return;
-    const list = parseExerciseTemplate(text);
-    if (!list) {
-      showToast('El archivo no es una plantilla de ejercicios válida');
-      return;
-    }
-    setPendingImport(list); // abre el aviso de confirmación
   };
 
-  // Confirma el texto pegado (móvil): valida y abre el aviso de sustitución.
-  const handlePasteImport = () => {
-    const list = parseExerciseTemplate(pasteText);
-    if (!list) {
-      showToast('El texto no es una plantilla de ejercicios válida');
+  /** Añade solo los que no tiene: lo seguro, y casi siempre lo que se quiere. */
+  const handleAnadirNuevos = async () => {
+    if (!profile || !encontrada) return;
+    const nuevos = queLeFaltan(exercises, encontrada.ejercicios);
+    if (nuevos.length === 0) {
+      showToast('Ya tienes todos esos ejercicios');
       return;
     }
-    setPasteOpen(false);
-    setPendingImport(list);
+    setAnadiendo(true);
+    try {
+      await Promise.all(
+        nuevos.map((e) =>
+          createExercise({
+            trainerId: profile.uid,
+            name: e.name,
+            muscleGroup: e.muscleGroup,
+            measure: e.measure,
+            description: e.description,
+            videoUrl: e.videoUrl,
+            muscles: e.muscles,
+            muscleWeights: e.muscleWeights,
+            subgroup: e.subgroup,
+            load: e.load,
+            band: e.band,
+          })
+        )
+      );
+      cerrarImportar();
+      await load();
+      showToast(frase`${nuevos.length} ejercicios añadidos a tu biblioteca`);
+    } catch {
+      showToast('No se pudieron añadir');
+    } finally {
+      setAnadiendo(false);
+    }
+  };
+
+  const cerrarImportar = () => {
+    setImportarAbierto(false);
+    setCodigoEscrito('');
+    setEncontrada(null);
   };
 
   // Sustituye TODA la biblioteca por la plantilla importada.
@@ -602,19 +615,19 @@ export default function ExercisesScreen() {
             },
           },
           {
-            icono: 'download-outline' as const,
-            texto: 'Exportar mi biblioteca',
+            icono: 'share-social-outline' as const,
+            texto: compartiendo ? 'Compartiendo…' : 'Compartir mi biblioteca',
             onPress: () => {
               setMenuOpen(false);
-              handleExport();
+              handleCompartir();
             },
           },
           {
-            icono: 'cloud-upload-outline' as const,
-            texto: 'Importar una biblioteca',
+            icono: 'download-outline' as const,
+            texto: 'Importar con un código',
             onPress: () => {
               setMenuOpen(false);
-              handleImportTemplate();
+              setImportarAbierto(true);
             },
           },
           ...(isAdmin(profile)
@@ -684,17 +697,13 @@ export default function ExercisesScreen() {
             {myCategories.map((group) => (
               <Pressable
                 key={group}
-                onPress={() => {
-                  setColorTarget(group);
-                  setCustomColor(categoryColor(group));
-                }}
+                onPress={() => setColorTarget(group)}
                 style={styles.catColorRow}
               >
                 <View style={[styles.catDotBig, { backgroundColor: categoryColor(group) }]} />
                 <Text style={styles.catColorName} numberOfLines={1}>
                   {group}
                 </Text>
-                <Text style={styles.catColorHex}>{categoryColor(group).toUpperCase()}</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
               </Pressable>
             ))}
@@ -875,12 +884,13 @@ export default function ExercisesScreen() {
         cargando={importing}
       />
 
-      {/* Color de una categoría: paleta + color personalizado */}
+      {/* Color de una categoría: solo la paleta. Escribir un código de color
+          a mano era una puerta a colores que no casan con la app. */}
       <Dialogo
         visible={!!colorTarget}
         onClose={() => setColorTarget(null)}
         titulo={colorTarget ?? ''}
-        texto="Elige un color o escribe el tuyo."
+        texto="Elige su color."
         cancelar="Cerrar"
       >
         <View style={{ height: spacing.md }} />
@@ -898,29 +908,6 @@ export default function ExercisesScreen() {
                   ]}
                 />
               ))}
-            </View>
-            <View style={styles.customRow}>
-              <View
-                style={[
-                  styles.catDotBig,
-                  { backgroundColor: normalizeHex(customColor) ?? colors.surfaceAlt },
-                ]}
-              />
-              <TextInput
-                value={customColor}
-                onChangeText={setCustomColor}
-                placeholder="#FF9900"
-                placeholderTextColor={colors.textFaint}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={7}
-                style={styles.addCatInput}
-                onSubmitEditing={applyCustomColor}
-                returnKeyType="done"
-              />
-              <Pressable onPress={applyCustomColor} style={styles.addCatBtn} hitSlop={6}>
-                <Text style={styles.addCatText}>Usar</Text>
-              </Pressable>
             </View>
       </Dialogo>
 
@@ -949,22 +936,99 @@ export default function ExercisesScreen() {
         />
       </Dialogo>
 
-      {/* Importar por pegado de texto (móvil) */}
+      {/* El código para compartir la biblioteca, grande y para copiar. */}
       <Dialogo
-        visible={pasteOpen}
-        onClose={() => setPasteOpen(false)}
-        titulo="Pegar plantilla"
-        texto="Pega aquí el texto de la plantilla que te ha compartido otro entrenador."
+        visible={!!codigoMostrado}
+        onClose={() => setCodigoMostrado(null)}
+        icono="share-social-outline"
+        tono="normal"
+        titulo="Tu código de biblioteca"
+        texto={frase`Quien lo escriba en «Importar con un código» recibe tus ${exercises.length} ejercicios. Si cambias tu biblioteca, vuelve a compartir: el código no cambia.`}
+        accion="Enviar el código"
+        onAccion={() => {
+          Share.share({
+            message: frase`Mi biblioteca de ejercicios en UDECA: ${codigoMostrado ?? ''}. Ábrela en Ejercicios › … › Importar con un código.`,
+          }).catch(() => {});
+        }}
+        cancelar="Cerrar"
       >
-        <TextInput
-          value={pasteText}
-          onChangeText={setPasteText}
-          placeholder="Pega el contenido JSON…"
-          placeholderTextColor={colors.textFaint}
-          multiline
-          style={styles.pasteInput}
-        />
-        <Button title="Continuar" onPress={handlePasteImport} style={{ marginTop: spacing.md }} />
+        <Text style={styles.codigoGrande} selectable>
+          {codigoMostrado}
+        </Text>
+      </Dialogo>
+
+      {/* Importar con un código: se escribe, se ve qué trae y se elige. */}
+      <Dialogo
+        visible={importarAbierto}
+        onClose={cerrarImportar}
+        icono="download-outline"
+        tono="normal"
+        titulo="Importar con un código"
+        texto="Escribe el código que te ha pasado otro entrenador."
+        cancelar="Cerrar"
+      >
+        <View style={styles.codigoFila}>
+          <TextInput
+            value={codigoEscrito}
+            onChangeText={(v) => {
+              setCodigoEscrito(v);
+              setEncontrada(null);
+            }}
+            placeholder="ABC123"
+            placeholderTextColor={colors.textFaint}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={8}
+            style={[styles.addCatInput, styles.codigoInput]}
+            onSubmitEditing={handleBuscarCodigo}
+            returnKeyType="search"
+          />
+        </View>
+        {/* Debajo y a lo ancho: al lado del campo no cabía en un móvil. */}
+        {encontrada ? null : (
+          <Button
+            title="Buscar"
+            variant="secondary"
+            onPress={handleBuscarCodigo}
+            loading={buscando}
+            disabled={codigoEscrito.trim().length < 6}
+            style={{ marginTop: spacing.sm }}
+          />
+        )}
+        {encontrada ? (
+          <View style={styles.encontrada}>
+            <Text style={styles.encontradaTitulo}>
+              {encontrada.nombre
+                ? frase`Biblioteca de ${encontrada.nombre}`
+                : 'Biblioteca encontrada'}
+            </Text>
+            <Text style={styles.encontradaTexto}>
+              {frase`${encontrada.ejercicios.length} ejercicios · ${queLeFaltan(exercises, encontrada.ejercicios).length} que no tienes`}
+            </Text>
+            <Button
+              title={
+                queLeFaltan(exercises, encontrada.ejercicios).length === 0
+                  ? 'Ya los tienes todos'
+                  : frase`Añadir los ${queLeFaltan(exercises, encontrada.ejercicios).length} que no tengo`
+              }
+              onPress={handleAnadirNuevos}
+              loading={anadiendo}
+              disabled={queLeFaltan(exercises, encontrada.ejercicios).length === 0}
+              style={{ marginTop: spacing.md }}
+            />
+            <Pressable
+              onPress={() => {
+                const lista = encontrada.ejercicios;
+                cerrarImportar();
+                setPendingImport(lista);
+              }}
+              hitSlop={8}
+              style={styles.sustituirEnlace}
+            >
+              <Text style={styles.sustituirTexto}>O sustituir toda mi biblioteca por esta</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </Dialogo>
 
       {/* Aviso de confirmación al importar (sustituye TODA la biblioteca) */}
@@ -982,20 +1046,6 @@ export default function ExercisesScreen() {
       />
     </ScreenContainer>
   );
-}
-
-/** Acepta "#abc", "abc123" o "#AABBCC" y devuelve "#AABBCC", o null si no vale. */
-function normalizeHex(input: string): string | null {
-  const v = input.trim().replace(/^#/, '');
-  if (/^[0-9a-fA-F]{3}$/.test(v)) {
-    return `#${v
-      .split('')
-      .map((c) => c + c)
-      .join('')
-      .toUpperCase()}`;
-  }
-  if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v.toUpperCase()}`;
-  return null;
 }
 
 const styles = StyleSheet.create({
@@ -1030,7 +1080,6 @@ const styles = StyleSheet.create({
   },
   catDotBig: { width: 22, height: 22, borderRadius: 11 },
   catColorName: { ...typography.small, color: colors.text, flex: 1 },
-  catColorHex: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   paletteGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1040,7 +1089,6 @@ const styles = StyleSheet.create({
   },
   paletteDot: { width: 40, height: 40, borderRadius: 20, borderWidth: 3, borderColor: 'transparent' },
   paletteDotOn: { borderColor: colors.text },
-  customRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   bloque: { marginBottom: spacing.sm },
   bloqueCab: {
     flexDirection: 'row',
@@ -1098,17 +1146,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   addCatText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  pasteInput: {
+  codigoGrande: {
+    ...typography.h1,
+    color: colors.primaryBright,
+    textAlign: 'center',
+    letterSpacing: 6,
     marginTop: spacing.md,
-    minHeight: 140,
-    maxHeight: 240,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    color: colors.text,
-    fontSize: 13,
-    textAlignVertical: 'top',
+    ...tabularNums,
   },
+  codigoFila: { marginTop: spacing.md },
+  codigoInput: { flex: 0, letterSpacing: 3, fontFamily: fonts.semiBold, textAlign: 'center' },
+  encontrada: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+  },
+  encontradaTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  encontradaTexto: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  sustituirEnlace: { alignSelf: 'center', marginTop: spacing.md },
+  sustituirTexto: { ...typography.small, color: colors.textMuted, textDecorationLine: 'underline' },
 });

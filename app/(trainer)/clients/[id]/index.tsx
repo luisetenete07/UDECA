@@ -476,7 +476,9 @@ export default function ClientDetailScreen() {
                 <Button
                   key={meses}
                   title={meses === 1 ? '1 mes' : frase`${meses} meses`}
-                  variant={meses === 1 ? 'primary' : 'secondary'}
+                  // Las tres iguales: son la misma acción con otra cifra, y
+                  // destacar una empujaba a elegirla sin mirar.
+                  variant="secondary"
                   compacto
                   onPress={() => fijarPeriodo(alargar(client.nextPaymentDate, meses))}
                   style={{ flex: 1 }}
@@ -587,6 +589,7 @@ export default function ClientDetailScreen() {
             title="Ajustes del alumno"
             hint={`${currentStatus !== 'active' ? `${CLIENT_STATUS_LABEL[currentStatus]} · ` : ''}${client?.vip === true ? 'VIP · ' : ''}${frase`${conMiles(client?.stepGoal ?? OBJETIVO_POR_DEFECTO)} pasos`}`}
             defaultOpen={false}
+            style={styles.ultimaTarjeta}
           >
             {/* Activo / En pausa / Inactivo: tres opciones excluyentes, o sea el
                 mismo control que en el resto de la app. Estaba arriba del todo,
@@ -643,20 +646,16 @@ export default function ClientDetailScreen() {
             />
             {pasosError ? <Text style={styles.confirmText}>{pasosError}</Text> : null}
             {pasosSaved ? <Text style={styles.confirmSavedText}>Objetivo guardado</Text> : null}
-          </CollapsibleCard>
 
-          <CollapsibleCard
-            id="alumno-gestion"
-            icon="person-remove-outline"
-            title="Gestión del alumno"
-            defaultOpen={false}
-            style={styles.ultimaTarjeta}
-          >
-            <Text style={styles.mutedText}>
-              Sácalo de tu grupo para que deje de aparecer en tus clientes. No se
-              borra su cuenta ni su historial; podrá vincularse a otro entrenador
-              con un código.
-            </Text>
+            {/* Sacarlo del grupo, al final de los ajustes y no en una tarjeta
+                propia: era una sección entera para un botón que se usa una vez
+                en la vida del alumno. Va separado y en rojo, con confirmación. */}
+            <View style={styles.zonaSalida}>
+              <Text style={styles.ajusteTitulo}>Sacar del grupo</Text>
+              <Text style={styles.mutedText}>
+                Deja de aparecer en tus clientes. No se borra su cuenta ni su
+                historial; podrá vincularse a otro entrenador con un código.
+              </Text>
             {confirmRemove ? (
               <Text style={styles.confirmText}>
                 ¿Seguro? Pulsa de nuevo para confirmar.
@@ -677,6 +676,7 @@ export default function ClientDetailScreen() {
                 style={{ marginTop: spacing.sm }}
               />
             ) : null}
+            </View>
           </CollapsibleCard>
         </>
       ) : null}
@@ -1131,6 +1131,12 @@ const styles = StyleSheet.create({
   },
   objetivoPlazo: { ...typography.small, color: colors.textFaint, fontSize: 11, width: 78, paddingTop: 2 },
   ajusteTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: 2 },
+  zonaSalida: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   objetivoTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },

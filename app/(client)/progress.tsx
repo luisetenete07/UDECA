@@ -40,6 +40,7 @@ import { FadeIn } from '../../components/FadeIn';
 import { Dialogo } from '../../components/Dialogo';
 import { Segmented } from '../../components/Segmented';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
+import { LogrosDelAlumno } from '../../components/LogrosDelAlumno';
 import { Chip, ChipRow } from '../../components/Chip';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
@@ -820,6 +821,8 @@ export default function ProgressScreen() {
                 </View>
               ))}
             </CollapsibleCard>
+
+            <LogrosDelAlumno workoutLogs={workoutLogs} weightLogs={weightLogs} />
           </>
         )
       ) : null}

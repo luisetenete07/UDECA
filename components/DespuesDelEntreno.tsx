@@ -155,7 +155,12 @@ export function ResumenEntreno({
             </View>
             {prs.map((pr) => (
               <View key={pr.exerciseName} style={styles.filaLogro}>
-                <Text style={styles.nombreLogro}>{pr.exerciseName}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.nombreLogro}>{pr.exerciseName}</Text>
+                  {/* Cuánto ha subido y desde cuándo: "+3 reps · antes 8 reps,
+                      hace 5 semanas". Es lo que convierte un número en un logro. */}
+                  {pr.contexto ? <Text style={styles.contextoLogro}>{pr.contexto}</Text> : null}
+                </View>
                 <Text style={styles.marcaLogro}>{pr.label}</Text>
               </View>
             ))}
@@ -344,6 +349,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   nombreLogro: { ...typography.body, color: colors.text },
+  contextoLogro: { ...typography.small, color: colors.textMuted, fontSize: 12, marginTop: 1 },
   marcaLogro: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
   filaIcono: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   descripcionLogro: {

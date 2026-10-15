@@ -12,7 +12,13 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { ResumenEntreno, TarjetaTerminado } from '../../components/DespuesDelEntreno';
 import { PRBurst } from '../../components/PRBurst';
-import { checkLivePR, type LivePR } from '../../lib/livePR';
+import {
+  checkLivePR,
+  contextoDelRecord,
+  contextoEnUnaLinea,
+  marcaAnterior,
+  type LivePR,
+} from '../../lib/livePR';
 import { FadeIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
 import { IntervalTimer } from '../../components/IntervalTimer';
@@ -87,10 +93,12 @@ import { shareRecordImage, shareSessionImage } from '../../lib/brandCards';
 import { startRest, stopRest, useActiveRest } from '../../lib/restTimerStore';
 import {
   bloqueDe,
-  descansoDelBloque,
+  descansoTrasRonda,
+  enLaRonda,
   esSuperserie,
   miembros as miembrosDelBloque,
   rondasDe,
+  serieSuelta,
   siguienteDelBloque,
   trasMarcarSerie,
 } from '../../lib/superserie';
@@ -1132,7 +1140,7 @@ export default function WorkoutScreen() {
           setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), 180);
         }
       } else {
-        const rest = descansoDelBloque(plan, bloque) || DEFAULT_REST_SECONDS;
+        const rest = descansoTrasRonda(plan, conLaMarca, bloque, setIndex) || DEFAULT_REST_SECONDS;
         startRest(rest, queTocaTrasDescansar(conLaMarca, plan, despues.siguiente, exerciseIndex));
 
         // Autoavance: con el bloque COMPLETO (el ejercicio, o la superserie
@@ -1161,15 +1169,16 @@ export default function WorkoutScreen() {
   ): string => {
     if (!siguiente) return 'Última serie hecha · guarda la sesión';
     const b = bloqueDe(plan, siguiente.ejercicio, sesion.length);
-    if (esSuperserie(b)) {
-      const nombres = miembrosDelBloque(b)
-        .filter((i) => !sesion[i]?.saltado)
+    // En superserie, la ronda con quienes la hacen. Si es una serie suelta (el
+    // otro ya terminó las suyas), se nombra como la de un ejercicio solo.
+    if (esSuperserie(b) && serieSuelta(sesion, b, siguiente.serie) === null) {
+      const nombres = enLaRonda(sesion, b, siguiente.serie)
         .map((i) => sesion[i]?.name ?? '')
         .join(' + ');
       return `${frase`Ahora`}: ${t('Ronda')} ${siguiente.serie + 1} · ${nombres}`;
     }
     const nombre = sesion[siguiente.ejercicio]?.name ?? '';
-    return siguiente.ejercicio === desde
+    return siguiente.ejercicio === desde || esSuperserie(b)
       ? `${frase`Ahora`}: ${enTitulo(palabraSerie)} ${siguiente.serie + 1} · ${nombre}`
       : `Ahora: ${nombre}`;
   };
@@ -1278,6 +1287,7 @@ export default function WorkoutScreen() {
   // una tarjeta. Anterior y Siguiente saltan de bloque en bloque.
   const bloqueVisible = bloqueDe(day?.exercises ?? [], safeIndex, log.length);
   const isLastExercise = bloqueVisible.fin >= log.length - 1;
+  const bloqueVisibleHecho = siguienteDelBloque(log, bloqueVisible) === null;
   // Rondas de superserie ya hechas que el alumno ha vuelto a abrir para corregir.
   const rondaAbierta = (b: { inicio: number }, r: number) => rondasAbiertas.has(`${b.inicio}:${r}`);
 
@@ -1526,7 +1536,19 @@ export default function WorkoutScreen() {
       // habría récord posible ni aunque el alumno acabe de apuntar su mejor
       // serie, que es justo lo que se estaba corrigiendo.
       const historyBase = corrigiendo ? history.filter((l) => l.id !== corrigiendo) : history;
-      const prs = detectNewPRs(historyBase, finalLog);
+      // Cada récord, con su historia: cuánto ha subido y desde cuándo.
+      const prs = detectNewPRs(historyBase, finalLog).map((pr) => {
+        const ex = finalLog.find((e) => e.name === pr.exerciseName);
+        if (!ex) return pr;
+        const esDeCarga = pr.label.includes('kg');
+        return {
+          ...pr,
+          contexto: contextoEnUnaLinea(
+            contextoDelRecord(historyBase, ex, ex.sets, esDeCarga),
+            marcaAnterior(historyBase, ex, esDeCarga)
+          ),
+        };
+      });
       const totals = sessionTotals(finalLog);
       // Logros que estaban desbloqueados antes de esta sesión (base entrenos).
       const beforeUnlocked = new Set(
@@ -1730,17 +1752,30 @@ export default function WorkoutScreen() {
     const rondas = rondasDe(log, b);
     const siguiente = siguienteDelBloque(log, b);
     const hecho = activos.length > 0 && siguiente === null;
-    const descanso = descansoDelBloque(plan, b) || DEFAULT_REST_SECONDS;
     const letra = (i: number) => String.fromCharCode(65 + (i - b.inicio));
     const clave = (x: string | number) => `${b.inicio}:${x}`;
     const todasLasRondas = Array.from({ length: rondas }, (_, r) => r);
-    const enLaRonda = (r: number) => activos.filter((i) => r < (log[i]?.sets.length ?? 0));
+    const enRonda = (r: number) => enLaRonda(log, b, r);
     const rondaHecha = (r: number) =>
-      enLaRonda(r).length > 0 && enLaRonda(r).every((i) => log[i]?.sets[r].completed);
+      enRonda(r).length > 0 && enRonda(r).every((i) => log[i]?.sets[r].completed);
     const actual = siguiente?.serie ?? null;
     const hechas = todasLasRondas.filter((r) => r !== actual && rondaHecha(r));
     const quedan = actual === null ? 0 : todasLasRondas.filter((r) => r > actual && !rondaHecha(r)).length;
     const verHechas = rondasAbiertas.has(clave('hechas'));
+    // Ronda de un solo ejercicio porque el otro ya terminó (2 series de A, 3
+    // de B): va aislada, con su aviso y su descanso.
+    const suelta = actual === null ? null : serieSuelta(log, b, actual);
+    const terminaron =
+      suelta === null
+        ? ''
+        : activos
+            .filter((j) => j !== suelta && actual !== null && actual >= (log[j]?.sets.length ?? 0))
+            .map(letra)
+            .join(' y ');
+    const sueltasPendientes =
+      actual === null
+        ? []
+        : todasLasRondas.filter((r) => r > actual && !rondaHecha(r) && serieSuelta(log, b, r) !== null);
     const alternar = (k: string) =>
       setRondasAbiertas((prev) => {
         const n = new Set(prev);
@@ -1975,7 +2010,7 @@ export default function WorkoutScreen() {
 
     /** La ronda como secuencia: A, "sin descanso", B… y al final, el descanso. */
     const ronda = (r: number, conDetalle: boolean) => {
-      const pasos = enLaRonda(r);
+      const pasos = enRonda(r);
       return pasos.map((i, k) => (
         <React.Fragment key={i}>
           {paso(i, r, conDetalle)}
@@ -2035,13 +2070,31 @@ export default function WorkoutScreen() {
           {/* La ronda que toca, entera y con todo. */}
           {actual !== null ? (
             <>
+              {suelta !== null ? (
+                <View style={styles.ssSuelta}>
+                  <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
+                  <Text style={styles.ssSueltaTexto}>
+                    {frase`Esta va sola: ${terminaron} ya ha hecho sus series.`}
+                  </Text>
+                </View>
+              ) : null}
               {ronda(actual, true)}
+              {siguiente ? (
+                <Button
+                  title={`✓  ${frase`Hecha`} · ${letra(siguiente.ejercicio)} ${log[siguiente.ejercicio]?.name ?? ''}`}
+                  onPress={() => updateSet(siguiente.ejercicio, siguiente.serie, 'completed', true)}
+                  style={styles.botonHecha}
+                />
+              ) : null}
               <View style={styles.ssFinRonda}>
                 <Ionicons name="timer-outline" size={14} color={colors.textMuted} />
                 <Text style={styles.ssFinRondaTexto}>
                   {actual === ultimaRonda
                     ? 'Última ronda'
-                    : frase`Luego, descanso de ${minutosSegundos(descanso, false)}`}
+                    : frase`Luego, descanso de ${minutosSegundos(
+                        descansoTrasRonda(plan, log, b, actual) || DEFAULT_REST_SECONDS,
+                        false
+                      )}`}
                 </Text>
               </View>
             </>
@@ -2058,7 +2111,7 @@ export default function WorkoutScreen() {
               </Text>
               <Text style={styles.ssPieResumen} numberOfLines={1}>
                 {!verHechas && hechas.length === 1
-                  ? enLaRonda(hechas[0]).map((i) => enCorto(i, hechas[0])).join('  ·  ')
+                  ? enRonda(hechas[0]).map((i) => enCorto(i, hechas[0])).join('  ·  ')
                   : ''}
               </Text>
               <Ionicons name={verHechas ? 'chevron-up' : 'chevron-down'} size={15} color={colors.textFaint} />
@@ -2080,7 +2133,7 @@ export default function WorkoutScreen() {
                   <Pressable key={r} onPress={() => alternar(clave(r))} style={styles.ssRondaLinea} hitSlop={4}>
                     <Text style={styles.ssRondaLineaTitulo}>{frase`Ronda ${r + 1}`}</Text>
                     <Text style={styles.ssPieResumen} numberOfLines={1}>
-                      {enLaRonda(r).map((i) => enCorto(i, r)).join('  ·  ')}
+                      {enRonda(r).map((i) => enCorto(i, r)).join('  ·  ')}
                     </Text>
                     <Ionicons name="create-outline" size={14} color={colors.textFaint} />
                   </Pressable>
@@ -2092,6 +2145,11 @@ export default function WorkoutScreen() {
               <Ionicons name="ellipse-outline" size={15} color={colors.textFaint} />
               <Text style={styles.ssPieTextoSuave}>
                 {quedan === 1 ? 'Queda 1 ronda más' : frase`Quedan ${quedan} rondas más`}
+                {sueltasPendientes.length > 0
+                  ? ` · ${sueltasPendientes
+                      .map((r) => frase`la ${r + 1}.ª, solo ${letra(serieSuelta(log, b, r)!)}`)
+                      .join(', ')}`
+                  : ''}
               </Text>
             </View>
           ) : null}
@@ -2160,6 +2218,8 @@ export default function WorkoutScreen() {
           exerciseName={prVivo.exerciseName}
           label={prVivo.label}
           previous={prVivo.previous}
+          mejora={prVivo.mejora}
+          desde={prVivo.desde}
           onDone={() => setPrVivo(null)}
         />
       ) : null}
@@ -2705,6 +2765,26 @@ export default function WorkoutScreen() {
                     {cuanto ? `${ex.sets} × ${cuanto}` : frase`${ex.sets} series`}
                   </Text>
                 </View>
+                {/* Series desiguales (2 de A, 3 de B): se dice antes de empezar
+                    que lo que sobra va solo, para que no pille por sorpresa. */}
+                {enlazado && i === b.fin
+                  ? (() => {
+                      const ids = miembrosDelBloque(b);
+                      const menos = Math.min(...ids.map((j) => day.exercises[j].sets));
+                      const sobran = ids
+                        .filter((j) => day.exercises[j].sets > menos)
+                        .map((j) => {
+                          const n = day.exercises[j].sets - menos;
+                          const quien = String.fromCharCode(65 + j - b.inicio);
+                          return n === 1
+                            ? frase`la última de ${quien} va sola`
+                            : frase`las ${n} últimas de ${quien} van solas`;
+                        });
+                      return sobran.length > 0 ? (
+                        <Text style={styles.previaSobran}>{enTitulo(sobran.join(' · '))}</Text>
+                      ) : null;
+                    })()
+                  : null}
               </React.Fragment>
             );
           })}
@@ -2730,6 +2810,8 @@ export default function WorkoutScreen() {
         const prev = lastPerf[exercise.exerciseId];
         const planned = day?.exercises[exerciseIndex];
         const isDone = exercise.sets.length > 0 && exercise.sets.every((s) => s.completed);
+        // La primera serie sin hacer: la que se enciende y la del botón grande.
+        const serieQueToca = exercise.sets.findIndex((s) => !s.completed);
         // Carga del ejercicio: define si hay casilla extra (peso/goma) o ninguna.
         const load = planned ? resolveLoad(planned) : 'none';
         // Medida real: isométrico (segundos) si CUALQUIER fuente lo indica —la
@@ -2958,8 +3040,12 @@ export default function WorkoutScreen() {
                 <Text style={styles.setHeadCap}>GOMA KG</Text>
               ) : null}
             </View>
-            {exercise.sets.map((set, setIndex) => (
-              <View key={setIndex} style={styles.setRow}>
+            {exercise.sets.map((set, setIndex) => {
+              // La serie que toca, encendida: con las manos cansadas no hay
+              // que buscar por dónde se iba.
+              const esAhora = !exercise.saltado && setIndex === serieQueToca;
+              return (
+              <View key={setIndex} style={[styles.setRow, esAhora && styles.setRowAhora]}>
                 {/* El nombre de la serie también marca: es hueco muerto al lado
                     del círculo, y con las manos cansadas se falla menos cuanto
                     más grande es lo que hay que tocar. */}
@@ -2969,11 +3055,17 @@ export default function WorkoutScreen() {
                     style={styles.setToggle}
                     hitSlop={6}
                   >
-                    <View style={[styles.checkButton, set.completed && styles.checkButtonDone]}>
+                    <View
+                      style={[
+                        styles.checkButton,
+                        esAhora && styles.ssCheckAhora,
+                        set.completed && styles.checkButtonDone,
+                      ]}
+                    >
                       <Ionicons
                         name="checkmark"
                         size={20}
-                        color={set.completed ? colors.onPrimary : colors.textFaint}
+                        color={set.completed ? colors.onPrimary : esAhora ? colors.primary : colors.textFaint}
                       />
                     </View>
                     {/* "Serie" solo si el plan no la llama de otra forma: hay
@@ -2983,6 +3075,11 @@ export default function WorkoutScreen() {
                     <Text style={[styles.setLabel, set.completed && styles.setLabelDone]}>
                       {enTitulo(palabraSerie)} {setIndex + 1}
                     </Text>
+                    {esAhora ? (
+                      <View style={styles.ssAhora}>
+                        <Text style={styles.ssAhoraTexto}>AHORA</Text>
+                      </View>
+                    ) : null}
                   </PressableScale>
                 <TextField
                   value={set.reps}
@@ -3034,7 +3131,18 @@ export default function WorkoutScreen() {
                   />
                 ) : null}
               </View>
-            ))}
+              );
+            })}
+            {/* MARCAR SIN APUNTAR AL CÍRCULO: un botón grande con la serie que
+                toca. Entre series, con el pulso alto, es lo único que hay que
+                hacer, y aquí no hay forma de fallar el toque. */}
+            {serieQueToca >= 0 && !exercise.saltado ? (
+              <Button
+                title={`✓  ${frase`Hecha`} · ${enTitulo(palabraSerie)} ${serieQueToca + 1}`}
+                onPress={() => updateSet(exerciseIndex, serieQueToca, 'completed', true)}
+                style={styles.botonHecha}
+              />
+            ) : null}
             {cluster ? (
               <Pressable
                 onPress={() => descansoDeBloque(cluster.restSeconds, exercise.name)}
@@ -3190,11 +3298,17 @@ export default function WorkoutScreen() {
         ) : (
           <Pressable
             onPress={() => setViewIndex(Math.min(log.length - 1, bloqueVisible.fin + 1))}
-            style={[styles.navBtn, styles.navNext]}
+            // Dorado solo con el bloque hecho: mientras quedan series, lo
+            // principal es "Hecha", y dos botones dorados no dicen cuál toca.
+            style={[styles.navBtn, styles.navSiguiente, bloqueVisibleHecho && styles.navNext]}
             hitSlop={6}
           >
-            <Text style={[styles.navBtnText, styles.navNextText]}>Siguiente</Text>
-            <Ionicons name="chevron-forward" size={22} color={colors.onPrimary} />
+            <Text style={[styles.navBtnText, bloqueVisibleHecho && styles.navNextText]}>Siguiente</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={22}
+              color={bloqueVisibleHecho ? colors.onPrimary : colors.text}
+            />
           </Pressable>
         )}
       </View>
@@ -3294,6 +3408,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
+  previaSobran: { ...typography.small, color: colors.textMuted, fontSize: 12, paddingLeft: spacing.sm + 4, paddingBottom: 4 },
   // Los de una superserie, cosidos por el filo dorado de la izquierda.
   previaFilaEnlazada: {
     borderTopWidth: 0,
@@ -3403,6 +3518,17 @@ const styles = StyleSheet.create({
   },
   ssRondaCorregirTitulo: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   ssPlegar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
+  ssSuelta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceAlt,
+  },
+  ssSueltaTexto: { ...typography.small, color: colors.textMuted, flex: 1 },
   ssEsfuerzo: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   ssEsfuerzoTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: spacing.xs },
   ssCampo: { alignItems: 'center' },
@@ -3554,7 +3680,16 @@ const styles = StyleSheet.create({
   navBtnDisabled: { opacity: 0.4 },
   navBtnText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   navBtnTextDisabled: { color: colors.textFaint },
-  navNext: { flex: 1, backgroundColor: colors.primary, borderColor: colors.primary },
+  navSiguiente: { flex: 1 },
+  navNext: { backgroundColor: colors.primary, borderColor: colors.primary },
+  setRowAhora: {
+    marginHorizontal: -spacing.xs,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+  },
+  botonHecha: { marginTop: spacing.sm },
   navNextText: { color: colors.onPrimary },
   exerciseCard: { marginBottom: spacing.md },
   exerciseCardDone: { opacity: 0.55 },

@@ -351,6 +351,29 @@ service cloud.firestore {
         && resource.data.trainerId == request.auth.uid;
     }
 
+    // Bibliotecas compartidas con un código (lib/firestore/bibliotecas.ts).
+    // Se LEEN sabiendo el código —cualquiera con sesión: es para pasársela a
+    // otro entrenador—, pero no se LISTAN: sin el código no se encuentra
+    // nada. Solo un entrenador comparte la suya, y solo él la cambia o borra.
+    match /bibliotecas/{codigo} {
+      allow get: if request.auth != null;
+      // Listar solo las propias (el borrado de la cuenta las busca así).
+      allow list: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'trainer'
+        && request.resource.data.plantilla is string
+        && request.resource.data.plantilla.size() < 900000;
+      allow update: if request.auth != null
+        && resource.data.trainerId == request.auth.uid
+        && request.resource.data.trainerId == request.auth.uid
+        && request.resource.data.plantilla is string
+        && request.resource.data.plantilla.size() < 900000;
+      allow delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
     // Rutinas asignadas a cada cliente.
     match /routines/{routineId} {
       allow read: if request.auth != null

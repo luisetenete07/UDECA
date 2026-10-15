@@ -72,6 +72,24 @@
       "./plugins/memoria-de-gradle",
       "./plugins/optimizar-android",
       [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Hoy",
+              "label": "UDECA · Hoy",
+              "description": "Tu entreno de hoy y tus pasos",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

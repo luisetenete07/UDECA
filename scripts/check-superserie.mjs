@@ -12,7 +12,10 @@ import { readFileSync } from 'node:fs';
 import {
   bloqueDe,
   descansoDelBloque,
+  descansoTrasRonda,
+  enLaRonda,
   rondasDe,
+  serieSuelta,
   siguienteDelBloque,
   trasMarcarSerie,
 } from '../lib/superserie.ts';
@@ -95,12 +98,32 @@ console.log('\nAl marcar una serie');
   ok('la siguiente del bloque va ronda a ronda', igual(siguienteDelBloque(log, { inicio: 4, fin: 6 }), { ejercicio: 6, serie: 0 }));
 }
 
+console.log('\nSeries desiguales (2 de A, 3 de B)');
+{
+  const planDesigual = [{ restSeconds: 60 }, { supersetWithPrevious: true, restSeconds: 45 }];
+  const b = { inicio: 0, fin: 1 };
+  const log = [series(true, true), series(true, true, false)];
+  ok('la 3.ª de B es una serie suelta', serieSuelta(log, b, 2) === 1);
+  ok('las dos primeras, no', serieSuelta(log, b, 0) === null && serieSuelta(log, b, 1) === null);
+  ok('en la 3.ª ronda solo está B', igual(enLaRonda(log, b, 2), [1]));
+  const r = trasMarcarSerie(log, planDesigual, 1, 1);
+  ok('tras la 2.ª ronda, descanso y luego B sola', r.tipo === 'descansar' && igual(r.siguiente, { ejercicio: 1, serie: 2 }));
+  ok('el descanso de una ronda entera, el de la superserie', descansoTrasRonda(planDesigual, log, b, 1) === 45);
+  const conB = [series(true, true), series(true, true, true)];
+  ok('el de la serie suelta, el del propio ejercicio', descansoTrasRonda(planDesigual, conB, b, 2) === 45);
+  const planB = [{ restSeconds: 60 }, { supersetWithPrevious: true }];
+  ok('y si no tiene, el de la superserie', descansoTrasRonda(planB, conB, b, 2) === 60);
+  // Con B saltado no es "suelta": B no ha terminado, se ha quedado fuera.
+  const saltado = [series(true, false), { saltado: true, sets: [{}, {}] }];
+  ok('con el otro saltado, no se llama suelta', serieSuelta(saltado, b, 1) === null);
+}
+
 console.log('\nEn la pantalla del entreno');
 {
   const w = readFileSync('app/(client)/workout.tsx', 'utf8');
   ok('la superserie se pinta entera, en su tarjeta', /if \(esSuperserie\(bloqueVisible\)\) return tarjetaDeSuperserie\(bloqueVisible\);/.test(w));
   ok('lo que toca después lo decide trasMarcarSerie', /const despues = trasMarcarSerie\(conLaMarca, plan, exerciseIndex, setIndex\);/.test(w));
-  ok('encadenada: sin descanso', /if \(despues\.tipo === 'encadenar'\) \{[\s\S]{0,300}\} else \{\s*const rest = descansoDelBloque/.test(w));
+  ok('encadenada: sin descanso', /if \(despues\.tipo === 'encadenar'\) \{[\s\S]{0,300}\} else \{\s*const rest = descansoTrasRonda/.test(w));
   ok('desplegada solo la ronda que toca, entera', /\{ronda\(actual, true\)\}/.test(w));
   ok('el paso que toca se enciende', />AHORA<\/Text>/.test(w));
   ok('entre paso y paso, "sin descanso"; al final, el descanso', />sin descanso<\/Text>/.test(w) && /Luego, descanso de \$\{/.test(w));
@@ -109,6 +132,9 @@ console.log('\nEn la pantalla del entreno');
   ok('y sin contestarlo no se pasa solo al siguiente', /!faltaEsfuerzo\(conLaMarca, bloque\)/.test(w));
   ok('Siguiente salta la superserie entera', /setViewIndex\(Math\.min\(log\.length - 1, bloqueVisible\.fin \+ 1\)\)/.test(w));
   ok('y antes de empezar ya se ve como bloque', /Superserie · sin descanso entre ellos/.test(w));
+  ok('la serie suelta se avisa en la tarjeta', /Esta va sola: \$\{terminaron\} ya ha hecho sus series\./.test(w));
+  ok('y antes de empezar', /la última de \$\{quien\} va sola/.test(w));
+  ok('su descanso es el suyo', /descansoTrasRonda\(plan, conLaMarca, bloque, setIndex\)/.test(w));
 }
 
 console.log(fallos === 0 ? '\n✔ La superserie se hace como se entrena: A, B y descanso' : `\n${fallos} fallo(s)`);

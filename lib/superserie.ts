@@ -95,6 +95,47 @@ export function descansoDelBloque(plan: EnElPlan[], b: Bloque): number {
   return Math.max(0, ...miembros(b).map((i) => plan[i]?.restSeconds ?? 0));
 }
 
+/** Los ejercicios que tienen serie en la ronda `r` (sin los saltados). */
+export function enLaRonda(log: EnCurso[], b: Bloque, r: number): number[] {
+  return miembros(b).filter((i) => {
+    const ex = log[i];
+    return !!ex && !ex.saltado && r < ex.sets.length;
+  });
+}
+
+/**
+ * Si la ronda `r` la hace UN solo ejercicio porque los demás ya terminaron sus
+ * series, ese ejercicio; si no, null.
+ *
+ * Pasa cuando el entrenador pone, por ejemplo, 2 series de A y 3 de B: la
+ * tercera de B ya no tiene con quién encadenarse. No es una superserie a
+ * medias, es una serie suelta, y se trata como tal: sola, con su descanso.
+ */
+export function serieSuelta(log: EnCurso[], b: Bloque, r: number): number | null {
+  if (!esSuperserie(b)) return null;
+  const quienes = enLaRonda(log, b, r);
+  if (quienes.length !== 1) return null;
+  // Que los demás hayan TERMINADO (no saltado): si no, no es suelta, es que
+  // el otro se ha quedado fuera hoy.
+  const terminados = miembros(b).filter((j) => {
+    const ex = log[j];
+    return j !== quienes[0] && !!ex && !ex.saltado && r >= ex.sets.length;
+  });
+  return terminados.length > 0 ? quienes[0] : null;
+}
+
+/**
+ * El descanso después de la ronda `r`.
+ *
+ * El de la superserie, salvo si la ronda era una serie suelta: entonces el del
+ * propio ejercicio, que es el que el entrenador pensó para él solo.
+ */
+export function descansoTrasRonda(plan: EnElPlan[], log: EnCurso[], b: Bloque, r: number): number {
+  const suelta = serieSuelta(log, b, r);
+  if (suelta !== null && (plan[suelta]?.restSeconds ?? 0) > 0) return plan[suelta]!.restSeconds!;
+  return descansoDelBloque(plan, b);
+}
+
 export type TrasLaSerie =
   /** Otro ejercicio de la misma ronda: se hace YA, sin descanso. */
   | { tipo: 'encadenar'; siguiente: Paso }

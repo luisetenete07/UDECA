@@ -34,6 +34,7 @@ export function Dialogo({
   cargando = false,
   desactivado = false,
   cancelar = 'Cancelar',
+  tono = 'peligro',
 }: {
   visible: boolean;
   onClose: () => void;
@@ -50,6 +51,12 @@ export function Dialogo({
   cargando?: boolean;
   desactivado?: boolean;
   cancelar?: string;
+  /**
+   * 'peligro' (por defecto): icono y botón en rojo, para lo que borra o
+   * sustituye. 'normal': en dorado, para lo que no hace daño (compartir un
+   * código, buscar uno). Un botón rojo para "Enviar" asusta sin motivo.
+   */
+  tono?: 'peligro' | 'normal';
 }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -57,8 +64,8 @@ export function Dialogo({
         {/* La tarjeta se come el toque: tocar dentro no cierra. */}
         <Pressable style={styles.tarjeta} onPress={() => {}}>
           {icono ? (
-            <View style={styles.icono}>
-              <Ionicons name={icono} size={24} color={colors.danger} />
+            <View style={[styles.icono, tono === 'normal' && styles.iconoNormal]}>
+              <Ionicons name={icono} size={24} color={tono === 'normal' ? colors.primary : colors.danger} />
             </View>
           ) : null}
           <Text style={styles.titulo}>{titulo}</Text>
@@ -67,7 +74,7 @@ export function Dialogo({
           {accion && onAccion ? (
             <Button
               title={accion}
-              variant="danger"
+              variant={tono === 'normal' ? 'primary' : 'danger'}
               onPress={onAccion}
               loading={cargando}
               disabled={desactivado}
@@ -113,6 +120,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: spacing.md,
   },
+  iconoNormal: { backgroundColor: colors.primaryMuted },
   titulo: { ...typography.h3, color: colors.text, marginBottom: spacing.xs },
   texto: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
 });

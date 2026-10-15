@@ -404,7 +404,7 @@ export interface ExerciseBest {
   hasUnassisted: boolean;
 }
 
-function parseReps(reps: string): number {
+export function parseReps(reps: string): number {
   const n = parseInt(reps, 10);
   return Number.isNaN(n) ? 0 : n;
 }
@@ -444,6 +444,12 @@ export interface PersonalRecord {
   exerciseName: string;
   /** Descripción corta del récord, p.ej. "12 kg × 8" o "15 reps". */
   label: string;
+  /**
+   * Cuánto ha mejorado y desde cuándo ("+3 reps · antes 8 reps, hace 5
+   * semanas"). Lo pone el resumen del entreno (lib/livePR.ts); un récord sin
+   * esto sigue siendo un récord.
+   */
+  contexto?: string;
 }
 
 /**

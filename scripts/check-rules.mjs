@@ -598,6 +598,36 @@ await comprobar('pero no las de otro entrenador', false, () =>
 );
 await comprobar('ni todas de golpe', false, () => getDocs(collection(db, 'rutinasDiarias')));
 
+/*
+ * BIBLIOTECAS COMPARTIDAS CON UN CÓDIGO (lib/firestore/bibliotecas.ts).
+ *
+ * Se leen sabiendo el código, pero no se listan: si se pudieran listar, el
+ * código no protegería nada. Y solo su entrenador las cambia.
+ */
+console.log('\nBibliotecas compartidas con un código');
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+const plantillaDePrueba = JSON.stringify({ app: 'udeca', type: 'exercise-template', version: 1, exercises: [] });
+await comprobar('el entrenador comparte la suya', true, () =>
+  setDoc(doc(db, 'bibliotecas', 'PRUEBA'), { trainerId: coach.user.uid, nombre: 'Coach', plantilla: plantillaDePrueba, updatedAt: Date.now() })
+);
+await comprobar('y no a nombre de otro', false, () =>
+  setDoc(doc(db, 'bibliotecas', 'PRUEB2'), { trainerId: 'otro-cualquiera', nombre: 'X', plantilla: plantillaDePrueba })
+);
+await comprobar('lista las suyas', true, () =>
+  getDocs(query(collection(db, 'bibliotecas'), where('trainerId', '==', coach.user.uid)))
+);
+await comprobar('pero no todas', false, () => getDocs(collection(db, 'bibliotecas')));
+await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
+await comprobar('cualquiera con sesión la lee con el código', true, () => getDoc(doc(db, 'bibliotecas', 'PRUEBA')));
+await comprobar('pero no la cambia', false, () =>
+  setDoc(doc(db, 'bibliotecas', 'PRUEBA'), { trainerId: coach.user.uid, nombre: 'Hack', plantilla: plantillaDePrueba })
+);
+await comprobar('un alumno no comparte biblioteca', false, () =>
+  setDoc(doc(db, 'bibliotecas', 'ALUMN1'), { trainerId: auth.currentUser.uid, nombre: 'Yo', plantilla: plantillaDePrueba })
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('su entrenador la borra', true, () => deleteDoc(doc(db, 'bibliotecas', 'PRUEBA')));
+
 console.log(
   fallos === 0
     ? '\n✔ Todas las comprobaciones de reglas pasan.\n'

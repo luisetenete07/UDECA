@@ -18,8 +18,6 @@ import { useAuth } from '../../lib/auth-context';
 import { MARCA_POR_DEFECTO } from '../../lib/marcaPropia';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
-import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
-import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getRutinaDiaria } from '../../lib/firestore/rutinaDiaria';
 import { hayRutinaDiaria } from '../../lib/rutinaDiaria';
 import { pickAvatar } from '../../lib/image';
@@ -35,10 +33,6 @@ import {
   PLAZOS,
   type Objetivos,
 } from '../../lib/objetivos';
-import {
-  computeAchievements,
-  type Achievement,
-} from '../../lib/stats';
 import { Chip, ChipRow } from '../../components/Chip';
 import { colors, fieldLabel, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import { EXPERIENCE_LEVELS, type ExperienceLevel } from '../../lib/types';
@@ -92,6 +86,16 @@ export default function ClientProfileScreen() {
     await refreshProfile();
   };
 
+  // El resumen del domingo: encendido salvo que se apague.
+  const [resumenOn, setResumenOn] = useState(profile?.weeklySummaryEnabled !== false);
+  const toggleResumen = async () => {
+    if (!profile) return;
+    const next = !resumenOn;
+    setResumenOn(next);
+    await updateUserProfile(profile.uid, { weeklySummaryEnabled: next });
+    await refreshProfile();
+  };
+
   /**
    * Insistir cada hora es mucho ruido, así que se pide expresamente y se puede
    * apagar de un toque. Al apagarlo se quitan los que ya estaban puestos: si
@@ -108,7 +112,6 @@ export default function ClientProfileScreen() {
   };
 
 
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
 
   // El aviso diario a hora fija se ha quitado del producto. Quien lo tuviera
@@ -124,11 +127,7 @@ export default function ClientProfileScreen() {
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [workoutLogs, weightLogs] = await Promise.all([
-      getWorkoutLogsForClient(profile.uid),
-      getWeightLogsForClient(profile.uid),
-    ]);
-    setAchievements(computeAchievements(workoutLogs, weightLogs));
+    // Ya no lee los entrenos: eran para los logros, que viven en Progreso.
     setLoading(false);
     getRutinaDiaria(profile.uid)
       .then((r) => setTieneRutinaDiaria(hayRutinaDiaria(r)))
@@ -197,7 +196,6 @@ export default function ClientProfileScreen() {
 
   if (loading) return <LoadingScreen />;
 
-  const unlockedCount = achievements.filter((a) => a.unlocked).length;
 
   // Nombre: se puede cambiar como máximo una vez cada 90 días.
   const NAME_COOLDOWN = 90 * 24 * 60 * 60 * 1000;
@@ -241,36 +239,8 @@ export default function ClientProfileScreen() {
           animada, la de abajo repitiéndola. Se queda la tarjeta, que además
           las cuenta solas y no ocupa el doble. */}
 
-      {/* Trece logros en una parrilla ocupaban casi una pantalla entera, y once
-          de ellos son los mismos para todo el mundo desde el primer día. Lo
-          que de verdad se viene a mirar —cuántos llevas— se lee plegado. */}
-      <CollapsibleCard
-        id="alumno-logros"
-        icon="ribbon-outline"
-        title="Logros"
-        hint={frase`${unlockedCount} de ${achievements.length}`}
-        defaultOpen={false}
-      >
-        <View style={styles.badgeGrid}>
-          {achievements.map((a) => (
-            <View key={a.id} style={styles.badge}>
-              <View
-                style={[styles.badgeIcon, a.unlocked ? styles.badgeIconOn : styles.badgeIconOff]}
-              >
-                <Ionicons
-                  name={a.icon as keyof typeof Ionicons.glyphMap}
-                  size={22}
-                  color={a.unlocked ? colors.primary : colors.textFaint}
-                />
-              </View>
-              <Text style={[styles.badgeTitle, !a.unlocked && styles.badgeTitleOff]}>
-                {a.title}
-              </Text>
-              <Text style={styles.badgeDesc}>{a.description}</Text>
-            </View>
-          ))}
-        </View>
-      </CollapsibleCard>
+      {/* Los logros se han ido a Progreso (components/LogrosDelAlumno.tsx):
+          son progreso, y aquí, entre los ajustes, casi no se veían. */}
 
       {/* Tarjeta de cambio de nombre: solo visible si NO se ha consumido el
           límite de una vez cada 90 días. Al gastarlo, desaparece hasta que
@@ -404,6 +374,22 @@ export default function ClientProfileScreen() {
             </Text>
           </>
         ) : null}
+
+        {/* El resumen del domingo lo manda el servidor (payments-webhook/api/
+            _resumen.js): aquí solo se dice si se quiere. */}
+        <View style={[styles.reminderTopRow, styles.reminderSegunda]}>
+          <Text style={styles.reminderSubtitulo}>Resumen del domingo</Text>
+          <Pressable
+            onPress={toggleResumen}
+            style={[styles.switch, resumenOn && styles.switchOn]}
+            hitSlop={6}
+          >
+            <View style={[styles.switchKnob, resumenOn && styles.switchKnobOn]} />
+          </Pressable>
+        </View>
+        <Text style={styles.reminderHint}>
+          Los domingos, tus entrenos, series y pasos de la semana. Solo si has entrenado.
+        </Text>
       </Card>
 
       {/* Cerrar sesión no borra nada: sin el rojo de lo peligroso, que se
@@ -459,31 +445,6 @@ const styles = StyleSheet.create({
   },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text },
-  badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  badge: {
-    width: '30%',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  badgeIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-    borderWidth: 1,
-  },
-  badgeIconOn: { backgroundColor: colors.primaryMuted, borderColor: colors.primary },
-  badgeIconOff: { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
-  badgeTitle: {
-    ...typography.small,
-    color: colors.text,
-    fontFamily: fonts.semiBold,
-    textAlign: 'center',
-  },
-  badgeTitleOff: { color: colors.textFaint },
-  badgeDesc: { ...typography.small, color: colors.textFaint, textAlign: 'center', fontSize: 11 },
   textarea: { height: 78, textAlignVertical: 'top' },
   fieldLabel: fieldLabel,
   savedText: { ...typography.small, color: colors.primary, marginBottom: spacing.sm },

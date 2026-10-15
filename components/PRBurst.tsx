@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
+import { frase } from '../lib/idioma';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
@@ -22,12 +23,18 @@ export function PRBurst({
   exerciseName,
   label,
   previous,
+  mejora,
+  desde,
   onDone,
 }: {
   exerciseName: string;
   label: string;
   /** Marca anterior, si la había. Sin ella no se enseña el "antes". */
   previous?: string | null;
+  /** Cuánto ha mejorado ("+3 reps"), lo primero que se lee del "antes". */
+  mejora?: string | null;
+  /** Cuándo puso la marca anterior ("hace 5 semanas"). */
+  desde?: string | null;
   onDone: () => void;
 }) {
   const anim = useRef(new Animated.Value(0)).current;
@@ -96,7 +103,15 @@ export function PRBurst({
             {'  ·  '}
             {exerciseName}
           </Text>
-          {previous ? <Text style={styles.prev}>Tu marca era {previous}</Text> : null}
+          {/* El récord con su historia: cuánto ha subido y desde cuándo tenía
+              la marca que acaba de batir (lib/livePR.ts). */}
+          {previous || mejora ? (
+            <Text style={styles.prev} numberOfLines={2}>
+              {mejora ? <Text style={styles.mejora}>{mejora}</Text> : null}
+              {mejora && previous ? '  ·  ' : ''}
+              {previous ? (desde ? frase`antes ${previous}, ${desde}` : frase`antes ${previous}`) : ''}
+            </Text>
+          ) : null}
         </View>
       </View>
     </Animated.View>
@@ -156,4 +171,5 @@ const styles = StyleSheet.create({
   line: { ...typography.body, color: colors.text, marginTop: 1 },
   mark: { fontFamily: fonts.heading, color: colors.primaryBright },
   prev: { ...typography.small, color: colors.textFaint, fontSize: 12, marginTop: 1 },
+  mejora: { color: colors.primaryBright, fontFamily: fonts.semiBold },
 });

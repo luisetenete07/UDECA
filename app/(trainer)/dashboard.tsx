@@ -26,6 +26,7 @@ import {
   getClientsForTrainer,
   setCoachingHasta,
   subscribeClientsForTrainer,
+  updateUserProfile,
 } from '../../lib/firestore/users';
 import { FREE_CLIENT_LIMIT, trainerAtFreeLimit } from '../../lib/subscription';
 import { alargar, coachingDe } from '../../lib/coaching';
@@ -40,6 +41,7 @@ import {
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
+import { conRevisado, loQueDestaca, porRevisar, type LoVisto } from '../../lib/bandeja';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
 import { sessionTotals, weekComparison } from '../../lib/stats';
@@ -62,6 +64,13 @@ export default function TrainerDashboard() {
   // refreshProfile: tras aceptar a un alumno, el servidor actualiza el recuento
   // del perfil y hay que releerlo para que el acceso quede al día.
   const { profile, refreshProfile, logo } = useAuth();
+  // La bandeja "Por revisar": lo visto, en local para que responda al toque,
+  // y guardado en el perfil para que valga en todos los dispositivos.
+  const [visto, setVisto] = useState<LoVisto>(() => ({
+    revisados: profile?.revisados,
+    revisadoHasta: profile?.revisadoHasta,
+  }));
+  const [verTodaLaBandeja, setVerTodaLaBandeja] = useState(false);
   const router = useRouter();
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
   const cacheKey = `trainer-dash-${profile?.uid ?? ''}`;
@@ -148,6 +157,19 @@ export default function TrainerDashboard() {
 
   const wk = weekComparison(logs);
   const hoyCero = inicioDelDia(now);
+  const pendientes = porRevisar(logs, visto);
+  const abrirRevisando = (log: WorkoutLog) => {
+    const revisados = conRevisado(visto.revisados, log.id);
+    setVisto((v) => ({ ...v, revisados }));
+    if (profile) updateUserProfile(profile.uid, { revisados }).catch(() => {});
+    router.push(`/(trainer)/clients/${log.clientId}/session?logId=${log.id}`);
+  };
+  const marcarTodoVisto = () => {
+    const revisadoHasta = Date.now();
+    setVisto({ revisados: [], revisadoHasta });
+    if (profile) updateUserProfile(profile.uid, { revisados: [], revisadoHasta }).catch(() => {});
+  };
+
   const byId = (id: string) => clients.find((c) => c.uid === id);
   // Alumnos distintos que ya han entrenado HOY (va en el pulso del grupo).
   const trainedToday = new Set(
@@ -547,42 +569,106 @@ export default function TrainerDashboard() {
         />
       </FadeIn>
 
+      {/*
+       * POR REVISAR (lib/bandeja.ts). Era "Actividad reciente": lo último, sin
+       * más, y había que abrir cada sesión para saber si había algo. Ahora salen
+       * las que aún no has abierto, cada una con lo que la hace digna de
+       * mirarse —un récord, una nota, series sin hacer—, y al abrirla se va.
+       */}
       <FadeIn delay={280}>
-      <View style={styles.section}>
-      <CollapsibleCard id="actividad" icon="pulse-outline" title="Actividad reciente">
-        {logs.length === 0 ? (
-          <EmptyState icon="pulse-outline" title="Aún no hay actividad" subtitle="Cuando tus alumnos entrenen, sus sesiones aparecerán aquí." />
-        ) : (
-          logs.slice(0, 6).map((log) => {
-            const client = byId(log.clientId);
-            return (
-              <Pressable
-                key={log.id}
-                onPress={() =>
-                  router.push(`/(trainer)/clients/${log.clientId}/session?logId=${log.id}`)
-                }
-                style={styles.activityRow}
-              >
-                <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
-                  {/* Cuándo, en palabras ("ayer", "hace 3 días"), y cuánto:
-                      la fecha en números obligaba a hacer la cuenta. */}
-                  <Text style={styles.logDetail} numberOfLines={1}>
-                    {unido(
-                      log.dayName,
-                      haceCuanto(diasEntre(log.date, now)),
-                      frase`${sessionTotals(log.exercises).sets} series`
-                    )}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        <Card style={styles.section}>
+          <View style={styles.bandejaCab}>
+            <Ionicons name="file-tray-full-outline" size={18} color={colors.primary} />
+            <Text style={styles.bandejaTitulo}>Por revisar</Text>
+            {pendientes.length > 0 ? (
+              <View style={styles.bandejaCuenta}>
+                <Text style={styles.bandejaCuentaTexto}>{pendientes.length}</Text>
+              </View>
+            ) : null}
+            <View style={{ flex: 1 }} />
+            {pendientes.length > 0 ? (
+              <Pressable onPress={marcarTodoVisto} hitSlop={8} style={styles.bandejaTodoBtn}>
+                <Ionicons name="checkmark-done-outline" size={15} color={colors.primary} />
+                <Text style={styles.bandejaTodo}>Todo visto</Text>
               </Pressable>
-            );
-          })
-        )}
-      </CollapsibleCard>
-      </View>
+            ) : null}
+          </View>
+          {pendientes.length === 0 ? (
+            <View style={styles.bandejaVacia}>
+              <Ionicons name="checkmark-done-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.mutedText}>
+                {logs.length === 0
+                  ? 'Cuando tus alumnos entrenen, sus sesiones llegarán aquí.'
+                  : 'Todo revisado. Los nuevos entrenos llegarán aquí.'}
+              </Text>
+            </View>
+          ) : (
+            (verTodaLaBandeja ? pendientes : pendientes.slice(0, 6)).map((log) => {
+              const client = byId(log.clientId);
+              const destacados = loQueDestaca(
+                log,
+                logs.filter((l) => l.clientId === log.clientId)
+              );
+              return (
+                <Pressable key={log.id} onPress={() => abrirRevisando(log)} style={styles.activityRow}>
+                  <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
+                    {/* Cuándo, en palabras ("ayer", "hace 3 días"), y cuánto. */}
+                    <Text style={styles.logDetail} numberOfLines={1}>
+                      {unido(
+                        log.dayName,
+                        haceCuanto(diasEntre(log.date, now)),
+                        frase`${sessionTotals(log.exercises).sets} series`
+                      )}
+                    </Text>
+                    {destacados.length > 0 ? (
+                      <View style={styles.destacados}>
+                        {destacados.map((d) => (
+                          <View
+                            key={d.texto}
+                            style={[
+                              styles.destacado,
+                              d.tono === 'logro' && styles.destacadoLogro,
+                              d.tono === 'aviso' && styles.destacadoAviso,
+                            ]}
+                          >
+                            <Ionicons
+                              name={d.icono}
+                              size={11}
+                              color={
+                                d.tono === 'logro'
+                                  ? colors.primaryBright
+                                  : d.tono === 'aviso'
+                                    ? colors.warning
+                                    : colors.textMuted
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.destacadoTexto,
+                                d.tono === 'logro' && { color: colors.primaryBright },
+                                d.tono === 'aviso' && { color: colors.warning },
+                              ]}
+                            >
+                              {d.texto}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                  <View style={styles.puntoNuevo} />
+                </Pressable>
+              );
+            })
+          )}
+          {pendientes.length > 6 && !verTodaLaBandeja ? (
+            <Pressable onPress={() => setVerTodaLaBandeja(true)} style={styles.bandejaMas} hitSlop={6}>
+              <Text style={styles.bandejaTodo}>{frase`Ver los ${pendientes.length}`}</Text>
+            </Pressable>
+          ) : null}
+        </Card>
       </FadeIn>
 
       {/* Los periodos que se acaban esta semana o ya se acabaron, con +1 mes
@@ -815,6 +901,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logClient: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  bandejaCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  bandejaTitulo: { ...typography.h3, color: colors.text },
+  bandejaCuenta: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  bandejaCuentaTexto: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.heading, fontSize: 12 },
+  bandejaTodo: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  bandejaTodoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  bandejaVacia: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
+  bandejaMas: { alignSelf: 'center', paddingTop: spacing.sm },
+  destacados: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 5 },
+  destacado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+  },
+  destacadoLogro: { backgroundColor: colors.primaryMuted },
+  destacadoAviso: { backgroundColor: colors.warningMuted },
+  destacadoTexto: { ...typography.small, color: colors.textMuted, fontSize: 11 },
+  // Sin abrir: el punto dorado de "nuevo", como en cualquier bandeja.
+  puntoNuevo: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
   logDetail: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   mutedText: { ...typography.small, color: colors.textFaint },
 });

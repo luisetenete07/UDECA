@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { t, frase  } from '../../lib/idioma';
-import { diaLargo, diaMes, diaYMes, esHoy } from '../../lib/fechas';
+import { diaLargo, diaMes, diaYMes, esHoy, inicioDelDia } from '../../lib/fechas';
+import { datosDelWidget, guardarDatosDelWidget } from '../../lib/widgetHoy';
 import { unido } from '../../lib/texto';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -34,7 +35,7 @@ import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getStepLogsForClient, type StepLog } from '../../lib/firestore/steps';
 import { getActiveNutritionPlanForClient, getMealLogsForClient } from '../../lib/firestore/nutrition';
 import { objetivosDelDia } from '../../lib/macrosDelDia';
-import { balanceDelDia, caloriasDePasos, pasosDeHoy } from '../../lib/pasos';
+import { balanceDelDia, caloriasDePasos, OBJETIVO_POR_DEFECTO, pasosDeHoy } from '../../lib/pasos';
 import { conMiles } from '../../lib/texto';
 import { FilaDelDia } from '../../components/FilaDelDia';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
@@ -209,6 +210,27 @@ export default function ClientDashboard() {
       .catch(() => {});
   }, [profile]);
 
+  // El widget "Hoy" de la pantalla del móvil (Android, lib/widgetHoy.ts): se
+  // le deja apuntado lo de hoy cada vez que cambia algo aquí.
+  useEffect(() => {
+    if (loading || !profile) return;
+    const hoy = inicioDelDia(Date.now());
+    const sesion = resolveTodaySession(routine, { alumno: cycleAnchor, pausas: profile.planPauses });
+    guardarDatosDelWidget(
+      datosDelWidget({
+        dia: hoy,
+        sinPlan: !routine,
+        enPausa: !!pausaActiva(profile.planPauses),
+        hecho: workoutLogs.some((l) => inicioDelDia(l.date) === hoy),
+        descanso: sesion.isRest,
+        nombreDelDia: sesion.day?.name,
+        ejercicios: sesion.day?.exercises.length,
+        pasos: pasosDeHoy(stepLogs)?.steps ?? null,
+        objetivoPasos: profile.stepGoal ?? OBJETIVO_POR_DEFECTO,
+      })
+    ).catch(() => {});
+  }, [loading, profile, routine, cycleAnchor, workoutLogs, stepLogs]);
+
   if (loading)
     return (
       <ScreenContainer>
@@ -287,6 +309,8 @@ export default function ClientDashboard() {
   const todayLogByHabit = new Map(
     habitLogs.filter((l) => l.day === today).map((l) => [l.habitId, l])
   );
+
+  const habitosHechos = habits.filter((h) => todayLogByHabit.has(h.id)).length;
 
   const toggleHabit = async (habit: Habit) => {
     const existing = todayLogByHabit.get(habit.id);
@@ -747,6 +771,48 @@ export default function ClientDashboard() {
             onPress={() => router.push('/(client)/progress?tab=nutricion')}
           />
         ) : null}
+        {/* LOS HÁBITOS DEL DÍA, AQUÍ Y NO EN UNA TARJETA AL FINAL.
+            Son cosas de hoy, como los pasos y las calorías: van en la misma
+            lista, con su cuenta y su barra, y se marcan con un toque sin
+            salir de la tarjeta. Al final de la pantalla casi no se veían. */}
+        {habits.length > 0 ? (
+          <View style={styles.habitosFila}>
+            <View style={styles.habitosCab}>
+              <Ionicons name="checkbox-outline" size={17} color={colors.textMuted} />
+              <Text style={styles.habitosEtiqueta}>Hábitos</Text>
+              <Text
+                style={[
+                  styles.habitosValor,
+                  habitosHechos === habits.length && { color: colors.primaryBright },
+                ]}
+              >
+                {habitosHechos}
+                <Text style={styles.habitosDe}>{` / ${habits.length}`}</Text>
+              </Text>
+            </View>
+            <ProgressBar progress={habitosHechos / habits.length} height={4} />
+            <View style={styles.habitosLista}>
+              {habits.map((h) => {
+                const done = todayLogByHabit.has(h.id);
+                return (
+                  <Pressable
+                    key={h.id}
+                    onPress={() => toggleHabit(h)}
+                    style={[styles.habito, done && styles.habitoHecho]}
+                    hitSlop={4}
+                  >
+                    <Ionicons
+                      name={done ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={16}
+                      color={done ? colors.primary : colors.textFaint}
+                    />
+                    <Text style={[styles.habitoTexto, done && styles.habitoTextoHecho]}>{h.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
         <FilaDelDia
           icono="body-outline"
           etiqueta="Peso"
@@ -802,30 +868,39 @@ export default function ClientDashboard() {
         </Card>
       ) : null}
 
-      {habits.length > 0 ? (
-        <Card style={styles.section}>
-          <Text style={styles.sectionLabel}>Hábitos de hoy</Text>
-          {habits.map((h) => {
-            const done = todayLogByHabit.has(h.id);
-            return (
-              <Pressable key={h.id} onPress={() => toggleHabit(h)} style={styles.habitRow}>
-                <View style={[styles.habitCheck, done && styles.habitCheckDone]}>
-                  {done ? (
-                    <Ionicons name="checkmark" size={14} color={colors.onPrimary} />
-                  ) : null}
-                </View>
-                <Text style={[styles.habitName, done && styles.habitNameDone]}>{h.name}</Text>
-              </Pressable>
-            );
-          })}
-        </Card>
-      ) : null}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  // Los hábitos, como una fila más de la tarjeta del día (ver FilaDelDia).
+  habitosFila: {
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  habitosCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  habitosEtiqueta: { ...typography.body, color: colors.textMuted, flex: 1 },
+  habitosValor: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  habitosDe: { ...typography.small, color: colors.textFaint, fontFamily: fonts.body },
+  habitosLista: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 2 },
+  habito: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  habitoHecho: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  habitoTexto: { ...typography.small, color: colors.text },
+  habitoTextoHecho: { color: colors.textMuted, textDecorationLine: 'line-through' },
   logoCoach: { width: 120, height: 32, alignSelf: 'flex-start', marginBottom: spacing.sm },
   greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
   greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
@@ -995,25 +1070,6 @@ const styles = StyleSheet.create({
   legendPlanned: { backgroundColor: colors.surfaceAlt, borderColor: colors.hairline },
   legendTodayDot: { backgroundColor: colors.surfaceAlt, borderColor: colors.primaryBright, borderWidth: 2 },
   legendText: { ...typography.small, color: colors.textMuted, fontSize: 11 },
-  habitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  habitCheck: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  habitCheckDone: { backgroundColor: colors.primary, borderColor: colors.primary },
-  habitName: { ...typography.body, color: colors.text },
-  habitNameDone: { color: colors.textMuted, textDecorationLine: 'line-through' },
   firstStepsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

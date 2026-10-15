@@ -203,6 +203,16 @@ export interface UserProfile {
    * se olvida—, y se apagan desde el perfil.
    */
   dailyRoutineRemindersEnabled?: boolean;
+  /** Entrenos ya vistos en la bandeja "Por revisar" (lib/bandeja.ts). */
+  revisados?: string[];
+  /** "Marcar todo como visto": lo llegado antes de esto ya no sale. */
+  revisadoHasta?: number;
+  /** El código con el que este entrenador comparte su biblioteca (lib/firestore/bibliotecas.ts). */
+  codigoBiblioteca?: string;
+  /** El resumen de la semana por push los domingos (lo manda el servidor). */
+  weeklySummaryEnabled?: boolean;
+  /** Cuándo se le mandó el último resumen (lo escribe el servidor). */
+  lastWeeklySummary?: number;
   /** Estado del alumno gestionado por el entrenador. */
   status?: ClientStatus;
   /** Estado de pago del alumno, gestionado por el entrenador. */

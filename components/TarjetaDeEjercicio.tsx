@@ -10,7 +10,7 @@ import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import { MEASURE_SHORT, type Exercise, type ExerciseMeasure } from '../lib/types';
 
 /** Cómo se mide, en un icono: lo que distingue una dominada de un front lever. */
-const ICONO_DE_MEDIDA: Record<ExerciseMeasure, React.ComponentProps<typeof Ionicons>['name']> = {
+export const ICONO_DE_MEDIDA: Record<ExerciseMeasure, React.ComponentProps<typeof Ionicons>['name']> = {
   reps: 'barbell-outline',
   seconds: 'timer-outline',
   combo: 'flash-outline',

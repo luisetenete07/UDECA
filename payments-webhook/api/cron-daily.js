@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { correoConfigurado, enviarCorreos } from './_correo.js';
+import { resumenDeLaSemana, seriesHechas } from './_resumen.js';
 
 /**
  * Tarea diaria de UDECA (Vercel Cron).
@@ -15,6 +16,7 @@ import { correoConfigurado, enviarCorreos } from './_correo.js';
  *  2. Avisa por push a quien lleva días sin entrenar.
  *  3. Avisa por push de que se acaba (o se acabó) el periodo de coaching.
  *  4. Avisa de que el año pagado se acaba, ANTES de que se acabe.
+ *  5. Los domingos, manda a cada alumno el resumen de su semana (_resumen.js).
  *
  * Variables de entorno: FIREBASE_SERVICE_ACCOUNT (JSON de la cuenta de
  * servicio) y CRON_SECRET (lo envía Vercel como Authorization: Bearer …).
@@ -124,13 +126,31 @@ export default async function handler(req, res) {
     const since = now - WINDOW_DAYS * DAY_MS;
     const logsSnap = await db.collection('workoutLogs').where('date', '>=', since).get();
     const byClient = new Map();
+    // Series de ESTA semana por alumno, para el resumen del domingo.
+    const seriesSemana = new Map();
+    const inicioSemana = startOfWeek(now);
     logsSnap.forEach((doc) => {
       const l = doc.data();
       if (!l?.clientId || typeof l.date !== 'number') return;
       const arr = byClient.get(l.clientId) ?? [];
       arr.push(l.date);
       byClient.set(l.clientId, arr);
+      if (l.date >= inicioSemana) {
+        seriesSemana.set(l.clientId, (seriesSemana.get(l.clientId) ?? 0) + seriesHechas(l));
+      }
     });
+
+    // ---- Los domingos: pasos de la semana, para el resumen ----
+    const esDomingo = new Date(now).getDay() === 0;
+    const pasosSemana = new Map();
+    if (esDomingo) {
+      const pasosSnap = await db.collection('stepLogs').where('date', '>=', inicioSemana).get();
+      pasosSnap.forEach((doc) => {
+        const p = doc.data();
+        if (!p?.clientId || typeof p.steps !== 'number') return;
+        pasosSemana.set(p.clientId, (pasosSemana.get(p.clientId) ?? 0) + p.steps);
+      });
+    }
 
     // ---- 2. Alumnos ----
     const usersSnap = await db.collection('users').get();
@@ -177,12 +197,37 @@ export default async function handler(req, res) {
         );
       }
 
+      // --- Resumen del domingo (se puede apagar desde el perfil) ---
+      // Va antes que el aviso de inactividad: si hoy le llega su resumen, ese
+      // otro aviso se queda para otro día (dos el mismo domingo es ruido).
+      let resumenEnviado = false;
+      const lastSummary = u.lastWeeklySummary ?? 0;
+      if (
+        esDomingo &&
+        u.pushToken &&
+        u.weeklySummaryEnabled !== false &&
+        now - lastSummary > NUDGE_COOLDOWN_MS
+      ) {
+        const resumen = resumenDeLaSemana({
+          entrenos: dates.filter((d) => d >= weekStart).length,
+          series: seriesSemana.get(doc.id) ?? 0,
+          pasos: pasosSemana.get(doc.id) ?? 0,
+          racha: streakFrom(dayStamps),
+        });
+        if (resumen) {
+          messages.push({ to: u.pushToken, ...resumen });
+          nudged.push({ id: doc.id, data: { lastWeeklySummary: now } });
+          resumenEnviado = true;
+        }
+      }
+
       // --- Aviso por inactividad (solo a quien ya ha entrenado alguna vez) ---
       const last = dayStamps.length > 0 ? Math.max(...dayStamps) : null;
       const daysOff = last ? Math.round((today - last) / DAY_MS) : null;
       const lastNudge = u.lastInactivityNudge ?? 0;
       if (
         u.pushToken &&
+        !resumenEnviado &&
         daysOff !== null &&
         daysOff >= INACTIVE_DAYS &&
         now - lastNudge > NUDGE_COOLDOWN_MS

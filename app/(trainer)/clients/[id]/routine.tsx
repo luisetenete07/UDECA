@@ -15,6 +15,10 @@ import {
   proporcionIntensidad,
 } from '../../../../lib/intensidad';
 import { Sheet } from '../../../../components/Sheet';
+import { VistaDelAlumno } from '../../../../components/VistaDelAlumno';
+import { sugerenciaDeProgresion } from '../../../../lib/progresion';
+import { getWorkoutLogsForClient } from '../../../../lib/firestore/workoutLogs';
+import { AplicarAVarios } from '../../../../components/AplicarAVarios';
 import { Chip, ChipRow } from '../../../../components/Chip';
 import { DiasSemana } from '../../../../components/DiasSemana';
 import { Opciones } from '../../../../components/Opciones';
@@ -96,6 +100,7 @@ import {
   type RoutineSchedule,
   type RoutineTemplate,
   type UserProfile,
+  type WorkoutLog,
   WEEKDAY_LABELS,
   WEEKDAY_NAMES,
 } from '../../../../lib/types';
@@ -141,6 +146,17 @@ export default function RoutineEditorScreen() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // "Ver como el alumno" y "Aplicar a otros alumnos" (paneles de abajo).
+  const [verComoAlumno, setVerComoAlumno] = useState(false);
+  // El historial del alumno: para sugerir subir lo que ya cumple de sobra.
+  const [logsDelAlumno, setLogsDelAlumno] = useState<WorkoutLog[]>([]);
+  useEffect(() => {
+    if (!clientId || !profile) return;
+    getWorkoutLogsForClient(clientId, profile.uid)
+      .then(setLogsDelAlumno)
+      .catch(() => {});
+  }, [clientId, profile]);
+  const [aplicarVarios, setAplicarVarios] = useState(false);
   const [routineId, setRoutineId] = useState<string | null>(null);
   const [name, setName] = useState('Rutina personalizada');
   const [days, setDays] = useState<RoutineDay[]>([]);
@@ -933,6 +949,52 @@ export default function RoutineEditorScreen() {
     } finally {
       setSavingTemplate(false);
     }
+  };
+
+  /**
+   * Lo que hay en pantalla, como rutina activa de otros alumnos: a cada uno su
+   * copia (ids nuevos, para que retocar la de uno no toque la de otro).
+   */
+  const aplicarAOtros = async (alumnos: UserProfile[]) => {
+    if (!profile || alumnos.length === 0) return;
+    const dias = diasAGuardar();
+    let hechos = 0;
+    for (const a of alumnos) {
+      try {
+        const nuevaId = await createRoutine({
+          trainerId: profile.uid,
+          clientId: a.uid,
+          name,
+          active: true,
+          days: dias.map((d) => ({
+            ...d,
+            id: nuevoId(),
+            exercises: d.exercises.map((e) => ({ ...e, id: nuevoId() })),
+          })),
+          schedule,
+          // Para ellos el ciclo empieza HOY: la fecha de este alumno puede ser
+          // de hace semanas, y les tocaría un día cualquiera de la rueda.
+          cycleStartDate: schedule === 'cycle' ? inicioDelDia(Date.now()) : undefined,
+          cycleStartDateSetAt: schedule === 'cycle' ? Date.now() : undefined,
+          scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
+          personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
+          visibilidad: visibilidadAGuardar(visibilidad),
+        });
+        await setActiveRoutine(a.uid, nuevaId, profile.uid);
+        if (schedule !== 'flex') await setClientTrackRir(a.uid, pedirEsfuerzo).catch(() => {});
+        notifyUser(a.uid, 'Nueva rutina asignada', frase`Tu entrenador ha actualizado tu plan: ${name}`);
+        hechos++;
+      } catch {
+        // Uno que falle no para a los demás; se cuenta abajo.
+      }
+    }
+    showToast(
+      hechos === alumnos.length
+        ? hechos === 1
+          ? 'Aplicada a 1 alumno'
+          : frase`Aplicada a ${hechos} alumnos`
+        : frase`Aplicada a ${hechos} de ${alumnos.length}: revisa los que faltan`
+    );
   };
 
   const removeTemplate = async (id: string) => {
@@ -1862,6 +1924,26 @@ export default function RoutineEditorScreen() {
                 </Pressable>
               </View>
 
+              {/* Si lo cumple de sobra dos sesiones seguidas, se dice aquí, en
+                  la ficha, con el nuevo objetivo a un toque (lib/progresion.ts). */}
+              {(() => {
+                const sug = sugerenciaDeProgresion(logsDelAlumno, ex);
+                return sug ? (
+                  <View style={styles.sugerencia}>
+                    <Ionicons name="trending-up" size={15} color={colors.primaryBright} />
+                    <Text style={styles.sugerenciaTexto}>{sug.texto}</Text>
+                    {sug.reps ? (
+                      <Pressable
+                        onPress={() => updateExerciseField(day.id, ex.id, 'reps', sug.reps!)}
+                        hitSlop={8}
+                      >
+                        <Text style={styles.sugerenciaAplicar}>Aplicar</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ) : null;
+              })()}
+
               {/*
                * LOS NÚMEROS, EN UNA SOLA FILA. Series, reps, la variable y el
                * descanso son lo que se toca en cada ficha: antes eran dos
@@ -2393,6 +2475,35 @@ export default function RoutineEditorScreen() {
 
       <Button title="+ Añadir día" variant="ghost" onPress={addDay} style={styles.addDayBtn} />
 
+      {/* Antes de guardar: verla como la verá el alumno, y llevarla a más de
+          uno de golpe. */}
+      <View style={styles.extrasFila}>
+        <Pressable onPress={() => setVerComoAlumno(true)} style={styles.extra} hitSlop={6}>
+          <Ionicons name="eye-outline" size={16} color={colors.primary} />
+          <Text style={styles.extraTexto}>Ver como el alumno</Text>
+        </Pressable>
+        <Pressable onPress={() => setAplicarVarios(true)} style={styles.extra} hitSlop={6}>
+          <Ionicons name="people-outline" size={16} color={colors.primary} />
+          <Text style={styles.extraTexto}>Aplicar a otros</Text>
+        </Pressable>
+      </View>
+      <VistaDelAlumno
+        visible={verComoAlumno}
+        onClose={() => setVerComoAlumno(false)}
+        dias={diasAGuardar()}
+        perso={schedule === 'flex' ? configuracionAGuardar() : undefined}
+        pedirEsfuerzo={pedirEsfuerzo}
+      />
+      {profile ? (
+        <AplicarAVarios
+          visible={aplicarVarios}
+          onClose={() => setAplicarVarios(false)}
+          trainerId={profile.uid}
+          excepto={clientId}
+          onAplicar={aplicarAOtros}
+        />
+      ) : null}
+
       {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
       <Button title="Guardar rutina" onPress={handleSave} loading={saving} />
       {/*
@@ -2416,6 +2527,28 @@ export default function RoutineEditorScreen() {
 }
 
 const styles = StyleSheet.create({
+  sugerencia: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primaryMuted,
+  },
+  sugerenciaTexto: { ...typography.small, color: colors.text, flex: 1 },
+  sugerenciaAplicar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  extrasFila: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  extra: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: spacing.xs },
+  extraTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   dayCardDragging: { borderColor: colors.hairline },
   dayCard: { marginBottom: spacing.md },
   scheduleCard: { marginBottom: spacing.md },
