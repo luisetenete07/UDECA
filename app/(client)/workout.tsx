@@ -1137,7 +1137,9 @@ export default function WorkoutScreen() {
 
         // Autoavance: con el bloque COMPLETO (el ejercicio, o la superserie
         // entera) pasa solo a lo siguiente, dejando ver el ✓ un instante.
-        if (despues.bloqueTerminado && bloque.fin < log.length - 1) {
+        // Salvo si el plan pide el esfuerzo y falta: se queda para que se
+        // conteste, y al contestarlo avanza (ver `updateExerciseEsfuerzo`).
+        if (despues.bloqueTerminado && !faltaEsfuerzo(conLaMarca, bloque) && bloque.fin < log.length - 1) {
           const destino =
             despues.siguiente && despues.siguiente.ejercicio > bloque.fin
               ? despues.siguiente.ejercicio
@@ -1238,7 +1240,32 @@ export default function WorkoutScreen() {
         return { ...ex, esfuerzo: { escala, valor }, rir: comoRir(escala, valor) };
       })
     );
+    // ¿Era lo último que faltaba del bloque (series hechas y esfuerzo puesto)?
+    // Entonces, al siguiente, como al cerrar la última serie.
+    const ex = log[exerciseIndex];
+    const quitando = (ex?.esfuerzo?.valor ?? rirComoValor(ex?.rir)) === valor;
+    const bloque = bloqueDe(day?.exercises ?? [], exerciseIndex, log.length);
+    const conElEsfuerzo = log.map((e, i) =>
+      i === exerciseIndex ? { ...e, esfuerzo: { escala, valor } } : e
+    );
+    if (
+      !quitando &&
+      bloque.fin < log.length - 1 &&
+      siguienteDelBloque(log, bloque) === null &&
+      !faltaEsfuerzo(conElEsfuerzo, bloque)
+    ) {
+      setTimeout(() => {
+        setViewIndex((cur) => (cur >= bloque.inicio && cur <= bloque.fin ? bloque.fin + 1 : cur));
+      }, 700);
+    }
   };
+
+  /** ¿Pide el plan el esfuerzo de cada ejercicio y falta el de alguno del bloque? */
+  const faltaEsfuerzo = (sesion: LoggedExercise[], b: { inicio: number; fin: number }) =>
+    pideEsfuerzoPorEjercicio &&
+    miembrosDelBloque(b).some(
+      (i) => sesion[i] && !sesion[i].saltado && !sesion[i].esfuerzo && sesion[i].rir == null
+    );
 
   // Lo saltado no cuenta para el progreso: si contara, la sesión pediría
   // series que el alumno ya ha decidido no hacer y el contador no llegaría
@@ -1682,14 +1709,19 @@ export default function WorkoutScreen() {
   }
 
   /*
-   * LA SUPERSERIE, EN UNA TARJETA Y POR RONDAS.
+   * LA SUPERSERIE: UNA RONDA A LA VISTA, COMO UNA SECUENCIA.
    *
-   * Arriba, los ejercicios del bloque (A, B…) con lo que pide cada uno. Debajo,
-   * las rondas: en cada una, una serie de cada ejercicio, una debajo de otra,
-   * que es como se hacen. La serie que toca se enciende; al marcarla, se
-   * enciende la del siguiente ejercicio —"ahora · sin descanso"— y solo al
-   * cerrar la ronda arranca el descanso. Las rondas hechas se pliegan en una
-   * línea, para que la que toca quede siempre arriba.
+   * Lo único desplegado es la ronda que toca, y se lee de arriba abajo como se
+   * hace: A, "sin descanso", B, "luego, descanso 1:30". Cada paso lleva junto
+   * todo lo suyo —nombre, objetivo, la última vez, las casillas—, sin una ficha
+   * aparte arriba que obligue a cruzar datos. El que toca se enciende ("AHORA");
+   * al marcarlo, se enciende el siguiente.
+   *
+   * Lo hecho y lo que queda, en dos líneas pequeñas al pie: lo hecho se abre
+   * para corregir; lo que queda solo se cuenta. Arriba, una barra por ronda.
+   *
+   * La pregunta del esfuerzo sale en la última ronda, que es cuando se puede
+   * contestar sabiendo de qué se habla; antes era ruido debajo de cada ronda.
    */
   const tarjetaDeSuperserie = (b: { inicio: number; fin: number }) => {
     const plan = day?.exercises ?? [];
@@ -1700,6 +1732,22 @@ export default function WorkoutScreen() {
     const hecho = activos.length > 0 && siguiente === null;
     const descanso = descansoDelBloque(plan, b) || DEFAULT_REST_SECONDS;
     const letra = (i: number) => String.fromCharCode(65 + (i - b.inicio));
+    const clave = (x: string | number) => `${b.inicio}:${x}`;
+    const todasLasRondas = Array.from({ length: rondas }, (_, r) => r);
+    const enLaRonda = (r: number) => activos.filter((i) => r < (log[i]?.sets.length ?? 0));
+    const rondaHecha = (r: number) =>
+      enLaRonda(r).length > 0 && enLaRonda(r).every((i) => log[i]?.sets[r].completed);
+    const actual = siguiente?.serie ?? null;
+    const hechas = todasLasRondas.filter((r) => r !== actual && rondaHecha(r));
+    const quedan = actual === null ? 0 : todasLasRondas.filter((r) => r > actual && !rondaHecha(r)).length;
+    const verHechas = rondasAbiertas.has(clave('hechas'));
+    const alternar = (k: string) =>
+      setRondasAbiertas((prev) => {
+        const n = new Set(prev);
+        if (n.has(k)) n.delete(k);
+        else n.add(k);
+        return n;
+      });
 
     const info = (i: number) => {
       const exercise = log[i];
@@ -1720,7 +1768,7 @@ export default function WorkoutScreen() {
       };
     };
 
-    /** Una casilla con su rótulo debajo: en una ronda cada fila es de un ejercicio distinto. */
+    /** Una casilla con su rótulo debajo: en la ronda cada paso es un ejercicio distinto. */
     const campo = (
       key: string,
       value: string,
@@ -1736,16 +1784,27 @@ export default function WorkoutScreen() {
           placeholder={placeholder}
           keyboardType={decimal ? 'decimal-pad' : 'numeric'}
           style={[styles.setFieldInput, styles.ssCampoCasilla]}
+          containerStyle={styles.ssCampoContenedor}
         />
         <Text style={styles.ssCampoRotulo}>{rotulo}</Text>
       </View>
     );
 
-    const fila = (i: number, r: number) => {
+    /** Un paso de la ronda: un ejercicio, con todo lo suyo junto. */
+    const paso = (i: number, r: number, conDetalle: boolean) => {
       const d = info(i);
       const set = d.exercise?.sets[r];
       if (!d.exercise || !set) return null;
+      const esAhora = siguiente?.ejercicio === i && siguiente.serie === r;
       const objetivo = d.planned?.reps || (d.isSeconds ? 'seg' : 'reps');
+      const pres = ve.objetivo && d.planned ? textoDePrescripcion(d.planned, perso) : '';
+      const meta = unido(
+        d.planned?.reps ? `${d.planned.reps} ${d.isSeconds ? 's' : 'reps'}` : undefined,
+        d.load === 'assisted' ? t('Con goma') : d.load === 'weighted' ? t('Lastrado') : undefined,
+        pres || undefined,
+        d.planned?.grip ? `${t('Agarre')} ${GRIP_LABEL[d.planned.grip].toLowerCase()}` : undefined,
+        d.cluster ? frase`Clúster ${d.bloques} bloques · ${d.cluster.restSeconds}s` : undefined
+      );
       const campos = [
         campo(
           'reps',
@@ -1799,62 +1858,138 @@ export default function WorkoutScreen() {
             ]
           : []),
       ];
-      const esLaSiguiente = siguiente?.ejercicio === i && siguiente.serie === r;
-      // "Sin descanso": la de antes en esta misma ronda ya está hecha.
-      const encadenada =
-        esLaSiguiente &&
-        activos.some((j) => j < i && r < (log[j]?.sets.length ?? 0) && log[j]?.sets[r].completed);
-      // Con tres casillas o más, el nombre no cabe al lado: va encima.
-      const apilada = campos.length >= 3;
-      const marca = (
-        <PressableScale
-          haptic
-          onPress={() => updateSet(i, r, 'completed', !set.completed)}
-          style={styles.setToggle}
-          hitSlop={6}
-        >
-          <View
-            style={[
-              styles.checkButton,
-              esLaSiguiente && styles.ssCheckSiguiente,
-              set.completed && styles.checkButtonDone,
-            ]}
+      const video = videoByExercise[d.exercise.exerciseId];
+      return (
+        <View key={i} style={[styles.ssPaso, esAhora && styles.ssPasoAhora]}>
+          <PressableScale
+            haptic
+            onPress={() => updateSet(i, r, 'completed', !set.completed)}
+            style={styles.ssMarca}
+            hitSlop={8}
           >
-            <Ionicons
-              name="checkmark"
-              size={20}
-              color={set.completed ? colors.onPrimary : esLaSiguiente ? colors.primary : colors.textFaint}
-            />
-          </View>
+            <View
+              style={[
+                styles.checkButton,
+                esAhora && styles.ssCheckAhora,
+                set.completed && styles.checkButtonDone,
+              ]}
+            >
+              <Ionicons
+                name="checkmark"
+                size={20}
+                color={set.completed ? colors.onPrimary : esAhora ? colors.primary : colors.textFaint}
+              />
+            </View>
+          </PressableScale>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[styles.setLabel, set.completed && styles.setLabelDone]} numberOfLines={2}>
-              <Text style={styles.ssLetraEnFila}>{letra(i)} </Text>
-              {d.exercise.name}
-            </Text>
-            {esLaSiguiente ? (
-              <Text style={styles.ssPista}>{encadenada ? 'Ahora · sin descanso' : 'Ahora'}</Text>
+            <View style={styles.ssPasoCab}>
+              <Text style={styles.ssLetraEnFila}>{letra(i)}</Text>
+              <Text
+                style={[styles.ssNombre, set.completed && !esAhora && styles.setLabelDone]}
+                numberOfLines={2}
+              >
+                {d.exercise.name}
+              </Text>
+              {esAhora ? (
+                <View style={styles.ssAhora}>
+                  <Text style={styles.ssAhoraTexto}>AHORA</Text>
+                </View>
+              ) : null}
+            </View>
+            {meta ? (
+              <Text style={styles.ssMeta} numberOfLines={1}>
+                {meta}
+              </Text>
+            ) : null}
+            {conDetalle && d.planned?.goal ? (
+              <Text style={styles.ssMeta}>{frase`Objetivo: ${d.planned.goal}`}</Text>
+            ) : null}
+            {conDetalle && d.prev ? (
+              <Text style={styles.ssUltima}>
+                Última vez: {d.load !== 'none' && d.prev.weight ? `${d.prev.weight} kg × ` : ''}
+                {d.prev.reps ?? '—'} {d.isSeconds ? 's' : 'reps'}
+              </Text>
+            ) : null}
+            {conDetalle && d.planned?.notes ? (
+              <Text style={styles.coachNotes} numberOfLines={3}>
+                {d.planned.notes}
+              </Text>
+            ) : null}
+            <View style={styles.ssCampos}>{campos}</View>
+            {conDetalle ? (
+              <View style={styles.ssAcciones}>
+                {video ? (
+                  <Pressable
+                    onPress={() => setVideoAbierto({ url: video, titulo: d.exercise!.name })}
+                    style={styles.ssAccion}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="play-circle-outline" size={14} color={colors.primary} />
+                    <Text style={styles.ssAccionTexto}>Técnica</Text>
+                  </Pressable>
+                ) : null}
+                {d.cluster ? (
+                  <Pressable
+                    onPress={() => descansoDeBloque(d.cluster!.restSeconds, d.exercise!.name)}
+                    style={styles.ssAccion}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="timer-outline" size={14} color={colors.primary} />
+                    <Text style={styles.ssAccionTexto}>
+                      {frase`Entre bloques · ${d.cluster.restSeconds}s`}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  onPress={() => setNoteOpenIndex(noteOpenIndex === i ? null : i)}
+                  style={styles.ssAccion}
+                  hitSlop={6}
+                >
+                  <Ionicons
+                    name={d.exercise.notes ? 'create' : 'create-outline'}
+                    size={14}
+                    color={colors.textMuted}
+                  />
+                  <Text style={styles.ssAccionTextoSuave}>Nota</Text>
+                </Pressable>
+                {puedeSaltar ? (
+                  <Pressable onPress={() => alternarSaltado(i)} style={styles.ssAccion} hitSlop={6}>
+                    <Ionicons name="play-skip-forward-outline" size={14} color={colors.textMuted} />
+                    <Text style={styles.ssAccionTextoSuave}>Saltar</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+            {conDetalle && (noteOpenIndex === i || d.exercise.notes) ? (
+              <TextField
+                value={d.exercise.notes ?? ''}
+                onChangeText={(v) => updateExerciseNote(i, v)}
+                placeholder="Ej. Hice la variante con goma, molestia en hombro..."
+                style={styles.noteField}
+              />
             ) : null}
           </View>
-        </PressableScale>
-      );
-      return (
-        <View key={i} style={[styles.ssFila, esLaSiguiente && styles.ssFilaSiguiente]}>
-          {apilada ? (
-            <>
-              {marca}
-              <View style={styles.ssCamposApilados}>{campos}</View>
-            </>
-          ) : (
-            <View style={styles.ssFilaEnLinea}>
-              {marca}
-              {campos}
-            </View>
-          )}
         </View>
       );
     };
 
-    /** Lo apuntado en una serie, en corto, para la línea de la ronda plegada. */
+    /** La ronda como secuencia: A, "sin descanso", B… y al final, el descanso. */
+    const ronda = (r: number, conDetalle: boolean) => {
+      const pasos = enLaRonda(r);
+      return pasos.map((i, k) => (
+        <React.Fragment key={i}>
+          {paso(i, r, conDetalle)}
+          {k < pasos.length - 1 ? (
+            <View style={styles.ssEnlace}>
+              <View style={styles.ssEnlaceLinea} />
+              <Text style={styles.ssEnlaceTexto}>sin descanso</Text>
+            </View>
+          ) : null}
+        </React.Fragment>
+      ));
+    };
+
+    /** Lo apuntado en una serie, en corto, para la línea de una ronda hecha. */
     const enCorto = (i: number, r: number) => {
       const d = info(i);
       const s = d.exercise?.sets[r];
@@ -1863,173 +1998,133 @@ export default function WorkoutScreen() {
       return `${letra(i)} ${marca}${s.weight ? ` · ${s.weight} kg` : ''}`;
     };
 
+    const ultimaRonda = rondas - 1;
+    const preguntarEsfuerzo =
+      pideEsfuerzoPorEjercicio && activos.length > 0 && (hecho || actual === ultimaRonda);
+
     return (
       <FadeIn key={`superserie-${b.inicio}`}>
-        <Card accent style={[styles.exerciseCard, hecho && styles.exerciseCardDone]}>
+        <Card accent style={styles.exerciseCard}>
+          {/* Arriba: qué es y por dónde va, en una línea y una barra. */}
           <View style={styles.ssCab}>
-            <View style={styles.ssIcono}>
-              <Ionicons name="link" size={15} color={colors.primaryBright} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.ssTitulo}>{frase`Superserie · ${ids.length} ejercicios`}</Text>
-              <Text style={styles.ssSub}>
-                {frase`Seguidos, sin descanso entre ellos. Descansa ${minutosSegundos(descanso, false)} al acabar cada ronda.`}
-              </Text>
-            </View>
-            {hecho ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+            <Ionicons name="link" size={15} color={colors.primaryBright} />
+            <Text style={styles.ssTitulo}>Superserie</Text>
+            <View style={{ flex: 1 }} />
+            {hecho ? (
+              <View style={styles.ssHecha}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                <Text style={styles.ssHechaTexto}>Hecha</Text>
+              </View>
+            ) : actual !== null ? (
+              <Text style={styles.ssCuenta}>{frase`Ronda ${actual + 1} de ${rondas}`}</Text>
+            ) : null}
+          </View>
+          <View style={styles.ssBarra}>
+            {todasLasRondas.map((r) => (
+              <View
+                key={r}
+                style={[
+                  styles.ssTramo,
+                  rondaHecha(r) && styles.ssTramoHecho,
+                  r === actual && styles.ssTramoActual,
+                ]}
+              />
+            ))}
           </View>
 
-          {ids.map((i) => {
-            const d = info(i);
-            if (!d.exercise) return null;
-            const pres = ve.objetivo && d.planned ? textoDePrescripcion(d.planned, perso) : '';
-            const meta = unido(
-              d.planned ? `${d.planned.sets} × ${d.planned.reps}${d.isSeconds ? 's' : ''}` : undefined,
-              pres || undefined,
-              d.load === 'assisted' ? t('Con goma') : d.load === 'weighted' ? t('Lastrado') : undefined,
-              d.planned?.grip ? `${t('Agarre')} ${GRIP_LABEL[d.planned.grip].toLowerCase()}` : undefined,
-              d.cluster ? frase`Clúster ${d.bloques} bloques · ${d.cluster.restSeconds}s` : undefined
-            );
-            return (
-              <View key={i} style={styles.ssEjercicio}>
-                <View style={styles.ssLetra}>
-                  <Text style={styles.ssLetraTexto}>{letra(i)}</Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    style={[styles.ssNombre, d.exercise.saltado && styles.ssNombreSaltado]}
-                    numberOfLines={2}
-                  >
-                    {d.exercise.name}
-                  </Text>
-                  {meta ? <Text style={styles.ssMeta}>{meta}</Text> : null}
-                  {d.planned?.goal ? (
-                    <Text style={styles.ssMeta}>{frase`Objetivo: ${d.planned.goal}`}</Text>
-                  ) : null}
-                  {d.prev ? (
-                    <Text style={styles.ssUltima}>
-                      Última vez: {d.load !== 'none' && d.prev.weight ? `${d.prev.weight} kg × ` : ''}
-                      {d.prev.reps ?? '—'} {d.isSeconds ? 's' : 'reps'}
-                    </Text>
-                  ) : null}
-                  {d.planned?.notes ? <Text style={styles.coachNotes}>{d.planned.notes}</Text> : null}
-                  {d.exercise.saltado ? (
-                    <Text style={styles.saltadoAviso}>
-                      Saltado hoy. Se guarda así para que tu entrenador lo sepa.
-                    </Text>
-                  ) : null}
-                  <View style={styles.ssAcciones}>
-                    {videoByExercise[d.exercise.exerciseId] ? (
-                      <Pressable
-                        onPress={() =>
-                          setVideoAbierto({
-                            url: videoByExercise[d.exercise!.exerciseId],
-                            titulo: d.exercise!.name,
-                          })
-                        }
-                        style={styles.ssAccion}
-                        hitSlop={6}
-                      >
-                        <Ionicons name="play-circle-outline" size={15} color={colors.primary} />
-                        <Text style={styles.videoLinkText}>Ver técnica</Text>
-                      </Pressable>
-                    ) : null}
-                    {d.cluster ? (
-                      <Pressable
-                        onPress={() => descansoDeBloque(d.cluster!.restSeconds, d.exercise!.name)}
-                        style={styles.ssAccion}
-                        hitSlop={6}
-                      >
-                        <Ionicons name="timer-outline" size={15} color={colors.primary} />
-                        <Text style={styles.videoLinkText}>
-                          {frase`Entre bloques · ${d.cluster.restSeconds}s`}
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                    {puedeSaltar ? (
-                      <Pressable onPress={() => alternarSaltado(i)} style={styles.ssAccion} hitSlop={6}>
-                        <Ionicons
-                          name={d.exercise.saltado ? 'play-skip-forward' : 'play-skip-forward-outline'}
-                          size={14}
-                          color={d.exercise.saltado ? colors.primary : colors.textMuted}
-                        />
-                        <Text style={styles.permisoTexto}>{d.exercise.saltado ? 'Saltado' : 'Saltar'}</Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                </View>
+          {/* La ronda que toca, entera y con todo. */}
+          {actual !== null ? (
+            <>
+              {ronda(actual, true)}
+              <View style={styles.ssFinRonda}>
+                <Ionicons name="timer-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.ssFinRondaTexto}>
+                  {actual === ultimaRonda
+                    ? 'Última ronda'
+                    : frase`Luego, descanso de ${minutosSegundos(descanso, false)}`}
+                </Text>
               </View>
-            );
-          })}
+            </>
+          ) : null}
 
-          {Array.from({ length: rondas }, (_, r) => {
-            const enLaRonda = activos.filter((i) => r < (log[i]?.sets.length ?? 0));
-            if (enLaRonda.length === 0) return null;
-            const hecha = enLaRonda.every((i) => log[i]?.sets[r].completed);
-            const actual = siguiente?.serie === r;
-            // Desplegada solo la que toca: las hechas y las que faltan, en una
-            // línea cada una. Se abren con un toque (corregir una hecha, o
-            // adelantar una). Así la ronda de ahora queda siempre a la vista.
-            if (!actual && !rondaAbierta(b, r)) {
-              return (
-                <Pressable
-                  key={r}
-                  onPress={() => setRondasAbiertas((prev) => new Set(prev).add(`${b.inicio}:${r}`))}
-                  style={[styles.ssRondaPlegada, hecha && styles.ssRondaPlegadaHecha]}
-                  hitSlop={4}
-                >
-                  <Ionicons
-                    name={hecha ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={16}
-                    color={hecha ? colors.primary : colors.textFaint}
-                  />
-                  <Text style={[styles.ssRondaPlegadaTitulo, !hecha && styles.ssRondaPlegadaPendiente]}>
-                    {frase`Ronda ${r + 1}`}
-                  </Text>
-                  <Text style={styles.ssRondaResumen} numberOfLines={1}>
-                    {hecha
-                      ? enLaRonda.map((i) => enCorto(i, r)).join('  ·  ')
-                      : enLaRonda
-                          .map((i) => `${letra(i)} ${plan[i]?.reps ?? ''}${info(i).isSeconds ? ' s' : ''}`)
-                          .join('  ·  ')}
-                  </Text>
-                  <Ionicons
-                    name={hecha ? 'create-outline' : 'chevron-down'}
-                    size={14}
-                    color={colors.textFaint}
-                  />
-                </Pressable>
-              );
-            }
-            return (
-              <View key={r} style={[styles.ssRonda, actual && styles.ssRondaActual]}>
-                <View style={styles.ssRondaCab}>
-                  <Text style={[styles.ssRondaTitulo, actual && styles.ssRondaTituloActual]}>
-                    {frase`RONDA ${r + 1} DE ${rondas}`}
-                  </Text>
-                  {!actual ? (
-                    <Pressable
-                      onPress={() =>
-                        setRondasAbiertas((prev) => {
-                          const n = new Set(prev);
-                          n.delete(`${b.inicio}:${r}`);
-                          return n;
-                        })
-                      }
-                      hitSlop={8}
-                    >
-                      <Text style={styles.ssPlegar}>Plegar</Text>
-                    </Pressable>
-                  ) : r > 0 ? (
-                    <Text style={styles.ssRondaDescanso}>
-                      {frase`después de ${minutosSegundos(descanso, false)} de descanso`}
+          {/* Y al pie, lo hecho (se abre para corregir) y lo que queda. */}
+          {hechas.length > 0 ? (
+            <Pressable onPress={() => alternar(clave('hechas'))} style={styles.ssPie} hitSlop={4}>
+              <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
+              <Text style={styles.ssPieTexto}>
+                {hechas.length === 1
+                  ? frase`Ronda ${hechas[0] + 1} hecha`
+                  : frase`${hechas.length} rondas hechas`}
+              </Text>
+              <Text style={styles.ssPieResumen} numberOfLines={1}>
+                {!verHechas && hechas.length === 1
+                  ? enLaRonda(hechas[0]).map((i) => enCorto(i, hechas[0])).join('  ·  ')
+                  : ''}
+              </Text>
+              <Ionicons name={verHechas ? 'chevron-up' : 'chevron-down'} size={15} color={colors.textFaint} />
+            </Pressable>
+          ) : null}
+          {verHechas
+            ? hechas.map((r) =>
+                rondaAbierta(b, r) ? (
+                  <View key={r} style={styles.ssRondaCorregir}>
+                    <View style={styles.ssRondaCorregirCab}>
+                      <Text style={styles.ssRondaCorregirTitulo}>{frase`Ronda ${r + 1}`}</Text>
+                      <Pressable onPress={() => alternar(clave(r))} hitSlop={8}>
+                        <Text style={styles.ssPlegar}>Listo</Text>
+                      </Pressable>
+                    </View>
+                    {ronda(r, false)}
+                  </View>
+                ) : (
+                  <Pressable key={r} onPress={() => alternar(clave(r))} style={styles.ssRondaLinea} hitSlop={4}>
+                    <Text style={styles.ssRondaLineaTitulo}>{frase`Ronda ${r + 1}`}</Text>
+                    <Text style={styles.ssPieResumen} numberOfLines={1}>
+                      {enLaRonda(r).map((i) => enCorto(i, r)).join('  ·  ')}
                     </Text>
-                  ) : null}
-                </View>
-                {enLaRonda.map((i) => fila(i, r))}
-              </View>
-            );
-          })}
+                    <Ionicons name="create-outline" size={14} color={colors.textFaint} />
+                  </Pressable>
+                )
+              )
+            : null}
+          {quedan > 0 ? (
+            <View style={styles.ssPie}>
+              <Ionicons name="ellipse-outline" size={15} color={colors.textFaint} />
+              <Text style={styles.ssPieTextoSuave}>
+                {quedan === 1 ? 'Queda 1 ronda más' : frase`Quedan ${quedan} rondas más`}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Saltados: se dicen, y se pueden recuperar. */}
+          {ids
+            .filter((i) => log[i]?.saltado)
+            .map((i) => (
+              <Pressable key={i} onPress={() => alternarSaltado(i)} style={styles.ssPie} hitSlop={4}>
+                <Ionicons name="play-skip-forward" size={14} color={colors.textFaint} />
+                <Text style={styles.ssPieTextoSuave} numberOfLines={1}>
+                  {frase`${letra(i)} · ${log[i]?.name ?? ''}, saltado hoy`}
+                </Text>
+                <Text style={styles.ssPlegar}>Recuperar</Text>
+              </Pressable>
+            ))}
+
+          {preguntarEsfuerzo ? (
+            <View style={styles.ssEsfuerzo}>
+              <Text style={styles.ssEsfuerzoTitulo}>
+                {hecho ? '¿Cuánto te ha costado cada uno?' : 'Al acabar: ¿cuánto te ha costado cada uno?'}
+              </Text>
+              {activos.map((i) => (
+                <SelectorDeEsfuerzo
+                  key={i}
+                  esfuerzo={esfuerzoDelPlan}
+                  etiqueta={`${letra(i)} · ${log[i]?.name ?? ''}`}
+                  value={log[i]?.esfuerzo?.valor ?? rirComoValor(log[i]?.rir)}
+                  onChange={(v) => updateExerciseEsfuerzo(i, v)}
+                />
+              ))}
+            </View>
+          ) : null}
 
           {isFlex ? (
             <View style={styles.setEditRow}>
@@ -2051,48 +2146,6 @@ export default function WorkoutScreen() {
               </Pressable>
             </View>
           ) : null}
-
-          {pideEsfuerzoPorEjercicio
-            ? activos.map((i) => (
-                <SelectorDeEsfuerzo
-                  key={i}
-                  esfuerzo={esfuerzoDelPlan}
-                  etiqueta={`${letra(i)} · ${log[i]?.name ?? ''}`}
-                  value={log[i]?.esfuerzo?.valor ?? rirComoValor(log[i]?.rir)}
-                  onChange={(v) => updateExerciseEsfuerzo(i, v)}
-                />
-              ))
-            : null}
-
-          {ids.map((i) =>
-            noteOpenIndex === i || log[i]?.notes ? (
-              <TextField
-                key={`nota-${i}`}
-                label={`${letra(i)} · ${log[i]?.name ?? ''}`}
-                value={log[i]?.notes ?? ''}
-                onChangeText={(v) => updateExerciseNote(i, v)}
-                placeholder="Ej. Hice la variante con goma, molestia en hombro..."
-                style={styles.noteField}
-              />
-            ) : null
-          )}
-          <View style={styles.ssAcciones}>
-            {ids.map((i) => (
-              <Pressable
-                key={i}
-                onPress={() => setNoteOpenIndex(noteOpenIndex === i ? null : i)}
-                style={styles.noteBtn}
-                hitSlop={6}
-              >
-                <Ionicons
-                  name={log[i]?.notes ? 'create' : 'create-outline'}
-                  size={13}
-                  color={colors.textMuted}
-                />
-                <Text style={styles.noteBtnText}>{frase`Nota ${letra(i)}`}</Text>
-              </Pressable>
-            ))}
-          </View>
         </Card>
       </FadeIn>
     );
@@ -3249,119 +3302,114 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.sm,
     marginLeft: 2,
   },
-  // ----- Superserie, en una tarjeta por rondas -----
-  ssCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
-  ssIcono: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
+  // ----- Superserie: una ronda a la vista, como secuencia -----
+  ssCab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ssTitulo: {
     ...typography.small,
     color: colors.primaryBright,
     fontFamily: fonts.semiBold,
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     textTransform: 'uppercase',
   },
-  ssSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
-  ssEjercicio: {
+  ssCuenta: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, ...tabularNums },
+  ssHecha: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ssHechaTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  // Una barra por ronda: lo hecho en dorado, la de ahora más clara.
+  ssBarra: { flexDirection: 'row', gap: 4, marginTop: spacing.sm, marginBottom: spacing.md },
+  ssTramo: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  ssTramoHecho: { backgroundColor: colors.primary },
+  ssTramoActual: { backgroundColor: colors.hairline },
+  ssPaso: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  ssLetra: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
+    gap: spacing.sm + 2,
+    padding: spacing.sm,
+    marginHorizontal: -spacing.sm,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.hairline,
-    marginTop: 1,
+    borderColor: 'transparent',
   },
-  ssLetraTexto: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.heading, fontSize: 12 },
-  ssNombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  ssNombreSaltado: { color: colors.textFaint, textDecorationLine: 'line-through' },
+  // El paso que toca: con su filo dorado, se encuentra sin buscar.
+  ssPasoAhora: { backgroundColor: colors.primaryMuted, borderColor: colors.hairline },
+  ssMarca: { paddingTop: 2 },
+  ssCheckAhora: { borderColor: colors.primary, borderWidth: 2 },
+  ssPasoCab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ssLetraEnFila: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
+  ssNombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flexShrink: 1 },
+  ssAhora: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+  },
+  ssAhoraTexto: { fontSize: 9, letterSpacing: 0.8, fontFamily: fonts.heading, color: colors.onPrimary },
   ssMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   ssUltima: { ...typography.small, color: colors.primary, marginTop: 2, fontSize: 12 },
-  ssAcciones: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.md },
-  ssAccion: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: spacing.xs },
-  ssRonda: {
-    marginTop: spacing.sm,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  // La ronda que toca: con el filo dorado, para que se encuentre sin buscar.
-  ssRondaActual: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
-  ssRondaCab: {
+  ssCampos: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  ssAcciones: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  ssRondaTitulo: {
-    ...typography.small,
-    color: colors.textMuted,
-    fontFamily: fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-  },
-  ssRondaTituloActual: { color: colors.primaryBright },
-  ssRondaDescanso: { ...typography.small, color: colors.textFaint, fontSize: 11 },
-  ssPlegar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
-  ssRondaPlegada: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xs + 2,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  ssRondaPlegadaHecha: { backgroundColor: colors.surfaceAlt, borderColor: 'transparent' },
-  ssRondaPlegadaTitulo: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  ssRondaPlegadaPendiente: { color: colors.textMuted },
-  ssRondaResumen: { ...typography.small, color: colors.textMuted, flex: 1, ...tabularNums },
-  ssFila: { paddingVertical: 4 },
-  // La serie que toca: un fondo apenas más claro y el círculo con filo dorado.
-  ssFilaSiguiente: {
-    marginHorizontal: -spacing.xs,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceAlt,
-  },
-  ssFilaEnLinea: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  ssCamposApilados: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
+    columnGap: spacing.md,
     marginTop: spacing.xs,
   },
-  ssCheckSiguiente: { borderColor: colors.primary, borderWidth: 2 },
-  ssLetraEnFila: { color: colors.primaryBright, fontFamily: fonts.heading },
-  ssPista: {
+  ssAccion: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4 },
+  ssAccionTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
+  ssAccionTextoSuave: { ...typography.small, color: colors.textMuted, fontSize: 12 },
+  // "Sin descanso": el hilo entre un paso y el siguiente, bajo el círculo.
+  ssEnlace: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: 19, height: 22 },
+  ssEnlaceLinea: { width: 2, alignSelf: 'stretch', borderRadius: 1, backgroundColor: colors.primary },
+  ssEnlaceTexto: {
     ...typography.small,
     color: colors.primaryBright,
     fontFamily: fonts.semiBold,
     fontSize: 11,
-    marginTop: 1,
+    marginLeft: spacing.sm,
   },
+  ssFinRonda: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  ssFinRondaTexto: { ...typography.small, color: colors.textMuted },
+  ssPie: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs + 2 },
+  ssPieTexto: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
+  ssPieTextoSuave: { ...typography.small, color: colors.textFaint, flex: 1 },
+  ssPieResumen: { ...typography.small, color: colors.textMuted, flex: 1, ...tabularNums },
+  ssRondaLinea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    paddingLeft: 23,
+  },
+  ssRondaLineaTitulo: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  ssRondaCorregir: {
+    marginVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  ssRondaCorregirCab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.sm,
+  },
+  ssRondaCorregirTitulo: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  ssPlegar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
+  ssEsfuerzo: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  ssEsfuerzoTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: spacing.xs },
   ssCampo: { alignItems: 'center' },
-  // Algo más estrechas que las de un ejercicio suelto: aquí comparten fila
-  // con el nombre del ejercicio, que es lo que dice de quién es la serie.
-  ssCampoCasilla: { width: 58 },
+  // Algo más estrechas que las de un ejercicio suelto: van varias en fila.
+  ssCampoCasilla: { width: 62 },
+  // Sin el margen de un campo de formulario: el rótulo va pegado a su casilla.
+  ssCampoContenedor: { marginBottom: 0 },
   ssCampoRotulo: {
     ...typography.small,
     color: colors.textFaint,
