@@ -13,6 +13,7 @@
 import { readFileSync } from 'node:fs';
 import { combinarRutinas, comoSeCombinan, rondasDeLaCombinacion } from '../lib/combinarRutinas.ts';
 import { bloqueDe, descansoDelBloque, esSuperserie } from '../lib/superserie.ts';
+import { POR_DEFECTO } from '../lib/planPersonalizado.ts';
 
 let fallos = 0;
 const ok = (desc, bien, extra = '') => {
@@ -27,6 +28,8 @@ const nombres = (lista) => lista.map((e) => `${e.supersetWithPrevious ? '+' : ''
 console.log('\nLo decide el entrenador');
 ok('sin decir nada, una detrás de otra', comoSeCombinan(undefined) === 'seguidas' && comoSeCombinan({}) === 'seguidas');
 ok('y en superseries si lo elige', comoSeCombinan({ combinar: 'superseries' }) === 'superseries');
+ok('un plan nuevo no lo trae puesto', POR_DEFECTO.combinar === undefined && comoSeCombinan(POR_DEFECTO) === 'seguidas');
+ok('un valor raro no fusiona', comoSeCombinan({ combinar: 'otra' }) === 'seguidas');
 
 console.log('\nUna detrás de otra');
 {
@@ -69,6 +72,10 @@ console.log('\nPantallas');
   ok('el entreno combina con lo que decidió el entrenador', /combinarRutinas\(chosen, modoCombinar\)/.test(entreno));
   ok('y enseña cómo queda antes de empezar', /rondasDeLaCombinacion\(/.test(entreno));
   ok('el entrenador lo elige en su plan', /cambiaPerso\(\{ combinar:/.test(readFileSync('app/(trainer)/clients/[id]/routine.tsx', 'utf8')));
+  // Solo lo decide el entrenador: el alumno lo lee de su plan y no tiene con
+  // qué cambiarlo, y la vista previa en superseries solo sale si es lo que hay.
+  ok('el alumno no lo puede cambiar', /const modoCombinar = comoSeCombinan\(perso\)/.test(entreno) && !/combinar:/.test(entreno));
+  ok('la vista de superseries, solo si el plan lo dice', /modoCombinar === 'superseries' \? \(\s*<>/.test(entreno));
 }
 
 console.log(fallos === 0 ? '\n✔ Las rutinas se combinan como dice el entrenador' : `\n${fallos} fallo(s)`);
