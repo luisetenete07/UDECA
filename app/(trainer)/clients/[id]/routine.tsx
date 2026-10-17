@@ -23,6 +23,12 @@ import { Chip, ChipRow } from '../../../../components/Chip';
 import { DiasSemana } from '../../../../components/DiasSemana';
 import { Opciones } from '../../../../components/Opciones';
 import { Segmented } from '../../../../components/Segmented';
+import {
+  combinarRutinas,
+  comoSeCombinan,
+  rondasDeLaCombinacion,
+  type ComoSeCombinan,
+} from '../../../../lib/combinarRutinas';
 import { RutinaDiariaEditor } from '../../../../components/RutinaDiariaEditor';
 import { TextField } from '../../../../components/TextField';
 import { DragList } from '../../../../components/DragList';
@@ -279,6 +285,19 @@ export default function RoutineEditorScreen() {
   /** Cambia una parte de la prescripción sin pisar el resto. */
   const cambiaPrescripcion = (parte: Partial<NonNullable<PlanPersonalizado['prescripcion']>>) =>
     setPerso((prev) => ({ ...prev, prescripcion: { ...prescripcionDe(prev), ...parte } }));
+  /*
+   * Un ejemplo de fusión con SUS rutinas (las dos primeras con ejercicios):
+   * "Flexiones + Dominadas, descanso, Fondos + Remo". Se entiende mejor que
+   * cualquier explicación.
+   */
+  const ejemploDeFusion = (() => {
+    const dos = days.filter((d) => !d.gtg && !d.isRest && d.exercises.length > 0).slice(0, 2);
+    if (dos.length < 2) return '';
+    return rondasDeLaCombinacion(combinarRutinas(dos, 'superseries'))
+      .slice(0, 2)
+      .map((r) => r.join(' + '))
+      .join(t(', descanso, '));
+  })();
   /** Los días tal y como se guardan: cada valor en su sitio (ver diasParaGuardar). */
   const diasAGuardar = () =>
     schedule === 'flex' ? diasParaGuardar(days, configuracionAGuardar()) : days;
@@ -1232,6 +1251,30 @@ export default function RoutineEditorScreen() {
               onChangeText={setScheduleLabel}
               style={{ marginTop: spacing.sm, marginBottom: 0 }}
             />
+
+            {/*
+              AL COMBINAR RUTINAS. El alumno puede marcar varias para el mismo
+              entreno; cómo se juntan lo decides tú. A la vista y no dentro de
+              "Personalizar": es una decisión de cómo se entrena, no de cómo se
+              llaman las cosas.
+            */}
+            <Text style={styles.persoTitulo}>Si el alumno combina varias rutinas</Text>
+            <Segmented
+              compacto
+              valor={comoSeCombinan(perso)}
+              opciones={[
+                { valor: 'seguidas' as ComoSeCombinan, texto: 'Una detrás de otra' },
+                { valor: 'superseries' as ComoSeCombinan, texto: 'En superseries' },
+              ]}
+              onChange={(v) => cambiaPerso({ combinar: v === 'superseries' ? 'superseries' : undefined })}
+            />
+            <Text style={[styles.persoAyuda, { marginTop: spacing.xs }]}>
+              {comoSeCombinan(perso) === 'superseries'
+                ? ejemploDeFusion
+                  ? frase`Se fusionan: una serie de cada rutina seguidas y después descanso, en el orden en que las marque. Ej.: ${ejemploDeFusion}…`
+                  : 'Se fusionan: una serie de cada rutina seguidas y después descanso, en el orden en que las marque.'
+                : 'Primero una rutina entera y después la siguiente, en el orden en que las marque.'}
+            </Text>
             <Pressable
               onPress={() => setPersonalizacionAbierta((v) => !v)}
               style={styles.persoToggle}

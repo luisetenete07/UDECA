@@ -121,6 +121,12 @@ export interface PlanPersonalizado {
   vocabulario?: VocabularioDelPlan;
   permisos?: PermisosDelAlumno;
   prescripcion?: PrescripcionDelPlan;
+  /**
+   * Cuando el alumno marca varias rutinas para el mismo entreno: una detrás de
+   * otra (sin valor) o fusionadas en superseries (ver lib/combinarRutinas.ts).
+   * Lo decide el entrenador; no viene puesto.
+   */
+  combinar?: 'seguidas' | 'superseries';
 }
 
 /** Lo que se guarda de un esfuerzo apuntado, sea cual sea la escala. */

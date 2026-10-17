@@ -574,6 +574,17 @@ export const EN: Record<string, string> = {
   'Ver menos': 'Show less',
   'Cada día': 'Every day',
   'No se ha podido guardar': 'Couldn\'t save',
+  // Combinar rutinas del personalizado (lib/combinarRutinas.ts).
+  'Si el alumno combina varias rutinas': 'If the client combines several routines',
+  'Una detrás de otra': 'One after another',
+  'En superseries': 'As supersets',
+  'Se fusionan: una serie de cada rutina seguidas y después descanso, en el orden en que las marque. Ej.: {0}…': 'They\'re merged: one set from each routine back to back, then rest, in the order they pick them. E.g.: {0}…',
+  'Se fusionan: una serie de cada rutina seguidas y después descanso, en el orden en que las marque.': 'They\'re merged: one set from each routine back to back, then rest, in the order they pick them.',
+  'Primero una rutina entera y después la siguiente, en el orden en que las marque.': 'One whole routine first and then the next, in the order they pick them.',
+  ', descanso, ': ', rest, ',
+  'Fusionadas en superseries': 'Merged into supersets',
+  'Una serie de cada una, seguidas, y después descansas. Empieza la que has marcado primero.': 'One set of each, back to back, then you rest. The one you picked first goes first.',
+  '{0} · sola': '{0} · on its own',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

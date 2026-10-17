@@ -70,6 +70,7 @@ import {
   sinLaUltimaSerie,
 } from '../../lib/gtg';
 import { PantallaGtg } from '../../components/PantallaGtg';
+import { combinarRutinas, comoSeCombinan, rondasDeLaCombinacion } from '../../lib/combinarRutinas';
 import {
   anclaDeLaCuenta,
   getCycleAnchor,
@@ -719,6 +720,12 @@ export default function WorkoutScreen() {
     });
   };
 
+  const modoCombinar = comoSeCombinan(perso);
+  // Las elegidas, en el orden en que se marcaron: lo que se va a juntar.
+  const elegidas = flexSelection
+    .map((id) => routine?.days.find((d) => d.id === id))
+    .filter((d): d is RoutineDay => !!d && !d.gtg);
+
   // Sensaciones: monta el entreno combinando las rutinas elegidas, en orden.
   const startFlexSession = () => {
     if (!routine || flexSelection.length === 0) return;
@@ -737,7 +744,9 @@ export default function WorkoutScreen() {
     const combined: RoutineDay = {
       id: `flex-${Date.now()}`,
       name: chosen.map((d) => d.name || 'Rutina').join(' + '),
-      exercises: chosen.flatMap((d) => d.exercises),
+      // Una detrás de otra o fusionadas en superseries: lo decide el
+      // entrenador en su plan (lib/combinarRutinas.ts).
+      exercises: combinarRutinas(chosen, modoCombinar),
       // Encadenando rutinas manda la más dura: un día suave ANTES de uno fuerte
       // no hace la sesión medio fuerte, la hace fuerte y con más fatiga.
       intensityPct: pctCombinado(chosen),
@@ -2470,6 +2479,48 @@ export default function WorkoutScreen() {
                 </Pressable>
               );
             })}
+            {/*
+              CÓMO VA A QUEDAR, ANTES DE EMPEZAR.
+
+              Con dos o más marcadas se enseña el entreno ya montado: si el
+              entrenador las fusiona en superseries, ronda a ronda ("Flexiones +
+              Dominadas"); si van seguidas, en qué orden. Empezar a ciegas y
+              descubrir a mitad que el tirón iba intercalado es justo lo que
+              hace abandonar una sesión combinada.
+            */}
+            {elegidas.length > 1 ? (
+              <View style={styles.combinado}>
+                <View style={styles.combinadoCab}>
+                  <Ionicons
+                    name={modoCombinar === 'superseries' ? 'git-merge-outline' : 'arrow-down-outline'}
+                    size={15}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.combinadoTitulo}>
+                    {modoCombinar === 'superseries' ? 'Fusionadas en superseries' : 'Una detrás de otra'}
+                  </Text>
+                </View>
+                {modoCombinar === 'superseries' ? (
+                  <>
+                    <Text style={styles.combinadoTexto}>
+                      Una serie de cada una, seguidas, y después descansas. Empieza la que has marcado primero.
+                    </Text>
+                    {rondasDeLaCombinacion(combinarRutinas(elegidas, 'superseries')).map((ronda, i) => (
+                      <View key={i} style={styles.combinadoRonda}>
+                        <Text style={styles.combinadoNum}>{i + 1}</Text>
+                        <Text style={styles.combinadoEjercicios} numberOfLines={2}>
+                          {ronda.length === 1 ? frase`${ronda[0]} · sola` : ronda.join('  +  ')}
+                        </Text>
+                      </View>
+                    ))}
+                  </>
+                ) : (
+                  <Text style={styles.combinadoTexto}>
+                    {elegidas.map((d) => d.name || enTitulo(palabraRutina)).join('  →  ')}
+                  </Text>
+                )}
+              </View>
+            ) : null}
             <Button
               title={
                 flexSelection.length > 1
@@ -3591,6 +3642,28 @@ const styles = StyleSheet.create({
   flexPickText: { ...typography.body, color: colors.textMuted, flex: 1 },
   flexPickPct: { ...typography.small, color: colors.primary, fontSize: 11, marginTop: 2 },
   flexPickTextOn: { color: colors.text, fontFamily: fonts.semiBold },
+  combinado: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    gap: spacing.xs,
+  },
+  combinadoCab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  combinadoTitulo: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  combinadoTexto: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
+  combinadoRonda: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: 2 },
+  combinadoNum: {
+    ...typography.small,
+    color: colors.textFaint,
+    fontFamily: fonts.semiBold,
+    width: 16,
+    textAlign: 'right',
+    ...tabularNums,
+  },
+  combinadoEjercicios: { ...typography.small, color: colors.text, flex: 1 },
   flexHistory: {
     marginTop: spacing.md,
     paddingTop: spacing.sm,
