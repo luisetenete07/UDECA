@@ -11,7 +11,15 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-combinar.mjs
  */
 import { readFileSync } from 'node:fs';
-import { combinarRutinas, comoSeCombinan, rondasDeLaCombinacion } from '../lib/combinarRutinas.ts';
+import {
+  ajustesDeFusion,
+  combinarRutinas,
+  comoSeCombinan,
+  ordenParaFusionar,
+  rondasDeLaCombinacion,
+  segundosDeMinutos,
+  textoDeDescanso,
+} from '../lib/combinarRutinas.ts';
 import { bloqueDe, descansoDelBloque, esSuperserie } from '../lib/superserie.ts';
 import { POR_DEFECTO } from '../lib/planPersonalizado.ts';
 
@@ -49,7 +57,10 @@ console.log('\nEn superseries');
   ok('el que sobra va solo', !esSuperserie(bloqueDe(r, 4)));
   ok('tras la ronda, el descanso más largo (2,5 min)', descansoDelBloque(r, bloqueDe(r, 0)) === 150);
   ok('sin tocar las rutinas del entrenador', empuje.exercises[0].supersetWithPrevious === undefined && tiron.exercises[1].restSeconds === 90);
-  ok('lo que se enseña antes de empezar', JSON.stringify(rondasDeLaCombinacion(r)) === JSON.stringify([['Flexiones', 'Dominadas'], ['Fondos', 'Remo'], ['Pike']]));
+  ok(
+    'lo que se enseña antes de empezar',
+    JSON.stringify(rondasDeLaCombinacion(r).map((x) => x.nombres)) === JSON.stringify([['Flexiones', 'Dominadas'], ['Fondos', 'Remo'], ['Pike']])
+  );
 }
 
 console.log('\nUna superserie que ya venía en la rutina');
@@ -66,12 +77,51 @@ console.log('\nTres rutinas');
   ok('una de cada en la primera ronda', nombres(r).startsWith('Flexiones +Dominadas +Sentadilla Fondos +Remo'), nombres(r));
 }
 
+console.log('\nLos tiempos del entrenador');
+{
+  const r = combinarRutinas([empuje, tiron], 'superseries', { descanso: 360, transicion: 30 });
+  ok('tras cada superserie, sus 6 minutos', descansoDelBloque(r, bloqueDe(r, 0)) === 360 && descansoDelBloque(r, bloqueDe(r, 2)) === 360);
+  ok('entre un ejercicio y otro, sus 30 s', r[1].transicionSegundos === 30 && r[0].transicionSegundos === undefined);
+  ok('sin decir nada, seguido', combinarRutinas([empuje, tiron], 'superseries')[1].transicionSegundos === undefined);
+  ok('ajustes limpios: un cero no es un tiempo', JSON.stringify(ajustesDeFusion({ descansoFusion: 0, transicionFusion: -5 })) === '{}');
+  ok('se leen del plan', ajustesDeFusion({ descansoFusion: 360, transicionFusion: 15 }).descanso === 360);
+  ok('"6" son 6 min, "2:30" y "2,5" son 150 s', segundosDeMinutos('6') === 360 && segundosDeMinutos('2:30') === 150 && segundosDeMinutos('2,5') === 150);
+  ok('lo vacío o raro no vale', segundosDeMinutos('') === undefined && segundosDeMinutos('abc') === undefined && segundosDeMinutos('0') === undefined);
+  ok('se escribe como lo diría', textoDeDescanso(360) === '6 min' && textoDeDescanso(150) === '2:30 min' && textoDeDescanso(30) === '30 s');
+}
+
+console.log('\nEjercicios aislados (la parte de hipertrofia)');
+{
+  const skillsA = { exercises: [ej('Plancha'), ej('Pino'), ej('Curl', { aislado: true, restSeconds: 60 }), ej('Press', { aislado: true, restSeconds: 75 })] };
+  const skillsB = { exercises: [ej('Front'), ej('Muscle up'), ej('Remo', { aislado: true, restSeconds: 60 })] };
+  const r = combinarRutinas([skillsA, skillsB], 'superseries', { descanso: 360 });
+  ok('las skills fusionadas y la hipertrofia después, cada una sola', nombres(r) === 'Plancha +Front Pino +Muscle up Curl Press Remo', nombres(r));
+  const curl = r.findIndex((e) => e.name === 'Curl');
+  ok('el aislado no va en superserie', !esSuperserie(bloqueDe(r, curl)));
+  ok('y descansa lo suyo, no los 6 minutos', descansoDelBloque(r, bloqueDe(r, curl)) === 60);
+  ok('la vista previa lo dice', rondasDeLaCombinacion(r).filter((x) => x.aislado).length === 3);
+  const conCalentamiento = { exercises: [ej('Movilidad', { aislado: true }), ej('Plancha')] };
+  const r2 = combinarRutinas([conCalentamiento, { exercises: [ej('Front')] }], 'superseries');
+  ok('un aislado al principio de su rutina va antes de las superseries', nombres(r2) === 'Movilidad Plancha +Front', nombres(r2));
+  ok('una detrás de otra no cambia nada', nombres(combinarRutinas([skillsA, skillsB], 'seguidas')) === 'Plancha Pino Curl Press Front Muscle up Remo');
+}
+
+console.log('\nQué rutina va primero');
+{
+  const A = { id: 'a' }, B = { id: 'b' };
+  ok('la que marque el alumno', ordenParaFusionar([B, A], [A, B], undefined)[0] === B);
+  ok('o la de más arriba en el plan, si lo decide el entrenador', ordenParaFusionar([B, A], [A, B], 'plan')[0] === A);
+}
+
 console.log('\nPantallas');
 {
   const entreno = readFileSync('app/(client)/workout.tsx', 'utf8');
-  ok('el entreno combina con lo que decidió el entrenador', /combinarRutinas\(chosen, modoCombinar\)/.test(entreno));
+  ok('el entreno combina con lo que decidió el entrenador', /combinarRutinas\(chosen, modoCombinar, fusion\)/.test(entreno));
   ok('y enseña cómo queda antes de empezar', /rondasDeLaCombinacion\(/.test(entreno));
-  ok('el entrenador lo elige en su plan', /cambiaPerso\(\{ combinar:/.test(readFileSync('app/(trainer)/clients/[id]/routine.tsx', 'utf8')));
+  const editor = readFileSync('app/(trainer)/clients/[id]/routine.tsx', 'utf8');
+  ok('el entrenador lo elige en su plan', /cambiaPerso\(\{ combinar:/.test(editor));
+  ok('y sus tiempos, su orden y qué va aislado', /descansoFusion:/.test(editor) && /transicionFusion:/.test(editor) && /ordenFusion:/.test(editor) && /setAislado\(/.test(editor));
+  ok('el entreno usa sus tiempos', /combinarRutinas\(chosen, modoCombinar, fusion\)/.test(entreno) && /transicionSegundos/.test(entreno));
   // Solo lo decide el entrenador: el alumno lo lee de su plan y no tiene con
   // qué cambiarlo, y la vista previa en superseries solo sale si es lo que hay.
   ok('el alumno no lo puede cambiar', /const modoCombinar = comoSeCombinan\(perso\)/.test(entreno) && !/combinar:/.test(entreno));

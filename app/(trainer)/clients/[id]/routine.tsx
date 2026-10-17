@@ -24,9 +24,12 @@ import { DiasSemana } from '../../../../components/DiasSemana';
 import { Opciones } from '../../../../components/Opciones';
 import { Segmented } from '../../../../components/Segmented';
 import {
+  ajustesDeFusion,
   combinarRutinas,
   comoSeCombinan,
   rondasDeLaCombinacion,
+  segundosDeMinutos,
+  textoDeDescanso,
   type ComoSeCombinan,
 } from '../../../../lib/combinarRutinas';
 import { RutinaDiariaEditor } from '../../../../components/RutinaDiariaEditor';
@@ -290,14 +293,44 @@ export default function RoutineEditorScreen() {
    * "Flexiones + Dominadas, descanso, Fondos + Remo". Se entiende mejor que
    * cualquier explicación.
    */
+  const fusion = ajustesDeFusion(perso);
   const ejemploDeFusion = (() => {
     const dos = days.filter((d) => !d.gtg && !d.isRest && d.exercises.length > 0).slice(0, 2);
     if (dos.length < 2) return '';
-    return rondasDeLaCombinacion(combinarRutinas(dos, 'superseries'))
-      .slice(0, 2)
-      .map((r) => r.join(' + '))
-      .join(t(', descanso, '));
+    const rondas = rondasDeLaCombinacion(combinarRutinas(dos, 'superseries', fusion))
+      .filter((r) => !r.aislado && r.nombres.length > 1)
+      .slice(0, 2);
+    if (rondas.length === 0) return '';
+    const pausa = fusion.descanso ? frase`, ${textoDeDescanso(fusion.descanso)} de descanso, ` : t(', descanso, ');
+    return rondas.map((r) => r.nombres.join(' + ')).join(pausa);
   })();
+  /*
+   * El descanso tras cada superserie fusionada, escrito a mano cuando no es
+   * uno de los botones (null: se enseña el que haya guardado).
+   */
+  const [descansoOtro, setDescansoOtro] = useState<string | null>(null);
+  const DESCANSOS_DE_FUSION = [120, 180, 240, 300, 360];
+  const descansoOtroVisible =
+    descansoOtro ??
+    (fusion.descanso && !DESCANSOS_DE_FUSION.includes(fusion.descanso)
+      ? fusion.descanso % 60 === 0
+        ? String(fusion.descanso / 60)
+        : `${Math.floor(fusion.descanso / 60)}:${String(fusion.descanso % 60).padStart(2, '0')}`
+      : '');
+  /** Marca (o desmarca) un ejercicio como aislado al fusionar rutinas. */
+  const setAislado = (dayId: string, exerciseRowId: string, aislado: boolean) =>
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) =>
+                e.id === exerciseRowId ? { ...e, aislado: aislado || undefined } : e
+              ),
+            }
+          : d
+      )
+    );
   /** Los días tal y como se guardan: cada valor en su sitio (ver diasParaGuardar). */
   const diasAGuardar = () =>
     schedule === 'flex' ? diasParaGuardar(days, configuracionAGuardar()) : days;
@@ -1271,10 +1304,95 @@ export default function RoutineEditorScreen() {
             <Text style={[styles.persoAyuda, { marginTop: spacing.xs }]}>
               {comoSeCombinan(perso) === 'superseries'
                 ? ejemploDeFusion
-                  ? frase`Se fusionan: una serie de cada rutina seguidas y después descanso, en el orden en que las marque. Ej.: ${ejemploDeFusion}…`
-                  : 'Se fusionan: una serie de cada rutina seguidas y después descanso, en el orden en que las marque.'
+                  ? frase`Se fusionan: una serie de cada rutina y después descanso. Ej.: ${ejemploDeFusion}…`
+                  : 'Se fusionan: una serie de cada rutina y después descanso.'
                 : 'Primero una rutina entera y después la siguiente, en el orden en que las marque.'}
             </Text>
+            {/*
+              LOS TIEMPOS Y EL ORDEN DE LA FUSIÓN. Cada entrenador tiene los
+              suyos: 6 minutos tras una pareja de skills no es lo que pide otro
+              método. Y lo que no deba ir en superserie se marca "Aislado" en el
+              propio ejercicio: va solo y con su descanso.
+            */}
+            {comoSeCombinan(perso) === 'superseries' ? (
+              <View style={styles.fusionCaja}>
+                <Text style={[styles.fusionEtiqueta, { marginTop: 0 }]}>Descanso tras cada superserie</Text>
+                <View style={styles.persoFichas}>
+                  <Chip
+                    texto="El de cada ejercicio"
+                    compacto
+                    activo={!fusion.descanso}
+                    onPress={() => {
+                      setDescansoOtro(null);
+                      cambiaPerso({ descansoFusion: undefined });
+                    }}
+                  />
+                  {DESCANSOS_DE_FUSION.map((seg) => (
+                    <Chip
+                      key={seg}
+                      texto={textoDeDescanso(seg)}
+                      compacto
+                      activo={fusion.descanso === seg}
+                      onPress={() => {
+                        setDescansoOtro(null);
+                        cambiaPerso({ descansoFusion: seg });
+                      }}
+                    />
+                  ))}
+                </View>
+                <TextField
+                  label="Otro (minutos, p. ej. 8 o 2:30)"
+                  value={descansoOtroVisible}
+                  onChangeText={(v) => {
+                    setDescansoOtro(v);
+                    const seg = segundosDeMinutos(v);
+                    if (seg) cambiaPerso({ descansoFusion: seg });
+                    else if (!v.trim()) cambiaPerso({ descansoFusion: undefined });
+                  }}
+                  keyboardType="numbers-and-punctuation"
+                  containerStyle={{ marginTop: spacing.sm, marginBottom: 0 }}
+                  style={{ marginBottom: 0 }}
+                />
+
+                <Text style={styles.fusionEtiqueta}>Entre un ejercicio y otro de la superserie</Text>
+                <View style={styles.persoFichas}>
+                  {[0, 15, 30, 60].map((seg) => (
+                    <Chip
+                      key={seg}
+                      texto={seg === 0 ? 'Seguido' : textoDeDescanso(seg)}
+                      compacto
+                      activo={(fusion.transicion ?? 0) === seg}
+                      onPress={() => cambiaPerso({ transicionFusion: seg || undefined })}
+                    />
+                  ))}
+                </View>
+
+                <Text style={styles.fusionEtiqueta}>Qué rutina va primero</Text>
+                <View style={styles.persoFichas}>
+                  <Chip
+                    texto="La que marque el alumno"
+                    compacto
+                    activo={perso.ordenFusion !== 'plan'}
+                    onPress={() => cambiaPerso({ ordenFusion: undefined })}
+                  />
+                  <Chip
+                    texto="La de más arriba en tu plan"
+                    compacto
+                    activo={perso.ordenFusion === 'plan'}
+                    onPress={() => cambiaPerso({ ordenFusion: 'plan' })}
+                  />
+                </View>
+
+                <View style={styles.fusionAviso}>
+                  <Ionicons name="remove-circle-outline" size={15} color={colors.primary} style={{ marginTop: 1 }} />
+                  <Text style={styles.fusionAvisoTexto}>
+                    ¿Ejercicios que no deben ir en superserie, como la hipertrofia con descansos cortos? Márcalos
+                    como «Aislado» en su rutina: van solos y con su propio descanso. Si están al principio de la
+                    rutina, antes de las superseries; si no, al final.
+                  </Text>
+                </View>
+              </View>
+            ) : null}
             <Pressable
               onPress={() => setPersonalizacionAbierta((v) => !v)}
               style={styles.persoToggle}
@@ -1987,6 +2105,30 @@ export default function RoutineEditorScreen() {
                 </Pressable>
               </View>
 
+              {/* AL FUSIONAR RUTINAS: si este se empareja o va aislado. Solo
+                  se enseña si el plan fusiona en superseries; a la vista y no
+                  en "más opciones", porque es justo lo que se decide al montar
+                  una rutina de skills con su parte de hipertrofia. */}
+              {schedule === 'flex' && comoSeCombinan(perso) === 'superseries' && !day.gtg ? (
+                <View style={styles.fusionFila}>
+                  <Text style={styles.fusionFilaTexto}>Al fusionar</Text>
+                  <Chip
+                    texto="Se empareja"
+                    icono="git-merge-outline"
+                    compacto
+                    activo={!ex.aislado}
+                    onPress={() => setAislado(day.id, ex.id, false)}
+                  />
+                  <Chip
+                    texto="Aislado"
+                    icono="remove-circle-outline"
+                    compacto
+                    activo={!!ex.aislado}
+                    onPress={() => setAislado(day.id, ex.id, true)}
+                  />
+                </View>
+              ) : null}
+
               {/* Si lo cumple de sobra dos sesiones seguidas, se dice aquí, en
                   la ficha, con el nuevo objetivo a un toque (lib/progresion.ts). */}
               {(() => {
@@ -2659,6 +2801,39 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   persoAyuda: { ...typography.small, color: colors.textFaint, marginBottom: spacing.xs },
+  fusionCaja: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  fusionEtiqueta: {
+    ...typography.small,
+    color: colors.text,
+    fontFamily: fonts.semiBold,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  fusionAviso: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.sm + 2,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+  },
+  fusionAvisoTexto: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 18 },
+  fusionFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  fusionFilaTexto: { ...typography.small, color: colors.textMuted, marginRight: 2 },
   // En fila y envolviendo: son interruptores cortos, y en columna ocupaban
   // media pantalla para decir cuatro palabras.
   persoFichas: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

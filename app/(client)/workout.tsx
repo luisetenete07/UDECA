@@ -70,7 +70,14 @@ import {
   sinLaUltimaSerie,
 } from '../../lib/gtg';
 import { PantallaGtg } from '../../components/PantallaGtg';
-import { combinarRutinas, comoSeCombinan, rondasDeLaCombinacion } from '../../lib/combinarRutinas';
+import {
+  ajustesDeFusion,
+  combinarRutinas,
+  comoSeCombinan,
+  ordenParaFusionar,
+  rondasDeLaCombinacion,
+  textoDeDescanso,
+} from '../../lib/combinarRutinas';
 import {
   anclaDeLaCuenta,
   getCycleAnchor,
@@ -721,17 +728,27 @@ export default function WorkoutScreen() {
   };
 
   const modoCombinar = comoSeCombinan(perso);
-  // Las elegidas, en el orden en que se marcaron: lo que se va a juntar.
-  const elegidas = flexSelection
-    .map((id) => routine?.days.find((d) => d.id === id))
-    .filter((d): d is RoutineDay => !!d && !d.gtg);
+  const fusion = ajustesDeFusion(perso);
+  /*
+   * Las elegidas, en el orden en que se juntan: el que marcó el alumno, o el
+   * del plan si al fusionar así lo decidió el entrenador.
+   */
+  const enOrden = (dias: RoutineDay[]) =>
+    modoCombinar === 'superseries' ? ordenParaFusionar(dias, routine?.days ?? [], perso?.ordenFusion) : dias;
+  const elegidas = enOrden(
+    flexSelection
+      .map((id) => routine?.days.find((d) => d.id === id))
+      .filter((d): d is RoutineDay => !!d && !d.gtg)
+  );
 
   // Sensaciones: monta el entreno combinando las rutinas elegidas, en orden.
   const startFlexSession = () => {
     if (!routine || flexSelection.length === 0) return;
-    const chosen = flexSelection
-      .map((id) => routine.days.find((d) => d.id === id))
-      .filter((d): d is RoutineDay => !!d);
+    const chosen = enOrden(
+      flexSelection
+        .map((id) => routine.days.find((d) => d.id === id))
+        .filter((d): d is RoutineDay => !!d)
+    );
     // Grease the groove no se monta como sesión: se entra en su pantalla tal
     // cual, con su propio día.
     if (chosen.length === 1 && chosen[0].gtg) {
@@ -746,7 +763,7 @@ export default function WorkoutScreen() {
       name: chosen.map((d) => d.name || 'Rutina').join(' + '),
       // Una detrás de otra o fusionadas en superseries: lo decide el
       // entrenador en su plan (lib/combinarRutinas.ts).
-      exercises: combinarRutinas(chosen, modoCombinar),
+      exercises: combinarRutinas(chosen, modoCombinar, fusion),
       // Encadenando rutinas manda la más dura: un día suave ANTES de uno fuerte
       // no hace la sesión medio fuerte, la hace fuerte y con más fatiga.
       intensityPct: pctCombinado(chosen),
@@ -1147,6 +1164,12 @@ export default function WorkoutScreen() {
         // Un segundo toque, más suave: "y ahora el otro".
         if (Platform.OS !== 'web') {
           setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), 180);
+        }
+        // Si el entrenador dejó unos segundos para cambiar de ejercicio dentro
+        // de la superserie (rutinas fusionadas), corren ahora; si no, seguido.
+        const transicion = plan[despues.siguiente.ejercicio]?.transicionSegundos ?? 0;
+        if (transicion > 0) {
+          startRest(transicion, frase`Ahora: ${conLaMarca[despues.siguiente.ejercicio]?.name ?? ''}`);
         }
       } else {
         const rest = descansoTrasRonda(plan, conLaMarca, bloque, setIndex) || DEFAULT_REST_SECONDS;
@@ -2026,7 +2049,12 @@ export default function WorkoutScreen() {
           {k < pasos.length - 1 ? (
             <View style={styles.ssEnlace}>
               <View style={styles.ssEnlaceLinea} />
-              <Text style={styles.ssEnlaceTexto}>sin descanso</Text>
+              {/* La pausa para cambiar, si el entrenador la puso al fusionar. */}
+              <Text style={styles.ssEnlaceTexto}>
+                {plan[pasos[k + 1]]?.transicionSegundos
+                  ? frase`${textoDeDescanso(plan[pasos[k + 1]].transicionSegundos!)} para cambiar`
+                  : 'sin descanso'}
+              </Text>
             </View>
           ) : null}
         </React.Fragment>
@@ -2503,13 +2531,24 @@ export default function WorkoutScreen() {
                 {modoCombinar === 'superseries' ? (
                   <>
                     <Text style={styles.combinadoTexto}>
-                      Una serie de cada una, seguidas, y después descansas. Empieza la que has marcado primero.
+                      {fusion.transicion
+                        ? frase`Una serie de cada una con ${textoDeDescanso(fusion.transicion)} para cambiar, y después descansas`
+                        : 'Una serie de cada una, seguidas, y después descansas'}
+                      {fusion.descanso ? ` ${textoDeDescanso(fusion.descanso)}` : ''}.{' '}
+                      {perso?.ordenFusion === 'plan'
+                        ? 'El orden lo pone tu entrenador.'
+                        : 'Empieza la que has marcado primero.'}
                     </Text>
-                    {rondasDeLaCombinacion(combinarRutinas(elegidas, 'superseries')).map((ronda, i) => (
+                    {rondasDeLaCombinacion(combinarRutinas(elegidas, 'superseries', fusion)).map((ronda, i) => (
                       <View key={i} style={styles.combinadoRonda}>
                         <Text style={styles.combinadoNum}>{i + 1}</Text>
                         <Text style={styles.combinadoEjercicios} numberOfLines={2}>
-                          {ronda.length === 1 ? frase`${ronda[0]} · sola` : ronda.join('  +  ')}
+                          {ronda.nombres.join('  +  ')}
+                          {ronda.aislado ? (
+                            <Text style={styles.combinadoAislado}>{t('  · aislado, con su descanso')}</Text>
+                          ) : ronda.nombres.length === 1 ? (
+                            <Text style={styles.combinadoAislado}>{t('  · sola')}</Text>
+                          ) : null}
                         </Text>
                       </View>
                     ))}
@@ -2804,7 +2843,11 @@ export default function WorkoutScreen() {
                 {enlazado && i === b.inicio ? (
                   <View style={styles.previaSuperserie}>
                     <Ionicons name="link" size={12} color={colors.primaryBright} />
-                    <Text style={styles.previaSuperserieTexto}>Superserie · sin descanso entre ellos</Text>
+                    <Text style={styles.previaSuperserieTexto}>
+                      {day.exercises[b.inicio + 1]?.transicionSegundos
+                        ? frase`Superserie · ${textoDeDescanso(day.exercises[b.inicio + 1].transicionSegundos!)} para cambiar`
+                        : 'Superserie · sin descanso entre ellos'}
+                    </Text>
                   </View>
                 ) : null}
                 <View style={[styles.previaFila, enlazado && styles.previaFilaEnlazada]}>
@@ -3664,6 +3707,7 @@ const styles = StyleSheet.create({
     ...tabularNums,
   },
   combinadoEjercicios: { ...typography.small, color: colors.text, flex: 1 },
+  combinadoAislado: { color: colors.textFaint },
   flexHistory: {
     marginTop: spacing.md,
     paddingTop: spacing.sm,

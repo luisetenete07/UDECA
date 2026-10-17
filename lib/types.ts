@@ -613,6 +613,18 @@ export interface RoutineExercise {
   notes?: string;
   /** true = se hace en superserie encadenado con el ejercicio anterior. */
   supersetWithPrevious?: boolean;
+  /**
+   * Al fusionar rutinas en superseries (plan personalizado), este NO se
+   * empareja: va solo y con su propio descanso. Para la parte de hipertrofia
+   * de una rutina de skills, por ejemplo (ver lib/combinarRutinas.ts).
+   */
+  aislado?: boolean;
+  /**
+   * Segundos de pausa ANTES de este ejercicio cuando va en superserie con el
+   * anterior. No lo escribe nadie a mano: lo pone la fusión de rutinas con el
+   * tiempo que haya elegido el entrenador. Sin valor, seguido.
+   */
+  transicionSegundos?: number;
   /** Copia de la medida del ejercicio al añadirlo ('reps' por defecto). */
   measure?: ExerciseMeasure;
   /**

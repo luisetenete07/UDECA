@@ -123,10 +123,21 @@ console.log('\nEn la pantalla del entreno');
   const w = readFileSync('app/(client)/workout.tsx', 'utf8');
   ok('la superserie se pinta entera, en su tarjeta', /if \(esSuperserie\(bloqueVisible\)\) return tarjetaDeSuperserie\(bloqueVisible\);/.test(w));
   ok('lo que toca después lo decide trasMarcarSerie', /const despues = trasMarcarSerie\(conLaMarca, plan, exerciseIndex, setIndex\);/.test(w));
-  ok('encadenada: sin descanso', /if \(despues\.tipo === 'encadenar'\) \{[\s\S]{0,300}\} else \{\s*const rest = descansoTrasRonda/.test(w));
+  {
+    // Sin descanso entre los de la ronda. La única pausa posible es la que el
+    // entrenador ponga para cambiar de ejercicio al fusionar rutinas
+    // (lib/combinarRutinas.ts), y solo si la puso.
+    const m = /if \(despues\.tipo === 'encadenar'\) \{([\s\S]{0,900}?)\} else \{\s*const rest = descansoTrasRonda/.exec(w);
+    const rama = m?.[1] ?? '';
+    const pausas = rama.match(/startRest\(/g) ?? [];
+    ok(
+      'encadenada: sin descanso (salvo la transición que ponga el entrenador)',
+      !!m && (pausas.length === 0 || (pausas.length === 1 && /if \(transicion > 0\) \{\s*startRest\(transicion,/.test(rama)))
+    );
+  }
   ok('desplegada solo la ronda que toca, entera', /\{ronda\(actual, true\)\}/.test(w));
   ok('el paso que toca se enciende', />AHORA<\/Text>/.test(w));
-  ok('entre paso y paso, "sin descanso"; al final, el descanso', />sin descanso<\/Text>/.test(w) && /Luego, descanso de \$\{/.test(w));
+  ok('entre paso y paso, "sin descanso"; al final, el descanso', /'sin descanso'/.test(w) && /Luego, descanso de \$\{/.test(w));
   ok('lo hecho y lo que queda, en una línea al pie', /rondas hechas`/.test(w) && /Quedan \$\{quedan\} rondas más/.test(w));
   ok('el esfuerzo se pregunta en la última ronda', /\(hecho \|\| actual === ultimaRonda\)/.test(w));
   ok('y sin contestarlo no se pasa solo al siguiente', /!faltaEsfuerzo\(conLaMarca, bloque\)/.test(w));

@@ -127,6 +127,12 @@ export interface PlanPersonalizado {
    * Lo decide el entrenador; no viene puesto.
    */
   combinar?: 'seguidas' | 'superseries';
+  /** Solo en superseries: descanso tras cada superserie fusionada, en segundos. */
+  descansoFusion?: number;
+  /** Solo en superseries: segundos entre un ejercicio y el siguiente de la superserie (0: seguido). */
+  transicionFusion?: number;
+  /** Solo en superseries: el orden lo pone el alumno al marcarlas (sin valor) o el plan. */
+  ordenFusion?: 'alumno' | 'plan';
 }
 
 /** Lo que se guarda de un esfuerzo apuntado, sea cual sea la escala. */
