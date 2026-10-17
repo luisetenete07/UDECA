@@ -217,6 +217,8 @@ export default function ClientLayout() {
       <Tabs.Screen name="profile" options={{ href: null }} />
       {/* Registrar un entreno de otro día (se abre desde Entreno y Progreso). */}
       <Tabs.Screen name="registrar" options={{ href: null }} />
+      {/* Reservar una llamada 1:1: se abre desde la tarjeta del inicio. */}
+      <Tabs.Screen name="llamadas" options={{ href: null }} />
     </Tabs>
     {/* Crono de descanso global: sigue corriendo y visible en cualquier pestaña. */}
     <GlobalRestTimer />

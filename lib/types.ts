@@ -203,6 +203,8 @@ export interface UserProfile {
    * se olvida—, y se apagan desde el perfil.
    */
   dailyRoutineRemindersEnabled?: boolean;
+  /** El plan del alumno con su entrenador (lib/llamadas.ts). Lo pone el entrenador. */
+  planId?: string;
   /** Entrenos ya vistos en la bandeja "Por revisar" (lib/bandeja.ts). */
   revisados?: string[];
   /** "Marcar todo como visto": lo llegado antes de esto ya no sale. */

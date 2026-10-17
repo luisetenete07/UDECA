@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { t, frase  } from '../../lib/idioma';
 import { diaLargo, diaMes, diaYMes, esHoy, inicioDelDia } from '../../lib/fechas';
 import { datosDelWidget, guardarDatosDelWidget } from '../../lib/widgetHoy';
+import { TarjetaDeLlamada } from '../../components/TarjetaDeLlamada';
+import { getAjustesLlamadas, getLlamadasDelAlumno } from '../../lib/firestore/llamadas';
+import type { AjustesLlamadas, Llamada } from '../../lib/llamadas';
 import { unido } from '../../lib/texto';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -209,6 +212,23 @@ export default function ClientDashboard() {
       })
       .catch(() => {});
   }, [profile]);
+
+  // Las llamadas 1:1 con su entrenador (lib/llamadas.ts): aparte y sin
+  // bloquear nada, porque la tarjeta solo sale si su plan las incluye.
+  const [llamadas, setLlamadas] = useState<{ ajustes: AjustesLlamadas; mias: Llamada[] } | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      const trainerId = profile?.trainerId;
+      if (!trainerId || !profile) return;
+      let vivo = true;
+      Promise.all([getAjustesLlamadas(trainerId), getLlamadasDelAlumno(profile.uid, trainerId)])
+        .then(([ajustes, mias]) => vivo && setLlamadas({ ajustes, mias }))
+        .catch(() => {});
+      return () => {
+        vivo = false;
+      };
+    }, [profile])
+  );
 
   // El widget "Hoy" de la pantalla del móvil (Android, lib/widgetHoy.ts): se
   // le deja apuntado lo de hoy cada vez que cambia algo aquí.
@@ -829,6 +849,17 @@ export default function ClientDashboard() {
           encuentra antes un botón que habla de otro. Aquí sí: esta es la
           pantalla del repaso —cómo va la semana, qué falta—, que es cuando uno
           se acuerda de que el martes entrenó sin el móvil delante. */}
+      {llamadas ? (
+        <FadeIn delay={200}>
+          <TarjetaDeLlamada
+            ajustes={llamadas.ajustes}
+            mias={llamadas.mias}
+            planId={profile?.planId}
+            onPress={() => router.push('/(client)/llamadas')}
+          />
+        </FadeIn>
+      ) : null}
+
       <FadeIn delay={208}>
         <RegistrarOtroDia />
       </FadeIn>

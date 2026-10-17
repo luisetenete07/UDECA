@@ -65,6 +65,7 @@ import {
 } from '../../../../lib/firestore/users';
 import { useAuth } from '../../../../lib/auth-context';
 import { CollapsibleCard } from '../../../../components/CollapsibleCard';
+import { PlanDelAlumno } from '../../../../components/PlanDelAlumno';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
 import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
@@ -554,6 +555,14 @@ export default function ClientDetailScreen() {
                 </Text>
               ) : null}
             </Card>
+          ) : null}
+
+          {profile ? (
+            <PlanDelAlumno
+              trainerId={profile.uid}
+              alumno={client}
+              onCambia={(cambio) => setClient((c) => (c ? { ...c, ...cambio } : c))}
+            />
           ) : null}
 
           <CollapsibleCard

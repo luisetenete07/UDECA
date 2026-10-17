@@ -32,6 +32,7 @@ import { getActiveRoutinesForTrainer } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { Chip, ChipRow } from '../../../components/Chip';
+import { getAjustesLlamadas } from '../../../lib/firestore/llamadas';
 import { fechaNumerica, inicioDeLaSemana, inicioDelDia, masDias } from '../../../lib/fechas';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import { alargar, coachingDe } from '../../../lib/coaching';
@@ -111,6 +112,10 @@ export default function ClientsScreen() {
   const [error, setError] = useState<string | null>(null);
   // Alumno sobre el que se mantiene pulsado, para las acciones rápidas.
   const [rapidas, setRapidas] = useState<UserProfile | null>(null);
+  // Los planes de sus alumnos (Llamadas 1:1): su nombre, junto al del alumno.
+  const [planes, setPlanes] = useState<Record<string, string>>(
+    () => getCached<Record<string, string>>(`${cacheKey}-planes`) ?? {}
+  );
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -138,6 +143,13 @@ export default function ClientsScreen() {
         if (log.date < monday) continue;
         (trainedByClient[log.clientId] ??= new Set()).add(inicioDelDia(log.date));
       }
+      getAjustesLlamadas(profile.uid)
+        .then((a) => {
+          const nombres = Object.fromEntries(a.planes.map((p) => [p.id, p.nombre]));
+          setPlanes(nombres);
+          setCached(`${cacheKey}-planes`, nombres);
+        })
+        .catch(() => {});
       getActiveRoutinesForTrainer(profile.uid)
         .then((rutinas) => {
           const skip: Record<string, number> = {};
@@ -326,7 +338,16 @@ export default function ClientsScreen() {
                 <Avatar name={client.name} photoURL={client.photoURL} size={40} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.clientName}>{client.name}</Text>
+                <View style={styles.nombreFila}>
+                  <Text style={[styles.clientName, { flexShrink: 1 }]} numberOfLines={1}>
+                    {client.name}
+                  </Text>
+                  {client.planId && planes[client.planId] ? (
+                    <Text style={styles.planEtiqueta} numberOfLines={1}>
+                      {planes[client.planId]}
+                    </Text>
+                  ) : null}
+                </View>
                 <Text style={styles.clientGoal}>{client.goal || 'Sin objetivo definido'}</Text>
                 <View style={styles.payBadgeRow}>
                   <View style={[styles.dot, { backgroundColor: activity.color }]} />
@@ -498,6 +519,18 @@ const styles = StyleSheet.create({
   },
   clientName: { ...typography.h3, color: colors.text },
   clientGoal: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  nombreFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  planEtiqueta: {
+    ...typography.small,
+    fontSize: 11,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+    backgroundColor: colors.primaryMuted,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: radius.full,
+    overflow: 'hidden',
+  },
   statusDot: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,

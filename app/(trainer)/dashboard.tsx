@@ -1,5 +1,5 @@
 import { frase } from '../../lib/idioma';
-import { diaMes, diasEntre, inicioDelDia } from '../../lib/fechas';
+import { diaMes, diasEntre, inicioDelDia, masDias } from '../../lib/fechas';
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -42,6 +42,8 @@ import {
 } from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
 import { conRevisado, loQueDestaca, porRevisar, type LoVisto } from '../../lib/bandeja';
+import { getLlamadasEntre } from '../../lib/firestore/llamadas';
+import type { Llamada } from '../../lib/llamadas';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
 import { sessionTotals, weekComparison } from '../../lib/stats';
@@ -78,6 +80,7 @@ export default function TrainerDashboard() {
   const [clients, setClients] = useState<UserProfile[]>(cached?.clients ?? []);
   const [logs, setLogs] = useState<WorkoutLog[]>(cached?.logs ?? []);
   const [tasks, setTasks] = useState<import('../../lib/types').CoachTask[]>([]);
+  const [llamadas, setLlamadas] = useState<Llamada[]>([]);
   const [cycles, setCycles] = useState<import('../../lib/types').TrainingCycle[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>(cached?.requests ?? []);
   const [processingReq, setProcessingReq] = useState<string | null>(null);
@@ -94,19 +97,23 @@ export default function TrainerDashboard() {
       let cancelled = false;
       (async () => {
         try {
-          const [clientData, logData, requestData, taskData, cycleData] = await Promise.all([
+          const hoy = inicioDelDia(Date.now());
+          const [clientData, logData, requestData, taskData, cycleData, llamadaData] = await Promise.all([
             getClientsForTrainer(profile.uid),
             getWorkoutLogsForTrainer(profile.uid),
             getJoinRequestsForTrainer(profile.uid),
             getCoachTasks(profile.uid).catch(() => []),
             // Para la semana del inicio: los ciclos que empiezan o acaban.
             getCyclesForTrainer(profile.uid).catch(() => []),
+            // Y las llamadas 1:1 de estas semanas (la tira se mueve de semana en semana).
+            getLlamadasEntre(profile.uid, masDias(hoy, -21), masDias(hoy, 42)).catch(() => []),
           ]);
           if (cancelled) return;
           setClients(clientData);
           setLogs(logData);
           setTasks(taskData);
           setCycles(cycleData);
+          setLlamadas(llamadaData);
           setRequests(requestData);
           setCached(cacheKey, {
             clients: clientData,
@@ -559,6 +566,7 @@ export default function TrainerDashboard() {
           ya pasó. El mes entero, en "Ver mes". */}
       <FadeIn delay={210}>
         <SemanaDelCoach
+          llamadas={llamadas}
           clients={clients}
           cycles={cycles}
           tasks={tasks}

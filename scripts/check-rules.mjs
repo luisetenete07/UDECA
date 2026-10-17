@@ -628,6 +628,92 @@ await comprobar('un alumno no comparte biblioteca', false, () =>
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
 await comprobar('su entrenador la borra', true, () => deleteDoc(doc(db, 'bibliotecas', 'PRUEBA')));
 
+/*
+ * LLAMADAS 1:1 (lib/llamadas.ts).
+ *
+ * El entrenador pone sus horas y sus planes; el alumno reserva un hueco de SU
+ * entrenador, a su nombre y en el futuro. El id es la hora, así que un hueco
+ * cogido no se puede volver a coger. Y el plan lo pone el entrenador.
+ */
+console.log('\nLlamadas 1:1');
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+const coachId = coach.user.uid;
+const ajustesDePrueba = { trainerId: coachId, activas: true, franjas: [], duracionMin: 30, planes: [], updatedAt: Date.now() };
+await comprobar('el entrenador guarda sus horas y planes', true, () =>
+  setDoc(doc(db, 'llamadasCoach', coachId), ajustesDePrueba)
+);
+await comprobar('pero no las de otro', false, () =>
+  setDoc(doc(db, 'llamadasCoach', 'otro-cualquiera'), { ...ajustesDePrueba, trainerId: 'otro-cualquiera' })
+);
+const marcos = await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
+const marcosId = marcos.user.uid;
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('le pone un plan a su alumno', true, () =>
+  setDoc(doc(db, 'users', marcosId), { planId: 'premium' }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
+await comprobar('el alumno lee las horas de su entrenador', true, () => getDoc(doc(db, 'llamadasCoach', coachId)));
+await comprobar('pero no las cambia', false, () =>
+  setDoc(doc(db, 'llamadasCoach', coachId), { ...ajustesDePrueba, activas: false })
+);
+await comprobar('ni se cambia el plan', false, () =>
+  setDoc(doc(db, 'users', marcosId), { planId: 'otro' }, { merge: true })
+);
+// Una hora distinta en cada pasada: si se repite el script sin resembrar, la
+// de la vez anterior no estorba.
+const manana = Math.floor((Date.now() + 86400000) / 60000) * 60000 + Math.floor(Math.random() * 5000) * 60000;
+const llamada = (inicio, extra = {}) => ({
+  trainerId: coachId,
+  clientId: marcosId,
+  inicio,
+  fin: inicio + 30 * 60000,
+  createdAt: Date.now(),
+  ...extra,
+});
+await comprobar('reserva un hueco de su entrenador', true, () =>
+  setDoc(doc(db, 'llamadas', `${coachId}_${manana}`), llamada(manana))
+);
+await comprobar('ve las suyas', true, () =>
+  getDocs(query(collection(db, 'llamadas'), where('clientId', '==', marcosId), where('trainerId', '==', coachId)))
+);
+const ayer = Math.floor((Date.now() - 86400000) / 60000) * 60000;
+await comprobar('en el pasado, no', false, () => setDoc(doc(db, 'llamadas', `${coachId}_${ayer}`), llamada(ayer)));
+await comprobar('con un id que no es su hora, no', false, () =>
+  setDoc(doc(db, 'llamadas', `${coachId}_1`), llamada(manana + 3600000))
+);
+await comprobar('con otro entrenador, no', false, () =>
+  setDoc(doc(db, 'llamadas', `otro-cualquiera_${manana}`), llamada(manana, { trainerId: 'otro-cualquiera' }))
+);
+await comprobar('a nombre de otro alumno, no', false, () =>
+  setDoc(doc(db, 'llamadas', `${coachId}_${manana + 3600000}`), llamada(manana + 3600000, { clientId: 'otro-cualquiera' }))
+);
+await comprobar('con campos de más, no', false, () =>
+  setDoc(doc(db, 'llamadas', `${coachId}_${manana + 3600000}`), llamada(manana + 3600000, { nota: 'x' }))
+);
+await comprobar('de 5 horas, no', false, () =>
+  setDoc(doc(db, 'llamadas', `${coachId}_${manana + 3600000}`), llamada(manana + 3600000, { fin: manana + 3600000 + 5 * 3600000 }))
+);
+await signInWithEmailAndPassword(auth, 'alumno2@demo.test', PW);
+await comprobar('otro alumno no coge el mismo hueco', false, () =>
+  setDoc(doc(db, 'llamadas', `${coachId}_${manana}`), llamada(manana, { clientId: auth.currentUser.uid }))
+);
+await comprobar('pero ve qué horas están cogidas', true, () =>
+  getDocs(query(collection(db, 'llamadas'), where('trainerId', '==', coachId), where('inicio', '>=', Date.now())))
+);
+await comprobar('y no la cancela', false, () => deleteDoc(doc(db, 'llamadas', `${coachId}_${manana}`)));
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador ve las suyas', true, () =>
+  getDocs(query(collection(db, 'llamadas'), where('trainerId', '==', coachId), where('inicio', '>=', Date.now())))
+);
+await comprobar('y la puede cancelar', true, () => deleteDoc(doc(db, 'llamadas', `${coachId}_${manana}`)));
+await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
+await comprobar('el alumno cancela la suya', true, async () => {
+  await setDoc(doc(db, 'llamadas', `${coachId}_${manana}`), llamada(manana));
+  await deleteDoc(doc(db, 'llamadas', `${coachId}_${manana}`));
+});
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await setDoc(doc(db, 'users', marcosId), { planId: deleteField() }, { merge: true });
+
 console.log(
   fallos === 0
     ? '\n✔ Todas las comprobaciones de reglas pasan.\n'

@@ -25,6 +25,14 @@
         { "fieldPath": "trainerId", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "llamadas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trainerId", "order": "ASCENDING" },
+        { "fieldPath": "inicio", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

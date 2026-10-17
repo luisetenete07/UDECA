@@ -80,6 +80,15 @@ export default function TrainerLayout() {
           ),
         }}
       />
+      {/* Llamadas 1:1: horarios y planes. Se abre desde el Calendario. */}
+      <Tabs.Screen
+        name="llamadas"
+        options={{
+          href: null,
+          title: 'Llamadas',
+          tabBarIcon: (props) => <TabIcon {...props} outline="call-outline" filled="call" />,
+        }}
+      />
       <Tabs.Screen
         name="profile"
         options={{

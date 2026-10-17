@@ -124,6 +124,12 @@ export function diaSemanaCorto(ts: number | Date): string {
   );
 }
 
+/** "Lun", "Mar"…: solo el día de la semana, corto (para tiras de días). */
+export function diaDeLaSemana(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return mayusculaInicial(d.toLocaleDateString(localeActual(), { weekday: 'short' }).replace('.', ''));
+}
+
 /*
  * Comparar días, no instantes.
  *
@@ -213,4 +219,85 @@ export function mediodiaDe(ts: number | Date): number {
  */
 export function diasEntre(a: number | Date, b: number | Date): number {
   return Math.round((inicioDelDia(b) - inicioDelDia(a)) / (24 * 60 * 60 * 1000));
+}
+
+/** "18:05": la hora del día, en hora local y con dos cifras. */
+export function horaCorta(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** La zona horaria del dispositivo ("Europe/Madrid"), si se sabe. */
+export function zonaDelDispositivo(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Año, mes (0-11), día, hora y minuto de un instante, vistos en una zona. */
+function partesEnZona(ts: number, zona: string) {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: zona,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+  }).formatToParts(new Date(ts));
+  const de = (tipo: string) => Number(partes.find((p) => p.type === tipo)?.value ?? NaN);
+  const h = de('hour');
+  return { y: de('year'), m: de('month') - 1, d: de('day'), h: h === 24 ? 0 : h, mi: de('minute') };
+}
+
+/**
+ * El día del calendario de un instante en una zona horaria: año, mes (0-11) y
+ * día. Sin zona, o si el móvil no sabe de zonas, el del propio dispositivo.
+ *
+ * Para las llamadas: el entrenador dice "los lunes de 9 a 13" en SU hora, y un
+ * alumno en Canarias tiene que ver esas mismas horas en la suya.
+ */
+export function diaEnZona(ts: number, zona?: string): { y: number; m: number; d: number } {
+  if (zona && zona !== zonaDelDispositivo()) {
+    try {
+      const p = partesEnZona(ts, zona);
+      if (!Number.isNaN(p.y)) return { y: p.y, m: p.m, d: p.d };
+    } catch {
+      // Sin datos de zonas: se cae a la hora del dispositivo.
+    }
+  }
+  const f = new Date(ts);
+  return { y: f.getFullYear(), m: f.getMonth(), d: f.getDate() };
+}
+
+/**
+ * El instante en que en una zona son tal día y tal hora ("el lunes 20 a las
+ * 9:00 en Madrid"). `minutos` son los del día (9:00 = 540).
+ *
+ * Se calcula probando: se toma la hora como si fuera UTC, se mira qué hora es
+ * entonces en la zona y se corrige la diferencia (dos veces, por si en medio
+ * cambia la hora de verano). Sin zona, o en la del propio móvil, la hora local.
+ */
+export function marcaEnZona(zona: string | undefined, y: number, m: number, d: number, minutos: number): number {
+  const local = () => {
+    const f = new Date(y, m, d, 0, 0, 0, 0);
+    f.setMinutes(minutos);
+    return f.getTime();
+  };
+  if (!zona || zona === zonaDelDispositivo()) return local();
+  try {
+    const supuesta = Date.UTC(y, m, d, 0, minutos);
+    const desfase = (ts: number) => {
+      const p = partesEnZona(ts, zona);
+      return Date.UTC(p.y, p.m, p.d, p.h, p.mi) - Math.floor(ts / 60000) * 60000;
+    };
+    let ts = supuesta - desfase(supuesta);
+    const otra = supuesta - desfase(ts);
+    if (otra !== ts) ts = otra;
+    return Number.isNaN(ts) ? local() : ts;
+  } catch {
+    return local();
+  }
 }

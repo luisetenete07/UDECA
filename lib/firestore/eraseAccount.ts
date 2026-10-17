@@ -21,6 +21,8 @@ const MIAS: { coleccion: string; campo: string }[] = [
   { coleccion: 'weightLogs', campo: 'clientId' },
   { coleccion: 'progressPhotos', campo: 'clientId' },
   { coleccion: 'joinRequests', campo: 'clientId' },
+  // Sus llamadas reservadas: borrarlas libera el hueco en la agenda del coach.
+  { coleccion: 'llamadas', campo: 'clientId' },
 ];
 
 /** Colecciones que crea el ENTRENADOR y que solo él puede borrar. */
@@ -36,6 +38,8 @@ const DEL_ENTRENADOR: { coleccion: string; campo: string }[] = [
   { coleccion: 'trainingCycles', campo: 'trainerId' },
   { coleccion: 'routineTemplates', campo: 'trainerId' },
   { coleccion: 'bibliotecas', campo: 'trainerId' },
+  { coleccion: 'llamadas', campo: 'trainerId' },
+  { coleccion: 'llamadasCoach', campo: 'trainerId' },
   { coleccion: 'payments', campo: 'trainerId' },
 ];
 

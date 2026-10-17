@@ -6,7 +6,7 @@ import {
   type EventoDelCalendario,
 } from '../../lib/calendarioCoach';
 import { frase } from '../../lib/idioma';
-import { diaLargo, inicioDelDia, mesLargo } from '../../lib/fechas';
+import { diaLargo, inicioDelDia, masDias, mesLargo } from '../../lib/fechas';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { LayoutAnimation, Modal, Platform, Pressable, StyleSheet, TextInput, UIManager, View } from 'react-native';
 import { Text } from '../../components/Texto';
@@ -26,6 +26,8 @@ import {
   updateCoachTask,
 } from '../../lib/firestore/coachTasks';
 import { getClientsForTrainer } from '../../lib/firestore/users';
+import { getLlamadasEntre } from '../../lib/firestore/llamadas';
+import type { Llamada } from '../../lib/llamadas';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { Segmented } from '../../components/Segmented';
 import { Dialogo } from '../../components/Dialogo';
@@ -62,6 +64,8 @@ export default function CoachCalendarScreen() {
   const [tasks, setTasks] = useState<CoachTask[]>([]);
   const [clients, setClients] = useState<UserProfile[]>([]);
   const [cycles, setCycles] = useState<TrainingCycle[]>([]);
+  // Las llamadas 1:1 reservadas por sus alumnos (lib/llamadas.ts).
+  const [llamadas, setLlamadas] = useState<Llamada[]>([]);
 
   // --- Tareas ---
   const [draft, setDraft] = useState('');
@@ -82,14 +86,18 @@ export default function CoachCalendarScreen() {
 
   const load = useCallback(async () => {
     if (!profile) return;
-    const [taskData, clientData, cycleData] = await Promise.all([
+    const hoy = inicioDelDia(Date.now());
+    const [taskData, clientData, cycleData, llamadaData] = await Promise.all([
       getCoachTasks(profile.uid).catch(() => []),
       getClientsForTrainer(profile.uid).catch(() => []),
       getCyclesForTrainer(profile.uid).catch(() => []),
+      // De dos meses atrás a tres por delante: lo que se mira en un calendario.
+      getLlamadasEntre(profile.uid, masDias(hoy, -62), masDias(hoy, 93)).catch(() => []),
     ]);
     setTasks(taskData);
     setClients(clientData);
     setCycles(cycleData);
+    setLlamadas(llamadaData);
     setLoading(false);
   }, [profile]);
 
@@ -239,7 +247,7 @@ export default function CoachCalendarScreen() {
   const dayTasks = useMemo(() => tasks.filter((t) => t.scope === 'day' && !t.done), [tasks]);
   const eventsByDay = useMemo(() => {
     const map = new Map<number, CalEvent[]>();
-    for (const [dia, eventos] of eventosPorDia(clients, cycles, dayTasks)) {
+    for (const [dia, eventos] of eventosPorDia(clients, cycles, dayTasks, Date.now(), llamadas)) {
       map.set(
         dia,
         eventos.map((e) => ({
@@ -253,7 +261,7 @@ export default function CoachCalendarScreen() {
       );
     }
     return map;
-  }, [clients, cycles, dayTasks, router]);
+  }, [clients, cycles, dayTasks, llamadas, router]);
 
   if (loading) {
     return (
@@ -592,9 +600,21 @@ export default function CoachCalendarScreen() {
       <View style={styles.screenHeader}>
         <Text style={styles.screenTitle}>Calendario</Text>
         <Text style={styles.screenSubtitle}>
-          Fin de coaching, ciclos y tus tareas. Toca un día y apunta lo que quieras.
+          Llamadas, fin de coaching, ciclos y tus tareas. Toca un día y apunta lo que quieras.
         </Text>
       </View>
+
+      {/* Las llamadas 1:1: cuándo estás disponible y qué incluye cada plan. */}
+      <Pressable onPress={() => router.push('/(trainer)/llamadas')} style={styles.llamadasBtn}>
+        <View style={styles.llamadasIcono}>
+          <Ionicons name="call-outline" size={17} color={colors.success} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.llamadasTitulo}>Llamadas 1:1</Text>
+          <Text style={styles.llamadasSub}>Tus horarios y los planes de tus alumnos</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+      </Pressable>
 
       {calendarContent}
       {objetivosContent}
@@ -611,6 +631,7 @@ export default function CoachCalendarScreen() {
 }
 
 const WEEKDAY_HEADS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
 
 /** Selector de día (mini-calendario mensual) para reubicar una tarea. */
 function MoveTaskModal({
@@ -839,6 +860,27 @@ function GoalsList({
 }
 
 const styles = StyleSheet.create({
+  llamadasBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  llamadasIcono: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.successMuted,
+  },
+  llamadasTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  llamadasSub: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   backBtn: {
     alignSelf: 'flex-start',
     width: 40,

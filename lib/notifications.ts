@@ -307,3 +307,39 @@ export async function cancelarAvisosGtg(): Promise<void> {
     // Si no había ninguno, no pasa nada.
   }
 }
+
+const LLAMADA_PREFIJO = 'llamada-';
+
+/**
+ * El aviso de una llamada 1:1, una hora antes (lib/llamadas.ts).
+ *
+ * Es local, en el móvil del alumno: se programa al reservar y se quita al
+ * cancelar. Sin él, una llamada reservada con dos semanas de antelación se
+ * olvida, y el entrenador se queda llamando a alguien que no la espera.
+ */
+export async function programarAvisoDeLlamada(id: string, inicio: number, como: string): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const cuando = inicio - 60 * 60 * 1000;
+  if (cuando <= Date.now()) return;
+  try {
+    const existing = await Notifications.getPermissionsAsync();
+    let granted = existing.status === 'granted';
+    if (!granted && existing.status !== 'denied') {
+      const req = await Notifications.requestPermissionsAsync();
+      granted = req.status === 'granted';
+    }
+    if (!granted) return;
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${LLAMADA_PREFIJO}${id}`,
+      content: { title: t('Llamada con tu entrenador en 1 hora'), body: t(como) },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(cuando) },
+    });
+  } catch {
+    // Sin aviso, la llamada sigue reservada y en su pantalla.
+  }
+}
+
+export async function cancelarAvisoDeLlamada(id: string): Promise<void> {
+  if (Platform.OS === 'web') return;
+  await Notifications.cancelScheduledNotificationAsync(`${LLAMADA_PREFIJO}${id}`).catch(() => {});
+}

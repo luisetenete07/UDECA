@@ -171,7 +171,10 @@ service cloud.firestore {
               'paymentLink',
               // Ser VIP es el plan que ha contratado, no una casilla suya:
               // poder marcárselo sería llevarse gratis el contenido de arriba.
-              'vip'
+              'vip',
+              // Su plan (y con él cuántas llamadas al mes tiene): lo pone su
+              // entrenador. Poder cambiárselo sería darse llamadas de más.
+              'planId'
             ])
         )
         || (
@@ -206,7 +209,9 @@ service cloud.firestore {
               // `stepGoal`: los pasos al día que le pide su entrenador. No es
               // lo mismo un repartidor que alguien ocho horas sentado, y una
               // cifra igual para los dos no la cumple ninguno.
-              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses', 'paymentLink', 'vip', 'stepGoal'])
+              // `planId`: el plan del alumno (sus llamadas al mes, su
+              // antelación, si es VIP). Lo decide quien lo entrena.
+              .hasOnly(['status', 'paymentStatus', 'monthlyFeeEur', 'nextPaymentDate', 'paymentReportedAt', 'billingAnchorDay', 'trackRir', 'planPauses', 'paymentLink', 'vip', 'stepGoal', 'planId'])
             || (
               // Sacar del grupo: se elimina el vínculo con el entrenador.
               !('trainerId' in request.resource.data)
@@ -349,6 +354,56 @@ service cloud.firestore {
         && request.resource.data.trainerId == request.auth.uid;
       allow update, delete: if request.auth != null
         && resource.data.trainerId == request.auth.uid;
+    }
+
+    // LLAMADAS 1:1 (lib/llamadas.ts, lib/firestore/llamadas.ts).
+    //
+    // La disponibilidad y los planes del entrenador: los escribe él y los leen
+    // él y sus alumnos (es lo que necesitan para ver los huecos y su cupo).
+    match /llamadasCoach/{trainerId} {
+      allow read: if request.auth != null
+        && (
+          request.auth.uid == trainerId
+          || resource.data.trainerId == request.auth.uid
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('trainerId', '') == trainerId
+        );
+      allow create, update: if request.auth != null
+        && request.auth.uid == trainerId
+        && request.resource.data.trainerId == trainerId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'trainer';
+      allow delete: if request.auth != null && request.auth.uid == trainerId;
+    }
+
+    // Cada llamada reservada. El id ES la hora (`{trainerId}_{inicio}`) y solo
+    // se puede CREAR, no pisar: si dos alumnos reservan el mismo hueco a la
+    // vez, el segundo se encuentra el documento hecho y se le rechaza, en vez
+    // de quedar dos llamadas a la misma hora.
+    //
+    // La leen el entrenador, el alumno que la reservó y los demás alumnos del
+    // mismo entrenador (para saber qué huecos están cogidos: el documento no
+    // lleva nombres, solo la hora). Cancelar es borrar, y pueden los dos.
+    match /llamadas/{codigo} {
+      function miEntrenador() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('trainerId', '');
+      }
+      allow read: if request.auth != null
+        && (
+          resource.data.trainerId == request.auth.uid
+          || resource.data.clientId == request.auth.uid
+          || resource.data.trainerId == miEntrenador()
+        );
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.trainerId == miEntrenador()
+        && codigo == request.resource.data.trainerId + '_' + string(request.resource.data.inicio)
+        && request.resource.data.inicio is int
+        && request.resource.data.fin is int
+        && request.resource.data.fin > request.resource.data.inicio
+        && request.resource.data.fin - request.resource.data.inicio <= 4 * 60 * 60 * 1000
+        && request.resource.data.inicio > request.time.toMillis()
+        && request.resource.data.keys().hasOnly(['trainerId', 'clientId', 'inicio', 'fin', 'createdAt']);
+      allow delete: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
     }
 
     // Bibliotecas compartidas con un código (lib/firestore/bibliotecas.ts).
