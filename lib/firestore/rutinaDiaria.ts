@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { inicioDelDia } from '../fechas';
+import { stripUndefined } from './clean';
 import type { DiaDeRutinaDiaria, RutinaDiaria } from '../types';
 
 /**
@@ -32,9 +33,11 @@ export async function getRutinaDiaria(clientId: string): Promise<RutinaDiaria | 
 export async function setRutinaDiaria(
   rutina: Omit<RutinaDiaria, 'id' | 'updatedAt'>
 ): Promise<void> {
+  // Sin los campos vacíos: Firestore no guarda un `undefined` (al borrar el
+  // vídeo o las indicaciones de un ejercicio, el guardado entero fallaba).
   await setDoc(
     doc(db, 'rutinasDiarias', rutina.clientId),
-    { ...rutina, updatedAt: Date.now() },
+    stripUndefined({ ...rutina, updatedAt: Date.now() }),
     { merge: true }
   );
 }

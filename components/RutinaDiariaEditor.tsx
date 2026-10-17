@@ -74,6 +74,7 @@ export function RutinaDiariaEditor({
   const [cargando, setCargando] = useState(true);
   const [activa, setActiva] = useState(false);
   const [nombre, setNombre] = useState('');
+  const [indicaciones, setIndicaciones] = useState('');
   const [ejercicios, setEjercicios] = useState<EjercicioDiario[]>([]);
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoObjetivo, setNuevoObjetivo] = useState('');
@@ -104,6 +105,7 @@ export function RutinaDiariaEditor({
         if (r) {
           setActiva(r.activa);
           setNombre(r.nombre ?? '');
+          setIndicaciones(r.indicaciones ?? '');
           setEjercicios(r.ejercicios ?? []);
           // Si ya tiene una puesta, se abre: es lo que se viene a mirar.
           setAbierto(r.activa && r.ejercicios.length > 0);
@@ -124,11 +126,12 @@ export function RutinaDiariaEditor({
    * la pantalla sin pulsarlo y se pierda lo escrito.
    */
   const guardar = async (
-    cambios: Partial<{ activa: boolean; nombre: string; ejercicios: EjercicioDiario[] }>
+    cambios: Partial<{ activa: boolean; nombre: string; indicaciones: string; ejercicios: EjercicioDiario[] }>
   ) => {
     const siguiente = {
       activa: cambios.activa ?? activa,
       nombre: cambios.nombre ?? nombre,
+      indicaciones: cambios.indicaciones ?? indicaciones,
       ejercicios: cambios.ejercicios ?? ejercicios,
     };
     try {
@@ -137,6 +140,9 @@ export function RutinaDiariaEditor({
         clientId,
         activa: siguiente.activa,
         nombre: siguiente.nombre.trim() || NOMBRE_POR_DEFECTO,
+        // Vacío y no sin campo: el guardado mezcla, y sin el campo se quedaría
+        // la indicación de antes después de borrarla.
+        indicaciones: siguiente.indicaciones.trim(),
         ejercicios: siguiente.ejercicios,
       });
     } catch {
@@ -305,6 +311,22 @@ export function RutinaDiariaEditor({
             placeholder={t(NOMBRE_POR_DEFECTO)}
             placeholderTextColor={colors.textFaint}
           />
+          {/* Lo que vale para toda la rutina: cada cuánto, cuánto dejar en la
+              recámara, qué hacer el día que no sale. Lo de un ejercicio va en
+              ese ejercicio. */}
+          <TextInput
+            style={[styles.campoEjercicio, styles.campoIndicaciones, { marginTop: spacing.sm }]}
+            value={indicaciones}
+            onChangeText={setIndicaciones}
+            onBlur={() => guardar({ indicaciones })}
+            placeholder={t(
+              paraMi
+                ? 'Indicaciones para toda la rutina (opcional)'
+                : 'Indicaciones para toda la rutina: cada cuánto, cuánto dejar en la recámara… (opcional)'
+            )}
+            placeholderTextColor={colors.textFaint}
+            multiline
+          />
 
           {/* El arrastre sale SOLO del asa (`handleOnly`): la fila lleva campos
               de texto dentro, y sin eso colocar el cursor en uno la movería. */}
@@ -343,6 +365,9 @@ export function RutinaDiariaEditor({
                   </Pressable>
                   {/* Que se vea desde fuera si tiene vídeo: entrar a cada uno a
                       comprobarlo es lo que hace que no se rellene nunca. */}
+                  {e.indicaciones?.trim() ? (
+                    <Ionicons name="document-text-outline" size={15} color={colors.primary} />
+                  ) : null}
                   {e.video?.trim() ? (
                     <Ionicons name="play-circle-outline" size={16} color={colors.primary} />
                   ) : null}
@@ -390,6 +415,15 @@ export function RutinaDiariaEditor({
                         Con series, se marcan de una en una a lo largo del día.
                       </Text>
                     </View>
+                    <TextInput
+                      style={[styles.campoEjercicio, styles.campoIndicaciones]}
+                      defaultValue={e.indicaciones ?? ''}
+                      onChangeText={(t) => cambiar(e.id, { indicaciones: t.trim() ? t : undefined })}
+                      onBlur={guardarLista}
+                      placeholder={t('Indicaciones: técnica, cómo repartirlo, qué notar (opcional)')}
+                      placeholderTextColor={colors.textFaint}
+                      multiline
+                    />
                     <TextInput
                       style={styles.campoEjercicio}
                       defaultValue={e.video ?? ''}
@@ -604,6 +638,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
     backgroundColor: colors.surfaceAlt,
   },
+  campoIndicaciones: { minHeight: 64, textAlignVertical: 'top' },
   filaObjetivoNuevo: {
     flexDirection: 'row',
     alignItems: 'center',

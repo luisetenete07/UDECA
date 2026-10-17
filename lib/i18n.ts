@@ -563,6 +563,17 @@ export const EN: Record<string, string> = {
   '{0} al mes': '{0} a month',
   'te queda 1 este mes': '1 left this month',
   'te quedan {0} este mes': '{0} left this month',
+  // Indicaciones por escrito del grease the groove (components/PantallaGtg.tsx, components/RutinaDiaria*.tsx).
+  'Indicaciones para toda la rutina (opcional)': 'Cues for the whole routine (optional)',
+  'Indicaciones para toda la rutina: cada cuánto, cuánto dejar en la recámara… (opcional)': 'Cues for the whole routine: how often, how much to leave in the tank… (optional)',
+  'Indicaciones: técnica, cómo repartirlo, qué notar (opcional)': 'Cues: technique, how to spread it out, what to feel (optional)',
+  'Indicaciones del día (opcional)': 'Cues for the day (optional)',
+  'Cada cuánto, cuánto dejar en la recámara, qué hacer si una serie sale fea…': 'How often, how much to leave in the tank, what to do if a set gets ugly…',
+  'Indicaciones de tu entrenador': 'Cues from your coach',
+  'Ver más': 'Show more',
+  'Ver menos': 'Show less',
+  'Cada día': 'Every day',
+  'No se ha podido guardar': 'Couldn\'t save',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

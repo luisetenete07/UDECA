@@ -684,6 +684,12 @@ export default function RoutineEditorScreen() {
     );
   };
 
+  const updateDayGtgIndicaciones = (dayId: string, texto: string) => {
+    setDays((prev) =>
+      prev.map((d) => (d.id === dayId ? { ...d, gtgIndicaciones: texto.trim() ? texto : undefined } : d))
+    );
+  };
+
   const toggleIntervalTimer = (dayId: string) => {
     setDays((prev) =>
       prev.map((d) => (d.id === dayId ? { ...d, showIntervalTimer: !d.showIntervalTimer } : d))
@@ -1716,11 +1722,25 @@ export default function RoutineEditorScreen() {
                 ) : null}
               </View>
               {day.gtg ? (
+                <>
                 <Text style={styles.optionalHint}>
                   Esta rutina no es una sesión: son series sueltas repartidas por todo el día,
                   ninguna al fallo. El alumno la elige sola, no encadenada con otra, y en
                   repeticiones va el objetivo de CADA serie.
                 </Text>
+                {/* Lo que vale para todo el día y no es de ningún ejercicio:
+                    cada cuánto, cuánto dejar, qué hacer si una sale fea. Lo
+                    ve el alumno encima de sus series. */}
+                <TextField
+                  label="Indicaciones del día (opcional)"
+                  value={day.gtgIndicaciones ?? ''}
+                  onChangeText={(v) => updateDayGtgIndicaciones(day.id, v)}
+                  placeholder="Cada cuánto, cuánto dejar en la recámara, qué hacer si una serie sale fea…"
+                  multiline
+                  style={styles.gtgIndicaciones}
+                  containerStyle={{ marginBottom: spacing.sm }}
+                />
+                </>
               ) : null}
               {day.gtg || !seMuestra.intensidad || prescripcionDe(perso).intensidad.escala === 'ninguna' ? null : prescripcionDe(perso).intensidad.escala === 'propia' ? (
               /* Con las etiquetas del entrenador: se toca la que va, y tocar
@@ -2610,6 +2630,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   gtgCampo: { flex: 1, marginBottom: 0 },
+  gtgIndicaciones: { minHeight: 76, textAlignVertical: 'top', marginBottom: 0 },
   dayIntensityRow: { marginBottom: spacing.sm },
   dayIntensityLabel: {
     ...typography.label,

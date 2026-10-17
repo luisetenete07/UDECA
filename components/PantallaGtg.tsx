@@ -42,10 +42,13 @@ export function PantallaGtg({
   const ejercicios = dia?.exercises ?? [];
   const [elegido, setElegido] = useState(ejercicios[0]?.exerciseId ?? '');
   const [marca, setMarca] = useState('');
+  const [indicacionesAbiertas, setIndicacionesAbiertas] = useState(false);
 
   const p = progresoGtg(routine, entrenoDeHoy, dia);
   const ejercicio = ejercicios.find((e) => e.exerciseId === elegido) ?? ejercicios[0];
   const enSegundos = isHoldMeasure(ejercicio?.measure);
+  const indicaciones = dia?.gtgIndicaciones?.trim() ?? '';
+  const indicacionesLargas = indicaciones.length > 140 || indicaciones.includes('\n');
 
   const anadir = () => {
     if (!ejercicio || !marca.trim()) return;
@@ -145,6 +148,12 @@ export function PantallaGtg({
             </Text>
           )}
 
+          {/* Las indicaciones de ESTE ejercicio (las que el entrenador escribe
+              en cada uno al montar el día). Antes se escribían y aquí no salían. */}
+          {ejercicio?.notes?.trim() ? (
+            <Text style={styles.notaEjercicio}>{ejercicio.notes.trim()}</Text>
+          ) : null}
+
           {p.hechas > 0 ? (
             <Pressable onPress={onDeshacer} hitSlop={8} style={styles.deshacer}>
               <Ionicons name="arrow-undo-outline" size={14} color={colors.textFaint} />
@@ -153,6 +162,30 @@ export function PantallaGtg({
           ) : null}
         </Card>
       )}
+
+      {/*
+       * LAS INDICACIONES DEL DÍA, DEBAJO.
+       *
+       * Se leen una vez y la pantalla se abre ocho: arriba empujarían el campo
+       * de apuntar fuera de la vista justo en las siete veces que ya se saben.
+       * Largas, en tres líneas y "Ver más".
+       */}
+      {indicaciones ? (
+        <Card style={styles.tarjeta}>
+          <View style={styles.indicacionesCab}>
+            <Ionicons name="document-text-outline" size={15} color={colors.primary} />
+            <Text style={styles.indicacionesTitulo}>Indicaciones de tu entrenador</Text>
+          </View>
+          <Text style={styles.indicacionesTexto} numberOfLines={indicacionesAbiertas || !indicacionesLargas ? undefined : 3}>
+            {indicaciones}
+          </Text>
+          {indicacionesLargas ? (
+            <Pressable onPress={() => setIndicacionesAbiertas((v) => !v)} hitSlop={8}>
+              <Text style={styles.verMas}>{indicacionesAbiertas ? 'Ver menos' : 'Ver más'}</Text>
+            </Pressable>
+          ) : null}
+        </Card>
+      ) : null}
     </>
   );
 }
@@ -194,6 +227,11 @@ const styles = StyleSheet.create({
   filaMarca: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
   campo: { width: 96, marginBottom: 0 },
   objetivo: { ...typography.small, color: colors.textFaint, marginTop: spacing.sm },
+  notaEjercicio: { ...typography.small, color: colors.textMuted, marginTop: spacing.xs, fontStyle: 'italic', lineHeight: 18 },
+  indicacionesCab: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs },
+  indicacionesTitulo: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  indicacionesTexto: { ...typography.body, color: colors.text, lineHeight: 22 },
+  verMas: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, marginTop: spacing.xs },
   deshacer: {
     flexDirection: 'row',
     alignItems: 'center',

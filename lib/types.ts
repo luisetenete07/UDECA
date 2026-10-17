@@ -705,6 +705,15 @@ export interface RoutineDay {
   gtg?: boolean;
   /** Solo con `gtg`: series al día de ESTE día. Sin valor, las de la rutina. */
   gtgSetsPerDay?: number;
+  /**
+   * Solo con `gtg`: las indicaciones del entrenador para el día, por escrito.
+   *
+   * En una sesión, lo que el entrenador quiere decir va en cada ejercicio. En
+   * el grease the groove lo importante es CÓMO se reparte el día —cada cuánto,
+   * cuánto dejar en la recámara, qué hacer si una serie sale fea—, y eso no es
+   * de ningún ejercicio en concreto.
+   */
+  gtgIndicaciones?: string;
   /** El coach activa el temporizador de intervalos (EMOM) para este día. */
   showIntervalTimer?: boolean;
   /**
@@ -1319,6 +1328,11 @@ export interface EjercicioDiario {
    * poder mirar cómo se hacen.
    */
   video?: string;
+  /**
+   * Indicaciones del entrenador para ESTE ejercicio, por escrito: la técnica,
+   * cómo repartirlo, qué notar. El objetivo dice cuánto; esto, cómo.
+   */
+  indicaciones?: string;
 }
 
 export interface RutinaDiaria {
@@ -1330,6 +1344,8 @@ export interface RutinaDiaria {
   activa: boolean;
   /** Cómo la llama el entrenador. Lo ve el alumno. */
   nombre: string;
+  /** Indicaciones para toda la rutina, por escrito. Vacío: ninguna. */
+  indicaciones?: string;
   ejercicios: EjercicioDiario[];
   updatedAt: number;
 }

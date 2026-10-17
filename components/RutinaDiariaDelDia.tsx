@@ -58,6 +58,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
   const [rutina, setRutina] = useState<RutinaDiaria | null>(null);
   const [dia, setDia] = useState<DiaDeRutinaDiaria | null>(null);
   const [video, setVideo] = useState<{ url: string; titulo: string } | null>(null);
+  const [indicacionesAbiertas, setIndicacionesAbiertas] = useState(false);
   const uid = profile?.uid;
 
   useEffect(() => {
@@ -121,6 +122,10 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
 
   const hechos = hechosDeHoy(dia);
   const p = progresoDiario(rutina, dia);
+  const indicaciones = rutina.indicaciones?.trim() ?? '';
+  // Larga: dos líneas y "Ver más". La tarjeta se mira varias veces al día y
+  // el texto se lee una; entero cada vez empujaría la lista hacia abajo.
+  const indicacionesLargas = indicaciones.length > 110 || indicaciones.includes('\n');
 
   return (
     /*
@@ -174,6 +179,24 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       <ProgressBar progress={p.ratio} height={8} />
       <Text style={styles.texto}>{textoDiario(p)}</Text>
 
+      {indicaciones ? (
+        <Pressable
+          onPress={indicacionesLargas ? () => setIndicacionesAbiertas((v) => !v) : undefined}
+          style={styles.indicaciones}
+          hitSlop={4}
+        >
+          <Ionicons name="document-text-outline" size={15} color={colors.primary} style={{ marginTop: 1 }} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.indicacionesTexto} numberOfLines={indicacionesAbiertas ? undefined : 2}>
+              {indicaciones}
+            </Text>
+            {indicacionesLargas ? (
+              <Text style={styles.verMas}>{indicacionesAbiertas ? 'Ver menos' : 'Ver más'}</Text>
+            ) : null}
+          </View>
+        </Pressable>
+      ) : null}
+
       {/* Una línea entre el titular y la lista. Sin ella, con tres ejercicios y
           sus series, la cabecera se leía como una fila más de la lista y el
           número grande perdía todo el trabajo que hace. */}
@@ -220,6 +243,11 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                   <Text style={styles.filaObjetivo} numberOfLines={2}>
                     {conSeries ? frase`${hechasAqui} de ${detalle}` : detalle}
                   </Text>
+                ) : null}
+                {/* Cómo hacerlo, si el entrenador lo dejó escrito. Entero: es
+                    corto y es justo lo que hay que tener delante al hacerlo. */}
+                {e.indicaciones?.trim() ? (
+                  <Text style={styles.filaIndicaciones}>{e.indicaciones.trim()}</Text>
                 ) : null}
               </Pressable>
 
@@ -361,4 +389,17 @@ const styles = StyleSheet.create({
   // Hecho: se atenúa y se tacha. Sigue a la vista para poder desmarcarlo.
   filaHecha: { color: colors.textFaint, textDecorationLine: 'line-through' },
   filaObjetivo: { ...typography.small, color: colors.textMuted, marginTop: 1 },
+  filaIndicaciones: { ...typography.small, color: colors.textMuted, marginTop: 4, fontStyle: 'italic', lineHeight: 18 },
+  indicaciones: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.sm + 2,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  indicacionesTexto: { ...typography.small, color: colors.text, lineHeight: 19 },
+  verMas: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, marginTop: 2 },
 });

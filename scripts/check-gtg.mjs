@@ -9,6 +9,7 @@
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-gtg.mjs
  */
+import { readFileSync } from 'node:fs';
 import {
   conSerieAnadida,
   entrenoDeHoy,
@@ -215,6 +216,20 @@ console.log('\nUn día entero de gtg vale UN día de racha');
     String(currentStreak([enDia(0), enDia(1), enDia(3)], plan))
   );
   comprueba('hoy todavía sin series no la rompe', currentStreak([enDia(1), enDia(2)], plan) === 2);
+}
+
+console.log('\nLas indicaciones por escrito llegan al alumno');
+{
+  // Se escribían en el editor y no salían en ningún sitio: el entrenador las
+  // dejaba puestas creyendo que el alumno las leía.
+  const lee = (f) => readFileSync(f, 'utf8');
+  const pantalla = lee('components/PantallaGtg.tsx');
+  comprueba('las del día GTG, en su pantalla', /dia\?\.gtgIndicaciones/.test(pantalla));
+  comprueba('y las de cada ejercicio', /ejercicio\?\.notes/.test(pantalla));
+  comprueba('el entrenador las escribe en el día', /gtgIndicaciones/.test(lee('app/(trainer)/clients/[id]/routine.tsx')));
+  const tarjeta = lee('components/RutinaDiariaDelDia.tsx');
+  comprueba('rutina diaria: las generales y las de cada ejercicio', /rutina\.indicaciones/.test(tarjeta) && /e\.indicaciones/.test(tarjeta));
+  comprueba('borrarlas no rompe el guardado (sin undefined)', /stripUndefined/.test(lee('lib/firestore/rutinaDiaria.ts')));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
