@@ -15,7 +15,9 @@ import {
   ajustesDeFusion,
   combinarRutinas,
   comoSeCombinan,
+  juntarTramos,
   ordenParaFusionar,
+  primerasRondas,
   rondasDeLaCombinacion,
   segundosDeMinutos,
   textoDeDescanso,
@@ -61,6 +63,39 @@ console.log('\nEn superseries');
     'lo que se enseña antes de empezar',
     JSON.stringify(rondasDeLaCombinacion(r).map((x) => x.nombres)) === JSON.stringify([['Flexiones', 'Dominadas'], ['Fondos', 'Remo'], ['Pike']])
   );
+}
+
+console.log('\nSerie a serie: planche (tuck ×6) con front (press ×2, hold ×2, dominadas ×2)');
+{
+  const planche = { exercises: [ej('Tuck', { sets: 6 })] };
+  const front = { exercises: [ej('Press', { sets: 2 }), ej('Hold', { sets: 2 }), ej('Dominadas', { sets: 2 })] };
+  const r = combinarRutinas([planche, front], 'superseries', { descanso: 360 });
+  const rondas = primerasRondas(r, 99).map((x) => x.join('–'));
+  ok(
+    'tuck–press, tuck–press, tuck–hold, tuck–hold, tuck–dominadas, tuck–dominadas',
+    JSON.stringify(rondas) === JSON.stringify(['Tuck–Press', 'Tuck–Press', 'Tuck–Hold', 'Tuck–Hold', 'Tuck–Dominadas', 'Tuck–Dominadas']),
+    JSON.stringify(rondas)
+  );
+  ok('y no seis de tuck con dos de press', !r.some((e) => e.name === 'Tuck' && e.sets === 6));
+  ok('el tuck va en tres tramos de 2, cada uno con su id', r.filter((e) => e.name === 'Tuck').map((e) => `${e.id}:${e.sets}`).join(' ') === 'Tuck:2 Tuck~2:2 Tuck~3:2');
+  ok('cada tramo es una superserie en pantalla', esSuperserie(bloqueDe(r, 0)) && esSuperserie(bloqueDe(r, 2)) && esSuperserie(bloqueDe(r, 4)));
+  ok('con el descanso de la fusión tras cada ronda', descansoDelBloque(r, bloqueDe(r, 2)) === 360);
+  ok(
+    'la vista previa: tres tramos ×2',
+    JSON.stringify(rondasDeLaCombinacion(r).map((x) => `${x.nombres.join('+')}×${x.series}`)) === JSON.stringify(['Tuck+Press×2', 'Tuck+Hold×2', 'Tuck+Dominadas×2'])
+  );
+  const alReves = primerasRondas(combinarRutinas([front, planche], 'superseries'), 3).map((x) => x.join('–'));
+  ok('al revés: press–tuck', alReves[0] === 'Press–Tuck' && alReves[2] === 'Hold–Tuck', JSON.stringify(alReves));
+  const corta = { exercises: [ej('Press', { sets: 2 }), ej('Hold', { sets: 2 })] };
+  const r2 = combinarRutinas([planche, corta], 'superseries');
+  ok('si una se acaba, lo que queda de la otra va solo', rondasDeLaCombinacion(r2).map((x) => `${x.nombres.join('+')}×${x.series}`).join(' ') === 'Tuck+Press×2 Tuck+Hold×2 Tuck×2');
+  // Al guardar, el tuck vuelve a ser una fila con sus 6 series, en orden.
+  const log = r.map((e) => ({ exerciseId: e.exerciseId, name: e.name, sets: Array.from({ length: e.sets }, (_, k) => ({ reps: `${e.id}-${k}`, completed: true })) }));
+  const guardado = juntarTramos(log, r);
+  ok('al guardar: tuck ×6, press ×2, hold ×2, dominadas ×2', guardado.map((e) => `${e.name}×${e.sets.length}`).join(' ') === 'Tuck×6 Press×2 Hold×2 Dominadas×2', guardado.map((e) => `${e.name}×${e.sets.length}`).join(' '));
+  ok('con las series en el orden en que se hicieron', guardado[0].sets.map((x) => x.reps).join(',') === 'Tuck-0,Tuck-1,Tuck~2-0,Tuck~2-1,Tuck~3-0,Tuck~3-1');
+  const dosVeces = [{ id: 'a' }, { id: 'b' }];
+  ok('un ejercicio puesto dos veces a propósito sigue siendo dos', juntarTramos([{ exerciseId: 'x', name: 'X', sets: [] }, { exerciseId: 'x', name: 'X', sets: [] }], dosVeces).length === 2);
 }
 
 console.log('\nUna superserie que ya venía en la rutina');
@@ -117,6 +152,7 @@ console.log('\nPantallas');
 {
   const entreno = readFileSync('app/(client)/workout.tsx', 'utf8');
   ok('el entreno combina con lo que decidió el entrenador', /combinarRutinas\(chosen, modoCombinar, fusion\)/.test(entreno));
+  ok('y al guardar junta los tramos', /juntarTramos\(baseLog, day\.exercises\)/.test(entreno));
   ok('y enseña cómo queda antes de empezar', /rondasDeLaCombinacion\(/.test(entreno));
   const editor = readFileSync('app/(trainer)/clients/[id]/routine.tsx', 'utf8');
   ok('el entrenador lo elige en su plan', /cambiaPerso\(\{ combinar:/.test(editor));

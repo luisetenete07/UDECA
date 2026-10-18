@@ -76,6 +76,7 @@ import {
   ajustesDeFusion,
   combinarRutinas,
   comoSeCombinan,
+  juntarTramos,
   ordenParaFusionar,
   rondasDeLaCombinacion,
   textoDeDescanso,
@@ -1587,7 +1588,9 @@ export default function WorkoutScreen() {
       // estadísticas la interpreten bien años después, aunque el entrenador
       // cambie la ficha del ejercicio. Manda la del plan; si no la trae, la de
       // la biblioteca; y si tampoco, reps.
-      const finalLog: LoggedExercise[] = baseLog.map((ex) => {
+      // Los tramos de un mismo ejercicio (rutinas fusionadas serie a serie)
+      // vuelven a ser una fila: "Tuck planche, 6 series".
+      const finalLog: LoggedExercise[] = juntarTramos(baseLog, day.exercises).map((ex) => {
         const candidata = ex.measure ?? measureByExercise[ex.exerciseId];
         const measure: ExerciseMeasure = EXERCISE_MEASURES.includes(
           candidata as ExerciseMeasure
@@ -2577,6 +2580,7 @@ export default function WorkoutScreen() {
                         <Text style={styles.combinadoNum}>{i + 1}</Text>
                         <Text style={styles.combinadoEjercicios} numberOfLines={2}>
                           {ronda.nombres.join('  +  ')}
+                          {ronda.series > 1 ? <Text style={styles.combinadoVeces}>{`  ×${ronda.series}`}</Text> : null}
                           {ronda.aislado ? (
                             <Text style={styles.combinadoAislado}>{t('  · aislado, con su descanso')}</Text>
                           ) : ronda.nombres.length === 1 ? (
@@ -3743,6 +3747,7 @@ const styles = StyleSheet.create({
   },
   combinadoEjercicios: { ...typography.small, color: colors.text, flex: 1 },
   combinadoAislado: { color: colors.textFaint },
+  combinadoVeces: { color: colors.primary, fontFamily: fonts.semiBold },
   flexHistory: {
     marginTop: spacing.md,
     paddingTop: spacing.sm,

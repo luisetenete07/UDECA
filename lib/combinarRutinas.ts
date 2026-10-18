@@ -1,5 +1,5 @@
 import type { PlanPersonalizado } from './planPersonalizado';
-import type { RoutineDay, RoutineExercise } from './types';
+import type { LoggedExercise, RoutineDay, RoutineExercise } from './types';
 
 /**
  * VARIAS RUTINAS EN UN MISMO ENTRENO.
@@ -9,25 +9,32 @@ import type { RoutineDay, RoutineExercise } from './types';
  * Cómo se juntan lo decide el ENTRENADOR en su plan, no el alumno:
  *
  *  - 'seguidas' (lo de siempre): primero una rutina entera y después la otra.
- *  - 'superseries': se fusionan. El primer bloque de una con el primero de la
- *    otra, en superserie; después los segundos, y así. Una serie de empuje,
- *    sin descanso una de tirón, y entonces sí, descanso.
+ *  - 'superseries': se fusionan SERIE A SERIE. Una serie de la primera
+ *    rutina, sin descanso una de la segunda, y entonces sí, descanso; y así
+ *    hasta acabarlas.
  *
  * El orden lo pone el alumno al marcarlas: si marca Tirón antes que Empuje, la
  * ronda empieza por el tirón. Es el "o viceversa".
  *
- * POR BLOQUES, NO POR EJERCICIOS
+ * SERIE A SERIE, NO EJERCICIO A EJERCICIO
  *
- * Si una rutina ya trae una superserie suya (A1 + A2), fusionar ejercicio a
- * ejercicio la partiría y A2 acabaría emparejado con un ejercicio de la otra
- * rutina. Se fusiona por bloques: lo que el entrenador encadenó sigue
- * encadenado, y se le suma lo de la otra rutina (A1 + A2 + B1).
+ * Cada rutina es una fila de series, en su orden: planche = tuck ×6; front =
+ * press ×2, hold ×2, dominadas ×2. Fusionar es ir sacando una de cada fila:
+ *
+ *   tuck – press · tuck – press · tuck – hold · tuck – hold · tuck – dominadas · tuck – dominadas
+ *
+ * Emparejar por ejercicios daba otra cosa —seis de tuck contra dos de press, y
+ * el hold y las dominadas al final, solos— que no es lo que programa nadie.
+ *
+ * Para la pantalla del entreno eso son superseries normales: el tuck se parte
+ * en tramos (2 + 2 + 2), cada uno en superserie con lo que le toca de la otra
+ * rutina. Lo que una rutina ya traía encadenado (A1 + A2) sigue encadenado y
+ * cuenta como UNA vuelta de su fila.
  *
  * LA QUE TIENE MÁS
  *
- * Si una rutina tiene cuatro bloques y la otra tres, el cuarto va solo. Es el
- * mismo caso que una superserie de series desiguales (lib/superserie.ts): no
- * se inventa una pareja que el entrenador no ha puesto.
+ * Si una fila se acaba antes, lo que queda de la otra va solo, con su descanso
+ * de fusión. No se inventa una pareja que el entrenador no ha puesto.
  */
 export type ComoSeCombinan = 'seguidas' | 'superseries';
 
@@ -125,15 +132,34 @@ export function combinarRutinas(
     return { antes, fusionables: resto.filter((b) => !esAislado(b)), despues: resto.filter(esAislado) };
   });
   const salida: RoutineExercise[] = partes.flatMap((p) => p.antes.flatMap(tal));
-  const rondas = Math.max(0, ...partes.map((p) => p.fusionables.length));
-  for (let r = 0; r < rondas; r++) {
-    const ronda = partes.flatMap((p) => p.fusionables[r] ?? []);
-    if (ronda.length === 0) continue;
-    const descanso = ajustes.descanso ?? Math.max(0, ...ronda.map((e) => e.restSeconds ?? 0));
-    ronda.forEach((e, i) => {
-      const ultimo = i === ronda.length - 1;
+  // Cada rutina, como fila de vueltas: una serie de un ejercicio suelto, o una
+  // vuelta de una superserie suya.
+  const filas = partes.map((p) => vueltasDe(p.fusionables));
+  const largo = Math.max(0, ...filas.map((f) => f.length));
+  // Ronda a ronda, una vuelta de cada fila; las rondas seguidas con los mismos
+  // ejercicios se juntan en un tramo (tuck + press ×2).
+  const tramos: { vueltas: (RoutineExercise[] | null)[]; rondas: number }[] = [];
+  const clave = (vs: (RoutineExercise[] | null)[]) => vs.map((v) => (v ? v.map((e) => e.id).join('+') : '-')).join('|');
+  for (let r = 0; r < largo; r++) {
+    const vueltas = filas.map((f) => f[r] ?? null);
+    const ultimo = tramos[tramos.length - 1];
+    if (ultimo && clave(ultimo.vueltas) === clave(vueltas)) ultimo.rondas++;
+    else tramos.push({ vueltas, rondas: 1 });
+  }
+  // Un mismo ejercicio partido en tramos lleva un id por tramo: la pantalla los
+  // trata como ejercicios distintos y el id se usa de clave.
+  const vecesVisto = new Map<string, number>();
+  for (const t of tramos) {
+    const miembros = t.vueltas.flatMap((v) => v ?? []);
+    const descanso = ajustes.descanso ?? Math.max(0, ...miembros.map((e) => e.restSeconds ?? 0));
+    miembros.forEach((e, i) => {
+      const n = vecesVisto.get(e.id) ?? 0;
+      vecesVisto.set(e.id, n + 1);
+      const ultimo = i === miembros.length - 1;
       salida.push({
         ...e,
+        id: n === 0 ? e.id : `${e.id}~${n + 1}`,
+        sets: t.rondas,
         supersetWithPrevious: i > 0,
         ...(ultimo && descanso > 0 ? { restSeconds: descanso } : {}),
         ...(i > 0 && ajustes.transicion ? { transicionSegundos: ajustes.transicion } : {}),
@@ -143,8 +169,27 @@ export function combinarRutinas(
   return [...salida, ...partes.flatMap((p) => p.despues.flatMap(tal))];
 }
 
+/**
+ * Una rutina como fila de vueltas, en su orden: tuck ×6 son seis vueltas de
+ * tuck; una superserie suya A1 + A2 de 3 series, tres vueltas de [A1, A2] (si
+ * uno lleva menos series, sus últimas vueltas van sin él).
+ */
+function vueltasDe(bloques: RoutineExercise[][]): RoutineExercise[][] {
+  const vueltas: RoutineExercise[][] = [];
+  for (const b of bloques) {
+    const rondas = Math.max(0, ...b.map((e) => Math.max(0, Math.floor(e.sets || 0))));
+    for (let r = 0; r < rondas; r++) {
+      const vuelta = b.filter((e) => r < Math.floor(e.sets || 0));
+      if (vuelta.length > 0) vueltas.push(vuelta);
+    }
+  }
+  return vueltas;
+}
+
 export interface RondaParaVer {
   nombres: string[];
+  /** Cuántas veces se repite (las series de cada uno en ese tramo). */
+  series: number;
   /** Va sola porque el entrenador la marcó como aislada (no por sobrar). */
   aislado: boolean;
 }
@@ -154,9 +199,69 @@ export interface RondaParaVer {
  * ronda con sus ejercicios. Así sabe a qué se mete y en qué orden.
  */
 export function rondasDeLaCombinacion(
-  ejercicios: Pick<RoutineExercise, 'name' | 'supersetWithPrevious' | 'aislado'>[]
+  ejercicios: Pick<RoutineExercise, 'name' | 'supersetWithPrevious' | 'aislado' | 'sets'>[]
 ): RondaParaVer[] {
-  return bloquesDe(ejercicios).map((b) => ({ nombres: b.map((e) => e.name), aislado: esAislado(b) }));
+  return bloquesDe(ejercicios).map((b) => ({
+    nombres: b.map((e) => e.name),
+    series: Math.max(0, ...b.map((e) => e.sets ?? 0)),
+    aislado: esAislado(b),
+  }));
+}
+
+/**
+ * Las primeras `n` rondas, una a una ("Tuck – Press"), para el ejemplo que ve
+ * el entrenador: así se lee la fusión tal cual se va a entrenar.
+ */
+export function primerasRondas(
+  ejercicios: Pick<RoutineExercise, 'name' | 'supersetWithPrevious' | 'aislado' | 'sets'>[],
+  n: number
+): string[][] {
+  const salida: string[][] = [];
+  for (const r of rondasDeLaCombinacion(ejercicios)) {
+    if (r.aislado) continue;
+    for (let i = 0; i < Math.max(1, r.series) && salida.length < n; i++) salida.push(r.nombres);
+    if (salida.length >= n) break;
+  }
+  return salida;
+}
+
+/**
+ * AL GUARDAR, CADA EJERCICIO EN UNA SOLA FILA.
+ *
+ * Fusionando serie a serie, el tuck se entrena en tramos (2 + 2 + 2) y la
+ * pantalla los lleva como ejercicios distintos. En el historial, en cambio, lo
+ * que se quiere ver es "Tuck planche, 6 series": tres filas de tuck harían
+ * creer que se entrenó tres veces, y partirían sus marcas.
+ *
+ * Se juntan solo los tramos de la fusión (id con `~`), en el orden en que se
+ * hicieron. Un ejercicio que el entrenador puso dos veces a propósito sigue
+ * siendo dos.
+ */
+export function juntarTramos(log: LoggedExercise[], plan: Pick<RoutineExercise, 'id'>[]): LoggedExercise[] {
+  const base = (i: number) => (plan[i]?.id ?? '').split('~')[0];
+  const salida: LoggedExercise[] = [];
+  const dondeVa = new Map<string, number>();
+  log.forEach((ex, i) => {
+    const id = plan[i]?.id ?? '';
+    const k = base(i);
+    const destino = id.includes('~') ? dondeVa.get(k) : undefined;
+    if (destino === undefined) {
+      if (k) dondeVa.set(k, salida.length);
+      salida.push(ex);
+      return;
+    }
+    const antes = salida[destino];
+    salida[destino] = {
+      ...antes,
+      sets: [...antes.sets, ...ex.sets],
+      // Saltado solo si se saltaron todos sus tramos.
+      saltado: antes.saltado && ex.saltado ? true : undefined,
+      notes: [antes.notes, ex.notes].filter((n) => n?.trim()).join(' · ') || undefined,
+      rir: ex.rir ?? antes.rir,
+      esfuerzo: ex.esfuerzo ?? antes.esfuerzo,
+    };
+  });
+  return salida;
 }
 
 /** "6 min", "2:30 min", "45 s": un descanso como lo diría el entrenador. */

@@ -27,7 +27,7 @@ import {
   ajustesDeFusion,
   combinarRutinas,
   comoSeCombinan,
-  rondasDeLaCombinacion,
+  primerasRondas,
   segundosDeMinutos,
   textoDeDescanso,
   type ComoSeCombinan,
@@ -297,12 +297,11 @@ export default function RoutineEditorScreen() {
   const ejemploDeFusion = (() => {
     const dos = days.filter((d) => !d.gtg && !d.isRest && d.exercises.length > 0).slice(0, 2);
     if (dos.length < 2) return '';
-    const rondas = rondasDeLaCombinacion(combinarRutinas(dos, 'superseries', fusion))
-      .filter((r) => !r.aislado && r.nombres.length > 1)
-      .slice(0, 2);
+    // Ronda a ronda, como se va a entrenar: "Tuck – Press, descanso, Tuck – Press".
+    const rondas = primerasRondas(combinarRutinas(dos, 'superseries', fusion), 3).filter((r) => r.length > 1);
     if (rondas.length === 0) return '';
     const pausa = fusion.descanso ? frase`, ${textoDeDescanso(fusion.descanso)} de descanso, ` : t(', descanso, ');
-    return rondas.map((r) => r.nombres.join(' + ')).join(pausa);
+    return rondas.map((r) => r.join(' – ')).join(pausa);
   })();
   /*
    * El descanso tras cada superserie fusionada, escrito a mano cuando no es
