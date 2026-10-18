@@ -1113,6 +1113,15 @@ export interface WorkoutLog {
   esfuerzo?: EsfuerzoApuntado;
   /** Duración de la sesión en minutos (desde la primera serie completada). */
   durationMin?: number;
+  /**
+   * Solo en los días de grease the groove: las series que se buscaban ESE día.
+   *
+   * Lo pone el plan, pero el alumno puede subirlo o bajarlo para el día
+   * ("hoy hago ocho", "hoy solo cuatro"), y queda guardado con el día: el
+   * historial tiene que comparar con lo que se buscaba entonces, no con lo
+   * que pide el plan hoy.
+   */
+  gtg?: { objetivo: number };
   createdAt: number;
 }
 
@@ -1372,6 +1381,14 @@ export interface DiaDeRutinaDiaria {
   date: number;
   /** Ids de los ejercicios ya hechos hoy. */
   hechos: string[];
+  /**
+   * Las series de hoy de cada ejercicio, si el alumno añadió o quitó alguna
+   * (id del ejercicio → series). Solo vale para ese día: mañana vuelven las
+   * del entrenador.
+   */
+  series?: Record<string, number>;
+  /** Cuántas marcas había que hacer ese día, para el historial. */
+  total?: number;
   updatedAt: number;
 }
 

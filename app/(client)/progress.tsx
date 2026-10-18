@@ -29,6 +29,7 @@ import { resumenDeConstancia, ventanaDeConstancia } from '../../lib/constancia';
 import { buildBlockView } from '../../lib/blockView';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
+import { SeriesDelGtg } from '../../components/SeriesDelGtg';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getCached, setCached } from '../../lib/screenCache';
@@ -591,6 +592,7 @@ export default function ProgressScreen() {
 
       {tab === 'workouts' ? (
         months.length === 0 ? (
+          <>
           <Card style={styles.section}>
             <EmptyState
               icon="barbell-outline"
@@ -598,6 +600,8 @@ export default function ProgressScreen() {
               subtitle="Cuando termines una sesión se guardará aquí, en tu registro mensual."
             />
           </Card>
+          {uid ? <SeriesDelGtg clientId={uid} workoutLogs={workoutLogs} routine={activeRoutine} /> : null}
+          </>
         ) : (
           <>
             {/* LO QUE SE PERSIGUE, lo primero.
@@ -635,6 +639,10 @@ export default function ProgressScreen() {
                 />
               </View>
             </Card>
+
+            {/* Las series del grease the groove, día a día: la misma tarjeta que
+                ve su entrenador en su ficha. */}
+            {uid ? <SeriesDelGtg clientId={uid} workoutLogs={workoutLogs} routine={activeRoutine} /> : null}
 
             {/* Una tarjeta entera con un botón grande partía en dos lo que se
                 lee de corrido: el reparto del bloque, la constancia y el mes a

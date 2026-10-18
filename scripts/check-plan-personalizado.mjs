@@ -126,7 +126,7 @@ ok(
 // si no, la corrección entera se rechaza con "permisos insuficientes".
 ok(
   'las reglas dejan corregir el esfuerzo de la sesión',
-  /hasOnly\(\['exercises', 'durationMin', 'feedback', 'esfuerzo'\]\)/.test(lee('firestore.rules'))
+  /hasOnly\(\['exercises', 'durationMin', 'feedback', 'esfuerzo'(, '\w+')*\]\)/.test(lee('firestore.rules'))
 );
 
 // =========================================================================

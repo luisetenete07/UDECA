@@ -248,6 +248,21 @@ await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
 await comprobar('el entrenador ve lo que lleva hecho', true, () =>
   getDoc(doc(db, 'rutinasDiariasDias', claveDia))
 );
+// El historial de su grease the groove (components/SeriesDelGtg.tsx): lista
+// los días de SU alumno, filtrando por su propio trainerId.
+await comprobar('y su historial de días', true, () =>
+  getDocs(
+    query(
+      collection(db, 'rutinasDiariasDias'),
+      where('clientId', '==', alumno.id),
+      where('trainerId', '==', coach.user.uid),
+      where('date', '>=', 0)
+    )
+  )
+);
+await comprobar('pero no los de cualquiera', false, () =>
+  getDocs(query(collection(db, 'rutinasDiariasDias'), where('clientId', '==', alumno.id)))
+);
 // Dar por hecho el ejercicio de otro no es una función: es falsear su registro.
 await comprobar('pero no puede darlo por hecho él', false, () =>
   setDoc(doc(db, 'rutinasDiariasDias', claveDia), {
@@ -635,6 +650,30 @@ await comprobar('su entrenador la borra', true, () => deleteDoc(doc(db, 'bibliot
  * entrenador, a su nombre y en el futuro. El id es la hora, así que un hueco
  * cogido no se puede volver a coger. Y el plan lo pone el entrenador.
  */
+/*
+ * GREASE THE GROOVE: el alumno sube o baja las series de hoy, y se guarda en
+ * su entreno del día (`gtg.objetivo`). Lo demás del entreno no se mueve.
+ */
+console.log('\nSeries del grease the groove');
+await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
+{
+  const yo = auth.currentUser.uid;
+  const entreno = await addDoc(collection(db, 'workoutLogs'), {
+    trainerId: coach.user.uid, clientId: yo, routineId: 'r', routineName: 'R', dayName: 'Grease the groove',
+    date: Date.now(), exercises: [], gtg: { objetivo: 6 }, createdAt: Date.now(),
+  });
+  await comprobar('cambia las series de hoy', true, () =>
+    setDoc(doc(db, 'workoutLogs', entreno.id), { gtg: { objetivo: 8 } }, { merge: true })
+  );
+  await comprobar('pero no el día del entreno', false, () =>
+    setDoc(doc(db, 'workoutLogs', entreno.id), { date: 1 }, { merge: true })
+  );
+  await comprobar('ve su historial de la rutina diaria', true, () =>
+    getDocs(query(collection(db, 'rutinasDiariasDias'), where('clientId', '==', yo), where('date', '>=', 0)))
+  );
+  await deleteDoc(doc(db, 'workoutLogs', entreno.id));
+}
+
 console.log('\nLlamadas 1:1');
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
 const coachId = coach.user.uid;

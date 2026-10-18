@@ -7,7 +7,7 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { ProgressRing } from './ProgressRing';
 import { TextField } from './TextField';
-import { progresoGtg, textoDelDia } from '../lib/gtg';
+import { MAX_OBJETIVO, objetivoDelDia, progresoGtg, textoDelDia } from '../lib/gtg';
 import { isHoldMeasure } from '../lib/types';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { Routine, RoutineDay, WorkoutLog } from '../lib/types';
@@ -30,6 +30,8 @@ export function PantallaGtg({
   guardando,
   onAnadirSerie,
   onDeshacer,
+  ajusteObjetivo,
+  onCambiarObjetivo,
 }: {
   routine: Routine;
   /** El día que se entrena: el primero de la rutina, o el elegido en Sensaciones. */
@@ -38,13 +40,19 @@ export function PantallaGtg({
   guardando?: boolean;
   onAnadirSerie: (exerciseId: string, nombre: string, marca: string) => void;
   onDeshacer: () => void;
+  /** Las series de hoy que puso el alumno antes de apuntar ninguna (aún sin guardar). */
+  ajusteObjetivo?: number | null;
+  /** El alumno sube o baja las series de hoy. */
+  onCambiarObjetivo?: (series: number) => void;
 }) {
   const ejercicios = dia?.exercises ?? [];
   const [elegido, setElegido] = useState(ejercicios[0]?.exerciseId ?? '');
   const [marca, setMarca] = useState('');
   const [indicacionesAbiertas, setIndicacionesAbiertas] = useState(false);
 
-  const p = progresoGtg(routine, entrenoDeHoy, dia);
+  const p = progresoGtg(routine, entrenoDeHoy, dia, ajusteObjetivo);
+  // Lo que puso el entrenador, para decirlo cuando el alumno lo ha cambiado.
+  const delPlan = objetivoDelDia(routine, dia);
   const ejercicio = ejercicios.find((e) => e.exerciseId === elegido) ?? ejercicios[0];
   const enSegundos = isHoldMeasure(ejercicio?.measure);
   const indicaciones = dia?.gtgIndicaciones?.trim() ?? '';
@@ -85,6 +93,39 @@ export function PantallaGtg({
             <View key={`extra-${i}`} style={[styles.punto, styles.puntoExtra]} />
           ))}
         </View>
+
+        {/*
+          AÑADIR O QUITAR SERIES PARA HOY. Hay días de hacer una más y días de
+          quedarse en cuatro, y en un método que vive de no apretar eso es lo
+          sano. Cambia solo hoy; mañana vuelven las del entrenador, y si no son
+          las suyas se dice.
+        */}
+        {onCambiarObjetivo ? (
+          <View style={styles.ajuste}>
+            <Pressable
+              onPress={() => onCambiarObjetivo(p.objetivo - 1)}
+              disabled={p.objetivo <= 1}
+              hitSlop={8}
+              style={[styles.ajusteBtn, p.objetivo <= 1 && styles.ajusteApagado]}
+            >
+              <Ionicons name="remove" size={14} color={colors.textMuted} />
+              <Text style={styles.ajusteTexto}>Quitar serie</Text>
+            </Pressable>
+            <View style={{ flex: 1 }} />
+            <Pressable
+              onPress={() => onCambiarObjetivo(p.objetivo + 1)}
+              disabled={p.objetivo >= MAX_OBJETIVO}
+              hitSlop={8}
+              style={[styles.ajusteBtn, p.objetivo >= MAX_OBJETIVO && styles.ajusteApagado]}
+            >
+              <Ionicons name="add" size={14} color={colors.primary} />
+              <Text style={[styles.ajusteTexto, { color: colors.primary }]}>Añadir serie</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {onCambiarObjetivo && p.objetivo !== delPlan && delPlan > 0 ? (
+          <Text style={styles.ajusteNota}>{frase`Hoy ${p.objetivo} · tu entrenador puso ${delPlan}`}</Text>
+        ) : null}
       </Card>
 
       {ejercicios.length === 0 ? (
@@ -210,6 +251,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   puntoHecho: { backgroundColor: colors.primary, borderColor: colors.primary },
+  ajuste: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  ajusteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4 },
+  ajusteApagado: { opacity: 0.35 },
+  ajusteTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  ajusteNota: { ...typography.small, fontSize: 11, color: colors.textFaint, textAlign: 'center', marginTop: 2 },
   puntoExtra: { backgroundColor: colors.textFaint, borderColor: colors.textFaint },
   fila: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
   chip: {

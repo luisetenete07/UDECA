@@ -66,6 +66,7 @@ import {
 import { useAuth } from '../../../../lib/auth-context';
 import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { PlanDelAlumno } from '../../../../components/PlanDelAlumno';
+import { SeriesDelGtg } from '../../../../components/SeriesDelGtg';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
 import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
@@ -749,6 +750,17 @@ export default function ClientDetailScreen() {
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
             </Pressable>
           </Card>
+
+          {/* Las series de su grease the groove, día a día: lo mismo que ve él
+              en su Progreso. */}
+          {profile && id ? (
+            <SeriesDelGtg
+              clientId={id}
+              trainerId={profile.uid}
+              workoutLogs={workoutLogs}
+              routine={routines.find((r) => r.active) ?? null}
+            />
+          ) : null}
 
           <CollapsibleCard
             id="alumno-historial"

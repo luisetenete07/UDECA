@@ -104,12 +104,38 @@ export interface ProgresoGtg {
   quedan: number;
 }
 
+/** El tope de series al día que se puede poner. */
+export const MAX_OBJETIVO = 30;
+
+/**
+ * LAS SERIES QUE SE BUSCAN HOY.
+ *
+ * Las pone el plan, pero el alumno puede subirlas o bajarlas para el día: hay
+ * días de hacer una más y días de quedarse en cuatro, y en un método que vive
+ * de no apretar eso es lo sano. Lo que haya puesto manda: guardado en el
+ * entreno del día o, si aún no ha hecho ninguna serie, el `ajuste` que lleva la
+ * pantalla (un entreno sin series no se crea: contaría como día entrenado).
+ */
+export function objetivoDeHoy(
+  routine: Routine | null | undefined,
+  log: WorkoutLog | null,
+  dia?: RoutineDay | null,
+  ajuste?: number | null
+): number {
+  const propio = log?.gtg?.objetivo ?? ajuste;
+  if (typeof propio === 'number' && Number.isFinite(propio) && propio > 0) {
+    return Math.min(MAX_OBJETIVO, Math.max(1, Math.round(propio)));
+  }
+  return objetivoDelDia(routine, dia);
+}
+
 export function progresoGtg(
   routine: Routine | null | undefined,
   log: WorkoutLog | null,
-  dia?: RoutineDay | null
+  dia?: RoutineDay | null,
+  ajuste?: number | null
 ): ProgresoGtg {
-  const objetivo = objetivoDelDia(routine, dia);
+  const objetivo = objetivoDeHoy(routine, log, dia, ajuste);
   const hechas = seriesDeHoy(log);
   return {
     hechas,

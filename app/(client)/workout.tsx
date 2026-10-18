@@ -66,6 +66,8 @@ import {
   conSerieAnadida,
   entrenoDeHoy,
   esGtg,
+  MAX_OBJETIVO,
+  objetivoDeHoy,
   objetivoDelDia,
   sinLaUltimaSerie,
 } from '../../lib/gtg';
@@ -1475,6 +1477,32 @@ export default function WorkoutScreen() {
   const gtgLog =
     routine && esModoGtg ? entrenoDeHoy(history, routine.id, Date.now(), nombreGtg) : null;
 
+  /*
+   * Las series de hoy, si el alumno las cambia ANTES de apuntar ninguna: aún no
+   * hay entreno del día donde guardarlas (crearlo vacío contaría como día
+   * entrenado), así que esperan aquí y se guardan con la primera serie.
+   */
+  const [objetivoGtgHoy, setObjetivoGtgHoy] = useState<number | null>(null);
+  const objetivoGtgAGuardar = () => objetivoDeHoy(routine, gtgLog, diaGtg, objetivoGtgHoy);
+
+  const cambiarObjetivoGtg = async (series: number) => {
+    const n = Math.min(MAX_OBJETIVO, Math.max(1, Math.round(series)));
+    if (!gtgLog) {
+      setObjetivoGtgHoy(n);
+      return;
+    }
+    // Con el entreno del día ya hecho, se guarda en él: así lo ve también el
+    // entrenador y el historial compara con lo que se buscaba ese día.
+    const antes = history;
+    setHistory((prev) => prev.map((l) => (l.id === gtgLog.id ? { ...l, gtg: { objetivo: n } } : l)));
+    try {
+      await updateWorkoutLog(gtgLog.id, { gtg: { objetivo: n } });
+    } catch {
+      setHistory(antes);
+      showToast('No se pudo cambiar');
+    }
+  };
+
   const anadirSerieGtg = async (exerciseId: string, nombre: string, marca: string) => {
     if (!profile || !routine) return;
     const enPlan = diaGtg?.exercises.find((e) => e.exerciseId === exerciseId);
@@ -1486,8 +1514,11 @@ export default function WorkoutScreen() {
         { exerciseId, name: nombre, measure },
         marca
       );
+      // Con lo que se buscaba hoy: el historial lo necesita y marca el
+      // entreno como de grease the groove.
+      const gtg = { objetivo: objetivoGtgAGuardar() };
       if (gtgLog) {
-        await updateWorkoutLog(gtgLog.id, { exercises });
+        await updateWorkoutLog(gtgLog.id, { exercises, ...(gtgLog.gtg ? {} : { gtg }) });
       } else {
         await createWorkoutLog({
           trainerId: routine.trainerId,
@@ -1497,7 +1528,9 @@ export default function WorkoutScreen() {
           dayName: nombreGtg ?? 'Grease the groove',
           date: Date.now(),
           exercises,
+          gtg,
         });
+        setObjetivoGtgHoy(null);
         // Con la primera serie el día ya está empezado: sobra el aviso de las
         // ocho de la tarde diciendo que no ha entrenado.
         cancelarAvisosOlvido().catch(() => {});
@@ -2614,6 +2647,8 @@ export default function WorkoutScreen() {
           routine={routine}
           dia={diaGtg}
           entrenoDeHoy={gtgLog}
+          ajusteObjetivo={objetivoGtgHoy}
+          onCambiarObjetivo={cambiarObjetivoGtg}
           guardando={saving}
           onAnadirSerie={anadirSerieGtg}
           onDeshacer={quitarSerieGtg}

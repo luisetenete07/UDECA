@@ -43,10 +43,14 @@ export function marcaDeSerie(id: string, serie: number): string {
 }
 
 /** Todas las marcas que existen hoy, en orden. Nada fuera de esta lista cuenta. */
-export function marcasDeLaRutina(r: RutinaDiaria | null | undefined): string[] {
+export function marcasDeLaRutina(
+  r: RutinaDiaria | null | undefined,
+  dia?: DiaDeRutinaDiaria | null,
+  ahora = Date.now()
+): string[] {
   const salida: string[] = [];
   for (const e of r?.ejercicios ?? []) {
-    const n = seriesDe(e);
+    const n = seriesDelDia(e, dia, ahora);
     if (n <= 1) salida.push(e.id);
     else for (let i = 1; i <= n; i++) salida.push(marcaDeSerie(e.id, i));
   }
@@ -67,6 +71,61 @@ export function seriesDe(e: { series?: number }): number {
 
 /** El tope. Más que esto no es una rutina diaria, es otra cosa. */
 export const MAX_SERIES = 30;
+
+/**
+ * ¿Se cuenta por series? Solo si el entrenador puso un número: son los que el
+ * alumno puede subir o bajar. Dos minutos de movilidad no tienen series que
+ * añadir.
+ */
+export function cuentaSeries(e: { series?: number }): boolean {
+  return typeof e.series === 'number' && e.series > 0;
+}
+
+/**
+ * Las series de HOY de un ejercicio: las que el alumno haya puesto para hoy o,
+ * si no ha tocado nada, las del entrenador. Lo de ayer no cuenta.
+ */
+export function seriesDelDia(
+  e: EjercicioDiario,
+  dia?: DiaDeRutinaDiaria | null,
+  ahora = Date.now()
+): number {
+  const propias = dia && esMismoDia(dia.date, ahora) ? dia.series?.[e.id] : undefined;
+  return typeof propias === 'number' ? seriesDe({ series: propias }) : seriesDe(e);
+}
+
+/**
+ * EL ALUMNO AÑADE O QUITA SERIES PARA HOY.
+ *
+ * Hay días de hacer una más y días de hacer una menos, y en algo que se repite
+ * a diario eso es lo sano, no un fallo. Lo que cambia es SOLO hoy: mañana
+ * vuelven las del entrenador.
+ *
+ * Lo ya marcado se respeta: si llevaba tres hechas y baja a dos, quedan dos
+ * hechas (y no "3 de 2"). Devuelve las series del día y lo hecho, para guardar.
+ */
+export function conSeriesDeHoy(
+  rutina: RutinaDiaria,
+  dia: DiaDeRutinaDiaria | null | undefined,
+  ejercicioId: string,
+  series: number,
+  ahora = Date.now()
+): { series: Record<string, number>; hechos: string[] } {
+  const e = rutina.ejercicios.find((x) => x.id === ejercicioId);
+  const deHoy = dia && esMismoDia(dia.date, ahora) ? { ...(dia.series ?? {}) } : {};
+  const hechos = hechosDeHoy(dia, ahora);
+  if (!e) return { series: deHoy, hechos };
+  const nuevo = Math.min(MAX_SERIES, Math.max(1, Math.floor(series)));
+  const suyas = (m: string) => m === e.id || m.startsWith(`${e.id}#`);
+  const hechasAqui = hechos.filter(suyas).length;
+  const marcas = nuevo <= 1 ? [e.id] : Array.from({ length: nuevo }, (_, i) => marcaDeSerie(e.id, i + 1));
+  if (nuevo === seriesDe(e)) delete deHoy[e.id];
+  else deHoy[e.id] = nuevo;
+  return {
+    series: deHoy,
+    hechos: [...hechos.filter((m) => !suyas(m)), ...marcas.slice(0, Math.min(hechasAqui, nuevo))],
+  };
+}
 
 /**
  * Lee el número de series que se escribe en el editor.
@@ -230,7 +289,7 @@ export function progresoDiario(
    * contar: se vería "4 de 3 hechas", que es la clase de número que hace
    * desconfiar de todo lo demás que dice la pantalla.
    */
-  const vivas = new Set(marcasDeLaRutina(rutina));
+  const vivas = new Set(marcasDeLaRutina(rutina, dia, ahora));
   const total = vivas.size;
   const hechos = hechosDeHoy(dia, ahora).filter((m) => vivas.has(m)).length;
   return {

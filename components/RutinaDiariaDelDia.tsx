@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Text } from './Texto';
 import { frase } from '../lib/idioma';
+import { esMismoDia } from '../lib/fechas';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from './ProgressBar';
 import { VisorDeVideo } from './VisorDeVideo';
@@ -15,12 +16,16 @@ import {
 } from '../lib/firestore/rutinaDiaria';
 import {
   conMarca,
+  conSeriesDeHoy,
+  cuentaSeries,
   hayRutinaDiaria,
   hechosDeHoy,
   marcaDeSerie,
   NOMBRE_POR_DEFECTO,
+  MAX_SERIES,
   progresoDiario,
   seriesDe,
+  seriesDelDia,
   textoDelEjercicio,
   textoDiario,
 } from '../lib/rutinaDiaria';
@@ -84,14 +89,48 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       // Se pinta ya y se guarda detrás: marcar una casilla no puede esperar a
       // que conteste la red.
-      setDia((prev) => ({
-        id: prev?.id ?? '',
+      const nuevo: DiaDeRutinaDiaria = {
+        id: dia?.id ?? '',
         clientId: uid,
         date: Date.now(),
         hechos: siguiente,
+        // Las series que hubiera cambiado hoy siguen; las de otro día, no.
+        ...(dia?.series && esMismoDia(dia.date, Date.now()) ? { series: dia.series } : {}),
         updatedAt: Date.now(),
-      }));
-      setDiaDeRutinaDiaria(uid, siguiente, rutina.trainerId).catch(() => {});
+      };
+      setDia(nuevo);
+      setDiaDeRutinaDiaria(uid, siguiente, rutina.trainerId, Date.now(), {
+        ...(nuevo.series ? { series: nuevo.series } : {}),
+        total: progresoDiario(rutina, nuevo).total,
+      }).catch(() => {});
+    },
+    [uid, rutina, dia]
+  );
+
+  /*
+   * AÑADIR O QUITAR SERIES, SOLO PARA HOY.
+   *
+   * Hay días de hacer una más del pino y días de quedarse en tres. Cambia solo
+   * hoy: mañana vuelven las del entrenador. Lo ya marcado se respeta.
+   */
+  const cambiarSeries = useCallback(
+    (ejercicioId: string, series: number) => {
+      if (!uid || !rutina) return;
+      const r = conSeriesDeHoy(rutina, dia, ejercicioId, series);
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      const nuevo: DiaDeRutinaDiaria = {
+        id: dia?.id ?? '',
+        clientId: uid,
+        date: Date.now(),
+        hechos: r.hechos,
+        series: r.series,
+        updatedAt: Date.now(),
+      };
+      setDia(nuevo);
+      setDiaDeRutinaDiaria(uid, r.hechos, rutina.trainerId, Date.now(), {
+        series: r.series,
+        total: progresoDiario(rutina, nuevo).total,
+      }).catch(() => {});
     },
     [uid, rutina, dia]
   );
@@ -203,20 +242,21 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       <View style={styles.raya} />
 
       {rutina.ejercicios.map((e) => {
-        const series = seriesDe(e);
+        // Las de HOY: las del entrenador o las que haya puesto para hoy.
+        const series = seriesDelDia(e, dia);
         /*
          * Con series, una casilla por serie; sin ellas, una sola para todo el
          * ejercicio. Es la diferencia entre poder decir "llevo dos de cinco" a
          * lo largo del día y tener que esperar a terminarlas todas para marcar
          * algo, que en el grease the groove es justo lo que no encaja.
          */
-        const conSeries = typeof e.series === 'number' && e.series > 0 && series > 1;
+        const conSeries = cuentaSeries(e) && series > 1;
         const marcas = conSeries
           ? Array.from({ length: series }, (_, i) => marcaDeSerie(e.id, i + 1))
           : [e.id];
         const hechasAqui = marcas.filter((m) => hechos.includes(m)).length;
         const entero = hechasAqui === marcas.length;
-        const detalle = textoDelEjercicio(e);
+        const detalle = textoDelEjercicio({ ...e, ...(cuentaSeries(e) ? { series } : {}) });
 
         return (
           <View key={e.id} style={styles.fila}>
@@ -268,6 +308,35 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                       </Pressable>
                     );
                   })}
+                </View>
+              ) : null}
+
+              {/* Una más o una menos, para hoy. Solo en los que cuentan series. */}
+              {cuentaSeries(e) ? (
+                <View style={styles.ajuste}>
+                  <Pressable
+                    onPress={() => cambiarSeries(e.id, series - 1)}
+                    disabled={series <= 1}
+                    hitSlop={6}
+                    style={[styles.ajusteBtn, series <= 1 && styles.ajusteApagado]}
+                    accessibilityLabel="Quitar una serie hoy"
+                  >
+                    <Ionicons name="remove" size={13} color={colors.textMuted} />
+                    <Text style={styles.ajusteTexto}>Quitar</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => cambiarSeries(e.id, series + 1)}
+                    disabled={series >= MAX_SERIES}
+                    hitSlop={6}
+                    style={[styles.ajusteBtn, series >= MAX_SERIES && styles.ajusteApagado]}
+                    accessibilityLabel="Añadir una serie hoy"
+                  >
+                    <Ionicons name="add" size={13} color={colors.primary} />
+                    <Text style={[styles.ajusteTexto, { color: colors.primary }]}>Añadir</Text>
+                  </Pressable>
+                  {series !== seriesDe(e) ? (
+                    <Text style={styles.ajusteNota}>{frase`Hoy ${series} · tu entrenador puso ${seriesDe(e)}`}</Text>
+                  ) : null}
                 </View>
               ) : null}
 
@@ -373,6 +442,11 @@ const styles = StyleSheet.create({
   serieTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   serieTextoOn: { color: colors.onPrimary },
   verVideo: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
+  ajuste: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm },
+  ajusteBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  ajusteApagado: { opacity: 0.35 },
+  ajusteTexto: { ...typography.small, fontSize: 12, color: colors.textMuted, fontFamily: fonts.semiBold },
+  ajusteNota: { ...typography.small, fontSize: 11, color: colors.textFaint },
   verVideoTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   casilla: {
     width: 24,

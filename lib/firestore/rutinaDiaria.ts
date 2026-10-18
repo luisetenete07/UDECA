@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { inicioDelDia } from '../fechas';
 import { stripUndefined } from './clean';
@@ -51,23 +51,61 @@ export async function getDiaDeRutinaDiaria(
   return s.exists() ? ({ id: s.id, ...s.data() } as DiaDeRutinaDiaria) : null;
 }
 
-/** Guarda lo hecho hoy. Lo escribe el ALUMNO: es él quien las hace. */
+/**
+ * Guarda lo hecho hoy. Lo escribe el ALUMNO: es él quien las hace.
+ *
+ * Con `extra`, también las series que haya cambiado hoy y cuántas marcas
+ * había que hacer (lo que el historial compara después).
+ */
 export async function setDiaDeRutinaDiaria(
   clientId: string,
   hechos: string[],
   trainerId?: string,
-  dia = Date.now()
+  dia = Date.now(),
+  extra?: { series?: Record<string, number>; total?: number }
 ): Promise<void> {
   const date = inicioDelDia(dia);
-  await setDoc(
-    doc(db, 'rutinasDiariasDias', claveDelDia(clientId, date)),
-    {
-      clientId,
-      date,
-      hechos,
-      updatedAt: Date.now(),
-      ...(trainerId ? { trainerId } : {}),
-    },
-    { merge: true }
-  );
+  const datos = {
+    clientId,
+    date,
+    hechos,
+    updatedAt: Date.now(),
+    ...(trainerId ? { trainerId } : {}),
+    ...(extra?.series ? { series: extra.series } : {}),
+    ...(typeof extra?.total === 'number' ? { total: extra.total } : {}),
+  };
+  // Cada campo que se manda se REEMPLAZA entero (`mergeFields`) y el resto no
+  // se toca. Con un merge normal, un ejercicio que vuelve a sus series de
+  // siempre seguiría en `series`: el merge mezcla los mapas y no borra claves.
+  await setDoc(doc(db, 'rutinasDiariasDias', claveDelDia(clientId, date)), datos, {
+    mergeFields: Object.keys(datos),
+  });
+}
+
+/**
+ * Los días de la rutina diaria desde `desde`, para el historial.
+ *
+ * El alumno pide los suyos; el entrenador, los de SU alumno (las reglas solo le
+ * dejan listar los que llevan su `trainerId`). Si el índice aún no está creado,
+ * se cae a la consulta sin acotar y se filtra aquí: funciona igual, solo lee más.
+ */
+export async function getDiasDeRutinaDiaria(
+  clientId: string,
+  desde: number,
+  trainerId?: string
+): Promise<DiaDeRutinaDiaria[]> {
+  const base = [
+    where('clientId', '==', clientId),
+    ...(trainerId ? [where('trainerId', '==', trainerId)] : []),
+  ];
+  const leer = (snap: Awaited<ReturnType<typeof getDocs>>) =>
+    snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as object) }) as DiaDeRutinaDiaria)
+      .filter((d) => d.date >= desde)
+      .sort((a, b) => a.date - b.date);
+  try {
+    return leer(await getDocs(query(collection(db, 'rutinasDiariasDias'), ...base, where('date', '>=', desde))));
+  } catch {
+    return leer(await getDocs(query(collection(db, 'rutinasDiariasDias'), ...base)));
+  }
 }

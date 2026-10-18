@@ -97,7 +97,7 @@ export async function createWorkoutLog(
  */
 export async function updateWorkoutLog(
   id: string,
-  data: Pick<WorkoutLog, 'exercises'> & Partial<Pick<WorkoutLog, 'durationMin' | 'feedback'>>
+  data: Partial<Pick<WorkoutLog, 'exercises' | 'durationMin' | 'feedback' | 'gtg'>>
 ): Promise<void> {
   await updateDoc(doc(db, 'workoutLogs', id), stripUndefined(data));
 }

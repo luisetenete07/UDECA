@@ -610,6 +610,18 @@ export const EN: Record<string, string> = {
   '{0} para cambiar': '{0} to switch',
   'Superserie · {0} para cambiar': 'Superset · {0} to switch',
   'Ahora: {0}': 'Now: {0}',
+  // Series del grease the groove: añadir/quitar y su historial (components/SeriesDelGtg.tsx).
+  'Hoy {0} · tu entrenador puso {1}': 'Today {0} · your coach set {1}',
+  'Quitar una serie hoy': 'Remove a set today',
+  'Añadir una serie hoy': 'Add a set today',
+  'Nada en los últimos 7 días.': 'Nothing in the last 7 days.',
+  '{0} de 7 días · objetivo cumplido {1} · media {2} al día': '{0} of 7 days · target hit {1} · {2} a day on average',
+  'Objetivo hecho': 'Target hit',
+  'A medias': 'Partly done',
+  'serie en los últimos 7 días': 'set in the last 7 days',
+  'series en los últimos 7 días': 'sets in the last 7 days',
+  'hecha en los últimos 7 días': 'done in the last 7 days',
+  'hechas en los últimos 7 días': 'done in the last 7 days',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':
