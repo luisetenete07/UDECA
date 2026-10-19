@@ -139,7 +139,7 @@ if (conPrebuild.length === 0) {
   process.exit(0);
 }
 
-const temporal = mkdtempSync(path.join(tmpdir(), 'udeca-ios-'));
+const temporal = mkdtempSync(path.join(tmpdir(), 'calico-ios-'));
 const piezas = [];
 try {
   for (const { paquete, tar } of conPrebuild) {

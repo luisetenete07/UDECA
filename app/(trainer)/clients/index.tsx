@@ -256,7 +256,7 @@ export default function ClientsScreen() {
       rows
     );
     const stamp = new Date().toISOString().slice(0, 10);
-    if (!downloadCsv(`udeca-clientes-${stamp}.csv`, csv)) {
+    if (!downloadCsv(`calico-clientes-${stamp}.csv`, csv)) {
       showToast('La exportación solo está disponible en la versión web');
     }
   };

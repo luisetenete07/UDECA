@@ -1,4 +1,4 @@
-package expo.modules.udecapasos
+package expo.modules.calicopasos
 
 import android.content.Context
 import com.google.android.gms.common.ConnectionResult
@@ -25,12 +25,12 @@ import java.util.concurrent.TimeUnit
  * Lo que no puede saber es lo andado ANTES de suscribirse: el primer día cuenta
  * desde que se conecta.
  */
-class UdecaPasosModule : Module() {
+class CalicoPasosModule : Module() {
   private val context: Context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
 
   override fun definition() = ModuleDefinition {
-    Name("UdecaPasos")
+    Name("CalicoPasos")
 
     // Hace falta Google Play services al día; sin él se sigue con el sensor.
     Function("disponible") {

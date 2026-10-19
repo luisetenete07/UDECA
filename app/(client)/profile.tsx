@@ -397,7 +397,7 @@ export default function ClientProfileScreen() {
       <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={styles.signOut} />
       {/* Con la marca de su entrenador, una firma pequeña: la app es suya,
           pero se sabe con qué está hecha. */}
-      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conUdeca}>con CALICO</Text> : null}
+      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conCalico}>con CALICO</Text> : null}
 
       {/* Eliminar la cuenta: discreto, pero SIEMPRE presente. Las tiendas
           exigen que se pueda hacer desde dentro de la app, y el proceso en sí
@@ -410,7 +410,7 @@ export default function ClientProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  conUdeca: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.md, fontSize: 11 },
+  conCalico: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.md, fontSize: 11 },
   borrarCuenta: { alignSelf: 'center', paddingVertical: spacing.lg },
   borrarCuentaTexto: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
   hero: { alignItems: 'center', marginBottom: spacing.lg },

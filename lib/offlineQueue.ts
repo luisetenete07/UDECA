@@ -8,7 +8,7 @@ import type { WorkoutLog } from './types';
  * la siguiente vez que la app abre el entreno o el inicio con conexión.
  * El alumno nunca pierde una sesión por entrenar sin cobertura.
  */
-const KEY = 'udeca-pending-workouts';
+const KEY = 'calico-pending-workouts';
 
 export type PendingWorkout = Omit<WorkoutLog, 'id' | 'createdAt'>;
 

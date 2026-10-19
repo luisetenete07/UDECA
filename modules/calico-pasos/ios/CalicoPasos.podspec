@@ -1,11 +1,11 @@
 Pod::Spec.new do |s|
-  s.name           = 'UdecaPasos'
+  s.name           = 'CalicoPasos'
   s.version        = '1.0.0'
   s.summary        = 'Pasos del día desde Salud (HealthKit), con el Apple Watch incluido.'
   s.description    = 'Pasos del día desde Salud (HealthKit), con el Apple Watch incluido.'
   s.license        = 'UNLICENSED'
   s.author         = 'CALICO'
-  s.homepage       = 'https://udeca.app'
+  s.homepage       = 'https://github.com/luisetenete07/app-calistenia'
   s.platforms      = {
     :ios => '16.4'
   }

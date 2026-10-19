@@ -10,12 +10,12 @@
  *
  * Uso:
  *   1) Arranca el emulador (una vez instalado firebase-tools):
- *        npx firebase-tools@13 emulators:start --project udeca-demo --only auth,firestore
+ *        npx firebase-tools@13 emulators:start --project calico-demo --only auth,firestore
  *   2) Siembra los datos:
  *        node scripts/seed-emulator.mjs
  *   3) Compila la app apuntando al emulador y sírvela:
  *        EXPO_PUBLIC_FIREBASE_EMULATOR=1 EXPO_PUBLIC_FIREBASE_API_KEY=demo \
- *        EXPO_PUBLIC_FIREBASE_PROJECT_ID=udeca-demo EXPO_PUBLIC_FIREBASE_APP_ID=1:1:web:1 \
+ *        EXPO_PUBLIC_FIREBASE_PROJECT_ID=calico-demo EXPO_PUBLIC_FIREBASE_APP_ID=1:1:web:1 \
  *        npx expo export --platform web --clear && npx serve -s dist -l 4599
  *
  * La marca EXPO_PUBLIC_FIREBASE_EMULATOR solo se pone a mano en este flujo: los
@@ -39,7 +39,7 @@ import {
   where,
 } from 'firebase/firestore';
 
-const app = initializeApp({ apiKey: 'demo', projectId: 'udeca-demo', appId: '1:1:web:1' });
+const app = initializeApp({ apiKey: 'demo', projectId: 'calico-demo', appId: '1:1:web:1' });
 const auth = getAuth(app);
 const db = getFirestore(app);
 connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });

@@ -214,7 +214,7 @@ export const PAGOS_ACTIVOS = true;
  *
  * Va aparte de `ADMIN_EMAILS` a propósito, y no es un detalle: un admin puede
  * regalar suscripciones a cualquiera y las reglas de Firestore se lo permiten
- * (ver `isUdecaAdmin` en firestore.rules). Meter aquí una cuenta de escaparate
+ * (ver `isCalicoAdmin` en firestore.rules). Meter aquí una cuenta de escaparate
  * sería darle las llaves de la caja para ahorrarse una lista de cuatro líneas.
  *
  * Lo que da: se salta el muro de pago y el alta de 1 €. Nada más.

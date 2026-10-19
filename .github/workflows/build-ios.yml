@@ -116,7 +116,7 @@ jobs:
           EXPO_ASC_ISSUER_ID: b4f2d2f6-3485-4bb5-8d7c-5e89c09356d9
           EXPO_APPLE_TEAM_ID: 633UC6AVQJ
           EXPO_APPLE_TEAM_TYPE: INDIVIDUAL
-        run: eas build --platform ios --profile production --non-interactive --local --output ./udeca.ipa
+        run: eas build --platform ios --profile production --non-interactive --local --output ./calico.ipa
 
       # Subir va APARTE de compilar, y no con `--auto-submit`.
       #
@@ -132,7 +132,7 @@ jobs:
           EXPO_ASC_ISSUER_ID: b4f2d2f6-3485-4bb5-8d7c-5e89c09356d9
           EXPO_APPLE_TEAM_ID: 633UC6AVQJ
           EXPO_APPLE_TEAM_TYPE: INDIVIDUAL
-        run: eas submit --platform ios --profile production --path ./udeca.ipa --non-interactive
+        run: eas submit --platform ios --profile production --path ./calico.ipa --non-interactive
 
       # Y se guarda pase lo que pase con la subida: con el .ipa en la mano,
       # subirlo a mano desde Transporter es cuestión de minutos.
@@ -140,8 +140,8 @@ jobs:
         if: ${{ always() && inputs.en_el_runner }}
         uses: actions/upload-artifact@v4
         with:
-          name: udeca-ipa
-          path: ./udeca.ipa
+          name: calico-ipa
+          path: ./calico.ipa
           if-no-files-found: ignore
 
       - name: Limpiar clave

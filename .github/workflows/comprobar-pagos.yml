@@ -75,7 +75,7 @@ jobs:
         run: |
           url=https://udeca.vercel.app/api/check-subscription
           curl -s -o /tmp/s.txt -X POST "$url" -H 'Content-Type: application/json' \
-            --data '{"uid":"comprobacion-sin-pago","email":"no-existe@udeca-comprobacion.invalid"}' || true
+            --data '{"uid":"comprobacion-sin-pago","email":"no-existe@calico-comprobacion.invalid"}' || true
           cuerpo=$(cat /tmp/s.txt)
           echo "respuesta: $cuerpo"
 

@@ -33,7 +33,7 @@ export interface RememberedAccount {
   lastUsed: number;
 }
 
-const KEY = 'udeca-accounts';
+const KEY = 'calico-accounts';
 const MAX = 6;
 
 export async function getRememberedAccounts(): Promise<RememberedAccount[]> {

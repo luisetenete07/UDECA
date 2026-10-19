@@ -80,7 +80,7 @@ la primera de Android → **Download**.
 **Desde GitHub:** Actions → **Bajar el ultimo .aab** → *Run workflow* (con la
 rama correcta) → cuando termine, abre la ejecución y baja el adjunto de la
 sección **Artifacts**. Ojo: **viene dentro de un `.zip`**. Descomprímelo y sube
-el `udeca.aab` de dentro, no el zip.
+el `calico.aab` de dentro, no el zip.
 
 Ya en **Play Console**:
 

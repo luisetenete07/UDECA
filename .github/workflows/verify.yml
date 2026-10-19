@@ -64,7 +64,7 @@ jobs:
       # paga, y son justo las que no se pueden probar leyendo un fichero: una
       # regla mal escrita compila igual.
       #
-      # El proyecto es `udeca-demo`, inventado y local. Los guiones lo llevan
+      # El proyecto es `calico-demo`, inventado y local. Los guiones lo llevan
       # escrito dentro, así que ni tocan ni pueden tocar el Firebase de verdad
       # aunque su configuración esté en el entorno de este workflow.
       # El emulador de Firestore corre sobre Java, y firebase-tools pide 21 o
@@ -80,7 +80,7 @@ jobs:
       - name: Emulador de Firebase
         run: |
           npx --yes firebase-tools emulators:start \
-            --project udeca-demo --only auth,firestore > /tmp/emulador.log 2>&1 &
+            --project calico-demo --only auth,firestore > /tmp/emulador.log 2>&1 &
           for _ in $(seq 1 60); do
             curl -s -o /dev/null http://127.0.0.1:9099/ && break
             sleep 2

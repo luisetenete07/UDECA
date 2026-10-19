@@ -155,7 +155,7 @@ jobs:
           for intento in 1 2; do
             echo "::group::Intento $intento"
             if eas build --platform android --profile production \
-                 --non-interactive --local --output ./udeca.aab; then
+                 --non-interactive --local --output ./calico.aab; then
               echo "::endgroup::"
               exit 0
             fi
@@ -178,18 +178,18 @@ jobs:
         if: ${{ always() && inputs.en_el_runner }}
         run: |
           set -uo pipefail
-          if [ -s ./udeca.aab ]; then
+          if [ -s ./calico.aab ]; then
             echo "El .aab está donde se pidió."
           else
             SUELTO=$(find . -name '*.aab' -size +1M -print -quit 2>/dev/null || true)
             if [ -n "$SUELTO" ]; then
               echo "Encontrado en $SUELTO"
-              cp "$SUELTO" ./udeca.aab
+              cp "$SUELTO" ./calico.aab
             else
               echo "::warning::No hay ningún .aab: la compilación no llegó a terminar"
             fi
           fi
-          ls -lh ./udeca.aab 2>/dev/null || true
+          ls -lh ./calico.aab 2>/dev/null || true
 
       # Qué permisos pide de verdad el .aab, después de que Gradle junte los de
       # todas las librerías. Una de Google Play (la de los pasos) podría traer
@@ -199,10 +199,10 @@ jobs:
         if: ${{ always() && inputs.en_el_runner }}
         run: |
           set -uo pipefail
-          if [ ! -s ./udeca.aab ]; then echo "No hay .aab que mirar."; exit 0; fi
+          if [ ! -s ./calico.aab ]; then echo "No hay .aab que mirar."; exit 0; fi
           curl -fsSL --retry 3 -o bundletool.jar \
             https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar
-          java -jar bundletool.jar dump manifest --bundle ./udeca.aab \
+          java -jar bundletool.jar dump manifest --bundle ./calico.aab \
             | grep -E "uses-permission" | sed 's/^ *//' | tee permisos.txt
           if grep -q "android.permission.health" permisos.txt; then
             echo "::error::El .aab pide permisos de Salud (Health Connect)."
@@ -213,6 +213,6 @@ jobs:
         if: ${{ always() && inputs.en_el_runner }}
         uses: actions/upload-artifact@v4
         with:
-          name: udeca-aab
-          path: ./udeca.aab
+          name: calico-aab
+          path: ./calico.aab
           if-no-files-found: ignore

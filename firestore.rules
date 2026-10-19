@@ -43,7 +43,7 @@ service cloud.firestore {
     match /users/{userId} {
       // Admin de la plataforma CALICO: gestiona las suscripciones de los
       // coaches (modelo SaaS). Identificado por su correo verificado.
-      function isUdecaAdmin() {
+      function isCalicoAdmin() {
         return request.auth != null
           && request.auth.token.email in [
             'luisetenete07@gmail.com',
@@ -98,7 +98,7 @@ service cloud.firestore {
           // El alumno puede leer el perfil de SU entrenador (p. ej. para
           // enviarle una notificación al completar una sesión).
           || userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
-          || isUdecaAdmin()
+          || isCalicoAdmin()
         );
       // Al crearse, nadie puede regalarse tiempo de suscripción. La excepción
       // es la PRUEBA GRATUITA del entrenador: 14 días (DIAS_DE_PRUEBA_ENTRENADOR,
@@ -178,7 +178,7 @@ service cloud.firestore {
             ])
         )
         || (
-          isUdecaAdmin()
+          isCalicoAdmin()
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['subscriptionUntil', 'subscriptionPlan'])
         )
@@ -239,14 +239,14 @@ service cloud.firestore {
       // El propio usuario puede borrar su cuenta (su documento de perfil);
       // el admin de CALICO puede eliminar cuentas desde su panel.
       allow delete: if request.auth != null
-        && (request.auth.uid == userId || isUdecaAdmin());
+        && (request.auth.uid == userId || isCalicoAdmin());
     }
 
     // Plantilla maestra de ejercicios de CALICO (colección global). La lee
     // cualquier usuario autenticado (para precargarla en su biblioteca); solo
     // el admin (CEO) puede crear/editar/borrar.
     match /templateExercises/{exerciseId} {
-      function isUdecaAdmin() {
+      function isCalicoAdmin() {
         return request.auth != null
           && request.auth.token.email in [
             'luisetenete07@gmail.com',
@@ -254,7 +254,7 @@ service cloud.firestore {
           ];
       }
       allow read: if request.auth != null;
-      allow create, update, delete: if isUdecaAdmin();
+      allow create, update, delete: if isCalicoAdmin();
     }
 
     // Biblioteca de ejercicios de cada entrenador.
@@ -741,7 +741,7 @@ service cloud.firestore {
     // conocida: `affectedKeys` funciona con `increment`, así que nadie puede
     // inventarse campos ni meter datos aquí.
     match /analytics/{day} {
-      function isUdecaAdmin() {
+      function isCalicoAdmin() {
         return request.auth != null
           && request.auth.token.email in [
             'luisetenete07@gmail.com',
@@ -757,21 +757,21 @@ service cloud.firestore {
           'updatedAt'
         ];
       }
-      allow read, delete: if isUdecaAdmin();
+      allow read, delete: if isCalicoAdmin();
       allow create: if request.resource.data.keys().hasOnly(knownCounters());
       allow update: if request.resource.data.diff(resource.data)
         .affectedKeys().hasOnly(knownCounters());
     }
 
     match /errorLogs/{logId} {
-      function isUdecaAdmin() {
+      function isCalicoAdmin() {
         return request.auth != null
           && request.auth.token.email in [
             'luisetenete07@gmail.com',
             'luistenaf@gmail.com'
           ];
       }
-      allow read, delete: if isUdecaAdmin();
+      allow read, delete: if isCalicoAdmin();
       allow update: if false; // un error registrado no se reescribe
       allow create: if request.resource.data.keys().hasOnly([
             'message', 'stack', 'where', 'uid', 'fatal', 'platform', 'appVersion', 'createdAt'

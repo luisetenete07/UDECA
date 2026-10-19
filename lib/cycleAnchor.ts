@@ -22,8 +22,8 @@ import type { UserProfile } from './types';
  * La clave nueva se guarda APARTE de la vieja, sin tocarla. Así una versión
  * anterior de la app que lea el mismo móvil sigue encontrando lo que espera.
  */
-const clave = (routineId: string) => `udeca-cycle-anchor-${routineId}`;
-const claveFecha = (routineId: string) => `udeca-cycle-anchor-at-${routineId}`;
+const clave = (routineId: string) => `calico-cycle-anchor-${routineId}`;
+const claveFecha = (routineId: string) => `calico-cycle-anchor-at-${routineId}`;
 
 /** El ancla guardada en este dispositivo, con la fecha en que se decidió. */
 export async function getCycleAnchor(routineId: string): Promise<AnclaDelAlumno | null> {

@@ -112,7 +112,7 @@ export interface MemberCardData {
 export type CardData = SessionCardData | RecordCardData | ReportCardData | MemberCardData;
 
 /**
- * Código de dibujo. Define `udecaDrawCard(canvas, kind, data, logoUri)` y
+ * Código de dibujo. Define `calicoDrawCard(canvas, kind, data, logoUri)` y
  * devuelve una promesa que se resuelve cuando la tarjeta está pintada.
  */
 export const CARD_SCRIPT = `
@@ -539,7 +539,7 @@ function espaciado(t) {
   return String(t || '').split('').join(' ');
 }
 
-function udecaDrawCard(canvas, kind, data, logoUri, textos) {
+function calicoDrawCard(canvas, kind, data, logoUri, textos) {
   T = textos || {};
   canvas.width = W;
   canvas.height = H;
@@ -580,7 +580,7 @@ ${CARD_SCRIPT}
   };
   try {
     var p = ${payload};
-    udecaDrawCard(document.getElementById('c'), p.kind, p.data, p.logoUri, p.textos)
+    calicoDrawCard(document.getElementById('c'), p.kind, p.data, p.logoUri, p.textos)
       .then(function (canvas) { post(canvas.toDataURL('image/png')); })
       .catch(function (e) { post('ERROR:' + e.message); });
   } catch (e) {

@@ -27,7 +27,7 @@
  * (`completarPerfilDeGoogle` en lib/auth-context). Lo que se prueba aquí es ese
  * camino, que es donde estaba el fallo.
  *
- *   firebase emulators:start --project udeca-demo --only auth,firestore
+ *   firebase emulators:start --project calico-demo --only auth,firestore
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-registro.mjs
  */
 import { initializeApp } from 'firebase/app';
@@ -41,7 +41,7 @@ const AUTH_REST = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
 const DIA = 24 * 60 * 60 * 1000;
 const PW = 'Demo1234';
 
-const app = initializeApp({ apiKey: 'demo', projectId: 'udeca-demo' });
+const app = initializeApp({ apiKey: 'demo', projectId: 'calico-demo' });
 const auth = getAuth(app);
 connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
 const db = getFirestore(app);
@@ -200,7 +200,7 @@ console.log('\nLo que sigue sin poderse hacer');
 // --- A recoger ---
 for (const { uid, idToken } of creadas) {
   await fetch(
-    `http://127.0.0.1:8080/v1/projects/udeca-demo/databases/(default)/documents/users/${uid}`,
+    `http://127.0.0.1:8080/v1/projects/calico-demo/databases/(default)/documents/users/${uid}`,
     { method: 'DELETE', headers: { Authorization: 'Bearer owner' } }
   ).catch(() => {});
   await fetch(`${AUTH_REST}/accounts:delete?key=demo`, {

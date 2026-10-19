@@ -160,10 +160,10 @@ interface WorkoutDraft {
   viewIndex?: number;
 }
 
-const draftKey = (uid: string) => `udeca-workout-draft-${uid}`;
+const draftKey = (uid: string) => `calico-workout-draft-${uid}`;
 // Entreno de un día anterior que quedó sin finalizar (se guarda aparte para que
 // empezar uno nuevo hoy no lo borre).
-const pendingKey = (uid: string) => `udeca-workout-pending-${uid}`;
+const pendingKey = (uid: string) => `calico-workout-pending-${uid}`;
 // Un borrador merece restaurarse si contiene CUALQUIER dato del alumno, no solo
 // series marcadas: reps o pesos tecleados y notas cuentan igual. Solo se
 // escriben borradores que difieren de la plantilla del día (ver pristineRef),

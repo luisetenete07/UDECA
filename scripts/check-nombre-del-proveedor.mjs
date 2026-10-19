@@ -133,7 +133,7 @@ console.log('\nY siempre se llega con uno puesto');
   ok('el correo se parte por los puntos', nombreDeCorreo('luis.tena@gmail.com') === 'Luis Tena');
   ok('y por guiones y barras bajas', nombreDeCorreo('ana_gil-ruiz@x.es') === 'Ana Gil Ruiz');
   // La etiqueta del correo no es parte del nombre de nadie.
-  ok('sin la etiqueta de detrás del +', nombreDeCorreo('udeca.app+coach@gmail.com') === 'Udeca App');
+  ok('sin la etiqueta de detrás del +', nombreDeCorreo('calico.app+coach@gmail.com') === 'Calico App');
   /*
    * DEL CORREO ESCONDIDO DE APPLE NO SALE NADA. Son letras y números al azar:
    * poner "X7k2m9" de nombre es peor que no poner ninguno, y ahí es donde la

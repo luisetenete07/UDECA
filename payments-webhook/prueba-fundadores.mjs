@@ -18,7 +18,7 @@ if (!process.env.FIRESTORE_EMULATOR_HOST) {
 admin.initializeApp(
   process.env.FIREBASE_SERVICE_ACCOUNT
     ? { credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) }
-    : { projectId: process.env.GCLOUD_PROJECT || 'udeca-demo' }
+    : { projectId: process.env.GCLOUD_PROJECT || 'calico-demo' }
 );
 const db = admin.firestore();
 

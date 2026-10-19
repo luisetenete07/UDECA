@@ -32,7 +32,7 @@ import {
 } from 'firebase/firestore';
 
 const HOST = process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST || '127.0.0.1';
-const app = initializeApp({ apiKey: 'demo', projectId: 'udeca-demo', appId: '1:1:web:1' });
+const app = initializeApp({ apiKey: 'demo', projectId: 'calico-demo', appId: '1:1:web:1' });
 const auth = getAuth(app);
 const db = getFirestore(app);
 connectAuthEmulator(auth, `http://${HOST}:9099`, { disableWarnings: true });
@@ -621,7 +621,7 @@ await comprobar('ni todas de golpe', false, () => getDocs(collection(db, 'rutina
  */
 console.log('\nBibliotecas compartidas con un código');
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
-const plantillaDePrueba = JSON.stringify({ app: 'udeca', type: 'exercise-template', version: 1, exercises: [] });
+const plantillaDePrueba = JSON.stringify({ app: 'calico', type: 'exercise-template', version: 1, exercises: [] });
 await comprobar('el entrenador comparte la suya', true, () =>
   setDoc(doc(db, 'bibliotecas', 'PRUEBA'), { trainerId: coach.user.uid, nombre: 'Coach', plantilla: plantillaDePrueba, updatedAt: Date.now() })
 );

@@ -138,10 +138,10 @@ El diseño se revisa mirándolo, no imaginándolo. El ciclo completo:
 npx tsc --noEmit
 node scripts/check-native-deps.mjs
 # emulador con datos de prueba
-firebase emulators:start --only auth,firestore --project udeca-demo
+firebase emulators:start --only auth,firestore --project calico-demo
 node scripts/seed-emulator.mjs
 # build web apuntando al emulador
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=udeca-demo \
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=calico-demo \
 EXPO_PUBLIC_FIREBASE_EMULATOR=1 \
   npx expo export --platform web --output-dir dist-emu
 npx http-server dist-emu -p 4599

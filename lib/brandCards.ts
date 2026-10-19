@@ -98,7 +98,7 @@ let drawCard: DrawCard | null = null;
 function getDrawCard(): DrawCard {
   if (!drawCard) {
     // eslint-disable-next-line no-new-func
-    drawCard = new Function(`${CARD_SCRIPT}\nreturn udecaDrawCard;`)() as DrawCard;
+    drawCard = new Function(`${CARD_SCRIPT}\nreturn calicoDrawCard;`)() as DrawCard;
   }
   return drawCard;
 }
@@ -184,18 +184,18 @@ async function shareCard(
 // ---------- API pública ----------
 
 export function shareSessionImage(data: SessionCardData): Promise<ShareResult> {
-  return shareCard('session', data, 'sesion-udeca.png', 'Sesión CALICO');
+  return shareCard('session', data, 'sesion-calico.png', 'Sesión CALICO');
 }
 
 export function shareRecordImage(data: RecordCardData): Promise<ShareResult> {
-  return shareCard('record', data, 'record-udeca.png', 'Récord CALICO');
+  return shareCard('record', data, 'record-calico.png', 'Récord CALICO');
 }
 
 export function shareReportImage(data: ReportCardData): Promise<ShareResult> {
-  return shareCard('report', data, 'informe-udeca.png', 'Informe CALICO');
+  return shareCard('report', data, 'informe-calico.png', 'Informe CALICO');
 }
 
 /** Carné de miembro (con número de fundador si lo tiene encendido). */
 export function shareMemberImage(data: MemberCardData): Promise<ShareResult> {
-  return shareCard('member', data, 'carne-udeca.png', 'Mi carné CALICO');
+  return shareCard('member', data, 'carne-calico.png', 'Mi carné CALICO');
 }

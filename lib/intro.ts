@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * inicio de sesión.
  */
 
-const KEY = 'udeca-intro-seen';
+const KEY = 'calico-intro-seen';
 
 export async function hasSeenIntro(): Promise<boolean> {
   try {

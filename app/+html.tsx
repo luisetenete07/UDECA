@@ -76,9 +76,9 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('${base}/sw.js', { updateViaCache: 'none' }).then(function (reg) {
       function showUpdateBanner() {
-        if (document.getElementById('udeca-update-bar')) return;
+        if (document.getElementById('calico-update-bar')) return;
         var fondo = document.createElement('div');
-        fondo.id = 'udeca-update-bar';
+        fondo.id = 'calico-update-bar';
         fondo.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
         var caja = document.createElement('div');
         caja.style.cssText = 'max-width:380px;width:100%;text-align:center;';

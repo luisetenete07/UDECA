@@ -70,7 +70,7 @@ export default async function handler(req, res) {
   if (!esperada) {
     return res.status(503).json({ error: 'Falta configurar LEADS_EXPORT_KEY' });
   }
-  const dada = req.headers['x-udeca-key'] || req.query.key;
+  const dada = req.headers['x-calico-key'] || req.query.key;
   if (!claveCorrecta(dada, esperada)) {
     // Se dice QUÉ falta y CONTRA QUÉ variable se está comparando, nunca su
     // valor. Sin esto, "clave no válida" es igual de opaco tanto si te has
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="udeca-comunidad-${fecha(Date.now())}.csv"`
+      `attachment; filename="calico-comunidad-${fecha(Date.now())}.csv"`
     );
     // Que no se quede en ninguna caché por el camino: es una lista de personas.
     res.setHeader('Cache-Control', 'no-store');

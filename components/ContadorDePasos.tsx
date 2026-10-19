@@ -400,7 +400,7 @@ export function ContadorDePasos({
       await prepararPasosDelSistema();
       return;
     }
-    const clave = `udeca-salud-pedido-${profile.uid}`;
+    const clave = `calico-salud-pedido-${profile.uid}`;
     const yaPedido = await AsyncStorage.getItem(clave).catch(() => '1');
     if (enSilencio && yaPedido) return;
     await prepararPasosDelSistema();

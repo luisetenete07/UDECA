@@ -11,7 +11,7 @@
  *  - Nunca toca peticiones a otros dominios (Firebase, etc.).
  */
 
-const CACHE = 'udeca-v1';
+const CACHE = 'calico-v1';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());

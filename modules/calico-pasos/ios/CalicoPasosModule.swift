@@ -12,11 +12,11 @@ import HealthKit
  *
  * Solo lee pasos. No escribe nada.
  */
-public class UdecaPasosModule: Module {
+public class CalicoPasosModule: Module {
   private let store = HKHealthStore()
 
   public func definition() -> ModuleDefinition {
-    Name("UdecaPasos")
+    Name("CalicoPasos")
 
     Function("disponible") { () -> Bool in
       return HKHealthStore.isHealthDataAvailable()

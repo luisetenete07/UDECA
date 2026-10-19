@@ -23,6 +23,7 @@ import { ActualizacionObligatoria } from '../components/ActualizacionObligatoria
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { installGlobalErrorLogging } from '../lib/errorLog';
 import { colors } from '../lib/theme';
+import { migrarClavesAntiguas } from '../lib/clavesAntiguas';
 
 /**
  * Engancha una sola vez el registro de errores no capturados. Vive dentro del
@@ -43,6 +44,21 @@ function GlobalErrorLogger() {
 
 export default function RootLayout() {
   const [splashDone, setSplashDone] = useState(false);
+  /*
+   * Las claves guardadas con el nombre anterior pasan a su nombre nuevo ANTES
+   * de que nada las lea (lib/clavesAntiguas.ts): la cuenta, la cola de
+   * entrenos sin subir y el borrador se leen en cuanto arranca la sesión. Con
+   * un tope, por si el almacenamiento tardara: mejor arrancar que esperar.
+   */
+  const [clavesListas, setClavesListas] = useState(false);
+  useEffect(() => {
+    const tope = setTimeout(() => setClavesListas(true), 1500);
+    migrarClavesAntiguas().finally(() => {
+      clearTimeout(tope);
+      setClavesListas(true);
+    });
+    return () => clearTimeout(tope);
+  }, []);
   const [fontsLoaded] = useFonts({
     Sora_600SemiBold,
     Sora_700Bold,
@@ -64,6 +80,7 @@ export default function RootLayout() {
         </Head>
       ) : null}
       <SafeAreaProvider>
+        {!clavesListas ? null : (
         <AuthProvider>
           <StatusBar style="light" />
           <GlobalErrorLogger />
@@ -90,6 +107,7 @@ export default function RootLayout() {
               entera, esté donde esté quien la abre. */}
           <ActualizacionObligatoria />
         </AuthProvider>
+        )}
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ArranqueSeguro>

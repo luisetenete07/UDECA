@@ -7,7 +7,7 @@
  * código fuente.
  */
 (function () {
-  var C = window.UDECA_COMUNIDAD || {};
+  var C = window.CALICO_COMUNIDAD || {};
   var form = document.getElementById('form');
   var nombre = document.getElementById('nombre');
   var email = document.getElementById('email');

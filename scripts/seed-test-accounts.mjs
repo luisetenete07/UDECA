@@ -47,7 +47,7 @@ const PASSWORD = process.env.SEED_PASSWORD || randomPassword();
 
 function randomPassword() {
   const abc = 'abcdefghijkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let out = 'udeca-';
+  let out = 'calico-';
   for (let i = 0; i < 12; i++) out += abc[Math.floor(Math.random() * abc.length)];
   return out;
 }

@@ -3,11 +3,11 @@ plugins {
   id 'expo-module-gradle-plugin'
 }
 
-group = 'app.udeca'
+group = 'app.calico'
 version = '1.0.0'
 
 android {
-  namespace "expo.modules.udecapasos"
+  namespace "expo.modules.calicopasos"
   defaultConfig {
     versionCode 1
     versionName '1.0.0'

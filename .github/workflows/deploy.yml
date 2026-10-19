@@ -146,7 +146,7 @@ jobs:
           publish_dir: ./dist
           publish_branch: gh-pages
           user_name: "CALICO Deploy"
-          user_email: "udeca-bot@example.com"
+          user_email: "calico-bot@example.com"
           commit_message: "Deploy web build"
 
       # Y se comprueba que están DE VERDAD en internet, no solo en una rama.

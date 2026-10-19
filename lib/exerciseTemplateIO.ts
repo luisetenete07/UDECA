@@ -12,7 +12,7 @@ import {
  * SUSTITUYE toda la biblioteca actual (aviso de confirmación en la pantalla).
  */
 
-const MAGIC = 'udeca';
+const MAGIC = 'calico';
 const TYPE = 'exercise-template';
 
 export interface ExportedExercise {

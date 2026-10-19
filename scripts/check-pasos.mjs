@@ -312,14 +312,14 @@ console.log('\nLos pasos del sistema: Salud en iPhone, la grabación de Google e
   /*
    * El contador del iPhone no sabe nada del Apple Watch, y el sensor de
    * Android solo cuenta con la app delante. El módulo nativo
-   * (modules/udeca-pasos) lee lo bueno de cada uno.
+   * (modules/calico-pasos) lee lo bueno de cada uno.
    */
   const c = readFileSync(new URL('../components/ContadorDePasos.tsx', import.meta.url), 'utf8');
   const nativo = readFileSync(new URL('../lib/pasosNativos.ts', import.meta.url), 'utf8');
-  const swift = readFileSync(new URL('../modules/udeca-pasos/ios/UdecaPasosModule.swift', import.meta.url), 'utf8');
-  const kt = readFileSync(new URL('../modules/udeca-pasos/android/src/main/java/expo/modules/udecapasos/UdecaPasosModule.kt', import.meta.url), 'utf8');
-  const gradle = readFileSync(new URL('../modules/udeca-pasos/android/build.gradle', import.meta.url), 'utf8');
-  comprueba('el módulo es opcional: sin él, la app sigue como antes', /requireOptionalNativeModule<ModuloDePasos>\('UdecaPasos'\)/.test(nativo));
+  const swift = readFileSync(new URL('../modules/calico-pasos/ios/CalicoPasosModule.swift', import.meta.url), 'utf8');
+  const kt = readFileSync(new URL('../modules/calico-pasos/android/src/main/java/expo/modules/calicopasos/CalicoPasosModule.kt', import.meta.url), 'utf8');
+  const gradle = readFileSync(new URL('../modules/calico-pasos/android/build.gradle', import.meta.url), 'utf8');
+  comprueba('el módulo es opcional: sin él, la app sigue como antes', /requireOptionalNativeModule<ModuloDePasos>\('CalicoPasos'\)/.test(nativo));
   comprueba('iPhone: Salud, solo lectura de pasos', /requestAuthorization\(toShare: nil, read: \[pasos\]\)/.test(swift) && /\.stepCount/.test(swift));
   comprueba('iPhone: la suma de Salud, que no cuenta dos veces lo del reloj', /options: \.cumulativeSum/.test(swift));
   comprueba('iPhone: se queda con el mayor entre Salud y el propio iPhone',

@@ -39,7 +39,7 @@ export const FUNNEL_EVENTS = [
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];
 
 /** Clave donde se recuerda qué pasos ya contó ESTE dispositivo. */
-const ONCE_KEY = 'udeca.analytics.once.v1';
+const ONCE_KEY = 'calico.analytics.once.v1';
 
 /** Día natural en formato AAAA-MM-DD, en la zona horaria del dispositivo. */
 function today(): string {

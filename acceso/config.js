@@ -6,7 +6,7 @@
  * en el código de la página y saltarse el formulario, que es justo lo que le da
  * valor a la puerta.
  */
-window.UDECA_COMUNIDAD = {
+window.CALICO_COMUNIDAD = {
   /** Endpoint que guarda el contacto y devuelve el acceso. */
   apiUrl: 'https://udeca.vercel.app/api/lead',
   /** De dónde viene la visita (para saber qué campaña trae gente). */

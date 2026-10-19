@@ -1,5 +1,5 @@
 {
-  "name": "udeca-payments-webhook",
+  "name": "calico-payments-webhook",
   "version": "1.0.0",
   "private": true,
   "type": "module",

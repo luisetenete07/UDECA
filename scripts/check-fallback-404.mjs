@@ -31,7 +31,7 @@ const raiz = new URL('..', import.meta.url).pathname;
 
 console.log('\nLa copia para las direcciones con identificador');
 {
-  const dir = mkdtempSync(join(tmpdir(), 'udeca-404-'));
+  const dir = mkdtempSync(join(tmpdir(), 'calico-404-'));
   const indice =
     '<!DOCTYPE html><html><head><script>window.__EXPO_ROUTER_HYDRATE__=true;</script></head>' +
     '<body><div id="root"><div>inicio ya dibujado</div></div></body></html>';
@@ -49,7 +49,7 @@ console.log('\nLa copia para las direcciones con identificador');
 
 console.log('\nSi Expo cambia la bandera, revienta aquí y no en producción');
 {
-  const dir = mkdtempSync(join(tmpdir(), 'udeca-404b-'));
+  const dir = mkdtempSync(join(tmpdir(), 'calico-404b-'));
   writeFileSync(join(dir, 'index.html'), '<html><body>sin bandera ninguna</body></html>');
   let peto = false;
   try {

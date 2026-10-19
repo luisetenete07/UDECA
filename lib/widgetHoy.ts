@@ -13,7 +13,9 @@ import { Platform } from 'react-native';
  * crear desde aquí; esto es solo Android, y en el resto no hace nada.
  */
 
-export const CLAVE_DEL_WIDGET = 'udeca-widget-hoy';
+import { migrarClavesAntiguas } from './clavesAntiguas';
+
+export const CLAVE_DEL_WIDGET = 'calico-widget-hoy';
 export const NOMBRE_DEL_WIDGET = 'Hoy';
 
 export { datosDelWidget, type DatosDelWidget } from './widgetDatos';
@@ -21,6 +23,9 @@ import type { DatosDelWidget } from './widgetDatos';
 
 export async function leerDatosDelWidget(): Promise<DatosDelWidget | null> {
   try {
+    // El widget puede pintarse antes de que se abra la app tras actualizar:
+    // que encuentre sus datos con la clave nueva (lib/clavesAntiguas.ts).
+    await migrarClavesAntiguas();
     const t = await AsyncStorage.getItem(CLAVE_DEL_WIDGET);
     return t ? (JSON.parse(t) as DatosDelWidget) : null;
   } catch {

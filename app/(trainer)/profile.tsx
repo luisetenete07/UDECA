@@ -680,7 +680,7 @@ export default function TrainerProfileScreen() {
       <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={{ marginTop: spacing.lg }} />
       {/* Con marca propia, una firma pequeña al final: la app es suya, pero se
           sabe con qué está hecha. */}
-      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conUdeca}>con CALICO</Text> : null}
+      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conCalico}>con CALICO</Text> : null}
 
       {/* Ver el comentario del mismo botón en el perfil del alumno. */}
       <Pressable onPress={() => router.push('/account-deletion')} style={styles.borrarCuenta}>
@@ -691,7 +691,7 @@ export default function TrainerProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  conUdeca: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.md, fontSize: 11 },
+  conCalico: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.md, fontSize: 11 },
   borrarCuenta: { alignSelf: 'center', paddingVertical: spacing.lg },
   borrarCuentaTexto: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
   backBtn: {

@@ -21,8 +21,8 @@ import { cursosParaMi, esVip } from '../../lib/vip';
 import { useTabScreenOptions } from '../../lib/navTheme';
 import { t, useT  } from '../../lib/idioma';
 
-const onboardingKey = (uid: string) => `udeca-onboarding-${uid}`;
-const pestanasKey = (uid: string) => `udeca-pestanas-${uid}`;
+const onboardingKey = (uid: string) => `calico-onboarding-${uid}`;
+const pestanasKey = (uid: string) => `calico-pestanas-${uid}`;
 
 /** Qué pestañas tienen algo dentro. `null` mientras no se sabe: se enseñan. */
 interface PestanasConAlgo {

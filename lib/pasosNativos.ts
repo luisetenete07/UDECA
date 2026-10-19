@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
 
 /**
- * El módulo nativo de pasos (modules/udeca-pasos).
+ * El módulo nativo de pasos (modules/calico-pasos).
  *
  *  - iPhone: Salud (HealthKit). Junta iPhone y Apple Watch sin contar dos veces
  *    lo mismo: la cifra es la que la persona ve en su app de Salud.
@@ -24,7 +24,7 @@ interface ModuloDePasos {
 }
 
 const modulo: ModuloDePasos | null =
-  Platform.OS === 'web' ? null : requireOptionalNativeModule<ModuloDePasos>('UdecaPasos');
+  Platform.OS === 'web' ? null : requireOptionalNativeModule<ModuloDePasos>('CalicoPasos');
 
 /** ¿Hay lectura del sistema (Salud o la grabación de Google)? */
 export function hayPasosDelSistema(): boolean {
