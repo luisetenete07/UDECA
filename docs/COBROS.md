@@ -1,4 +1,4 @@
-# Cómo se cobra en UDECA
+# Cómo se cobra en CALICO
 
 Un solo documento con las tres cosas que se cobran, quién las paga y —lo que
 más problemas da— **dónde se puede enseñar un precio y dónde no**.
@@ -15,7 +15,7 @@ más problemas da— **dónde se puede enseñar un precio y dónde no**.
 | **Primer año del entrenador** | 27 €, una vez | entrenador al entrar | web (`pagos.altaCoach`) o app (`COACH_ENTRY_LINK`) |
 | **Plan anual del entrenador** | 180 €/año | para quitar el tope de 5 alumnos, y para seguir a partir del segundo año | app (`COACH_PAYMENT_LINK`) |
 
-El **alumno de un entrenador no le paga nada a UDECA**. Lo que le paga a su
+El **alumno de un entrenador no le paga nada a CALICO**. Lo que le paga a su
 entrenador es cosa de los dos: la app solo lleva la cuenta.
 
 ### Por qué se entra pagando el año entero
@@ -183,11 +183,11 @@ cada plan.
 
 ### Lo que tiene que seguir cuadrando
 
-Los enlaces se crearon en el **perfil de UDECA** de Stripe, y las claves de
+Los enlaces se crearon en el **perfil de CALICO** de Stripe, y las claves de
 Vercel (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) son de **ese mismo
 perfil**. Esa coincidencia es todo lo que hace que un pago active una cuenta.
 
-Estuvo apagado un tiempo justo por eso: los enlaces eran del perfil de UDECA y
+Estuvo apagado un tiempo justo por eso: los enlaces eran del perfil de CALICO y
 las claves de la cuenta de coaching. Con esa mezcla el cliente paga de verdad,
 el servidor le pregunta a la cuenta equivocada, no encuentra el pago y **la
 cuenta no se activa nunca**. Sin ningún error y con el dinero ya cobrado.
@@ -303,7 +303,7 @@ la cuenta, y el día que se pegue la clave empieza a funcionar solo.
 3. **API Keys → Create**, permiso de solo envío.
 4. En Vercel, en el proyecto del webhook: **Settings → Environment Variables**
    - `RESEND_API_KEY` = la clave
-   - `MAIL_FROM` = `UDECA <avisos@udeca.app>` (opcional; es el valor por defecto)
+   - `MAIL_FROM` = `CALICO <avisos@udeca.app>` (opcional; es el valor por defecto)
 5. **Volver a desplegar.** Las variables no entran en vigor hasta el siguiente
    despliegue.
 

@@ -3,7 +3,7 @@ import { correoConfigurado, enviarCorreos } from './_correo.js';
 import { resumenDeLaSemana, seriesHechas } from './_resumen.js';
 
 /**
- * Tarea diaria de UDECA (Vercel Cron).
+ * Tarea diaria de CALICO (Vercel Cron).
  *
  * Resuelve dos cosas que la app SOLA no puede: hasta ahora, las métricas del
  * grupo y los avisos dependían de que el propio alumno abriera la app. Si no

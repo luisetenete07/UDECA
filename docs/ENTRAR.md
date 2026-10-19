@@ -1,6 +1,6 @@
 # Entrar con Google y con Apple
 
-Guía de configuración con los datos de UDECA ya puestos. El código ya está
+Guía de configuración con los datos de CALICO ya puestos. El código ya está
 hecho; esto es lo que hay que dejar preparado **fuera** de la app: en Firebase,
 en Google Cloud y en Apple.
 
@@ -76,7 +76,7 @@ Guarda.
 **+ CREAR CREDENCIALES** → **ID de cliente de OAuth** → Tipo de aplicación:
 **iOS**.
 
-- Nombre: `UDECA iOS`
+- Nombre: `CALICO iOS`
 - **ID de paquete**: `com.udeca.app`
 - Crear.
 
@@ -122,7 +122,7 @@ Cópiala entera, con los dos puntos.
 Ahora, en Google Cloud: **+ CREAR CREDENCIALES** → **ID de cliente de OAuth** →
 Tipo de aplicación: **Android**.
 
-- Nombre: `UDECA Android`
+- Nombre: `CALICO Android`
 - **Nombre del paquete**: `entrenadores.app`
 - **Huella digital del certificado SHA-1**: la que acabas de copiar.
 - Crear.
@@ -253,7 +253,7 @@ Profiles.
 1. **Identifiers** → tu App ID `com.udeca.app` → marca **Sign in with Apple** →
    Save. *(Con esto ya funciona en iPhone.)*
 2. **Identifiers** → **+** → **Services IDs**:
-   - Description: `UDECA Web`
+   - Description: `CALICO Web`
    - Identifier: `com.udeca.app.web` (no puede ser igual que el del App ID)
    - Continue → Register.
    - Entra en él → marca **Sign in with Apple** → **Configure**:
@@ -261,7 +261,7 @@ Profiles.
      - Domains: `udeca-luistenafit.firebaseapp.com`
      - Return URLs: `https://udeca-luistenafit.firebaseapp.com/__/auth/handler`
    - Save.
-3. **Keys** → **+** → nombre `UDECA Apple Sign In` → marca **Sign in with
+3. **Keys** → **+** → nombre `CALICO Apple Sign In` → marca **Sign in with
    Apple** → Configure → Primary App ID `com.udeca.app` → Continue → Register.
    - **Descarga el archivo `.p8`. Solo se puede descargar UNA vez.**
    - Apunta el **Key ID** (10 caracteres).

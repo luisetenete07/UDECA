@@ -14,7 +14,7 @@ import { colors, fonts, gradients, radius, spacing, typography } from '../../lib
 const NATIVE = Platform.OS !== 'web';
 
 /**
- * Presentación de la esencia de UDECA para quien abre la app por primera vez y
+ * Presentación de la esencia de CALICO para quien abre la app por primera vez y
  * todavía no tiene cuenta. Son tres ideas, no un manual: qué entrenamos, cómo
  * lo entrenamos y con quién. Termina invitando a entrar con la prueba gratuita
  * por delante, para que la primera pantalla nunca sea un muro de pago.

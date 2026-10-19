@@ -1,5 +1,5 @@
 /*
- * Identidad de UDECA en web: negro, oro cálido, Sora para los títulos e Inter
+ * Identidad de CALICO en web: negro, oro cálido, Sora para los títulos e Inter
  * para el texto. Los mismos valores que usa la app (lib/theme.ts), para que
  * quien llega desde la web y abre la app no note que ha cambiado de sitio.
  */
@@ -104,6 +104,8 @@ header.scrolled .nav {
 }
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
 .brand img { width: 34px; height: 34px; }
+/* El logotipo de CALICO entero (con su C): va en vector y se mide por el alto. */
+.brand img.logotipo { width: auto; height: 22px; }
 .brand span {
   font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
   letter-spacing: -0.02em;

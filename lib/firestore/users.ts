@@ -98,7 +98,7 @@ function mapClients(snap: QuerySnapshot<DocumentData>): UserProfile[] {
 }
 
 
-/** Admin UDECA: lista de todos los coaches (para gestionar suscripciones). */
+/** Admin CALICO: lista de todos los coaches (para gestionar suscripciones). */
 export async function getAllCoaches(): Promise<UserProfile[]> {
   return cuentasPorRol('trainer');
 }
@@ -112,7 +112,7 @@ async function cuentasPorRol(rol: UserProfile['role']): Promise<UserProfile[]> {
 }
 
 /**
- * Admin UDECA: fija el fin de suscripción de una cuenta de pago (reglas: solo
+ * Admin CALICO: fija el fin de suscripción de una cuenta de pago (reglas: solo
  * admin).
  */
 export async function setCoachSubscription(
@@ -127,7 +127,7 @@ export async function setCoachSubscription(
 }
 
 /**
- * Admin UDECA: elimina el perfil de un coach de la plataforma (pierde el
+ * Admin CALICO: elimina el perfil de un coach de la plataforma (pierde el
  * acceso y desaparece del panel). Su credencial de login en Firebase Auth
  * solo puede borrarla él mismo o el admin desde la consola de Firebase.
  */
@@ -147,7 +147,7 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
  * el enlace de pago de aquí abajo: `updateUserProfile` descarta los `undefined`
  * antes de escribir, así que "guardar vacío" no borraría nada y la marca
  * anterior reaparecería al recargar el perfil. Quien quita su marca quiere
- * volver a UDECA, no quedarse con la de ayer.
+ * volver a CALICO, no quedarse con la de ayer.
  */
 export async function setBrandName(uid: string, marca: string) {
   const limpio = marca.trim();
@@ -157,7 +157,7 @@ export async function setBrandName(uid: string, marca: string) {
 }
 
 /**
- * El logo del entrenador. `null` lo quita (y vuelve el emblema de UDECA).
+ * El logo del entrenador. `null` lo quita (y vuelve el emblema de CALICO).
  * Se guarda tal cual llega de `pickLogo`, ya pequeño.
  */
 export async function setBrandLogo(uid: string, logo: string | null) {

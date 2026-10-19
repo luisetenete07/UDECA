@@ -42,7 +42,7 @@ export function RateApp() {
           <Ionicons name="star" size={18} color={colors.primary} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.titulo}>¿Te está gustando UDECA?</Text>
+          <Text style={styles.titulo}>¿Te está gustando CALICO?</Text>
           <Text style={styles.texto}>
             Una valoración tuya vale más que cualquier anuncio: es lo que hace que otros
             se atrevan a probarla.

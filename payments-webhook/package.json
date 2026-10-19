@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Webhook de Stripe para confirmar cobros de UDECA automáticamente (desplegable gratis en Vercel).",
+  "description": "Webhook de Stripe para confirmar cobros de CALICO automáticamente (desplegable gratis en Vercel).",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
     "firebase-admin": "^12.7.0",

@@ -141,7 +141,7 @@ export function clientSlotsOf(profile: { clientSlots?: number } | null): number 
 }
 
 /**
- * Correos con poderes de administración de UDECA (gestión de suscripciones).
+ * Correos con poderes de administración de CALICO (gestión de suscripciones).
  * Los admins tienen acceso completo de por vida (nunca pagan ni caducan).
  */
 export const ADMIN_EMAILS = ['luisetenete07@gmail.com', 'luistenaf@gmail.com'];
@@ -151,17 +151,17 @@ export function isAdmin(profile: UserProfile | null): boolean {
 }
 
 /**
- * ¿Se cobra ya en UDECA?
+ * ¿Se cobra ya en CALICO?
  *
  * Está aquí, en el fichero puro, porque lo mira la puerta de entrada
  * (`needsEntryPayment`) y esa tiene que poder comprobarse sin arrancar la app.
  *
  * AHORA MISMO SÍ. Los cinco Payment Links de producción están en
  * lib/enlacesDeCobro.ts y las claves de Vercel son del MISMO perfil de Stripe en
- * el que se crearon (el de UDECA).
+ * el que se crearon (el de CALICO).
  *
  * Esa coincidencia es todo: estuvo apagado un tiempo justamente porque los
- * enlaces eran del perfil de UDECA y las claves de otra cuenta, la del
+ * enlaces eran del perfil de CALICO y las claves de otra cuenta, la del
  * coaching. Con esa mezcla el cliente paga de verdad, el servidor le pregunta a
  * la cuenta equivocada, no encuentra ese pago y la cuenta no se activa nunca:
  * sin ningún error y con el dinero ya cobrado. Si algún día se cambia de perfil
@@ -195,11 +195,11 @@ export function isAdmin(profile: UserProfile | null): boolean {
  *
  * Lo que NO apaga: la prueba sigue teniendo su plazo, y al acabarse la cuenta
  * se para. El acceso se da a mano desde el panel de CEO (perfil del
- * entrenador → "Admin UDECA · cuentas"), que es como se cubre a quien paga por
+ * entrenador → "Admin CALICO · cuentas"), que es como se cubre a quien paga por
  * fuera mientras tanto.
  *
  * Y tampoco toca lo que un ALUMNO le paga a su ENTRENADOR: ese dinero no pasa
- * por UDECA y la app no lo lleva (solo el periodo de coaching, ver
+ * por CALICO y la app no lo lleva (solo el periodo de coaching, ver
  * lib/coaching.ts).
  */
 export const PAGOS_ACTIVOS = true;
@@ -328,7 +328,7 @@ export function planIlimitado(profile: UserProfile | null): boolean {
 }
 
 /**
- * ¿Puede este entrenador poner SU LOGO en lugar del de UDECA?
+ * ¿Puede este entrenador poner SU LOGO en lugar del de CALICO?
  *
  * Es del plan sin tope, no del de entrada: es lo que el entrenador enseña a sus
  * alumnos cada día, y por eso es la razón más visible para dar el salto. Los

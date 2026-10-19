@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "UDECA",
+    "name": "CALICO",
     "slug": "udeca",
     "scheme": [
       "udeca",
@@ -23,7 +23,7 @@
       "infoPlist": {
         "NSMotionUsageDescription": "Para contar los pasos que das cada día y sumarlos a tu plan de nutrición, sin que tengas que apuntarlos a mano.",
         "NSHealthShareUsageDescription": "Para leer los pasos que das cada día, también los de tu Apple Watch, y sumarlos a tu plan de nutrición sin que tengas que apuntarlos a mano.",
-        "NSHealthUpdateUsageDescription": "UDECA solo lee tus pasos de Salud para tu plan de nutrición. No escribe ni cambia ningún dato de Salud."
+        "NSHealthUpdateUsageDescription": "CALICO solo lee tus pasos de Salud para tu plan de nutrición. No escribe ni cambia ningún dato de Salud."
       },
       "entitlements": {
         "com.apple.developer.healthkit": true,
@@ -77,7 +77,7 @@
           "widgets": [
             {
               "name": "Hoy",
-              "label": "UDECA · Hoy",
+              "label": "CALICO · Hoy",
               "description": "Tu entreno de hoy y tus pasos",
               "minWidth": "180dp",
               "minHeight": "110dp",

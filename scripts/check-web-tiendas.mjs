@@ -14,7 +14,7 @@
  *
  *  2. LAS INSIGNIAS SON DE OTROS. La de Apple y la de Google vienen de sus
  *     dueños y sus guías de marca prohíben retocarlas. Un "ya que estoy" de
- *     recolorearlas para que peguen con el negro de UDECA no lo detecta nadie
+ *     recolorearlas para que peguen con el negro de CALICO no lo detecta nadie
  *     mirando, y es incumplir las dos condiciones que hay firmadas por tener la
  *     app publicada. Aquí se comprueba que siguen siendo los archivos que se
  *     bajaron, por tamaño y por lo que llevan dentro.

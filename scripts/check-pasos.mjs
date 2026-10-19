@@ -88,7 +88,7 @@ console.log('\nQué se guarda cuando llega una lectura del móvil');
   comprueba('sin nada previo, se guarda tal cual', pasosAGuardar(null, 4000, { acumulativo: false }) === 4000);
 
   // Android: solo cuenta con la app abierta, así que se suma; si sustituyera,
-  // abrir UDECA a las ocho de la tarde borraría el día entero.
+  // abrir CALICO a las ocho de la tarde borraría el día entero.
   comprueba('en Android se suma a lo del día', pasosAGuardar({ date: 0, steps: 4000, source: 'telefono' }, 300, { acumulativo: true }) === 4300);
 
   // Y lo escrito a mano no lo pisa una lectura parcial: quien teclea los 12.000
@@ -278,7 +278,7 @@ console.log('\nLos días en que no se abrió la app (iPhone)');
 {
   /*
    * El iPhone guarda una semana de pasos. Sin rellenar, el día que no se abría
-   * UDECA se quedaba a cero aunque el teléfono supiera cuánto se anduvo.
+   * CALICO se quedaba a cero aunque el teléfono supiera cuánto se anduvo.
    */
   const hoy = inicioDelDia(Date.now());
   const ayer = masDias(hoy, -1);

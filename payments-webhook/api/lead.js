@@ -138,7 +138,7 @@ export default async function handler(req, res) {
         updatedAt: Date.now(),
         // Consentimiento para escribirle: se guarda con fecha, que es lo que
         // exige el RGPD para poder demostrarlo.
-        consent: { granted: true, at: Date.now(), text: 'Alta en la comunidad privada de UDECA' },
+        consent: { granted: true, at: Date.now(), text: 'Alta en la comunidad privada de CALICO' },
       },
       { merge: true }
     );

@@ -46,8 +46,8 @@ console.log('\nQué dice la marca');
   // Una captura de una clase no tiene por qué publicar la dirección de nadie.
   comprueba('nunca lleva el correo', !t.includes('@'));
 
-  comprueba('sin nombre, al menos la marca', textoDeMarca({ uid: 'xxxxxyyyyy' }).startsWith('UDECA'));
-  comprueba('sin perfil no revienta', textoDeMarca(null) === 'UDECA');
+  comprueba('sin nombre, al menos la marca', textoDeMarca({ uid: 'xxxxxyyyyy' }).startsWith('CALICO'));
+  comprueba('sin perfil no revienta', textoDeMarca(null) === 'CALICO');
   comprueba('un nombre con espacios de sobra se limpia', textoDeMarca({ name: '  Ana  ', uid: 'q1w2e3' }).startsWith('Ana'));
 }
 

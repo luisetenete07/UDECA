@@ -308,20 +308,20 @@ export const EN: Record<string, string> = {
   ' El esfuerzo se le pregunta al terminar cada ejercicio.': ' Effort is asked after each exercise.',
   '1 ejercicio': '1 exercise',
   '{0} ejercicios': '{0} exercises',
-  // El logo del entrenador (components/EditorDeMarca.tsx) y la firma de UDECA.
-  'con UDECA': 'with UDECA',
+  // El logo del entrenador (components/EditorDeMarca.tsx) y la firma de CALICO.
+  'con CALICO': 'with CALICO',
   'Tu logo': 'Your logo',
   'Subir logo': 'Upload logo',
   'Cambiar logo': 'Change logo',
   'Logo guardado': 'Logo saved',
-  'Vuelve a verse el emblema de UDECA': "UDECA's emblem is back",
+  'Vuelve a verse el emblema de CALICO': "CALICO's emblem is back",
   'No se pudo guardar el logo': "Couldn't save the logo",
   'No se pudo quitar el logo': "Couldn't remove the logo",
   'Ese logo pesa demasiado. Prueba con uno más sencillo.': 'That logo is too heavy. Try a simpler one.',
-  'Sustituye al emblema de UDECA en tu app y en la de tus alumnos, también en las imágenes que comparten. Mejor un PNG con el fondo transparente.':
-    "Replaces UDECA's emblem in your app and your students', including the images they share. A PNG with a transparent background works best.",
-  'Incluido en el plan sin tope: tu logo en lugar del de UDECA, para ti y para tus alumnos.':
-    "Included in the unlimited plan: your logo instead of UDECA's, for you and your students.",
+  'Sustituye al emblema de CALICO en tu app y en la de tus alumnos, también en las imágenes que comparten. Mejor un PNG con el fondo transparente.':
+    "Replaces CALICO's emblem in your app and your students', including the images they share. A PNG with a transparent background works best.",
+  'Incluido en el plan sin tope: tu logo en lugar del de CALICO, para ti y para tus alumnos.':
+    "Included in the unlimited plan: your logo instead of CALICO's, for you and your students.",
   // Tu grupo, en Clientes (components/ClasificacionDelGrupo.tsx y AccesoALibretas.tsx).
   'Tu grupo': 'Your group',
   'Quién más se supera este mes': 'Who is improving most this month',
@@ -452,7 +452,7 @@ export const EN: Record<string, string> = {
   'Tu código de biblioteca': 'Your library code',
   'Quien lo escriba en «Importar con un código» recibe tus {0} ejercicios. Si cambias tu biblioteca, vuelve a compartir: el código no cambia.': 'Whoever types it in «Import with a code» gets your {0} exercises. If you change your library, share again: the code stays the same.',
   'Enviar el código': 'Send the code',
-  'Mi biblioteca de ejercicios en UDECA: {0}. Ábrela en Ejercicios › … › Importar con un código.': 'My UDECA exercise library: {0}. Open it in Exercises › … › Import with a code.',
+  'Mi biblioteca de ejercicios en CALICO: {0}. Ábrela en Ejercicios › … › Importar con un código.': 'My CALICO exercise library: {0}. Open it in Exercises › … › Import with a code.',
   'Escribe el código que te ha pasado otro entrenador.': 'Type the code another coach gave you.',
   'Biblioteca de {0}': '{0}\'s library',
   'Biblioteca encontrada': 'Library found',
@@ -624,8 +624,8 @@ export const EN: Record<string, string> = {
   'hechas en los últimos 7 días': 'done in the last 7 days',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
-  'UDECA es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':
-    'UDECA is now for coaches and their students. If you train with someone, ask them to invite you and sign in with a student account.',
+  'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':
+    'CALICO is now for coaches and their students. If you train with someone, ask them to invite you and sign in with a student account.',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':
     'If you like, you can delete this account and all its data.',
   'Lo que apagues desaparece para ti y para el alumno hasta que lo vuelvas a encender. Lo que ya habías puesto se guarda.':
@@ -653,15 +653,15 @@ export const EN: Record<string, string> = {
   'Entrar como': 'Sign in as',
   'No se puede entrar desde este dispositivo. Prueba desde el navegador en app.udeca.app.':
     "You can't sign in from this device. Try from your browser at app.udeca.app.",
-  'Al entrar aceptas los términos y la política de privacidad de UDECA.':
-    "By signing in you accept UDECA's terms and privacy policy.",
+  'Al entrar aceptas los términos y la política de privacidad de CALICO.':
+    "By signing in you accept CALICO's terms and privacy policy.",
   'Unir mi cuenta': 'Link my account',
   'Crea tu cuenta': 'Create your account',
   'En un toque. Sin contraseñas que recordar.': 'One tap. No passwords to remember.',
   'No se puede crear la cuenta desde este dispositivo. Prueba desde el navegador en app.udeca.app.':
     "You can't create an account from this device. Try from your browser at app.udeca.app.",
-  'Al crear tu cuenta aceptas los términos y la política de privacidad de UDECA.':
-    "By creating your account you accept UDECA's terms and privacy policy.",
+  'Al crear tu cuenta aceptas los términos y la política de privacidad de CALICO.':
+    "By creating your account you accept CALICO's terms and privacy policy.",
   'Puedes entrar como': 'You can sign in as',
   'Lo eliges al terminar de entrar.': "You'll choose that once you're in.",
   '¿Ya tienes cuenta?': 'Already have an account?',
@@ -1277,7 +1277,7 @@ export const EN: Record<string, string> = {
   Todos: 'All',
   'Toda la categoría': 'The whole category',
   'No hay ejercicios': 'No exercises',
-  '¿Actualizar a pack UDECA?': 'Update to the UDECA pack?',
+  '¿Actualizar a pack CALICO?': 'Update to the CALICO pack?',
   'Elige un color o escribe el tuyo.': 'Pick a colour or type your own.',
   'Pegar plantilla': 'Paste template',
   'Pega aquí el texto de la plantilla que te ha compartido otro entrenador.':
@@ -1287,7 +1287,7 @@ export const EN: Record<string, string> = {
   'No se pudo guardar el color': "Couldn't save the colour",
   'Escribe un color tipo #FF9900': 'Type a colour like #FF9900',
   'Ya tienes todos los ejercicios del pack': 'You already have every exercise in the pack',
-  'Biblioteca sincronizada con el pack UDECA': 'Library synced with the UDECA pack',
+  'Biblioteca sincronizada con el pack CALICO': 'Library synced with the CALICO pack',
   'No se pudo actualizar el pack': "Couldn't update the pack",
   'No tienes ejercicios que exportar': 'You have no exercises to export',
   'Plantilla exportada': 'Template exported',
@@ -1299,8 +1299,8 @@ export const EN: Record<string, string> = {
   'Plantilla importada': 'Template imported',
   'No se pudo importar la plantilla': "Couldn't import the template",
 
-  // --- Plantilla UDECA (solo CEO) ---
-  'Plantilla UDECA': 'UDECA template',
+  // --- Plantilla CALICO (solo CEO) ---
+  'Plantilla CALICO': 'CALICO template',
   'Solo tú (CEO) editas esta plantilla. Cada entrenador nuevo puede precargarla en su biblioteca. Elige los músculos de cada ejercicio para el cuerpo anatómico.':
     'Only you (CEO) edit this template. Every new coach can preload it into their library. Choose the muscles of each exercise for the anatomical body.',
   'Se mide en': 'Measured in',
@@ -1341,7 +1341,7 @@ export const EN: Record<string, string> = {
     "What actually broke on people's phones, grouped by fault.",
   'Cargando errores...': 'Loading errors...',
   'Ningún error registrado. Buena señal.': 'No errors logged. Good sign.',
-  'Admin UDECA · cuentas': 'UDECA admin · accounts',
+  'Admin CALICO · cuentas': 'CALICO admin · accounts',
   'Gestiona las suscripciones de los entrenadores.': 'Manage the coaches’ subscriptions.',
   'Cargando…': 'Loading…',
   Quitar: 'Remove',
@@ -1404,7 +1404,7 @@ export const EN: Record<string, string> = {
   'Tu cuenta ha sido eliminada': 'Your account has been deleted',
 
   // --- Páginas legales ---
-  'Eliminar tu cuenta de UDECA': 'Delete your UDECA account',
+  'Eliminar tu cuenta de CALICO': 'Delete your CALICO account',
   'Desde la app, tú mismo': 'From the app, yourself',
   'Perfil → Eliminar mi cuenta': 'Profile → Delete my account',
   'Por correo, si prefieres': 'By email, if you prefer',
@@ -1421,7 +1421,7 @@ export const EN: Record<string, string> = {
   'Falta configurar Firebase': 'Firebase is not configured yet',
   'Crea un archivo .env en la raíz del proyecto (puedes copiar .env.example) con las credenciales de tu proyecto de Firebase y reinicia la app. Consulta el README para más detalles.':
     'Create a .env file at the root of the project (you can copy .env.example) with your Firebase project credentials and restart the app. See the README for details.',
-  'Política de privacidad de UDECA': 'UDECA privacy policy',
+  'Política de privacidad de CALICO': 'CALICO privacy policy',
   'Última actualización: julio 2026': 'Last updated: July 2026',
   'Datos de cuenta:': 'Account data:',
   'Perfil:': 'Profile:',
@@ -1429,8 +1429,8 @@ export const EN: Record<string, string> = {
   'Nutrición:': 'Nutrition:',
   'Comunicación:': 'Communication:',
   'Datos técnicos:': 'Technical data:',
-  'UDECA nunca ve ni guarda los datos completos de tu tarjeta':
-    'UDECA never sees or stores your full card details',
+  'CALICO nunca ve ni guarda los datos completos de tu tarjeta':
+    'CALICO never sees or stores your full card details',
   'entrenador asignado': 'assigned coach',
   'Firebase (Google):': 'Firebase (Google):',
   'Stripe:': 'Stripe:',
@@ -1583,7 +1583,7 @@ export const EN: Record<string, string> = {
   'Código del entrenador': 'Coach code',
   'Enviar solicitud': 'Send request',
   'Solicitud cancelada': 'Request cancelled',
-  'Universidad de Calistenia': 'University of Calisthenics',
+  'Calisthenics Coaches': 'Calisthenics Coaches',
   'Tus datos': 'Your details',
   'Nivel de actividad': 'Activity level',
   'Rellena tus datos para ver tus calorías y macros.':
@@ -1667,7 +1667,7 @@ export const EN: Record<string, string> = {
   'Ejercicios del plan activo.': 'Exercises from the active plan.',
   'No se pudo guardar la selección': "Couldn't save the selection",
   'No se pudo restaurar': "Couldn't restore",
-  '¿Te está gustando UDECA?': 'Are you enjoying UDECA?',
+  '¿Te está gustando CALICO?': 'Are you enjoying CALICO?',
   'Una valoración tuya vale más que cualquier anuncio: es lo que hace que otros se atrevan a probarla.':
     'A review from you is worth more than any advert: it is what makes other people dare to try it.',
   'Valorar la app': 'Rate the app',
@@ -1747,8 +1747,8 @@ export const EN: Record<string, string> = {
   'Empezar ciclo hoy · actual:': 'Start the cycle today · current:',
   'Todo el día · ': 'All day · ',
   'Has entrado como ': 'You signed in as ',
-  '. Solo falta saber cómo vas a usar UDECA.':
-    ". We just need to know how you're going to use UDECA.",
+  '. Solo falta saber cómo vas a usar CALICO.':
+    ". We just need to know how you're going to use CALICO.",
   'Tu cuenta ': 'Your account ',
   ' se creó con contraseña. Escríbela una última vez y la dejamos unida a tu cuenta de Google: no perderás nada y a partir de ahora entras de un toque.':
     " was created with a password. Type it one last time and we'll link it to your Google account: you lose nothing, and from now on you get in with one tap.",
@@ -1833,11 +1833,11 @@ export const EN: Record<string, string> = {
     'None of that carries your name or your email once your profile is gone. If you want it deleted too, write to us at ',
   ' y lo hacemos a mano en un máximo de 30 días.':
     ' and we will do it by hand within 30 days at most.',
-  'Entra en UDECA y ve a ': 'Open UDECA and go to ',
+  'Entra en CALICO y ve a ': 'Open CALICO and go to ',
   ', al final de la pantalla. Son cinco pasos: te explicamos qué se borra, tienes que escribir "ELIMINAR MI CUENTA" y volver a confirmar que eres tú con Google o con Apple, lo mismo con lo que entras. Al terminar, tu cuenta y tus datos desaparecen en el momento. Vale para cualquier tipo de perfil: alumno, atleta y entrenador.':
     ', at the bottom of the screen. It is five steps: we explain what gets deleted, you have to type "DELETE MY ACCOUNT" and confirm it is you with Google or Apple, the same one you sign in with. When you finish, your account and your data disappear straight away. It works for any kind of profile: student, athlete and coach.',
-  'UDECA (Universidad de Calistenia) es una aplicación de entrenamiento de calistenia que conecta a entrenadores con sus alumnos y permite a atletas individuales gestionar su propio plan. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes. El responsable del tratamiento es el titular de UDECA; puedes contactar en cualquier momento en ':
-    'UDECA (University of Calisthenics) is a calisthenics training app that connects coaches with their students and lets individual athletes manage their own plan. This policy explains what data we process, what for, and what rights you have. The data controller is the owner of UDECA; you can get in touch at any time at ',
+  'CALICO (Calisthenics Coaches) es una aplicación de entrenamiento de calistenia que conecta a entrenadores con sus alumnos y permite a atletas individuales gestionar su propio plan. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes. El responsable del tratamiento es el titular de CALICO; puedes contactar en cualquier momento en ':
+    'CALICO (Calisthenics Coaches) is a calisthenics training app that connects coaches with their students and lets individual athletes manage their own plan. This policy explains what data we process, what for, and what rights you have. The data controller is the owner of CALICO; you can get in touch at any time at ',
   'Borrar el último (': 'Delete the last one (',
   ' kcal de gasto, aproximadas': ' kcal burned, approximate',
   'Media de la semana: ': 'Weekly average: ',
@@ -1950,8 +1950,8 @@ export const EN: Record<string, string> = {
   'Puedes cambiarlo cuando quieras. Lo que ya está apuntado no se toca.':
     'You can change it whenever you like. What is already recorded is left alone.',
   'Dejarlo como está': 'Leave it as it is',
-  'Esta versión de UDECA ya no está al día. Actualiza para seguir entrenando: tus datos, tus rutinas y tu progreso te esperan intactos.':
-    'This version of UDECA is out of date. Update to keep training: your data, your routines and your progress are waiting, untouched.',
+  'Esta versión de CALICO ya no está al día. Actualiza para seguir entrenando: tus datos, tus rutinas y tu progreso te esperan intactos.':
+    'This version of CALICO is out of date. Update to keep training: your data, your routines and your progress are waiting, untouched.',
   'Actualizar en la App Store': 'Update on the App Store',
   'Actualizar en Google Play': 'Update on Google Play',
   'Tienes la {0}': 'You have {0}',
@@ -1986,8 +1986,8 @@ export const EN: Record<string, string> = {
   '{0} para cerrarla': '{0} to close it',
   'Ahora: Serie {0} · {1}': 'Now: Set {0} · {1}',
   '{0} entreno(s) pendiente(s) subido(s) ✓': '{0} pending workout(s) uploaded ✓',
-  '{0}\n\nEntreno con UDECA — Universidad de Calistenia':
-    '{0}\n\nTraining with UDECA — University of Calisthenics',
+  '{0}\n\nEntreno con CALICO — Calisthenics Coaches':
+    '{0}\n\nTraining with CALICO — Calisthenics Coaches',
   '{0} ha registrado {1} del {2}.': '{0} logged {1} from {2}.',
   'Registrar el entreno del {0}': "Log the workout from {0}",
   'Aún no hay series de {0} registradas.': 'No {0} sets logged yet.',
@@ -2045,8 +2045,8 @@ export const EN: Record<string, string> = {
     'Signing up starts your {0} days with everything unlocked. After that you decide whether to carry on.',
   'El alta incluye {0} alumnos con su propia cuenta. Si tu grupo crece, entonces hablamos.':
     'Signing up includes {0} students with their own account. If your group grows, then we talk.',
-  'Hola, quiero activar mi cuenta de UDECA. Mi correo es: {0}':
-    'Hello, I would like to activate my UDECA account. My email is: {0}',
+  'Hola, quiero activar mi cuenta de CALICO. Mi correo es: {0}':
+    'Hello, I would like to activate my CALICO account. My email is: {0}',
   'Te quedan {0} días de prueba': '{0} trial days left',
   'Te quedan {0} días de prueba. Si ya lo tienes claro, pasa al plan completo y olvídate del contador.':
     '{0} trial days left. If you already know this is for you, move to the full plan and forget the countdown.',
@@ -2157,7 +2157,7 @@ export const EN: Record<string, string> = {
     'The exercises already in "{0}" will be updated too.',
   '{0} ejercicios añadidos a tu biblioteca': '{0} exercises added to your library',
   '{0} ejercicios añadidos desde tu cuenta': '{0} exercises added from your account',
-  'Añadir el pack UDECA ({0} ejercicios)': 'Add the UDECA pack ({0} exercises)',
+  'Añadir el pack CALICO ({0} ejercicios)': 'Add the CALICO pack ({0} exercises)',
   'Sustituir por {0} ejercicios': 'Replace with {0} exercises',
 
   // --- Frases con datos: planificación y bloques ---
@@ -2445,8 +2445,8 @@ export const EN: Record<string, string> = {
   'Reps por lado': 'Reps per side',
   'Terminar de editar categorías': 'Finish editing categories',
   'Importar una biblioteca': 'Import a library',
-  'Empieza con el pack UDECA o crea el primero con «+ Nuevo».':
-    'Start with the UDECA pack or create the first one with "+ New".',
+  'Empieza con el pack CALICO o crea el primero con «+ Nuevo».':
+    'Start with the CALICO pack or create the first one with "+ New".',
   'Prueba con otra búsqueda o categoría.': 'Try another search or category.',
   'Sí, sustituirlo todo': 'Yes, replace everything',
   "Carga el pack base o crea el primer ejercicio con '+ Nuevo'.":
@@ -2460,8 +2460,8 @@ export const EN: Record<string, string> = {
   'No se pudo guardar el código.': "Couldn't save the code.",
   'Copiar código': 'Copy code',
   'Compartir código': 'Share code',
-  'Cuenta administradora de UDECA: acceso completo sin caducidad.':
-    'UDECA admin account: full access with no expiry.',
+  'Cuenta administradora de CALICO: acceso completo sin caducidad.':
+    'CALICO admin account: full access with no expiry.',
   'Todavía no hay ningún atleta registrado.': 'No athlete has signed up yet.',
   'Todavía no hay ningún entrenador registrado.': 'No coach has signed up yet.',
   'Cuenta de la casa': 'House account',
@@ -2632,12 +2632,12 @@ export const EN: Record<string, string> = {
   'Instálala como app': 'Install it as an app',
   'En Safari: toca el botón Compartir (cuadrado con flecha, abajo).':
     'In Safari: tap the Share button (the square with an arrow, at the bottom).',
-  'Elige “Añadir a pantalla de inicio” y confirma. UDECA quedará como una app más.':
-    'Choose "Add to Home Screen" and confirm. UDECA will sit there like any other app.',
+  'Elige “Añadir a pantalla de inicio” y confirma. CALICO quedará como una app más.':
+    'Choose "Add to Home Screen" and confirm. CALICO will sit there like any other app.',
   'En Chrome: toca el menú ⋮ (arriba a la derecha).':
     'In Chrome: tap the ⋮ menu (top right).',
-  'Elige “Instalar aplicación” o “Añadir a pantalla de inicio”. UDECA quedará como una app más.':
-    'Choose "Install app" or "Add to Home screen". UDECA will sit there like any other app.',
+  'Elige “Instalar aplicación” o “Añadir a pantalla de inicio”. CALICO quedará como una app más.':
+    'Choose "Install app" or "Add to Home screen". CALICO will sit there like any other app.',
   'Guardar y empezar': 'Save and start',
   'Defínelo para tenerlo siempre presente y medir tu avance. Podrás cambiarlo cuando quieras desde tu perfil.':
     'Set it so you always have it in mind and can measure your progress. You can change it whenever you like from your profile.',
@@ -2693,8 +2693,7 @@ export const EN: Record<string, string> = {
   'Nutrición, macros y libreta de comidas': 'Nutrition, macros and meal book',
   'Informes en PDF y récords guardados para siempre':
     'PDF reports and PRs saved forever',
-  'Cobros, avisos de impago y control de cuotas':
-    'Payments, overdue notices and fee tracking',
+  'Periodos de coaching y llamadas 1:1': 'Coaching periods and 1:1 calls',
   'Informes de progreso con tu marca': 'Progress reports with your branding',
   'Esta cuenta no incluye alumnos': 'This account includes no students',
   'El alta de tu tarjeta ya se usó en otra cuenta de entrenador, así que esta entra sin plazas. Con el plan tienes alumnos ilimitados.':
@@ -2875,9 +2874,9 @@ export const EN: Record<string, string> = {
   'Esa semana se cayó; el resto del bloque va aparte.':
     'That week fell through; the rest of the block is separate.',
   'Entrena más duro de lo que le pides': 'They train harder than you ask them to',
-  'Sesión UDECA': 'UDECA session',
-  'Récord UDECA': 'UDECA PR',
-  'Mi carné UDECA': 'My UDECA card',
+  'Sesión CALICO': 'CALICO session',
+  'Récord CALICO': 'CALICO PR',
+  'Mi carné CALICO': 'My CALICO card',
   ALUMNO: 'STUDENT',
   FORMACIÓN: 'COURSE',
   ATLETA: 'ATHLETE',
@@ -2898,10 +2897,10 @@ export const EN: Record<string, string> = {
   'Alumnos a tu cargo': 'Students in your care',
   'Días seguidos': 'Days in a row',
   'Tu primer entreno': 'Your first workout',
-  'Forma a otros dentro de UDECA': 'Trains others inside UDECA',
+  'Forma a otros dentro de CALICO': 'Trains others inside CALICO',
   'Se entrena a sí mismo': 'Trains themselves',
   'Entrena con su entrenador': 'Trains with their coach',
-  'Estudia en la Universidad de Calistenia': 'Studies at the University of Calisthenics',
+  'Se forma con los cursos de CALICO': 'Learns with CALICO courses',
   'Tu comunidad': 'Your community',
   Borrar: 'Delete',
   'Aún no has entrenado en este bloque.': "You haven't trained in this block yet.",
@@ -2947,8 +2946,8 @@ export const EN: Record<string, string> = {
   'Ese correo no parece válido.': 'That email does not look valid.',
   'Tu navegador ha bloqueado la ventana de acceso. Permítela y vuelve a probar.':
     'Your browser blocked the sign-in window. Allow it and try again.',
-  'Este sitio no está autorizado para entrar. Avisa a UDECA.':
-    'This site is not authorised for sign-in. Let UDECA know.',
+  'Este sitio no está autorizado para entrar. Avisa a CALICO.':
+    'This site is not authorised for sign-in. Let CALICO know.',
   'Esa forma de entrar no está disponible ahora mismo. Prueba con la otra.':
     'That sign-in method is not available right now. Try the other one.',
   'No se ha podido entrar. Inténtalo otra vez en un momento.':
@@ -3013,13 +3012,13 @@ export const EN: Record<string, string> = {
   'Sin perfil': 'No profile',
   'Tus ejercicios, tus rutinas y tus notas se quedan como las escribiste.':
     'Your exercises, your routines and your notes stay exactly as you wrote them.',
-  'Bienvenido a UDECA': 'Welcome to UDECA',
-  'Bienvenido a UDECA, {0}': 'Welcome to UDECA, {0}',
+  'Bienvenido a CALICO': 'Welcome to CALICO',
+  'Bienvenido a CALICO, {0}': 'Welcome to CALICO, {0}',
   'Empieza {0}': '{0} starts',
   'Termina {0}': '{0} ends',
   'Semana {0} · descarga': 'Week {0} · deload',
   'Miembro fundador': 'Founding member',
-  'En UDECA': 'In UDECA',
+  'En CALICO': 'In CALICO',
   mes: 'month',
   meses: 'months',
   Entrenamiento: 'Workout',

@@ -36,7 +36,7 @@ import { type MealBook, type MealLog, type NutritionPlan } from '../lib/types';
 /**
  * Toda la nutrición: el peso, los pasos, los macros, las comidas y las
  * libretas del coach. Las fotos de progreso se quitaron: fotos y vídeos van por
- * WhatsApp o Telegram, y UDECA se centra en lo que solo hace ella.
+ * WhatsApp o Telegram, y CALICO se centra en lo que solo hace ella.
  *
  * Era una pestaña propia de la app y ahora vive dentro de Progreso, en la
  * pestaña de Nutrición. El motivo es que las dos cosas se miran juntas: lo que
@@ -513,7 +513,7 @@ export function PanelDeNutricion() {
         `Sheet` es el panel que usa toda la app —el de registrar una comida está
         diez líneas más abajo— y resuelve eso: se cierra tocando fuera, tiene su
         scroll con los toques que atraviesan el teclado, y es lo que ya funciona
-        en los móviles de verdad de quienes usan UDECA.
+        en los móviles de verdad de quienes usan CALICO.
       */}
       <Sheet
         visible={calcOpen}

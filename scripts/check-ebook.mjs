@@ -155,14 +155,14 @@ console.log('\nEl e-book no sale de la app');
   ok('ni irse a otro sitio', !puedeAbrirse('https://cualquier.cosa/x', puente));
 
   /*
-   * LAS APPS DE FUERA. Lo que sacó a los alumnos de UDECA con la 1.1.5: la
+   * LAS APPS DE FUERA. Lo que sacó a los alumnos de CALICO con la 1.1.5: la
    * página de Google intenta abrir su app con `intent://` (Android) o
    * `googledrive://` (iPhone). Esas direcciones no se cargan, se le entregan
    * al sistema. Y la de Android, con `embedded=true` dentro, se colaba por la
    * regla del visor de Google, que solo miraba el dominio.
    */
   const intent = 'intent://drive.google.com/viewerng/viewer?embedded=true&url=x#Intent;scheme=https;package=com.google.android.apps.docs;end';
-  ok('un intent:// de Drive NO', !puedeAbrirse(intent, puente), 'abre la app de Drive y saca al alumno de UDECA');
+  ok('un intent:// de Drive NO', !puedeAbrirse(intent, puente), 'abre la app de Drive y saca al alumno de CALICO');
   ok('ni googledrive://', !puedeAbrirse('googledrive://open?id=x', puente));
   ok('ni la App Store', !puedeAbrirse('itms-apps://apps.apple.com/app/id1', doc));
   ok('ni un market:// de Google Play', !puedeAbrirse('market://details?id=com.google.android.apps.docs', puente));

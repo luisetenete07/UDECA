@@ -166,7 +166,7 @@ export function muscleLoad(
     for (const ex of log.exercises) {
       const completed = ex.sets.filter((s) => s.completed).length;
       if (completed === 0) continue;
-      // Si el ejercicio define músculos explícitos (plantilla UDECA, con su
+      // Si el ejercicio define músculos explícitos (plantilla CALICO, con su
       // porcentaje de trabajo), mandan ellos; si no, por nombre y grupo.
       const explicit = weightsByExerciseId?.[ex.exerciseId];
       const map =

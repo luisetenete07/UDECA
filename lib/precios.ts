@@ -1,5 +1,5 @@
 /**
- * Los precios de UDECA, y solo los precios.
+ * Los precios de CALICO, y solo los precios.
  *
  * POR QUÉ ESTÁN EN SU PROPIO FICHERO
  *

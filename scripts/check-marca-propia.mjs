@@ -1,11 +1,11 @@
 /*
- * La marca propia: la palabra que sustituye a UDECA dentro de la app.
+ * La marca propia: la palabra que sustituye a CALICO dentro de la app.
  *
  * Lo que se vigila aquí son las dos cosas que, si se rompen, no dan error.
  *
  * LA PRIMERA es QUIÉN VE QUÉ. Un alumno no tiene marca —no paga y no vende
  * nada—, así que lee la de SU ENTRENADOR. Si eso se invirtiera, el alumno de
- * un coach con marca vería UDECA, y el coach estaría pagando por una marca que
+ * un coach con marca vería CALICO, y el coach estaría pagando por una marca que
  * no ve nadie. No hay pantalla en rojo que avise de eso.
  *
  * LA SEGUNDA es EL TOPE. Doce letras salen de medir la barra lateral, que es el
@@ -60,12 +60,12 @@ console.log('\nQuién ve qué');
     marcaDe({ role: 'client', brandName: 'LA MIA' }, coach) === 'IRON BOX'
   );
 
-  ok('sin marca, UDECA', marcaDe({ role: 'trainer' }) === MARCA_POR_DEFECTO);
-  ok('sin sesión, UDECA', marcaDe(null) === MARCA_POR_DEFECTO);
-  // Mientras el perfil del coach no ha llegado se lee UDECA, que es mejor que
+  ok('sin marca, CALICO', marcaDe({ role: 'trainer' }) === MARCA_POR_DEFECTO);
+  ok('sin sesión, CALICO', marcaDe(null) === MARCA_POR_DEFECTO);
+  // Mientras el perfil del coach no ha llegado se lee CALICO, que es mejor que
   // un hueco parpadeando en la cabecera.
-  ok('y mientras carga la del coach, UDECA', marcaDe(alumno, null) === MARCA_POR_DEFECTO);
-  ok('el coach sin marca deja a su alumno en UDECA', marcaDe(alumno, { role: 'trainer' }) === MARCA_POR_DEFECTO);
+  ok('y mientras carga la del coach, CALICO', marcaDe(alumno, null) === MARCA_POR_DEFECTO);
+  ok('el coach sin marca deja a su alumno en CALICO', marcaDe(alumno, { role: 'trainer' }) === MARCA_POR_DEFECTO);
 
   ok('tieneMarcaPropia distingue', tieneMarcaPropia(coach) && !tieneMarcaPropia({ role: 'trainer' }));
   ok('y no se cree un espacio en blanco', !tieneMarcaPropia({ role: 'trainer', brandName: '   ' }));
@@ -79,11 +79,11 @@ console.log('\nLos tres sitios donde se pinta la usan');
     ['la tarjeta que se comparte', 'components/ProgressCard.tsx'],
   ]) {
     const f = lee(ruta);
-    // Se busca que la SAQUE del contexto y que no quede "UDECA" escrito a
+    // Se busca que la SAQUE del contexto y que no quede "CALICO" escrito a
     // fuego en un `<Text>`. El logo no vale con `{marca}` a secas porque sin
     // sesión pinta la de la casa a propósito.
     ok(`${que} la saca del contexto`, /const \{[^}]*\bmarca\b[^}]*\} = useAuth\(\)/.test(f));
-    ok(`${que} no la lleva escrita a fuego`, !/>\s*UDECA\s*</.test(f), 'queda un UDECA literal');
+    ok(`${que} no la lleva escrita a fuego`, !/>\s*CALICO\s*</.test(f), 'queda un CALICO literal');
     // El seguro del tope: si una tipografía es más ancha de lo medido, antes
     // que empujar nada, se recorta.
     ok(`${que} la recorta a una línea`, /numberOfLines=\{1\}/.test(f));
@@ -91,7 +91,7 @@ console.log('\nLos tres sitios donde se pinta la usan');
   // Entrar y registrarse van SIN sesión: ahí no se sabe de quién es nadie y la
   // marca es la de la app.
   for (const ruta of ['app/(auth)/login.tsx', 'app/(auth)/register.tsx', 'app/(auth)/welcome.tsx']) {
-    ok(`${ruta} enseña UDECA`, /<Logo sinSesion/.test(lee(ruta)));
+    ok(`${ruta} enseña CALICO`, /<Logo sinSesion/.test(lee(ruta)));
   }
 }
 

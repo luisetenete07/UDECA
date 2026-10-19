@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 /**
  * Recuerda si ya se ha visto la presentación de bienvenida. Es una marca del
  * DISPOSITIVO, no de la cuenta: quien acaba de instalar la app y aún no tiene
- * cuenta debe ver primero qué es UDECA, y quien ya la conoce entra directo al
+ * cuenta debe ver primero qué es CALICO, y quien ya la conoce entra directo al
  * inicio de sesión.
  */
 

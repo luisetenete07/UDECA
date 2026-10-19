@@ -110,7 +110,7 @@ console.log('\nLo que sí hay, sigue funcionando');
   /*
    * Y sin dar a entender que cuenta con la app cerrada. "Se leen solos de este
    * móvil" era verdad con Health Connect; sin él, quien salga a andar sin abrir
-   * UDECA vuelve creyendo que el contador está roto.
+   * CALICO vuelve creyendo que el contador está roto.
    */
   ok('en Android se dice que cuenta con la app abierta',
     /'Se cuentan con la app abierta'/.test(contador) && !/'Se leen solos de este móvil'/.test(contador));

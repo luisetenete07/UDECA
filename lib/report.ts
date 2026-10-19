@@ -1,7 +1,7 @@
 import { diaMes, fechaLegible, inicioDeLaSemana, masDias, mayusculaInicial } from './fechas';
 import { frase } from './idioma';
 import { setsByMuscleGroup, weeklyExerciseMatrix, workoutsByMonth, type MatrixCell, type MatrixRow } from './stats';
-import { UDECA_LOGO_DATA_URI } from './udecaLogo';
+import { CALICO_LOGO_OSCURO_DATA_URI } from './calicoLogo';
 import { marcaActual } from './marcaActual';
 import type { Routine, UserProfile, WeightLog, WorkoutLog } from './types';
 
@@ -199,16 +199,16 @@ const ARROW: Record<Direction, string> = {
 const fmtKg = (n: number) => `${n.toFixed(1).replace('.', ',')} kg`;
 
 /**
- * Quién firma el informe: la marca del entrenador ("IRON BOX · con UDECA") o
+ * Quién firma el informe: la marca del entrenador ("IRON BOX · con CALICO") o
  * la de la casa. El logo de arriba sigue la misma regla (ver lib/marcaActual.ts).
  */
 function firmaDelInforme(): string {
   const { marca } = marcaActual();
-  return marca ? `${marca} · con UDECA` : 'UDECA · Universidad de Calistenia';
+  return marca ? `${marca} · con CALICO` : 'CALICO · Calisthenics Coaches';
 }
 
 /**
- * Informe de progreso con la identidad de UDECA: resumen del periodo, mejoría
+ * Informe de progreso con la identidad de CALICO: resumen del periodo, mejoría
  * ejercicio por ejercicio, la tabla semana a semana que se ve en pantalla,
  * reparto de trabajo, peso corporal y rutina en vigor.
  */
@@ -484,7 +484,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
   <body>
     <div class="sheet">
       <div class="head">
-        <img src="${marcaActual().logo ?? UDECA_LOGO_DATA_URI}" alt="" />
+        <img src="${marcaActual().logo ?? CALICO_LOGO_OSCURO_DATA_URI}" alt="" />
         <div class="who">
           <div class="brand">${escapeHtml(firmaDelInforme())}</div>
           <h1>${escapeHtml(client.name)}</h1>

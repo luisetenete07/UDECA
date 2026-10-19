@@ -1,8 +1,8 @@
 /**
  * Cómo se llama la comunidad de un alumno.
  *
- * Decía "Comunidad UDECA", y eso es de quien hizo la app, no de quien la usa.
- * Un alumno no entrena con UDECA: entrena con Luis, con Marta o con quien le
+ * Decía "Comunidad CALICO", y eso es de quien hizo la app, no de quien la usa.
+ * Un alumno no entrena con CALICO: entrena con Luis, con Marta o con quien le
  * cobre cada mes. El grupo del ranking son los alumnos de ESE entrenador, y
  * poner otra marca por delante es quitarle el sitio a la única persona con la
  * que tiene relación.

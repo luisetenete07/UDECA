@@ -18,7 +18,7 @@
  * Esto comprueba dos cosas:
  *
  *   1. Que la constante sigue apagada en iOS.
- *   2. Que todo el que sepa construir una URL de pago de UDECA la mire antes.
+ *   2. Que todo el que sepa construir una URL de pago de CALICO la mire antes.
  *
  * Lo que un ALUMNO le paga a su ENTRENADOR queda fuera: la app ya no lo lleva
  * (solo el periodo de coaching, ver lib/coaching.ts).
@@ -31,7 +31,7 @@ import { join, relative } from 'node:path';
 const RAIZ = new URL('..', import.meta.url).pathname;
 const CARPETAS = ['app', 'components'];
 
-/** Las funciones que devuelven una URL para pagarle a UDECA. */
+/** Las funciones que devuelven una URL para pagarle a CALICO. */
 const CONSTRUCTORES = ['subscriptionCheckoutUrl', 'entryCheckoutUrl'];
 const GUARDA = 'CAN_LINK_TO_PAYMENT';
 
@@ -104,7 +104,7 @@ ok(
   sinGuarda.join(', ')
 );
 if (sinGuarda.length) {
-  console.log('\n         Estas pantallas saben construir una URL de pago de UDECA y no');
+  console.log('\n         Estas pantallas saben construir una URL de pago de CALICO y no');
   console.log('         comprueban si esta plataforma puede ofrecerla. En el iPhone del');
   console.log('         revisor de Apple saldría el botón, y eso es rechazo por 3.1.1.');
   console.log(`         Envuélvelo: const url = ${GUARDA} ? ...checkoutUrl(profile) : null;`);

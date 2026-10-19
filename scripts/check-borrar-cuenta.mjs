@@ -3,7 +3,7 @@
  *
  * EL FALLO QUE ESTO PERSIGUE
  *
- * El último paso pedía SIEMPRE la contraseña. Desde que UDECA entra solo con
+ * El último paso pedía SIEMPRE la contraseña. Desde que CALICO entra solo con
  * Google y Apple, casi nadie tiene contraseña: escribieran lo que escribieran,
  * Firebase respondía que la credencial no vale. O sea que nadie que hubiera
  * entrado con Google o con Apple —es decir, todo el mundo nuevo— podía borrar

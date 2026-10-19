@@ -62,7 +62,7 @@ export default function TrainerProfileScreen() {
   const [codeInput, setCodeInput] = useState('');
   const [savingCode, setSavingCode] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
-  // Panel admin UDECA (solo cuentas administradoras).
+  // Panel admin CALICO (solo cuentas administradoras).
   const [adminOpen, setAdminOpen] = useState(false);
   // Errores reales de los usuarios (solo CEO).
   const [errorsOpen, setErrorsOpen] = useState(false);
@@ -144,7 +144,7 @@ export default function TrainerProfileScreen() {
       return Promise.resolve(window.confirm(message));
     }
     return new Promise((resolve) => {
-      Alert.alert('Admin UDECA', message, [
+      Alert.alert('Admin CALICO', message, [
         { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
         { text: 'Confirmar', style: 'destructive', onPress: () => resolve(true) },
       ]);
@@ -259,10 +259,10 @@ export default function TrainerProfileScreen() {
   const handleShare = async () => {
     if (!profile?.inviteCode) return;
     const message =
-      `Únete a mis entrenamientos en UDECA.\n\n` +
+      `Únete a mis entrenamientos en CALICO.\n\n` +
       // La app vive en app.udeca.app; www.udeca.app es la web de presentación.
       // Al alumno hay que mandarlo donde puede registrarse, no al escaparate.
-      `1) Entra en app.udeca.app (o busca "UDECA" en Google Play).\n` +
+      `1) Entra en app.udeca.app (o busca "CALICO" en Google Play).\n` +
       frase`2) Regístrate como alumno con mi código: ${profile.inviteCode}\n\n` +
       `¡Nos vemos dentro!`;
     if (Platform.OS === 'web') {
@@ -414,7 +414,7 @@ export default function TrainerProfileScreen() {
         <Text style={styles.email}>{profile?.email}</Text>
       </View>
 
-      {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
+      {/* El carné: quién es dentro de CALICO, y su número si es fundador. */}
       <MemberCard />
 
       <EditorDeMarca />
@@ -501,9 +501,9 @@ export default function TrainerProfileScreen() {
       >
         <Text style={styles.helperText}>
           {admin
-            ? 'Cuenta administradora de UDECA: acceso completo sin caducidad.'
+            ? 'Cuenta administradora de CALICO: acceso completo sin caducidad.'
             : sub.legacy
-              ? 'Cuenta fundadora: acceso completo a UDECA Pro.'
+              ? 'Cuenta fundadora: acceso completo a CALICO Pro.'
               : // El estado de la cuenta, sin precio (ver lib/subscription.ts).
                 `Plan activo hasta ${
                   profile?.subscriptionUntil ? fechaCorta(profile.subscriptionUntil) : '—'
@@ -629,7 +629,7 @@ export default function TrainerProfileScreen() {
       {admin ? (
         <Card accent style={styles.section}>
           <View style={styles.subHeader}>
-            <Text style={styles.sectionTitle}>Admin UDECA · cuentas</Text>
+            <Text style={styles.sectionTitle}>Admin CALICO · cuentas</Text>
             <Pressable onPress={adminOpen ? () => setAdminOpen(false) : () => openAdmin()} hitSlop={8}>
               <Ionicons
                 name={adminOpen ? 'chevron-up' : 'chevron-down'}
@@ -680,7 +680,7 @@ export default function TrainerProfileScreen() {
       <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={{ marginTop: spacing.lg }} />
       {/* Con marca propia, una firma pequeña al final: la app es suya, pero se
           sabe con qué está hecha. */}
-      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conUdeca}>con UDECA</Text> : null}
+      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conUdeca}>con CALICO</Text> : null}
 
       {/* Ver el comentario del mismo botón en el perfil del alumno. */}
       <Pressable onPress={() => router.push('/account-deletion')} style={styles.borrarCuenta}>

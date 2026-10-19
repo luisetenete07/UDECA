@@ -86,7 +86,7 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
 
   /** Lo que el entrenador ya tiene con su año, pague o no el plan sin tope. */
   const yaIncluido = [
-    'Cobros, avisos de impago y control de cuotas',
+    'Periodos de coaching y llamadas 1:1',
     'Rutinas, ciclos y calendario',
     'Nutrición, macros y pasos',
     'Informes de progreso con tu marca',
@@ -150,7 +150,7 @@ export function UpgradeCard({ variante = 'completa', onClose }: Props) {
   return (
     <Card accent style={styles.card}>
       <View style={styles.cabecera}>
-        <Text style={styles.eyebrow}>UDECA PRO</Text>
+        <Text style={styles.eyebrow}>CALICO PRO</Text>
         {diasRestantes !== null ? (
           <View style={styles.pill}>
             <Text style={styles.pillTexto}>

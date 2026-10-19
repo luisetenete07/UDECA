@@ -60,7 +60,7 @@ export default function AccountDeletionScreen() {
    *
    * Firebase no borra una cuenta si hace rato que se entró: exige volver a
    * demostrar que eres tú. Aquí se pedía SIEMPRE la contraseña, y desde que
-   * UDECA entra solo con Google y Apple la mayoría de la gente NO TIENE
+   * CALICO entra solo con Google y Apple la mayoría de la gente NO TIENE
    * contraseña: escribieran lo que escribieran, fallaba. O sea que nadie que
    * hubiera entrado con Google o con Apple podía borrar su cuenta.
    *

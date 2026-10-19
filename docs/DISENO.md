@@ -1,6 +1,6 @@
 # Diseño
 
-Cómo se ve y cómo se comporta UDECA, y por qué. Esto no es una guía de estilo
+Cómo se ve y cómo se comporta CALICO, y por qué. Esto no es una guía de estilo
 decorativa: son las decisiones que hay que respetar para que una pantalla nueva
 no desentone con las que ya están.
 

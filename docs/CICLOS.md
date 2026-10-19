@@ -1,6 +1,6 @@
 # Planificación por ciclos
 
-Cómo se planifica una temporada en UDECA, qué decide la app y qué decide el
+Cómo se planifica una temporada en CALICO, qué decide la app y qué decide el
 entrenador.
 
 ---

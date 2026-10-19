@@ -48,8 +48,8 @@ export function EntryWall() {
     void track('checkout_start');
     const destino =
       url ??
-      `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Alta en UDECA')}&body=${encodeURIComponent(
-        frase`Hola, quiero activar mi cuenta de UDECA. Mi correo es: ${profile?.email ?? ''}`
+      `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Alta en CALICO')}&body=${encodeURIComponent(
+        frase`Hola, quiero activar mi cuenta de CALICO. Mi correo es: ${profile?.email ?? ''}`
       )}`;
     Linking.openURL(destino).catch(() => {});
   };
@@ -152,7 +152,7 @@ export function EntryWall() {
       ) : (
         <>
           <GateText>
-            Esta cuenta todavía no está activa. Puedes activarla desde tu cuenta de UDECA y volver
+            Esta cuenta todavía no está activa. Puedes activarla desde tu cuenta de CALICO y volver
             aquí: al entrar de nuevo, la app la reconoce sola.
           </GateText>
           <Button

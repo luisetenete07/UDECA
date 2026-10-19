@@ -41,7 +41,7 @@ service cloud.firestore {
 
     // Perfiles de usuario (entrenadores y clientes).
     match /users/{userId} {
-      // Admin de la plataforma UDECA: gestiona las suscripciones de los
+      // Admin de la plataforma CALICO: gestiona las suscripciones de los
       // coaches (modelo SaaS). Identificado por su correo verificado.
       function isUdecaAdmin() {
         return request.auth != null
@@ -237,12 +237,12 @@ service cloud.firestore {
         )
       );
       // El propio usuario puede borrar su cuenta (su documento de perfil);
-      // el admin de UDECA puede eliminar cuentas desde su panel.
+      // el admin de CALICO puede eliminar cuentas desde su panel.
       allow delete: if request.auth != null
         && (request.auth.uid == userId || isUdecaAdmin());
     }
 
-    // Plantilla maestra de ejercicios de UDECA (colección global). La lee
+    // Plantilla maestra de ejercicios de CALICO (colección global). La lee
     // cualquier usuario autenticado (para precargarla en su biblioteca); solo
     // el admin (CEO) puede crear/editar/borrar.
     match /templateExercises/{exerciseId} {

@@ -148,7 +148,7 @@ export default function TemplateExercisesScreen() {
       muscleGroup: draft.muscleGroup,
       measure: draft.measure,
       description: draft.description.trim() || undefined,
-      // La plantilla UDECA nunca guarda vídeo: cada entrenador pone el suyo.
+      // La plantilla CALICO nunca guarda vídeo: cada entrenador pone el suyo.
       videoUrl: undefined,
       muscles: musclesOf(draft.muscleWeights).length > 0 ? musclesOf(draft.muscleWeights) : undefined,
       muscleWeights:
@@ -259,7 +259,7 @@ export default function TemplateExercisesScreen() {
     <ScreenContainer>
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Plantilla UDECA</Text>
+          <Text style={styles.title}>Plantilla CALICO</Text>
           <Text style={styles.subtitle}>
             {items.length} {items.length === 1 ? 'ejercicio' : 'ejercicios'} · precarga oficial
             para entrenadores

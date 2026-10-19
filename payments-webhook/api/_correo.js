@@ -3,7 +3,7 @@
  *
  * Existe porque los avisos solo llegaban por notificación push, y el push solo
  * existe si la persona tiene la app de móvil instalada y ha dado permiso. Quien
- * usa UDECA desde el navegador —que son muchos— no recibía nada: se encontraba
+ * usa CALICO desde el navegador —que son muchos— no recibía nada: se encontraba
  * el muro de pago al acabarse la prueba sin haber sido avisado, después de que la propia
  * app le prometiera por escrito que se le avisaría. Eso no es un aviso perdido,
  * es alguien que iba a pagar y se va.
@@ -22,7 +22,7 @@ const RESEND_URL = 'https://api.resend.com/emails';
 
 /** Remitente. Tiene que ser un dominio verificado en Resend. */
 function remitente() {
-  return process.env.MAIL_FROM || 'UDECA <avisos@udeca.app>';
+  return process.env.MAIL_FROM || 'CALICO <avisos@udeca.app>';
 }
 
 export function correoConfigurado() {
@@ -58,11 +58,11 @@ function plantilla(titulo, parrafos, boton) {
              'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
         <tr><td>
           <p style="margin:0 0 6px;font-size:12px;letter-spacing:1.6px;color:#A2968B;
-             text-transform:uppercase;font-weight:600">UDECA</p>
+             text-transform:uppercase;font-weight:600">CALICO</p>
           <h1 style="margin:0 0 18px;font-size:21px;line-height:1.3;color:#111111">${titulo}</h1>
           ${cuerpo}${cta}
           <p style="margin:26px 0 0;font-size:12px;line-height:1.5;color:#8a8a8a">
-            Recibes este aviso porque tienes una cuenta en UDECA.
+            Recibes este aviso porque tienes una cuenta en CALICO.
           </p>
         </td></tr>
       </table>

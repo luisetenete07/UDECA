@@ -59,7 +59,7 @@ const PROPIEDADES = [
 ];
 
 const REGLAS = `
-# --- UDECA: reglas para compilar con R8 (ver plugins/optimizar-android.js) ---
+# --- CALICO: reglas para compilar con R8 (ver plugins/optimizar-android.js) ---
 
 # Que los informes de fallo se sigan pudiendo leer.
 #
@@ -128,7 +128,7 @@ module.exports = function withOptimizarAndroid(config) {
       const actual = await fs.readFile(ruta, 'utf8');
       // Idempotente: `prebuild` sin `--clean` vuelve a pasar por aquí sobre un
       // fichero que ya las tiene, y duplicarlas no rompe pero ensucia.
-      if (!actual.includes('UDECA: reglas para compilar con R8')) {
+      if (!actual.includes('CALICO: reglas para compilar con R8')) {
         await fs.writeFile(ruta, `${actual}${REGLAS}`);
       }
       return config;

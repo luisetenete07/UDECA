@@ -91,7 +91,7 @@ jobs:
             echo "OK  La clave es de PRODUCCIÓN y Stripe la acepta."
           elif echo "$cuerpo" | grep -q "(test)"; then
             echo "::error::La clave de Stripe sigue en MODO PRUEBAS (sk_test)."
-            echo "::error::Los pagos reales no se verían: hay que poner la sk_live del perfil de UDECA."
+            echo "::error::Los pagos reales no se verían: hay que poner la sk_live del perfil de CALICO."
             exit 1
           else
             echo "::error::Respuesta inesperada: $cuerpo"

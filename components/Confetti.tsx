@@ -15,7 +15,7 @@ interface Piece {
 }
 
 /**
- * Lluvia de confeti en la paleta oro de UDECA para celebrar hitos
+ * Lluvia de confeti en la paleta oro de CALICO para celebrar hitos
  * (sesión completada, récords). Sin dependencias: RN Animated puro.
  * Se reproduce una vez al montar y desaparece sola.
  */

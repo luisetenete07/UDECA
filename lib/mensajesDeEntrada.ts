@@ -75,7 +75,7 @@ export function mensajeDeEntrada(e: unknown, origen: OrigenDeEntrada = 'contrase
       return 'Tu navegador ha bloqueado la ventana de acceso. Permítela y vuelve a probar.';
     }
     if (codigo.includes('unauthorized-domain')) {
-      return conCodigo('Este sitio no está autorizado para entrar. Avisa a UDECA.', codigo);
+      return conCodigo('Este sitio no está autorizado para entrar. Avisa a CALICO.', codigo);
     }
     return conCodigo('No se ha podido entrar. Inténtalo otra vez en un momento.', codigo);
   }
@@ -95,7 +95,7 @@ export function mensajeDeEntrada(e: unknown, origen: OrigenDeEntrada = 'contrase
     return 'Tu navegador ha bloqueado la ventana de acceso. Permítela y vuelve a probar.';
   }
   if (codigo.includes('unauthorized-domain')) {
-    return 'Este sitio no está autorizado para entrar. Avisa a UDECA.';
+    return 'Este sitio no está autorizado para entrar. Avisa a CALICO.';
   }
   if (codigo.includes('operation-not-allowed')) {
     return 'Esa forma de entrar no está disponible ahora mismo. Prueba con la otra.';

@@ -124,7 +124,7 @@ export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
          * (`Linking.openURL`). Con la 1.1.5, en Android el PDF pasa por el
          * visor de Google, y su página intenta abrir la app de Drive con una
          * dirección `intent://`. Resultado: el alumno tocaba el e-book y
-         * acababa FUERA de UDECA, en otra app. Con la lista abierta a todo,
+         * acababa FUERA de CALICO, en otra app. Con la lista abierta a todo,
          * esa dirección llega al filtro y el filtro la rechaza.
          */
         originWhitelist={['*']}

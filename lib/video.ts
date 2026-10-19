@@ -294,7 +294,7 @@ export function miniaturaDelEnlace(
 /**
  * Las PÁGINAS de YouTube: lo único que de verdad hay que impedir.
  *
- * Son las que sacan al alumno de UDECA y lo dejan en la app de YouTube, con el
+ * Son las que sacan al alumno de CALICO y lo dejan en la app de YouTube, con el
  * vídeo del curso a la vista de cualquiera y sin forma cómoda de volver.
  */
 const PAGINAS_QUE_SACAN = [

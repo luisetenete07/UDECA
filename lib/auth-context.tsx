@@ -34,7 +34,7 @@ interface AuthContextValue {
   /** Si el correo del usuario actual está verificado (Firebase Auth). */
   emailVerified: boolean;
   /**
-   * La palabra que se lee donde pone "UDECA".
+   * La palabra que se lee donde pone "CALICO".
    *
    * Vive aquí y no en cada pantalla por un motivo concreto: para un ALUMNO no
    * es la suya, es la de su entrenador, y eso exige leer OTRO documento. Si lo
@@ -43,7 +43,7 @@ interface AuthContextValue {
    */
   marca: string;
   /**
-   * El logo que sustituye al de UDECA: el suyo si es entrenador, el de su
+   * El logo que sustituye al de CALICO: el suyo si es entrenador, el de su
    * entrenador si es alumno. `null` si no hay, o si su plan no lo incluye
    * (`puedeLlevarLogo`): entonces se ve el emblema de siempre.
    */
@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
          *
          * Las reglas ya dejan al alumno leer el perfil de SU coach, así que no
          * hace falta duplicar el dato en ningún sitio. Se pide sin `await` y
-         * sin bloquear: mientras no llegue se lee UDECA, que es mejor que un
+         * sin bloquear: mientras no llegue se lee CALICO, que es mejor que un
          * hueco parpadeando en la cabecera. Y si falla —sin red— tampoco pasa
          * nada: la app arranca igual.
          */

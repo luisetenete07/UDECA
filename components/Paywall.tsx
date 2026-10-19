@@ -110,7 +110,7 @@ export function Paywall() {
       Linking.openURL(checkoutUrl).catch(() => {});
     } else {
       Linking.openURL(
-        `mailto:${CONTACT_EMAIL}?subject=Suscripción UDECA Pro&body=Hola, quiero activar mi suscripción de UDECA (Pro). Mi correo es: ${profile?.email ?? ''}`
+        `mailto:${CONTACT_EMAIL}?subject=Suscripción CALICO Pro&body=Hola, quiero activar mi suscripción de CALICO (Pro). Mi correo es: ${profile?.email ?? ''}`
       ).catch(() => {});
     }
   };

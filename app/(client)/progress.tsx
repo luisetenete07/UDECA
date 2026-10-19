@@ -232,12 +232,12 @@ export default function ProgressScreen() {
   };
 
   // Comparte una sesión concreta del registro mensual como imagen de marca
-  // UDECA; si no se puede generar, cae a texto compartible.
+  // CALICO; si no se puede generar, cae a texto compartible.
   const handleShareSession = async (log: WorkoutLog) => {
     const t = sessionTotals(log.exercises, measureByExercise);
     try {
       const result = await shareSessionImage({
-        routineName: log.routineName ?? 'UDECA',
+        routineName: log.routineName ?? 'CALICO',
         dayName: log.dayName,
         durationMin: log.durationMin ?? 0,
         sets: t.sets,
@@ -254,14 +254,14 @@ export default function ProgressScreen() {
       // Caemos al texto.
     }
     const parts = [
-      `Sesión completada en UDECA: ${log.dayName ?? log.routineName ?? ''}`.trim(),
+      `Sesión completada en CALICO: ${log.dayName ?? log.routineName ?? ''}`.trim(),
       log.durationMin ? `${log.durationMin} min` : null,
       frase`${t.sets} series`,
       t.reps > 0 ? `${t.reps} reps` : null,
       t.seconds > 0 ? `${t.seconds}s isométrico` : null,
       t.volumeKg > 0 ? frase`${t.volumeKg} kg de volumen` : null,
     ].filter(Boolean);
-    const message = frase`${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    const message = frase`${parts.join(' · ')}\n\nEntreno con CALICO — Calisthenics Coaches`;
     try {
       await Share.share({ message });
     } catch {

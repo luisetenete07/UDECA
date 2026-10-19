@@ -60,7 +60,7 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       {Platform.OS === 'web' ? (
         <Head>
-          <title>UDECA — Universidad de Calistenia</title>
+          <title>CALICO — Calisthenics Coaches</title>
         </Head>
       ) : null}
       <SafeAreaProvider>

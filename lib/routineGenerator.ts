@@ -9,7 +9,7 @@ import {
 import { nuevoId } from './ids';
 
 /**
- * Copiloto UDECA: genera un BORRADOR de rutina a partir de la biblioteca del
+ * Copiloto CALICO: genera un BORRADOR de rutina a partir de la biblioteca del
  * coach y del nivel del alumno. Es determinista (sin IA externa ni claves):
  * selecciona ejercicios por patrón (empuje/tirón/core/pierna), pone los
  * isométricos primero (trabajo de skill en fresco, estándar en calistenia) y

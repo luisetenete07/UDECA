@@ -59,7 +59,7 @@ export class ArranqueSeguro extends React.Component<Props, State> {
       <View style={{ flex: 1, backgroundColor: '#000000' }}>
         <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 80 }}>
           <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '700', marginBottom: 10 }}>
-            UDECA no ha podido arrancar
+            CALICO no ha podido arrancar
           </Text>
           <Text style={{ color: '#ADADAD', fontSize: 15, lineHeight: 21, marginBottom: 22 }}>
             Esto es un fallo nuestro, no de tu móvil ni de tu cuenta. Hazle una

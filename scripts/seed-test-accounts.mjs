@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Crea las dos cuentas de prueba de UDECA (coach y alumno) listas para
+ * Crea las dos cuentas de prueba de CALICO (coach y alumno) listas para
  * usar: correo ya verificado, alumno ya dentro del grupo del coach y código de
  * invitación creado. Evita la ronda de registrarse dos veces, abrir dos
  * correos de verificación y aprobar la solicitud a mano cada vez que hace falta
@@ -22,7 +22,7 @@
  *   SEED_EMAIL_BASE=otro@gmail.com   (por defecto udeca.app@gmail.com)
  *   SEED_PASSWORD=otracosa           (si no, se genera una y se imprime)
  *
- * Los correos se generan con "+etiqueta" sobre la cuenta de UDECA
+ * Los correos se generan con "+etiqueta" sobre la cuenta de CALICO
  * (udeca.app+coach@gmail.com…): Gmail los entrega todos a esa misma bandeja y
  * Firebase los trata como cuentas distintas. Cero cuentas de Google nuevas.
  */

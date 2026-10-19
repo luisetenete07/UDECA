@@ -5,7 +5,7 @@ import admin from 'firebase-admin';
  * cualquier herramienta de email (Mailchimp, Brevo, MailerLite…).
  *
  * Vive fuera de la app a propósito. Los contactos de la comunidad no son
- * usuarios de UDECA: son gente que ha dejado su correo en una página de
+ * usuarios de CALICO: son gente que ha dejado su correo en una página de
  * captación, y mezclarlos con las cuentas —en la misma pantalla o en la misma
  * colección— acaba con alguien mandando una campaña a sus propios alumnos.
  *

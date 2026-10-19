@@ -12,7 +12,7 @@ import admin from 'firebase-admin';
  *
  * Por qué vive en el servidor y no en la app: la clave de Anthropic es un
  * secreto y el repositorio es público. Una clave metida en la app se saca del
- * paquete en dos minutos y la paga UDECA. Aquí solo existe como variable de
+ * paquete en dos minutos y la paga CALICO. Aquí solo existe como variable de
  * entorno de Vercel.
  *
  * Quién puede llamar: solo alguien con sesión de Firebase, y hay que

@@ -72,7 +72,7 @@ except Exception as e:  # noqa: BLE001
 
 # --- El ejecutable ----------------------------------------------------------
 titulo('El ejecutable')
-nombre = info.get('CFBundleExecutable', 'UDECA')
+nombre = info.get('CFBundleExecutable', 'CALICO')
 binario = app / nombre
 if binario.exists():
     print(f'  ✔ {nombre} — {humano(binario.stat().st_size)}')

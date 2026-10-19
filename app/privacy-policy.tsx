@@ -6,13 +6,13 @@ import { colors, spacing, typography } from '../lib/theme';
 export default function PrivacyPolicy() {
   return (
     <ScrollView contentContainerStyle={styles.container} style={{ backgroundColor: colors.background }}>
-      <Text style={styles.title}>Política de privacidad de UDECA</Text>
+      <Text style={styles.title}>Política de privacidad de CALICO</Text>
       <Text style={styles.updated}>Última actualización: octubre 2026</Text>
 
       <Text style={styles.intro}>
-        UDECA (Universidad de Calistenia) es una aplicación de entrenamiento de calistenia que
+        CALICO (Calisthenics Coaches) es una aplicación de entrenamiento de calistenia que
         conecta a entrenadores con sus alumnos. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes.
-        El responsable del tratamiento es el titular de UDECA; puedes contactar en cualquier momento
+        El responsable del tratamiento es el titular de CALICO; puedes contactar en cualquier momento
         en <Text style={styles.bold}>luistenaf@gmail.com</Text>.
       </Text>
 
@@ -44,7 +44,7 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="3. El contador de pasos">
-        Si activas el contador de pasos, UDECA lee los pasos que cuenta tu propio teléfono. Es
+        Si activas el contador de pasos, CALICO lee los pasos que cuenta tu propio teléfono. Es
         opcional: la app funciona igual sin ello, y siempre puedes escribir tus pasos a mano.
         {'\n\n'}
         • <Text style={styles.bold}>Qué leemos:</Text> únicamente el número de pasos de cada día
@@ -52,10 +52,10 @@ export default function PrivacyPolicy() {
         cardiaco, ni sueño, ni entrenamientos, ni ubicación.{'\n'}
         • <Text style={styles.bold}>En iPhone:</Text> se le piden a la app{' '}
         <Text style={styles.bold}>Salud</Text> los pasos (los del iPhone y, si lo llevas, tu Apple
-        Watch), y solo eso. UDECA no escribe ni modifica nada en Salud.{'\n'}
+        Watch), y solo eso. CALICO no escribe ni modifica nada en Salud.{'\n'}
         • <Text style={styles.bold}>En Android:</Text> los cuenta el propio móvil con la API de
-        grabación de Google Play services, que los guarda en el dispositivo, también con UDECA
-        cerrada; si tu móvil no la tiene, el sensor mientras tienes UDECA abierta.
+        grabación de Google Play services, que los guarda en el dispositivo, también con CALICO
+        cerrada; si tu móvil no la tiene, el sensor mientras tienes CALICO abierta.
         No usamos Health Connect ni ningún otro almacén de datos de salud.
         {'\n'}
         • <Text style={styles.bold}>Dónde acaba:</Text> la cifra diaria se guarda en tu cuenta para
@@ -72,7 +72,7 @@ export default function PrivacyPolicy() {
         Los pagos de las cuotas y de la suscripción se procesan a través de{' '}
         <Text style={styles.bold}>Stripe</Text>, un proveedor de pagos certificado. Los datos de tu
         tarjeta se introducen y almacenan directamente en Stripe:{' '}
-        <Text style={styles.bold}>UDECA nunca ve ni guarda los datos completos de tu tarjeta</Text>.
+        <Text style={styles.bold}>CALICO nunca ve ni guarda los datos completos de tu tarjeta</Text>.
         Solo recibimos la confirmación de si un pago se ha realizado y su historial (fechas e importes)
         para mostrar tu estado de cuota. Consulta la política de privacidad de Stripe en{' '}
         <Text style={styles.bold}>stripe.com/es/privacy</Text>.
@@ -80,7 +80,7 @@ export default function PrivacyPolicy() {
 
       <Section title="5. Proveedores y con quién se comparten">
         Tus datos de entrenamiento son visibles para tu <Text style={styles.bold}>entrenador
-        asignado</Text> en UDECA (no lo son para otros alumnos, salvo la clasificación del grupo y tu
+        asignado</Text> en CALICO (no lo son para otros alumnos, salvo la clasificación del grupo y tu
         estado en línea, que puedes tratar con tu coach).{'\n\n'}
         Para funcionar, la app se apoya en proveedores de infraestructura que actúan como encargados
         del tratamiento:{'\n'}
@@ -120,7 +120,7 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="10. Menores">
-        UDECA no está dirigida a menores de 14 años. Si eres menor de esa edad, no debes usar la app
+        CALICO no está dirigida a menores de 14 años. Si eres menor de esa edad, no debes usar la app
         sin el consentimiento de tus padres o tutores.
       </Section>
 

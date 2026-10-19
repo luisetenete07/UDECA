@@ -4,7 +4,7 @@ import { Text } from './Texto';
 import { colors, spacing, typography } from '../lib/theme';
 
 /**
- * Pantalla de carga con identidad propia: el logo de UDECA late suavemente
+ * Pantalla de carga con identidad propia: el logo de CALICO late suavemente
  * mientras llegan los datos (en vez de un spinner genérico).
  */
 export function LoadingScreen({ label }: { label?: string }) {

@@ -1007,7 +1007,7 @@ export default function WorkoutScreen() {
       // Caemos al texto.
     }
     const parts = [
-      `Sesión completada en UDECA: ${day?.name ?? routine.name}`,
+      `Sesión completada en CALICO: ${day?.name ?? routine.name}`,
       summary.durationMin > 0 ? `${summary.durationMin} min` : null,
       frase`${summary.sets} series`,
       summary.reps > 0 ? `${summary.reps} reps` : null,
@@ -1020,7 +1020,7 @@ export default function WorkoutScreen() {
         : null,
       summary.streak > 1 ? frase`Racha: ${summary.streak} días` : null,
     ].filter(Boolean);
-    const message = frase`${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    const message = frase`${parts.join(' · ')}\n\nEntreno con CALICO — Calisthenics Coaches`;
     try {
       await Share.share({ message });
     } catch {
@@ -1058,14 +1058,14 @@ export default function WorkoutScreen() {
       // Caemos al texto.
     }
     const parts = [
-      `Sesión completada en UDECA: ${logToShare.dayName ?? routine.name}`,
+      `Sesión completada en CALICO: ${logToShare.dayName ?? routine.name}`,
       logToShare.durationMin ? `${logToShare.durationMin} min` : null,
       frase`${t.sets} series`,
       t.reps > 0 ? `${t.reps} reps` : null,
       t.seconds > 0 ? `${t.seconds}s isométrico` : null,
       t.volumeKg > 0 ? frase`${t.volumeKg} kg de volumen` : null,
     ].filter(Boolean);
-    const message = frase`${parts.join(' · ')}\n\nEntreno con UDECA — Universidad de Calistenia`;
+    const message = frase`${parts.join(' · ')}\n\nEntreno con CALICO — Calisthenics Coaches`;
     try {
       await Share.share({ message });
     } catch {
@@ -1095,7 +1095,7 @@ export default function WorkoutScreen() {
     const lines = summary.prs.map((pr) => `${pr.exerciseName}: ${pr.label}`);
     const message = `NUEVO RÉCORD PERSONAL\n\n${lines.join('\n')}\n\n${
       summary.streak > 1 ? frase`Racha de ${summary.streak} días\n` : ''
-    }Entrenando con UDECA — Universidad de Calistenia\nwww.udeca.app`;
+    }Entrenando con CALICO — Calisthenics Coaches\nwww.udeca.app`;
     try {
       await Share.share({ message });
     } catch {

@@ -214,7 +214,7 @@ export function puedeAbrirse(destino: string, documento: string): boolean {
    * NADA QUE NO SEA UNA PÁGINA WEB. Las páginas de Google intentan abrir su
    * propia app con direcciones como `intent://drive.google.com/...` (Android)
    * o `googledrive://` (iPhone). Esas direcciones no se cargan: se ENTREGAN al
-   * sistema, que abre la otra app y saca al alumno de UDECA — que es lo que
+   * sistema, que abre la otra app y saca al alumno de CALICO — que es lo que
    * pasó con la 1.1.5. Y una `intent://` de Drive con `embedded=true` dentro
    * se colaba por la regla de abajo, que solo miraba el dominio.
    */

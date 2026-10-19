@@ -2,7 +2,7 @@
  * EL PERIODO DE COACHING DE UN ALUMNO: hasta cuándo entrena con su entrenador.
  *
  * Es lo único que la app lleva de la relación entre los dos. El dinero —cuánto
- * cobra, por dónde y si ya ha pagado— es cosa suya, fuera de UDECA: llevarlo
+ * cobra, por dónde y si ya ha pagado— es cosa suya, fuera de CALICO: llevarlo
  * aquí convertía la ficha del alumno en una hoja de cobros, y lo que el
  * entrenador necesita saber de un vistazo es otra cosa: si ese alumno está
  * dentro, cuánto le queda y cuándo hay que renovar.

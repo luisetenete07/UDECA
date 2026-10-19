@@ -6,12 +6,12 @@ import { colors, spacing, typography } from '../lib/theme';
 export default function DeleteAccount() {
   return (
     <ScrollView contentContainerStyle={styles.container} style={{ backgroundColor: colors.background }}>
-      <Text style={styles.title}>Eliminar tu cuenta de UDECA</Text>
+      <Text style={styles.title}>Eliminar tu cuenta de CALICO</Text>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Desde la app, tú mismo</Text>
         <Text style={styles.body}>
-          Entra en UDECA y ve a <Text style={styles.fuerte}>Perfil → Eliminar mi cuenta</Text>, al
+          Entra en CALICO y ve a <Text style={styles.fuerte}>Perfil → Eliminar mi cuenta</Text>, al
           final de la pantalla. Son cinco pasos: te explicamos qué se borra, tienes que
           escribir "ELIMINAR MI CUENTA" y volver a confirmar que eres tú con Google o con
           Apple, lo mismo con lo que entras. Al terminar, tu cuenta y tus datos desaparecen

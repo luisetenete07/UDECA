@@ -50,7 +50,7 @@ export interface Carne {
 const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'fundador' | 'tipo'>> = {
   coach: {
     titulo: 'ENTRENADOR',
-    lema: 'Forma a otros dentro de UDECA',
+    lema: 'Forma a otros dentro de CALICO',
     monograma: 'EN',
     acento: '#C9BDB0',
   },
@@ -62,7 +62,7 @@ const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'fundador' | '
   },
   formacion: {
     titulo: 'FORMACIÓN',
-    lema: 'Estudia en la Universidad de Calistenia',
+    lema: 'Se forma con los cursos de CALICO',
     monograma: 'FO',
     acento: '#B9A98F',
   },
@@ -117,7 +117,7 @@ export function datosDelCarne(
 /**
  * Qué eres, para el rótulo de la marca.
  *
- * Arriba a la izquierda del todo, bajo "UDECA", ponía "Entrenador" a todo el
+ * Arriba a la izquierda del todo, bajo "CALICO", ponía "Entrenador" a todo el
  * mundo: un alumno abría la app y lo primero que leía era que era entrenador.
  * No es un detalle de estilo —es la primera frase que dice la app sobre quien
  * la usa, y estaba equivocada para dos de cada tres cuentas.

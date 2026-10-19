@@ -1,5 +1,5 @@
 /**
- * Tarjetas de marca UDECA como imagen PNG (1080×1350):
+ * Tarjetas de marca CALICO como imagen PNG (1080×1350):
  *  - Resumen de sesión (al terminar de entrenar).
  *  - Récord personal.
  *  - Informe del alumno (lo genera el coach desde su ficha).
@@ -27,7 +27,7 @@ import {
   type SessionCardData,
 } from './cardEngine';
 import { canRenderCardNatively, renderCardBase64 } from '../components/CardRendererHost';
-import { UDECA_LOGO_DATA_URI } from './udecaLogo';
+import { CALICO_LOGO_DATA_URI } from './calicoLogo';
 import { marcaActual } from './marcaActual';
 import { getIdioma } from './idioma';
 import { t } from './idioma';
@@ -46,9 +46,9 @@ type DrawCard = (
   textos: CardTextos
 ) => Promise<HTMLCanvasElement>;
 
-/** El logo del entrenador si lo tiene (y su plan lo incluye), si no el de UDECA. */
+/** El logo del entrenador si lo tiene (y su plan lo incluye), si no el de CALICO. */
 function logoDeLaTarjeta(): string {
-  return marcaActual().logo ?? UDECA_LOGO_DATA_URI;
+  return marcaActual().logo ?? CALICO_LOGO_DATA_URI;
 }
 
 /**
@@ -184,18 +184,18 @@ async function shareCard(
 // ---------- API pública ----------
 
 export function shareSessionImage(data: SessionCardData): Promise<ShareResult> {
-  return shareCard('session', data, 'sesion-udeca.png', 'Sesión UDECA');
+  return shareCard('session', data, 'sesion-udeca.png', 'Sesión CALICO');
 }
 
 export function shareRecordImage(data: RecordCardData): Promise<ShareResult> {
-  return shareCard('record', data, 'record-udeca.png', 'Récord UDECA');
+  return shareCard('record', data, 'record-udeca.png', 'Récord CALICO');
 }
 
 export function shareReportImage(data: ReportCardData): Promise<ShareResult> {
-  return shareCard('report', data, 'informe-udeca.png', 'Informe UDECA');
+  return shareCard('report', data, 'informe-udeca.png', 'Informe CALICO');
 }
 
 /** Carné de miembro (con número de fundador si lo tiene encendido). */
 export function shareMemberImage(data: MemberCardData): Promise<ShareResult> {
-  return shareCard('member', data, 'carne-udeca.png', 'Mi carné UDECA');
+  return shareCard('member', data, 'carne-udeca.png', 'Mi carné CALICO');
 }

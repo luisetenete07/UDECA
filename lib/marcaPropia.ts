@@ -1,7 +1,7 @@
 /**
- * La marca que se lee en la app: UDECA, o la que haya puesto quien paga.
+ * La marca que se lee en la app: CALICO, o la que haya puesto quien paga.
  *
- * Un entrenador que vive de esto no está vendiendo UDECA: está vendiendo LO
+ * Un entrenador que vive de esto no está vendiendo CALICO: está vendiendo LO
  * SUYO. Que sus alumnos abran la app y lean el nombre de otra empresa le resta
  * a él y no le suma a nadie. Con esto, el coach escribe su palabra y es la que
  * ven él y todos sus alumnos.
@@ -11,7 +11,7 @@
  *  - Entrenador: la suya, porque la ha puesto él.
  *  - Alumno de un entrenador: LA DE SU ENTRENADOR. No tiene marca propia —no
  *    paga y no vende nada— y la app es, para él, la de su coach.
- *  - Sin sesión (entrar, registrarse): UDECA. Ahí todavía no se sabe de quién
+ *  - Sin sesión (entrar, registrarse): CALICO. Ahí todavía no se sabe de quién
  *    es nadie, y la marca de la app es la única que hay.
  *
  * Aquí no se importa nada a propósito: es recorte de texto y elegir entre dos
@@ -19,7 +19,7 @@
  */
 
 /** Lo que se lee cuando nadie ha puesto nada. */
-export const MARCA_POR_DEFECTO = 'UDECA';
+export const MARCA_POR_DEFECTO = 'CALICO';
 
 /**
  * Cuántas letras caben. DOCE, y el número sale de medir, no de opinar.
@@ -59,7 +59,7 @@ export function limpiarMarca(texto: string): string {
     .trim();
 }
 
-/** ¿Vale como marca? Vacío vale: significa volver a UDECA. */
+/** ¿Vale como marca? Vacío vale: significa volver a CALICO. */
 export function marcaValida(texto: string): boolean {
   return limpiarMarca(texto).length <= LARGO_DE_LA_MARCA;
 }
@@ -73,7 +73,7 @@ interface ConMarca {
  * La marca que le toca a esta persona.
  *
  * `deSuEntrenador` es el perfil del coach, y solo se usa si quien mira es un
- * alumno. Si todavía no ha llegado —se carga aparte— se enseña UDECA, que es
+ * alumno. Si todavía no ha llegado —se carga aparte— se enseña CALICO, que es
  * mejor que un hueco parpadeando.
  */
 export function marcaDe(

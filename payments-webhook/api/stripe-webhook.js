@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { aplicarAlta } from './_alta.js';
 
 /**
- * Webhook de Stripe para UDECA: verifica de forma SEGURA (firma de Stripe) que
+ * Webhook de Stripe para CALICO: verifica de forma SEGURA (firma de Stripe) que
  * un alumno ha pagado y marca el cobro automáticamente en Firestore.
  *
  * Se despliega GRATIS en Vercel. Variables de entorno necesarias (ver README):

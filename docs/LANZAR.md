@@ -98,13 +98,13 @@ Aquí no hay que descargar nada: la acción **sube el `.ipa` sola** a App Store
 Connect. Solo hay que esperar a que Apple lo procese (de 10 a 30 minutos) y
 elegirlo.
 
-En [App Store Connect](https://appstoreconnect.apple.com) → **Apps** → UDECA:
+En [App Store Connect](https://appstoreconnect.apple.com) → **Apps** → CALICO:
 
 1. **Distribución** → **App para iOS → 1.0.1**.
 2. Baja al bloque **Compilación** → **+** → elige la que acaba de subir (la del
    número más alto).
 3. Comprueba que la ficha sigue completa: capturas, descripción, notas del
-   revisor, y **"Se requiere iniciar sesión" DESMARCADA** (UDECA entra con
+   revisor, y **"Se requiere iniciar sesión" DESMARCADA** (CALICO entra con
    Google y Apple; no hay usuario ni contraseña que dar).
 4. **Añadir para revisión** → **Enviar**.
 

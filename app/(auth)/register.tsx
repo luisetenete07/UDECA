@@ -110,7 +110,7 @@ export default function RegisterScreen() {
         ) : null}
 
         <Text style={styles.legal}>
-          Al crear tu cuenta aceptas los términos y la política de privacidad de UDECA.
+          Al crear tu cuenta aceptas los términos y la política de privacidad de CALICO.
         </Text>
       </Card>
 

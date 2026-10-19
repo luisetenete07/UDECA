@@ -93,7 +93,7 @@ export function ActualizacionObligatoria() {
         {/* Se dice POR QUÉ, no solo que hay que hacerlo. Un muro sin motivo se
             lee como un capricho; con motivo, se entiende y se pulsa. */}
         <Text style={styles.texto}>
-          Esta versión de UDECA ya no está al día. Actualiza para seguir
+          Esta versión de CALICO ya no está al día. Actualiza para seguir
           entrenando: tus datos, tus rutinas y tu progreso te esperan intactos.
         </Text>
         <Button

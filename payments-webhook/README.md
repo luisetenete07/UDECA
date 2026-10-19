@@ -1,4 +1,4 @@
-# Cobro automático de UDECA (webhook de Stripe)
+# Cobro automático de CALICO (webhook de Stripe)
 
 Esta pequeña función confirma **automáticamente** los pagos: cuando un alumno
 paga por el enlace de Stripe, Stripe avisa aquí, se verifica la firma y se marca
@@ -14,14 +14,14 @@ coach no tiene que confirmar nada a mano.
 
 1. Una cuenta de **Stripe** (gratis): https://dashboard.stripe.com
 2. Una cuenta de **Vercel** (gratis, sin tarjeta): https://vercel.com
-3. Tu proyecto de **Firebase** (el que ya usa UDECA).
+3. Tu proyecto de **Firebase** (el que ya usa CALICO).
 
 ## Paso 1 · Enlace de pago en Stripe
 
 1. En Stripe: **Payment Links** → **New** → crea un enlace con la cuota (p. ej.
-   "Cuota mensual UDECA", precio recurrente o único, como prefieras).
+   "Cuota mensual CALICO", precio recurrente o único, como prefieras).
 2. Copia la URL (`https://buy.stripe.com/...`).
-3. Pégala en la app: **UDECA → Alumnos → (el alumno) → Cobro → Enlace de pago**.
+3. Pégala en la app: **CALICO → Alumnos → (el alumno) → Cobro → Enlace de pago**.
 
 El enlace va **por alumno**, no por entrenador: cada plan tiene su precio, y con
 uno común el botón cobraría de más a unos y de menos a otros. Crea en Stripe un
@@ -74,7 +74,7 @@ respaldo por si algún pago no cuadra o se cobra por otro medio.
 ### Notas
 
 - **Un coach = una cuenta de Stripe.** Este webhook usa una sola cuenta de
-  Stripe (la del coach). Si en el futuro UDECA tiene muchos coaches, cada uno con
+  Stripe (la del coach). Si en el futuro CALICO tiene muchos coaches, cada uno con
   su Stripe, habría que montar una plataforma con muchas cuentas conectadas. Es
   un cambio futuro; para uno o pocos coaches, esto vale.
 - Hubo un alta de cuentas conectadas (`/api/connect`) para que cada coach cobrara
@@ -96,7 +96,7 @@ en series y marcas usando la API de Anthropic.
 
 Vive aquí, y no en la app, porque **la clave es un secreto y el repositorio de la
 app es público**: una clave metida en la app se saca del paquete en dos minutos
-y la factura la paga UDECA.
+y la factura la paga CALICO.
 
 | Variable | Valor |
 |---|---|

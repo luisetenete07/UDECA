@@ -1,4 +1,4 @@
-# Subir UDECA a las tiendas
+# Subir CALICO a las tiendas
 
 Los tres formatos —web, Play Store y App Store— salen del **mismo código**.
 No hay que preparar nada a mano: están montados como acciones de GitHub, así
@@ -73,7 +73,7 @@ Las capturas son lo que más se tarda. Lo demás es media hora.
 
 ### Las notas para el revisor: sin esto, rechazo casi seguro
 
-En UDECA **no hay entrar con correo y contraseña**: solo Google y Apple (ver
+En CALICO **no hay entrar con correo y contraseña**: solo Google y Apple (ver
 `docs/ENTRAR.md`). Eso significa que la cuenta de demostración que pide Apple
 —usuario y contraseña— no sirve de nada aquí, y un revisor que no puede entrar
 rechaza la app sin mirar nada más.
@@ -90,7 +90,7 @@ entera.
 
 ### Por qué en el iPhone no hay ningún botón de pagar
 
-**UDECA cobra desde septiembre de 2026**, con los cuatro Payment Links de
+**CALICO cobra desde septiembre de 2026**, con los cuatro Payment Links de
 producción puestos: 17 € el primer año del atleta, 27 € el del entrenador, y
 después 96 € y 180 € al año. Este apartado decía lo contrario —que no se cobraba
 en ninguna plataforma— porque se escribió cuando la cuenta de Stripe aún no
@@ -119,7 +119,7 @@ enlace suelto en la app es inofensivo porque manda `CAN_LINK_TO_PAYMENT`, pero
 `web/config.js` no mira ningún interruptor y ahí un enlace es un cobro real.
 
 Con los pagos apagados, el acceso se amplía a mano desde el panel de CEO (perfil
-del entrenador → *Admin UDECA · cuentas*), que lista entrenadores y atletas por
+del entrenador → *Admin CALICO · cuentas*), que lista entrenadores y atletas por
 separado y da +1 mes o +1 año a cualquiera.
 
 Dos guardianes lo vigilan, y los dos cambian de modo solos según el
@@ -130,7 +130,7 @@ enlace suelto; encendidos, que los cuatro estén puestos, cuadren y sean de
 producción).
 
 Lo que un **alumno le paga a su entrenador** no entra aquí: es un servicio real
-entre dos personas, Apple lo excluye expresamente, no pasa por UDECA y sigue
+entre dos personas, Apple lo excluye expresamente, no pasa por CALICO y sigue
 igual en las tres plataformas.
 
 ---
@@ -149,7 +149,7 @@ están puestos; esto es por si hay que rehacerlos algún día.
 desde el secreto justo antes de compilar y lo borra al terminar. Si alguna vez
 aparece un `asc-key.p8` en un commit, hay que revocar esa clave en App Store
 Connect y generar otra: con ella cualquiera puede subir builds a nombre de
-UDECA.
+CALICO.
 
 ---
 
@@ -172,7 +172,7 @@ defecto para toda app de iPhone) y ahí no arrancaría, porque React Native usa
 librerías que en macOS no existen. La app no está pensada para Mac, así que la
 solución es no ofrecerla en Mac:
 
-> App Store Connect → UDECA → **Pricing and Availability** → en la lista de
+> App Store Connect → CALICO → **Pricing and Availability** → en la lista de
 > plataformas, desmarcar **Mac con Apple silicon**. Se guarda y ya está.
 
 No se arregla desde el código: es un ajuste de la ficha, no del binario. Y
@@ -243,7 +243,7 @@ empaqueta, sino algo que pasa YA EJECUTÁNDOSE, en los primeros instantes. Y eso
 solo lo dice el registro de fallo del propio teléfono:
 
 > iPhone → **Ajustes** → **Privacidad y seguridad** → **Análisis y mejoras** →
-> **Datos de análisis** → un fichero que empieza por `UDECA-`.
+> **Datos de análisis** → un fichero que empieza por `CALICO-`.
 > Interesan dos líneas: `Exception Type` y la primera de `Thread 0 Crashed`.
 
 También sale en **App Store Connect → TestFlight → la versión → Crashes**.
@@ -273,7 +273,7 @@ de firma de aplicaciones está detrás de un botón de copiar, no escrita.
 
 **Se registra en Google Cloud, NO en Firebase.** En Firebase de este proyecto
 solo hay una app **web** (el identificador es `1:1042172841881:web:…`), porque
-UDECA usa el SDK de JavaScript de Firebase en las tres plataformas. Al no haber
+CALICO usa el SDK de JavaScript de Firebase en las tres plataformas. Al no haber
 app de Android registrada allí, no existe el "Añadir huella digital" del que
 hablan todos los tutoriales. El sitio es:
 

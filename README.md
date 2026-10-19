@@ -1,6 +1,6 @@
-# UDECA — Universidad de Calistenia
+# CALICO — Calisthenics Coaches
 
-App multiplataforma (iOS, Android y Web) de UDECA (by Luis Tena /
+App multiplataforma (iOS, Android y Web) de CALICO (by Luis Tena /
 luistenafit) para que el entrenador gestione a sus clientes, rutinas,
 entrenamientos y progreso desde un único lugar, y para que cada cliente
 acceda a su plan personalizado.
@@ -80,8 +80,8 @@ Implementado hasta ahora:
   semana sin registrar su peso.
 - **Mejoras de diseño**: feedback háptico en los botones (iOS/Android).
 
-**Fase 4 — Identidad UDECA y experiencia élite**
-- **Rebranding UDECA**: negro + oro (#A2968B), tipografías Cinzel/Inter,
+**Fase 4 — Identidad CALICO y experiencia élite**
+- **Rebranding CALICO**: negro + oro (#A2968B), tipografías Cinzel/Inter,
   logotipos reales, degradados oro, halos y tarjetas con filo dorado.
 - **Perfil de alumno enriquecido**: foto de perfil (base64 en Firestore),
   bio, nivel, peso objetivo, logros/insignias y recordatorio diario de
@@ -305,7 +305,7 @@ firestore.rules            Reglas de seguridad de Firestore
 ## 9. Añadir el logo real (icono, splash y favicon)
 
 Por ahora la app usa los iconos de ejemplo que genera Expo por defecto. Para
-poner el logo real de UDECA, sustituye estos archivos en `assets/` por el
+poner el logo real de CALICO, sustituye estos archivos en `assets/` por el
 tuyo (mismo nombre, mismas dimensiones — puedes exportarlos con cualquier
 editor de imagen o herramienta online tipo Canva/Figma):
 

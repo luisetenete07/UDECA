@@ -2,7 +2,7 @@
  * LA PUERTA DE SERVICIO CON CORREO. SE QUEDA, Y ESTE GUARDIÁN CON ELLA.
  *
  * Apple rechazó la 1.1.2 por la norma 2.1(a) pidiendo "a user name and
- * password" para revisar la app, y UDECA solo entra con Google o Apple. Se
+ * password" para revisar la app, y CALICO solo entra con Google o Apple. Se
  * añadió esta entrada para darle credenciales al revisor. Se iba a quitar al
  * aprobarse, pero Apple revisa CADA actualización con esas mismas
  * credenciales: quitarla es un rechazo garantizado en la siguiente versión.

@@ -1,4 +1,4 @@
-# Los tres sitios de UDECA
+# Los tres sitios de CALICO
 
 A partir de ahora el dominio se reparte en tres, cada uno con su trabajo:
 
@@ -299,7 +299,7 @@ repositorio es público, y ahí dentro la puerta la abriría cualquiera.
 
 ### La lista de correos
 
-Los contactos de la comunidad **no se mezclan con las cuentas de UDECA**. Viven
+Los contactos de la comunidad **no se mezclan con las cuentas de CALICO**. Viven
 en su propia colección, `leads`, separada de `users`: quien deja el correo en
 una página de captación no es un usuario de la app, y juntarlos acaba con
 alguien mandando una campaña a sus propios alumnos.

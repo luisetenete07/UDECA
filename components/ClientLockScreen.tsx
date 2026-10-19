@@ -21,7 +21,7 @@ import { colors, spacing, typography } from '../lib/theme';
  * puede hacer es decírselo: pedirlo no abre la app, porque si la abriera
  * bastaría con pulsar el botón para no renovar nunca.
  *
- * Sin euros: lo que se paga es cosa suya y de su entrenador, fuera de UDECA.
+ * Sin euros: lo que se paga es cosa suya y de su entrenador, fuera de CALICO.
  * Y nunca se pierde nada: el plan, el historial y las marcas siguen ahí.
  */
 export function ClientLockScreen() {

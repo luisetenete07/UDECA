@@ -104,7 +104,7 @@ export function VideoPlayer({
   }
 
   // Cualquier otro enlace (Drive, Dropbox, etc.): se muestra embebido DENTRO
-  // de la app (iframe/WebView) para que el usuario nunca salga de UDECA.
+  // de la app (iframe/WebView) para que el usuario nunca salga de CALICO.
   return <VimeoVideo embedUrl={url} protectedContent={protectedContent} />;
 }
 
@@ -268,7 +268,7 @@ function VimeoVideo({
    *
    * Con un vídeo de YouTube, el reproductor incrustado trae sus propios
    * enlaces —el título, el logo, "Ver en YouTube"— y cualquiera de ellos
-   * sacaba al alumno de UDECA y lo dejaba en la app de YouTube, con el vídeo
+   * sacaba al alumno de CALICO y lo dejaba en la app de YouTube, con el vídeo
    * del curso a la vista de quien pase por allí y sin forma cómoda de volver.
    *
    * Se arregla no dejando que el WebView navegue a ninguna otra parte: solo

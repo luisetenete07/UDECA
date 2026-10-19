@@ -10,7 +10,7 @@ import { colors, radius, shadows, spacing, typography } from '../lib/theme';
 /**
  * La pantalla que dice "todavía no puedes entrar", y solo hay una.
  *
- * En UDECA hay cinco puertas —verificar el correo, vincularse con un
+ * En CALICO hay cinco puertas —verificar el correo, vincularse con un
  * entrenador, pagar el alta, renovar la suscripción y desbloquear una cuota
  * atrasada— y cada una se había escrito por su cuenta. El resultado era que
  * las cinco decían lo mismo con cinco caras distintas: el círculo del icono

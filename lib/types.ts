@@ -75,18 +75,18 @@ export interface UserProfile {
   /** Solo en entrenadores: código que comparten con sus clientes para vincularse. */
   inviteCode?: string;
   /**
-   * La palabra que sustituye a "UDECA" en la app.
+   * La palabra que sustituye a "CALICO" en la app.
    *
    * La pone el entrenador o el atleta desde su perfil. La del entrenador la ven
    * también SUS ALUMNOS: para ellos la app es la de su coach, no la nuestra.
    *
-   * Vacío o sin poner significa UDECA. Tope de caracteres y limpieza en
+   * Vacío o sin poner significa CALICO. Tope de caracteres y limpieza en
    * lib/marcaPropia.ts, que es donde se explica de dónde sale el número.
    */
   brandName?: string;
   /**
    * El logo del entrenador (imagen en `data:`, pequeña), que sustituye al
-   * emblema de UDECA para él y para sus alumnos. Solo se ENSEÑA si su plan lo
+   * emblema de CALICO para él y para sus alumnos. Solo se ENSEÑA si su plan lo
    * incluye (`puedeLlevarLogo` en lib/planBase.ts): si deja de pagarlo, se deja
    * de ver sin tener que borrar nada.
    */
@@ -228,9 +228,9 @@ export interface UserProfile {
   /** true en cuentas creadas con verificación de correo obligatoria. */
   emailVerificationRequired?: boolean;
   /**
-   * SaaS UDECA (solo coaches): fin de la suscripción o del periodo de prueba
+   * SaaS CALICO (solo coaches): fin de la suscripción o del periodo de prueba
    * (timestamp ms). Sin valor = cuenta fundadora (acceso completo, anterior a
-   * la monetización). Solo el admin de UDECA puede modificarlo (reglas).
+   * la monetización). Solo el admin de CALICO puede modificarlo (reglas).
    */
   subscriptionUntil?: number;
   /**
@@ -399,7 +399,7 @@ export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
  */
 /**
  * Paleta con la que cada entrenador colorea sus categorías. Son tonos que
- * conviven con el negro y el oro de UDECA sin competir con ellos.
+ * conviven con el negro y el oro de CALICO sin competir con ellos.
  */
 export const CATEGORY_PALETTE = [
   '#A2968B',
@@ -508,7 +508,7 @@ export interface Exercise {
   /**
    * Músculos que trabaja el ejercicio (para colorear el cuerpo anatómico). Si
    * está definido, tiene prioridad sobre la clasificación automática por nombre.
-   * Se hereda de la plantilla UDECA al importar el pack.
+   * Se hereda de la plantilla CALICO al importar el pack.
    */
   muscles?: MuscleId[];
   /**
@@ -540,7 +540,7 @@ export const GRIP_LABEL: Record<GripType, string> = {
 };
 
 /**
- * Plantilla maestra de ejercicios de UDECA. La edita SOLO el admin (CEO) y
+ * Plantilla maestra de ejercicios de CALICO. La edita SOLO el admin (CEO) y
  * cualquier entrenador nuevo puede precargarla en su biblioteca. Cada ejercicio
  * define qué músculos trabaja para el gráfico del cuerpo anatómico.
  */

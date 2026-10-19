@@ -5,7 +5,7 @@ import { colors } from '../lib/theme';
 const NATIVE = Platform.OS !== 'web';
 
 /**
- * Animación breve de bienvenida al abrir la app: el logo de UDECA aparece
+ * Animación breve de bienvenida al abrir la app: el logo de CALICO aparece
  * con un destello dorado, se asienta y todo se desvanece hacia la app.
  * Se muestra una vez por arranque. Llama a `onFinish` al terminar.
  */

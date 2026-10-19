@@ -291,7 +291,7 @@ export default function ClientDetailScreen() {
   /**
    * Guarda los pasos al día. Vacío = quitar el objetivo y volver al de la app;
    * no es lo mismo que escribir 10.000 a mano, porque el día que cambie el que
-   * trae UDECA este alumno se quedaría con el viejo escrito a fuego.
+   * trae CALICO este alumno se quedaría con el viejo escrito a fuego.
    */
   const handleSaveStepGoal = async () => {
     if (!id || savingPasos) return;
@@ -450,7 +450,7 @@ export default function ClientDetailScreen() {
           {/*
            * EL PERIODO DE COACHING. Es lo único de la relación con el alumno que
            * lleva la app: hasta cuándo entrena contigo. El dinero —cuánto, por
-           * dónde, si ya ha pagado— es cosa vuestra, fuera de UDECA. Si pasan
+           * dónde, si ya ha pagado— es cosa vuestra, fuera de CALICO. Si pasan
            * unos días sin renovar, al alumno se le pausa la app hasta que lo hagas.
            */}
           <Card style={styles.section}>

@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
   s.summary        = 'Pasos del día desde Salud (HealthKit), con el Apple Watch incluido.'
   s.description    = 'Pasos del día desde Salud (HealthKit), con el Apple Watch incluido.'
   s.license        = 'UNLICENSED'
-  s.author         = 'UDECA'
+  s.author         = 'CALICO'
   s.homepage       = 'https://udeca.app'
   s.platforms      = {
     :ios => '16.4'

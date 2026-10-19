@@ -11,7 +11,7 @@ import { db } from '../firebase';
 import type { TemplateExercise } from '../types';
 
 /**
- * Plantilla maestra de ejercicios de UDECA (colección global). La lee cualquier
+ * Plantilla maestra de ejercicios de CALICO (colección global). La lee cualquier
  * entrenador para precargar su biblioteca; solo el admin (CEO) puede escribir
  * (lo imponen las reglas de Firestore).
  */

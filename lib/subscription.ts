@@ -25,7 +25,7 @@ export {
 } from './enlacesDeCobro';
 
 /**
- * Modelo de UDECA: paga el entrenador, y sus alumnos entran gratis con su
+ * Modelo de CALICO: paga el entrenador, y sus alumnos entran gratis con su
  * código.
  *
  *  - ENTRADA: el PRIMER AÑO ENTERO, pago único. No es una prueba: son doce meses con la app completa. El pago con
@@ -161,7 +161,7 @@ export async function verifySubscriptionNow(
  *  2. La norma 3.1.1 de la App Store prohíbe enseñar precios de contenido
  *     digital y enlaces a pagar fuera. Teniendo dos textos —uno con precio y
  *     otro sin— la única duda era cuál se colaba en la build de iOS.
- *  3. "Gratis" tampoco: el alumno de un entrenador no paga a UDECA, pero sí le
+ *  3. "Gratis" tampoco: el alumno de un entrenador no paga a CALICO, pero sí le
  *     paga a su entrenador. Poner "gratis" en su tarjeta al registrarse le dice
  *     algo que no es verdad para él.
  *

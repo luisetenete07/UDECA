@@ -8,7 +8,7 @@
  * rechazo.
  *
  * Esto vigila que no vuelva a colarse uno. Lo que sí puede llevar importes es
- * lo que un ALUMNO le paga a su ENTRENADOR: eso no es el precio de UDECA, es
+ * lo que un ALUMNO le paga a su ENTRENADOR: eso no es el precio de CALICO, es
  * la cuota que cada entrenador pone, y esa sí vive en la app.
  *
  *   node scripts/check-sin-precios.mjs
@@ -42,7 +42,7 @@ const PATRONES = [
     re: /ANNUAL_PRICE_EUR|ATHLETE_ANNUAL_EUR|COACH_FIRST_YEAR_EUR|ATHLETE_FIRST_YEAR_EUR|COACH_MONTHLY_EQUIV_EUR|ATHLETE_MONTHLY_EQUIV_EUR|COACH_FIRST_YEAR_MONTHLY_EUR|ATHLETE_FIRST_YEAR_MONTHLY_EUR|AHORRO_PRIMER_ANO_/,
     que: 'una constante de precio',
   },
-  // "Gratis" tampoco: el alumno no le paga a UDECA, pero sí a su entrenador.
+  // "Gratis" tampoco: el alumno no le paga a CALICO, pero sí a su entrenador.
   { re: /\bgratis\b/i, que: '"gratis"' },
 ];
 

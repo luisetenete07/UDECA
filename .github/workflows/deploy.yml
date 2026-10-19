@@ -1,4 +1,4 @@
-# Despliegue automático de la APP de UDECA a GitHub Pages.
+# Despliegue automático de la APP de CALICO a GitHub Pages.
 #
 # Cada push a la rama de desarrollo compila la app web (Expo) y publica el
 # resultado en la rama gh-pages, que GitHub Pages sirve en app.udeca.app.
@@ -145,7 +145,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           publish_branch: gh-pages
-          user_name: "UDECA Deploy"
+          user_name: "CALICO Deploy"
           user_email: "udeca-bot@example.com"
           commit_message: "Deploy web build"
 
@@ -171,7 +171,7 @@ jobs:
             bien=0
             for _ in $(seq 1 18); do
               codigo=$(curl -sL -o /tmp/pagina.html -w '%{http_code}' "$url" || echo 000)
-              if [ "$codigo" = "200" ] && grep -q "UDECA" /tmp/pagina.html; then
+              if [ "$codigo" = "200" ] && grep -q "CALICO" /tmp/pagina.html; then
                 echo "OK  $url ($(wc -c < /tmp/pagina.html) bytes)"
                 bien=1
                 break

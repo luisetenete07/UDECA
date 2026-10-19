@@ -228,7 +228,7 @@ export default function ClientProfileScreen() {
         ) : null}
       </View>
 
-      {/* El carné: quién es dentro de UDECA, y su número si es fundador. */}
+      {/* El carné: quién es dentro de CALICO, y su número si es fundador. */}
       <MemberCard />
 
       <SelectorDeIdioma />
@@ -397,7 +397,7 @@ export default function ClientProfileScreen() {
       <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={styles.signOut} />
       {/* Con la marca de su entrenador, una firma pequeña: la app es suya,
           pero se sabe con qué está hecha. */}
-      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conUdeca}>con UDECA</Text> : null}
+      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conUdeca}>con CALICO</Text> : null}
 
       {/* Eliminar la cuenta: discreto, pero SIEMPRE presente. Las tiendas
           exigen que se pueda hacer desde dentro de la app, y el proceso en sí

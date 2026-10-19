@@ -85,7 +85,7 @@ export default function ExercisesScreen() {
   // Color de categoría: un único diálogo por categoría (paleta + personalizado),
   // en vez de una parrilla de muestras repetida en cada fila.
   const [colorTarget, setColorTarget] = useState<string | null>(null);
-  // Confirmación previa de "Actualizar a pack UDECA": es destructivo (sustituye
+  // Confirmación previa de "Actualizar a pack CALICO": es destructivo (sustituye
   // toda la biblioteca), así que nunca se ejecuta a la primera pulsación.
   const [confirmPack, setConfirmPack] = useState(false);
   // Renombrar subgrupos dentro de la categoría filtrada.
@@ -194,7 +194,7 @@ export default function ExercisesScreen() {
     }
   };
 
-  // Pack a precargar: la plantilla oficial de UDECA (editada por el CEO) si
+  // Pack a precargar: la plantilla oficial de CALICO (editada por el CEO) si
   // existe; si no, el pack estático de calistenia. Cada ejercicio arrastra sus
   // músculos para el cuerpo anatómico.
   const packItems = useMemo(
@@ -231,7 +231,7 @@ export default function ExercisesScreen() {
     return packItems.filter((p) => !existing.has(p.name.trim().toLowerCase()));
   }, [packItems, exercises]);
 
-  // Importa el pack UDECA saltando los ejercicios que ya existen (por nombre).
+  // Importa el pack CALICO saltando los ejercicios que ya existen (por nombre).
   const handleImportPack = async () => {
     if (!profile) return;
     setImporting(true);
@@ -262,7 +262,7 @@ export default function ExercisesScreen() {
     }
   };
 
-  // ACTUALIZAR pack (solo la cuenta admin de UDECA): deja la biblioteca
+  // ACTUALIZAR pack (solo la cuenta admin de CALICO): deja la biblioteca
   // exactamente como el pack actual. Actualiza por nombre (conservando el id,
   // para que las rutinas que referencian el ejercicio no se rompan, y su
   // vídeo), crea los nuevos, BORRA los que ya no están en el pack y reemplaza
@@ -336,7 +336,7 @@ export default function ExercisesScreen() {
         });
         await refreshProfile();
       }
-      showToast('Biblioteca sincronizada con el pack UDECA');
+      showToast('Biblioteca sincronizada con el pack CALICO');
       await load();
     } catch {
       showToast('No se pudo actualizar el pack');
@@ -598,7 +598,7 @@ export default function ExercisesScreen() {
             ? [
                 {
                   icono: 'cube-outline' as const,
-                  texto: frase`Añadir el pack UDECA (${missingPack.length} ejercicios)`,
+                  texto: frase`Añadir el pack CALICO (${missingPack.length} ejercicios)`,
                   onPress: () => {
                     setMenuOpen(false);
                     handleImportPack();
@@ -634,7 +634,7 @@ export default function ExercisesScreen() {
             ? [
                 {
                   icono: 'shield-checkmark' as const,
-                  texto: 'Plantilla UDECA (CEO)',
+                  texto: 'Plantilla CALICO (CEO)',
                   onPress: () => {
                     setMenuOpen(false);
                     router.push('/(trainer)/exercises/template');
@@ -644,7 +644,7 @@ export default function ExercisesScreen() {
                   ? [
                       {
                         icono: 'sync-outline' as const,
-                        texto: 'Actualizar a pack UDECA',
+                        texto: 'Actualizar a pack CALICO',
                         peligro: true,
                         onPress: () => {
                           setMenuOpen(false);
@@ -810,14 +810,14 @@ export default function ExercisesScreen() {
           title="No hay ejercicios"
           subtitle={
             exercises.length === 0 && missingPack.length > 0
-              ? 'Empieza con el pack UDECA o crea el primero con «+ Nuevo».'
+              ? 'Empieza con el pack CALICO o crea el primero con «+ Nuevo».'
               : 'Prueba con otra búsqueda o categoría.'
           }
           // Con la biblioteca vacía el pack es LA acción a hacer, así que aquí
           // sí se muestra en grande (en la cabecera va como pastilla pequeña).
           actionLabel={
             exercises.length === 0 && missingPack.length > 0
-              ? `Importar pack UDECA (${missingPack.length})`
+              ? `Importar pack CALICO (${missingPack.length})`
               : undefined
           }
           onAction={
@@ -870,13 +870,13 @@ export default function ExercisesScreen() {
         })
       )}
 
-      {/* Confirmación previa de "Actualizar a pack UDECA" (destructivo) */}
+      {/* Confirmación previa de "Actualizar a pack CALICO" (destructivo) */}
       <Dialogo
         visible={confirmPack}
         onClose={() => setConfirmPack(false)}
         icono="warning-outline"
-        titulo="¿Actualizar a pack UDECA?"
-        texto={`Tu biblioteca quedará EXACTAMENTE igual que el pack UDECA actual (${packItems.length} ejercicios): se sustituyen los datos de los que ya tienes, se añaden los que falten y se BORRAN tus ${exercises.length} ${
+        titulo="¿Actualizar a pack CALICO?"
+        texto={`Tu biblioteca quedará EXACTAMENTE igual que el pack CALICO actual (${packItems.length} ejercicios): se sustituyen los datos de los que ya tienes, se añaden los que falten y se BORRAN tus ${exercises.length} ${
           exercises.length === 1 ? 'ejercicio' : 'ejercicios'
         } que no estén en el pack. También se reemplazan tus categorías. No se puede deshacer.`}
         accion="Sí, sustituirlo todo"
@@ -947,7 +947,7 @@ export default function ExercisesScreen() {
         accion="Enviar el código"
         onAccion={() => {
           Share.share({
-            message: frase`Mi biblioteca de ejercicios en UDECA: ${codigoMostrado ?? ''}. Ábrela en Ejercicios › … › Importar con un código.`,
+            message: frase`Mi biblioteca de ejercicios en CALICO: ${codigoMostrado ?? ''}. Ábrela en Ejercicios › … › Importar con un código.`,
           }).catch(() => {});
         }}
         cancelar="Cerrar"

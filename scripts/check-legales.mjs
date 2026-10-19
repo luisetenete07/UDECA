@@ -98,13 +98,13 @@ for (const trozo of [
 ]) {
   ok(`habla de "${trozo}"`, privacidad.includes(trozo));
 }
-ok('y también en inglés', privacidad.includes('UDECA privacy policy'));
+ok('y también en inglés', privacidad.includes('CALICO privacy policy'));
 
 console.log('\nY la de borrar la cuenta, también');
 ok('explica cómo se hace desde la app', /Perfil → Eliminar mi cuenta/.test(borrado));
 ok('dice qué se elimina', borrado.includes('Qué se elimina'));
 ok('y qué se conserva', borrado.includes('Qué se conserva'));
-ok('y también en inglés', borrado.includes('Delete your UDECA account'));
+ok('y también en inglés', borrado.includes('Delete your CALICO account'));
 
 console.log('\nLo que exige la tienda: se puede pedir SIN tener la app');
 ok(
@@ -198,7 +198,7 @@ console.log('\nLa de soporte sirve para lo que existe');
   // Sin una forma de contactar no es soporte, es un folleto.
   ok('hay un correo al que escribir', soporte.includes(`mailto:${CORREO}`));
   ok('dice cómo se entra (Google y Apple)', /Google/.test(soporte) && /Apple/.test(soporte));
-  ok('y también en inglés', soporte.includes('UDECA support'));
+  ok('y también en inglés', soporte.includes('CALICO support'));
   ok(
     'la publica el despliegue de la app',
     /for pagina in [^\n]*\bsoporte\b/.test(lee('.github/workflows/deploy.yml')),

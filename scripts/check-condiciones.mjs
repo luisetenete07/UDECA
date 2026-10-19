@@ -78,7 +78,7 @@ console.log('\nY deja claro que NO cubre el entrenamiento personal');
 {
   /*
    * La URL de condiciones es de la CUENTA de Stripe, no del enlace de pago, y
-   * bajo la misma entidad se cobran dos cosas: la suscripción a UDECA y el
+   * bajo la misma entidad se cobran dos cosas: la suscripción a CALICO y el
    * entrenamiento personal del entrenador. Los dos checkouts van a enseñar
    * este documento.
    *

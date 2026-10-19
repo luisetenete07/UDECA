@@ -77,9 +77,9 @@ export function tarjetaDeEntrenador(
   }
   const meses = mesesDesde(d.createdAt, ahora);
   if (meses >= 1) {
-    out.push({ etiqueta: t('En UDECA'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
+    out.push({ etiqueta: t('En CALICO'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
   }
-  return out.length > 0 ? out : [{ etiqueta: t('Entrenador'), valor: 'UDECA' }];
+  return out.length > 0 ? out : [{ etiqueta: t('Entrenador'), valor: 'CALICO' }];
 }
 
 export interface DatosAtleta {
@@ -121,7 +121,7 @@ export function tarjetaDeAtleta(
   }
   const meses = mesesDesde(d.createdAt, ahora);
   if (meses >= 1) {
-    out.push({ etiqueta: t('En UDECA'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
+    out.push({ etiqueta: t('En CALICO'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
   }
   return out.length > 0 ? out : [{ etiqueta: t('Empieza hoy'), valor: t('Tu primer entreno') }];
 }

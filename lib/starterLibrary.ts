@@ -1,7 +1,7 @@
 import type { ExerciseMeasure, MuscleGroup } from './types';
 
 /**
- * Pack de ejercicios UDECA: biblioteca de calistenia precargada para que un
+ * Pack de ejercicios CALICO: biblioteca de calistenia precargada para que un
  * coach nuevo empiece a montar rutinas en minutos. Sin vídeos a propósito:
  * cada coach sube los suyos propios (decisión de producto).
  */

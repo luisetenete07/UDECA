@@ -20,7 +20,7 @@ import {
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /**
- * "Pon tu nombre donde pone UDECA."
+ * "Pon tu nombre donde pone CALICO."
  *
  * UNA PANTALLA PARA LOS DOS, y no es por ahorrar: entrenador y atleta hacen
  * exactamente lo mismo aquí, y con dos copias la que menos se usa se queda
@@ -56,7 +56,7 @@ export function EditorDeMarca() {
       // desmentirla.
       await setBrandName(profile.uid, limpio);
       await refreshProfile();
-      showToast(limpio ? frase`Tu marca es ${limpio}` : 'Vuelve a verse UDECA');
+      showToast(limpio ? frase`Tu marca es ${limpio}` : 'Vuelve a verse CALICO');
     } catch {
       showToast('No se pudo guardar tu marca');
     } finally {
@@ -96,7 +96,7 @@ export function EditorDeMarca() {
     try {
       await setBrandLogo(profile.uid, null);
       await refreshProfile();
-      showToast('Vuelve a verse el emblema de UDECA');
+      showToast('Vuelve a verse el emblema de CALICO');
     } catch {
       showToast('No se pudo quitar el logo');
     }
@@ -110,8 +110,8 @@ export function EditorDeMarca() {
       </View>
       <Text style={styles.ayuda}>
         {esEntrenador
-          ? 'La palabra que sustituye a UDECA dentro de la app. La verás tú y la verán todos tus alumnos.'
-          : 'La palabra que sustituye a UDECA dentro de la app, para que sea la tuya.'}
+          ? 'La palabra que sustituye a CALICO dentro de la app. La verás tú y la verán todos tus alumnos.'
+          : 'La palabra que sustituye a CALICO dentro de la app, para que sea la tuya.'}
       </Text>
 
       <View style={styles.muestra}>
@@ -135,14 +135,14 @@ export function EditorDeMarca() {
       </Text>
 
       <Button
-        title={limpio ? 'Guardar mi marca' : 'Volver a UDECA'}
+        title={limpio ? 'Guardar mi marca' : 'Volver a CALICO'}
         onPress={guardar}
         loading={guardando}
         disabled={!cambiado}
       />
       {tieneMarcaPropia(profile) ? (
         <Text style={styles.pie}>
-          Déjalo vacío y guarda para volver a UDECA.
+          Déjalo vacío y guarda para volver a CALICO.
         </Text>
       ) : null}
 
@@ -152,7 +152,7 @@ export function EditorDeMarca() {
           {puedeLogo ? (
             <>
               <Text style={styles.ayuda}>
-                Sustituye al emblema de UDECA en tu app y en la de tus alumnos, también en las
+                Sustituye al emblema de CALICO en tu app y en la de tus alumnos, también en las
                 imágenes que comparten. Mejor un PNG con el fondo transparente.
               </Text>
               <View style={styles.logoFila}>
@@ -175,7 +175,7 @@ export function EditorDeMarca() {
             <View style={styles.logoCerrado}>
               <Ionicons name="lock-closed-outline" size={15} color={colors.textMuted} />
               <Text style={styles.logoCerradoTexto}>
-                Incluido en el plan sin tope: tu logo en lugar del de UDECA, para ti y para tus
+                Incluido en el plan sin tope: tu logo en lugar del de CALICO, para ti y para tus
                 alumnos.
               </Text>
             </View>

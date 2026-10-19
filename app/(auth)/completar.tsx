@@ -14,7 +14,7 @@ import type { UserRole } from '../../lib/types';
  * El último paso de entrar con Google.
  *
  * Google da una identidad —nombre, correo, foto— pero no dice qué es esa
- * persona en UDECA, y el rol decide la app entera: con quién entrena, qué
+ * persona en CALICO, y el rol decide la app entera: con quién entrena, qué
  * pantallas ve y quién paga. Así que la primera vez hay que preguntarlo.
  *
  * Se pregunta AQUÍ y no antes de abrir Google a propósito. Elegir rol antes de
@@ -135,7 +135,7 @@ export default function CompletarCuentaScreen() {
         {/* Ni "Google" ni "Apple" a fuego: aquí se llega por los dos, y decir
             el que no es hace dudar de si la cuenta es la correcta. */}
         Has entrado como {firebaseUser?.email ?? 'tu cuenta'}. Solo falta saber cómo vas a
-        usar UDECA.
+        usar CALICO.
       </Text>
 
       {editandoNombre || !nombreDePartida ? (

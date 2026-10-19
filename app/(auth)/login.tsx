@@ -37,7 +37,7 @@ import {
 import { colors, fieldLabel, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 
 /**
- * Entrar en UDECA: con Google o con Apple, y nada más.
+ * Entrar en CALICO: con Google o con Apple, y nada más.
  *
  * El correo y la contraseña se fueron de aquí. No porque estorbaran, sino
  * porque cada uno de los dos campos es una oportunidad de no entrar: la
@@ -356,7 +356,7 @@ export default function LoginScreen() {
         ) : null}
 
         <Text style={styles.legal}>
-          Al entrar aceptas los términos y la política de privacidad de UDECA.
+          Al entrar aceptas los términos y la política de privacidad de CALICO.
         </Text>
       </Card>
 

@@ -4,7 +4,7 @@ import { diaEnZona, inicioDelDia, inicioDelMes, marcaEnZona } from './fechas';
  * LLAMADAS 1:1 CON EL ENTRENADOR.
  *
  * El alumno reserva una llamada en un hueco libre del entrenador, sin
- * mensajes de ida y vuelta para cuadrar la hora. UDECA solo pone el CUÁNDO y
+ * mensajes de ida y vuelta para cuadrar la hora. CALICO solo pone el CUÁNDO y
  * el CUÁNTAS: la llamada en sí sigue por WhatsApp, por teléfono o por el
  * enlace que el entrenador use (Meet, Zoom…), que es donde ya habla con sus
  * alumnos.

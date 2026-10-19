@@ -5,7 +5,7 @@
  * Cuando algo esté vacío, la web se comporta sola: los botones de descarga
  * salen como "Próximamente" y no llevan a ninguna parte rota.
  */
-window.UDECA = {
+window.CALICO = {
   /** Dónde vive la app mientras no está en las tiendas. */
   appUrl: 'https://app.udeca.app',
 

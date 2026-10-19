@@ -63,7 +63,7 @@ const NECESITA = [
 ];
 
 /**
- * Lo que saca al usuario de UDECA. Un alumno se ha metido en una lección de su
+ * Lo que saca al usuario de CALICO. Un alumno se ha metido en una lección de su
  * curso, no en un navegador — y el vídeo del curso no puede acabar abierto en
  * la app de YouTube, a la vista de cualquiera.
  */

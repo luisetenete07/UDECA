@@ -3,6 +3,7 @@ import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { useAuth } from '../lib/auth-context';
 import { MARCA_POR_DEFECTO } from '../lib/marcaPropia';
+import { Emblema, Logotipo } from './MarcaCalico';
 import { colors, fonts, spacing } from '../lib/theme';
 
 /**
@@ -20,32 +21,42 @@ export function Logo({ compact, sinSesion }: { compact?: boolean; sinSesion?: bo
   const propia = !sinSesion && (marca !== MARCA_POR_DEFECTO || suyo);
   return (
     <View style={compact ? styles.containerCompact : styles.container}>
-      {/* El logo, y nada más. Aquí había un halo dorado redondo por detrás, y
-          en Android no se veía como un halo: `elevation` dibuja la sombra del
-          sistema con la silueta de la vista, así que salía un disco amarillo
-          macizo detrás del emblema. El fondo de la marca es negro; lo que hace
-          que el logo destaque es el propio negro, no un aro. */}
-      <Image
-        source={suyo ? { uri: logo! } : require('../assets/android-icon-foreground.png')}
-        style={compact ? styles.emblemCompact : styles.emblem}
-        resizeMode="contain"
-      />
-      <Text style={[styles.mark, compact && styles.markCompact]} numberOfLines={1}>
-        {sinSesion ? MARCA_POR_DEFECTO : marca}
-      </Text>
-      <View style={styles.rule} />
-      {/* "Universidad de Calistenia" y la firma son de UDECA, no de quien haya
-          puesto su palabra: debajo de "IRON BOX" dirían algo que no es verdad.
-          Con marca propia, el logo se queda en la marca y ya. */}
-      {/* Y con marca propia, un "con UDECA" pequeño: la app es del
-          entrenador, pero quien la mira sabe con qué está hecha. */}
+      {/*
+        LA MARCA DE LA CASA: el logotipo de CALICO tal cual, en vector, con su
+        C y sus letras dibujadas. Escrito con una fuente parecida no sería el
+        logo, sería otra cosa que se le parece.
+
+        Con marca propia, lo del entrenador: su logo (o el emblema si no tiene)
+        y su nombre, con un "con CALICO" pequeño debajo — la app es suya, pero
+        quien la mira sabe con qué está hecha.
+      */}
       {!propia ? (
         <>
-          <Text style={styles.subtitle}>Universidad de Calistenia</Text>
+          <View style={compact ? styles.logotipoCompact : styles.logotipo}>
+            <Logotipo ancho={compact ? 156 : 220} />
+          </View>
+          <Text style={styles.subtitle}>Calisthenics Coaches</Text>
           {!compact ? <Text style={styles.credit}>by Luis Tena</Text> : null}
         </>
       ) : (
-        <Text style={styles.credit}>con UDECA</Text>
+        <>
+          {suyo ? (
+            <Image
+              source={{ uri: logo! }}
+              style={compact ? styles.emblemCompact : styles.emblem}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={compact ? styles.emblemCompact : styles.emblem}>
+              <Emblema alto={compact ? 44 : 60} />
+            </View>
+          )}
+          <Text style={[styles.mark, compact && styles.markCompact]} numberOfLines={1}>
+            {marca}
+          </Text>
+          <View style={styles.rule} />
+          <Text style={styles.credit}>con CALICO</Text>
+        </>
       )}
     </View>
   );
@@ -64,12 +75,18 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     marginBottom: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emblemCompact: {
     width: 52,
     height: 52,
     marginBottom: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  logotipo: { marginBottom: spacing.md },
+  logotipoCompact: { marginBottom: spacing.sm },
   mark: {
     fontSize: 30,
     fontFamily: fonts.display,

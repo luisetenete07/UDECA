@@ -3,13 +3,14 @@ import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { useAuth } from '../lib/auth-context';
 import { rotuloDelRol } from '../lib/carne';
+import { Emblema } from './MarcaCalico';
 import { colors, fonts, spacing } from '../lib/theme';
 
 /** Alto reservado para la marca en la cabecera de la barra lateral. */
 export const BRAND_HEIGHT = 96;
 
 /**
- * Marca UDECA en la cabecera de la barra lateral de escritorio.
+ * Marca CALICO en la cabecera de la barra lateral de escritorio.
  *
  * Va como fondo de la barra (`tabBarBackground`) porque la navegación no ofrece
  * ninguna ranura para meter contenido propio encima de los destinos. Por eso la
@@ -21,7 +22,7 @@ export const BRAND_HEIGHT = 96;
  *
  * Debajo de la marca va lo que ERES, no lo que es la app: "Entrenador",
  * "Atleta" o "Alumno" según la cuenta. Estaba escrito a fuego como
- * "Entrenador" para todos, así que un alumno abría UDECA y lo primero que leía
+ * "Entrenador" para todos, así que un alumno abría CALICO y lo primero que leía
  * arriba a la izquierda era un cargo que no es el suyo.
  */
 export function SidebarBrand() {
@@ -30,11 +31,13 @@ export function SidebarBrand() {
     <View style={styles.fill} pointerEvents="none">
       <View style={styles.row}>
         {/* El logo del entrenador, si su plan lo incluye; si no, el emblema. */}
-        <Image
-          source={logo ? { uri: logo } : require('../assets/android-icon-foreground.png')}
-          style={styles.emblem}
-          resizeMode="contain"
-        />
+        {logo ? (
+          <Image source={{ uri: logo }} style={styles.emblem} resizeMode="contain" />
+        ) : (
+          <View style={[styles.emblem, styles.emblemaCentro]}>
+            <Emblema alto={30} />
+          </View>
+        )}
         <View>
           {/* La marca de quien mira: la suya si paga, la de su entrenador si
               es alumno. `numberOfLines` es el seguro del tope de doce letras:
@@ -61,6 +64,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   emblem: { width: 34, height: 34 },
+  emblemaCentro: { alignItems: 'center', justifyContent: 'center' },
   mark: {
     fontSize: 19,
     fontFamily: fonts.display,

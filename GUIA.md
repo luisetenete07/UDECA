@@ -1,4 +1,4 @@
-# Guía de uso de UDECA
+# Guía de uso de CALICO
 
 La app vive en **https://app.udeca.app** (en www.udeca.app está la web de
 presentación, con los planes y las descargas). Es gratuita de alojar,
@@ -91,7 +91,7 @@ y recordatorio diario de entrenamiento.
    4. En la app: Cursos → tu curso → pega ese enlace en el campo de vídeo
       de la lección y guarda. El reproductor oficial de Vimeo aparece
       dentro de la app, y al estar restringido a tu dominio nadie puede
-      ver el vídeo fuera de UDECA.
+      ver el vídeo fuera de CALICO.
 2. **Google Play** (opcional): cuenta de desarrollador (25 $ una vez) +
    `npx eas build -p android`. La PWA ya cubre iPhone y Android sin coste.
 3. **Notificaciones push en web instalada**: funcionan en Android/Chrome;

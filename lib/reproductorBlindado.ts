@@ -7,7 +7,7 @@ import { parseVimeoUrl, parseYouTubeId } from './video';
  * el reproductor de ELLOS, y el reproductor de ellos viene con sus cosas
  * puestas —el título, el canal, "Compartir", "Ver en YouTube", el menú del
  * clic derecho, el logo que es un enlace—. Cada una de esas es una puerta para
- * sacar el vídeo de UDECA, y no se quitan con un parámetro: YouTube no deja.
+ * sacar el vídeo de CALICO, y no se quitan con un parámetro: YouTube no deja.
  *
  * La solución: taparlo entero. El reproductor de ellos se carga sin controles
  * (controls=0) y encima se pone un cristal que se come TODOS los toques, así

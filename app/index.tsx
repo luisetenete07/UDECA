@@ -42,7 +42,7 @@ export default function Index() {
   if (!firebaseUser || !profile) {
     if (introSeen === null) return <LoadingScreen label="Cargando..." />;
     // Primera vez en este dispositivo: antes de pedir nada, contamos qué es
-    // UDECA. Después, directo al inicio de sesión.
+    // CALICO. Después, directo al inicio de sesión.
     return <Redirect href={introSeen ? '/(auth)/login' : '/(auth)/welcome'} />;
   }
 

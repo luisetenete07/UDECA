@@ -39,8 +39,8 @@ console.log('\nSin nombre, nada roto');
 
 console.log('\nLa marca de la app no se cuela');
 {
-  comprueba('no dice UDECA con entrenador', !/UDECA/i.test(tituloDeComunidad('Luis Tena')));
-  comprueba('ni sin él', !/UDECA/i.test(tituloDeComunidad('')));
+  comprueba('no dice CALICO con entrenador', !/CALICO/i.test(tituloDeComunidad('Luis Tena')));
+  comprueba('ni sin él', !/CALICO/i.test(tituloDeComunidad('')));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

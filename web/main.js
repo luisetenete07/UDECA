@@ -4,7 +4,7 @@
  * que tiene que abrir en menos de un segundo.
  */
 (function () {
-  var C = window.UDECA || {};
+  var C = window.CALICO || {};
 
   /**
    * El código de un creador, si se llega con él: udeca.app/?codigo=ANA65.
@@ -51,7 +51,7 @@
       el.rel = 'noopener';
     } else {
       // Sin enlace configurado: mejor un correo que un botón que no hace nada.
-      el.href = 'mailto:' + (C.contacto || '') + '?subject=Quiero%20empezar%20en%20UDECA';
+      el.href = 'mailto:' + (C.contacto || '') + '?subject=Quiero%20empezar%20en%20CALICO';
     }
   });
 

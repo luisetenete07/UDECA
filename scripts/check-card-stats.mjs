@@ -42,7 +42,7 @@ const coachNuevo = tarjetaDeEntrenador(
 );
 comprueba(
   'recién llegado y sin alumnos: no enseña ceros',
-  coachNuevo.length === 1 && coachNuevo[0].valor === 'UDECA',
+  coachNuevo.length === 1 && coachNuevo[0].valor === 'CALICO',
   etiquetas(coachNuevo)
 );
 const coachPocos = tarjetaDeEntrenador(
@@ -55,7 +55,7 @@ comprueba(
   etiquetas(coachPocos)
 );
 comprueba('pero 2 alumnos sí', valorDe(coachPocos, 'Alumnos a tu cargo') === '2');
-comprueba('y menos de un mes no sale como "En UDECA"', valorDe(coachPocos, 'En UDECA') === undefined);
+comprueba('y menos de un mes no sale como "En CALICO"', valorDe(coachPocos, 'En CALICO') === undefined);
 
 const coachHecho = tarjetaDeEntrenador(
   {
@@ -79,7 +79,7 @@ comprueba(
     'Entrenos dirigidos'
   ) === '12.400'
 );
-comprueba('ocho meses', valorDe(coachHecho, 'En UDECA') === '8 meses');
+comprueba('ocho meses', valorDe(coachHecho, 'En CALICO') === '8 meses');
 
 console.log('\nAtleta y alumno');
 const novato = tarjetaDeAtleta(

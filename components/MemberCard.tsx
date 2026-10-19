@@ -40,7 +40,7 @@ export function MemberCard() {
   const [datos, setDatos] = useState<DatoTarjeta[]>([]);
 
   const esEntrenador = profile?.role === 'trainer';
-  // Quién es dentro de UDECA. Se calcula igual aquí y en la imagen que se
+  // Quién es dentro de CALICO. Se calcula igual aquí y en la imagen que se
   // comparte: son la misma tarjeta, y decir "Alumno" dentro y "Formación"
   // fuera sería tener dos.
   const [soloCursos, setSoloCursos] = useState(false);

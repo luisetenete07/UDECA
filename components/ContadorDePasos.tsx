@@ -194,7 +194,7 @@ export function ContadorDePasos({
    * LOS DÍAS EN QUE NO SE ABRIÓ LA APP.
    *
    * El iPhone (y la grabación de Google en Android) guardan los pasos de los
-   * últimos días, abras UDECA o no. Se preguntan los de atrás y se apunta lo
+   * últimos días, abras CALICO o no. Se preguntan los de atrás y se apunta lo
    * que falte (ver `diasPorRellenar`), comparando con lo guardado de verdad y
    * no con la lista de la pantalla, por lo mismo que `guardadoHoy`.
    *
@@ -337,10 +337,10 @@ export function ContadorDePasos({
        * `expo-sensors` no sabe dar los pasos de un día entero en Android —el
        * módulo contesta literalmente "Getting step count for date range is not
        * supported on Android yet"—, así que lo único que hay es escuchar el
-       * sensor mientras UDECA está abierta.
+       * sensor mientras CALICO está abierta.
        *
        * Se escucha un momento y lo andado se SUMA a lo que ya hubiera, porque
-       * sustituirlo borraría la mañana de quien abre UDECA por la tarde. Y se
+       * sustituirlo borraría la mañana de quien abre CALICO por la tarde. Y se
        * descuenta el paso fantasma que regala el módulo (ver
        * `sinElPasoFantasma` en lib/pasos.ts): era el que ponía "1 paso" a todo
        * el mundo.
@@ -435,7 +435,7 @@ export function ContadorDePasos({
    *
    * Se lee también al volver del segundo plano porque es justo cuando han
    * pasado cosas: se ha salido a andar con el móvil en el bolsillo y al volver
-   * a UDECA la cifra tiene que estar puesta.
+   * a CALICO la cifra tiene que estar puesta.
    *
    * En silencio: nadie ha pedido nada, así que ningún aviso por pantalla. Y sin
    * escribir si el número no cambia, para no hacer recargar la pantalla entera
@@ -591,7 +591,7 @@ export function ContadorDePasos({
                    * En Android se dice lo que de verdad pasa. Con la grabación
                    * de Google, cuenta con la app cerrada. Sin ella, el sensor
                    * solo cuenta mientras la app está delante, y decir otra cosa
-                   * haría que quien sale a andar sin abrir UDECA volviera
+                   * haría que quien sale a andar sin abrir CALICO volviera
                    * creyendo que el contador falla.
                    */
                   : hayPasosDelSistema()

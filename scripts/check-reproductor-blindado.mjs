@@ -3,7 +3,7 @@
  *
  * Lo que hay que proteger: que en una clase de pago no quede a la vista NADA
  * del reproductor de la plataforma. Cada logo, cada título y cada "Ver en
- * YouTube" es una puerta para sacar el vídeo de UDECA, y con un parámetro no
+ * YouTube" es una puerta para sacar el vídeo de CALICO, y con un parámetro no
  * se quitan: hay que taparlos y poner los controles propios.
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-reproductor-blindado.mjs

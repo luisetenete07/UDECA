@@ -16,7 +16,7 @@ import { conMiles } from './texto';
  *   Salud), incluido lo andado con la app cerrada.
  * - En Android los cuenta el sensor MIENTRAS LA APP ESTÁ DELANTE, y por eso la
  *   cifra se SUMA a lo que ya hubiera del día en vez de sustituirlo: si se
- *   contara solo lo de la app abierta, abrir UDECA a las ocho de la tarde
+ *   contara solo lo de la app abierta, abrir CALICO a las ocho de la tarde
  *   borraría el día entero. Los pasos del día completo en Android viven en
  *   Health Connect, que exige un permiso de datos de salud que Google revisa a
  *   mano; se implementó, la revisión no lo aceptó, y se quitó entero antes que
@@ -154,7 +154,7 @@ export function sinElPasoFantasma(lectura: number): number {
  *
  * En iPhone la lectura es la del día entero, así que manda. En Android solo
  * cuenta lo andado con la app abierta, así que se suma a lo que ya había: si
- * se sustituyera, abrir UDECA por la tarde borraría la mañana.
+ * se sustituyera, abrir CALICO por la tarde borraría la mañana.
  *
  * UNA LECTURA NUNCA BAJA EL CONTADOR DEL DÍA
  *
@@ -183,7 +183,7 @@ export function pasosAGuardar(
  *
  * El iPhone (y Android con la grabación de Google) guarda los pasos de los
  * últimos días, abras la app o no. Sin
- * esto, el día que no se abría UDECA se quedaba a cero para siempre, aunque el
+ * esto, el día que no se abría CALICO se quedaba a cero para siempre, aunque el
  * teléfono supiera perfectamente cuánto se había andado: la semana salía con
  * huecos que no eran de verdad y la media, por los suelos.
  *

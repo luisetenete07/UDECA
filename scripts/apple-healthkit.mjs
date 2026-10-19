@@ -1,5 +1,5 @@
 /**
- * Deja el App ID de UDECA listo para Salud (HealthKit) antes de compilar iOS.
+ * Deja el App ID de CALICO listo para Salud (HealthKit) antes de compilar iOS.
  *
  * POR QUÉ HACE FALTA
  *

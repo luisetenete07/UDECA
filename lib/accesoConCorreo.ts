@@ -4,7 +4,7 @@
  * POR QUÉ EXISTE
  *
  * Apple rechazó la 1.1.2 por la norma 2.1(a) pidiendo "a user name and password"
- * para poder revisar la app. Pero UDECA entra solo con Google o con Apple: no
+ * para poder revisar la app. Pero CALICO entra solo con Google o con Apple: no
  * había ninguna pantalla donde escribir una contraseña, así que la cuenta de
  * demostración que crea scripts/seed-test-accounts.mjs no servía para entrar.
  *

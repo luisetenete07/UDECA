@@ -10,7 +10,7 @@ export default function ExercisesLayout() {
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[id]" options={{ title: t('Ejercicio') }} />
-      <Stack.Screen name="template" options={{ title: t('Plantilla UDECA') }} />
+      <Stack.Screen name="template" options={{ title: t('Plantilla CALICO') }} />
     </Stack>
   );
 }

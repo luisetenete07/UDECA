@@ -6,7 +6,7 @@
  * (lib/auth-context.tsx) deja aquí la marca y el logo de quien mira, y las
  * tarjetas los leen al dibujar.
  *
- * `marca` vacía = la de UDECA, con su "Universidad de Calistenia" de siempre.
+ * `marca` vacía = la de CALICO, con su "Calisthenics Coaches" de siempre.
  */
 export interface MarcaActual {
   marca: string;

@@ -38,8 +38,8 @@ const PUESTOS = [colors.primaryBright, colors.textMuted, colors.textFaint];
 export default function SocialScreen() {
   const { profile } = useAuth();
   const [members, setMembers] = useState<SocialStats[]>([]);
-  // El nombre del entrenador: la comunidad es SUYA, no de UDECA. Un alumno de
-  // Luis entrena con Luis; que el rótulo dijera "Comunidad UDECA" le ponía por
+  // El nombre del entrenador: la comunidad es SUYA, no de CALICO. Un alumno de
+  // Luis entrena con Luis; que el rótulo dijera "Comunidad CALICO" le ponía por
   // delante una marca con la que él no ha hablado nunca.
   const [nombreDelCoach, setNombreDelCoach] = useState('');
   const [loading, setLoading] = useState(true);

@@ -1,5 +1,5 @@
 /**
- * El logo del entrenador en lugar del de UDECA (lib/planBase.ts › puedeLlevarLogo).
+ * El logo del entrenador en lugar del de CALICO (lib/planBase.ts › puedeLlevarLogo).
  *
  * Lo que se protege:
  *
@@ -7,7 +7,7 @@
  *    razón más visible para dar el salto desde el plan de entrada.
  *  - Que se decida con lo que escribe el servidor, no con el logo en sí: subir
  *    un logo lo puede cualquiera; que se VEA, no.
- *  - Que UDECA no desaparezca del todo: con marca propia queda un "con UDECA"
+ *  - Que CALICO no desaparezca del todo: con marca propia queda un "con CALICO"
  *    pequeño en las pantallas de puerta, en el perfil y en lo que se comparte.
  *    Es nuestro único canal de crecimiento que no cuesta dinero.
  *
@@ -53,26 +53,26 @@ console.log('\nSe decide al enseñarlo, no al subirlo');
 
 console.log('\nDónde se ve');
 {
-  ok('pantallas de puerta', /source=\{suyo \? \{ uri: logo! \}/.test(lee('components/Logo.tsx')));
-  ok('barra lateral', /logo \? \{ uri: logo \}/.test(lee('components/SidebarBrand.tsx')));
+  ok('pantallas de puerta', /suyo \? \(\s*<Image\s+source=\{\{ uri: logo! \}\}/.test(lee('components/Logo.tsx')));
+  ok('barra lateral', /logo \? \(\s*<Image source=\{\{ uri: logo \}\}/.test(lee('components/SidebarBrand.tsx')));
   ok('inicio del coach', /logo=\{logo\}/.test(lee('app/(trainer)/dashboard.tsx')));
   ok('inicio del alumno', /styles\.logoCoach/.test(lee('app/(client)/dashboard.tsx')));
   ok('tarjeta del perfil', /styles\.marcaLogo/.test(lee('components/ProgressCard.tsx')));
-  ok('imágenes que se comparten', /marcaActual\(\)\.logo \?\? UDECA_LOGO_DATA_URI/.test(lee('lib/brandCards.ts')));
-  ok('informe de progreso', /marcaActual\(\)\.logo \?\? UDECA_LOGO_DATA_URI/.test(lee('lib/report.ts')));
+  ok('imágenes que se comparten', /marcaActual\(\)\.logo \?\? CALICO_LOGO_DATA_URI/.test(lee('lib/brandCards.ts')));
+  ok('informe de progreso', /marcaActual\(\)\.logo \?\? CALICO_LOGO_OSCURO_DATA_URI/.test(lee('lib/report.ts')));
 }
 
-console.log('\nY UDECA no desaparece del todo');
+console.log('\nY CALICO no desaparece del todo');
 {
-  ok('"con UDECA" en las pantallas de puerta', />con UDECA</.test(lee('components/Logo.tsx')));
-  ok('en el perfil del alumno', />con UDECA</.test(lee('app/(client)/profile.tsx')));
-  ok('en el del entrenador', />con UDECA</.test(lee('app/(trainer)/profile.tsx')));
+  ok('"con CALICO" en las pantallas de puerta', />con CALICO</.test(lee('components/Logo.tsx')));
+  ok('en el perfil del alumno', />con CALICO</.test(lee('app/(client)/profile.tsx')));
+  ok('en el del entrenador', />con CALICO</.test(lee('app/(trainer)/profile.tsx')));
   const motor = lee('lib/cardEngine.ts');
   ok('en las imágenes que se comparten', /T\.marca \? 'C O N   U D E C A'/.test(motor));
-  ok('con la web de UDECA al pie', /w w w \. u d e c a \. a p p/.test(motor));
-  ok('y en el informe', /\$\{marca\} · con UDECA/.test(lee('lib/report.ts')));
-  ok('entrar y registrarse siguen siendo de UDECA', /<Logo sinSesion \/>/.test(lee('app/(auth)/login.tsx')));
+  ok('con la web de CALICO al pie', /w w w \. u d e c a \. a p p/.test(motor));
+  ok('y en el informe', /\$\{marca\} · con CALICO/.test(lee('lib/report.ts')));
+  ok('entrar y registrarse siguen siendo de CALICO', /<Logo sinSesion \/>/.test(lee('app/(auth)/login.tsx')));
 }
 
-console.log(fallos === 0 ? '\n✔ El logo es del plan sin tope y UDECA sigue firmando' : `\n${fallos} fallo(s)`);
+console.log(fallos === 0 ? '\n✔ El logo es del plan sin tope y CALICO sigue firmando' : `\n${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);
