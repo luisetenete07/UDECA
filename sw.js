@@ -1,5 +1,5 @@
 /*
- * Service worker de UDECA.
+ * Service worker de CALICO.
  *
  * Estrategia:
  *  - Bundles de /_expo/ (llevan hash en el nombre): cache-first permanente,
