@@ -1,0 +1,68 @@
+name: Versión mínima
+
+# Sube `minima` en config/version: todo el que tenga una versión anterior ve
+# el muro de "actualiza para seguir" al abrir la app. Ver docs/ACTUALIZAR.md.
+#
+# Antes de escribir pregunta a la App Store qué versión hay publicada y se
+# para si es anterior a la pedida. Google Play no se puede consultar desde
+# aquí: lánzalo con "escribir" solo cuando la versión esté publicada en las
+# DOS tiendas. Sin "escribir", solo comprueba.
+on:
+  workflow_dispatch:
+    inputs:
+      minima:
+        description: 'Versión mínima (p. ej. 1.2.0)'
+        required: true
+      escribir:
+        description: 'Escribirla de verdad (solo con la versión ya publicada en App Store y Google Play)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: version-minima
+  cancel-in-progress: false
+
+jobs:
+  minima:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Comprobar que existe la credencial
+        if: ${{ inputs.escribir }}
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::Falta el secreto FIREBASE_SERVICE_ACCOUNT."
+            exit 1
+          fi
+
+      - name: Instalar firebase-admin
+        if: ${{ inputs.escribir }}
+        run: npm i --no-save firebase-admin
+
+      - name: Preparar credencial
+        if: ${{ inputs.escribir }}
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          chmod 600 "$RUNNER_TEMP/sa.json"
+
+      - name: Comprobar y escribir
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          MINIMA: ${{ inputs.minima }}
+          ESCRIBIR: ${{ inputs.escribir }}
+        run: node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/version-minima.mjs
+
+      - name: Borrar credencial
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

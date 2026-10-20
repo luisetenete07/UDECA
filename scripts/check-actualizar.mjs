@@ -15,7 +15,14 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-actualizar.mjs
  */
 import { readFileSync } from 'node:fs';
-import { comparaVersiones, esVersion, tocaActualizar } from '../lib/version.ts';
+import {
+  DIAS_PARA_ACTUALIZAR,
+  avisoDeVersion,
+  comparaVersiones,
+  esVersion,
+  novedadEnLaAppStore,
+  tocaActualizar,
+} from '../lib/version.ts';
 
 let fallos = 0;
 const ok = (n, c, porQue = '') => {
@@ -122,6 +129,86 @@ console.log('\nEl muro, tal y como está montado');
   ok('no sale la primera vez que se entra',
     /var yaHabiaControl = !!navigator\.serviceWorker\.controller/.test(html) &&
       /if \(yaHabiaControl\) showUpdateBanner\(\)/.test(html));
+}
+
+/*
+ * LA VERSIÓN NUEVA, SIN TOCAR NADA
+ *
+ * Cada vez que se entra se pregunta a la tienda. Si tiene una versión más
+ * nueva, aviso que se puede dejar para luego; pasados unos días, muro.
+ */
+console.log('\nLo que dice la tienda');
+{
+  ok('sin versión nueva, nada', avisoDeVersion(false, 10) === 'nada');
+  ok('recién salida, aviso', avisoDeVersion(true, 0) === 'aviso');
+  ok(`a los ${DIAS_PARA_ACTUALIZAR - 1} días, todavía aviso`,
+    avisoDeVersion(true, DIAS_PARA_ACTUALIZAR - 1) === 'aviso');
+  ok(`a los ${DIAS_PARA_ACTUALIZAR} días, obligatoria`,
+    avisoDeVersion(true, DIAS_PARA_ACTUALIZAR) === 'obligatorio');
+  // Sin saber cuántos días lleva, cuenta como recién salida: aviso, no muro.
+  ok('sin saber los días, aviso y no muro', avisoDeVersion(true, undefined) === 'aviso');
+  ok('con días que no son un número, aviso', avisoDeVersion(true, '9') === 'aviso');
+  ok('si la tienda no contesta, nada', avisoDeVersion(undefined, 9) === 'nada');
+  // Hay margen de verdad: el muro no puede llegar el mismo día que la versión.
+  ok('hay días de margen antes del muro', DIAS_PARA_ACTUALIZAR >= 2);
+}
+
+console.log('\nLa búsqueda de la App Store');
+{
+  const dia = 86_400_000;
+  const ahora = Date.parse('2026-10-20T12:00:00Z');
+  const ficha = (f) => ({ resultCount: 1, results: [f] });
+  const nueva = { version: '1.3.0', minimumOsVersion: '16.0', currentVersionReleaseDate: new Date(ahora - 4 * dia).toISOString() };
+
+  const r = novedadEnLaAppStore('1.2.0', ficha(nueva), '17.4', ahora);
+  ok('una versión posterior es nueva', r.hayNueva === true);
+  ok('y se cuentan los días desde que salió', r.dias === 4);
+  ok('la misma versión no es nueva', !novedadEnLaAppStore('1.3.0', ficha(nueva), '17.4', ahora).hayNueva);
+  // TestFlight: quien prueba algo más nuevo que lo publicado no ve nada.
+  ok('una instalada más nueva que la tienda, nada',
+    !novedadEnLaAppStore('1.4.0', ficha(nueva), '17.4', ahora).hayNueva);
+  // Si la nueva pide un iOS que el móvil no tiene, no puede instalarla.
+  ok('si el iOS del móvil no llega, nada',
+    !novedadEnLaAppStore('1.2.0', ficha(nueva), '15.8', ahora).hayNueva);
+  ok('si no se sabe el iOS del móvil y la tienda pide uno, nada',
+    !novedadEnLaAppStore('1.2.0', ficha(nueva), undefined, ahora).hayNueva);
+  ok('sin fecha de salida, nueva pero con cero días',
+    (() => { const x = novedadEnLaAppStore('1.2.0', ficha({ ...nueva, currentVersionReleaseDate: 'ayer' }), '17.4', ahora); return x.hayNueva && x.dias === 0; })());
+  ok('sin resultados, nada', !novedadEnLaAppStore('1.2.0', { resultCount: 0, results: [] }, '17.4', ahora).hayNueva);
+  ok('respuesta vacía, nada', !novedadEnLaAppStore('1.2.0', null, '17.4', ahora).hayNueva);
+  ok('versión rara en la tienda, nada',
+    !novedadEnLaAppStore('1.2.0', ficha({ ...nueva, version: 'nueva' }), '17.4', ahora).hayNueva);
+  ok('sin saber la versión propia, nada', !novedadEnLaAppStore('', ficha(nueva), '17.4', ahora).hayNueva);
+}
+
+console.log('\nEl aviso de versión nueva, tal y como está montado');
+{
+  const sinComentarios = (s) =>
+    s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const lee = (f) => sinComentarios(readFileSync(new URL(`../${f}`, import.meta.url), 'utf8'));
+  const muro = lee('components/ActualizacionObligatoria.tsx');
+  const aviso = lee('components/AvisoDeVersionNueva.tsx');
+  const tienda = lee('lib/versionEnLaTienda.ts');
+  const kt = lee('modules/calico-tienda/android/src/main/java/expo/modules/calicotienda/CalicoTiendaModule.kt');
+  const gradle = readFileSync(new URL('../modules/calico-tienda/android/build.gradle', import.meta.url), 'utf8');
+
+  // El muro sale con la mínima del servidor O con la tienda pasados los días.
+  ok('la tienda, pasados los días, levanta el muro',
+    /!tocaActualizar\(VERSION_DE_LA_APP, minima\) && tienda !== 'obligatorio'/.test(muro));
+  ok('antes, sale el aviso', /tienda === 'aviso' && !luego \?/.test(muro) && /<AvisoDeVersionNueva/.test(muro));
+  ok('el aviso sí se puede dejar para luego', /Ahora no/.test(aviso) && /onPress=\{onLuego\}/.test(aviso));
+  ok('y dice que en unos días será obligatoria', /En unos días hará falta/.test(aviso));
+  // "Luego" dura hasta la próxima entrada, no para siempre.
+  ok('"Ahora no" vuelve a salir al entrar otra vez', /setLuego\(false\)/.test(muro) && !/AsyncStorage/.test(muro));
+  ok('a la tienda se le pregunta al entrar, no en cada vuelta',
+    /VUELTA_A_ENTRAR = 30 \* 60 \* 1000/.test(muro) && /Date\.now\(\) - fuera >= VUELTA_A_ENTRAR/.test(muro));
+  ok('si la tienda falla, nada', /catch \{\s*\}\s*return 'nada';/.test(tienda));
+  ok('la App Store se busca por el id de la ficha', /itunes\.apple\.com\/lookup\?id=\$\{ID_EN_LA_APP_STORE\}/.test(tienda));
+  ok('con tiempo límite', /setTimeout\(\(\) => control\.abort\(\), 8000\)/.test(tienda));
+  ok('en Android pregunta a Google Play', /requireOptionalNativeModule<ModuloDeTienda>\('CalicoTienda'\)/.test(tienda));
+  ok('con la librería de actualizaciones de Play', /com\.google\.android\.play:app-update:/.test(gradle));
+  ok('que solo dice que hay si a este móvil le toca', /UpdateAvailability\.UPDATE_AVAILABLE/.test(kt));
+  ok('y si Play no contesta, null', /addOnFailureListener \{ promise\.resolve\(null\) \}/.test(kt));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

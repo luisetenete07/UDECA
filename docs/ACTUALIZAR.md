@@ -1,11 +1,38 @@
 # Obligar a actualizar
 
-Cómo se fuerza a que todo el mundo pase a una versión nueva, y —más importante—
+Cómo se consigue que todo el mundo pase a una versión nueva, y —más importante—
 cómo no dejar a nadie fuera por error.
 
 ---
 
-## 1 · Qué hace
+## 0 · Lo normal: no hay que hacer nada
+
+Desde la **1.2.0**, la app pregunta sola a la tienda cada vez que se entra (al
+abrirla, o al volver tras más de media hora fuera). Si la App Store o Google
+Play tienen una versión más nueva que la instalada:
+
+| Días desde que salió | Qué ve la persona |
+| --- | --- |
+| Menos de 3 | Aviso "Hay una versión nueva", con **Actualizar** y **Ahora no**. "Ahora no" vale hasta la siguiente entrada. |
+| 3 o más | El muro: solo se puede ir a la tienda. |
+
+Publicar en las tiendas es todo lo que hay que hacer. Los días de margen son
+para que la versión esté de verdad en todas las fichas antes del muro: la
+búsqueda de Apple a veces la anuncia horas antes de que se pueda bajar.
+
+- **iPhone:** búsqueda pública de la App Store por el id de la ficha. Si la
+  versión nueva pide un iOS que el móvil no tiene, no se le avisa.
+- **Android:** Google Play desde el propio móvil (`modules/calico-tienda`).
+  Solo avisa si a ese móvil le toca (modelo, Android, lanzamiento escalonado).
+- **Revisores:** instalan la versión que revisan, más nueva que la publicada,
+  así que no ven nada.
+
+Las versiones **anteriores a la 1.2.0** no saben preguntar a la tienda: a esas
+solo les llega la mínima del servidor (abajo).
+
+---
+
+## 1 · La mínima del servidor: el muro inmediato
 
 Cuando la versión instalada es **anterior** a la mínima que dice el servidor, la
 app se tapa entera con un muro que no se puede cerrar y que solo ofrece ir a la
@@ -19,7 +46,13 @@ actualizar cuesta un segundo.
 
 ## 2 · Cómo se activa
 
-En la consola de Firebase, colección `config`, documento **`version`**:
+Lo más cómodo: **Actions → "Versión mínima" → Run workflow**, con la versión y
+"escribir" marcado. Antes de escribir pregunta a la App Store qué hay publicado
+y se niega si es anterior a la mínima pedida. Google Play no se puede consultar
+desde ahí: márcalo solo con la versión ya publicada en las dos tiendas. Sin
+"escribir", solo comprueba.
+
+A mano: en la consola de Firebase, colección `config`, documento **`version`**:
 
 | Campo | Tipo | Para qué |
 | --- | --- | --- |

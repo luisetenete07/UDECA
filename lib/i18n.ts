@@ -622,6 +622,11 @@ export const EN: Record<string, string> = {
   'series en los últimos 7 días': 'sets in the last 7 days',
   'hecha en los últimos 7 días': 'done in the last 7 days',
   'hechas en los últimos 7 días': 'done in the last 7 days',
+  // Aviso de versión nueva (components/AvisoDeVersionNueva.tsx).
+  'Hay una versión nueva de CALICO': 'A new version of CALICO is out',
+  'Actualiza para tener lo último. Tus datos, tus rutinas y tu progreso siguen igual.': 'Update to get the latest. Your data, routines and progress stay as they are.',
+  'En unos días hará falta para seguir usando la app.': 'In a few days you will need it to keep using the app.',
+  'Ahora no': 'Not now',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

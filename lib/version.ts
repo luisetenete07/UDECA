@@ -86,12 +86,80 @@ export function tocaActualizar(actual: string, minima: unknown): boolean {
 }
 
 /**
+ * LO QUE DICE LA TIENDA, SIN TOCAR NADA
+ *
+ * Lo de arriba es a mano: alguien sube `minima` en Firebase. Esto es solo:
+ * cada vez que se entra, se pregunta a la App Store o a Google Play si hay una
+ * versión posterior a la instalada. Si la hay, sale el aviso. Durante los
+ * primeros días se puede dejar para luego (vuelve a salir en cada entrada);
+ * pasados esos días, ya no.
+ *
+ * POR QUÉ HAY DÍAS DE MARGEN Y NO ES OBLIGATORIO DESDE EL PRIMER MINUTO
+ *
+ * La tienda no publica en todas partes a la vez. La búsqueda de Apple puede
+ * decir que hay una versión nueva horas antes de que la ficha deje pulsar
+ * "Actualizar" en el país de quien mira; un muro en ese rato manda a una
+ * tienda donde no hay nada que bajar, y no deja volver. Con unos días de
+ * margen, cuando el muro llega, la versión ya está en todas las fichas.
+ */
+export const DIAS_PARA_ACTUALIZAR = 3;
+
+/** 'nada': al día. 'aviso': hay versión nueva, se puede dejar para luego. 'obligatorio': ya no. */
+export type AvisoDeVersion = 'nada' | 'aviso' | 'obligatorio';
+
+/**
+ * Qué toca enseñar, sabiendo si la tienda tiene una versión nueva y cuántos
+ * días lleva fuera. Si no se sabe cuántos, cuenta como recién salida: ante la
+ * duda, aviso y no muro.
+ */
+export function avisoDeVersion(hayNueva: unknown, dias: unknown): AvisoDeVersion {
+  if (hayNueva !== true) return 'nada';
+  const lleva = typeof dias === 'number' && Number.isFinite(dias) ? dias : 0;
+  return lleva >= DIAS_PARA_ACTUALIZAR ? 'obligatorio' : 'aviso';
+}
+
+/**
+ * Lee la respuesta de la búsqueda de la App Store (itunes.apple.com/lookup).
+ *
+ * Solo hay versión nueva si la de la tienda es POSTERIOR a la instalada: quien
+ * prueba una versión de TestFlight más nueva que la publicada no tiene que ver
+ * nada. Y si la nueva pide un iOS que este móvil no tiene, tampoco: no podría
+ * instalarla, y un aviso imposible de cumplir acaba en muro sin salida.
+ *
+ * Cualquier cosa rara —sin resultados, sin versión, fechas que no son fechas—
+ * se lee como "no hay nada nuevo".
+ */
+export function novedadEnLaAppStore(
+  instalada: string,
+  respuesta: unknown,
+  iosDelMovil: unknown,
+  ahora: number
+): { hayNueva: boolean; dias: number } {
+  const nada = { hayNueva: false, dias: 0 };
+  const resultados = (respuesta as { results?: unknown } | null)?.results;
+  const ficha = Array.isArray(resultados) ? resultados[0] : null;
+  if (!ficha || typeof ficha !== 'object') return nada;
+  const { version, minimumOsVersion, currentVersionReleaseDate } = ficha as Record<string, unknown>;
+  if (!esVersion(version) || !esVersion(instalada)) return nada;
+  if (comparaVersiones(version, instalada) <= 0) return nada;
+  if (esVersion(minimumOsVersion)) {
+    const ios = String(iosDelMovil ?? '');
+    if (!esVersion(ios) || comparaVersiones(ios, minimumOsVersion) < 0) return nada;
+  }
+  const salio =
+    typeof currentVersionReleaseDate === 'string' ? Date.parse(currentVersionReleaseDate) : NaN;
+  const dias = Number.isFinite(salio) ? Math.max(0, Math.floor((ahora - salio) / 86_400_000)) : 0;
+  return { hayNueva: true, dias };
+}
+
+/**
  * Dónde se descarga la versión nueva.
  *
  * En la web no hay tienda: la versión nueva llega recargando, y de eso se
  * encarga el propio navegador (ver el aviso de versión en app/+html.tsx).
  */
-export const FICHA_EN_LA_APP_STORE = 'https://apps.apple.com/app/id6794591283';
+export const ID_EN_LA_APP_STORE = '6794591283';
+export const FICHA_EN_LA_APP_STORE = `https://apps.apple.com/app/id${ID_EN_LA_APP_STORE}`;
 export const FICHA_EN_GOOGLE_PLAY =
   'https://play.google.com/store/apps/details?id=entrenadores.app';
 /** En Android este esquema abre la app de Play directamente, sin pasar por la web. */

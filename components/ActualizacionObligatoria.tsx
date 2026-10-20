@@ -1,18 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { AppState, Linking, Platform, StyleSheet, View } from 'react-native';
+import { AppState, Platform, StyleSheet, View } from 'react-native';
 import { doc, getDoc } from 'firebase/firestore';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
+import { AvisoDeVersionNueva } from './AvisoDeVersionNueva';
 import { db } from '../lib/firebase';
 import { frase } from '../lib/idioma';
-import {
-  FICHA_EN_GOOGLE_PLAY,
-  FICHA_EN_LA_APP_STORE,
-  PLAY_DIRECTO,
-  tocaActualizar,
-} from '../lib/version';
+import { tocaActualizar, type AvisoDeVersion } from '../lib/version';
 import { VERSION_DE_LA_APP } from '../lib/versionDeLaApp';
+import { abrirLaTienda, versionEnLaTienda } from '../lib/versionEnLaTienda';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /**
@@ -24,10 +21,17 @@ import { colors, fonts, radius, spacing, typography } from '../lib/theme';
  *
  * CUÁNDO APARECE
  *
- * Solo cuando el servidor dice que esta versión ya no vale (`config/version`,
- * campo `minima`). Ver lib/version.ts para el porqué de cada decisión: por qué
- * se compara la versión y no el número de compilación, y por qué ante cualquier
- * duda NO se bloquea.
+ * De dos maneras, y basta con una:
+ *
+ *  - A mano: el servidor dice que esta versión ya no vale (`config/version`,
+ *    campo `minima`).
+ *  - Sola: la tienda tiene una versión más nueva desde hace unos días. Los
+ *    primeros días, en vez del muro, sale AvisoDeVersionNueva, que se puede
+ *    dejar para luego y vuelve a salir en cada entrada.
+ *
+ * Ver lib/version.ts para el porqué de cada decisión: por qué se compara la
+ * versión y no el número de compilación, por qué hay días de margen y por qué
+ * ante cualquier duda NO se bloquea.
  *
  * SE VUELVE A MIRAR AL VOLVER A LA APP
  *
@@ -37,17 +41,29 @@ import { colors, fonts, radius, spacing, typography } from '../lib/theme';
  * actualizar desde la tienda: es el momento en el que el muro tiene que
  * desaparecer solo.
  *
+ * A la tienda, en cambio, solo se le pregunta al entrar de verdad: al abrir la
+ * app o al volver tras un rato fuera (`VUELTA_A_ENTRAR`). Quien sale un momento
+ * a cambiar la música a mitad de un entreno no tiene que encontrarse el aviso
+ * al volver, ni una consulta a Apple cada vez que mira el reloj.
+ *
  * EN LA WEB NO SE USA
  *
  * Ahí no hay tienda ni versión instalada: la versión nueva llega recargando, y
  * de eso se encarga el aviso de app/+html.tsx, que también es obligatorio.
  */
+/** Tiempo fuera de la app a partir del cual volver cuenta como entrar otra vez. */
+const VUELTA_A_ENTRAR = 30 * 60 * 1000;
+
 export function ActualizacionObligatoria() {
   const [minima, setMinima] = useState<unknown>(null);
+  const [tienda, setTienda] = useState<AvisoDeVersion>('nada');
+  // "Ahora no" vale hasta la próxima entrada.
+  const [luego, setLuego] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
     let vivo = true;
+    let fuera = 0;
 
     const mirar = () => {
       getDoc(doc(db, 'config', 'version'))
@@ -59,9 +75,25 @@ export function ActualizacionObligatoria() {
         .catch(() => {});
     };
 
+    const mirarLaTienda = () => {
+      versionEnLaTienda().then((v) => {
+        if (vivo) setTienda(v);
+      });
+    };
+
     mirar();
+    mirarLaTienda();
     const sub = AppState.addEventListener('change', (estado) => {
-      if (estado === 'active') mirar();
+      if (estado !== 'active') {
+        if (!fuera) fuera = Date.now();
+        return;
+      }
+      mirar();
+      if (fuera && Date.now() - fuera >= VUELTA_A_ENTRAR) {
+        setLuego(false);
+        mirarLaTienda();
+      }
+      fuera = 0;
     });
     return () => {
       vivo = false;
@@ -69,19 +101,11 @@ export function ActualizacionObligatoria() {
     };
   }, []);
 
-  if (!tocaActualizar(VERSION_DE_LA_APP, minima)) return null;
-
-  const abrirTienda = () => {
-    if (Platform.OS === 'ios') {
-      Linking.openURL(FICHA_EN_LA_APP_STORE).catch(() => {});
-      return;
-    }
-    // En Android el esquema de Play abre la app directamente; si el móvil no
-    // tiene los servicios de Google, queda la web.
-    Linking.openURL(PLAY_DIRECTO).catch(() =>
-      Linking.openURL(FICHA_EN_GOOGLE_PLAY).catch(() => {})
-    );
-  };
+  if (!tocaActualizar(VERSION_DE_LA_APP, minima) && tienda !== 'obligatorio') {
+    return tienda === 'aviso' && !luego ? (
+      <AvisoDeVersionNueva onActualizar={abrirLaTienda} onLuego={() => setLuego(true)} />
+    ) : null;
+  }
 
   return (
     <View style={styles.fondo}>
@@ -98,7 +122,7 @@ export function ActualizacionObligatoria() {
         </Text>
         <Button
           title={Platform.OS === 'ios' ? 'Actualizar en la App Store' : 'Actualizar en Google Play'}
-          onPress={abrirTienda}
+          onPress={abrirLaTienda}
           style={{ marginTop: spacing.lg, alignSelf: 'stretch' }}
         />
         <Text style={styles.version}>

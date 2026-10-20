@@ -1,0 +1,24 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'app.calico'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.calicotienda"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Actualizaciones dentro de la app de Google Play (In-App Updates): dice si
+  // a ESTE móvil le toca una versión más nueva que la instalada.
+  implementation 'com.google.android.play:app-update:2.1.0'
+  // Las tareas que devuelve (Task) vienen de aquí; declararlas evita depender
+  // de que lleguen de rebote.
+  implementation 'com.google.android.gms:play-services-tasks:18.2.0'
+}
