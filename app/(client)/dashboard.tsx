@@ -528,7 +528,7 @@ export default function ClientDashboard() {
         }
       >
         <LinearGradient
-          colors={gradients.goldSubtle}
+          colors={gradients.marcaSuave}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.todayCard}
@@ -1060,7 +1060,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.glowGold,
+    ...shadows.brillo,
   },
   todayRest: {
     width: 56,

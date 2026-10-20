@@ -12,7 +12,7 @@ import type { DatosDelWidget } from '../lib/widgetDatos';
  */
 const FONDO = '#0D0D0D';
 const BORDE = '#262626';
-const ORO = '#C9BDB0';
+const AZUL = '#7FA8FF';
 const TEXTO = '#FFFFFF';
 const SUAVE = '#9A9A9A';
 const PISTA = '#2A2A2A';
@@ -42,7 +42,7 @@ export function WidgetHoy({ datos, ahora }: { datos: DatosDelWidget | null; ahor
       }}
     >
       <FlexWidget style={{ flexDirection: 'column', width: 'match_parent' }}>
-        <TextWidget text="CALICO · HOY" style={{ fontSize: 11, color: ORO, letterSpacing: 0.12, fontWeight: '600' }} />
+        <TextWidget text="CALICO · HOY" style={{ fontSize: 11, color: AZUL, letterSpacing: 0.12, fontWeight: '600' }} />
         <TextWidget
           text={vigente ? vigente.titulo : 'Abre CALICO'}
           maxLines={1}
@@ -53,7 +53,7 @@ export function WidgetHoy({ datos, ahora }: { datos: DatosDelWidget | null; ahor
           text={vigente ? (vigente.hecho ? `✓ ${vigente.detalle}` : vigente.detalle) : 'para ver tu día'}
           maxLines={1}
           truncate="END"
-          style={{ fontSize: 13, color: vigente?.hecho ? ORO : SUAVE, marginTop: 2 }}
+          style={{ fontSize: 13, color: vigente?.hecho ? AZUL : SUAVE, marginTop: 2 }}
         />
       </FlexWidget>
       {pasos !== null && vigente ? (
@@ -65,7 +65,7 @@ export function WidgetHoy({ datos, ahora }: { datos: DatosDelWidget | null; ahor
           <FlexWidget
             style={{ flexDirection: 'row', width: 'match_parent', height: 5, marginTop: 5, backgroundColor: PISTA, borderRadius: 3 }}
           >
-            <FlexWidget style={{ height: 5, flex: Math.max(0.0001, progreso), backgroundColor: ORO, borderRadius: 3 }} />
+            <FlexWidget style={{ height: 5, flex: Math.max(0.0001, progreso), backgroundColor: AZUL, borderRadius: 3 }} />
             <FlexWidget style={{ height: 5, flex: Math.max(0.0001, 1 - progreso) }} />
           </FlexWidget>
         </FlexWidget>

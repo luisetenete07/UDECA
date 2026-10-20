@@ -60,7 +60,7 @@ function AnimatedValue({ value, style }: { value: string; style: object[] }) {
 export function StatTile({ icon, value, label, highlight }: StatTileProps) {
   return (
     <LinearGradient
-      colors={highlight ? gradients.goldSubtle : gradients.surface}
+      colors={highlight ? gradients.marcaSuave : gradients.surface}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={[styles.tile, highlight && styles.tileHighlight]}

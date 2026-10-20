@@ -14,8 +14,8 @@ import { isOnline } from '../lib/presence';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { SocialStats } from '../lib/types';
 
-/** Oro, plata y bronce, en los tonos apagados de la marca. */
-const MEDALLA = ['#C9BDB0', '#A7AEB6', '#A07C5B'];
+/** Oro, plata y bronce: los de un podio, apagados para no chillar sobre negro. */
+const MEDALLA = ['#D8B65A', '#A7AEB6', '#A07C5B'];
 
 /**
  * La clasificación del grupo, al final de Clientes.

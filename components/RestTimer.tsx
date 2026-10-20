@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     marginBottom: spacing.md,
-    ...shadows.glowGold,
+    ...shadows.brillo,
   },
   topRow: {
     flexDirection: 'row',

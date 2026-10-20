@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
-    ...shadows.glowGold,
+    ...shadows.brillo,
   },
   titulo: { ...typography.h2, color: colors.text, textAlign: 'center' },
   texto: {

@@ -89,7 +89,7 @@ if ('serviceWorker' in navigator) {
         txt.style.cssText = 'color:#9A9A9A;font-size:15px;line-height:22px;margin-top:10px;';
         txt.textContent = 'Actualiza para seguir entrenando. Tarda un segundo y no pierdes nada de lo que tienes guardado.';
         var btn = document.createElement('button');
-        btn.style.cssText = 'margin-top:24px;width:100%;border:none;border-radius:14px;padding:15px 16px;font-weight:700;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#C9BDB0,#A2968B);color:#0A0A0A;';
+        btn.style.cssText = 'margin-top:24px;width:100%;border:none;border-radius:14px;padding:15px 16px;font-weight:700;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#7FA8FF,#3D7BFF);color:#FFFFFF;';
         btn.textContent = 'Actualizar';
         btn.onclick = function () { window.location.reload(); };
         caja.appendChild(tit); caja.appendChild(txt); caja.appendChild(btn);
@@ -160,10 +160,10 @@ html, body {
 }
 #root { overflow-x: hidden; }
 * { -webkit-tap-highlight-color: transparent; }
-::selection { background: rgba(162,150,139,0.35); color: #fff; }
+::selection { background: rgba(61,123,255,0.40); color: #fff; }
 input, textarea, button, select { font-family: inherit; }
 /* Enfoque accesible y premium: aro dorado suave en vez del contorno del navegador. */
-:focus-visible { outline: 2px solid rgba(162,150,139,0.6); outline-offset: 2px; }
+:focus-visible { outline: 2px solid rgba(61,123,255,0.7); outline-offset: 2px; }
 /* Barra de scroll discreta a juego con el tema oscuro. */
 * { scrollbar-width: thin; scrollbar-color: #2A2A2A transparent; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }

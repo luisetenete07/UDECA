@@ -19,8 +19,8 @@ import type { Routine, UserProfile, WeightLog, WorkoutLog } from './types';
  * papel blanco, es decir, una hoja en blanco.
  */
 
-const GOLD = '#96702A';
-const GOLD_SOFT = '#C9902B';
+const AZUL = '#1E56D6';
+const AZUL_SUAVE = '#3D7BFF';
 const INK = '#14161B';
 const MUTED = '#6C727C';
 const HAIRLINE = '#E4E6EA';
@@ -167,7 +167,7 @@ function improvementsOf(rows: MatrixRow[]): Improvement[] {
 // ---------------------------------------------------------------------------
 
 /** Línea de evolución diminuta. Dice de un vistazo si sube, baja o serpentea. */
-function sparkline(values: (number | null)[], w = 66, h = 18, color = GOLD_SOFT): string {
+function sparkline(values: (number | null)[], w = 66, h = 18, color = AZUL_SUAVE): string {
   const puntos = values
     .map((v, i) => ({ v, i }))
     .filter((p): p is { v: number; i: number } => p.v !== null);
@@ -385,10 +385,10 @@ export function buildClientReportHtml(data: ClientReportData): string {
       .sheet { max-width: 186mm; margin: 0 auto; }
 
       /* Cabecera */
-      .head { display: flex; align-items: flex-start; gap: 14px; border-bottom: 2px solid ${GOLD}; padding-bottom: 14px; }
+      .head { display: flex; align-items: flex-start; gap: 14px; border-bottom: 2px solid ${AZUL}; padding-bottom: 14px; }
       .head img { width: 46px; height: 46px; }
       .head .who { flex: 1; }
-      .brand { font-size: 9px; letter-spacing: 3.4px; text-transform: uppercase; color: ${GOLD}; font-weight: 700; }
+      .brand { font-size: 9px; letter-spacing: 3.4px; text-transform: uppercase; color: ${AZUL}; font-weight: 700; }
       h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 25px; letter-spacing: .4px; margin: 3px 0 2px; }
       .sub { color: ${MUTED}; font-size: 10.5px; }
       .stamp { text-align: right; color: ${MUTED}; font-size: 9.5px; line-height: 1.6; white-space: nowrap; }
@@ -404,7 +404,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
       tr { break-inside: avoid; }
       h2 {
         font-family: Georgia, 'Times New Roman', serif; font-size: 12px; letter-spacing: 2.2px;
-        text-transform: uppercase; color: ${GOLD}; margin: 0 0 9px;
+        text-transform: uppercase; color: ${AZUL}; margin: 0 0 9px;
         border-bottom: 1px solid ${HAIRLINE}; padding-bottom: 6px; font-weight: 700;
       }
       .note { color: ${MUTED}; font-size: 9.5px; margin: 7px 0 0; }
@@ -431,7 +431,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
       .imp th.ev, .imp td.ev { width: 78px; }
       .imp th.val, .imp td.val { width: 62px; }
       .imp td.val { font-variant-numeric: tabular-nums; white-space: nowrap; }
-      .imp td.best { color: ${GOLD}; font-weight: 700; white-space: nowrap; }
+      .imp td.best { color: ${AZUL}; font-weight: 700; white-space: nowrap; }
       .imp th.chg, .imp td.delta { width: 122px; }
       .imp td.delta { font-weight: 600; }
       .imp th.wks, .imp td.wks { width: 54px; }
@@ -444,7 +444,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
       .grid td.ex { font-weight: 600; font-size: 10px; }
       .grid th.wk, .grid td.wk { text-align: center; font-variant-numeric: tabular-nums; padding: 5px 2px; }
       .grid th.wk { font-size: 7.5px; letter-spacing: .4px; }
-      .grid th.wk.now { color: ${GOLD}; }
+      .grid th.wk.now { color: ${AZUL}; }
       .grid td.wk b { font-size: 10.5px; font-weight: 700; }
       .grid td.wk i { display: block; font-style: normal; font-size: 8px; color: ${MUTED}; }
       .grid td.empty { color: #C7CBD2; }
@@ -457,14 +457,14 @@ export function buildClientReportHtml(data: ClientReportData): string {
       .col h3 { margin: 0 0 7px; font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase; color: ${MUTED}; }
       .mark { display: flex; align-items: baseline; gap: 7px; padding: 3px 0; }
       .mark-label { font-size: 9px; color: ${MUTED}; width: 62px; }
-      .mark-value { font-size: 14px; font-weight: 700; color: ${GOLD}; font-variant-numeric: tabular-nums; }
+      .mark-value { font-size: 14px; font-weight: 700; color: ${AZUL}; font-variant-numeric: tabular-nums; }
       .mark-name { font-size: 9.5px; color: ${INK}; }
 
       /* Barras de reparto */
       .bar-row { display: flex; align-items: center; gap: 9px; padding: 3px 0; }
       .bar-label { width: 96px; font-size: 10px; }
       .bar-track { flex: 1; height: 7px; background: #F0F1F4; border-radius: 4px; overflow: hidden; }
-      .bar-fill { display: block; height: 100%; background: ${GOLD_SOFT}; border-radius: 4px; }
+      .bar-fill { display: block; height: 100%; background: ${AZUL_SUAVE}; border-radius: 4px; }
       .bar-value { width: 108px; text-align: right; font-size: 9px; color: ${MUTED}; font-variant-numeric: tabular-nums; }
 
       /* Peso */

@@ -72,7 +72,7 @@ export default function RegisterScreen() {
     <ScreenContainer contentStyle={styles.content} maxWidth={560}>
       <View style={styles.header}>
         <LinearGradient
-          colors={gradients.goldHaloSoft}
+          colors={gradients.haloSuave}
           style={styles.heroGlow}
           pointerEvents="none"
         />

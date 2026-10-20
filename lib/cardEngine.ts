@@ -118,8 +118,8 @@ export type CardData = SessionCardData | RecordCardData | ReportCardData | Membe
 export const CARD_SCRIPT = `
 var W = 1080, H = 1350;
 var BG = '#000000';
-var GOLD = '#A2968B';
-var GOLD_SOFT = '#C9BDB0';
+var AZUL = '#3D7BFF';
+var AZUL_CLARO = '#7FA8FF';
 var TEXT = '#FFFFFF';
 var MUTED = '#ADADAD';
 var FAINT = '#666666';
@@ -160,23 +160,23 @@ function drawFrame(ctx, logo) {
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, W, H);
   var glow = ctx.createRadialGradient(W / 2, 220, 0, W / 2, 220, 780);
-  glow.addColorStop(0, 'rgba(162, 150, 139, 0.20)');
-  glow.addColorStop(1, 'rgba(162, 150, 139, 0)');
+  glow.addColorStop(0, 'rgba(61, 123, 255, 0.20)');
+  glow.addColorStop(1, 'rgba(61, 123, 255, 0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = 'rgba(162, 150, 139, 0.45)';
+  ctx.strokeStyle = 'rgba(61, 123, 255, 0.45)';
   ctx.lineWidth = 4;
   roundRect(ctx, 40, 40, W - 80, H - 80, 44);
   ctx.stroke();
   ctx.textAlign = 'center';
   if (logo) ctx.drawImage(logo, W / 2 - 52, 44, 104, 104);
-  ctx.fillStyle = GOLD_SOFT;
+  ctx.fillStyle = AZUL_CLARO;
   ctx.font = '600 54px ' + DISPLAY;
   ctx.fillText(marcaGrande(ctx), W / 2, 198);
   ctx.fillStyle = MUTED;
   ctx.font = '600 23px sans-serif';
   ctx.fillText(subMarca(), W / 2, 238);
-  ctx.fillStyle = GOLD;
+  ctx.fillStyle = AZUL;
   ctx.fillRect(W / 2 - 40, 262, 80, 3);
 }
 
@@ -189,10 +189,10 @@ function drawFooter(ctx) {
 
 /** Casilla de estadística: caja redondeada con valor grande y etiqueta. */
 function drawStat(ctx, x, y, w, h, value, label) {
-  ctx.fillStyle = 'rgba(162, 150, 139, 0.07)';
+  ctx.fillStyle = 'rgba(61, 123, 255, 0.07)';
   roundRect(ctx, x, y, w, h, 26);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(162, 150, 139, 0.28)';
+  ctx.strokeStyle = 'rgba(61, 123, 255, 0.28)';
   ctx.lineWidth = 2;
   roundRect(ctx, x, y, w, h, 26);
   ctx.stroke();
@@ -200,7 +200,7 @@ function drawStat(ctx, x, y, w, h, value, label) {
   ctx.fillStyle = TEXT;
   ctx.font = '800 64px sans-serif';
   ctx.fillText(fit(ctx, value, w - 50), x + w / 2, y + h / 2 + 4);
-  ctx.fillStyle = GOLD_SOFT;
+  ctx.fillStyle = AZUL_CLARO;
   ctx.font = '600 25px sans-serif';
   ctx.fillText(label.toUpperCase(), x + w / 2, y + h - 32);
 }
@@ -217,7 +217,7 @@ function drawSession(ctx, data) {
   ctx.fillStyle = TEXT;
   ctx.font = '600 62px ' + DISPLAY;
   ctx.fillText(T.sesionCompletada, W / 2, 362);
-  ctx.fillStyle = GOLD_SOFT;
+  ctx.fillStyle = AZUL_CLARO;
   ctx.font = '700 38px sans-serif';
   var sub = data.routineName + (data.dayName ? ' · ' + data.dayName : '');
   ctx.fillText(fit(ctx, sub, W - 200), W / 2, 424);
@@ -242,7 +242,7 @@ function drawSession(ctx, data) {
   if (data.prCount > 0) {
     extras.push({
       text: data.prCount === 1 ? T.nuevoRecord : data.prCount + ' ' + T.records,
-      color: GOLD_SOFT, font: '800 40px sans-serif', gapBefore: 70
+      color: AZUL_CLARO, font: '800 40px sans-serif', gapBefore: 70
     });
   }
   if (data.streak > 1) {
@@ -285,37 +285,37 @@ function drawRecord(ctx, data, logo) {
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, W, H);
   var glow = ctx.createRadialGradient(W / 2, 220, 0, W / 2, 220, 760);
-  glow.addColorStop(0, 'rgba(162, 150, 139, 0.20)');
-  glow.addColorStop(1, 'rgba(162, 150, 139, 0)');
+  glow.addColorStop(0, 'rgba(61, 123, 255, 0.20)');
+  glow.addColorStop(1, 'rgba(61, 123, 255, 0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = 'rgba(162, 150, 139, 0.45)';
+  ctx.strokeStyle = 'rgba(61, 123, 255, 0.45)';
   ctx.lineWidth = 5;
   roundRect(ctx, 40, 40, W - 80, H - 80, 44);
   ctx.stroke();
   ctx.textAlign = 'center';
   if (logo) ctx.drawImage(logo, W / 2 - 52, 44, 104, 104);
-  ctx.fillStyle = GOLD_SOFT;
+  ctx.fillStyle = AZUL_CLARO;
   ctx.font = '600 54px ' + DISPLAY;
   ctx.fillText(marcaGrande(ctx), W / 2, 198);
   ctx.fillStyle = MUTED;
   ctx.font = '600 26px sans-serif';
   ctx.fillText(subMarca(), W / 2, 240);
-  ctx.fillStyle = GOLD;
+  ctx.fillStyle = AZUL;
   ctx.fillRect(W / 2 - 44, 272, 88, 4);
 
   // Insignia PR dibujada a mano (dos anillas + monograma).
-  ctx.strokeStyle = GOLD;
+  ctx.strokeStyle = AZUL;
   ctx.lineWidth = 7;
   ctx.beginPath();
   ctx.arc(W / 2, 420, 78, 0, Math.PI * 2);
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(W / 2, 420, 92, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(162, 150, 139, 0.35)';
+  ctx.strokeStyle = 'rgba(61, 123, 255, 0.35)';
   ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.fillStyle = GOLD_SOFT;
+  ctx.fillStyle = AZUL_CLARO;
   ctx.font = '900 64px sans-serif';
   ctx.fillText('PR', W / 2, 443);
   ctx.fillStyle = TEXT;
@@ -326,7 +326,7 @@ function drawRecord(ctx, data, logo) {
   var compact = prs.length > 1;
   var y = prs.length === 1 ? 790 : 730;
   for (var i = 0; i < prs.length; i++) {
-    ctx.fillStyle = GOLD_SOFT;
+    ctx.fillStyle = AZUL_CLARO;
     ctx.font = '700 ' + (compact ? 40 : 46) + 'px sans-serif';
     ctx.fillText(fit(ctx, prs[i].exerciseName.toUpperCase(), W - 200), W / 2, y);
     ctx.fillStyle = TEXT;
@@ -345,7 +345,7 @@ function drawReport(ctx, data) {
   ctx.fillStyle = TEXT;
   ctx.font = '600 56px ' + DISPLAY;
   ctx.fillText(T.informe, W / 2, 350);
-  ctx.fillStyle = GOLD_SOFT;
+  ctx.fillStyle = AZUL_CLARO;
   ctx.font = '700 40px sans-serif';
   ctx.fillText(fit(ctx, data.clientName.toUpperCase(), W - 200), W / 2, 414);
   if (data.periodLabel) {
@@ -367,7 +367,7 @@ function drawReport(ctx, data) {
   drawStat(ctx, x0 + bw + gap, y, bw, bh, wc, T.pesoCorporal);
   y += bh + gap + 40;
 
-  ctx.fillStyle = GOLD;
+  ctx.fillStyle = AZUL;
   ctx.font = '800 32px sans-serif';
   ctx.fillText(T.mejoresMarcas, W / 2, y);
   y += 56;
@@ -390,7 +390,7 @@ function drawReport(ctx, data) {
  * número dentro, y el marco doble en oro.
  */
 function drawMember(ctx, data, logo) {
-  var acento = data.acento || GOLD;
+  var acento = data.acento || AZUL;
   var esFundador = !!data.fundador;
 
   ctx.fillStyle = BG;
@@ -418,7 +418,7 @@ function drawMember(ctx, data, logo) {
 
   ctx.textAlign = 'center';
   if (logo) ctx.drawImage(logo, W / 2 - 46, 96, 92, 92);
-  ctx.fillStyle = GOLD_SOFT;
+  ctx.fillStyle = AZUL_CLARO;
   ctx.font = '600 46px ' + DISPLAY;
   ctx.fillText(marcaGrande(ctx), W / 2, 244);
   ctx.fillStyle = MUTED;
@@ -491,7 +491,7 @@ function drawMember(ctx, data, logo) {
   // El fundador, además del sello, lleva su promesa escrita. Es lo que hace que
   // el número signifique algo para quien ve la tarjeta y no lo entiende.
   if (esFundador) {
-    ctx.fillStyle = GOLD_SOFT;
+    ctx.fillStyle = AZUL_CLARO;
     ctx.font = '600 28px sans-serif';
     ctx.fillText(T.numeroNoSeReasigna, W / 2, 1104);
   }
@@ -520,7 +520,7 @@ function hexA(hex, a) {
   var h = String(hex).replace('#', '');
   if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
   var n = parseInt(h, 16);
-  if (isNaN(n)) return 'rgba(162, 150, 139, ' + a + ')';
+  if (isNaN(n)) return 'rgba(61, 123, 255, ' + a + ')';
   return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + a + ')';
 }
 

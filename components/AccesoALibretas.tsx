@@ -50,7 +50,7 @@ export function AccesoALibretas({ trainerId }: { trainerId: string }) {
       style={styles.card}
     >
       <LinearGradient
-        colors={gradients.gold}
+        colors={gradients.marca}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.icono}

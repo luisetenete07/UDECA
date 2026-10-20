@@ -3,7 +3,8 @@ import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { useAuth } from '../lib/auth-context';
 import { rotuloDelRol } from '../lib/carne';
-import { Emblema } from './MarcaCalico';
+import { Emblema, Logotipo } from './MarcaCalico';
+import { MARCA_POR_DEFECTO } from '../lib/marcaPropia';
 import { colors, fonts, spacing } from '../lib/theme';
 
 /** Alto reservado para la marca en la cabecera de la barra lateral. */
@@ -30,24 +31,35 @@ export function SidebarBrand() {
   return (
     <View style={styles.fill} pointerEvents="none">
       <View style={styles.row}>
-        {/* El logo del entrenador, si su plan lo incluye; si no, el emblema. */}
-        {logo ? (
-          <Image source={{ uri: logo }} style={styles.emblem} resizeMode="contain" />
-        ) : (
-          <View style={[styles.emblem, styles.emblemaCentro]}>
-            <Emblema alto={30} />
+        {/* Sin marca propia, el logotipo de CALICO tal cual (el dibujado, no
+            escrito con una fuente); con la suya, su logo o el emblema y su
+            nombre. Debajo, siempre, lo que eres: entrenador o alumno. */}
+        {!logo && marca === MARCA_POR_DEFECTO ? (
+          <View>
+            <Logotipo ancho={128} />
+            <Text style={[styles.sub, { marginTop: 6 }]}>{rotuloDelRol(profile)}</Text>
           </View>
+        ) : (
+          <>
+            {logo ? (
+              <Image source={{ uri: logo }} style={styles.emblem} resizeMode="contain" />
+            ) : (
+              <View style={[styles.emblem, styles.emblemaCentro]}>
+                <Emblema alto={30} />
+              </View>
+            )}
+            <View>
+              {/* La marca de quien mira: la suya si paga, la de su entrenador si
+                  es alumno. `numberOfLines` es el seguro del tope de doce letras:
+                  con una tipografía más ancha o un panel más estrecho, antes que
+                  empujar al emblema, se recorta. */}
+              <Text style={styles.mark} numberOfLines={1}>
+                {marca}
+              </Text>
+              <Text style={styles.sub}>{rotuloDelRol(profile)}</Text>
+            </View>
+          </>
         )}
-        <View>
-          {/* La marca de quien mira: la suya si paga, la de su entrenador si
-              es alumno. `numberOfLines` es el seguro del tope de doce letras:
-              con una tipografía más ancha o un panel más estrecho, antes que
-              empujar al emblema, se recorta. */}
-          <Text style={styles.mark} numberOfLines={1}>
-            {marca}
-          </Text>
-          <Text style={styles.sub}>{rotuloDelRol(profile)}</Text>
-        </View>
       </View>
       <View style={styles.rule} />
     </View>

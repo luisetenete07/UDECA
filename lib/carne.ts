@@ -43,28 +43,28 @@ export interface Carne {
 /**
  * Cada tipo con su color, su monograma y su frase.
  *
- * Los tres colores salen del mismo oro: son el mismo material a distinta
- * temperatura, no tres colores de marcas distintas. Una tarjeta verde y otra
- * azul se verían de dos empresas.
+ * Los tres colores salen del mismo azul: son el mismo color a distinta
+ * luz, no tres colores de marcas distintas. Una tarjeta verde y otra
+ * naranja se verían de dos empresas.
  */
 const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'fundador' | 'tipo'>> = {
   coach: {
     titulo: 'ENTRENADOR',
     lema: 'Forma a otros dentro de CALICO',
     monograma: 'EN',
-    acento: '#C9BDB0',
+    acento: '#7FA8FF',
   },
   alumno: {
     titulo: 'ALUMNO',
     lema: 'Entrena con su entrenador',
     monograma: 'AL',
-    acento: '#8A7E73',
+    acento: '#3D7BFF',
   },
   formacion: {
     titulo: 'FORMACIÓN',
     lema: 'Se forma con los cursos de CALICO',
     monograma: 'FO',
-    acento: '#B9A98F',
+    acento: '#A9C4FF',
   },
 };
 

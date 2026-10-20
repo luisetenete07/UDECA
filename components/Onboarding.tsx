@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 48,
   },
-  logo: { width: 64, height: 64, borderRadius: 16, marginBottom: spacing.xl, ...shadows.glowGold },
+  logo: { width: 64, height: 64, borderRadius: 16, marginBottom: spacing.xl, ...shadows.brillo },
   slide: { alignItems: 'center', minHeight: 240 },
   iconWrap: {
     width: 72,

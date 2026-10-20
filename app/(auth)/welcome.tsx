@@ -85,7 +85,7 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={gradients.goldHalo} style={styles.halo} pointerEvents="none" />
+      <LinearGradient colors={gradients.halo} style={styles.halo} pointerEvents="none" />
 
       {/* Salida directa, visible desde la primera diapositiva. Quien llega con
           el código de su entrenador ya viene convertido y solo quiere entrar. */}

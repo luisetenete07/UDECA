@@ -66,7 +66,7 @@ export class ArranqueSeguro extends React.Component<Props, State> {
             foto a esta pantalla y mándanosla: con lo que pone aquí abajo se
             arregla.
           </Text>
-          <Text style={{ color: '#C9BDB0', fontSize: 13, fontWeight: '600', marginBottom: 6 }}>
+          <Text style={{ color: '#7FA8FF', fontSize: 13, fontWeight: '600', marginBottom: 6 }}>
             QUÉ HA FALLADO
           </Text>
           <Text
@@ -78,7 +78,7 @@ export class ArranqueSeguro extends React.Component<Props, State> {
           {pila ? (
             <>
               <Text
-                style={{ color: '#C9BDB0', fontSize: 13, fontWeight: '600', marginBottom: 6 }}
+                style={{ color: '#7FA8FF', fontSize: 13, fontWeight: '600', marginBottom: 6 }}
               >
                 DÓNDE
               </Text>

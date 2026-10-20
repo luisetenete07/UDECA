@@ -94,7 +94,7 @@ export function Button({
       {variant === 'primary' ? (
         // Acabado oro con degradado de marca y filo brillante superior.
         <LinearGradient
-          colors={gradients.gold}
+          colors={gradients.marca}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={[styles.base, compacto && styles.baseCompacta]}

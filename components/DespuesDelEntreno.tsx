@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
     marginBottom: spacing.md,
-    ...shadows.glowGold,
+    ...shadows.brillo,
   },
   resumenTitulo: { ...typography.h1, color: colors.text, textAlign: 'center' },
   resumenSubtitulo: {
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
-    ...shadows.glowGold,
+    ...shadows.brillo,
   },
   tarjetaTitulo: { ...typography.h2, color: colors.text, textAlign: 'center' },
   tarjetaSubtitulo: {

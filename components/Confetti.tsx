@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Dimensions, Easing, StyleSheet, View } from 'react-native';
 
-const COLORS = ['#C9BDB0', '#A2968B', '#8A7E73', '#FFFFFF', '#D4AF37'];
+const COLORS = ['#7FA8FF', '#3D7BFF', '#2556D9', '#FFFFFF', '#D8B65A'];
 const PIECES = 26;
 
 interface Piece {

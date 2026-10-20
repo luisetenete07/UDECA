@@ -45,7 +45,7 @@ function plantilla(titulo, parrafos, boton) {
     .join('');
   const cta = boton
     ? `<p style="margin:22px 0 0">
-         <a href="${boton.url}" style="display:inline-block;background:#A2968B;color:#0A0A0A;
+         <a href="${boton.url}" style="display:inline-block;background:#3D7BFF;color:#FFFFFF;
             text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:8px">
            ${boton.texto}
          </a>
@@ -57,7 +57,7 @@ function plantilla(titulo, parrafos, boton) {
              border-radius:14px;padding:28px 26px;font-family:-apple-system,BlinkMacSystemFont,
              'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
         <tr><td>
-          <p style="margin:0 0 6px;font-size:12px;letter-spacing:1.6px;color:#A2968B;
+          <p style="margin:0 0 6px;font-size:12px;letter-spacing:1.6px;color:#7FA8FF;
              text-transform:uppercase;font-weight:600">CALICO</p>
           <h1 style="margin:0 0 18px;font-size:21px;line-height:1.3;color:#111111">${titulo}</h1>
           ${cuerpo}${cta}

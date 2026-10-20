@@ -809,7 +809,7 @@ export default function ClientDetailScreen() {
             hint={frase`Volumen y constancia`}
             defaultOpen={false}
           >
-            <Text style={styles.mutedText}>Cada punto dorado es un día entrenado.</Text>
+            <Text style={styles.mutedText}>Cada punto azul es un día entrenado.</Text>
             <View style={{ marginTop: spacing.sm }}>
               <ConsistencyMap days={trainingDays(workoutLogs)} />
             </View>

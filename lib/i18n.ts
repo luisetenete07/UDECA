@@ -992,7 +992,7 @@ export const EN: Record<string, string> = {
   'El cliente todavía no ha subido fotos.': "The client hasn't uploaded any photos yet.",
   'Asigna hábitos que el alumno marcará cada día desde su inicio.':
     'Assign habits your student will tick off every day from their home screen.',
-  'Cada punto dorado es un día entrenado.': 'Every gold dot is a day trained.',
+  'Cada punto azul es un día entrenado.': 'Every blue dot is a day trained.',
   'Volumen semanal (kg)': 'Weekly volume (kg)',
   'Isométricos: segundos por semana': 'Holds: seconds per week',
   'Segundos totales de aguante (ejercicios por tiempo), separados por empuje y tirón.':
