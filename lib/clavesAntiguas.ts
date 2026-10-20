@@ -27,6 +27,35 @@ export function claveNueva(clave: string): string | null {
   return AHORA + clave.slice(ANTES.length);
 }
 
+/**
+ * En la web, lo mismo pero en el acto, sin esperar a nada.
+ *
+ * Allí el almacenamiento es el del navegador, que es síncrono, y la app no
+ * puede quedarse en blanco esperando: la web se publica con cada pantalla ya
+ * pintada en el HTML, y si el arranque esperase a una promesa, ese HTML
+ * saldría vacío (pasó: la publicación lo detectó y se paró). Al generar el
+ * HTML no hay navegador ni nada que migrar, y no hace nada.
+ */
+export function migrarClavesAntiguasEnLaWeb() {
+  try {
+    const almacen = typeof window !== 'undefined' ? window.localStorage : undefined;
+    if (!almacen) return;
+    const viejas: string[] = [];
+    for (let i = 0; i < almacen.length; i++) {
+      const k = almacen.key(i);
+      if (k && claveNueva(k) !== null) viejas.push(k);
+    }
+    for (const k of viejas) {
+      const nueva = claveNueva(k)!;
+      const v = almacen.getItem(k);
+      if (v !== null && almacen.getItem(nueva) === null) almacen.setItem(nueva, v);
+      almacen.removeItem(k);
+    }
+  } catch {
+    // Igual que en el móvil: si falla, se sigue sin lo guardado de antes.
+  }
+}
+
 export function migrarClavesAntiguas(): Promise<void> {
   if (!enCurso) {
     enCurso = (async () => {

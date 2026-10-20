@@ -23,7 +23,11 @@ import { ActualizacionObligatoria } from '../components/ActualizacionObligatoria
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { installGlobalErrorLogging } from '../lib/errorLog';
 import { colors } from '../lib/theme';
-import { migrarClavesAntiguas } from '../lib/clavesAntiguas';
+import { migrarClavesAntiguas, migrarClavesAntiguasEnLaWeb } from '../lib/clavesAntiguas';
+
+// En la web, las claves de antes pasan a su nombre nuevo aquí, al cargar, antes
+// de pintar nada: sin esperar, y sin dejar vacío el HTML que se publica.
+if (Platform.OS === 'web') migrarClavesAntiguasEnLaWeb();
 
 /**
  * Engancha una sola vez el registro de errores no capturados. Vive dentro del
@@ -49,9 +53,13 @@ export default function RootLayout() {
    * de que nada las lea (lib/clavesAntiguas.ts): la cuenta, la cola de
    * entrenos sin subir y el borrador se leen en cuanto arranca la sesión. Con
    * un tope, por si el almacenamiento tardara: mejor arrancar que esperar.
+   *
+   * En la web no se espera: ya se migró, en el acto, al cargar este fichero
+   * (más abajo). Esperar dejaría vacío el HTML que se publica.
    */
-  const [clavesListas, setClavesListas] = useState(false);
+  const [clavesListas, setClavesListas] = useState(Platform.OS === 'web');
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const tope = setTimeout(() => setClavesListas(true), 1500);
     migrarClavesAntiguas().finally(() => {
       clearTimeout(tope);

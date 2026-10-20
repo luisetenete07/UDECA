@@ -71,6 +71,10 @@ console.log('\nLo guardado en el móvil no se pierde al cambiar de nombre');
   const raiz = readFileSync('app/_layout.tsx', 'utf8');
   ok('antes de que arranque la sesión (que lee la cola de entrenos y las cuentas)', /migrarClavesAntiguas\(\)/.test(raiz) && /!clavesListas \? null : \(\s*<AuthProvider>/.test(raiz));
   ok('y el widget, aunque se pinte antes de abrir la app', /await migrarClavesAntiguas\(\);/.test(readFileSync('lib/widgetHoy.ts', 'utf8')));
+  // En la web no se espera a nada: se migra al cargar, en el acto. Si la web
+  // esperase, el HTML que se publica saldría vacío (la publicación se paró
+  // por eso tres veces seguidas).
+  ok('en la web se migra al cargar, sin esperar', /if \(Platform\.OS === 'web'\) migrarClavesAntiguasEnLaWeb\(\);/.test(raiz) && /useState\(Platform\.OS === 'web'\)/.test(raiz));
 }
 
 console.log(fallos === 0 ? '\n✔ Todo se llama CALICO' : `\n${fallos} fallo(s)`);
