@@ -404,8 +404,6 @@ export const EN: Record<string, string> = {
   'antes {0}': 'before {0}',
   'Por revisar': 'To review',
   'Marcar todo como visto': 'Mark all as seen',
-  'Cuando tus alumnos entrenen, sus sesiones llegarán aquí.': 'When your students train, their sessions will land here.',
-  'Todo revisado. Los nuevos entrenos llegarán aquí.': 'All reviewed. New workouts will land here.',
   '1 récord': '1 PR',
   '{0} récords': '{0} PRs',
   'Ha dejado una nota': 'Left a note',
@@ -627,6 +625,11 @@ export const EN: Record<string, string> = {
   'Actualiza para tener lo último. Tus datos, tus rutinas y tu progreso siguen igual.': 'Update to get the latest. Your data, routines and progress stay as they are.',
   'En unos días hará falta para seguir usando la app.': 'In a few days you will need it to keep using the app.',
   'Ahora no': 'Not now',
+  // Llamadas en Por revisar (app/(trainer)/dashboard.tsx).
+  'Cuando tus alumnos entrenen o reserven llamadas, llegará aquí.': 'When your students train or book calls, it will show up here.',
+  'Todo revisado. Los nuevos entrenos y llamadas llegarán aquí.': 'All reviewed. New workouts and calls will show up here.',
+  'Ha cancelado una llamada': 'Cancelled a call',
+  'Ha reservado una llamada': 'Booked a call',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

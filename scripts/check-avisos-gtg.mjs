@@ -21,12 +21,14 @@ const hoy = (l) => l.filter((x) => x.esHoy);
 console.log('\nHoy, solo lo que queda por delante');
 {
   const l = avisosDelGtg(4, a(8));
-  ok('a las 8, los cuatro de hoy', hoy(l).length === HORAS_DEL_GTG.length, String(hoy(l).length));
-  ok('y no más de cuatro al día', HORAS_DEL_GTG.length <= 4);
+  ok('dos al día: a las 10:00 y a las 18:00', HORAS_DEL_GTG.join(',') === '10,18', HORAS_DEL_GTG.join(','));
+  ok('a las 8, los dos de hoy', hoy(l).map((x) => new Date(x.cuando).getHours()).join(',') === '10,18');
+  ok('en punto', l.every((x) => new Date(x.cuando).getMinutes() === 0));
   const tarde = avisosDelGtg(2, a(14, 30));
-  ok('a las 14:30, solo los de las 16 y las 19', hoy(tarde).map((x) => new Date(x.cuando).getHours()).join(',') === '16,19');
-  const justo = avisosDelGtg(2, a(15, 58));
-  ok('uno para dentro de dos minutos no se pone', !hoy(justo).some((x) => new Date(x.cuando).getHours() === 16));
+  ok('a las 14:30, solo el de las 18', hoy(tarde).map((x) => new Date(x.cuando).getHours()).join(',') === '18');
+  const justo = avisosDelGtg(2, a(17, 58));
+  ok('uno para dentro de dos minutos no se pone', !hoy(justo).some((x) => new Date(x.cuando).getHours() === 18));
+  ok('pasadas las 18, hoy ya ninguno', hoy(avisosDelGtg(2, a(18, 30))).length === 0);
 }
 
 console.log('\nCon todo hecho, hoy se calla');
@@ -41,7 +43,8 @@ console.log('\nLos días siguientes, puestos');
   const l = avisosDelGtg(3, a(20));
   const dias = new Set(l.map((x) => new Date(x.cuando).getDate()));
   ok(`${DIAS_DE_AVISOS_GTG - 1} días más por delante`, dias.size === DIAS_DE_AVISOS_GTG - 1, [...dias].join(','));
-  ok('ni uno de noche', l.every((x) => new Date(x.cuando).getHours() >= 10 && new Date(x.cuando).getHours() <= 19));
+  ok('cada día, los mismos dos', l.length === (DIAS_DE_AVISOS_GTG - 1) * 2);
+  ok('ni uno fuera de las 10 y las 18', l.every((x) => [10, 18].includes(new Date(x.cuando).getHours())));
 }
 
 console.log('\nY la app los usa');

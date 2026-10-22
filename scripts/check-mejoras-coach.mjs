@@ -12,7 +12,7 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-mejoras-coach.mjs
  */
 import { readFileSync } from 'node:fs';
-import { conRevisado, loQueDestaca, MAX_REVISADOS, porRevisar } from '../lib/bandeja.ts';
+import { bandeja, conRevisado, idEnLaBandeja, loQueDestaca, MAX_REVISADOS, porRevisar } from '../lib/bandeja.ts';
 import { objetivoSubido, sugerenciaDeProgresion, topeDelObjetivo } from '../lib/progresion.ts';
 import { LARGO_DEL_CODIGO, normalizarCodigo, nuevoCodigo, queLeFaltan } from '../lib/codigoBiblioteca.ts';
 
@@ -52,7 +52,44 @@ console.log('\n7. Bandeja "Por revisar"');
   ok('y lo que fue al fallo', d.includes('1 al fallo'));
   const dash = lee('app/(trainer)/dashboard.tsx');
   ok('está en el inicio del entrenador', /Por revisar<\/Text>/.test(dash) && !/title="Actividad reciente"/.test(dash));
-  ok('abrir uno lo marca como visto', /conRevisado\(visto\.revisados, log\.id\)/.test(dash));
+  ok('abrir uno lo marca como visto', /conRevisado\(visto\.revisados, id\)/.test(dash) && /abrirRevisando\(log\.id,/.test(dash));
+}
+
+console.log('\n7b. Las llamadas de los alumnos, también en "Por revisar"');
+{
+  const act = (id, tipo, horas, extra = {}) => ({
+    id, trainerId: 't', clientId: 'c1', tipo, inicio: AHORA + 2 * DIA, cuando: AHORA - horas * 3_600_000, ...extra,
+  });
+  const logs = [log('a', 1, []), log('b', 3, [])];
+  const actividad = [act('r1', 'reservada', 2), act('c1', 'cancelada', 30), act('vieja', 'reservada', 20 * 24)];
+  const b = bandeja(logs, actividad, {}, AHORA);
+  ok('cada reserva y cada cancelación es una entrada nueva',
+    b.filter((x) => x.clase === 'llamada').map((x) => x.actividad.tipo).join() === 'reservada,cancelada');
+  ok('mezcladas con los entrenos, de la más nueva a la más vieja',
+    b.map((x) => (x.clase === 'llamada' ? x.actividad.id : x.log.id)).join() === 'r1,a,c1,b', b.map((x) => x.id).join());
+  ok('lo de hace más de dos semanas, no', !b.some((x) => x.id === 'llamada:vieja'));
+  ok('abierta, deja de salir', !bandeja(logs, actividad, { revisados: [idEnLaBandeja({ id: 'r1' })] }, AHORA).some((x) => x.id === 'llamada:r1'));
+  ok('"Todo visto" también se las lleva', bandeja(logs, actividad, { revisadoHasta: AHORA }, AHORA).length === 0);
+  // El id de una llamada no puede chocar con el de un entreno que se llame igual.
+  ok('una llamada y un entreno con el mismo id no se pisan',
+    bandeja([log('x', 1, [])], [act('x', 'reservada', 1)], { revisados: ['x'] }, AHORA).map((i) => i.id).join() === 'llamada:x');
+
+  const dash = lee('app/(trainer)/dashboard.tsx');
+  ok('el inicio del entrenador las carga', /getActividadDeLlamadas\(profile\.uid, masDias\(hoy, -DIAS_DE_BANDEJA\)\)/.test(dash));
+  ok('y las pinta en la bandeja', /bandeja\(logs, actividadLlamadas, visto\)/.test(dash) && /Ha cancelado una llamada/.test(dash) && /Ha reservado una llamada/.test(dash));
+  ok('abrir una lleva a las llamadas', /abrirRevisando\(item\.id, '\/\(trainer\)\/llamadas'\)/.test(dash));
+
+  const fs = lee('lib/firestore/llamadas.ts');
+  ok('reservar lo apunta', /apuntarActividad\('reservada', l\)/.test(fs));
+  ok('cancelar el alumno lo apunta', /if \(delAlumno\) apuntarActividad\('cancelada', delAlumno\)/.test(fs));
+  ok('con la hora del servidor', /cuando: serverTimestamp\(\)/.test(fs));
+  ok('el alumno cancela con lo suyo', /await cancelarLlamada\(l\.id, l\);/.test(lee('app/(client)/llamadas.tsx')));
+  // Lo que cancela el entrenador no le llega a su propia bandeja.
+  ok('lo que cancela el entrenador no se le apunta a él', /await cancelarLlamada\(l\.id\);/.test(lee('app/(trainer)/llamadas.tsx')));
+  const borrar = lee('lib/firestore/eraseAccount.ts');
+  ok('al borrar la cuenta se va también',
+    /coleccion: 'actividadLlamadas', campo: 'clientId'/.test(borrar) && /coleccion: 'actividadLlamadas', campo: 'trainerId'/.test(borrar));
+  ok('con su índice', /"collectionGroup": "actividadLlamadas"[\s\S]{0,160}"fieldPath": "cuando"/.test(lee('firestore.indexes.json')));
 }
 
 console.log('\n8. Sugerencia de progresión');

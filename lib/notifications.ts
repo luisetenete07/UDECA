@@ -250,7 +250,7 @@ const GTG_PREFIJO = 'rutina-diaria-';
  * Los avisos de la rutina de cada día (ver lib/avisosDiarios.ts).
  *
  * Se rehacen enteros cada vez: al abrir el inicio y al marcar algo. Así el de
- * las 16:00 dice lo que de verdad queda, y si a las 15:00 ya está todo hecho,
+ * las 18:00 dice lo que de verdad queda, y si a las 17:00 ya está todo hecho,
  * no suena. Devuelve cuántos quedaron puestos.
  */
 export async function programarAvisosGtg(

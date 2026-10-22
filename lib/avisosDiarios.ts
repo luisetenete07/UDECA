@@ -9,8 +9,9 @@ import { inicioDelDia, masDias } from './fechas';
  * unas pocas veces, a horas fijas, mientras quede algo por marcar.
  *
  * Reglas:
- *  - Cuatro avisos como mucho al día, separados tres horas: es un recordatorio,
- *    no una alarma.
+ *  - Dos avisos al día, a las 10:00 y a las 18:00: uno para empezar el día y
+ *    otro para rematarlo. Es un recordatorio, no una alarma; con más, se
+ *    acaban ignorando todos.
  *  - Hoy, solo los que quedan por delante, y ninguno si ya está todo hecho.
  *  - Los días siguientes se dejan puestos también (un aviso local solo se
  *    puede programar con la app abierta, y el día que hace falta es justo el
@@ -18,7 +19,7 @@ import { inicioDelDia, masDias } from './fechas';
  */
 
 /** Horas a las que avisa, en punto. */
-export const HORAS_DEL_GTG = [10, 13, 16, 19] as const;
+export const HORAS_DEL_GTG = [10, 18] as const;
 
 /** Días que se dejan programados, contando hoy. */
 export const DIAS_DE_AVISOS_GTG = 3;

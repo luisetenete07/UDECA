@@ -70,6 +70,22 @@ export interface Llamada {
   createdAt: number;
 }
 
+/**
+ * Lo que hace un alumno con sus llamadas, para la bandeja "Por revisar" del
+ * entrenador (lib/bandeja.ts). Hace falta aparte porque cancelar BORRA la
+ * llamada: sin esto, de una cancelación no quedaría ni rastro.
+ */
+export interface ActividadDeLlamada {
+  id: string;
+  trainerId: string;
+  clientId: string;
+  tipo: 'reservada' | 'cancelada';
+  /** Cuándo es (o era) la llamada. */
+  inicio: number;
+  /** Cuándo pasó: al reservar o al cancelar. */
+  cuando: number;
+}
+
 export const DURACIONES = [15, 20, 30, 45, 60] as const;
 export const MARGENES_HORAS = [1, 3, 12, 24, 48] as const;
 export const MAX_ANTELACION_DIAS = 60;

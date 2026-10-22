@@ -50,6 +50,14 @@
         { "fieldPath": "trainerId", "order": "ASCENDING" },
         { "fieldPath": "inicio", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "actividadLlamadas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trainerId", "order": "ASCENDING" },
+        { "fieldPath": "cuando", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

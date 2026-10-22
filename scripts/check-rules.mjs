@@ -29,6 +29,8 @@ import {
   query,
   where,
   deleteField,
+  serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 
 const HOST = process.env.EXPO_PUBLIC_FIREBASE_EMULATOR_HOST || '127.0.0.1';
@@ -750,7 +752,45 @@ await comprobar('el alumno cancela la suya', true, async () => {
   await setDoc(doc(db, 'llamadas', `${coachId}_${manana}`), llamada(manana));
   await deleteDoc(doc(db, 'llamadas', `${coachId}_${manana}`));
 });
+
+/*
+ * Lo que hace el alumno con sus llamadas, para "Por revisar" del entrenador.
+ * Lo apunta él, a su nombre, para SU entrenador y con la hora del servidor.
+ */
+console.log('\nActividad de llamadas (Por revisar)');
+const actividad = (extra = {}) => ({
+  trainerId: coachId, clientId: marcosId, tipo: 'reservada', inicio: manana, cuando: serverTimestamp(), ...extra,
+});
+let apuntada = null;
+await comprobar('el alumno apunta que ha reservado', true, async () => {
+  apuntada = await addDoc(collection(db, 'actividadLlamadas'), actividad());
+});
+await comprobar('y que ha cancelado', true, () => addDoc(collection(db, 'actividadLlamadas'), actividad({ tipo: 'cancelada' })));
+await comprobar('otra cosa, no', false, () => addDoc(collection(db, 'actividadLlamadas'), actividad({ tipo: 'pagada' })));
+await comprobar('para otro entrenador, no', false, () =>
+  addDoc(collection(db, 'actividadLlamadas'), actividad({ trainerId: 'otro-cualquiera' }))
+);
+await comprobar('a nombre de otro alumno, no', false, () =>
+  addDoc(collection(db, 'actividadLlamadas'), actividad({ clientId: 'otro-cualquiera' }))
+);
+await comprobar('con otra fecha que la del servidor, no', false, () =>
+  addDoc(collection(db, 'actividadLlamadas'), actividad({ cuando: Timestamp.fromMillis(Date.now() - 86400000) }))
+);
+await comprobar('con campos de más, no', false, () =>
+  addDoc(collection(db, 'actividadLlamadas'), actividad({ nota: 'x' }))
+);
+await comprobar('ni se cambia después', false, () =>
+  setDoc(doc(db, 'actividadLlamadas', apuntada.id), { tipo: 'cancelada' }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, 'alumno2@demo.test', PW);
+await comprobar('otro alumno no la ve', false, () => getDoc(doc(db, 'actividadLlamadas', apuntada.id)));
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador ve la de sus alumnos', true, () =>
+  getDocs(query(collection(db, 'actividadLlamadas'), where('trainerId', '==', coachId), where('cuando', '>=', Timestamp.fromMillis(Date.now() - 14 * 86400000))))
+);
+await comprobar('pero no la apunta él', false, () => addDoc(collection(db, 'actividadLlamadas'), actividad()));
+await comprobar('y la puede borrar (al borrar su cuenta)', true, () => deleteDoc(doc(db, 'actividadLlamadas', apuntada.id)));
+
 await setDoc(doc(db, 'users', marcosId), { planId: deleteField() }, { merge: true });
 
 console.log(

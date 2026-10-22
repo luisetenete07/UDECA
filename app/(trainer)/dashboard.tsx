@@ -1,5 +1,5 @@
 import { frase } from '../../lib/idioma';
-import { diaMes, diasEntre, inicioDelDia, masDias } from '../../lib/fechas';
+import { diaLargo, diaMes, diasEntre, horaCorta, inicioDelDia, masDias } from '../../lib/fechas';
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -41,9 +41,9 @@ import {
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
-import { conRevisado, loQueDestaca, porRevisar, type LoVisto } from '../../lib/bandeja';
-import { getLlamadasEntre } from '../../lib/firestore/llamadas';
-import type { Llamada } from '../../lib/llamadas';
+import { bandeja, conRevisado, DIAS_DE_BANDEJA, loQueDestaca, type LoVisto } from '../../lib/bandeja';
+import { getActividadDeLlamadas, getLlamadasEntre } from '../../lib/firestore/llamadas';
+import type { ActividadDeLlamada, Llamada } from '../../lib/llamadas';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
 import { sessionTotals, weekComparison } from '../../lib/stats';
@@ -81,6 +81,9 @@ export default function TrainerDashboard() {
   const [logs, setLogs] = useState<WorkoutLog[]>(cached?.logs ?? []);
   const [tasks, setTasks] = useState<import('../../lib/types').CoachTask[]>([]);
   const [llamadas, setLlamadas] = useState<Llamada[]>([]);
+  // Lo que han hecho los alumnos con sus llamadas (reservar, cancelar): va a
+  // "Por revisar" junto a los entrenos.
+  const [actividadLlamadas, setActividadLlamadas] = useState<ActividadDeLlamada[]>([]);
   const [cycles, setCycles] = useState<import('../../lib/types').TrainingCycle[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>(cached?.requests ?? []);
   const [processingReq, setProcessingReq] = useState<string | null>(null);
@@ -98,7 +101,7 @@ export default function TrainerDashboard() {
       (async () => {
         try {
           const hoy = inicioDelDia(Date.now());
-          const [clientData, logData, requestData, taskData, cycleData, llamadaData] = await Promise.all([
+          const [clientData, logData, requestData, taskData, cycleData, llamadaData, actividadData] = await Promise.all([
             getClientsForTrainer(profile.uid),
             getWorkoutLogsForTrainer(profile.uid),
             getJoinRequestsForTrainer(profile.uid),
@@ -107,6 +110,7 @@ export default function TrainerDashboard() {
             getCyclesForTrainer(profile.uid).catch(() => []),
             // Y las llamadas 1:1 de estas semanas (la tira se mueve de semana en semana).
             getLlamadasEntre(profile.uid, masDias(hoy, -21), masDias(hoy, 42)).catch(() => []),
+            getActividadDeLlamadas(profile.uid, masDias(hoy, -DIAS_DE_BANDEJA)).catch(() => []),
           ]);
           if (cancelled) return;
           setClients(clientData);
@@ -114,6 +118,7 @@ export default function TrainerDashboard() {
           setTasks(taskData);
           setCycles(cycleData);
           setLlamadas(llamadaData);
+          setActividadLlamadas(actividadData);
           setRequests(requestData);
           setCached(cacheKey, {
             clients: clientData,
@@ -164,12 +169,14 @@ export default function TrainerDashboard() {
 
   const wk = weekComparison(logs);
   const hoyCero = inicioDelDia(now);
-  const pendientes = porRevisar(logs, visto);
-  const abrirRevisando = (log: WorkoutLog) => {
-    const revisados = conRevisado(visto.revisados, log.id);
+  const pendientes = bandeja(logs, actividadLlamadas, visto);
+  // Al abrir algo de la bandeja deja de salir: un entreno lleva a su sesión, y
+  // una llamada a la agenda de llamadas.
+  const abrirRevisando = (id: string, ruta: string) => {
+    const revisados = conRevisado(visto.revisados, id);
     setVisto((v) => ({ ...v, revisados }));
     if (profile) updateUserProfile(profile.uid, { revisados }).catch(() => {});
-    router.push(`/(trainer)/clients/${log.clientId}/session?logId=${log.id}`);
+    router.push(ruta as never);
   };
   const marcarTodoVisto = () => {
     const revisadoHasta = Date.now();
@@ -605,20 +612,69 @@ export default function TrainerDashboard() {
             <View style={styles.bandejaVacia}>
               <Ionicons name="checkmark-done-outline" size={18} color={colors.textMuted} />
               <Text style={styles.mutedText}>
-                {logs.length === 0
-                  ? 'Cuando tus alumnos entrenen, sus sesiones llegarán aquí.'
-                  : 'Todo revisado. Los nuevos entrenos llegarán aquí.'}
+                {logs.length === 0 && actividadLlamadas.length === 0
+                  ? 'Cuando tus alumnos entrenen o reserven llamadas, llegará aquí.'
+                  : 'Todo revisado. Los nuevos entrenos y llamadas llegarán aquí.'}
               </Text>
             </View>
           ) : (
-            (verTodaLaBandeja ? pendientes : pendientes.slice(0, 6)).map((log) => {
+            (verTodaLaBandeja ? pendientes : pendientes.slice(0, 6)).map((item) => {
+              if (item.clase === 'llamada') {
+                const a = item.actividad;
+                const alumno = byId(a.clientId);
+                const cancelada = a.tipo === 'cancelada';
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => abrirRevisando(item.id, '/(trainer)/llamadas')}
+                    style={styles.activityRow}
+                  >
+                    <Avatar name={alumno?.name} photoURL={alumno?.photoURL} size={38} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.logClient}>{alumno?.name ?? 'Cliente'}</Text>
+                      <Text style={styles.logDetail} numberOfLines={1}>
+                        {unido(
+                          cancelada ? 'Ha cancelado una llamada' : 'Ha reservado una llamada',
+                          haceCuanto(diasEntre(a.cuando, now))
+                        )}
+                      </Text>
+                      {/* La hora de la llamada, en su pastilla: azul la que
+                          viene, en ámbar la que se ha caído. */}
+                      <View style={styles.destacados}>
+                        <View style={[styles.destacado, cancelada ? styles.destacadoAviso : styles.destacadoLogro]}>
+                          <Ionicons
+                            name={cancelada ? 'close-circle-outline' : 'call-outline'}
+                            size={11}
+                            color={cancelada ? colors.warning : colors.primaryBright}
+                          />
+                          <Text
+                            style={[
+                              styles.destacadoTexto,
+                              { color: cancelada ? colors.warning : colors.primaryBright },
+                              cancelada && styles.tachado,
+                            ]}
+                          >
+                            {frase`${diaLargo(a.inicio)}, ${horaCorta(a.inicio)}`}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.puntoNuevo} />
+                  </Pressable>
+                );
+              }
+              const log = item.log;
               const client = byId(log.clientId);
               const destacados = loQueDestaca(
                 log,
                 logs.filter((l) => l.clientId === log.clientId)
               );
               return (
-                <Pressable key={log.id} onPress={() => abrirRevisando(log)} style={styles.activityRow}>
+                <Pressable
+                  key={item.id}
+                  onPress={() => abrirRevisando(log.id, `/(trainer)/clients/${log.clientId}/session?logId=${log.id}`)}
+                  style={styles.activityRow}
+                >
                   <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
@@ -938,6 +994,8 @@ const styles = StyleSheet.create({
   destacadoLogro: { backgroundColor: colors.primaryMuted },
   destacadoAviso: { backgroundColor: colors.warningMuted },
   destacadoTexto: { ...typography.small, color: colors.textMuted, fontSize: 11 },
+  // La hora de una llamada cancelada: tachada, porque ya no está.
+  tachado: { textDecorationLine: 'line-through' },
   // Sin abrir: el punto dorado de "nuevo", como en cualquier bandeja.
   puntoNuevo: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
   logDetail: { ...typography.small, color: colors.textMuted, marginTop: 2 },

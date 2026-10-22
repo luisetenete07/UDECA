@@ -1,4 +1,6 @@
 import {
+  Timestamp,
+  addDoc,
   collection,
   deleteDoc,
   deleteField,
@@ -6,6 +8,7 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where,
@@ -14,6 +17,7 @@ import { db } from '../firebase';
 import {
   AJUSTES_POR_DEFECTO,
   idDeLlamada,
+  type ActividadDeLlamada,
   type AjustesLlamadas,
   type Llamada,
 } from '../llamadas';
@@ -32,6 +36,11 @@ import {
  *
  * Cancelar es borrar: el hueco vuelve a quedar libre y la llamada deja de
  * contar en el cupo del mes.
+ *
+ *  - `actividadLlamadas/{auto}`: lo que hace el ALUMNO (reservar, cancelar),
+ *    para la bandeja "Por revisar" del entrenador. Se apunta aparte, después
+ *    de reservar o cancelar y sin esperar: si apuntarlo fallara, la reserva o
+ *    la cancelación siguen valiendo, que es lo que importa.
  */
 
 export async function getAjustesLlamadas(trainerId: string): Promise<AjustesLlamadas> {
@@ -97,11 +106,56 @@ export async function reservarLlamada(l: Omit<Llamada, 'id' | 'createdAt'>): Pro
     const code = (e as { code?: string })?.code;
     throw new Error(code === 'permission-denied' ? 'ocupada' : 'error');
   }
+  // Solo reserva el alumno (las reglas no dejan a nadie más), así que esto es
+  // siempre actividad suya.
+  apuntarActividad('reservada', l).catch(() => {});
   return { id, ...datos };
 }
 
-export async function cancelarLlamada(id: string): Promise<void> {
+/**
+ * Cancela. Con `delAlumno` (la llamada que cancela el alumno) queda apuntado
+ * para el entrenador; lo que cancela el propio entrenador no se le apunta a él.
+ */
+export async function cancelarLlamada(id: string, delAlumno?: Llamada): Promise<void> {
   await deleteDoc(doc(db, 'llamadas', id));
+  if (delAlumno) apuntarActividad('cancelada', delAlumno).catch(() => {});
+}
+
+async function apuntarActividad(
+  tipo: ActividadDeLlamada['tipo'],
+  l: Pick<Llamada, 'trainerId' | 'clientId' | 'inicio'>
+): Promise<void> {
+  // La hora la pone el servidor: ni un reloj mal puesto ni nadie puede
+  // apuntar algo con otra fecha (las reglas lo exigen).
+  await addDoc(collection(db, 'actividadLlamadas'), {
+    trainerId: l.trainerId,
+    clientId: l.clientId,
+    tipo,
+    inicio: l.inicio,
+    cuando: serverTimestamp(),
+  });
+}
+
+/** Lo que han hecho sus alumnos con las llamadas desde `desde`, para la bandeja. */
+export async function getActividadDeLlamadas(trainerId: string, desde: number): Promise<ActividadDeLlamada[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, 'actividadLlamadas'),
+      where('trainerId', '==', trainerId),
+      where('cuando', '>=', Timestamp.fromMillis(desde))
+    )
+  );
+  return snap.docs.map((x) => {
+    const d = x.data();
+    return {
+      id: x.id,
+      trainerId: String(d.trainerId),
+      clientId: String(d.clientId),
+      tipo: d.tipo === 'cancelada' ? 'cancelada' : 'reservada',
+      inicio: Number(d.inicio),
+      cuando: d.cuando instanceof Timestamp ? d.cuando.toMillis() : Number(d.cuando ?? 0),
+    };
+  });
 }
 
 /**

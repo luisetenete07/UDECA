@@ -1,5 +1,6 @@
 import { frase, t } from './idioma';
 import { detectNewPRs } from './stats';
+import type { ActividadDeLlamada } from './llamadas';
 import type { WorkoutLog } from './types';
 
 /*
@@ -42,6 +43,41 @@ export function porRevisar(logs: WorkoutLog[], visto: LoVisto, ahora = Date.now(
   return logs
     .filter((l) => llegada(l) > desde && !vistos.has(l.id))
     .sort((a, b) => llegada(b) - llegada(a));
+}
+
+/*
+ * LAS LLAMADAS, EN LA MISMA BANDEJA.
+ *
+ * Cada vez que un alumno reserva o cancela una llamada, llega aquí como algo
+ * nuevo, igual que un entreno: sale hasta que el entrenador lo abre o marca
+ * todo como visto. Comparten la lista de vistos; el id de una llamada lleva
+ * delante "llamada:" para no confundirse nunca con el de un entreno.
+ */
+export type EnLaBandeja =
+  | { clase: 'entreno'; id: string; llegada: number; log: WorkoutLog }
+  | { clase: 'llamada'; id: string; llegada: number; actividad: ActividadDeLlamada };
+
+export const idEnLaBandeja = (a: Pick<ActividadDeLlamada, 'id'>) => `llamada:${a.id}`;
+
+/** Todo lo que hay por revisar —entrenos y llamadas—, del más nuevo al más viejo. */
+export function bandeja(
+  logs: WorkoutLog[],
+  actividad: ActividadDeLlamada[],
+  visto: LoVisto,
+  ahora = Date.now()
+): EnLaBandeja[] {
+  const desde = Math.max(ahora - DIAS_DE_BANDEJA * DIA, visto.revisadoHasta ?? 0);
+  const vistos = new Set(visto.revisados ?? []);
+  const entrenos: EnLaBandeja[] = porRevisar(logs, visto, ahora).map((log) => ({
+    clase: 'entreno',
+    id: log.id,
+    llegada: llegada(log),
+    log,
+  }));
+  const llamadas: EnLaBandeja[] = actividad
+    .filter((a) => a.cuando > desde && !vistos.has(idEnLaBandeja(a)))
+    .map((a) => ({ clase: 'llamada', id: idEnLaBandeja(a), llegada: a.cuando, actividad: a }));
+  return [...entrenos, ...llamadas].sort((a, b) => b.llegada - a.llegada);
 }
 
 /** La lista de vistos con uno más (el primero), sin pasarse del tope. */

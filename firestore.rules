@@ -406,6 +406,27 @@ service cloud.firestore {
         && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
     }
 
+    // Lo que hace cada alumno con sus llamadas (reservar, cancelar), para la
+    // bandeja "Por revisar" de su entrenador. Hace falta aparte porque cancelar
+    // borra la llamada. Lo apunta el propio alumno, a su nombre, para SU
+    // entrenador y con la hora del servidor; nadie lo cambia después. Lo leen
+    // los dos, y lo borran los dos (al borrar la cuenta).
+    match /actividadLlamadas/{id} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.trainerId is string
+        && request.resource.data.trainerId != ''
+        && request.resource.data.trainerId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('trainerId', '')
+        && request.resource.data.tipo in ['reservada', 'cancelada']
+        && request.resource.data.inicio is int
+        && request.resource.data.cuando == request.time
+        && request.resource.data.keys().hasOnly(['trainerId', 'clientId', 'tipo', 'inicio', 'cuando']);
+      allow delete: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+    }
+
     // Bibliotecas compartidas con un código (lib/firestore/bibliotecas.ts).
     // Se LEEN sabiendo el código —cualquiera con sesión: es para pasársela a
     // otro entrenador—, pero no se LISTAN: sin el código no se encuentra

@@ -161,7 +161,7 @@ export default function ReservarLlamada() {
     setMias((prev) => prev.filter((x) => x.id !== l.id));
     setOcupadas((prev) => prev.filter((x) => x.id !== l.id));
     try {
-      await cancelarLlamada(l.id);
+      await cancelarLlamada(l.id, l);
       cancelarAvisoDeLlamada(l.id).catch(() => {});
       notifyUser(
         trainerId,
