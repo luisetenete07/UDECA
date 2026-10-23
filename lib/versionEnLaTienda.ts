@@ -46,11 +46,18 @@ export function abrirLaTienda() {
 }
 
 async function deLaAppStore(): Promise<AvisoDeVersion> {
-  // Se busca primero en la tienda del país del móvil: la de Estados Unidos, que
-  // es la que contesta sin decir país, no tiene la app si no se publica allí.
+  // Solo cuenta la tienda del país del móvil, y si ahí no está, nada.
+  //
+  // Antes, si no la encontraba, miraba la de Estados Unidos (la que contesta
+  // sin decir país). Pero que una versión esté allí no quiere decir que se
+  // pueda bajar aquí: pasó que la App Store de España no tenía la app a la
+  // venta y la de Estados Unidos sí. Con aquella vuelta, a quien estaba en
+  // España le habría llegado un "actualiza" —y a los días un muro— pidiéndole
+  // algo que su tienda no tenía.
   const pais = paisDelMovil();
-  let respuesta = pais ? await buscarEnLaAppStore(pais) : null;
-  if (!respuesta?.resultCount) respuesta = await buscarEnLaAppStore();
+  if (!pais) return 'nada';
+  const respuesta = await buscarEnLaAppStore(pais);
+  if (!respuesta?.resultCount) return 'nada';
   const { hayNueva, dias } = novedadEnLaAppStore(
     VERSION_DE_LA_APP,
     respuesta,
@@ -60,15 +67,12 @@ async function deLaAppStore(): Promise<AvisoDeVersion> {
   return avisoDeVersion(hayNueva, dias);
 }
 
-async function buscarEnLaAppStore(pais?: string): Promise<{ resultCount?: number } | null> {
+async function buscarEnLaAppStore(pais: string): Promise<{ resultCount?: number } | null> {
   const control = new AbortController();
   const reloj = setTimeout(() => control.abort(), 8000);
   try {
     // `t` cambia en cada consulta para que ninguna caché devuelva la ficha de ayer.
-    const url =
-      `https://itunes.apple.com/lookup?id=${ID_EN_LA_APP_STORE}` +
-      (pais ? `&country=${pais}` : '') +
-      `&t=${Date.now()}`;
+    const url = `https://itunes.apple.com/lookup?id=${ID_EN_LA_APP_STORE}&country=${pais}&t=${Date.now()}`;
     const r = await fetch(url, { signal: control.signal });
     return r.ok ? await r.json() : null;
   } catch {

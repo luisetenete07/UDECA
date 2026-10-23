@@ -45,16 +45,20 @@ async function enLaAppStore(pais) {
   }
 }
 
-// Se dice en qué tienda está: que conteste la de Estados Unidos no quiere
-// decir que esté a la venta en España (pasó: Apple decía "no disponible en tu
-// país" a un usuario español con la versión ya publicada).
+// Cuenta la tienda de ESPAÑA, que es donde están los usuarios. La de Estados
+// Unidos se enseña solo como dato: pasó que allí estaba la versión nueva y en
+// España la app ni siquiera estaba a la venta, y una mínima puesta con la de
+// Estados Unidos habría dejado sin app a todos los iPhone de España.
 const enEspana = await enLaAppStore('es');
 const sinPais = await enLaAppStore();
 console.log(`Tienda de España: ${enEspana ? `sí (${enEspana.version})` : 'NO está a la venta'}`);
 console.log(`Tienda de Estados Unidos: ${sinPais ? `sí (${sinPais.version})` : 'NO está a la venta'}`);
-const ficha = enEspana ?? sinPais;
+const ficha = enEspana;
 if (!ficha || !esVersion(ficha.version)) {
-  console.error('La App Store no contesta o no encuentra la app. No se toca nada.');
+  console.error(
+    'En la App Store de España la app no está a la venta (o no contesta). No se toca nada: ' +
+      'revisa en App Store Connect la disponibilidad por países y el estado de comerciante (DSA).'
+  );
   process.exit(1);
 }
 console.log(`App Store: "${ficha.trackName}" ${ficha.version}, publicada el ${ficha.currentVersionReleaseDate}.`);

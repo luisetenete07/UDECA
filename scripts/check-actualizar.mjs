@@ -205,6 +205,20 @@ console.log('\nEl aviso de versión nueva, tal y como está montado');
   ok('si la tienda falla, nada', /catch \{\s*\}\s*return 'nada';/.test(tienda));
   ok('la App Store se busca por el id de la ficha', /itunes\.apple\.com\/lookup\?id=\$\{ID_EN_LA_APP_STORE\}/.test(tienda));
   ok('con tiempo límite', /setTimeout\(\(\) => control\.abort\(\), 8000\)/.test(tienda));
+  /*
+   * SOLO LA TIENDA DEL PAÍS DEL MÓVIL.
+   *
+   * Pasó: la App Store de España no tenía la app a la venta y la de Estados
+   * Unidos sí. Si al no encontrarla aquí se mirase allí, a quien está en
+   * España le llegaría un "actualiza" —y a los días un muro— pidiéndole una
+   * versión que su tienda no tiene.
+   */
+  ok('solo cuenta la tienda del país del móvil, sin irse a otra',
+    /if \(!pais\) return 'nada';/.test(tienda) &&
+      /if \(!respuesta\?\.resultCount\) return 'nada';/.test(tienda) &&
+      !/buscarEnLaAppStore\(\)/.test(tienda));
+  ok('y la mínima se pone mirando la tienda de España',
+    /const ficha = enEspana;/.test(lee('scripts/version-minima.mjs')));
   ok('en Android pregunta a Google Play', /requireOptionalNativeModule<ModuloDeTienda>\('CalicoTienda'\)/.test(tienda));
   ok('con la librería de actualizaciones de Play', /com\.google\.android\.play:app-update:/.test(gradle));
   ok('que solo dice que hay si a este móvil le toca', /UpdateAvailability\.UPDATE_AVAILABLE/.test(kt));

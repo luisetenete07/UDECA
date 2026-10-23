@@ -20,8 +20,11 @@ Publicar en las tiendas es todo lo que hay que hacer. Los días de margen son
 para que la versión esté de verdad en todas las fichas antes del muro: la
 búsqueda de Apple a veces la anuncia horas antes de que se pueda bajar.
 
-- **iPhone:** búsqueda pública de la App Store por el id de la ficha. Si la
-  versión nueva pide un iOS que el móvil no tiene, no se le avisa.
+- **iPhone:** búsqueda pública de la App Store por el id de la ficha, en la
+  tienda del país del móvil y solo en esa. Si la app no está a la venta en
+  ese país, no se avisa (que esté en la de Estados Unidos no quiere decir que
+  se pueda bajar aquí). Si la versión nueva pide un iOS que el móvil no
+  tiene, tampoco.
 - **Android:** Google Play desde el propio móvil (`modules/calico-tienda`).
   Solo avisa si a ese móvil le toca (modelo, Android, lanzamiento escalonado).
 - **Revisores:** instalan la versión que revisan, más nueva que la publicada,
@@ -47,8 +50,9 @@ actualizar cuesta un segundo.
 ## 2 · Cómo se activa
 
 Lo más cómodo: **Actions → "Versión mínima" → Run workflow**, con la versión y
-"escribir" marcado. Antes de escribir pregunta a la App Store qué hay publicado
-y se niega si es anterior a la mínima pedida. Google Play no se puede consultar
+"escribir" marcado. Antes de escribir pregunta a la App Store **de España** qué
+hay publicado y se niega si la app no está a la venta allí o si es anterior a la
+mínima pedida. Google Play no se puede consultar
 desde ahí: márcalo solo con la versión ya publicada en las dos tiendas. Sin
 "escribir", solo comprueba.
 
