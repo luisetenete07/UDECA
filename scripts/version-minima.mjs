@@ -45,7 +45,14 @@ async function enLaAppStore(pais) {
   }
 }
 
-const ficha = (await enLaAppStore('es')) ?? (await enLaAppStore());
+// Se dice en qué tienda está: que conteste la de Estados Unidos no quiere
+// decir que esté a la venta en España (pasó: Apple decía "no disponible en tu
+// país" a un usuario español con la versión ya publicada).
+const enEspana = await enLaAppStore('es');
+const sinPais = await enLaAppStore();
+console.log(`Tienda de España: ${enEspana ? `sí (${enEspana.version})` : 'NO está a la venta'}`);
+console.log(`Tienda de Estados Unidos: ${sinPais ? `sí (${sinPais.version})` : 'NO está a la venta'}`);
+const ficha = enEspana ?? sinPais;
 if (!ficha || !esVersion(ficha.version)) {
   console.error('La App Store no contesta o no encuentra la app. No se toca nada.');
   process.exit(1);
