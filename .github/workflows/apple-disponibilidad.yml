@@ -1,0 +1,28 @@
+name: Disponibilidad en la App Store
+
+# En qué países está a la venta la app y, en los que no, el motivo que da App
+# Store Connect (países sin marcar, estado de comerciante de la UE, etc.).
+# Solo lee: no cambia nada. Ver scripts/apple-disponibilidad.mjs.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  mirar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Reconstruye la clave .p8 desde el secreto (nunca se commitea).
+      - name: Preparar clave de App Store Connect
+        run: printf '%s' "${{ secrets.ASC_API_KEY_P8 }}" > asc-key.p8
+      - name: Mirar la disponibilidad
+        env:
+          EXPO_ASC_API_KEY_PATH: ./asc-key.p8
+          EXPO_ASC_KEY_ID: MZPCDLQ2DV
+          EXPO_ASC_ISSUER_ID: b4f2d2f6-3485-4bb5-8d7c-5e89c09356d9
+        run: node scripts/apple-disponibilidad.mjs
+      - name: Limpiar clave
+        if: always()
+        run: rm -f asc-key.p8
