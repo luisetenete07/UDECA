@@ -13,6 +13,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { modoDelAlumno } from '../lib/visibilidad.ts';
+import { alargarDescanso, getRest, restantes, startRest, stopRest, stopRestSiEs } from '../lib/restTimerStore.ts';
 
 let fallos = 0;
 const ok = (desc, bien, extra = '') => {
@@ -32,7 +33,37 @@ console.log('\nEntrenando, menos cosas a la vista');
   ok('el esfuerzo, al acabar el ejercicio', /pideEsfuerzoPorEjercicio && \(isDone \|\| exercise\.saltado\)/.test(w));
   ok('en el primero no hay "Anterior"', /\{bloqueVisible\.inicio > 0 \? \(\s*<Pressable/.test(w));
   const descanso = lee('components/RestTimer.tsx');
-  ok('el descanso: "+15 s" y "Seguir", sin "−15 s"', /addTime\(15\)/.test(descanso) && !/addTime\(-15\)/.test(descanso) && />Seguir</.test(descanso));
+  ok('el descanso: "+15 s" y "Seguir", sin "−15 s"', /alargarDescanso\(15\)/.test(descanso) && !/(addTime|alargarDescanso)\(-15\)/.test(descanso) && />Seguir</.test(descanso));
+}
+
+console.log('\nEl descanso, dentro de la pantalla de entreno');
+{
+  // Flotando abajo tapaba "Anterior" y "Siguiente".
+  const enLinea = (w.match(/<RestTimer key=\{activeRest\.id\} rest=\{activeRest\} enLinea \/>/g) ?? []).length;
+  ok('va dentro: en el ejercicio suelto y en la superserie', enLinea === 2, String(enLinea));
+  ok('sin el hueco de abajo que se reservaba para el flotante', !/restSpacer/.test(w));
+  ok('la tarjeta no se apaga mientras descansa', /isDone && !activeRest && styles\.exerciseCardDone/.test(w));
+  const flotante = lee('components/GlobalRestTimer.tsx');
+  const patron = flotante.match(/return (\/.*\/)\.test\(ruta/);
+  const esEntreno = patron ? new Function(`return ${patron[1]}`)() : null;
+  ok('en la pantalla de entreno no flota', /if \(!rest \|\| enLaPantallaDeEntreno\(ruta\)\) return null;/.test(flotante) && !!esEntreno && esEntreno.test('/workout'));
+  ok('en las demás pestañas, sí', !!esEntreno && !esEntreno.test('/progress') && !esEntreno.test('/dashboard') && !esEntreno.test('/workouts-history'));
+
+  // La hora a la que acaba vive en el estado, no en el componente: al pasar de
+  // la pantalla de entreno a otra pestaña no vuelve a empezar.
+  const antes = Date.now();
+  startRest(120, 'Serie 2');
+  const r1 = getRest();
+  ok('el final se guarda en el estado', r1 && r1.endsAt >= antes + 120000 && r1.endsAt <= Date.now() + 120000);
+  ok('y lo que queda se cuenta contra el reloj', r1 && restantes(r1, r1.endsAt - 30000) === 30);
+  alargarDescanso(15);
+  const r2 = getRest();
+  ok('"+15 s" mueve el final y la barra', r2 && r2.endsAt === r1.endsAt + 15000 && r2.seconds === 135 && r2.id === r1.id);
+  stopRestSiEs(r1.id + 99);
+  ok('parar otro descanso no para este', getRest()?.id === r1.id);
+  stopRestSiEs(r1.id);
+  ok('y parar este, sí', getRest() === null);
+  stopRest();
 }
 
 console.log('\nEn tabla, si el entrenador lo elige');

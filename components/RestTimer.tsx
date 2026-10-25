@@ -5,75 +5,76 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { playBeep, primeAudio } from '../lib/sound';
 import { cancelRestEndNotification, scheduleRestEndNotification } from '../lib/notifications';
+import { alargarDescanso, restantes, stopRestSiEs, type ActiveRest } from '../lib/restTimerStore';
 import { showToast } from './Toast';
 import { colors, fonts, radius, shadows, spacing, typography } from '../lib/theme';
 
 interface RestTimerProps {
-  /** Segundos de descanso. Cambiar la key del componente reinicia el timer. */
-  seconds: number;
-  /** Texto de "lo siguiente" (p. ej. "Ahora: Serie 2 · Dominadas"). */
-  title?: string;
-  onDone: () => void;
+  /** El descanso que corre (lib/restTimerStore.ts): su final y su duración. */
+  rest: ActiveRest;
+  /**
+   * Dentro de la pantalla de entreno, debajo de las series, en vez de flotar
+   * encima de todo. Flotando tapaba "Anterior" y "Siguiente".
+   */
+  enLinea?: boolean;
 }
 
+/** El último descanso que ya avisó: avisa una vez aunque se monte dos veces. */
+let yaAviso = 0;
+
 /**
- * Cronómetro de descanso entre series. Aparece al completar una serie,
- * cuenta atrás con barra de progreso dorada y avisa (háptica) al terminar.
+ * Cronómetro de descanso entre series. Aparece al completar una serie, cuenta
+ * atrás con su barra y avisa (háptica o pitido) al terminar.
+ *
+ * La hora a la que acaba vive en el estado global, no aquí: así cuenta igual
+ * dentro de la pantalla de entreno y flotando en las demás pestañas, y no
+ * vuelve a empezar al pasar de una a otra.
  */
-export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
-  const [remaining, setRemaining] = useState(seconds);
-  const total = useRef(seconds);
-  // Momento absoluto en que termina el descanso. Al calcular el tiempo restante
-  // contra el reloj (Date.now) en vez de restar 1 cada segundo, la cuenta atrás
-  // sigue siendo exacta aunque el móvil se bloquee o la app pase a segundo plano.
-  const endsAt = useRef(Date.now() + seconds * 1000);
-  const doneRef = useRef(onDone);
-  doneRef.current = onDone;
-  const firedRef = useRef(false);
-  const barAnim = useRef(new Animated.Value(1)).current;
+export function RestTimer({ rest, enLinea = false }: RestTimerProps) {
+  const [remaining, setRemaining] = useState(() => restantes(rest));
+  const restRef = useRef(rest);
+  restRef.current = rest;
+  const barAnim = useRef(new Animated.Value(rest.seconds > 0 ? restantes(rest) / rest.seconds : 0)).current;
 
-  const remainingNow = () => Math.max(0, Math.round((endsAt.current - Date.now()) / 1000));
-
-  // Cierra el descanso una sola vez: avisa (háptica/sonido) y llama a onDone.
+  // Cierra el descanso una sola vez: avisa (háptica/sonido) y lo para.
   const finish = () => {
-    if (firedRef.current) return;
-    firedRef.current = true;
+    const r = restRef.current;
+    if (yaAviso === r.id) return;
+    yaAviso = r.id;
     cancelRestEndNotification();
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       playBeep();
     }
-    // Aviso rápido en pantalla: se cierra solo en ~2 s (se desvanece al seguir
-    // con la siguiente serie sin estorbar).
+    // Aviso rápido en pantalla: se cierra solo en ~2 s.
     showToast('Descanso terminado · a por la siguiente serie');
-    setTimeout(() => doneRef.current(), 600);
+    setTimeout(() => stopRestSiEs(r.id), 600);
   };
 
   // Barra fluida: acompaña la cuenta atrás sin saltos por segundo.
   useEffect(() => {
     Animated.timing(barAnim, {
-      toValue: total.current > 0 ? Math.max(remaining - 1, 0) / total.current : 0,
+      toValue: rest.seconds > 0 ? Math.max(remaining - 1, 0) / rest.seconds : 0,
       duration: 1000,
       easing: Easing.linear,
       useNativeDriver: false,
     }).start();
-  }, [remaining, barAnim]);
+  }, [remaining, rest.seconds, barAnim]);
 
-  // El timer aparece tras un gesto (marcar serie): preparamos el audio aquí
-  // para poder sonar al terminar la cuenta atrás (política de autoplay web) y
-  // programamos una notificación local que suena aunque la pantalla esté apagada.
+  // El timer aparece tras un gesto (marcar serie): se prepara el audio para
+  // poder sonar al terminar (política de autoplay web) y se programa una
+  // notificación local que suena aunque la pantalla esté apagada. Con cada
+  // cambio del final ("+15 s") se vuelve a programar.
   useEffect(() => {
     primeAudio();
-    scheduleRestEndNotification(seconds);
-    return () => {
-      cancelRestEndNotification();
-    };
-  }, [seconds]);
+    const rem = restantes(rest);
+    if (rem > 0) scheduleRestEndNotification(rem);
+  }, [rest.id, rest.endsAt]);
 
   useEffect(() => {
     const tick = () => {
-      const rem = remainingNow();
+      const rem = restantes(restRef.current);
       setRemaining((prev) => (prev === rem ? prev : rem));
       if (rem <= 0) finish();
     };
@@ -81,13 +82,13 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
     // Ticks frecuentes para reengancharse rápido al volver de segundo plano.
     const id = setInterval(tick, 250);
     return () => clearInterval(id);
-  }, []);
+  }, [rest.id]);
 
-  // Al volver a primer plano (desbloquear el móvil o reabrir la pestaña),
-  // recalculamos el tiempo restante contra el reloj real de inmediato.
+  // Al volver a primer plano (desbloquear el móvil o reabrir la pestaña), se
+  // recalcula lo que queda contra el reloj real de inmediato.
   useEffect(() => {
     const resync = () => {
-      const rem = remainingNow();
+      const rem = restantes(restRef.current);
       setRemaining(rem);
       if (rem <= 0) finish();
     };
@@ -109,39 +110,25 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
     return () => sub.remove();
   }, []);
 
-  // Suma o RESTA tiempo al descanso; si al restar llega a cero, termina.
-  const addTime = (extra: number) => {
-    total.current = Math.max(1, total.current + extra);
-    endsAt.current = Math.max(Date.now(), endsAt.current + extra * 1000);
-    firedRef.current = false;
-    const rem = remainingNow();
-    setRemaining(rem);
-    if (rem <= 0) {
-      finish();
-    } else {
-      scheduleRestEndNotification(rem);
-    }
-  };
-
   const handleSkip = () => {
     cancelRestEndNotification();
-    doneRef.current();
+    stopRestSiEs(rest.id);
   };
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, enLinea && styles.containerEnLinea]}>
       <View style={styles.topRow}>
         <View style={styles.labelWrap}>
           <View style={styles.labelRow}>
             <Ionicons name="hourglass-outline" size={15} color={colors.primary} />
             <Text style={styles.label}>Descanso</Text>
           </View>
-          {title ? <Text style={styles.title} numberOfLines={1}>{title}</Text> : null}
+          {rest.title ? <Text style={styles.title} numberOfLines={1}>{rest.title}</Text> : null}
         </View>
-        <Text style={styles.time}>
+        <Text style={[styles.time, enLinea && styles.timeEnLinea]}>
           {mins}:{secs.toString().padStart(2, '0')}
         </Text>
       </View>
@@ -162,7 +149,7 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
         {/* Dos botones: un poco más de descanso, o seguir ya. Había también
             "−15 s", pero acortar es lo mismo que saltar un poco antes: un
             botón más que pensar entre serie y serie. */}
-        <Pressable onPress={() => addTime(15)} style={styles.action} hitSlop={8}>
+        <Pressable onPress={() => alargarDescanso(15)} style={styles.action} hitSlop={8}>
           <Ionicons name="add" size={14} color={colors.text} />
           <Text style={styles.actionText}>15s</Text>
         </Pressable>
@@ -205,6 +192,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fonts.semiBold,
   },
+  // Dentro de la tarjeta: sin la sombra que lo hacía flotar, y separado de
+  // las series de arriba.
+  containerEnLinea: { marginTop: spacing.sm, marginBottom: 0, shadowOpacity: 0, elevation: 0, borderColor: colors.primary },
+  timeEnLinea: { fontSize: 34, lineHeight: 38 },
   time: {
     fontSize: 40,
     lineHeight: 44,

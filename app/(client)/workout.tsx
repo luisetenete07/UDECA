@@ -35,6 +35,7 @@ import { applyWeekPlan } from '../../lib/weekPlan';
 import { esfuerzoDePct, etiquetaCombinada, pctCombinado, textoIntensidad } from '../../lib/intensidad';
 import { modoDelAlumno, queVeElAlumno } from '../../lib/visibilidad';
 import { TablaDeEntreno } from '../../components/TablaDeEntreno';
+import { RestTimer } from '../../components/RestTimer';
 import { SelectorDeEsfuerzo } from '../../components/SelectorDeEsfuerzo';
 import { diasDePausa, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
@@ -2166,6 +2167,10 @@ export default function WorkoutScreen() {
             </>
           ) : null}
 
+          {/* El descanso, aquí dentro, debajo de la ronda que se acaba de
+              hacer: es donde se está mirando. */}
+          {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
+
           {/* Y al pie, lo hecho (se abre para corregir) y lo que queda. */}
           {hechas.length > 0 ? (
             <Pressable onPress={() => alternar(clave('hechas'))} style={styles.ssPie} hitSlop={4}>
@@ -2277,7 +2282,7 @@ export default function WorkoutScreen() {
 
   // ---------- Modo entreno ----------
   return (
-    <ScreenContainer contentStyle={activeRest ? styles.restSpacer : undefined}>
+    <ScreenContainer>
       {prVivo ? (
         <PRBurst
           key={`${prVivo.exerciseId}-${prVivo.label}`}
@@ -2997,7 +3002,7 @@ export default function WorkoutScreen() {
         );
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
-          <Card accent style={[styles.exerciseCard, isDone && styles.exerciseCardDone]}>
+          <Card accent style={[styles.exerciseCard, isDone && !activeRest && styles.exerciseCardDone]}>
             <View style={styles.exerciseHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>
@@ -3259,6 +3264,12 @@ export default function WorkoutScreen() {
               pensar cuál tocar. Se queda la fila, que es donde está el número
               que acaba de hacer, con su ✓ grande y la fila entera como blanco.
             */}
+            {/*
+              EL DESCANSO, DENTRO. Justo debajo de las series, donde se acaba
+              de tocar el ✓. Flotando abajo tapaba "Anterior" y "Siguiente".
+              (En las demás pestañas sigue flotando: components/GlobalRestTimer.)
+            */}
+            {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
             {cluster ? (
               <Pressable
                 onPress={() => descansoDeBloque(cluster.restSeconds, exercise.name)}
@@ -3664,7 +3675,6 @@ const styles = StyleSheet.create({
   previaSeries: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold, ...tabularNums },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   // Hueco al pie para que el crono flotante de descanso no tape la navegación.
-  restSpacer: { paddingBottom: 210 },
   exitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
