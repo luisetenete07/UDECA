@@ -682,6 +682,11 @@ export const EN: Record<string, string> = {
   'En cada serie': 'On every set',
   'El esfuerzo se le pregunta en cada serie, mientras descansa.': 'Effort is asked on every set, while resting.',
   ' El esfuerzo se le pregunta en cada serie, mientras descansa.': ' Effort is asked on every set, while resting.',
+  // La tarjeta del ejercicio: nota, herramientas y series (app/(client)/workout.tsx)
+  'Tu nota': 'Your note',
+  'Para tu entrenador: variante, molestias, cómo ha ido...': 'For your coach: variation, discomfort, how it went...',
+  'Descanso entre bloques · {0}s': 'Rest between blocks · {0}s',
+  'SEGUNDOS': 'SECONDS',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

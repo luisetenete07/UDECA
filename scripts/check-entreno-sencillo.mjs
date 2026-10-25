@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs';
 import { modoDelAlumno } from '../lib/visibilidad.ts';
 import { esfuerzoDelEjercicio, textoDeEsfuerzo } from '../lib/planPersonalizado.ts';
 import { alargarDescanso, getRest, restantes, startRest, stopRest, stopRestSiEs } from '../lib/restTimerStore.ts';
+import { seriesAnteriores, textoDeSerieAnterior } from '../lib/stats.ts';
 
 let fallos = 0;
 const ok = (desc, bien, extra = '') => {
@@ -29,8 +30,7 @@ const w = lee('app/(client)/workout.tsx');
 console.log('\nEntrenando, menos cosas a la vista');
 {
   ok('lo que toca, en una línea de texto', /<Text style=\{styles\.metaLinea\}>/.test(w) && !/styles\.metaChip\b/.test(w));
-  ok('técnica y última vez, en la misma fila', /<View style=\{styles\.consultaFila\}>/.test(w));
-  ok('sin etiqueta "AHORA": la fila encendida ya lo dice', !/>AHORA</.test(w) && /styles\.setRowAhora/.test(w));
+  ok('sin etiqueta "AHORA": la fila encendida ya lo dice', !/>AHORA</.test(w) && /filaAhora/.test(lee('components/FilaDeSerie.tsx')));
   ok('sin la pregunta del esfuerzo "al acabar" (ni del ejercicio ni de la superserie)',
     !/Al acabar: ¿cuánto te ha costado cada uno\?/.test(w) && !/updateExerciseEsfuerzo/.test(w));
   ok('en el primero no hay "Anterior"', /\{bloqueVisible\.inicio > 0 \? \(\s*<Pressable/.test(w));
@@ -119,6 +119,42 @@ console.log('\nEl esfuerzo, serie a serie, mientras descansa');
   ok('el entrenador ve el esfuerzo de cada serie', /const porSerie = ex\.sets\.some\(\(s\) => s\.esfuerzo\)/.test(sesion) && /textoDeEsfuerzo\(ex\.esfuerzo\?\.escala \?\? 'rir', set\.esfuerzo\)/.test(sesion));
   const editor = lee('app/(trainer)/clients/[id]/routine.tsx');
   ok('y en su editor se llama "En cada serie"', /texto: 'En cada serie'/.test(editor));
+}
+
+console.log('\nCada serie con aire, la nota arriba y lo de la última vez en su serie');
+{
+  // La misma fila para el ejercicio suelto y para cada paso de la superserie.
+  const filas = (w.match(/<FilaDeSerie\b/g) ?? []).length;
+  ok('una sola fila de serie para todo (suelto y superserie)', filas === 2, String(filas));
+  const fila = lee('components/FilaDeSerie.tsx');
+  const casillas = fila.indexOf('{enDosLineas ? null : casillas}');
+  const check = fila.search(/style=\{\[\s*styles\.check,/);
+  ok('el ✓ a la derecha, después de las casillas', casillas > 0 && check > casillas);
+  ok('el ✓ y las casillas, de 48 (44 en un móvil estrecho)',
+    /const ANCHO_CHECK = 48;/.test(fila) && /height: 48,/.test(fila) && /width < 380 \? \{ casilla: 54, check: 44 \}/.test(fila) && /\{ width: m\.check, height: m\.check/.test(fila));
+  ok('cada fila en su caja, con aire debajo', /fila: \{[^}]*borderWidth: 1,[^}]*marginBottom: spacing\.sm/.test(fila));
+  ok('con tres casillas o más, bajan a otra línea', /const enDosLineas = campos\.length > 2;/.test(fila));
+
+  ok('lo de la última vez, en cada serie', (w.match(/antes=\{antesDe\(/g) ?? []).length === 2 && !/Última vez:/.test(w));
+  const logs = [
+    { date: 1, exercises: [{ exerciseId: 'dom', sets: [{ reps: '5', weight: '5', completed: true }] }] },
+    { date: 3, exercises: [{ exerciseId: 'dom', sets: [{ reps: '', completed: false }] }] },
+    { date: 2, exercises: [{ exerciseId: 'dom', sets: [{ reps: '6', weight: '10', completed: true }, { reps: '5', completed: true }] }] },
+  ];
+  const ant = seriesAnteriores(logs);
+  ok('la última sesión en que se apuntó algo (no la vacía)', ant.dom?.length === 2 && ant.dom[0].reps === '6');
+  ok('"6 × 10" con lastre (el "kg" ya lo dice su casilla)', textoDeSerieAnterior(ant.dom[0], { carga: 'weighted' }) === '6 × 10');
+  ok('"8 s" en un isométrico', textoDeSerieAnterior({ reps: '8', completed: true }, { segundos: true }) === '8 s');
+  ok('"3 + 5 s" en un combo', textoDeSerieAnterior({ reps: '3', seconds: '5', completed: true }, { combo: true }) === '3 + 5 s');
+  ok('"6 / 6" por lados', textoDeSerieAnterior({ reps: '6', side2: '6', completed: true }, { lados: true }) === '6 / 6');
+  ok('"3+3+3" en clúster', textoDeSerieAnterior({ reps: '3', clusters: ['3', '3'], completed: true }) === '3+3+3');
+  ok('una serie sin hacer no dice nada', textoDeSerieAnterior({ reps: '6', completed: false }) === '' && textoDeSerieAnterior(undefined) === '');
+
+  ok('la nota, en su pastilla junto a Técnica y Saltar, y se abre debajo',
+    /'Tu nota' : 'Nota'/.test(w) && /<\/View>\s*\{campoDeNota\(exerciseIndex\)\}/.test(w) && !/Añadir nota|Editar nota/.test(w));
+  ok('en la superserie, la nota de cada ejercicio dentro de su caja', /\{campoDeNota\(i, true\)\}/.test(w));
+  ok('las notas del entrenador, en su cajita (suelto y superserie)', (w.match(/notaDelEntrenador\(/g) ?? []).length === 2);
+  ok('las herramientas, pastillas de 36 de alto', /herramienta: \{[^}]*minHeight: 36,/.test(w));
 }
 
 console.log(fallos === 0 ? '\n✔ El entreno y el editor, más sencillos' : `\n${fallos} fallo(s)`);

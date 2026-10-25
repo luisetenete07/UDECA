@@ -28,7 +28,7 @@ const AHORA = Date.UTC(2026, 9, 15, 12);
 console.log('\n1. Modo foco');
 {
   const w = lee('app/(client)/workout.tsx');
-  ok('la serie que toca se enciende', /const serieQueToca = exercise\.sets\.findIndex\(\(s\) => !s\.completed\);/.test(w) && /styles\.setRowAhora/.test(w));
+  ok('la serie que toca se enciende', /const serieQueToca = exercise\.sets\.findIndex\(\(s\) => !s\.completed\);/.test(w) && /esAhora=\{!exercise\.saltado && setIndex === serieQueToca\}/.test(w));
   ok('cada serie se marca con su ✓', /updateSet\(exerciseIndex, setIndex, 'completed', !set\.completed\)/.test(w));
   // Sin el botón grande "Hecha · Serie N" debajo: dos formas de hacer lo
   // mismo, una al lado de la otra, era justo el exceso de botones.

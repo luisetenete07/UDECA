@@ -68,6 +68,51 @@ export function lastPerformanceByExercise(
   return result;
 }
 
+/**
+ * LAS SERIES DE LA ÚLTIMA VEZ, UNA A UNA.
+ *
+ * Para cada ejercicio, las series de la sesión más reciente en que se hizo
+ * (con alguna serie completada y apuntada). Durante el entreno, cada fila
+ * enseña lo que hizo en ESA misma serie la vez anterior ("6 × 10"),
+ * que es justo lo que se mira para decidir si hoy se sube: un solo "última
+ * vez" para todo el ejercicio no dice si la tercera serie ya costaba.
+ */
+export function seriesAnteriores(
+  logs: WorkoutLog[]
+): Record<string, LoggedExercise['sets']> {
+  const sorted = [...logs].sort((a, b) => b.date - a.date);
+  const result: Record<string, LoggedExercise['sets']> = {};
+  for (const log of sorted) {
+    for (const ex of log.exercises) {
+      if (result[ex.exerciseId]) continue;
+      if (!ex.sets.some((s) => s.completed && s.reps.trim() !== '')) continue;
+      result[ex.exerciseId] = ex.sets;
+    }
+  }
+  return result;
+}
+
+/**
+ * Lo de una serie anterior en corto, para su fila: "6", "6 × 10", "8 s",
+ * "3 + 5 s", "6 / 6", "3+3+3". Vacío si esa serie no se hizo.
+ *
+ * Los kilos van sin "kg": la casilla de al lado ya lo dice, y con la unidad
+ * no cabía en un móvil de 360 de ancho (se cortaba justo el peso).
+ */
+export function textoDeSerieAnterior(
+  set: LoggedExercise['sets'][number] | undefined,
+  o: { segundos?: boolean; combo?: boolean; lados?: boolean; carga?: 'none' | 'weighted' | 'assisted' } = {}
+): string {
+  if (!set || !set.completed || !set.reps?.trim()) return '';
+  const marcas = [set.reps, ...(set.clusters ?? [])].filter((m) => String(m ?? '').trim() !== '');
+  let txt = marcas.join('+');
+  if (o.lados && set.side2) txt = `${txt} / ${set.side2}`;
+  if (o.segundos) txt = `${txt} s`;
+  if (o.combo && set.seconds) txt = `${txt} + ${set.seconds} s`;
+  if (o.carga && o.carga !== 'none' && set.weight) txt = `${txt} × ${set.weight}`;
+  return txt;
+}
+
 /*
  * Las fechas viven en lib/fechas.ts, que es la única copia de cada una.
  *

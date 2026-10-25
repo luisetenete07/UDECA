@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { t, frase  } from '../../lib/idioma';
 import { diaLargo, diaSemanaCorto, esMismoDia, inicioDelDia, masDias } from '../../lib/fechas';
 import { unido } from '../../lib/texto';
@@ -36,6 +36,7 @@ import { esfuerzoDePct, etiquetaCombinada, pctCombinado, textoIntensidad } from 
 import { modoDelAlumno, queVeElAlumno } from '../../lib/visibilidad';
 import { TablaDeEntreno } from '../../components/TablaDeEntreno';
 import { RestTimer } from '../../components/RestTimer';
+import { CabeceraDeSeries, FilaDeSerie, type CampoDeSerie } from '../../components/FilaDeSerie';
 import { SelectorDeEsfuerzo } from '../../components/SelectorDeEsfuerzo';
 import { diasDePausa, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
@@ -123,7 +124,9 @@ import {
   currentStreak,
   detectNewPRs,
   lastPerformanceByExercise,
+  seriesAnteriores,
   sessionTotals,
+  textoDeSerieAnterior,
   type Achievement,
   type LastPerformance,
   type PersonalRecord,
@@ -248,6 +251,8 @@ export default function WorkoutScreen() {
   const [diaEmpezado, setDiaEmpezado] = useState<string | null>(null);
   const [log, setLog] = useState<LoggedExercise[]>([]);
   const [lastPerf, setLastPerf] = useState<Record<string, LastPerformance>>({});
+  // Las series de la última vez, una a una: cada fila dice lo de SU serie.
+  const anteriores = useMemo(() => seriesAnteriores(history), [history]);
   const [videoByExercise, setVideoByExercise] = useState<Record<string, string>>({});
   // Medida ACTUAL de cada ejercicio en la biblioteca (reps/segundos). Manda
   // sobre la copia guardada en la rutina por si el coach la cambió después.
@@ -1872,6 +1877,161 @@ export default function WorkoutScreen() {
     );
   }
 
+  /** Lo que hace falta para pintar las series de un ejercicio: medida, carga, clúster… */
+  const infoDe = (i: number) => {
+    const exercise = log[i];
+    const planned = day?.exercises[i];
+    // La medida que manda: la del plan si la trae, si no la del registro y,
+    // en último caso, la de la biblioteca del entrenador. Así una plancha
+    // marcada como segundos nunca se muestra como reps.
+    const medida =
+      planned?.measure ?? exercise?.measure ?? measureByExercise[exercise?.exerciseId ?? ''];
+    const isSeconds = isHoldMeasure(medida);
+    return {
+      exercise,
+      planned,
+      prev: exercise ? lastPerf[exercise.exerciseId] : undefined,
+      load: planned ? resolveLoad(planned) : ('none' as const),
+      isSeconds,
+      // Combo: reps Y aguante en la misma serie (dos casillas).
+      isCombo: medida === 'combo',
+      // Por lados: la segunda casilla es el otro brazo, no otra cosa.
+      isDual: isDualMeasure(medida),
+      // Clúster: una casilla por bloque y un botón para la pausa corta.
+      cluster: planned?.cluster,
+      bloques: planned?.cluster ? clusterBlocks(planned.cluster) : 1,
+    };
+  };
+
+  /**
+   * Las casillas de una serie, iguales en un ejercicio suelto y en un paso de
+   * superserie: las reps (o el primer bloque, o el lado izquierdo), los demás
+   * bloques, el aguante o el otro lado, y los kilos.
+   */
+  const camposDeSerie = (i: number, r: number): CampoDeSerie[] => {
+    const d = infoDe(i);
+    const set = d.exercise?.sets[r];
+    if (!set) return [];
+    const objetivo = d.planned?.reps || (d.isSeconds ? 'seg' : 'reps');
+    const campos: CampoDeSerie[] = [
+      {
+        clave: 'reps',
+        valor: set.reps,
+        onChange: (v) => updateSet(i, r, 'reps', v),
+        placeholder: objetivo,
+        rotulo: d.cluster
+          ? 'BLOQUE 1'
+          : d.isDual
+            ? d.isSeconds ? 'IZQ. S' : 'IZQ.'
+            : d.isSeconds ? 'SEGUNDOS' : 'REPS',
+      },
+    ];
+    // Un bloque más de la misma serie: se apunta lo que salió en cada uno,
+    // que es justo lo que un clúster quiere medir.
+    for (let k = 0; k < d.bloques - 1; k++) {
+      campos.push({
+        clave: `bloque-${k}`,
+        valor: set.clusters?.[k] ?? '',
+        onChange: (v) => updateCluster(i, r, k, v),
+        placeholder: objetivo,
+        rotulo: `BLOQUE ${k + 2}`,
+      });
+    }
+    if (d.isCombo) {
+      campos.push({
+        clave: 'aguante',
+        valor: set.seconds ?? '',
+        onChange: (v) => updateSet(i, r, 'seconds', v),
+        placeholder: d.planned?.seconds ? String(d.planned.seconds) : 'seg',
+        rotulo: 'AGUANTE S',
+      });
+    } else if (d.isDual) {
+      campos.push({
+        clave: 'der',
+        valor: set.side2 ?? '',
+        onChange: (v) => updateSet(i, r, 'side2', v),
+        placeholder: d.planned?.side2 || objetivo,
+        rotulo: d.isSeconds ? 'DER. S' : 'DER.',
+      });
+    }
+    if (d.load !== 'none') {
+      campos.push({
+        clave: 'kg',
+        valor: set.weight ?? '',
+        onChange: (v) => updateSet(i, r, 'weight', v),
+        // El peso de la última vez, de fondo: si repite carga, no teclea nada.
+        placeholder: d.prev?.weight || '—',
+        rotulo: d.load === 'assisted' ? 'GOMA KG' : 'KG',
+        decimal: true,
+      });
+    }
+    return campos;
+  };
+
+  /** Lo que hizo en esa misma serie la última vez ("6 × 10"). */
+  const antesDe = (i: number, r: number) => {
+    const d = infoDe(i);
+    if (!d.exercise) return '';
+    return textoDeSerieAnterior(anteriores[d.exercise.exerciseId]?.[r], {
+      segundos: d.isSeconds,
+      combo: d.isCombo,
+      lados: d.isDual,
+      carga: d.load,
+    });
+  };
+
+  /**
+   * Una herramienta del ejercicio, en pastilla: Técnica, Nota, Saltar, Subir…
+   * Todas iguales y en una fila, con hueco para el dedo; antes eran enlaces
+   * sueltos de 12 px repartidos por la tarjeta.
+   */
+  const herramienta = (
+    clave: string,
+    icono: React.ComponentProps<typeof Ionicons>['name'],
+    texto: string,
+    onPress: () => void,
+    o: { activa?: boolean; apagada?: boolean; principal?: boolean } = {}
+  ) => (
+    <Pressable
+      key={clave}
+      onPress={onPress}
+      disabled={o.apagada}
+      style={[styles.herramienta, o.activa && styles.herramientaActiva, o.apagada && styles.herramientaApagada]}
+      hitSlop={4}
+    >
+      <Ionicons
+        name={icono}
+        size={15}
+        color={o.activa || o.principal ? colors.primaryBright : colors.textMuted}
+      />
+      <Text style={[styles.herramientaTexto, (o.activa || o.principal) && styles.herramientaTextoActiva]}>
+        {texto}
+      </Text>
+    </Pressable>
+  );
+
+  /** Lo que el entrenador escribió para ese ejercicio, en su cajita (antes, cursiva suelta). */
+  const notaDelEntrenador = (texto: string) => (
+    <View style={styles.notaCoach}>
+      <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.primary} style={styles.notaCoachIcono} />
+      <Text style={styles.notaCoachTexto}>{texto}</Text>
+    </View>
+  );
+
+  /** La nota del alumno sobre un ejercicio: se abre con su pastilla y se queda si tiene algo. */
+  const notaVisible = (i: number) => noteOpenIndex === i || !!log[i]?.notes;
+  const campoDeNota = (i: number, enPaso = false) =>
+    notaVisible(i) ? (
+      <TextField
+        value={log[i]?.notes ?? ''}
+        onChangeText={(v) => updateExerciseNote(i, v)}
+        placeholder="Para tu entrenador: variante, molestias, cómo ha ido..."
+        multiline
+        style={styles.noteField}
+        containerStyle={enPaso ? styles.noteCajaEnPaso : styles.noteCaja}
+      />
+    ) : null;
+
   /*
    * LA SUPERSERIE: UNA RONDA A LA VISTA, COMO UNA SECUENCIA.
    *
@@ -1926,223 +2086,72 @@ export default function WorkoutScreen() {
         return n;
       });
 
-    const info = (i: number) => {
-      const exercise = log[i];
-      const planned = plan[i];
-      const medida =
-        planned?.measure ?? exercise?.measure ?? measureByExercise[exercise?.exerciseId ?? ''];
-      const isSeconds = isHoldMeasure(medida);
-      return {
-        exercise,
-        planned,
-        prev: exercise ? lastPerf[exercise.exerciseId] : undefined,
-        load: planned ? resolveLoad(planned) : ('none' as const),
-        isSeconds,
-        isCombo: medida === 'combo',
-        isDual: isDualMeasure(medida),
-        cluster: planned?.cluster,
-        bloques: planned?.cluster ? clusterBlocks(planned.cluster) : 1,
-      };
-    };
+    const info = infoDe;
 
-    /** Una casilla con su rótulo debajo: en la ronda cada paso es un ejercicio distinto. */
-    const campo = (
-      key: string,
-      value: string,
-      onChange: (v: string) => void,
-      placeholder: string,
-      rotulo: string,
-      decimal = false
-    ) => (
-      <View key={key} style={styles.ssCampo}>
-        <TextField
-          value={value}
-          onChangeText={onChange}
-          placeholder={placeholder}
-          keyboardType={decimal ? 'decimal-pad' : 'numeric'}
-          style={[styles.setFieldInput, styles.ssCampoCasilla]}
-          containerStyle={styles.ssCampoContenedor}
-        />
-        <Text style={styles.ssCampoRotulo}>{rotulo}</Text>
-      </View>
-    );
-
-    /** Un paso de la ronda: un ejercicio, con todo lo suyo junto. */
+    /** Un paso de la ronda: un ejercicio, con todo lo suyo junto y en su caja. */
     const paso = (i: number, r: number, conDetalle: boolean) => {
       const d = info(i);
       const set = d.exercise?.sets[r];
       if (!d.exercise || !set) return null;
       const esAhora = siguiente?.ejercicio === i && siguiente.serie === r;
-      const objetivo = d.planned?.reps || (d.isSeconds ? 'seg' : 'reps');
       const pres = ve.objetivo && d.planned ? textoDePrescripcion(d.planned, perso) : '';
       const meta = unido(
         d.planned?.reps ? `${d.planned.reps} ${d.isSeconds ? 's' : 'reps'}` : undefined,
         d.load === 'assisted' ? t('Con goma') : d.load === 'weighted' ? t('Lastrado') : undefined,
         pres || undefined,
         d.planned?.grip ? `${t('Agarre')} ${GRIP_LABEL[d.planned.grip].toLowerCase()}` : undefined,
-        d.cluster ? frase`Clúster ${d.bloques} bloques · ${d.cluster.restSeconds}s` : undefined
+        d.cluster ? frase`Clúster ${d.bloques} bloques · ${d.cluster.restSeconds}s` : undefined,
+        conDetalle && d.planned?.goal ? frase`Objetivo: ${d.planned.goal}` : undefined
       );
-      const campos = [
-        campo(
-          'reps',
-          set.reps,
-          (v) => updateSet(i, r, 'reps', v),
-          objetivo,
-          d.cluster ? 'BLOQUE 1' : d.isDual ? (d.isSeconds ? 'IZQ. S' : 'IZQ.') : d.isSeconds ? 'SEG.' : 'REPS'
-        ),
-        ...(d.cluster
-          ? Array.from({ length: d.bloques - 1 }, (_, k) =>
-              campo(
-                `bloque-${k}`,
-                set.clusters?.[k] ?? '',
-                (v) => updateCluster(i, r, k, v),
-                objetivo,
-                `BLOQUE ${k + 2}`
-              )
-            )
-          : []),
-        ...(d.isCombo
-          ? [
-              campo(
-                'aguante',
-                set.seconds ?? '',
-                (v) => updateSet(i, r, 'seconds', v),
-                d.planned?.seconds ? String(d.planned.seconds) : 'seg',
-                'AGUANTE S'
-              ),
-            ]
-          : d.isDual
-            ? [
-                campo(
-                  'der',
-                  set.side2 ?? '',
-                  (v) => updateSet(i, r, 'side2', v),
-                  d.planned?.side2 || objetivo,
-                  d.isSeconds ? 'DER. S' : 'DER.'
-                ),
-              ]
-            : []),
-        ...(d.load !== 'none'
-          ? [
-              campo(
-                'kg',
-                set.weight ?? '',
-                (v) => updateSet(i, r, 'weight', v),
-                d.prev?.weight || '—',
-                d.load === 'assisted' ? 'GOMA KG' : 'KG',
-                true
-              ),
-            ]
-          : []),
-      ];
       const video = videoByExercise[d.exercise.exerciseId];
+      const nombre = d.exercise.name;
       return (
-        <View key={i} style={[styles.ssPaso, esAhora && styles.ssPasoAhora]}>
-          <PressableScale
-            haptic
-            onPress={() => updateSet(i, r, 'completed', !set.completed)}
-            style={styles.ssMarca}
-            hitSlop={8}
-          >
-            <View
-              style={[
-                styles.checkButton,
-                esAhora && styles.ssCheckAhora,
-                set.completed && styles.checkButtonDone,
-              ]}
-            >
-              <Ionicons
-                name="checkmark"
-                size={20}
-                color={set.completed ? colors.onPrimary : esAhora ? colors.primary : colors.textFaint}
-              />
-            </View>
-          </PressableScale>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={styles.ssPasoCab}>
-              <Text style={styles.ssLetraEnFila}>{letra(i)}</Text>
-              <Text
-                style={[styles.ssNombre, set.completed && !esAhora && styles.setLabelDone]}
-                numberOfLines={2}
-              >
-                {d.exercise.name}
-              </Text>
-              {etiquetaDeEsfuerzo(i, r)}
-            </View>
-            {meta ? (
-              <Text style={styles.ssMeta} numberOfLines={1}>
-                {meta}
-              </Text>
-            ) : null}
-            {conDetalle && d.planned?.goal ? (
-              <Text style={styles.ssMeta}>{frase`Objetivo: ${d.planned.goal}`}</Text>
-            ) : null}
-            {conDetalle && d.prev ? (
-              <Text style={styles.ssUltima}>
-                Última vez: {d.load !== 'none' && d.prev.weight ? `${d.prev.weight} kg × ` : ''}
-                {d.prev.reps ?? '—'} {d.isSeconds ? 's' : 'reps'}
-              </Text>
-            ) : null}
-            {conDetalle && d.planned?.notes ? (
-              <Text style={styles.coachNotes} numberOfLines={3}>
-                {d.planned.notes}
-              </Text>
-            ) : null}
-            <View style={styles.ssCampos}>{campos}</View>
-            {conDetalle ? (
-              <View style={styles.ssAcciones}>
-                {video ? (
-                  <Pressable
-                    onPress={() => setVideoAbierto({ url: video, titulo: d.exercise!.name })}
-                    style={styles.ssAccion}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="play-circle-outline" size={14} color={colors.primary} />
-                    <Text style={styles.ssAccionTexto}>Técnica</Text>
-                  </Pressable>
-                ) : null}
-                {d.cluster ? (
-                  <Pressable
-                    onPress={() => descansoDeBloque(d.cluster!.restSeconds, d.exercise!.name)}
-                    style={styles.ssAccion}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="timer-outline" size={14} color={colors.primary} />
-                    <Text style={styles.ssAccionTexto}>
-                      {frase`Entre bloques · ${d.cluster.restSeconds}s`}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  onPress={() => setNoteOpenIndex(noteOpenIndex === i ? null : i)}
-                  style={styles.ssAccion}
-                  hitSlop={6}
-                >
-                  <Ionicons
-                    name={d.exercise.notes ? 'create' : 'create-outline'}
-                    size={14}
-                    color={colors.textMuted}
-                  />
-                  <Text style={styles.ssAccionTextoSuave}>Nota</Text>
-                </Pressable>
-                {puedeSaltar ? (
-                  <Pressable onPress={() => alternarSaltado(i)} style={styles.ssAccion} hitSlop={6}>
-                    <Ionicons name="play-skip-forward-outline" size={14} color={colors.textMuted} />
-                    <Text style={styles.ssAccionTextoSuave}>Saltar</Text>
-                  </Pressable>
-                ) : null}
+        <FilaDeSerie
+          key={i}
+          letra={letra(i)}
+          titulo={nombre}
+          detalle={meta}
+          antes={antesDe(i, r)}
+          extra={etiquetaDeEsfuerzo(i, r)}
+          esAhora={esAhora}
+          hecha={set.completed}
+          campos={camposDeSerie(i, r)}
+          // Cada paso es un ejercicio distinto: el rótulo va con su casilla.
+          conRotulos
+          onMarcar={() => updateSet(i, r, 'completed', !set.completed)}
+          pie={
+            conDetalle ? (
+              <View style={styles.ssPasoPie}>
+                {d.planned?.notes ? notaDelEntrenador(d.planned.notes) : null}
+                <View style={styles.herramientas}>
+                  {video
+                    ? herramienta('tecnica', 'play-circle-outline', 'Técnica', () => setVideoAbierto({ url: video, titulo: nombre }), { principal: true })
+                    : null}
+                  {d.cluster
+                    ? herramienta(
+                        'bloques',
+                        'timer-outline',
+                        frase`Entre bloques · ${d.cluster.restSeconds}s`,
+                        () => descansoDeBloque(d.cluster!.restSeconds, nombre),
+                        { principal: true }
+                      )
+                    : null}
+                  {herramienta(
+                    'nota',
+                    d.exercise.notes ? 'create' : 'create-outline',
+                    'Nota',
+                    () => setNoteOpenIndex(noteOpenIndex === i ? null : i),
+                    { activa: notaVisible(i) }
+                  )}
+                  {puedeSaltar
+                    ? herramienta('saltar', 'play-skip-forward-outline', 'Saltar', () => alternarSaltado(i))
+                    : null}
+                </View>
+                {campoDeNota(i, true)}
               </View>
-            ) : null}
-            {conDetalle && (noteOpenIndex === i || d.exercise.notes) ? (
-              <TextField
-                value={d.exercise.notes ?? ''}
-                onChangeText={(v) => updateExerciseNote(i, v)}
-                placeholder="Ej. Hice la variante con goma, molestia en hombro..."
-                style={styles.noteField}
-              />
-            ) : null}
-          </View>
-        </View>
+            ) : null
+          }
+        />
       );
     };
 
@@ -2309,23 +2318,13 @@ export default function WorkoutScreen() {
             ))}
 
           {isFlex ? (
-            <View style={styles.setEditRow}>
-              <Pressable
-                onPress={() => activos.forEach((i) => (log[i]?.sets.length ?? 0) > 1 && removeSet(i))}
-                style={styles.setEditBtn}
-                hitSlop={6}
-              >
-                <Ionicons name="remove" size={16} color={colors.textMuted} />
-                <Text style={styles.setEditText}>Quitar ronda</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => activos.forEach((i) => addSet(i))}
-                style={styles.setEditBtn}
-                hitSlop={6}
-              >
-                <Ionicons name="add" size={16} color={colors.primary} />
-                <Text style={[styles.setEditText, { color: colors.primary }]}>Añadir ronda</Text>
-              </Pressable>
+            <View style={[styles.herramientas, styles.herramientasPie]}>
+              {herramienta('quitar-ronda', 'remove', 'Quitar ronda', () =>
+                activos.forEach((i) => (log[i]?.sets.length ?? 0) > 1 && removeSet(i))
+              )}
+              {herramienta('anadir-ronda', 'add', 'Añadir ronda', () => activos.forEach((i) => addSet(i)), {
+                principal: true,
+              })}
             </View>
           ) : null}
         </Card>
@@ -3025,120 +3024,24 @@ export default function WorkoutScreen() {
         const exerciseIndex = safeIndex;
         const exercise = log[exerciseIndex];
         if (!exercise) return null;
-        const prev = lastPerf[exercise.exerciseId];
-        const planned = day?.exercises[exerciseIndex];
+        const { planned, load, isSeconds, cluster, bloques } = infoDe(exerciseIndex);
         const isDone = exercise.sets.length > 0 && exercise.sets.every((s) => s.completed);
-        // La primera serie sin hacer: la que se enciende y la del botón grande.
+        // La primera serie sin hacer: la que se enciende.
         const serieQueToca = exercise.sets.findIndex((s) => !s.completed);
-        // Carga del ejercicio: define si hay casilla extra (peso/goma) o ninguna.
-        const load = planned ? resolveLoad(planned) : 'none';
-        // Medida real: isométrico (segundos) si CUALQUIER fuente lo indica —la
-        // biblioteca actual del coach, la copia de la rutina o el registro—. Así
-        // una plancha marcada como segundos nunca se muestra como reps.
-        // La medida que manda: la del plan si la trae, si no la del registro y,
-        // en último caso, la de la biblioteca del entrenador.
-        const medida =
-          planned?.measure ?? exercise.measure ?? measureByExercise[exercise.exerciseId];
-        const isSeconds = isHoldMeasure(medida);
-        // Combo: la serie combina repeticiones Y aguante, así que lleva una
-        // casilla extra de segundos junto a la de reps.
-        const isCombo = medida === 'combo';
-        // Por lados: la segunda casilla es el otro brazo, no otra cosa.
-        const isDual = isDualMeasure(medida);
-        // Clúster: la serie se hace en bloques con una pausa mínima, así que
-        // lleva una casilla por bloque y un botón para ese descanso corto.
-        const cluster = planned?.cluster;
-        const bloques = cluster ? clusterBlocks(cluster) : 1;
         const categoriaEjercicio = unido(
           planned?.muscleGroup ?? muscleByExercise[exercise.exerciseId],
           planned?.subgroup
         );
+        const video = videoByExercise[exercise.exerciseId];
         return (
           <FadeIn key={exercise.exerciseId + exerciseIndex}>
           <Card accent style={[styles.exerciseCard, isDone && !activeRest && styles.exerciseCardDone]}>
             <View style={styles.exerciseHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>
-                  {exercise.name}
-                </Text>
-              </View>
+              <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>{exercise.name}</Text>
               {isDone && !exercise.saltado ? (
                 <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
               ) : null}
             </View>
-
-            {/*
-              LO QUE EL ALUMNO PUEDE TOCAR (solo si su plan se lo permite).
-              
-              Va aquí arriba, junto al nombre, y no escondido al final: son
-              decisiones que se toman ANTES de empezar el ejercicio, mirándolo.
-            */}
-            {puedeSaltar || puedeReordenar ? (
-              <View style={styles.permisosFila}>
-                {puedeReordenar ? (
-                  <>
-                    <Pressable
-                      onPress={() => moverEjercicio(exerciseIndex, exerciseIndex - 1)}
-                      disabled={exerciseIndex === 0}
-                      style={styles.permisoBtn}
-                      hitSlop={6}
-                    >
-                      <Ionicons
-                        name="arrow-up"
-                        size={14}
-                        color={exerciseIndex === 0 ? colors.textFaint : colors.textMuted}
-                      />
-                      <Text style={styles.permisoTexto}>Subir</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => moverEjercicio(exerciseIndex, exerciseIndex + 1)}
-                      disabled={exerciseIndex >= log.length - 1}
-                      style={styles.permisoBtn}
-                      hitSlop={6}
-                    >
-                      <Ionicons
-                        name="arrow-down"
-                        size={14}
-                        color={
-                          exerciseIndex >= log.length - 1 ? colors.textFaint : colors.textMuted
-                        }
-                      />
-                      <Text style={styles.permisoTexto}>Bajar</Text>
-                    </Pressable>
-                  </>
-                ) : null}
-                {puedeSaltar ? (
-                  <Pressable
-                    onPress={() => alternarSaltado(exerciseIndex)}
-                    style={styles.permisoBtn}
-                    hitSlop={6}
-                  >
-                    <Ionicons
-                      name={exercise.saltado ? 'play-skip-forward' : 'play-skip-forward-outline'}
-                      size={14}
-                      color={exercise.saltado ? colors.primary : colors.textMuted}
-                    />
-                    <Text
-                      style={[
-                        styles.permisoTexto,
-                        exercise.saltado && { color: colors.primaryBright },
-                      ]}
-                    >
-                      {exercise.saltado ? 'Saltado' : 'Saltar'}
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
-
-            {/* Saltado: se queda a la vista y se dice por qué. Borrarlo dejaría
-                una sesión que parece completa y un entrenador que no se entera
-                de que ese ejercicio lleva semanas sin hacerse. */}
-            {exercise.saltado ? (
-              <Text style={styles.saltadoAviso}>
-                Saltado hoy. Se guarda así para que tu entrenador lo sepa.
-              </Text>
-            ) : null}
             {/*
               LO QUE TOCA, EN UNA LÍNEA. Eran hasta siete pastillas (series,
               RIR, descanso, goma, agarre, objetivo, clúster) más la categoría
@@ -3161,223 +3064,112 @@ export default function WorkoutScreen() {
                 )}
               </Text>
             ) : null}
-            {planned?.notes ? <Text style={styles.coachNotes}>{planned.notes}</Text> : null}
-            {/* La técnica y la última vez, en la misma fila: son dos
-                consultas rápidas, no dos secciones. */}
-            {videoByExercise[exercise.exerciseId] || prev ? (
-              <View style={styles.consultaFila}>
-                {videoByExercise[exercise.exerciseId] ? (
-                  <Pressable
-                    onPress={() =>
-                      setVideoAbierto({
-                        url: videoByExercise[exercise.exerciseId],
-                        titulo: exercise.name,
-                      })
-                    }
-                    style={styles.videoLink}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="play-circle-outline" size={15} color={colors.primary} />
-                    <Text style={styles.videoLinkText}>Técnica</Text>
-                  </Pressable>
-                ) : null}
-                {prev ? (
-                  <View style={styles.prevRow}>
-                    <Ionicons name="time-outline" size={13} color={colors.textMuted} />
-                    <Text style={styles.prevText}>
-                      Última vez: {load !== 'none' && prev.weight ? `${prev.weight} kg × ` : ''}
-                      {prev.reps ?? '—'} {isSeconds ? 's' : 'reps'}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-            <View style={styles.setHead}>
-              <Text style={styles.setHeadCap}>
-                {cluster
-                  ? 'BLOQUE 1'
-                  : isDual
-                    ? isSeconds
-                      ? 'IZQ. S'
-                      : 'IZQ.'
-                    : isSeconds
-                      ? 'SEGUNDOS'
-                      : 'REPS'}
-              </Text>
-              {cluster
-                ? Array.from({ length: bloques - 1 }, (_, b) => (
-                    <Text key={b} style={styles.setHeadCap}>
-                      BLOQUE {b + 2}
-                    </Text>
-                  ))
+            {planned?.notes ? notaDelEntrenador(planned.notes) : null}
+
+            {/*
+              LAS HERRAMIENTAS DEL EJERCICIO, JUNTAS Y ANTES DE LAS SERIES.
+
+              Técnica, la nota, saltar y (si el plan lo deja) subir o bajar: son
+              cosas que se miran o se deciden ANTES de empezar o mientras se
+              descansa, no al marcar. Antes estaban repartidas: la técnica
+              arriba, saltar en otra fila y "Añadir nota" al final, debajo del
+              descanso, donde nadie la veía. La nota, al abrirse, sale aquí
+              mismo, debajo de su pastilla: se escribe donde se ha tocado.
+            */}
+            <View style={[styles.herramientas, styles.herramientasArriba]}>
+              {video
+                ? herramienta('tecnica', 'play-circle-outline', 'Técnica', () => setVideoAbierto({ url: video, titulo: exercise.name }), { principal: true })
                 : null}
-              {isCombo ? <Text style={styles.setHeadCap}>AGUANTE S</Text> : null}
-              {isDual ? (
-                <Text style={styles.setHeadCap}>{isSeconds ? 'DER. S' : 'DER.'}</Text>
-              ) : null}
-              {load === 'weighted' ? (
-                <Text style={styles.setHeadCap}>PESO KG</Text>
-              ) : load === 'assisted' ? (
-                <Text style={styles.setHeadCap}>GOMA KG</Text>
+              {herramienta(
+                'nota',
+                exercise.notes ? 'create' : 'create-outline',
+                exercise.notes ? 'Tu nota' : 'Nota',
+                () => setNoteOpenIndex(noteOpenIndex === exerciseIndex ? null : exerciseIndex),
+                { activa: notaVisible(exerciseIndex) }
+              )}
+              {puedeSaltar
+                ? herramienta(
+                    'saltar',
+                    exercise.saltado ? 'play-skip-forward' : 'play-skip-forward-outline',
+                    exercise.saltado ? 'Saltado' : 'Saltar',
+                    () => alternarSaltado(exerciseIndex),
+                    { activa: exercise.saltado }
+                  )
+                : null}
+              {puedeReordenar ? (
+                <>
+                  {herramienta('subir', 'arrow-up', 'Subir', () => moverEjercicio(exerciseIndex, exerciseIndex - 1), {
+                    apagada: exerciseIndex === 0,
+                  })}
+                  {herramienta('bajar', 'arrow-down', 'Bajar', () => moverEjercicio(exerciseIndex, exerciseIndex + 1), {
+                    apagada: exerciseIndex >= log.length - 1,
+                  })}
+                </>
               ) : null}
             </View>
-            {exercise.sets.map((set, setIndex) => {
-              // La serie que toca, encendida: con las manos cansadas no hay
-              // que buscar por dónde se iba.
-              const esAhora = !exercise.saltado && setIndex === serieQueToca;
-              return (
-              <View key={setIndex} style={[styles.setRow, esAhora && styles.setRowAhora]}>
-                {/* El nombre de la serie también marca: es hueco muerto al lado
-                    del círculo, y con las manos cansadas se falla menos cuanto
-                    más grande es lo que hay que tocar. */}
-                  <PressableScale
-                    haptic
-                    onPress={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
-                    style={styles.setToggle}
-                    hitSlop={6}
-                  >
-                    <View
-                      style={[
-                        styles.checkButton,
-                        esAhora && styles.ssCheckAhora,
-                        set.completed && styles.checkButtonDone,
-                      ]}
-                    >
-                      <Ionicons
-                        name="checkmark"
-                        size={20}
-                        color={set.completed ? colors.onPrimary : esAhora ? colors.primary : colors.textFaint}
-                      />
-                    </View>
-                    {/* "Serie" solo si el plan no la llama de otra forma: hay
-                        métodos que trabajan por rondas o por vueltas, y llamar
-                        a las cosas como las llama el entrenador es la mitad de
-                        que el alumno entienda su plan. */}
-                    <Text style={[styles.setLabel, set.completed && styles.setLabelDone]}>
-                      {enTitulo(palabraSerie)} {setIndex + 1}
-                    </Text>
-                  </PressableScale>
-                {/* Lo que le costó, si lo ha dicho: tocándolo se cambia. */}
-                {etiquetaDeEsfuerzo(exerciseIndex, setIndex)}
-                <TextField
-                  value={set.reps}
-                  onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
-                  placeholder={planned?.reps || (isSeconds ? 'seg' : 'reps')}
-                  keyboardType="numeric"
-                  style={styles.setFieldInput}
-                />
-                {/* Un bloque más de la misma serie: se apunta lo que salió en
-                    cada uno, que es justo lo que un clúster quiere medir. */}
-                {cluster
-                  ? Array.from({ length: bloques - 1 }, (_, b) => (
-                      <TextField
-                        key={b}
-                        value={set.clusters?.[b] ?? ''}
-                        onChangeText={(v) => updateCluster(exerciseIndex, setIndex, b, v)}
-                        placeholder={planned?.reps || (isSeconds ? 'seg' : 'reps')}
-                        keyboardType="numeric"
-                        style={styles.setFieldInput}
-                      />
-                    ))
-                  : null}
-                {isCombo ? (
-                  <TextField
-                    value={set.seconds ?? ''}
-                    onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'seconds', v)}
-                    placeholder={planned?.seconds ? String(planned.seconds) : 'seg'}
-                    keyboardType="numeric"
-                    style={styles.setFieldInput}
-                  />
-                ) : isDual ? (
-                  <TextField
-                    value={set.side2 ?? ''}
-                    onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'side2', v)}
-                    placeholder={planned?.side2 || planned?.reps || (isSeconds ? 'seg' : 'reps')}
-                    keyboardType="numeric"
-                    style={styles.setFieldInput}
-                  />
-                ) : null}
-                {load !== 'none' ? (
-                  <TextField
-                    value={set.weight}
-                    onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'weight', v)}
-                    // Precarga visual con el peso de la última vez: cero tecleo
-                    // si repites carga (solo escribes si cambias de peso).
-                    placeholder={prev?.weight || '—'}
-                    keyboardType="decimal-pad"
-                    style={styles.setFieldInput}
-                  />
-                ) : null}
-              </View>
-              );
-            })}
+            {campoDeNota(exerciseIndex)}
+            {/* Saltado: se queda a la vista y se dice por qué. Borrarlo dejaría
+                una sesión que parece completa y un entrenador que no se entera
+                de que ese ejercicio lleva semanas sin hacerse. */}
+            {exercise.saltado ? (
+              <Text style={styles.saltadoAviso}>
+                Saltado hoy. Se guarda así para que tu entrenador lo sepa.
+              </Text>
+            ) : null}
+
             {/*
-              SE MARCA CON EL ✓ DE CADA SERIE, Y YA ESTÁ.
-              
-              Había además un botón grande "Hecha · Serie N" debajo: dos formas
-              de hacer lo mismo, una al lado de la otra, y el alumno tenía que
-              pensar cuál tocar. Se queda la fila, que es donde está el número
-              que acaba de hacer, con su ✓ grande y la fila entera como blanco.
+              LAS SERIES: una caja por serie, con aire entre una y otra, las
+              casillas grandes y el ✓ a la derecha, donde cae el pulgar. Lo de
+              la última vez va en cada serie ("◷ 6 × 10"), no en una
+              línea suelta para todo el ejercicio. "Serie" solo si el plan no
+              la llama de otra forma (rondas, vueltas…). La que toca, encendida.
             */}
+            <View style={styles.series}>
+              <CabeceraDeSeries rotulos={camposDeSerie(exerciseIndex, 0).map((c) => c.rotulo)} />
+              {exercise.sets.map((set, setIndex) => (
+                <FilaDeSerie
+                  key={setIndex}
+                  titulo={`${enTitulo(palabraSerie)} ${setIndex + 1}`}
+                  antes={antesDe(exerciseIndex, setIndex)}
+                  // Lo que le costó, si lo ha dicho: tocándolo se cambia.
+                  extra={etiquetaDeEsfuerzo(exerciseIndex, setIndex)}
+                  esAhora={!exercise.saltado && setIndex === serieQueToca}
+                  hecha={set.completed}
+                  campos={camposDeSerie(exerciseIndex, setIndex)}
+                  onMarcar={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
+                />
+              ))}
+            </View>
             {/*
-              EL DESCANSO, DENTRO. Justo debajo de las series, donde se acaba
-              de tocar el ✓. Flotando abajo tapaba "Anterior" y "Siguiente".
-              (En las demás pestañas sigue flotando: components/GlobalRestTimer.)
+              EL ESFUERZO DE ESA SERIE Y EL DESCANSO, DENTRO. Justo debajo de
+              las series, donde se acaba de tocar el ✓. Flotando abajo tapaba
+              "Anterior" y "Siguiente". (En las demás pestañas sigue flotando:
+              components/GlobalRestTimer.)
             */}
             {preguntaDeSerie({ inicio: exerciseIndex, fin: exerciseIndex })}
             {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
-            {cluster ? (
-              <Pressable
-                onPress={() => descansoDeBloque(cluster.restSeconds, exercise.name)}
-                style={styles.clusterRestBtn}
-                hitSlop={6}
-              >
-                <Ionicons name="timer-outline" size={15} color={colors.primary} />
-                <Text style={styles.clusterRestText}>
-                  Descanso entre bloques · {cluster.restSeconds}s
-                </Text>
-              </Pressable>
-            ) : null}
-            {isFlex ? (
-              <View style={styles.setEditRow}>
-                <Pressable onPress={() => removeSet(exerciseIndex)} style={styles.setEditBtn} hitSlop={6}>
-                  <Ionicons name="remove" size={16} color={colors.textMuted} />
-                  <Text style={styles.setEditText}>
-                    {frase`Quitar ${palabraSerie.toLowerCase()}`}
-                  </Text>
-                </Pressable>
-                <Pressable onPress={() => addSet(exerciseIndex)} style={styles.setEditBtn} hitSlop={6}>
-                  <Ionicons name="add" size={16} color={colors.primary} />
-                  <Text style={[styles.setEditText, { color: colors.primary }]}>
-                    {frase`Añadir ${palabraSerie.toLowerCase()}`}
-                  </Text>
-                </Pressable>
+            {cluster || isFlex ? (
+              <View style={[styles.herramientas, styles.herramientasPie]}>
+                {cluster
+                  ? herramienta(
+                      'bloques',
+                      'timer-outline',
+                      frase`Descanso entre bloques · ${cluster.restSeconds}s`,
+                      () => descansoDeBloque(cluster.restSeconds, exercise.name),
+                      { principal: true }
+                    )
+                  : null}
+                {isFlex ? (
+                  <>
+                    {/* Quitar la única serie saca el ejercicio del día (Sensaciones). */}
+                    {herramienta('quitar-serie', 'remove', frase`Quitar ${palabraSerie.toLowerCase()}`, () => removeSet(exerciseIndex))}
+                    {herramienta('anadir-serie', 'add', frase`Añadir ${palabraSerie.toLowerCase()}`, () => addSet(exerciseIndex), {
+                      principal: true,
+                    })}
+                  </>
+                ) : null}
               </View>
             ) : null}
-            {noteOpenIndex === exerciseIndex || exercise.notes ? (
-              <TextField
-                value={exercise.notes ?? ''}
-                onChangeText={(v) => updateExerciseNote(exerciseIndex, v)}
-                placeholder="Ej. Hice la variante con goma, molestia en hombro..."
-                style={styles.noteField}
-              />
-            ) : null}
-            <Pressable
-              onPress={() =>
-                setNoteOpenIndex(noteOpenIndex === exerciseIndex ? null : exerciseIndex)
-              }
-              style={styles.noteBtn}
-              hitSlop={6}
-            >
-              <Ionicons
-                name={exercise.notes ? 'create' : 'create-outline'}
-                size={13}
-                color={colors.textMuted}
-              />
-              <Text style={styles.noteBtnText}>
-                {exercise.notes ? 'Editar nota' : 'Añadir nota'}
-              </Text>
-            </Pressable>
           </Card>
           </FadeIn>
         );
@@ -3546,6 +3338,44 @@ export default function WorkoutScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ----- La tarjeta del ejercicio: herramientas, notas y series -----
+  // Técnica, Nota, Saltar…: pastillas de 36 de alto, para el dedo y no para la uña.
+  herramientas: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  herramientasArriba: { marginTop: spacing.xs, marginBottom: spacing.md },
+  herramientasPie: { marginTop: spacing.md },
+  herramienta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+  },
+  herramientaActiva: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  herramientaApagada: { opacity: 0.4 },
+  herramientaTexto: { ...typography.small, fontSize: 13, color: colors.textMuted, fontFamily: fonts.semiBold },
+  herramientaTextoActiva: { color: colors.primaryBright },
+  // Lo que escribió el entrenador, en su cajita: se distingue de lo demás sin cursiva.
+  notaCoach: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    marginBottom: spacing.sm,
+  },
+  notaCoachIcono: { marginTop: 2 },
+  notaCoachTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 19 },
+  noteField: { minHeight: 48, textAlignVertical: 'top' },
+  noteCaja: { marginTop: -spacing.xs, marginBottom: spacing.md },
+  noteCajaEnPaso: { marginTop: spacing.sm, marginBottom: 0 },
+  series: { marginTop: spacing.xs },
+  // Lo de cada ejercicio de la superserie, dentro de su caja y bajo una raya.
+  ssPasoPie: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   // La lista de lo que toca, antes de empezar.
   previa: {
     backgroundColor: colors.surface,
@@ -3630,37 +3460,15 @@ const styles = StyleSheet.create({
   ssTramo: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
   ssTramoHecho: { backgroundColor: colors.primary },
   ssTramoActual: { backgroundColor: colors.hairline },
-  ssPaso: {
+  // "Sin descanso": el hilo que cose la caja de un paso con la del siguiente.
+  ssEnlace: {
     flexDirection: 'row',
-    gap: spacing.sm + 2,
-    padding: spacing.sm,
-    marginHorizontal: -spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  // El paso que toca: con su filo dorado, se encuentra sin buscar.
-  ssPasoAhora: { backgroundColor: colors.primaryMuted, borderColor: colors.hairline },
-  ssMarca: { paddingTop: 2 },
-  ssCheckAhora: { borderColor: colors.primary, borderWidth: 2 },
-  ssPasoCab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ssLetraEnFila: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
-  ssNombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flexShrink: 1 },
-  ssMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  ssUltima: { ...typography.small, color: colors.primary, marginTop: 2, fontSize: 12 },
-  ssCampos: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
-  ssAcciones: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    columnGap: spacing.md,
-    marginTop: spacing.xs,
+    gap: spacing.sm,
+    paddingLeft: spacing.md + 2,
+    height: 24,
+    marginTop: -spacing.sm,
   },
-  ssAccion: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4 },
-  ssAccionTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
-  ssAccionTextoSuave: { ...typography.small, color: colors.textMuted, fontSize: 12 },
-  // "Sin descanso": el hilo entre un paso y el siguiente, bajo el círculo.
-  ssEnlace: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: 19, height: 22 },
   ssEnlaceLinea: { width: 2, alignSelf: 'stretch', borderRadius: 1, backgroundColor: colors.primary },
   ssEnlaceTexto: {
     ...typography.small,
@@ -3718,19 +3526,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   ssSueltaTexto: { ...typography.small, color: colors.textMuted, flex: 1 },
-  ssCampo: { alignItems: 'center' },
   // Algo más estrechas que las de un ejercicio suelto: van varias en fila.
-  ssCampoCasilla: { width: 62 },
   // Sin el margen de un campo de formulario: el rótulo va pegado a su casilla.
-  ssCampoContenedor: { marginBottom: 0 },
-  ssCampoRotulo: {
-    ...typography.small,
-    color: colors.textFaint,
-    fontSize: 9,
-    letterSpacing: 0.6,
-    fontFamily: fonts.semiBold,
-    marginTop: 2,
-  },
   previaSeries: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold, ...tabularNums },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
   // Hueco al pie para que el crono flotante de descanso no tape la navegación.
@@ -3817,27 +3614,6 @@ const styles = StyleSheet.create({
   flexHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md, paddingVertical: 3 },
   flexHistoryDate: { ...typography.small, color: colors.textFaint, width: 74 },
   flexHistoryWhat: { ...typography.small, color: colors.textMuted, flex: 1, textAlign: 'right' },
-  setEditRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  setEditBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  clusterRestBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: spacing.xs,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  clusterRestText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  setEditText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   exitTitle: { ...typography.h2, color: colors.text, textAlign: 'center', marginTop: spacing.sm },
   exitMsg: {
     ...typography.small,
@@ -3892,13 +3668,6 @@ const styles = StyleSheet.create({
   navBtnTextDisabled: { color: colors.textFaint },
   navSiguiente: { flex: 1 },
   navNext: { backgroundColor: colors.primary, borderColor: colors.primary },
-  setRowAhora: {
-    marginHorizontal: -spacing.xs,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryMuted,
-  },
   navNextText: { color: colors.onPrimary },
   exerciseCard: { marginBottom: spacing.md },
   exerciseCardDone: { opacity: 0.55 },
@@ -3910,8 +3679,6 @@ const styles = StyleSheet.create({
   },
   exerciseName: { ...typography.h3, color: colors.text, flex: 1 },
   exerciseNameCurrent: { color: colors.primaryBright },
-  prevRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  prevText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
   restoredBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -4001,7 +3768,6 @@ const styles = StyleSheet.create({
   // La pregunta del día va separada del botón de terminar por un hueco: pegada
   // a él se lee como parte del botón y se contesta sin mirar.
   esfuerzoFinal: { marginTop: spacing.sm, marginBottom: spacing.sm },
-  permisosFila: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   anadirBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -4021,8 +3787,6 @@ const styles = StyleSheet.create({
   anadirNombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
   anadirMeta: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   anadirVacio: { ...typography.small, color: colors.textMuted, paddingVertical: spacing.md },
-  permisoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  permisoTexto: { ...typography.small, color: colors.textMuted, fontSize: 12 },
   saltadoAviso: {
     ...typography.small,
     color: colors.textFaint,
@@ -4034,47 +3798,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
   },
-  coachNotes: {
-    ...typography.small,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    marginBottom: spacing.sm,
-  },
   // Lo que toca, en una línea de texto (antes, una fila de pastillas).
   metaLinea: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, marginTop: 2, marginBottom: spacing.sm },
   // Técnica y última vez, en una sola fila.
-  consultaFila: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.sm },
-  videoLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  videoLinkText: {
-    ...typography.small,
-    color: colors.primary,
-    fontFamily: fonts.semiBold,
-  },
-  setHead: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-    marginBottom: 4,
-  },
-  setHeadCap: {
-    ...typography.small,
-    color: colors.textFaint,
-    fontSize: 10,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 0.8,
-    width: 66,
-    textAlign: 'center',
-  },
-  setRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
   /*
    * El `flex` va aquí, en el propio pulsable.
    *
@@ -4084,44 +3810,6 @@ const styles = StyleSheet.create({
    * ella el comentario que la explicaba — que había pasado a decir lo
    * contrario de lo que hace el código.
    */
-  setToggle: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 2,
-  },
-  setLabel: { ...typography.small, color: colors.text, flex: 1, fontFamily: fonts.semiBold },
-  setLabelDone: { color: colors.textMuted },
-  setFieldInput: {
-    width: 66,
-    marginBottom: 0,
-    paddingHorizontal: spacing.sm,
-    textAlign: 'center',
-  },
-  noteField: { marginTop: spacing.sm, marginBottom: 0 },
-  noteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    marginTop: spacing.sm,
-  },
-  noteBtnText: { ...typography.small, color: colors.textMuted, fontSize: 12 },
-  checkButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  checkButtonDone: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
   // ----- Descanso opcional (Día 7 TENA) -----
   optionalCard: { marginBottom: spacing.md },
   optionalHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
