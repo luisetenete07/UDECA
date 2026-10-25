@@ -28,6 +28,12 @@ interface ScreenContainerProps {
    * de verdad quiera ocupar todo el ancho (`0`).
    */
   maxWidth?: number;
+  /**
+   * Algo fijo abajo, fuera del desplazamiento: el botón que cierra la pantalla
+   * ("Guardar rutina") cuando la pantalla es tan larga que tenerlo solo al
+   * final obligaba a bajar del todo cada vez.
+   */
+  pie?: React.ReactNode;
 }
 
 /**
@@ -47,6 +53,7 @@ export function ScreenContainer({
   onRefresh,
   contentStyle,
   maxWidth,
+  pie,
 }: ScreenContainerProps) {
   const layout = useLayout();
   // `maxWidth={0}` es la forma de pedir explícitamente todo el ancho.
@@ -157,6 +164,11 @@ export function ScreenContainer({
             <FadeIn style={[styles.column, cap, contentStyle]}>{children}</FadeIn>
           </ContextoDeBloqueo.Provider>
         </ScrollView>
+        {pie ? (
+          <View style={[styles.pie, gutter, { paddingBottom: spacing.sm + abajo }]}>
+            <View style={[styles.column, cap]}>{pie}</View>
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -185,5 +197,12 @@ const styles = StyleSheet.create({
   column: {
     width: '100%',
     alignSelf: 'center',
+  },
+  pie: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
 });

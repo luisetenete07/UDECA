@@ -687,6 +687,19 @@ export const EN: Record<string, string> = {
   'Para tu entrenador: variante, molestias, cómo ha ido...': 'For your coach: variation, discomfort, how it went...',
   'Descanso entre bloques · {0}s': 'Rest between blocks · {0}s',
   'SEGUNDOS': 'SECONDS',
+  // El editor de rutinas, más rápido (app/(trainer)/clients/[id]/routine.tsx)
+  'En el día': 'In the day',
+  'En el día ×{0}': 'In the day ×{0}',
+  'Listo · {0} en el día': 'Done · {0} in the day',
+  'Igualar series, reps y descanso': 'Match sets, reps and rest',
+  'Subir el día': 'Move day up',
+  'Bajar el día': 'Move day down',
+  'Igualar el día': 'Match the day',
+  '{0} · lo que dejes vacío no cambia': '{0} · anything left empty stays the same',
+  'Aplicar a los {0} ejercicios': 'Apply to the {0} exercises',
+  'Día igualado': 'Day matched',
+  '· Separar': '· Split',
+  'Cada día va a un día de la semana (L-D, abajo); uno nuevo coge el primero libre.': 'Each day goes on a weekday (M-S, below); a new one takes the first free day.',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':
@@ -788,8 +801,6 @@ export const EN: Record<string, string> = {
   // --- Mi plan (alumno) ---
   Categoría: 'Category',
   'Nombre del plan': 'Plan name',
-  'Asigna cada día a un día de la semana con los botones L-D de abajo.':
-    'Assign each day to a weekday with the buttons below.',
   'SUPERSERIE con el anterior': 'SUPERSET with the previous one',
   Bloques: 'Blocks',
   'Añadir ejercicio': 'Add exercise',

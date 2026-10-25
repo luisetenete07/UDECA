@@ -3,7 +3,7 @@ import { t, frase  } from '../../../../lib/idioma';
 import { unido } from '../../../../lib/texto';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../../components/Button';
@@ -24,7 +24,7 @@ import { Chip, ChipRow } from '../../../../components/Chip';
 import { DiasSemana } from '../../../../components/DiasSemana';
 import { Opciones } from '../../../../components/Opciones';
 import { Segmented } from '../../../../components/Segmented';
-import { QuickSheet } from '../../../../components/QuickSheet';
+import { QuickSheet, type AccionRapida } from '../../../../components/QuickSheet';
 import {
   ajustesDeFusion,
   combinarRutinas,
@@ -38,6 +38,13 @@ import { RutinaDiariaEditor } from '../../../../components/RutinaDiariaEditor';
 import { TextField } from '../../../../components/TextField';
 import { DragList } from '../../../../components/DragList';
 import { moveItem } from '../../../../lib/useDragReorder';
+import {
+  igualarEjercicios,
+  numerosHeredados,
+  primerDiaLibre,
+  resumenDeEjercicios,
+  type Igualar,
+} from '../../../../lib/editorRutina';
 import { showToast } from '../../../../components/Toast';
 import { useAuth } from '../../../../lib/auth-context';
 import { createExercise, getExerciseLibrary } from '../../../../lib/firestore/exercises';
@@ -146,7 +153,6 @@ function resumenDeOpciones(ex: RoutineExercise): string {
   const partes: string[] = [];
   if (ex.grip) partes.push(t(GRIP_LABEL[ex.grip]));
   if (ex.cluster) partes.push(`${t('Clúster')} ${clusterBlocks(ex.cluster)}×${ex.cluster.restSeconds}s`);
-  if (ex.supersetWithPrevious) partes.push(t('Superserie'));
   if (ex.goal) partes.push(`${t('Objetivo')}: ${ex.goal}`);
   if (ex.notes?.trim()) partes.push(`"${ex.notes.trim()}"`);
   return partes.join(' · ');
@@ -188,6 +194,9 @@ export default function RoutineEditorScreen() {
   const [masAbierto, setMasAbierto] = useState(false);
   /** El menú de un día (duplicar, borrar), por id de día. */
   const [menuDia, setMenuDia] = useState<string | null>(null);
+  // "Igualar el día": qué día y lo escrito en sus casillas (vacío = no tocar).
+  const [igualando, setIgualando] = useState<string | null>(null);
+  const [ig, setIg] = useState({ sets: '', reps: '', segundos: '', rir: '', descanso: '' });
   /** "Lo que ve el alumno", plegado: se toca poco y ocupaba media pantalla. */
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   /** Los días con "más del día" (EMOM, aproximaciones) a la vista. */
@@ -474,7 +483,17 @@ export default function RoutineEditorScreen() {
 
   const addDay = () => {
     const id = nuevoId();
-    setDays((prev) => [...prev, { id, name: `Día ${prev.length + 1}`, exercises: [] }]);
+    setDays((prev) => [
+      ...prev,
+      {
+        id,
+        name: `Día ${prev.length + 1}`,
+        exercises: [],
+        // En la semana, el primer día que aún no tiene nada: así no hay que
+        // ir a buscarlo en la fila L-D de cada día nuevo.
+        ...(schedule === 'weekly' ? { weekday: primerDiaLibre(prev) } : {}),
+      },
+    ]);
     setExpandedDays((prev) => ({ ...prev, [id]: true })); // el día nuevo se abre
   };
 
@@ -483,6 +502,25 @@ export default function RoutineEditorScreen() {
   };
 
   // Mueve un día una posición arriba o abajo (reordenar la semana / el ciclo).
+  // Desde su menú: arrastrar el asa en un móvil, con la lista llena de campos,
+  // es lo más lento que hay para "este va uno más arriba".
+  const moverDia = (dayId: string, delta: number) => {
+    setDays((prev) => {
+      const idx = prev.findIndex((d) => d.id === dayId);
+      const destino = idx + delta;
+      if (idx < 0 || destino < 0 || destino >= prev.length) return prev;
+      return moveItem(prev, idx, destino);
+    });
+  };
+
+  // Igualar el día (su menú): series, reps, RIR o descanso para todos a la vez.
+  const igualarDia = (dayId: string, valores: Igualar) => {
+    setDays((prev) =>
+      prev.map((d) => (d.id === dayId ? { ...d, exercises: igualarEjercicios(d.exercises, valores) } : d))
+    );
+    // Los descansos a medio escribir se olvidan: manda lo que se acaba de igualar.
+    setRestText({});
+  };
 
   // Duplica un día (con ids nuevos) justo debajo, para no rehacerlo.
   const duplicateDay = (dayId: string) => {
@@ -592,13 +630,19 @@ export default function RoutineEditorScreen() {
     );
   }, [exercises, exerciseSearch, filtroCategoria, filtroSubgrupo]);
 
+  // El día al que se están añadiendo ejercicios (el buscador abierto).
+  const diaDelPicker = pickerForDay ? days.find((d) => d.id === pickerForDay) : undefined;
+
   const addExerciseToDay = (dayId: string, exercise: Exercise) => {
+    const dia = days.find((d) => d.id === dayId);
     const routineExercise: RoutineExercise = {
       id: nuevoId(),
       exerciseId: exercise.id,
       name: exercise.name,
-      sets: 3,
-      reps: exercise.measure === 'seconds' ? '30' : '10',
+      // Con los números del de antes: un día se monta casi siempre con las
+      // mismas series y el mismo descanso, y teclearlos en cada ejercicio
+      // era lo que más tiempo se llevaba (ver numerosHeredados).
+      ...numerosHeredados(dia?.exercises ?? [], exercise.measure ?? 'reps'),
       measure: exercise.measure ?? 'reps',
       // La categoría y el subgrupo viajan con el plan: se enseñan durante el
       // entrenamiento junto al nombre —para no confundir dos ejercicios que se
@@ -1169,7 +1213,19 @@ export default function RoutineEditorScreen() {
   if (loading) return <LoadingScreen />;
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      /*
+        "GUARDAR RUTINA", SIEMPRE A MANO. Fijo abajo, fuera del desplazamiento:
+        con los días abiertos el editor mide varias pantallas, y tenerlo solo
+        al final obligaba a bajar del todo para guardar un cambio de arriba.
+      */
+      pie={
+        <>
+          {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
+          <Button title="Guardar rutina" onPress={handleSave} loading={saving} />
+        </>
+      }
+    >
       <View style={styles.nombreFila}>
         <TextField
           label="Nombre de la rutina"
@@ -1265,13 +1321,6 @@ export default function RoutineEditorScreen() {
             style={{ marginTop: spacing.xs }}
           />
         </Card>
-      ) : null}
-
-      {/* Lo que hará TODOS los días aparte del plan. Va aquí, pegado a la
-          programación, porque es cuando se está decidiendo qué entrena y
-          cuándo: es el momento en que uno se acuerda del pino y la movilidad. */}
-      {clientId && profile ? (
-        <RutinaDiariaEditor trainerId={profile.uid} clientId={clientId} />
       ) : null}
 
       <Card accent style={styles.scheduleCard}>
@@ -1669,7 +1718,7 @@ export default function RoutineEditorScreen() {
           </>
         ) : (
           <Text style={styles.scheduleHint}>
-            Asigna cada día a un día de la semana con los botones L-D de abajo.
+            Cada día va a un día de la semana (L-D, abajo); uno nuevo coge el primero libre.
           </Text>
         )}
 
@@ -1780,7 +1829,7 @@ export default function RoutineEditorScreen() {
         gap={0}
         handleOnly
         onReorder={(from, to) => setDays((prev) => moveItem(prev, from, to))}
-        renderItem={(day, dayIndex, diaArrastrando, asaDia) => {
+        renderItem={(day, dayIndex, diaArrastrando) => {
         const isOpen = expandedDays[day.id] ?? false;
         const exCount = day.exercises.length;
         const summaryParts: string[] = [];
@@ -1819,20 +1868,35 @@ export default function RoutineEditorScreen() {
         return (
         <Card style={[styles.dayCard, diaArrastrando && styles.dayCardDragging]}>
           <View style={styles.dayHeaderRow}>
-            <Pressable
-              style={styles.dayHeaderMain}
-              onPress={() => toggleDayExpanded(day.id)}
-            >
-              <Text style={styles.dayTitle} numberOfLines={1}>
-                {nombreDelDia(day.name, dayIndex)}
-              </Text>
-            </Pressable>
-            {/* Asa del día: mantener pulsado y mover para cambiar su orden. */}
-            <View {...asaDia} style={styles.moveDayBtn}>
-              <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
-            </View>
-            {/* Duplicar y borrar, en el menú del día: dos iconos menos en
-                cada tarjeta, y borrar deja de estar a un toque mal dado. */}
+            {/* Abierto, el nombre se cambia en el propio título: antes había
+                además un campo "Nombre del día" que repetía lo mismo justo
+                debajo y empujaba los ejercicios media pantalla. */}
+            {isOpen ? (
+              <View style={[styles.dayHeaderMain, styles.dayTitleEditable]}>
+                <TextInput
+                  value={day.name}
+                  onChangeText={(v) => updateDayName(day.id, v)}
+                  placeholder={nombreDelDia('', dayIndex)}
+                  placeholderTextColor={colors.textFaint}
+                  style={[styles.dayTitle, styles.dayTitleInput]}
+                  accessibilityLabel={t('Nombre del día')}
+                />
+                <Ionicons name="pencil" size={13} color={colors.textFaint} />
+              </View>
+            ) : (
+              <Pressable
+                style={styles.dayHeaderMain}
+                onPress={() => toggleDayExpanded(day.id)}
+              >
+                <Text style={styles.dayTitle} numberOfLines={1}>
+                  {nombreDelDia(day.name, dayIndex)}
+                </Text>
+              </Pressable>
+            )}
+            {/* Igualar, duplicar, subir, bajar y borrar, en el menú del día.
+                Sin asa de arrastrar (como en los ejercicios): en un móvil,
+                arrastrar dentro de una lista llena de campos era lo más lento
+                para "este va uno más arriba", y el asa era un icono más. */}
             <Pressable onPress={() => setMenuDia(day.id)} style={styles.removeDayBtn} hitSlop={8} accessibilityLabel="Opciones del día">
               <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
             </Pressable>
@@ -1854,16 +1918,17 @@ export default function RoutineEditorScreen() {
             <Text style={styles.daySummary} numberOfLines={2}>
               {summaryParts.join(' · ')}
             </Text>
+            {/* Plegado, también QUÉ lleva: se repasa la semana entera sin
+                abrir día por día. El "+" es la superserie. */}
+            {!isOpen && !day.isRest && day.exercises.length > 0 ? (
+              <Text style={styles.dayEjercicios} numberOfLines={2}>
+                {resumenDeEjercicios(day.exercises)}
+              </Text>
+            ) : null}
           </Pressable>
 
           {isOpen ? (
           <>
-          <TextField
-            label="Nombre del día"
-            value={day.name}
-            onChangeText={(v) => updateDayName(day.id, v)}
-            style={{ marginTop: spacing.sm }}
-          />
 
           {schedule === 'cycle' ? (
             <>
@@ -2107,11 +2172,34 @@ export default function RoutineEditorScreen() {
                 arrastrando && styles.exerciseRowDragging,
               ]}
             >
-              {ex.supersetWithPrevious ? (
-                <View style={styles.supersetTag}>
-                  <Ionicons name="link" size={12} color={colors.primaryBright} />
-                  <Text style={styles.supersetTagText}>SUPERSERIE con el anterior</Text>
-                </View>
+              {/*
+               * LA SUPERSERIE, DE UN TOQUE, SOBRE LA RAYA ENTRE LOS DOS.
+               *
+               * Estaba dentro de "Carga, agarre, indicaciones…": para unir dos
+               * ejercicios había que abrir las opciones del segundo y buscar
+               * el enlace. Ahora es la pastilla que cose uno con otro: "+
+               * Superserie" para unirlos y, unidos, "Superserie · Separar".
+               * En un día de grease the groove no hay superseries: no sale.
+               */}
+              {exIndex > 0 && !day.gtg ? (
+                <Pressable
+                  onPress={() => toggleSuperset(day.id, ex.id)}
+                  style={[styles.enlace, ex.supersetWithPrevious && styles.enlaceActivo]}
+                  hitSlop={6}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: !!ex.supersetWithPrevious }}
+                  accessibilityLabel={t('Superserie con el anterior')}
+                >
+                  <Ionicons
+                    name={ex.supersetWithPrevious ? 'link' : 'add'}
+                    size={13}
+                    color={ex.supersetWithPrevious ? colors.primaryBright : colors.textFaint}
+                  />
+                  <Text style={[styles.enlaceTexto, ex.supersetWithPrevious && styles.enlaceTextoActivo]}>
+                    Superserie
+                  </Text>
+                  {ex.supersetWithPrevious ? <Text style={styles.enlaceSeparar}>· Separar</Text> : null}
+                </Pressable>
               ) : null}
               {/*
                * LA CABECERA: nombre y, a la derecha, todo lo que mueve.
@@ -2423,20 +2511,6 @@ export default function RoutineEditorScreen() {
                       : 'Series en clúster'}
                   </Text>
                 </Pressable>
-                {exIndex > 0 ? (
-                  <Pressable onPress={() => toggleSuperset(day.id, ex.id)} style={styles.linkBtn}>
-                    <Ionicons
-                      name={ex.supersetWithPrevious ? 'unlink' : 'link'}
-                      size={14}
-                      color={colors.primary}
-                    />
-                    <Text style={styles.linkBtnText}>
-                      {ex.supersetWithPrevious
-                        ? 'Quitar superserie'
-                        : 'Superserie con el anterior'}
-                    </Text>
-                  </Pressable>
-                ) : null}
               </View>
               </View>
               ) : null}
@@ -2624,11 +2698,15 @@ export default function RoutineEditorScreen() {
                       </Text>
                     ) : null}
                     {ejerciciosFiltrados
-                      .map((ex) => (
+                      .map((ex) => {
+                        // Lo que ya está en el día, marcado: se añaden varios
+                        // seguidos sin perder la cuenta (y sin cerrar).
+                        const yaEsta = (diaDelPicker?.exercises ?? []).filter((e) => e.exerciseId === ex.id).length;
+                        return (
                         <Pressable
                           key={ex.id}
                           onPress={() => pickerForDay && addExerciseToDay(pickerForDay, ex)}
-                          style={styles.pickerRow}
+                          style={[styles.pickerRow, yaEsta > 0 && styles.pickerRowYa]}
                         >
                           <View style={{ flex: 1 }}>
                             <Text style={styles.pickerRowText}>
@@ -2645,12 +2723,33 @@ export default function RoutineEditorScreen() {
                               {ex.measure === 'seconds' ? ' · isométrico' : ''}
                             </Text>
                           </View>
-                          <Ionicons name="add-circle" size={22} color={colors.primary} />
+                          {yaEsta > 0 ? (
+                            <View style={styles.pickerYa}>
+                              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                              <Text style={styles.pickerYaTexto}>
+                                {yaEsta > 1 ? frase`En el día ×${yaEsta}` : 'En el día'}
+                              </Text>
+                            </View>
+                          ) : (
+                            <Ionicons name="add-circle" size={22} color={colors.primary} />
+                          )}
                         </Pressable>
-                      ))}
+                        );
+                      })}
                   </ScrollView>
                   </>
                 )}
+                {/* Se queda abierto para añadir varios seguidos; "Listo" cierra
+                    y dice cuántos lleva el día. */}
+                <Button
+                  title={
+                    diaDelPicker && diaDelPicker.exercises.length > 0
+                      ? frase`Listo · ${diaDelPicker.exercises.length} en el día`
+                      : 'Listo'
+                  }
+                  onPress={() => setPickerForDay(null)}
+                  style={{ marginTop: spacing.sm }}
+                />
               </>
             )}
       </Sheet>
@@ -2757,13 +2856,126 @@ export default function RoutineEditorScreen() {
         visible={menuDia !== null}
         onClose={() => setMenuDia(null)}
         titulo="Opciones del día"
-        acciones={[
-          { icono: 'copy-outline', texto: 'Duplicar el día', onPress: () => { if (menuDia) duplicateDay(menuDia); setMenuDia(null); } },
-          { icono: 'trash-outline', texto: 'Borrar el día', peligro: true, onPress: () => { if (menuDia) removeDay(menuDia); setMenuDia(null); } },
-        ]}
+        acciones={(() => {
+          const idx = days.findIndex((d) => d.id === menuDia);
+          const dia = days[idx];
+          if (!dia) return [];
+          const cerrarY = (hacer: () => void) => () => {
+            hacer();
+            setMenuDia(null);
+          };
+          const acciones: AccionRapida[] = [];
+          // Lo que más tiempo ahorra, lo primero: todo el día de una vez.
+          if (!dia.isRest && dia.exercises.length > 1) {
+            acciones.push({
+              icono: 'options-outline',
+              texto: 'Igualar series, reps y descanso',
+              onPress: cerrarY(() => {
+                setIg({ sets: '', reps: '', segundos: '', rir: '', descanso: '' });
+                setIgualando(dia.id);
+              }),
+            });
+          }
+          acciones.push({ icono: 'copy-outline', texto: 'Duplicar el día', onPress: cerrarY(() => duplicateDay(dia.id)) });
+          if (idx > 0) acciones.push({ icono: 'arrow-up', texto: 'Subir el día', onPress: cerrarY(() => moverDia(dia.id, -1)) });
+          if (idx < days.length - 1) {
+            acciones.push({ icono: 'arrow-down', texto: 'Bajar el día', onPress: cerrarY(() => moverDia(dia.id, 1)) });
+          }
+          acciones.push({ icono: 'trash-outline', texto: 'Borrar el día', peligro: true, onPress: cerrarY(() => removeDay(dia.id)) });
+          return acciones;
+        })()}
       />
 
+      {/*
+        IGUALAR EL DÍA. Cinco ejercicios a 4 series y 2:00 de descanso eran
+        veinte casillas; aquí son dos. Lo que se deja vacío no cambia, y las
+        reps no pisan los segundos de un isométrico (lib/editorRutina.ts).
+      */}
+      {(() => {
+        const dia = days.find((d) => d.id === igualando);
+        const ejercicios = dia?.exercises ?? [];
+        const hayReps = ejercicios.some((e) => !isHoldMeasure(e.measure));
+        const haySegundos = ejercicios.some((e) => isHoldMeasure(e.measure));
+        const conRir = seMuestra.objetivo && (schedule !== 'flex' || prescripcionDe(perso).variable.tipo === 'rir');
+        const valores: Igualar = {
+          sets: Number.parseInt(ig.sets, 10) > 0 ? Number.parseInt(ig.sets, 10) : undefined,
+          reps: ig.reps.trim() || undefined,
+          segundos: ig.segundos.trim() || undefined,
+          rir: conRir && ig.rir.trim() ? rirDeTexto(ig.rir) : undefined,
+          restSeconds: ig.descanso.trim() ? segundosDeTexto(ig.descanso) || undefined : undefined,
+        };
+        const algo = Object.values(valores).some((v) => v !== undefined);
+        return (
+          <Sheet
+            visible={!!dia}
+            onClose={() => setIgualando(null)}
+            titulo="Igualar el día"
+            descripcion={dia ? frase`${nombreDelDia(dia.name, days.indexOf(dia))} · lo que dejes vacío no cambia` : undefined}
+          >
+            <View style={styles.exerciseFields}>
+              <Casilla
+                etiqueta="Series"
+                keyboardType="number-pad"
+                value={ig.sets}
+                onChangeText={(v) => setIg((p) => ({ ...p, sets: v }))}
+                placeholder="4"
+              />
+              {hayReps ? (
+                <Casilla
+                  etiqueta="Reps"
+                  value={ig.reps}
+                  onChangeText={(v) => setIg((p) => ({ ...p, reps: v }))}
+                  placeholder="8-12"
+                />
+              ) : null}
+              {haySegundos ? (
+                <Casilla
+                  etiqueta="Segundos"
+                  value={ig.segundos}
+                  onChangeText={(v) => setIg((p) => ({ ...p, segundos: v }))}
+                  placeholder="30"
+                />
+              ) : null}
+              {conRir ? (
+                <Casilla
+                  etiqueta="RIR"
+                  keyboardType="number-pad"
+                  value={ig.rir}
+                  onChangeText={(v) => setIg((p) => ({ ...p, rir: v }))}
+                  placeholder="2"
+                />
+              ) : null}
+              <Casilla
+                etiqueta="Descanso"
+                keyboardType="numbers-and-punctuation"
+                value={ig.descanso}
+                onChangeText={(v) => setIg((p) => ({ ...p, descanso: v }))}
+                placeholder="2:00"
+              />
+            </View>
+            <Button
+              title={frase`Aplicar a los ${ejercicios.length} ejercicios`}
+              disabled={!algo}
+              onPress={() => {
+                if (dia) igualarDia(dia.id, valores);
+                setIgualando(null);
+                showToast('Día igualado');
+              }}
+              style={{ marginTop: spacing.md }}
+            />
+          </Sheet>
+        );
+      })()}
+
       <Button title="+ Añadir día" variant="ghost" onPress={addDay} style={styles.addDayBtn} />
+
+      {/* Lo que hará TODOS los días aparte del plan (el pino, la movilidad).
+          Va después de los días y no encima: es un extra que se pone una vez,
+          y arriba empujaba los días —lo que se viene a tocar— una tarjeta más
+          abajo cada vez que se abría el editor. */}
+      {clientId && profile ? (
+        <RutinaDiariaEditor trainerId={profile.uid} clientId={clientId} />
+      ) : null}
 
       <VistaDelAlumno
         visible={verComoAlumno}
@@ -2782,8 +2994,6 @@ export default function RoutineEditorScreen() {
         />
       ) : null}
 
-      {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
-      <Button title="Guardar rutina" onPress={handleSave} loading={saving} />
     </ScreenContainer>
   );
 }
@@ -2973,13 +3183,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     lineHeight: 17,
   },
-  moveDayBtn: { paddingHorizontal: 4 },
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   removeDayBtn: { paddingHorizontal: spacing.sm },
   dayHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dayHeaderMain: { flex: 1, paddingVertical: spacing.xs },
   dayTitle: { ...typography.h3, color: colors.text },
+  pickerRowYa: { opacity: 0.85 },
+  pickerYa: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pickerYaTexto: { ...typography.small, fontSize: 12, color: colors.primary, fontFamily: fonts.semiBold },
+  // Abierto, el título es el campo del nombre: una raya debajo y un lápiz.
+  dayTitleEditable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dayTitleInput: { flex: 1, minWidth: 0, padding: 0, minHeight: 34 },
   daySummary: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  dayEjercicios: { ...typography.small, color: colors.text, marginTop: 4, lineHeight: 18 },
   weekdayRow: { marginTop: spacing.sm, marginBottom: spacing.sm },
   avisoRepetido: { ...typography.small, color: colors.warning, marginTop: spacing.xs },
   weekdayHeadRow: {
@@ -2989,11 +3211,33 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   weekdayLabel: fieldLabel,
+  // Con aire entre ejercicio y ejercicio: la pastilla de la superserie va
+  // montada sobre la raya que los separa.
   exerciseRow: {
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm + 4,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  enlace: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 26,
+    paddingHorizontal: 12,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    // Opaco: tapa la raya, y la pastilla se lee como el broche entre los dos.
+    backgroundColor: colors.surface,
+    marginTop: -(spacing.md + 13),
+    marginBottom: spacing.sm,
+  },
+  enlaceActivo: { borderColor: colors.primary },
+  enlaceTexto: { ...typography.small, fontSize: 12, color: colors.textFaint, fontFamily: fonts.semiBold },
+  enlaceTextoActivo: { color: colors.primaryBright },
+  enlaceSeparar: { ...typography.small, fontSize: 12, color: colors.textMuted },
   exerciseName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
   exerciseRowDragging: { borderColor: colors.hairline },
   exerciseRowLinked: {
@@ -3096,18 +3340,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   moveEliminarTexto: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold },
-  supersetTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: spacing.xs,
-  },
-  supersetTagText: {
-    fontSize: 10,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 1,
-    color: colors.primaryBright,
-  },
   linksRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
