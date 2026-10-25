@@ -161,7 +161,8 @@ console.log('\nEl editor guarda lo que se ve');
   ok('al abrir un plan viejo, respeta su herencia', (editor.match(/prescripcion: prescripcionDe\(/g) ?? []).length === 2);
   ok('se elige la intensidad', /'propia' as EscalaDeIntensidad/.test(editor) && /'ninguna' as EscalaDeIntensidad/.test(editor));
   ok('y la variable', /\['tempo', 'Tempo'\]/.test(editor) && /\['ninguna', 'Nada'\]/.test(editor));
-  ok('guardar como plantilla, a la vista', /Guardar también como plantilla/.test(editor));
+  // En el menú "Más", junto a "Usar una plantilla": donde se busca.
+  ok('guardar como plantilla, en el menú de "Más"', /texto: 'Guardar como plantilla', onPress: \(\) => \{ setMasAbierto\(false\); saveAsTemplate\(\); \}/.test(editor));
   ok('y la plantilla dice qué trae', /resumenDePrescripcion\(t\.personalizado\)/.test(editor));
 }
 

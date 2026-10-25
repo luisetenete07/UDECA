@@ -136,7 +136,8 @@ console.log('\nEn la pantalla del entreno');
     );
   }
   ok('desplegada solo la ronda que toca, entera', /\{ronda\(actual, true\)\}/.test(w));
-  ok('el paso que toca se enciende', />AHORA<\/Text>/.test(w));
+  // Encendido, sin la etiqueta "AHORA": la fila resaltada ya lo dice.
+  ok('el paso que toca se enciende', /esAhora && styles\.ssPasoAhora/.test(w));
   ok('entre paso y paso, "sin descanso"; al final, el descanso', /'sin descanso'/.test(w) && /Luego, descanso de \$\{/.test(w));
   ok('lo hecho y lo que queda, en una línea al pie', /rondas hechas`/.test(w) && /Quedan \$\{quedan\} rondas más/.test(w));
   ok('el esfuerzo se pregunta en la última ronda', /\(hecho \|\| actual === ultimaRonda\)/.test(w));

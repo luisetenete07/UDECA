@@ -46,8 +46,10 @@ console.log('\nAl guardar, siempre las dos claves');
 console.log('\nEl editor lo guarda en los tres tipos de plan');
 {
   const editor = sinComentar(lee('app/(trainer)/clients/[id]/routine.tsx'));
-  ok('en la rutina', /visibilidad: visibilidadAGuardar\(visibilidad\),\s*\};/.test(editor));
-  ok('y en la plantilla', /visibilidad: visibilidadAGuardar\(visibilidad\),\s*days: diasAGuardar\(\)/.test(editor));
+  ok('en la rutina', /visibilidad: visibilidadAGuardar\(visibilidad\),\s*modoAlumno,\s*\};/.test(editor));
+  ok('y en la plantilla', /visibilidad: visibilidadAGuardar\(visibilidad\),\s*modoAlumno,\s*days: diasAGuardar\(\)/.test(editor));
+  // Y cómo lo ve: en la app o en tabla, también en las dependencias.
+  ok('el modo (app o tabla) se lee y se guarda', /setModoAlumno\(modoDelAlumno\(existing\)\)/.test(editor) && /modoAlumno,[^\]]*router,\s*\]\);/.test(editor));
   // useCallback congela lo que no se declara.
   ok('en las dependencias del guardado', /visibilidad,[^\]]*router,\s*\]\);/.test(editor));
   ok('se lee al abrir', /setVisibilidad\(queVeElAlumno\(existing\)\)/.test(editor));
@@ -58,9 +60,9 @@ console.log('\nEl editor lo guarda en los tres tipos de plan');
 console.log('\nY el alumno solo ve lo que le dejan');
 {
   const entreno = sinComentar(lee('app/(client)/workout.tsx'));
-  ok('la cabecera de la sesión', /\|\| !ve\.intensidad \? null : textoIntensidad\(/.test(entreno));
+  ok('la cabecera de la sesión', /\|\| !ve\.intensidad( \|\| enMarcha)? \? null : textoIntensidad\(/.test(entreno));
   ok('la ficha de elegir rutina', /ficha\.intensidad && ve\.intensidad && intensidad/.test(entreno));
-  ok('el objetivo del ejercicio', /ve\.objetivo && textoDePrescripcion\(planned, perso\)/.test(entreno));
+  ok('el objetivo del ejercicio', /ve\.objetivo (&&|\?) textoDePrescripcion\(planned, perso\)/.test(entreno));
   const inicio = sinComentar(lee('app/(client)/dashboard.tsx'));
   ok('la tarjeta de hoy del inicio', /queVeElAlumno\(routine\)\.intensidad &&/.test(inicio));
 }

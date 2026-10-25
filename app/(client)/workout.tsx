@@ -33,7 +33,8 @@ import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { applyWeekPlan } from '../../lib/weekPlan';
 import { esfuerzoDePct, etiquetaCombinada, pctCombinado, textoIntensidad } from '../../lib/intensidad';
-import { queVeElAlumno } from '../../lib/visibilidad';
+import { modoDelAlumno, queVeElAlumno } from '../../lib/visibilidad';
+import { TablaDeEntreno } from '../../components/TablaDeEntreno';
 import { SelectorDeEsfuerzo } from '../../components/SelectorDeEsfuerzo';
 import { diasDePausa, pausaActiva } from '../../lib/pausa';
 import { PressableScale } from '../../components/PressableScale';
@@ -665,6 +666,8 @@ export default function WorkoutScreen() {
    * puesto se ve todo, como siempre (ver lib/visibilidad.ts).
    */
   const ve = queVeElAlumno(routine);
+  // Su entrenador le ha puesto el entreno en tabla (para entrenar sin la app).
+  const enTabla = modoDelAlumno(routine) === 'tabla';
   const esfuerzoDelPlan = perso?.esfuerzo;
   /** Lo de siempre: a quién se le pregunta cuando el plan no dice nada. */
   const preguntaHeredada = profile?.trackRir === true;
@@ -1993,11 +1996,6 @@ export default function WorkoutScreen() {
               >
                 {d.exercise.name}
               </Text>
-              {esAhora ? (
-                <View style={styles.ssAhora}>
-                  <Text style={styles.ssAhoraTexto}>AHORA</Text>
-                </View>
-              ) : null}
             </View>
             {meta ? (
               <Text style={styles.ssMeta} numberOfLines={1}>
@@ -2151,14 +2149,9 @@ export default function WorkoutScreen() {
                   </Text>
                 </View>
               ) : null}
+              {/* Cada paso se marca con su ✓ (el que toca va encendido). Sin
+                  botón grande aparte: eran dos formas de hacer lo mismo. */}
               {ronda(actual, true)}
-              {siguiente ? (
-                <Button
-                  title={`✓  ${frase`Hecha`} · ${letra(siguiente.ejercicio)} ${log[siguiente.ejercicio]?.name ?? ''}`}
-                  onPress={() => updateSet(siguiente.ejercicio, siguiente.serie, 'completed', true)}
-                  style={styles.botonHecha}
-                />
-              ) : null}
               <View style={styles.ssFinRonda}>
                 <Ionicons name="timer-outline" size={14} color={colors.textMuted} />
                 <Text style={styles.ssFinRondaTexto}>
@@ -2300,14 +2293,18 @@ export default function WorkoutScreen() {
       <SessionHeader
         titulo={routine.name}
         dia={day && !showCompleted && !esModoGtg ? day.name : null}
+        // La intensidad del día se ve antes de empezar; entrenando ya no
+        // decide nada y es una pastilla más en la cabecera.
         intensidad={
-          showCompleted || esModoGtg || !ve.intensidad ? null : textoIntensidad(day, routine.schedule)
+          showCompleted || esModoGtg || !ve.intensidad || enMarcha ? null : textoIntensidad(day, routine.schedule)
         }
         hechas={doneSets}
         // En grease the groove el anillo del día lo lleva su propia pantalla,
         // con las series repartidas; dos anillos distintos en la misma pantalla
         // se leen mal.
-        totales={showCompleted || esModoGtg ? 0 : totalSets}
+        // En tabla tampoco: no se marcan series, y un "0/14" que no se
+        // mueve nunca parece que falta algo.
+        totales={showCompleted || esModoGtg || (enTabla && !enMarcha) ? 0 : totalSets}
         acciones={accionesSesion}
         onSalir={() => {
           // Con la sesión en marcha no se sale a la ligera: confirmación.
@@ -2865,7 +2862,18 @@ export default function WorkoutScreen() {
       {/* LO QUE TOCA, antes de empezar: nombre y series de cada ejercicio, una
           línea cada uno. Sin esto la portada solo decía "Empezar entreno", y
           para saber si hacía falta la barra o la goma había que entrar. */}
-      {!enMarcha && day && !day.isRest && !showCompleted && day.exercises.length > 0 ? (
+      {/* EN TABLA, si su entrenador lo ha elegido así: el plan del día
+          entero, ordenado como una hoja de cálculo, para entrenar sin la app.
+          Sustituye a la lista corta de aquí abajo. */}
+      {!enMarcha && day && !day.isRest && !showCompleted && day.exercises.length > 0 && enTabla ? (
+        <TablaDeEntreno
+          day={day}
+          medidaDe={(ex) => ex.measure ?? measureByExercise[ex.exerciseId]}
+          objetivoDe={(ex) => (ve.objetivo ? textoDePrescripcion(ex, perso) : null)}
+        />
+      ) : null}
+
+      {!enMarcha && day && !day.isRest && !showCompleted && day.exercises.length > 0 && !enTabla ? (
         <View style={styles.previa}>
           <Text style={styles.previaTitulo}>
             {day.exercises.length === 1 ? frase`1 ejercicio` : frase`${day.exercises.length} ejercicios`}
@@ -2925,11 +2933,30 @@ export default function WorkoutScreen() {
       ) : null}
 
       {!enMarcha && day && !day.isRest && !showCompleted && log.length > 0 ? (
-        <Button
-          title="Empezar entreno"
-          onPress={() => setDiaEmpezado(day.id)}
-          style={{ marginTop: spacing.sm, marginBottom: spacing.md }}
-        />
+        enTabla ? (
+          <>
+            {/* En tabla no se apunta nada: entrena mirando la tabla y al
+                acabar lo da por hecho, tal y como estaba planeado. Es lo
+                mismo que "Terminar" sin marcar series. Si un día quiere
+                apuntar, puede. */}
+            <Button
+              title="Lo he hecho"
+              onPress={handleSave}
+              loading={saving}
+              style={{ marginTop: spacing.sm }}
+            />
+            <Pressable onPress={() => setDiaEmpezado(day.id)} style={styles.apuntarEnApp} hitSlop={8}>
+              <Text style={styles.apuntarEnAppTexto}>Prefiero apuntar las series</Text>
+            </Pressable>
+            {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
+          </>
+        ) : (
+          <Button
+            title="Empezar entreno"
+            onPress={() => setDiaEmpezado(day.id)}
+            style={{ marginTop: spacing.sm, marginBottom: spacing.md }}
+          />
+        )
       ) : null}
 
       {(() => {
@@ -2976,13 +3003,6 @@ export default function WorkoutScreen() {
                 <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>
                   {exercise.name}
                 </Text>
-                {/* Categoría y subgrupo bajo el nombre: entrenando, dos
-                    ejercicios que se llaman parecido solo se distinguen así
-                    ("Dominadas · Tirón · Aguantes"). Viene del plan, y si es
-                    de antes de que se guardara ahí, de la biblioteca. */}
-                {categoriaEjercicio ? (
-                  <Text style={styles.exerciseCategory}>{categoriaEjercicio}</Text>
-                ) : null}
               </View>
               {isDone && !exercise.saltado ? (
                 <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
@@ -3061,87 +3081,57 @@ export default function WorkoutScreen() {
                 Saltado hoy. Se guarda así para que tu entrenador lo sepa.
               </Text>
             ) : null}
-            {planned ? (
-              <View style={styles.metaRow}>
-                <View style={styles.metaChip}>
-                  <Text style={styles.metaChipText}>
-                    {planned.sets} × {planned.reps}
-                    {isSeconds ? 's' : ''}
-                  </Text>
-                </View>
-                {/* Lo que el entrenador prescribe en este ejercicio, en SU
-                    variable: "RIR 2", "RPE 8", "Tempo 3-1-1-0", "Zona B"... o
-                    nada, si su plan no lleva o este ejercicio va vacío. Fuera
-                    del plan personalizado, RIR como siempre. */}
-                {ve.objetivo && textoDePrescripcion(planned, perso) ? (
-                  <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText}>{textoDePrescripcion(planned, perso)}</Text>
-                  </View>
-                ) : null}
-                {planned.restSeconds ? (
-                  <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText}>
-                      Descanso {minutosSegundos(planned.restSeconds, false)}
-                    </Text>
-                  </View>
-                ) : null}
-                {load === 'assisted' ? (
-                  <View style={[styles.metaChip, styles.metaChipBand]}>
-                    <Text style={styles.metaChipText}>Con goma</Text>
-                  </View>
-                ) : load === 'weighted' ? (
-                  <View style={[styles.metaChip, styles.metaChipWeighted]}>
-                    <Text style={[styles.metaChipText, styles.metaChipWeightedText]}>
-                      Lastrado
-                    </Text>
-                  </View>
-                ) : null}
-                {planned?.grip ? (
-                  <View style={styles.metaChip}>
-                    <Text style={styles.metaChipText}>
-                      Agarre {GRIP_LABEL[planned.grip].toLowerCase()}
-                    </Text>
-                  </View>
-                ) : null}
-                {planned?.goal ? (
-                  <View style={[styles.metaChip, styles.metaChipBand]}>
-                    <Text style={styles.metaChipText}>Objetivo: {planned.goal}</Text>
-                  </View>
-                ) : null}
-                {cluster ? (
-                  <View style={[styles.metaChip, styles.metaChipCluster]}>
-                    <Text style={styles.metaChipText}>
-                      Clúster {bloques} bloques · {cluster.restSeconds}s
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
+            {/*
+              LO QUE TOCA, EN UNA LÍNEA. Eran hasta siete pastillas (series,
+              RIR, descanso, goma, agarre, objetivo, clúster) más la categoría
+              en otra línea: entrenando, con el pulso alto, se leía como una
+              pared. Ahora es una frase: "Tirón · 5 × 6 · RIR 1 · 2:00 de
+              descanso". La categoría va delante: dos ejercicios que se llaman
+              parecido se distinguen por ella.
+            */}
+            {planned || categoriaEjercicio ? (
+              <Text style={styles.metaLinea}>
+                {unido(
+                  categoriaEjercicio,
+                  planned ? `${planned.sets} × ${planned.reps}${isSeconds ? 's' : ''}` : null,
+                  planned && ve.objetivo ? textoDePrescripcion(planned, perso) : null,
+                  planned?.restSeconds ? frase`${minutosSegundos(planned.restSeconds, false)} de descanso` : null,
+                  load === 'assisted' ? t('Con goma') : load === 'weighted' ? t('Lastrado') : null,
+                  planned?.grip ? frase`Agarre ${GRIP_LABEL[planned.grip].toLowerCase()}` : null,
+                  planned?.goal ? frase`Objetivo: ${planned.goal}` : null,
+                  cluster ? frase`Clúster ${bloques} bloques · ${cluster.restSeconds}s` : null
+                )}
+              </Text>
             ) : null}
             {planned?.notes ? <Text style={styles.coachNotes}>{planned.notes}</Text> : null}
-            {videoByExercise[exercise.exerciseId] ? (
-              <>
-                <Pressable
-                  onPress={() =>
-                    setVideoAbierto({
-                      url: videoByExercise[exercise.exerciseId],
-                      titulo: exercise.name,
-                    })
-                  }
-                  style={styles.videoLink}
-                  hitSlop={4}
-                >
-                  <Ionicons name="play-circle-outline" size={15} color={colors.primary} />
-                  <Text style={styles.videoLinkText}>Ver técnica</Text>
-                </Pressable>
-              </>
-            ) : null}
-            {prev ? (
-              <View style={styles.prevRow}>
-                <Ionicons name="time-outline" size={13} color={colors.primary} />
-                <Text style={styles.prevText}>
-                  Última vez: {load !== 'none' && prev.weight ? `${prev.weight} kg × ` : ''}
-                  {prev.reps ?? '—'} {isSeconds ? 's' : 'reps'}
-                </Text>
+            {/* La técnica y la última vez, en la misma fila: son dos
+                consultas rápidas, no dos secciones. */}
+            {videoByExercise[exercise.exerciseId] || prev ? (
+              <View style={styles.consultaFila}>
+                {videoByExercise[exercise.exerciseId] ? (
+                  <Pressable
+                    onPress={() =>
+                      setVideoAbierto({
+                        url: videoByExercise[exercise.exerciseId],
+                        titulo: exercise.name,
+                      })
+                    }
+                    style={styles.videoLink}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="play-circle-outline" size={15} color={colors.primary} />
+                    <Text style={styles.videoLinkText}>Técnica</Text>
+                  </Pressable>
+                ) : null}
+                {prev ? (
+                  <View style={styles.prevRow}>
+                    <Ionicons name="time-outline" size={13} color={colors.textMuted} />
+                    <Text style={styles.prevText}>
+                      Última vez: {load !== 'none' && prev.weight ? `${prev.weight} kg × ` : ''}
+                      {prev.reps ?? '—'} {isSeconds ? 's' : 'reps'}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ) : null}
             <View style={styles.setHead}>
@@ -3208,11 +3198,6 @@ export default function WorkoutScreen() {
                     <Text style={[styles.setLabel, set.completed && styles.setLabelDone]}>
                       {enTitulo(palabraSerie)} {setIndex + 1}
                     </Text>
-                    {esAhora ? (
-                      <View style={styles.ssAhora}>
-                        <Text style={styles.ssAhoraTexto}>AHORA</Text>
-                      </View>
-                    ) : null}
                   </PressableScale>
                 <TextField
                   value={set.reps}
@@ -3266,16 +3251,14 @@ export default function WorkoutScreen() {
               </View>
               );
             })}
-            {/* MARCAR SIN APUNTAR AL CÍRCULO: un botón grande con la serie que
-                toca. Entre series, con el pulso alto, es lo único que hay que
-                hacer, y aquí no hay forma de fallar el toque. */}
-            {serieQueToca >= 0 && !exercise.saltado ? (
-              <Button
-                title={`✓  ${frase`Hecha`} · ${enTitulo(palabraSerie)} ${serieQueToca + 1}`}
-                onPress={() => updateSet(exerciseIndex, serieQueToca, 'completed', true)}
-                style={styles.botonHecha}
-              />
-            ) : null}
+            {/*
+              SE MARCA CON EL ✓ DE CADA SERIE, Y YA ESTÁ.
+              
+              Había además un botón grande "Hecha · Serie N" debajo: dos formas
+              de hacer lo mismo, una al lado de la otra, y el alumno tenía que
+              pensar cuál tocar. Se queda la fila, que es donde está el número
+              que acaba de hacer, con su ✓ grande y la fila entera como blanco.
+            */}
             {cluster ? (
               <Pressable
                 onPress={() => descansoDeBloque(cluster.restSeconds, exercise.name)}
@@ -3304,7 +3287,9 @@ export default function WorkoutScreen() {
                 </Pressable>
               </View>
             ) : null}
-            {pideEsfuerzoPorEjercicio ? (
+            {/* Al terminar las series, no antes: mientras quedan, no hay nada
+                que contestar y la pregunta solo estorba. */}
+            {pideEsfuerzoPorEjercicio && (isDone || exercise.saltado) ? (
               <SelectorDeEsfuerzo
                 esfuerzo={esfuerzoDelPlan}
                 value={exercise.esfuerzo?.valor ?? rirComoValor(exercise.rir)}
@@ -3390,6 +3375,9 @@ export default function WorkoutScreen() {
 
       {enMarcha ? (
       <View style={styles.navRow}>
+        {/* En el primero no hay "Anterior": un botón apagado que ocupa media
+            fila no ayuda a nada. */}
+        {bloqueVisible.inicio > 0 ? (
         <Pressable
           onPress={() =>
             setViewIndex(
@@ -3409,6 +3397,7 @@ export default function WorkoutScreen() {
             Anterior
           </Text>
         </Pressable>
+        ) : null}
 
         {isLastExercise ? (
           <Button
@@ -3426,7 +3415,7 @@ export default function WorkoutScreen() {
             }
             onPress={handleSave}
             loading={saving}
-            style={{ flex: 1, marginLeft: spacing.sm }}
+            style={{ flex: 1, marginLeft: bloqueVisible.inicio > 0 ? spacing.sm : 0 }}
           />
         ) : (
           <Pressable
@@ -3509,6 +3498,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     marginBottom: spacing.md,
   },
+  apuntarEnApp: { alignSelf: 'center', paddingVertical: spacing.sm, marginBottom: spacing.md },
+  apuntarEnAppTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   previaTitulo: {
     ...typography.label,
     color: colors.textMuted,
@@ -3583,13 +3574,6 @@ const styles = StyleSheet.create({
   ssPasoCab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   ssLetraEnFila: { ...typography.body, color: colors.primaryBright, fontFamily: fonts.heading },
   ssNombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flexShrink: 1 },
-  ssAhora: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: radius.full,
-    backgroundColor: colors.primary,
-  },
-  ssAhoraTexto: { fontSize: 9, letterSpacing: 0.8, fontFamily: fonts.heading, color: colors.onPrimary },
   ssMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   ssUltima: { ...typography.small, color: colors.primary, marginTop: 2, fontSize: 12 },
   ssCampos: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
@@ -3846,7 +3830,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.primaryMuted,
   },
-  botonHecha: { marginTop: spacing.sm },
   navNextText: { color: colors.onPrimary },
   exerciseCard: { marginBottom: spacing.md },
   exerciseCardDone: { opacity: 0.55 },
@@ -3856,16 +3839,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.xs,
   },
-  exerciseCategory: {
-    ...typography.small,
-    color: colors.primary,
-    fontSize: 12,
-    marginTop: 2,
-    letterSpacing: 0.3,
-  },
   exerciseName: { ...typography.h3, color: colors.text, flex: 1 },
   exerciseNameCurrent: { color: colors.primaryBright },
-  prevRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm },
+  prevRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   prevText: { ...typography.small, color: colors.primary, fontFamily: fonts.medium },
   restoredBanner: {
     flexDirection: 'row',
@@ -3995,33 +3971,19 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: spacing.sm,
   },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
-  metaChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  metaChipBand: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
-  metaChipCluster: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  // Lastre en azul (distinto de la goma dorada), sin emojis.
-  metaChipWeighted: { borderColor: 'rgba(91,155,213,0.5)', backgroundColor: 'rgba(91,155,213,0.14)' },
-  metaChipWeightedText: { color: '#7FB3E0' },
-  metaChipText: { ...typography.small, color: colors.primaryBright, fontSize: 11, fontFamily: fonts.semiBold },
+  // Lo que toca, en una línea de texto (antes, una fila de pastillas).
+  metaLinea: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, marginTop: 2, marginBottom: spacing.sm },
+  // Técnica y última vez, en una sola fila.
+  consultaFila: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.sm },
   videoLink: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    alignSelf: 'flex-start',
-    marginBottom: spacing.sm,
   },
   videoLinkText: {
     ...typography.small,
     color: colors.primary,
     fontFamily: fonts.semiBold,
-    textDecorationLine: 'underline',
   },
   setHead: {
     flexDirection: 'row',

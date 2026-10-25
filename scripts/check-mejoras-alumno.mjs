@@ -1,7 +1,8 @@
 /**
  * Las mejoras del alumno de la tanda de octubre.
  *
- *  1. Modo foco: la serie que toca, encendida, y un botón grande "Hecha".
+ *  1. Modo foco: la serie que toca, encendida, y se marca con su ✓ (sin un
+ *     botón grande "Hecha" aparte: eran dos formas de hacer lo mismo).
  *  2. Widget "Hoy" en la pantalla del móvil (Android).
  *  3. Resumen del domingo por push.
  *  4. El récord con su historia: cuánto ha subido y desde cuándo.
@@ -28,8 +29,12 @@ console.log('\n1. Modo foco');
 {
   const w = lee('app/(client)/workout.tsx');
   ok('la serie que toca se enciende', /const serieQueToca = exercise\.sets\.findIndex\(\(s\) => !s\.completed\);/.test(w) && /styles\.setRowAhora/.test(w));
-  ok('botón grande "Hecha" en el ejercicio suelto', /updateSet\(exerciseIndex, serieQueToca, 'completed', true\)/.test(w));
-  ok('y en la superserie', /updateSet\(siguiente\.ejercicio, siguiente\.serie, 'completed', true\)/.test(w));
+  ok('cada serie se marca con su ✓', /updateSet\(exerciseIndex, setIndex, 'completed', !set\.completed\)/.test(w));
+  // Sin el botón grande "Hecha · Serie N" debajo: dos formas de hacer lo
+  // mismo, una al lado de la otra, era justo el exceso de botones.
+  ok('sin botón grande "Hecha" aparte, ni suelto ni en la superserie',
+    !/updateSet\(exerciseIndex, serieQueToca, 'completed', true\)/.test(w) &&
+      !/updateSet\(siguiente\.ejercicio, siguiente\.serie, 'completed', true\)/.test(w));
   ok('"Siguiente" solo en dorado con el bloque hecho', /bloqueVisibleHecho && styles\.navNext/.test(w));
 }
 

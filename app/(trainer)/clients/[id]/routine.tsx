@@ -1,5 +1,6 @@
 import { diaMes, inicioDelDia } from '../../../../lib/fechas';
 import { t, frase  } from '../../../../lib/idioma';
+import { unido } from '../../../../lib/texto';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -23,6 +24,7 @@ import { Chip, ChipRow } from '../../../../components/Chip';
 import { DiasSemana } from '../../../../components/DiasSemana';
 import { Opciones } from '../../../../components/Opciones';
 import { Segmented } from '../../../../components/Segmented';
+import { QuickSheet } from '../../../../components/QuickSheet';
 import {
   ajustesDeFusion,
   combinarRutinas,
@@ -78,8 +80,10 @@ import {
 } from '../../../../lib/planPersonalizado';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import {
+  modoDelAlumno,
   queVeElAlumno,
   visibilidadAGuardar,
+  type ModoDelAlumno,
   type QueVeElAlumno,
 } from '../../../../lib/visibilidad';
 import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
@@ -172,6 +176,22 @@ export default function RoutineEditorScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [pickerForDay, setPickerForDay] = useState<string | null>(null);
   const [copyPickerOpen, setCopyPickerOpen] = useState(false);
+  /*
+   * TODO LO QUE NO ES MONTAR LA RUTINA, EN UN MENÚ.
+   *
+   * Arriba había tres botones (Borrador, Plantillas, Copiar) y abajo otros
+   * tres (Ver como el alumno, Aplicar a otros, Guardar también como
+   * plantilla): seis botones alrededor de lo único que se viene a hacer, que es
+   * poner ejercicios y guardar. Ahora van juntos en "Más", al lado del nombre,
+   * y abajo queda "Guardar rutina" solo.
+   */
+  const [masAbierto, setMasAbierto] = useState(false);
+  /** El menú de un día (duplicar, borrar), por id de día. */
+  const [menuDia, setMenuDia] = useState<string | null>(null);
+  /** "Lo que ve el alumno", plegado: se toca poco y ocupaba media pantalla. */
+  const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
+  /** Los días con "más del día" (EMOM, aproximaciones) a la vista. */
+  const [masDelDia, setMasDelDia] = useState<Set<string>>(() => new Set());
   const [otherClients, setOtherClients] = useState<UserProfile[]>([]);
   const [copying, setCopying] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -219,6 +239,8 @@ export default function RoutineEditorScreen() {
    * ejercicio). Vale para los tres tipos de plan; ver lib/visibilidad.ts.
    */
   const [visibilidad, setVisibilidad] = useState<QueVeElAlumno>({});
+  /** Cómo ve el alumno su entreno: apuntando en la app o en tabla. */
+  const [modoAlumno, setModoAlumno] = useState<ModoDelAlumno>('app');
   // Lo mismo, ya resuelto: qué se enseña en el editor y en el entreno.
   const seMuestra = queVeElAlumno({ visibilidad });
   /*
@@ -398,6 +420,7 @@ export default function RoutineEditorScreen() {
         }
         if (existing.scheduleLabel) setScheduleLabel(flexLabel(existing.scheduleLabel));
         setVisibilidad(queVeElAlumno(existing));
+        setModoAlumno(modoDelAlumno(existing));
         if (existing.cycleStartDate) setCycleStartDate(existing.cycleStartDate);
         fechaAlAbrir.current = existing.cycleStartDate ?? null;
         if (existing.personalizado) {
@@ -950,6 +973,7 @@ export default function RoutineEditorScreen() {
     setSchedule(t.schedule ?? 'weekly');
     if (t.scheduleLabel) setScheduleLabel(flexLabel(t.scheduleLabel));
     setVisibilidad(queVeElAlumno(t));
+    setModoAlumno(modoDelAlumno(t));
     if (t.personalizado) {
       // La prescripción se resuelve aparte: la de POR_DEFECTO (RIR) pisaría la
           // herencia de un plan guardado antes de que existiera (ver prescripcionDe).
@@ -999,6 +1023,7 @@ export default function RoutineEditorScreen() {
         scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
         personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
         visibilidad: visibilidadAGuardar(visibilidad),
+        modoAlumno,
         days: diasAGuardar(),
       });
       setTemplates(await getRoutineTemplatesForTrainer(profile.uid));
@@ -1036,6 +1061,7 @@ export default function RoutineEditorScreen() {
           scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
           personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
           visibilidad: visibilidadAGuardar(visibilidad),
+          modoAlumno,
         });
         await setActiveRoutine(a.uid, nuevaId, profile.uid);
         if (schedule !== 'flex') await setClientTrackRir(a.uid, pedirEsfuerzo).catch(() => {});
@@ -1075,6 +1101,7 @@ export default function RoutineEditorScreen() {
         personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
         // Los tres tipos de plan: se guarda siempre, con las dos claves.
         visibilidad: visibilidadAGuardar(visibilidad),
+        modoAlumno,
       };
       if (cambioLaFecha) fechaAlAbrir.current = cycleStartDate;
       const dias = diasAGuardar();
@@ -1134,6 +1161,7 @@ export default function RoutineEditorScreen() {
     nivelesIntensidadTexto,
     // Lo mismo: sin ella se guardaría lo que se veía al abrir la pantalla.
     visibilidad,
+    modoAlumno,
     pedirEsfuerzo,
     router,
   ]);
@@ -1142,7 +1170,31 @@ export default function RoutineEditorScreen() {
 
   return (
     <ScreenContainer>
-      <TextField label="Nombre de la rutina" value={name} onChangeText={setName} />
+      <View style={styles.nombreFila}>
+        <TextField
+          label="Nombre de la rutina"
+          value={name}
+          onChangeText={setName}
+          containerStyle={{ flex: 1, marginBottom: 0 }}
+        />
+        <Pressable onPress={() => setMasAbierto(true)} style={styles.masBtn} hitSlop={6} accessibilityLabel="Más opciones">
+          <Ionicons name="ellipsis-horizontal" size={20} color={colors.primary} />
+          <Text style={styles.masBtnTexto}>Más</Text>
+        </Pressable>
+      </View>
+      <QuickSheet
+        visible={masAbierto}
+        onClose={() => setMasAbierto(false)}
+        titulo="Más opciones"
+        acciones={[
+          { icono: 'albums-outline', texto: 'Usar una plantilla', onPress: () => { setMasAbierto(false); openTemplates(); } },
+          { icono: 'copy-outline', texto: 'Copiar de otro alumno', onPress: () => { setMasAbierto(false); openCopyPicker(); } },
+          { icono: 'sparkles-outline', texto: 'Generar un borrador', onPress: () => { setMasAbierto(false); handleGenerateDraft(); } },
+          { icono: 'eye-outline', texto: 'Ver como el alumno', onPress: () => { setMasAbierto(false); setVerComoAlumno(true); } },
+          { icono: 'people-outline', texto: 'Aplicar a otros alumnos', onPress: () => { setMasAbierto(false); setAplicarVarios(true); } },
+          { icono: 'bookmark-outline', texto: 'Guardar como plantilla', onPress: () => { setMasAbierto(false); saveAsTemplate(); } },
+        ]}
+      />
 
       {copyPickerOpen ? (
         <Card style={styles.copyCard}>
@@ -1213,31 +1265,7 @@ export default function RoutineEditorScreen() {
             style={{ marginTop: spacing.xs }}
           />
         </Card>
-      ) : (
-        <View style={styles.actionsRow}>
-          <Button
-            title="Borrador"
-            variant="secondary"
-            compacto
-            onPress={handleGenerateDraft}
-            style={styles.accionAncha}
-          />
-          <Button
-            title="Plantillas"
-            variant="secondary"
-            compacto
-            onPress={openTemplates}
-            style={styles.accionAncha}
-          />
-          <Button
-            title="Copiar"
-            variant="secondary"
-            compacto
-            onPress={openCopyPicker}
-            style={styles.accionAncha}
-          />
-        </View>
-      )}
+      ) : null}
 
       {/* Lo que hará TODOS los días aparte del plan. Va aquí, pegado a la
           programación, porque es cuando se está decidiendo qué entrena y
@@ -1644,6 +1672,44 @@ export default function RoutineEditorScreen() {
         )}
 
         {/*
+         * CÓMO LO VE EL ALUMNO: apuntando cada serie en la app, o en una tabla
+         * para entrenar sin ella (y al acabar, "Lo he hecho"). Se decide
+         * alumno por alumno: va en su rutina.
+         */}
+        <Pressable onPress={() => setAjustesAbiertos((v) => !v)} style={styles.ajustesCab} hitSlop={6}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.persoTitulo}>Lo que ve el alumno</Text>
+            {!ajustesAbiertos ? (
+              <Text style={styles.ajustesResumen} numberOfLines={1}>
+                {unido(
+                  modoAlumno === 'tabla' ? t('En tabla') : t('Apunta en la app'),
+                  seMuestra.intensidad ? t('intensidad') : null,
+                  seMuestra.objetivo ? t('objetivo') : null,
+                  schedule !== 'flex' && pedirEsfuerzo ? t('esfuerzo') : null
+                )}
+              </Text>
+            ) : null}
+          </View>
+          <Ionicons name={ajustesAbiertos ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+        </Pressable>
+        {ajustesAbiertos ? (
+        <>
+        <Segmented<ModoDelAlumno>
+          opciones={[
+            { valor: 'app', texto: 'Apunta en la app', icono: 'checkbox-outline' },
+            { valor: 'tabla', texto: 'En tabla', icono: 'grid-outline' },
+          ]}
+          valor={modoAlumno}
+          onChange={setModoAlumno}
+          compacto
+        />
+        <Text style={styles.persoAyuda}>
+          {modoAlumno === 'tabla'
+            ? 'Ve su plan en una tabla para entrenar sin la app, y al acabar marca "Lo he hecho".'
+            : 'Empieza el entreno en la app y marca cada serie.'}
+        </Text>
+
+        {/*
          * QUÉ VE EL ALUMNO AL ENTRENAR. En los tres tipos de plan.
          *
          * Apagado, desaparece para los dos: del entreno del alumno y de este
@@ -1702,6 +1768,8 @@ export default function RoutineEditorScreen() {
             </>
           );
         })()}
+        </>
+        ) : null}
       </Card>
 
       <DragList
@@ -1761,11 +1829,10 @@ export default function RoutineEditorScreen() {
             <View {...asaDia} style={styles.moveDayBtn}>
               <Ionicons name="reorder-three" size={18} color={colors.textMuted} />
             </View>
-            <Pressable onPress={() => duplicateDay(day.id)} style={styles.removeDayBtn} hitSlop={8}>
-              <Ionicons name="copy-outline" size={17} color={colors.textMuted} />
-            </Pressable>
-            <Pressable onPress={() => removeDay(day.id)} style={styles.removeDayBtn} hitSlop={8}>
-              <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            {/* Duplicar y borrar, en el menú del día: dos iconos menos en
+                cada tarjeta, y borrar deja de estar a un toque mal dado. */}
+            <Pressable onPress={() => setMenuDia(day.id)} style={styles.removeDayBtn} hitSlop={8} accessibilityLabel="Opciones del día">
+              <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
             </Pressable>
             <Pressable onPress={() => toggleDayExpanded(day.id)} hitSlop={8}>
               <Ionicons
@@ -1989,7 +2056,17 @@ export default function RoutineEditorScreen() {
           </View>
           )}
 
-          {!day.isRest ? (
+          {!day.isRest && !(masDelDia.has(day.id) || day.showIntervalTimer || day.approachesNote) ? (
+            <Pressable
+              onPress={() => setMasDelDia((prev) => new Set(prev).add(day.id))}
+              style={styles.masDelDia}
+              hitSlop={6}
+            >
+              <Ionicons name="add-circle-outline" size={15} color={colors.textMuted} />
+              <Text style={styles.masDelDiaTexto}>Calentamiento y temporizador</Text>
+            </Pressable>
+          ) : null}
+          {!day.isRest && (masDelDia.has(day.id) || day.showIntervalTimer || day.approachesNote) ? (
             <View style={styles.dayTools}>
               <Pressable
                 onPress={() => toggleIntervalTimer(day.id)}
@@ -2088,12 +2165,9 @@ export default function RoutineEditorScreen() {
                     <Ionicons name="chevron-down" size={18} color={colors.text} />
                   </Pressable>
                 </View>
-                {/* Asa: mantener pulsado aquí y arrastrar. Va aparte porque la
-                    ficha está llena de campos y colocar el cursor no debe
-                    mover el ejercicio. */}
-                <View {...asa} style={styles.moveBtn}>
-                  <Ionicons name="reorder-three" size={20} color={colors.textMuted} />
-                </View>
+                {/* Sin asa de arrastrar: eran tres formas de mover lo mismo
+                    (flechas, asa y menú). Las flechas, de un toque, para
+                    "uno más arriba"; el menú, para llevarlo a otro día. */}
                 <Pressable
                   onPress={() => setMovePicker({ dayId: day.id, ex })}
                   style={styles.moveBtn}
@@ -2677,20 +2751,18 @@ export default function RoutineEditorScreen() {
             </ScrollView>
       </Sheet>
 
+      <QuickSheet
+        visible={menuDia !== null}
+        onClose={() => setMenuDia(null)}
+        titulo="Opciones del día"
+        acciones={[
+          { icono: 'copy-outline', texto: 'Duplicar el día', onPress: () => { if (menuDia) duplicateDay(menuDia); setMenuDia(null); } },
+          { icono: 'trash-outline', texto: 'Borrar el día', peligro: true, onPress: () => { if (menuDia) removeDay(menuDia); setMenuDia(null); } },
+        ]}
+      />
+
       <Button title="+ Añadir día" variant="ghost" onPress={addDay} style={styles.addDayBtn} />
 
-      {/* Antes de guardar: verla como la verá el alumno, y llevarla a más de
-          uno de golpe. */}
-      <View style={styles.extrasFila}>
-        <Pressable onPress={() => setVerComoAlumno(true)} style={styles.extra} hitSlop={6}>
-          <Ionicons name="eye-outline" size={16} color={colors.primary} />
-          <Text style={styles.extraTexto}>Ver como el alumno</Text>
-        </Pressable>
-        <Pressable onPress={() => setAplicarVarios(true)} style={styles.extra} hitSlop={6}>
-          <Ionicons name="people-outline" size={16} color={colors.primary} />
-          <Text style={styles.extraTexto}>Aplicar a otros</Text>
-        </Pressable>
-      </View>
       <VistaDelAlumno
         visible={verComoAlumno}
         onClose={() => setVerComoAlumno(false)}
@@ -2710,27 +2782,28 @@ export default function RoutineEditorScreen() {
 
       {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
       <Button title="Guardar rutina" onPress={handleSave} loading={saving} />
-      {/*
-       * GUARDAR COMO PLANTILLA, AL LADO DE GUARDAR.
-       *
-       * Existía, pero escondido: había que abrir "Plantillas" arriba del todo
-       * para encontrar el botón, y un entrenador que acaba de montar su método
-       * no va a buscar arriba lo que quiere hacer abajo. Se guarda entero —los
-       * días, los ejercicios y, en el personalizado, cómo funciona por dentro y
-       * qué prescribe—, así que la próxima vez es aplicar y listo.
-       */}
-      <Button
-        title="Guardar también como plantilla"
-        variant="secondary"
-        onPress={saveAsTemplate}
-        loading={savingTemplate}
-        style={[styles.saveBtn, { marginTop: spacing.sm }]}
-      />
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  nombreFila: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, marginBottom: spacing.md },
+  masBtn: {
+    height: 48,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.surfaceAlt,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  masBtnTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  ajustesCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
+  ajustesResumen: { ...typography.small, color: colors.textMuted, marginTop: -4 },
+  masDelDia: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: spacing.xs, marginBottom: spacing.sm },
+  masDelDiaTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   sugerencia: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2743,16 +2816,6 @@ const styles = StyleSheet.create({
   },
   sugerenciaTexto: { ...typography.small, color: colors.text, flex: 1 },
   sugerenciaAplicar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  extrasFila: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.lg,
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  extra: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: spacing.xs },
-  extraTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   dayCardDragging: { borderColor: colors.hairline },
   dayCard: { marginBottom: spacing.md },
   scheduleCard: { marginBottom: spacing.md },
@@ -3067,13 +3130,6 @@ const styles = StyleSheet.create({
    * "r" suelta debajo. Con un ancho mínimo, cuando los tres ya no caben la fila
    * se parte en dos y cada botón vuelve a tener sitio para su texto.
    */
-  actionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  accionAncha: { flexGrow: 1, flexShrink: 1, flexBasis: 96, minWidth: 96 },
   templateRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3102,5 +3158,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
-  saveBtn: { marginBottom: spacing.xl },
 });

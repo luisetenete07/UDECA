@@ -2,7 +2,7 @@ import type { MacrosPorKg } from './macrosPorKg';
 import type { MuscleId } from './muscles';
 import type { PausaPlan } from './pausa';
 import type { EsfuerzoApuntado, PlanPersonalizado } from './planPersonalizado';
-import type { QueVeElAlumno } from './visibilidad';
+import type { ModoDelAlumno, QueVeElAlumno } from './visibilidad';
 
 // Dos papeles: el entrenador, que paga la plataforma, y su alumno, que no.
 // (Hubo un tercero, el atleta que se entrenaba solo; se quitó para centrar el
@@ -836,6 +836,11 @@ export interface Routine {
    * de plan. Sin esto, todo visible, como siempre (ver lib/visibilidad.ts).
    */
   visibilidad?: QueVeElAlumno;
+  /**
+   * Cómo ve el alumno su entreno: apuntando en la app ('app', o sin poner) o
+   * en una tabla para entrenar sin ella ('tabla'). Ver lib/visibilidad.ts.
+   */
+  modoAlumno?: ModoDelAlumno;
   /** (Obsoleto) intensidad global; ahora se define por día en RoutineDay. */
   intensity?: number;
   createdAt: number;
@@ -862,6 +867,8 @@ export interface RoutineTemplate {
   personalizado?: PlanPersonalizado;
   /** Qué ve el alumno al entrenar: también viaja con la plantilla. */
   visibilidad?: QueVeElAlumno;
+  /** Y cómo lo ve: en la app o en tabla. */
+  modoAlumno?: ModoDelAlumno;
   days: RoutineDay[];
   createdAt: number;
 }

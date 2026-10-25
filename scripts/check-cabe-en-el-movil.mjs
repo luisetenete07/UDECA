@@ -111,8 +111,11 @@ ok('ya no hay una vista en medio con el estilo',
 
 console.log('\nLos botones que van en fila caben o se parten en dos filas');
 const rutina = sinComentarios(lee('app/(trainer)/clients/[id]/routine.tsx'));
-ok('la fila de acciones puede partirse', /actionsRow: \{[\s\S]{0,120}flexWrap: 'wrap'/.test(rutina));
-ok('y cada botón tiene un ancho mínimo', /minWidth: 96/.test(rutina));
+// La fila de tres botones (Borrador, Plantillas, Copiar) ya no existe: van en
+// "Más", al lado del nombre. Lo que no puede volver es una fila de botones que
+// no quepa en un móvil de 320.
+ok('arriba, el nombre y "Más" en la misma fila', /nombreFila: \{/.test(rutina) && /onPress=\{\(\) => setMasAbierto\(true\)\}/.test(rutina));
+ok('sin la fila de tres botones', !/title="Borrador"/.test(rutina) && !/title="Plantillas"/.test(rutina));
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);
 process.exit(fallos === 0 ? 0 : 1);

@@ -159,16 +159,15 @@ export function RestTimer({ seconds, title, onDone }: RestTimerProps) {
         />
       </View>
       <View style={styles.actionsRow}>
+        {/* Dos botones: un poco más de descanso, o seguir ya. Había también
+            "−15 s", pero acortar es lo mismo que saltar un poco antes: un
+            botón más que pensar entre serie y serie. */}
         <Pressable onPress={() => addTime(15)} style={styles.action} hitSlop={8}>
           <Ionicons name="add" size={14} color={colors.text} />
           <Text style={styles.actionText}>15s</Text>
         </Pressable>
-        <Pressable onPress={() => addTime(-15)} style={styles.action} hitSlop={8}>
-          <Ionicons name="remove" size={14} color={colors.text} />
-          <Text style={styles.actionText}>15s</Text>
-        </Pressable>
         <Pressable onPress={handleSkip} style={[styles.action, styles.actionSkip]} hitSlop={8}>
-          <Text style={[styles.actionText, styles.actionSkipText]}>Saltar descanso</Text>
+          <Text style={[styles.actionText, styles.actionSkipText]}>Seguir</Text>
           <Ionicons name="play-skip-forward" size={13} color={colors.onPrimary} />
         </Pressable>
       </View>

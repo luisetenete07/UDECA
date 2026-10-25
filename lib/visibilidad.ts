@@ -49,3 +49,21 @@ export function queVeElAlumno(
 export function visibilidadAGuardar(v: QueVeElAlumno | undefined): Required<QueVeElAlumno> {
   return queVeElAlumno({ visibilidad: v });
 }
+
+/**
+ * CÓMO VE EL ALUMNO SU ENTRENO. Lo decide el entrenador, alumno por alumno
+ * (va en la rutina de cada uno).
+ *
+ *  - 'app': lo de siempre. Empieza el entreno y apunta cada serie.
+ *  - 'tabla': su plan como una tabla bien ordenada (ejercicio, series,
+ *    repeticiones, descanso, objetivo) para entrenar SIN usar la app: la
+ *    mira, entrena, y al acabar pulsa "Lo he hecho". Para quien no quiere ir
+ *    apuntando con el móvil en la mano, o entrena donde no puede.
+ *
+ * Sin elegir, 'app': así estaba todo el mundo.
+ */
+export type ModoDelAlumno = 'app' | 'tabla';
+
+export function modoDelAlumno(rutina: { modoAlumno?: ModoDelAlumno } | null | undefined): ModoDelAlumno {
+  return rutina?.modoAlumno === 'tabla' ? 'tabla' : 'app';
+}
