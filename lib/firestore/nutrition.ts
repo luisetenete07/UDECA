@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, deleteField, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { MealLog, NutritionPlan } from '../types';
@@ -37,8 +37,19 @@ export async function createNutritionPlan(
   return ref.id;
 }
 
-export async function updateNutritionPlan(id: string, data: Partial<NutritionPlan>) {
-  await updateDoc(doc(db, 'nutritionPlans', id), stripUndefined({ ...data, updatedAt: Date.now() }));
+export async function updateNutritionPlan(
+  id: string,
+  data: Partial<NutritionPlan>,
+  /**
+   * Campos que se BORRAN: al pasar un plan de "por kilo" a "en gramos" se
+   * quita lo de por kilo, y al quitar la creatina, la creatina.
+   */
+  quitar: ('porKg' | 'creatinaG')[] = []
+) {
+  await updateDoc(doc(db, 'nutritionPlans', id), {
+    ...stripUndefined({ ...data, updatedAt: Date.now() }),
+    ...Object.fromEntries(quitar.map((k) => [k, deleteField()])),
+  });
 }
 
 /** Marca este plan como activo y desactiva los demás planes del cliente. */

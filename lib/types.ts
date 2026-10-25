@@ -1,3 +1,4 @@
+import type { MacrosPorKg } from './macrosPorKg';
 import type { MuscleId } from './muscles';
 import type { PausaPlan } from './pausa';
 import type { EsfuerzoApuntado, PlanPersonalizado } from './planPersonalizado';
@@ -1146,6 +1147,14 @@ export interface NutritionPlan {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  /**
+   * Si el entrenador lo puso por kilo de peso (lib/macrosPorKg.ts): sus g/kg,
+   * el objetivo y el peso con el que se calculó. Los gramos de arriba salen de
+   * aquí. Sin esto, el plan se escribió en gramos.
+   */
+  porKg?: MacrosPorKg;
+  /** Creatina al día (g), si el plan la lleva. */
+  creatinaG?: number;
   notes?: string;
   createdAt: number;
   updatedAt: number;

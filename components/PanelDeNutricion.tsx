@@ -10,6 +10,7 @@ import { CardsSkeleton } from './Skeleton';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
+import { frase } from '../lib/idioma';
 import {
   createMealLog,
   getActiveNutritionPlanForClient,
@@ -18,6 +19,7 @@ import {
 import { getMealBooksForTrainer } from '../lib/firestore/mealBooks';
 import { seCorta } from '../lib/libretaDeComidas';
 import { objetivosDelDia } from '../lib/macrosDelDia';
+import { textoDeGramos, textoDeRango, type MacrosPorKg, type Rango } from '../lib/macrosPorKg';
 import { updateUserProfile } from '../lib/firestore/users';
 import { MacroCalculator } from './MacroCalculator';
 import { ContadorDePasos } from './ContadorDePasos';
@@ -283,6 +285,9 @@ export function PanelDeNutricion() {
                 Los ha puesto tu entrenador. Si calculas los tuyos, mandan los tuyos.
               </Text>
             ) : null}
+            {/* Si el entrenador lo puso por kilo, su criterio y lo que sale
+                en gramos: un rango se entiende mejor que un número suelto. */}
+            {targets.fromCoach && plan?.porKg ? <CriterioPorKg porKg={plan.porKg} /> : null}
           </>
         )}
 
@@ -566,7 +571,45 @@ function MacroTile({
   );
 }
 
+/** El plan del entrenador por kg de peso: cada macro, sus g/kg y sus gramos. */
+function CriterioPorKg({ porKg }: { porKg: MacrosPorKg }) {
+  const filas: { nombre: string; rango?: Rango; unidad?: string }[] = [
+    { nombre: 'Proteína', rango: porKg.proteina },
+    { nombre: 'Carbohidratos', rango: porKg.carbos },
+    { nombre: 'Grasas', rango: porKg.grasas },
+    { nombre: 'Creatina', rango: porKg.creatina, unidad: 'g/día' },
+  ];
+  return (
+    <View style={styles.porKg}>
+      <Text style={styles.porKgTitulo}>
+        {frase`Por kg de peso (${String(porKg.pesoKg).replace('.', ',')} kg)`}
+      </Text>
+      {filas.map((f) =>
+        f.rango ? (
+          <View key={f.nombre} style={styles.porKgFila}>
+            <Text style={styles.porKgNombre}>{f.nombre}</Text>
+            <Text style={styles.porKgPorKg}>{frase`${textoDeRango(f.rango, '–')} g/kg`}</Text>
+            <Text style={styles.porKgGramos}>{textoDeGramos(f.rango, porKg.pesoKg, f.unidad)}</Text>
+          </View>
+        ) : null
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  porKg: {
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairlineFaint,
+  },
+  porKgTitulo: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, marginBottom: 4 },
+  porKgFila: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3, gap: spacing.sm },
+  porKgNombre: { ...typography.small, color: colors.text, flex: 1 },
+  porKgPorKg: { ...typography.small, color: colors.textFaint },
+  porKgGramos: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, minWidth: 78, textAlign: 'right' },
   section: { marginBottom: spacing.md },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   subtitulo: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },

@@ -17,7 +17,8 @@ import {
   OBJETIVO_MINIMO,
   OBJETIVO_POR_DEFECTO,
 } from '../../../../lib/pasos';
-import { conMiles } from '../../../../lib/texto';
+import { conMiles, unido } from '../../../../lib/texto';
+import { textoDeRango } from '../../../../lib/macrosPorKg';
 import { getCoursesForTrainer } from '../../../../lib/firestore/courses';
 import { getCourseProgress } from '../../../../lib/firestore/courseProgress';
 import {
@@ -999,6 +1000,19 @@ export default function ClientDetailScreen() {
                   {nutritionPlan.dailyCalories} kcal · P{nutritionPlan.proteinG}g C
                   {nutritionPlan.carbsG}g G{nutritionPlan.fatG}g
                 </Text>
+                {/* Puesto por kilo: el criterio, que es lo que el entrenador
+                    recuerda ("1,8 de proteína"), más que los gramos. */}
+                {nutritionPlan.porKg ? (
+                  <Text style={styles.routineMeta}>
+                    {unido(
+                      frase`P ${textoDeRango(nutritionPlan.porKg.proteina, '–')} g/kg`,
+                      frase`C ${textoDeRango(nutritionPlan.porKg.carbos, '–')}`,
+                      frase`G ${textoDeRango(nutritionPlan.porKg.grasas, '–')}`,
+                      nutritionPlan.creatinaG ? frase`creatina ${String(nutritionPlan.creatinaG).replace('.', ',')} g` : null,
+                      frase`con ${String(nutritionPlan.porKg.pesoKg).replace('.', ',')} kg`
+                    )}
+                  </Text>
+                ) : null}
               </>
             ) : client.nutritionTargets ? (
               <>
