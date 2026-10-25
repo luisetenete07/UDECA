@@ -13,6 +13,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { modoDelAlumno } from '../lib/visibilidad.ts';
+import { esfuerzoDelEjercicio, textoDeEsfuerzo } from '../lib/planPersonalizado.ts';
 import { alargarDescanso, getRest, restantes, startRest, stopRest, stopRestSiEs } from '../lib/restTimerStore.ts';
 
 let fallos = 0;
@@ -30,7 +31,8 @@ console.log('\nEntrenando, menos cosas a la vista');
   ok('lo que toca, en una línea de texto', /<Text style=\{styles\.metaLinea\}>/.test(w) && !/styles\.metaChip\b/.test(w));
   ok('técnica y última vez, en la misma fila', /<View style=\{styles\.consultaFila\}>/.test(w));
   ok('sin etiqueta "AHORA": la fila encendida ya lo dice', !/>AHORA</.test(w) && /styles\.setRowAhora/.test(w));
-  ok('el esfuerzo, al acabar el ejercicio', /pideEsfuerzoPorEjercicio && \(isDone \|\| exercise\.saltado\)/.test(w));
+  ok('sin la pregunta del esfuerzo "al acabar" (ni del ejercicio ni de la superserie)',
+    !/Al acabar: ¿cuánto te ha costado cada uno\?/.test(w) && !/updateExerciseEsfuerzo/.test(w));
   ok('en el primero no hay "Anterior"', /\{bloqueVisible\.inicio > 0 \? \(\s*<Pressable/.test(w));
   const descanso = lee('components/RestTimer.tsx');
   ok('el descanso: "+15 s" y "Seguir", sin "−15 s"', /alargarDescanso\(15\)/.test(descanso) && !/(addTime|alargarDescanso)\(-15\)/.test(descanso) && />Seguir</.test(descanso));
@@ -94,6 +96,29 @@ console.log('\nEl editor de rutinas, más despejado');
   ok('duplicar y borrar el día, en su menú', /titulo="Opciones del día"/.test(editor));
   ok('calentamiento y temporizador, plegados hasta que se usan', /Calentamiento y temporizador/.test(editor));
   ok('el ejercicio se mueve con flechas o con su menú (sin asa)', !/<View \{\.\.\.asa\}/.test(editor));
+}
+
+console.log('\nEl esfuerzo, serie a serie, mientras descansa');
+{
+  // En RIR, el ejercicio se queda con la serie más dura: si una fue al fallo,
+  // el ejercicio fue al fallo (es lo que lee la bandeja del entrenador).
+  const r = esfuerzoDelEjercicio([{ esfuerzo: '3', rir: 3 }, { esfuerzo: 'Fallo', rir: 0 }, {}], 'rir');
+  ok('en RIR, el ejercicio se queda con la serie más dura', r.rir === 0 && r.esfuerzo?.valor === 'Fallo');
+  ok('sin ninguna contestada, nada', JSON.stringify(esfuerzoDelEjercicio([{}, {}], 'rir')) === '{}');
+  ok('con otra escala, la última contestada', esfuerzoDelEjercicio([{ esfuerzo: 'A' }, { esfuerzo: 'C' }], 'propia').esfuerzo?.valor === 'C');
+  ok('y un porcentaje nunca acaba en el RIR', esfuerzoDelEjercicio([{ esfuerzo: '80 %' }], 'porcentaje').rir === undefined);
+  ok('la etiqueta de la serie', textoDeEsfuerzo('rir', '2') === 'RIR 2' && textoDeEsfuerzo('rir', 'Fallo') === 'Fallo' && textoDeEsfuerzo('propia', 'B') === 'B');
+
+  ok('al marcar una serie se pregunta por ESA serie', /value === true && pideEsfuerzoPorEjercicio\) \{\s*setPendienteEsfuerzo\(\{ ejercicio: exerciseIndex, serie: setIndex \}\);/.test(w));
+  ok('la pregunta va encima del crono, en el ejercicio suelto',
+    /\{preguntaDeSerie\(\{ inicio: exerciseIndex, fin: exerciseIndex \}\)\}\s*\{activeRest \?/.test(w));
+  ok('se guarda en la serie, y el ejercicio sale de sus series',
+    /return \{ \.\.\.st, esfuerzo: valor/.test(w) && /esfuerzoDelEjercicio\(sets, escala\)/.test(w));
+  ok('lo dicho queda en la fila, y tocándolo se cambia', /\{etiquetaDeEsfuerzo\(exerciseIndex, setIndex\)\}/.test(w) && /\{etiquetaDeEsfuerzo\(i, r\)\}/.test(w));
+  const sesion = lee('app/(trainer)/clients/[id]/session.tsx');
+  ok('el entrenador ve el esfuerzo de cada serie', /const porSerie = ex\.sets\.some\(\(s\) => s\.esfuerzo\)/.test(sesion) && /textoDeEsfuerzo\(ex\.esfuerzo\?\.escala \?\? 'rir', set\.esfuerzo\)/.test(sesion));
+  const editor = lee('app/(trainer)/clients/[id]/routine.tsx');
+  ok('y en su editor se llama "En cada serie"', /texto: 'En cada serie'/.test(editor));
 }
 
 console.log(fallos === 0 ? '\n✔ El entreno y el editor, más sencillos' : `\n${fallos} fallo(s)`);

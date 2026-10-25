@@ -140,8 +140,11 @@ console.log('\nEn la pantalla del entreno');
   ok('el paso que toca se enciende', /esAhora && styles\.ssPasoAhora/.test(w));
   ok('entre paso y paso, "sin descanso"; al final, el descanso', /'sin descanso'/.test(w) && /Luego, descanso de \$\{/.test(w));
   ok('lo hecho y lo que queda, en una línea al pie', /rondas hechas`/.test(w) && /Quedan \$\{quedan\} rondas más/.test(w));
-  ok('el esfuerzo se pregunta en la última ronda', /\(hecho \|\| actual === ultimaRonda\)/.test(w));
-  ok('y sin contestarlo no se pasa solo al siguiente', /!faltaEsfuerzo\(conLaMarca, bloque\)/.test(w));
+  // El esfuerzo, serie a serie: la pregunta de la que se acaba de hacer va
+  // encima del crono, dentro de la tarjeta de la superserie.
+  ok('el esfuerzo se pregunta en cada serie, encima del descanso', /\{preguntaDeSerie\(b\)\}\s*\{activeRest \?/.test(w));
+  ok('y sin contestar la última no se pasa solo al siguiente',
+    /if \(pideEsfuerzoPorEjercicio\) \{\s*avanceTrasEsfuerzo\.current = \{ inicio: bloque\.inicio, fin: bloque\.fin, destino \};/.test(w));
   ok('Siguiente salta la superserie entera', /setViewIndex\(Math\.min\(log\.length - 1, bloqueVisible\.fin \+ 1\)\)/.test(w));
   ok('y antes de empezar ya se ve como bloque', /Superserie · sin descanso entre ellos/.test(w));
   ok('la serie suelta se avisa en la tarjeta', /Esta va sola: \$\{terminaron\} ya ha hecho sus series\./.test(w));

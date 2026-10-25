@@ -1542,15 +1542,17 @@ export default function RoutineEditorScreen() {
                   />
                 ) : null}
 
-                {/* 2 · CUÁNDO. Preguntar por cada ejercicio es lo más fino y lo
-                    más pesado; una vez al terminar es lo que la mayoría
-                    contesta de verdad; y hay quien no quiere preguntar nada. */}
+                {/* 2 · CUÁNDO. En cada serie, mientras descansa (un toque con el
+                    crono corriendo), es lo más fino; una vez al terminar es lo
+                    más ligero; y hay quien no quiere preguntar nada. El valor
+                    guardado sigue siendo 'ejercicio' para no tocar los planes
+                    que ya existen. */}
                 <Text style={styles.persoTitulo}>Cuándo se le pregunta</Text>
                 <Segmented
                   compacto
                   valor={perso.esfuerzo?.cuando ?? 'ejercicio'}
                   opciones={[
-                    { valor: 'ejercicio' as CuandoElEsfuerzo, texto: 'Por ejercicio' },
+                    { valor: 'ejercicio' as CuandoElEsfuerzo, texto: 'En cada serie' },
                     { valor: 'sesion' as CuandoElEsfuerzo, texto: 'Al terminar' },
                     { valor: 'nunca' as CuandoElEsfuerzo, texto: 'Nunca' },
                   ]}
@@ -1762,7 +1764,7 @@ export default function RoutineEditorScreen() {
               <Text style={styles.persoAyuda}>
                 Apagado no lo ve nadie; lo ya puesto se guarda.
                 {schedule !== 'flex' && pedirEsfuerzo
-                  ? ' El esfuerzo se le pregunta al terminar cada ejercicio.'
+                  ? ' El esfuerzo se le pregunta en cada serie, mientras descansa.'
                   : ''}
               </Text>
             </>

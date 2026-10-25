@@ -1055,6 +1055,14 @@ export interface LoggedSet {
   clusters?: string[];
   weight?: string;
   completed: boolean;
+  /**
+   * El esfuerzo de ESTA serie, en la escala del plan: 'Fallo', '2', '80 %',
+   * 'B'… Se pregunta al marcarla, mientras descansa (ver
+   * app/(client)/workout.tsx). Sin contestar, no existe.
+   */
+  esfuerzo?: string;
+  /** Con escala RIR, también como número (0 = al fallo). */
+  rir?: number;
 }
 
 /**
@@ -1073,11 +1081,11 @@ export interface LoggedExercise {
   /**
    * Repeticiones que quedaron en recámara (RIR), 0 = al fallo.
    *
-   * Va por EJERCICIO y no por serie a propósito: por serie es lo que hace un
-   * laboratorio, por ejercicio es lo que un entrenador usa de verdad, y es un
-   * toque en vez de cuatro. Cada pregunta en mitad de una serie se paga en
-   * abandono, así que solo se pide a quien sabe contestarla (ver
-   * `UserProfile.trackRir`).
+   * Se apunta POR SERIE (`LoggedSet.rir`), mientras se descansa, que es cuando
+   * se sabe y no cuesta nada: un toque con el crono corriendo. Aquí queda el de
+   * la serie MÁS DURA del ejercicio, para todo lo que ya leía este campo (el
+   * "al fallo" de la bandeja del entrenador, las medias del bloque, los
+   * informes). Ver `esfuerzoDelEjercicio` en lib/planPersonalizado.ts.
    */
   rir?: number;
   /**

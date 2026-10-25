@@ -678,6 +678,10 @@ export const EN: Record<string, string> = {
   'intensidad': 'intensity',
   'objetivo': 'target',
   'esfuerzo': 'effort',
+  // Esfuerzo por serie.
+  'En cada serie': 'On every set',
+  'El esfuerzo se le pregunta en cada serie, mientras descansa.': 'Effort is asked on every set, while resting.',
+  ' El esfuerzo se le pregunta en cada serie, mientras descansa.': ' Effort is asked on every set, while resting.',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

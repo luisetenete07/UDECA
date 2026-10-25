@@ -11,6 +11,7 @@ import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { getWorkoutLog } from '../../../../lib/firestore/workoutLogs';
 import { colors, fonts, spacing, typography } from '../../../../lib/theme';
 import { isDualMeasure, setMarks, type WorkoutLog } from '../../../../lib/types';
+import { textoDeEsfuerzo } from '../../../../lib/planPersonalizado';
 
 export default function SessionDetailScreen() {
   const { logId, id } = useLocalSearchParams<{ logId: string; id: string }>();
@@ -69,6 +70,8 @@ export default function SessionDetailScreen() {
         // Solo mostramos la columna de carga si el ejercicio tuvo algún valor.
         const showLoad = ex.sets.some((s) => s.weight);
         const loadUnit = ex.load === 'assisted' ? 'goma' : 'kg';
+        // ¿Apuntó el esfuerzo serie a serie?
+        const porSerie = ex.sets.some((s) => s.esfuerzo);
         return (
           <Card key={ex.exerciseId + i} style={styles.card}>
             <View style={styles.exHeader}>
@@ -77,6 +80,13 @@ export default function SessionDetailScreen() {
                 {done}/{ex.sets.length} series
               </Text>
             </View>
+            {/* Sesiones de antes de preguntar serie a serie: el esfuerzo del
+                ejercicio entero, si lo dijo. */}
+            {!porSerie && ex.esfuerzo ? (
+              <Text style={styles.esfuerzoEjercicio}>
+                {textoDeEsfuerzo(ex.esfuerzo.escala, ex.esfuerzo.valor)}
+              </Text>
+            ) : null}
             {ex.sets.map((set, j) => (
               <View key={j} style={styles.setRow}>
                 <Text style={styles.setLabel}>Serie {j + 1}</Text>
@@ -93,6 +103,13 @@ export default function SessionDetailScreen() {
                 {showLoad ? (
                   <Text style={styles.setValue}>
                     {set.weight ? `${set.weight} ${loadUnit}` : '—'}
+                  </Text>
+                ) : null}
+                {/* Lo que le costó ESA serie ("RIR 2", "Fallo"): la columna
+                    solo sale si apuntó alguna. */}
+                {porSerie ? (
+                  <Text style={[styles.esfuerzoSerie, set.rir === 0 && styles.esfuerzoSerieFallo]}>
+                    {set.esfuerzo ? textoDeEsfuerzo(ex.esfuerzo?.escala ?? 'rir', set.esfuerzo) : ''}
                   </Text>
                 ) : null}
                 <Ionicons
@@ -146,6 +163,9 @@ const styles = StyleSheet.create({
   setLabel: { ...typography.small, color: colors.textMuted, width: 56 },
   setValue: { ...typography.body, color: colors.text, flex: 1 },
   notes: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm, fontStyle: 'italic' },
+  esfuerzoEjercicio: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, marginBottom: spacing.xs },
+  esfuerzoSerie: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, width: 52, textAlign: 'right' },
+  esfuerzoSerieFallo: { color: colors.warning },
   feedbackLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   feedback: { ...typography.body, color: colors.text, marginTop: spacing.xs },
 });

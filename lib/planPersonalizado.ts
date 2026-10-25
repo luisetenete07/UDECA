@@ -228,6 +228,41 @@ export function rirComoValor(rir?: number): string | undefined {
   return String(rir);
 }
 
+/**
+ * EL ESFUERZO DEL EJERCICIO, SACADO DE SUS SERIES.
+ *
+ * Se pregunta serie a serie, pero media app lee el del ejercicio (el "al
+ * fallo" de la bandeja del entrenador, la media del bloque, los informes). Así
+ * que el ejercicio se queda con:
+ *  - En RIR, la serie MÁS DURA (el RIR más bajo): si una fue al fallo, el
+ *    ejercicio fue al fallo, que es lo que el entrenador necesita saber.
+ *  - En otra escala, la última contestada (no hay "más duro" que valga para
+ *    unas etiquetas que solo entiende el entrenador).
+ * Sin ninguna contestada, nada.
+ */
+export function esfuerzoDelEjercicio(
+  sets: { esfuerzo?: string; rir?: number }[],
+  escala: EscalaDeEsfuerzo
+): { esfuerzo?: EsfuerzoApuntado; rir?: number } {
+  const contestadas = sets.filter((s) => !!s.esfuerzo);
+  if (contestadas.length === 0) return {};
+  if (escala === 'rir') {
+    const rirs = contestadas
+      .map((s) => (typeof s.rir === 'number' ? s.rir : comoRir('rir', s.esfuerzo!)))
+      .filter((n): n is number => typeof n === 'number');
+    if (rirs.length === 0) return {};
+    const min = Math.min(...rirs);
+    return { esfuerzo: { escala, valor: rirComoValor(min)! }, rir: min };
+  }
+  return { esfuerzo: { escala, valor: contestadas[contestadas.length - 1].esfuerzo! } };
+}
+
+/** El esfuerzo de una serie en corto, para su etiqueta: "RIR 2", "Fallo", "80 %", "B". */
+export function textoDeEsfuerzo(escala: EscalaDeEsfuerzo, valor: string): string {
+  if (escala === 'rir' && valor !== 'Fallo') return `RIR ${valor}`;
+  return valor;
+}
+
 /** ¿Se le pregunta el esfuerzo, y dónde? */
 export function tocaPreguntarEsfuerzo(
   plan: PlanPersonalizado | undefined,

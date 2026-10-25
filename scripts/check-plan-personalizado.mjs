@@ -139,7 +139,8 @@ ok('un porcentaje NO se guarda como RIR', comoRir('porcentaje', '80 %') === unde
 ok('una etiqueta propia tampoco', comoRir('propia', 'B') === undefined);
 ok(
   'y el entreno escribe el número por ese camino',
-  /rir: comoRir\(escala, valor\)/.test(entreno),
+  // Serie a serie: el número va al `rir` de la serie solo si comoRir lo da.
+  /const rir = comoRir\(escala, valor\);/.test(entreno) && /\.\.\.\(rir !== undefined \? \{ rir \} : \{\}\)/.test(entreno),
   'si se escribiera el valor a pelo, un "80 %" acabaría en el campo del RIR'
 );
 // Ida y vuelta: lo ya guardado se tiene que poder volver a enseñar marcado.

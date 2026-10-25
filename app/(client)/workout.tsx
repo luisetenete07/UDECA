@@ -55,10 +55,13 @@ import {
   comoLlamaALaSerie,
   comoRir,
   enTitulo,
+  esfuerzoDelEjercicio,
   gruposDeLaRutina,
   minutosEstimados,
+  preguntaDeEsfuerzo,
   prescripcionDe,
   rirComoValor,
+  textoDeEsfuerzo,
   textoDeIntensidadDelDia,
   textoDePrescripcion,
   tocaPreguntarEsfuerzo,
@@ -688,6 +691,21 @@ export default function WorkoutScreen() {
   const ficha = perso?.ficha ?? { intensidad: true, ejercicios: true };
   /** El esfuerzo de la sesión entera, cuando se pregunta una sola vez al final. */
   const [esfuerzoSesion, setEsfuerzoSesion] = useState<EsfuerzoApuntado | undefined>();
+  /*
+   * EL ESFUERZO, SERIE A SERIE, MIENTRAS DESCANSA.
+   *
+   * Al marcar una serie con ✓ empieza el descanso y, justo encima del crono,
+   * se pregunta cuánto le ha costado ESA serie. Es el mejor momento: no está
+   * haciendo nada, la sensación está fresca y es un toque. Si hizo menos de
+   * lo previsto, la marca la corrige en la misma fila, que tiene encima.
+   *
+   * No bloquea: si no contesta y marca la siguiente, se pregunta por la
+   * nueva. Solo al terminar la última serie de un bloque espera a la
+   * respuesta para pasar al siguiente ejercicio (y "Siguiente" sigue ahí).
+   */
+  const [pendienteEsfuerzo, setPendienteEsfuerzo] = useState<{ ejercicio: number; serie: number } | null>(null);
+  /** Si al contestar hay que pasar al siguiente bloque (porque se acabó este). */
+  const avanceTrasEsfuerzo = useRef<{ inicio: number; fin: number; destino: number } | null>(null);
   /** El panel para añadir un ejercicio de otra rutina del plan. */
   const [anadirAbierto, setAnadirAbierto] = useState(false);
   const day = combinedDay ?? routine?.days.find((d) => d.id === selectedDayId) ?? null;
@@ -1129,6 +1147,15 @@ export default function WorkoutScreen() {
       )
     );
 
+    // Desmarcada: si era la que se estaba preguntando, se deja de preguntar.
+    if (field === 'completed' && value === false) {
+      setPendienteEsfuerzo((p) => (p && p.ejercicio === exerciseIndex && p.serie === setIndex ? null : p));
+    }
+    // Marcada: se pregunta su esfuerzo (si el plan lo pide) mientras descansa.
+    if (field === 'completed' && value === true && pideEsfuerzoPorEjercicio) {
+      setPendienteEsfuerzo({ ejercicio: exerciseIndex, serie: setIndex });
+    }
+
     // Al completar una serie: arranca el crono de descanso del ejercicio.
     // (En clúster, el descanso CORTO entre bloques se pide aparte: ver
     // `descansoDeBloque`. Este es el descanso largo, el de la serie entera.)
@@ -1184,16 +1211,21 @@ export default function WorkoutScreen() {
 
         // Autoavance: con el bloque COMPLETO (el ejercicio, o la superserie
         // entera) pasa solo a lo siguiente, dejando ver el ✓ un instante.
-        // Salvo si el plan pide el esfuerzo y falta: se queda para que se
-        // conteste, y al contestarlo avanza (ver `updateExerciseEsfuerzo`).
-        if (despues.bloqueTerminado && !faltaEsfuerzo(conLaMarca, bloque) && bloque.fin < log.length - 1) {
+        // Salvo si el plan pide el esfuerzo: entonces se queda a que conteste
+        // el de esta última serie, y al contestarlo avanza (ver
+        // `apuntarEsfuerzoDeSerie`).
+        if (despues.bloqueTerminado && bloque.fin < log.length - 1) {
           const destino =
             despues.siguiente && despues.siguiente.ejercicio > bloque.fin
               ? despues.siguiente.ejercicio
               : bloque.fin + 1;
-          setTimeout(() => {
-            setViewIndex((cur) => (cur >= bloque.inicio && cur <= bloque.fin ? destino : cur));
-          }, 900);
+          if (pideEsfuerzoPorEjercicio) {
+            avanceTrasEsfuerzo.current = { inicio: bloque.inicio, fin: bloque.fin, destino };
+          } else {
+            setTimeout(() => {
+              setViewIndex((cur) => (cur >= bloque.inicio && cur <= bloque.fin ? destino : cur));
+            }, 900);
+          }
         }
       }
     }
@@ -1278,42 +1310,80 @@ export default function WorkoutScreen() {
    * Se puede desmarcar volviendo a pulsar: si no se puede quitar un dato que se
    * ha metido sin querer, la gente deja de meterlo.
    */
-  const updateExerciseEsfuerzo = (exerciseIndex: number, valor: string) => {
+  const apuntarEsfuerzoDeSerie = (ejercicio: number, serie: number, valor: string) => {
     const escala = esfuerzoDelPlan?.escala ?? 'rir';
+    const puesto = log[ejercicio]?.sets[serie]?.esfuerzo;
+    const quitando = puesto === valor;
     setLog((prev) =>
       prev.map((ex, i) => {
-        if (i !== exerciseIndex) return ex;
-        const puesto = ex.esfuerzo?.valor ?? rirComoValor(ex.rir);
-        if (puesto === valor) return { ...ex, esfuerzo: undefined, rir: undefined };
-        return { ...ex, esfuerzo: { escala, valor }, rir: comoRir(escala, valor) };
+        if (i !== ejercicio) return ex;
+        const sets: LoggedExercise['sets'] = ex.sets.map((st, j) => {
+          if (j !== serie) return st;
+          if (quitando) {
+            const { esfuerzo: _e, rir: _r, ...resto } = st;
+            return resto;
+          }
+          const rir = comoRir(escala, valor);
+          return { ...st, esfuerzo: valor, ...(rir !== undefined ? { rir } : {}) };
+        });
+        // El del ejercicio sale de sus series (el más duro en RIR), para todo
+        // lo que ya lo leía: ver `esfuerzoDelEjercicio`.
+        const { esfuerzo, rir } = esfuerzoDelEjercicio(sets, escala);
+        return { ...ex, sets, esfuerzo, rir };
       })
     );
-    // ¿Era lo último que faltaba del bloque (series hechas y esfuerzo puesto)?
-    // Entonces, al siguiente, como al cerrar la última serie.
-    const ex = log[exerciseIndex];
-    const quitando = (ex?.esfuerzo?.valor ?? rirComoValor(ex?.rir)) === valor;
-    const bloque = bloqueDe(day?.exercises ?? [], exerciseIndex, log.length);
-    const conElEsfuerzo = log.map((e, i) =>
-      i === exerciseIndex ? { ...e, esfuerzo: { escala, valor } } : e
-    );
-    if (
-      !quitando &&
-      bloque.fin < log.length - 1 &&
-      siguienteDelBloque(log, bloque) === null &&
-      !faltaEsfuerzo(conElEsfuerzo, bloque)
-    ) {
+    if (quitando) return;
+    setPendienteEsfuerzo(null);
+    // Si era la última serie del bloque, ahora sí, al siguiente.
+    const avance = avanceTrasEsfuerzo.current;
+    if (avance && ejercicio >= avance.inicio && ejercicio <= avance.fin) {
+      avanceTrasEsfuerzo.current = null;
       setTimeout(() => {
-        setViewIndex((cur) => (cur >= bloque.inicio && cur <= bloque.fin ? bloque.fin + 1 : cur));
+        setViewIndex((cur) => (cur >= avance.inicio && cur <= avance.fin ? avance.destino : cur));
       }, 700);
     }
   };
 
-  /** ¿Pide el plan el esfuerzo de cada ejercicio y falta el de alguno del bloque? */
-  const faltaEsfuerzo = (sesion: LoggedExercise[], b: { inicio: number; fin: number }) =>
-    pideEsfuerzoPorEjercicio &&
-    miembrosDelBloque(b).some(
-      (i) => sesion[i] && !sesion[i].saltado && !sesion[i].esfuerzo && sesion[i].rir == null
+  /**
+   * La pregunta del esfuerzo de la serie que se acaba de hacer, encima del
+   * crono de descanso. Solo si esa serie es de lo que está en pantalla.
+   */
+  const preguntaDeSerie = (b: { inicio: number; fin: number }) => {
+    if (!pideEsfuerzoPorEjercicio || !pendienteEsfuerzo) return null;
+    const { ejercicio, serie } = pendienteEsfuerzo;
+    if (ejercicio < b.inicio || ejercicio > b.fin) return null;
+    const ex = log[ejercicio];
+    const st = ex?.sets[serie];
+    if (!ex || !st?.completed) return null;
+    const enSuperserie = b.fin > b.inicio;
+    return (
+      <View style={styles.preguntaSerie}>
+        <SelectorDeEsfuerzo
+          esfuerzo={esfuerzoDelPlan}
+          etiqueta={`${enTitulo(palabraSerie)} ${serie + 1}${enSuperserie ? ` · ${ex.name}` : ''} · ${t(preguntaDeEsfuerzo(esfuerzoDelPlan))}`}
+          value={st.esfuerzo}
+          onChange={(v) => apuntarEsfuerzoDeSerie(ejercicio, serie, v)}
+        />
+      </View>
     );
+  };
+
+  /** La etiqueta del esfuerzo de una serie hecha ("RIR 2"): tocándola, se cambia. */
+  const etiquetaDeEsfuerzo = (ejercicio: number, serie: number) => {
+    const st = log[ejercicio]?.sets[serie];
+    if (!pideEsfuerzoPorEjercicio || !st?.esfuerzo) return null;
+    return (
+      <Pressable
+        onPress={() => setPendienteEsfuerzo({ ejercicio, serie })}
+        style={[styles.esfuerzoChip, st.rir === 0 && styles.esfuerzoChipFallo]}
+        hitSlop={6}
+      >
+        <Text style={[styles.esfuerzoChipTexto, st.rir === 0 && styles.esfuerzoChipTextoFallo]}>
+          {textoDeEsfuerzo(esfuerzoDelPlan?.escala ?? 'rir', st.esfuerzo)}
+        </Text>
+      </Pressable>
+    );
+  };
 
   // Lo saltado no cuenta para el progreso: si contara, la sesión pediría
   // series que el alumno ya ha decidido no hacer y el contador no llegaría
@@ -1997,6 +2067,7 @@ export default function WorkoutScreen() {
               >
                 {d.exercise.name}
               </Text>
+              {etiquetaDeEsfuerzo(i, r)}
             </View>
             {meta ? (
               <Text style={styles.ssMeta} numberOfLines={1}>
@@ -2106,8 +2177,6 @@ export default function WorkoutScreen() {
     };
 
     const ultimaRonda = rondas - 1;
-    const preguntarEsfuerzo =
-      pideEsfuerzoPorEjercicio && activos.length > 0 && (hecho || actual === ultimaRonda);
 
     return (
       <FadeIn key={`superserie-${b.inicio}`}>
@@ -2167,8 +2236,9 @@ export default function WorkoutScreen() {
             </>
           ) : null}
 
-          {/* El descanso, aquí dentro, debajo de la ronda que se acaba de
-              hacer: es donde se está mirando. */}
+          {/* El esfuerzo de la serie que se acaba de hacer y el descanso,
+              aquí dentro, debajo de la ronda: es donde se está mirando. */}
+          {preguntaDeSerie(b)}
           {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
 
           {/* Y al pie, lo hecho (se abre para corregir) y lo que queda. */}
@@ -2237,23 +2307,6 @@ export default function WorkoutScreen() {
                 <Text style={styles.ssPlegar}>Recuperar</Text>
               </Pressable>
             ))}
-
-          {preguntarEsfuerzo ? (
-            <View style={styles.ssEsfuerzo}>
-              <Text style={styles.ssEsfuerzoTitulo}>
-                {hecho ? '¿Cuánto te ha costado cada uno?' : 'Al acabar: ¿cuánto te ha costado cada uno?'}
-              </Text>
-              {activos.map((i) => (
-                <SelectorDeEsfuerzo
-                  key={i}
-                  esfuerzo={esfuerzoDelPlan}
-                  etiqueta={`${letra(i)} · ${log[i]?.name ?? ''}`}
-                  value={log[i]?.esfuerzo?.valor ?? rirComoValor(log[i]?.rir)}
-                  onChange={(v) => updateExerciseEsfuerzo(i, v)}
-                />
-              ))}
-            </View>
-          ) : null}
 
           {isFlex ? (
             <View style={styles.setEditRow}>
@@ -3204,6 +3257,8 @@ export default function WorkoutScreen() {
                       {enTitulo(palabraSerie)} {setIndex + 1}
                     </Text>
                   </PressableScale>
+                {/* Lo que le costó, si lo ha dicho: tocándolo se cambia. */}
+                {etiquetaDeEsfuerzo(exerciseIndex, setIndex)}
                 <TextField
                   value={set.reps}
                   onChangeText={(v) => updateSet(exerciseIndex, setIndex, 'reps', v)}
@@ -3269,6 +3324,7 @@ export default function WorkoutScreen() {
               de tocar el ✓. Flotando abajo tapaba "Anterior" y "Siguiente".
               (En las demás pestañas sigue flotando: components/GlobalRestTimer.)
             */}
+            {preguntaDeSerie({ inicio: exerciseIndex, fin: exerciseIndex })}
             {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
             {cluster ? (
               <Pressable
@@ -3297,15 +3353,6 @@ export default function WorkoutScreen() {
                   </Text>
                 </Pressable>
               </View>
-            ) : null}
-            {/* Al terminar las series, no antes: mientras quedan, no hay nada
-                que contestar y la pregunta solo estorba. */}
-            {pideEsfuerzoPorEjercicio && (isDone || exercise.saltado) ? (
-              <SelectorDeEsfuerzo
-                esfuerzo={esfuerzoDelPlan}
-                value={exercise.esfuerzo?.valor ?? rirComoValor(exercise.rir)}
-                onChange={(v) => updateExerciseEsfuerzo(exerciseIndex, v)}
-              />
             ) : null}
             {noteOpenIndex === exerciseIndex || exercise.notes ? (
               <TextField
@@ -3510,6 +3557,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   apuntarEnApp: { alignSelf: 'center', paddingVertical: spacing.sm, marginBottom: spacing.md },
+  // La pregunta del esfuerzo de la serie, encima del crono.
+  preguntaSerie: { marginTop: spacing.sm },
+  // El esfuerzo de una serie hecha, en su fila ("RIR 2"); "Fallo", en ámbar.
+  esfuerzoChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryMuted,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  esfuerzoChipFallo: { backgroundColor: colors.warningMuted, borderColor: colors.warning },
+  esfuerzoChipTexto: { ...typography.small, fontSize: 11, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  esfuerzoChipTextoFallo: { color: colors.warning },
   apuntarEnAppTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   previaTitulo: {
     ...typography.label,
@@ -3657,8 +3718,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   ssSueltaTexto: { ...typography.small, color: colors.textMuted, flex: 1 },
-  ssEsfuerzo: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
-  ssEsfuerzoTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginBottom: spacing.xs },
   ssCampo: { alignItems: 'center' },
   // Algo más estrechas que las de un ejercicio suelto: van varias en fila.
   ssCampoCasilla: { width: 62 },
