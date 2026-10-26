@@ -91,6 +91,67 @@ export interface Destacado {
   tono: 'logro' | 'aviso' | 'normal';
 }
 
+/** Lo que hace digno de mirarse un entreno, contado (sin escribir aún). */
+export interface CuentaDestacada {
+  records: number;
+  notas: number;
+  sinHacer: number;
+  /** Los saltados, por nombre (uno solo se nombra: "Saltó Dominadas"). */
+  saltados: string[];
+  alFallo: number;
+}
+
+/** Lo contado de un entreno: récords, notas, series sin hacer, saltados y al fallo. */
+export function cuentaDestacada(log: WorkoutLog, historial: WorkoutLog[]): CuentaDestacada {
+  const antes = historial.filter((l) => l.id !== log.id && l.date < log.date);
+  return {
+    records: detectNewPRs(antes, log.exercises).length,
+    notas: log.exercises.filter((e) => e.notes?.trim()).length + (log.feedback?.trim() ? 1 : 0),
+    sinHacer: log.exercises
+      .filter((e) => !e.saltado)
+      .reduce((n, e) => n + e.sets.filter((s) => !s.completed).length, 0),
+    saltados: log.exercises.filter((e) => e.saltado).map((e) => e.name),
+    alFallo: log.exercises.filter((e) => e.rir === 0).length,
+  };
+}
+
+/** Lo contado, en pastillas cortas. Vacío si no hay nada que destacar. */
+export function pastillasDe(c: CuentaDestacada): Destacado[] {
+  const out: Destacado[] = [];
+  if (c.records > 0) {
+    out.push({ icono: 'trophy', texto: c.records === 1 ? t('1 récord') : frase`${c.records} récords`, tono: 'logro' });
+  }
+  if (c.notas > 0) {
+    out.push({
+      icono: 'chatbox-ellipses-outline',
+      texto: c.notas === 1 ? t('Ha dejado una nota') : frase`${c.notas} notas`,
+      tono: 'aviso',
+    });
+  }
+  if (c.sinHacer > 0) {
+    out.push({
+      icono: 'remove-circle-outline',
+      texto: c.sinHacer === 1 ? t('1 serie sin hacer') : frase`${c.sinHacer} series sin hacer`,
+      tono: 'aviso',
+    });
+  }
+  if (c.saltados.length > 0) {
+    out.push({
+      icono: 'play-skip-forward-outline',
+      texto: c.saltados.length === 1 ? frase`Saltó ${c.saltados[0]}` : frase`Saltó ${c.saltados.length} ejercicios`,
+      tono: 'aviso',
+    });
+  }
+  if (c.alFallo > 0) {
+    out.push({
+      icono: 'flame-outline',
+      texto: c.alFallo === 1 ? t('1 al fallo') : frase`${c.alFallo} al fallo`,
+      tono: 'normal',
+    });
+  }
+  return out;
+}
+
 /**
  * Por qué mirar este entreno, en pastillas cortas. Vacío si fue "normal".
  *
@@ -98,45 +159,59 @@ export interface Destacado {
  * se sacan sus marcas de antes para saber si hoy batió alguna.
  */
 export function loQueDestaca(log: WorkoutLog, historial: WorkoutLog[]): Destacado[] {
-  const out: Destacado[] = [];
-  const antes = historial.filter((l) => l.id !== log.id && l.date < log.date);
-  const records = detectNewPRs(antes, log.exercises).length;
-  if (records > 0) {
-    out.push({ icono: 'trophy', texto: records === 1 ? t('1 récord') : frase`${records} récords`, tono: 'logro' });
+  return pastillasDe(cuentaDestacada(log, historial));
+}
+
+/*
+ * LA BANDEJA, POR ALUMNO.
+ *
+ * Eran nueve filas casi iguales del mismo alumno, una por entreno. Ahora cada
+ * alumno es UNA fila —"3 entrenos nuevos · 4 al fallo"— que se abre para ver
+ * cada entreno y entrar en él. Las llamadas siguen sueltas: cada una es algo
+ * distinto que pasó (una reserva, una cancelación).
+ */
+export type GrupoDeLaBandeja =
+  | { clase: 'llamada'; id: string; llegada: number; item: Extract<EnLaBandeja, { clase: 'llamada' }> }
+  | {
+      clase: 'alumno';
+      id: string;
+      clientId: string;
+      llegada: number;
+      /** Sus entrenos por revisar, del más nuevo al más viejo. */
+      entrenos: Extract<EnLaBandeja, { clase: 'entreno' }>[];
+    };
+
+/** Lo de la bandeja, con los entrenos de cada alumno juntos; lo más nuevo, arriba. */
+export function porAlumno(items: EnLaBandeja[]): GrupoDeLaBandeja[] {
+  const grupos = new Map<string, Extract<GrupoDeLaBandeja, { clase: 'alumno' }>>();
+  const salida: GrupoDeLaBandeja[] = [];
+  for (const it of [...items].sort((a, b) => b.llegada - a.llegada)) {
+    if (it.clase === 'llamada') {
+      salida.push({ clase: 'llamada', id: it.id, llegada: it.llegada, item: it });
+      continue;
+    }
+    const cid = it.log.clientId;
+    let g = grupos.get(cid);
+    if (!g) {
+      g = { clase: 'alumno', id: `alumno:${cid}`, clientId: cid, llegada: it.llegada, entrenos: [] };
+      grupos.set(cid, g);
+      salida.push(g);
+    }
+    g.entrenos.push(it);
   }
-  const conNota = log.exercises.filter((e) => e.notes?.trim()).length + (log.feedback?.trim() ? 1 : 0);
-  if (conNota > 0) {
-    out.push({
-      icono: 'chatbox-ellipses-outline',
-      texto: conNota === 1 ? t('Ha dejado una nota') : frase`${conNota} notas`,
-      tono: 'aviso',
-    });
+  return salida;
+}
+
+/** Lo destacado de varios entrenos, sumado ("4 al fallo", "2 récords"). */
+export function loQueDestacaElGrupo(logs: WorkoutLog[], historial: WorkoutLog[]): Destacado[] {
+  const total: CuentaDestacada = { records: 0, notas: 0, sinHacer: 0, saltados: [], alFallo: 0 };
+  for (const log of logs) {
+    const c = cuentaDestacada(log, historial);
+    total.records += c.records;
+    total.notas += c.notas;
+    total.sinHacer += c.sinHacer;
+    total.saltados.push(...c.saltados);
+    total.alFallo += c.alFallo;
   }
-  const sinHacer = log.exercises
-    .filter((e) => !e.saltado)
-    .reduce((n, e) => n + e.sets.filter((s) => !s.completed).length, 0);
-  if (sinHacer > 0) {
-    out.push({
-      icono: 'remove-circle-outline',
-      texto: sinHacer === 1 ? t('1 serie sin hacer') : frase`${sinHacer} series sin hacer`,
-      tono: 'aviso',
-    });
-  }
-  const saltados = log.exercises.filter((e) => e.saltado);
-  if (saltados.length > 0) {
-    out.push({
-      icono: 'play-skip-forward-outline',
-      texto: saltados.length === 1 ? frase`Saltó ${saltados[0].name}` : frase`Saltó ${saltados.length} ejercicios`,
-      tono: 'aviso',
-    });
-  }
-  const alFallo = log.exercises.filter((e) => e.rir === 0).length;
-  if (alFallo > 0) {
-    out.push({
-      icono: 'flame-outline',
-      texto: alFallo === 1 ? t('1 al fallo') : frase`${alFallo} al fallo`,
-      tono: 'normal',
-    });
-  }
-  return out;
+  return pastillasDe(total);
 }

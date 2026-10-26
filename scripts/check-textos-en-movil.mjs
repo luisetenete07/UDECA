@@ -60,8 +60,9 @@ console.log('\nLas pantallas donde se cortaba algo');
   ok('y el distintivo baja si no cabe', /metaFila: \{[\s\S]{0,400}?flexWrap: 'wrap',/.test(cursos));
 
   const inicio = lee('app/(client)/dashboard.tsx');
-  // "INTENSIFICACIÓN" y "Semana 6 de 8" no caben juntas en 222 px.
-  ok('la fase y la semana pueden ir en dos filas', /cycleTop: \{[\s\S]{0,500}?flexWrap: 'wrap',/.test(inicio));
+  // "INTENSIFICACIÓN · SEMANA 6 DE 8" no cabe en una línea al lado del anillo
+  // de la semana (la fase va ahora en esa tarjeta, no en una aparte).
+  ok('la fase y la semana pueden ir en dos filas', /<Text style=\{styles\.sectionLabel\} numberOfLines=\{2\}>\s*\{semanaDelPlan/.test(inicio));
 
   // El título de una tarea lo escribe el entrenador y suele ser una frase. Las
   // tareas del inicio viven ahora en la semana (components/SemanaDelCoach.tsx).

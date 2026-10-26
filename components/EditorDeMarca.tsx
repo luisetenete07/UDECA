@@ -3,14 +3,15 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
-import { Card } from './Card';
+import { CollapsibleCard } from './CollapsibleCard';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
 import { setBrandLogo, setBrandName } from '../lib/firestore/users';
 import { pickLogo } from '../lib/image';
 import { puedeLlevarLogo } from '../lib/subscription';
-import { frase } from '../lib/idioma';
+import { frase, t } from '../lib/idioma';
+import { unido } from '../lib/texto';
 import {
   LARGO_DE_LA_MARCA,
   MARCA_POR_DEFECTO,
@@ -102,12 +103,20 @@ export function EditorDeMarca() {
     }
   };
 
+  /*
+   * PLEGADA, CON LO QUE HAY PUESTO. Es un ajuste que se hace una vez: abierta
+   * ocupaba media pantalla del perfil cada vez que se entraba. Plegada se lee
+   * la palabra que se usa (y si lleva logo) sin abrirla.
+   */
   return (
-    <Card style={styles.card}>
-      <View style={styles.cabecera}>
-        <Ionicons name="pricetag-outline" size={17} color={colors.primary} />
-        <Text style={styles.titulo}>Tu marca</Text>
-      </View>
+    <CollapsibleCard
+      id="coach-marca"
+      icon="pricetag-outline"
+      title="Tu marca"
+      hint={unido(muestra, logo ? t('con tu logo') : null)}
+      defaultOpen={false}
+      style={styles.card}
+    >
       <Text style={styles.ayuda}>
         {esEntrenador
           ? 'La palabra que sustituye a CALICO dentro de la app. La verás tú y la verán todos tus alumnos.'
@@ -182,14 +191,12 @@ export function EditorDeMarca() {
           )}
         </View>
       ) : null}
-    </Card>
+    </CollapsibleCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: { marginBottom: spacing.md },
-  cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  titulo: { ...typography.h3, color: colors.text },
   ayuda: { ...typography.small, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.md },
   /*
    * La muestra se pinta con LA MISMA letra y el MISMO espaciado que la marca de

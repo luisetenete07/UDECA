@@ -131,7 +131,9 @@ console.log('\nLa app ya no habla de dinero con el alumno');
 console.log('\nY el entrenador tampoco lleva cobros');
 {
   const ficha = sinComentarios(readFileSync('app/(trainer)/clients/[id]/index.tsx', 'utf8'));
-  ok('la ficha tiene la tarjeta de Coaching', />Coaching</.test(ficha) && /<PeriodoDeCoaching/.test(ficha));
+  // Una fila ("Coaching / Hasta el 5 dic / Quedan 9 días" · Alargar) que abre su hoja.
+  ok('la ficha tiene el coaching (fila y su hoja)',
+    /frase`Hasta el \$\{diaMes\(coaching\.hasta\)\}`/.test(ficha) && /<Text style=\{styles\.miniLabel\}>Coaching<\/Text>/.test(ficha) && /titulo="Coaching"/.test(ficha) && /<PeriodoDeCoaching/.test(ficha));
   ok('y no la de pagos', !/>Pagos</.test(ficha) && !/monthlyFeeEur|createPayment|Registrar pago/.test(ficha));
   const panel = sinComentarios(readFileSync('app/(trainer)/dashboard.tsx', 'utf8'));
   ok('el panel no tiene "Cobros del mes"', !/Cobros del mes|getPaymentsForTrainer|Recordar pagos/.test(panel));

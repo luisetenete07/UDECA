@@ -34,7 +34,8 @@ import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
 import { getExerciseLibrary } from '../../../../lib/firestore/exercises';
 import { alargar, ALARGAR_MESES, coachingDe, DIAS_DE_MARGEN, fechaEscrita } from '../../../../lib/coaching';
-import { PeriodoDeCoaching } from '../../../../components/PeriodoDeCoaching';
+import { colorDelPeriodo, PeriodoDeCoaching, textoDelPeriodo } from '../../../../components/PeriodoDeCoaching';
+import { Sheet } from '../../../../components/Sheet';
 import {
   createHabit,
   deleteHabit,
@@ -71,7 +72,7 @@ import { SeriesDelGtg } from '../../../../components/SeriesDelGtg';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
 import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
-import { diasEntre, fechaCorta, fechaNumerica } from '../../../../lib/fechas';
+import { diaMes, diasEntre, fechaCorta, fechaNumerica } from '../../../../lib/fechas';
 import { haceCuanto } from '../../../../lib/ultimoEntreno';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../../../lib/theme';
 import {
@@ -149,6 +150,12 @@ export default function ClientDetailScreen() {
   const [coachNote, setCoachNote] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
   const [pausaAbierta, setPausaAbierta] = useState(false);
+  // El coaching, en una línea; alargar o cambiar la fecha, en su hoja.
+  const [coachingAbierto, setCoachingAbierto] = useState(false);
+  // El historial, los 3 últimos hasta que se piden más.
+  const [historialEntero, setHistorialEntero] = useState(false);
+  // Hábitos: sin ninguno, la tarjeta no sale hasta que se va a poner uno.
+  const [ponerHabitos, setPonerHabitos] = useState(false);
   const [guardandoPausa, setGuardandoPausa] = useState(false);
 
   useFocusEffect(
@@ -454,12 +461,13 @@ export default function ClientDetailScreen() {
            * dónde, si ya ha pagado— es cosa vuestra, fuera de CALICO. Si pasan
            * unos días sin renovar, al alumno se le pausa la app hasta que lo hagas.
            */}
+          {/*
+            EL COACHING, EN UNA LÍNEA: hasta cuándo y cuánto queda, con su
+            color. Alargarlo (1/3/6 meses o hasta una fecha), avisarle o quitar
+            la fecha, en su hoja: se hace una vez al mes y ocupaba media
+            pantalla cada vez que se abría la ficha.
+          */}
           <Card style={styles.section}>
-            <View style={styles.titleRow}>
-              <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-              <Text style={styles.sectionTitle}>Coaching</Text>
-            </View>
-
             {client.paymentReportedAt ? (
               <View style={styles.reportedBanner}>
                 <Ionicons name="notifications" size={16} color={colors.primaryBright} />
@@ -468,9 +476,32 @@ export default function ClientDetailScreen() {
                 </Text>
               </View>
             ) : null}
-
+            <Pressable style={styles.coachingFila} onPress={() => setCoachingAbierto(true)} hitSlop={4}>
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                {/* Una cosa por línea: al lado de "Alargar" quedan 150 px en
+                    un móvil de 360, y tanto "Coaching hasta el 25 nov" como
+                    "Coaching · Quedan 30 días" se cortaban. */}
+                <Text style={styles.miniLabel}>Coaching</Text>
+                <Text style={styles.coachingTitulo} numberOfLines={1}>
+                  {coaching.hasta ? frase`Hasta el ${diaMes(coaching.hasta)}` : 'Sin fecha de fin'}
+                </Text>
+                <Text style={[styles.coachingDias, { color: colorDelPeriodo(coaching) }]} numberOfLines={1}>
+                  {coaching.hasta ? textoDelPeriodo(coaching) : 'Entra siempre'}
+                </Text>
+              </View>
+              <View style={styles.coachingBoton}>
+                <Text style={styles.coachingBotonTexto}>Alargar</Text>
+              </View>
+            </Pressable>
+          </Card>
+          <Sheet
+            visible={coachingAbierto}
+            onClose={() => setCoachingAbierto(false)}
+            titulo="Coaching"
+            descripcion={frase`Si pasan ${DIAS_DE_MARGEN} días sin renovar, se le pausa la app hasta que lo hagas.`}
+          >
             <PeriodoDeCoaching coaching={coaching} />
-
             {/* Alargar de un toque: desde el final si aún no ha llegado, desde hoy
                 si ya pasó (ver `alargar`). Es lo que se hace casi siempre. */}
             <Text style={styles.alargarRotulo}>Alargar</Text>
@@ -526,17 +557,13 @@ export default function ClientDetailScreen() {
               />
             ) : null}
 
-            <Text style={styles.payHint}>
-              {frase`Si pasan ${DIAS_DE_MARGEN} días sin renovar, se le pausa la app hasta que lo hagas.`}
-            </Text>
-
             {client.nextPaymentDate ? (
               <Pressable onPress={() => fijarPeriodo(null)} style={styles.quitarFecha} hitSlop={8}>
                 <Ionicons name="close-circle-outline" size={14} color={colors.textFaint} />
                 <Text style={styles.quitarFechaTexto}>Quitar la fecha de fin</Text>
               </Pressable>
             ) : null}
-          </Card>
+          </Sheet>
 
           {hayObjetivos(metas) || client.targetWeightKg ? (
             <Card style={styles.section}>
@@ -699,9 +726,12 @@ export default function ClientDetailScreen() {
             {activeRoutine ? (
               <>
                 <Text style={styles.routineName}>{activeRoutine.name}</Text>
+                {/* Los días que se ENTRENAN: contaba también los de descanso. */}
                 <Text style={styles.routineMeta}>
-                  {activeRoutine.days.length}{' '}
-                  {activeRoutine.days.length === 1 ? 'día' : 'días'} de entrenamiento
+                  {(() => {
+                    const n = activeRoutine.days.filter((d) => !d.isRest).length;
+                    return n === 1 ? frase`1 día de entrenamiento` : frase`${n} días de entrenamiento`;
+                  })()}
                 </Text>
               </>
             ) : (
@@ -750,6 +780,18 @@ export default function ClientDetailScreen() {
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
             </Pressable>
+
+            {/* Sin hábitos puestos, una fila y no una tarjeta que dice "Ninguno". */}
+            {habits.length === 0 && !ponerHabitos ? (
+              <Pressable style={styles.pausaFila} onPress={() => setPonerHabitos(true)}>
+                <Ionicons name="checkmark-done-outline" size={18} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.navTitle}>Hábitos diarios</Text>
+                  <Text style={styles.navHint}>Cosas que marcará cada día desde su inicio.</Text>
+                </View>
+                <Ionicons name="add" size={18} color={colors.textFaint} />
+              </Pressable>
+            ) : null}
           </Card>
 
           {/* Las series de su grease the groove, día a día: lo mismo que ve él
@@ -779,7 +821,8 @@ export default function ClientDetailScreen() {
             {workoutLogs.length === 0 ? (
               <Text style={styles.mutedText}>Todavía no ha registrado entrenamientos.</Text>
             ) : (
-              workoutLogs.slice(0, 10).map((log) => (
+              // Los 3 últimos: lo que se viene a ver es qué ha hecho estos días.
+              (historialEntero ? workoutLogs.slice(0, 30) : workoutLogs.slice(0, 3)).map((log) => (
                 <Pressable
                   key={log.id}
                   onPress={() => router.push(`/(trainer)/clients/${id}/session?logId=${log.id}`)}
@@ -801,19 +844,84 @@ export default function ClientDetailScreen() {
                 </Pressable>
               ))
             )}
+            {workoutLogs.length > 3 ? (
+              <Pressable onPress={() => setHistorialEntero((v) => !v)} style={styles.verMasFila} hitSlop={6}>
+                <Text style={styles.verMasTexto}>
+                  {historialEntero
+                    ? 'Ver menos'
+                    : frase`Ver más (${Math.min(workoutLogs.length, 30)})`}
+                </Text>
+              </Pressable>
+            ) : null}
           </CollapsibleCard>
 
+          {/*
+            SU PROGRESO, CON LO QUE DICE ALGO. Primero el ritmo de cada ejercicio
+            (si sube, se estanca o baja), que es lo que se viene a mirar; luego
+            la constancia. El volumen en kg solo si entrena con lastre, y los
+            segundos de isométricos solo si hace isométricos: a un alumno sin
+            lastre le salían dos gráficas vacías.
+          */}
           <CollapsibleCard
             id="alumno-actividad"
             icon="pulse-outline"
-            title="Actividad (12 semanas)"
-            hint={frase`Volumen y constancia`}
+            title="Progreso (12 semanas)"
+            hint={frase`Ritmo, constancia y volumen`}
             defaultOpen={false}
           >
+            {(() => {
+              // Ritmo de progreso proyectado de sus ejercicios más recientes.
+              const trends = listExercisesInLogs(workoutLogs)
+                .slice(0, 4)
+                .map((e) => exerciseProgression(workoutLogs, e.exerciseId))
+                .filter((prog): prog is NonNullable<typeof prog> => prog !== null)
+                .map((prog) => ({
+                  name: prog.name,
+                  unit: prog.measure === 'seconds' ? 's' : prog.hasWeight ? 'kg' : 'reps',
+                  slope: trendPerMonth(
+                    prog.points.map((p) => ({
+                      date: p.date,
+                      value: prog.hasWeight ? p.weight : p.reps,
+                    }))
+                  ),
+                }))
+                .filter((t) => t.slope !== null);
+              if (trends.length === 0) return null;
+              return (
+                <>
+                  <Text style={styles.sectionTitle}>Ritmo de progreso</Text>
+                  <Text style={styles.mutedText}>Tendencia al mes según sus últimas sesiones.</Text>
+                  {trends.map((t) => {
+                    const v = t.slope as number;
+                    const flat = Math.abs(v) < 0.3;
+                    const color = flat ? colors.textMuted : v > 0 ? colors.success : colors.danger;
+                    const label = flat
+                      ? 'estable'
+                      : `${v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} ${t.unit}/mes`;
+                    return (
+                      <View key={t.name} style={styles.trendRow}>
+                        <Text style={styles.trendName} numberOfLines={1}>
+                          {t.name}
+                        </Text>
+                        <Ionicons
+                          name={flat ? 'remove' : v > 0 ? 'trending-up' : 'trending-down'}
+                          size={14}
+                          color={color}
+                        />
+                        <Text style={[styles.trendValue, { color }]}>{label}</Text>
+                      </View>
+                    );
+                  })}
+                </>
+              );
+            })()}
+            <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Constancia</Text>
             <Text style={styles.mutedText}>Cada punto azul es un día entrenado.</Text>
             <View style={{ marginTop: spacing.sm }}>
               <ConsistencyMap days={trainingDays(workoutLogs)} />
             </View>
+            {weekly.some((w) => w.volumeKg > 0) ? (
+              <>
             <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Volumen semanal (kg)</Text>
             <LineChart
               points={weekly.map((w) => ({ date: w.weekStart, value: w.volumeKg }))}
@@ -821,6 +929,10 @@ export default function ClientDetailScreen() {
               emptyMessage="Sin entrenamientos con peso registrados todavía."
             />
 
+              </>
+            ) : null}
+            {weekly.some((w) => w.isoSeconds > 0) ? (
+              <>
             <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
               Isométricos: segundos por semana
             </Text>
@@ -848,62 +960,18 @@ export default function ClientDetailScreen() {
               emptyMessage="Sin ejercicios isométricos (por segundos) registrados todavía."
             />
 
-            {(() => {
-              // Ritmo de progreso proyectado de sus ejercicios más recientes.
-              const trends = listExercisesInLogs(workoutLogs)
-                .slice(0, 4)
-                .map((e) => exerciseProgression(workoutLogs, e.exerciseId))
-                .filter((prog): prog is NonNullable<typeof prog> => prog !== null)
-                .map((prog) => ({
-                  name: prog.name,
-                  unit: prog.measure === 'seconds' ? 's' : prog.hasWeight ? 'kg' : 'reps',
-                  slope: trendPerMonth(
-                    prog.points.map((p) => ({
-                      date: p.date,
-                      value: prog.hasWeight ? p.weight : p.reps,
-                    }))
-                  ),
-                }))
-                .filter((t) => t.slope !== null);
-              if (trends.length === 0) return null;
-              return (
-                <>
-                  <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
-                    Ritmo de progreso
-                  </Text>
-                  <Text style={styles.mutedText}>Tendencia al mes según sus últimas sesiones.</Text>
-                  {trends.map((t) => {
-                    const v = t.slope as number;
-                    const flat = Math.abs(v) < 0.3;
-                    const color = flat ? colors.textMuted : v > 0 ? colors.success : colors.danger;
-                    const label = flat
-                      ? 'estable'
-                      : `${v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} ${t.unit}/mes`;
-                    return (
-                      <View key={t.name} style={styles.trendRow}>
-                        <Text style={styles.trendName} numberOfLines={1}>
-                          {t.name}
-                        </Text>
-                        <Ionicons
-                          name={flat ? 'remove' : v > 0 ? 'trending-up' : 'trending-down'}
-                          size={14}
-                          color={color}
-                        />
-                        <Text style={[styles.trendValue, { color }]}>{label}</Text>
-                      </View>
-                    );
-                  })}
-                </>
-              );
-            })()}
+              </>
+            ) : null}
           </CollapsibleCard>
 
+          {habits.length > 0 || ponerHabitos ? (
           <CollapsibleCard
             id="alumno-habitos"
             icon="checkmark-done-outline"
             title="Hábitos diarios"
             hint={habits.length > 0 ? `${habits.length}` : 'Ninguno'}
-            defaultOpen={false}
+            // Si se acaba de pedir desde la tarjeta de la rutina, abierta.
+            defaultOpen={habits.length === 0 && ponerHabitos}
           >
             <Text style={styles.mutedText}>
               Asigna hábitos que el alumno marcará cada día desde su inicio.
@@ -938,6 +1006,7 @@ export default function ClientDetailScreen() {
               />
             </View>
           </CollapsibleCard>
+          ) : null}
 
           {/* Por dónde va en cada curso. Solo los publicados: los borradores no ha
               podido verlos y saldrían siempre a cero, como si el alumno fallara. */}
@@ -1063,6 +1132,22 @@ export default function ClientDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  // El coaching en una línea: hasta cuándo, cuánto queda y "Alargar".
+  coachingFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  coachingTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  coachingDias: { ...typography.small, fontFamily: fonts.semiBold, marginTop: 1 },
+  coachingBoton: {
+    paddingHorizontal: spacing.md,
+    height: 36,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.primaryMuted,
+    justifyContent: 'center',
+  },
+  coachingBotonTexto: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  verMasFila: { alignSelf: 'center', paddingVertical: spacing.sm },
+  verMasTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   // La última tarjeta se pegaba al borde de abajo: el botón de sacar del grupo
   // quedaba a ras del final de la pantalla, sin aire para pulsarlo tranquilo.
   ultimaTarjeta: { marginBottom: spacing.xl },
@@ -1133,7 +1218,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
     ...tabularNums,
   },
-  payHint: { ...typography.small, color: colors.textFaint, marginTop: spacing.xs, textAlign: 'center' },
   // `stretch` para que el campo y el botón midan lo mismo: sus alturas
   // naturales no coinciden y centrados quedaban desalineados.
   alargarFila: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },

@@ -491,18 +491,20 @@ export function ContadorDePasos({
   const maximo = Math.max(objetivo, ...semana.map((d) => d.steps), 1);
 
   if (compacto) {
-    // Sin elegir de dónde salen y sin nada apuntado, un "0 / 10.000" se lee
-    // como "no has andado". Es otra cosa: aún no está puesto.
+    // Sin elegir de dónde salen y sin nada apuntado, en el inicio no se pinta
+    // nada: era una fila "Pasos · Conectar" solo para decir que no hay datos,
+    // y conectarlo se hace en Progreso, donde está todo lo de los pasos. El
+    // componente sigue montado igual: los lee solo del móvil si hay permiso.
     const sinNada = !origen && !hoy;
+    if (sinNada) return null;
     return (
       <FilaDelDia
         icono="footsteps-outline"
         etiqueta="Pasos"
-        valor={sinNada ? undefined : conMiles(p.pasos)}
+        valor={conMiles(p.pasos)}
         de={conMiles(p.objetivo)}
-        progreso={sinNada ? undefined : p.ratio}
+        progreso={p.ratio}
         tono={p.cumplido ? 'cumplido' : 'normal'}
-        accion="Conectar"
         onPress={onAbrir}
       />
     );

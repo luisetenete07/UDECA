@@ -55,7 +55,9 @@ function BodySvg({
   intensity: Record<MuscleId, number>;
 }) {
   return (
-    <Svg width={150} height={300} viewBox={viewBox}>
+    // 130 × 260: delante y detrás caben UNO AL LADO DEL OTRO en un móvil
+    // (con 150 se bajaba el de detrás a otra fila y la tarjeta medía el doble).
+    <Svg width={130} height={260} viewBox={viewBox}>
       {parts.map((part, idx) => {
         const map = SLUG_TO_MUSCLE[part.slug];
         const v = map ? (intensity[map.m] ?? 0) * map.f : 0;

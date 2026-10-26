@@ -25,7 +25,6 @@ import { showToast } from '../../components/Toast';
 import { ProgressMatrix } from '../../components/ProgressMatrix';
 import { BlockOverview } from '../../components/BlockOverview';
 import { ObjetivosDeCiclo } from '../../components/ObjetivosDeCiclo';
-import { resumenDeConstancia, ventanaDeConstancia } from '../../lib/constancia';
 import { buildBlockView } from '../../lib/blockView';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
@@ -35,13 +34,13 @@ import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
-import { isComboExercise, isIsometricExercise, toNum, listExercisesInLogs, monthKeyOf, sessionTotals, setsByMuscleGroup, topExercises, trainingDays, weeklyActivity, weeklySetsForGroups, thenVsNow, workoutsByMonth } from '../../lib/stats';
-import { ConsistencyMap } from '../../components/ConsistencyMap';
+import { isComboExercise, isIsometricExercise, toNum, listExercisesInLogs, monthKeyOf, sessionTotals, setsByMuscleGroup, weeklyActivity, weeklySetsForGroups, thenVsNow, workoutsByMonth } from '../../lib/stats';
 import { FadeIn } from '../../components/FadeIn';
 import { Dialogo } from '../../components/Dialogo';
 import { Segmented } from '../../components/Segmented';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { LogrosDelAlumno } from '../../components/LogrosDelAlumno';
+import { ventanaDeConstancia } from '../../lib/constancia';
 import { Chip, ChipRow } from '../../components/Chip';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
 import {
@@ -69,6 +68,9 @@ interface ProgressData {
   workoutLogs: WorkoutLog[];
 }
 
+/** Entrenamientos de un mes que se ven sin pedir más. */
+const ENTRENOS_A_LA_VISTA = 5;
+
 export default function ProgressScreen() {
   const { profile, refreshProfile } = useAuth();
   const router = useRouter();
@@ -85,6 +87,8 @@ export default function ProgressScreen() {
   // Meses replegados a mano. Sin entrada = vale el criterio por defecto (solo
   // abierto el mes en curso).
   const [collapsedMonths, setCollapsedMonths] = useState<Record<string, boolean>>({});
+  // Los meses que se han pedido enteros (abiertos enseñan los 5 últimos).
+  const [mesesEnteros, setMesesEnteros] = useState<Record<string, boolean>>({});
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
   const cacheKey = `progress-${profile?.uid ?? ''}`;
   const cached = getCached<ProgressData>(cacheKey);
@@ -375,12 +379,9 @@ export default function ProgressScreen() {
 
   // El periodo del que hablan las DOS mitades de la tarjeta: el bloque en
   // curso, o las últimas cuatro semanas si no hay (ver lib/constancia.ts).
+
+  // El periodo del bloque en curso: lo usa el reparto de "Tu progreso completo".
   const ventana = useMemo(() => ventanaDeConstancia(bloqueActual), [bloqueActual]);
-  const diasEntrenados = useMemo(() => trainingDays(workoutLogs), [workoutLogs]);
-  const constancia = useMemo(
-    () => resumenDeConstancia(diasEntrenados, ventana),
-    [diasEntrenados, ventana]
-  );
 
   if (loading) {
     return (
@@ -411,7 +412,6 @@ export default function ProgressScreen() {
   };
 
   const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
-  const muscleMax = muscleMap.length > 0 ? muscleMap[0].sets : 0;
 
   const mesActual = months.find((m) => m.key === monthKeyOf()) ?? null;
   const mesesAnteriores = months.filter((m) => m.key !== monthKeyOf());
@@ -420,26 +420,23 @@ export default function ProgressScreen() {
   const pintarMes = (m: (typeof months)[number]) => (
     <>
       <Pressable style={styles.monthHeader} onPress={() => toggleMonth(m.key)}>
+        {/* El mes y, debajo, cuánto: al lado no cabían y el mes se partía. */}
+        <View style={{ flex: 1 }}>
         <Text style={styles.monthTitle}>{mayusculaInicial(m.label)}</Text>
+        {/* Sesiones y series, y ya. Las reps sumadas del mes, los segundos
+            de isométrico y los kilos de volumen eran cifras que nadie usa
+            para nada (566 reps no dicen si vas mejor). */}
         <Text style={styles.monthCount}>
           {m.sessions.length} {m.sessions.length === 1 ? 'sesión' : 'sesiones'}
+          {m.totalSets > 0 ? ` · ${frase`${m.totalSets} series`}` : ''}
         </Text>
+        </View>
         <Ionicons
           name={isMonthOpen(m.key) ? 'chevron-up' : 'chevron-down'}
           size={18}
           color={colors.textFaint}
         />
       </Pressable>
-      <View style={styles.monthStats}>
-        <MonthStat value={String(m.totalSets)} label="series" />
-        {m.totalReps > 0 ? <MonthStat value={String(m.totalReps)} label="reps" /> : null}
-        {m.totalSeconds > 0 ? (
-          <MonthStat value={`${m.totalSeconds}s`} label="isom." />
-        ) : null}
-        {m.volumeKg > 0 ? (
-          <MonthStat value={m.volumeKg.toLocaleString('es-ES')} label="kg vol." />
-        ) : null}
-      </View>
 
       {!isMonthOpen(m.key) ? (
         <Pressable onPress={() => toggleMonth(m.key)} style={styles.monthExpand}>
@@ -450,7 +447,9 @@ export default function ProgressScreen() {
         </Pressable>
       ) : null}
 
-      {isMonthOpen(m.key) && m.sessions.map((s) => {
+      {/* Abierto, los 5 últimos: el mes entero eran quince filas iguales
+          antes de llegar a nada más. El resto, a un toque. */}
+      {isMonthOpen(m.key) && (mesesEnteros[m.key] ? m.sessions : m.sessions.slice(0, ENTRENOS_A_LA_VISTA)).map((s) => {
         const t = sessionTotals(s.exercises, measureByExercise);
         const open = expandedSessions[s.id];
         const d = new Date(s.date);
@@ -564,6 +563,18 @@ export default function ProgressScreen() {
           </View>
         );
       })}
+      {isMonthOpen(m.key) && m.sessions.length > ENTRENOS_A_LA_VISTA ? (
+        <Pressable
+          onPress={() => setMesesEnteros((prev) => ({ ...prev, [m.key]: !prev[m.key] }))}
+          style={styles.monthExpand}
+          hitSlop={4}
+        >
+          <Ionicons name={mesesEnteros[m.key] ? 'chevron-up' : 'list-outline'} size={14} color={colors.primary} />
+          <Text style={styles.monthExpandText}>
+            {mesesEnteros[m.key] ? 'Ver menos' : frase`Ver los ${m.sessions.length} entrenamientos`}
+          </Text>
+        </Pressable>
+      ) : null}
     </>
   );
 
@@ -618,28 +629,13 @@ export default function ProgressScreen() {
               </Card>
             ) : null}
 
-            {/* El reparto del bloque se fue a "Tu progreso completo".
-                Aquí quedaba una tabla de números encima de todo lo demás, y lo
-                primero que se viene a mirar es si se ha entrenado, no cuántas
-                series de tirón llevas en la semana 3. Dentro está al lado de la
-                tabla de marcas, que es con lo que de verdad se compara. */}
-            <Card style={styles.section}>
-              <View style={styles.constancia}>
-                <View style={styles.constanciaFila}>
-                  <Text style={styles.constanciaTitulo}>Días que has entrenado</Text>
-                  <Text style={styles.constanciaCifra}>
-                    {Math.round(constancia.ratio * 100)} %
-                  </Text>
-                </View>
-                <Text style={styles.photoHint}>{constancia.texto}</Text>
-                <ConsistencyMap
-                  days={diasEntrenados}
-                  weeks={ventana.semanas}
-                  desde={ventana.desde}
-                />
-              </View>
-            </Card>
-
+            {/*
+              FUERA "DÍAS QUE HAS ENTRENADO". Dividía los días entrenados entre
+              TODOS los días del calendario: con un plan de 3 días por semana,
+              un 43 % era cumplirlo perfecto y se leía como suspenso. La
+              constancia de la semana ya está en el anillo del inicio, contra
+              lo que pide su plan.
+            */}
             {/* Las series del grease the groove, día a día: la misma tarjeta que
                 ve su entrenador en su ficha. */}
             {uid ? <SeriesDelGtg clientId={uid} workoutLogs={workoutLogs} routine={activeRoutine} /> : null}
@@ -783,53 +779,9 @@ export default function ProgressScreen() {
               )}
             </CollapsibleCard>
 
-            {muscleMap.length > 0 ? (
-              <CollapsibleCard
-                id="progreso-mapa"
-                icon="body-outline"
-                title="Mapa muscular"
-                hint={`${muscleMap.length} patrones`}
-                defaultOpen={false}
-              >
-                <Text style={styles.photoHint}>
-                  Series completadas por patrón de movimiento, en los últimos 28 días.
-                </Text>
-                {muscleMap.map((m) => (
-                  <View key={m.group} style={styles.muscleRow}>
-                    <Text style={styles.muscleLabel} numberOfLines={1}>
-                      {m.group}
-                    </Text>
-                    <View style={styles.muscleTrack}>
-                      <View
-                        style={[
-                          styles.muscleFill,
-                          { width: `${Math.max(6, (m.sets / muscleMax) * 100)}%` },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.muscleValue}>{m.sets}</Text>
-                  </View>
-                ))}
-              </CollapsibleCard>
-            ) : null}
-
-            <CollapsibleCard
-              id="progreso-top"
-              icon="podium-outline"
-              title="Más entrenados"
-              hint={topExercises(workoutLogs)[0]?.name}
-              defaultOpen={false}
-            >
-              {topExercises(workoutLogs).map((ex, i) => (
-                <View key={ex.name} style={styles.logRow}>
-                  <Text style={styles.logValue}>
-                    {i + 1}. {ex.name}
-                  </Text>
-                  <Text style={styles.logDate}>{ex.count} sesiones</Text>
-                </View>
-              ))}
-            </CollapsibleCard>
-
+            {/* Fuera "Mapa muscular" (lo mismo que "Músculos trabajados" en
+                Ejercicios, contado otra vez) y "Más entrenados" (cuántas
+                sesiones lleva cada ejercicio: no dice nada de cómo va). */}
             <LogrosDelAlumno workoutLogs={workoutLogs} weightLogs={weightLogs} />
           </>
         )
@@ -1031,14 +983,6 @@ function CompareRow({
   );
 }
 
-function MonthStat({ value, label }: { value: string; label: string }) {
-  return (
-    <View style={styles.monthStat}>
-      <Text style={styles.monthStatValue}>{value}</Text>
-      <Text style={styles.monthStatLabel}>{label}</Text>
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   navRow: {
@@ -1086,26 +1030,7 @@ const styles = StyleSheet.create({
    * vivía encima. Al mudarse ese, quedaba un hueco vacío con una raya en medio
    * de la nada, que es de esas cosas que parecen un fallo de carga.
    */
-  constancia: {},
-  constanciaFila: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  constanciaTitulo: { ...typography.h3, color: colors.text },
-  constanciaCifra: { ...typography.h3, color: colors.primaryBright, ...tabularNums },
   sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  logRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  logValue: { ...typography.body, color: colors.text, fontFamily: fonts.heading, flex: 1, marginRight: spacing.sm },
-  logDate: { ...typography.small, color: colors.textMuted },
   // ----- Mapa muscular -----
   muscleHeader: {
     flexDirection: 'row',
@@ -1127,30 +1052,6 @@ const styles = StyleSheet.create({
   muscleTabOn: { backgroundColor: colors.primary },
   muscleTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
   muscleTabTextOn: { color: colors.onPrimary },
-  muscleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  muscleLabel: { ...typography.small, color: colors.text, width: 104, fontFamily: fonts.medium },
-  muscleTrack: {
-    flex: 1,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  muscleFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 5 },
-  muscleValue: {
-    ...typography.small,
-    color: colors.primaryBright,
-    fontFamily: fonts.semiBold,
-    width: 30,
-    textAlign: 'right',
-  },
   // ----- Comparador 3 meses → hoy -----
   compareRow: {
     flexDirection: 'row',
@@ -1183,7 +1084,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-  monthTitle: { ...typography.h3, color: colors.text, flex: 1 },
+  monthTitle: { ...typography.h3, color: colors.text },
   monthExpand: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1193,24 +1094,6 @@ const styles = StyleSheet.create({
   },
   monthExpandText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   monthCount: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
-  monthStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  monthStat: {
-    flex: 1,
-    minWidth: 64,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  monthStatValue: { ...typography.h3, color: colors.primaryBright, fontSize: 18 },
-  monthStatLabel: { fontSize: 10, color: colors.textMuted, fontFamily: fonts.medium, marginTop: 2 },
   sessionRow: {
     flexDirection: 'row',
     alignItems: 'center',

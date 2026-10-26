@@ -41,7 +41,16 @@ import {
   getJoinRequestsForTrainer,
 } from '../../lib/firestore/joinRequests';
 import { getWorkoutLogsForTrainer } from '../../lib/firestore/workoutLogs';
-import { bandeja, conRevisado, DIAS_DE_BANDEJA, loQueDestaca, type LoVisto } from '../../lib/bandeja';
+import {
+  bandeja,
+  conRevisado,
+  DIAS_DE_BANDEJA,
+  loQueDestaca,
+  loQueDestacaElGrupo,
+  porAlumno,
+  type Destacado,
+  type LoVisto,
+} from '../../lib/bandeja';
 import { getActividadDeLlamadas, getLlamadasEntre } from '../../lib/firestore/llamadas';
 import type { ActividadDeLlamada, Llamada } from '../../lib/llamadas';
 import { notifyUser } from '../../lib/notifications';
@@ -62,6 +71,9 @@ interface DashboardData {
   requests: JoinRequest[];
 }
 
+/** Filas de "Por revisar" (alumnos o llamadas) que se ven sin pedir más. */
+const GRUPOS_A_LA_VISTA = 6;
+
 export default function TrainerDashboard() {
   // refreshProfile: tras aceptar a un alumno, el servidor actualiza el recuento
   // del perfil y hay que releerlo para que el acceso quede al día.
@@ -73,6 +85,8 @@ export default function TrainerDashboard() {
     revisadoHasta: profile?.revisadoHasta,
   }));
   const [verTodaLaBandeja, setVerTodaLaBandeja] = useState(false);
+  // Los alumnos de "Por revisar" que están abiertos (con varios entrenos).
+  const [gruposAbiertos, setGruposAbiertos] = useState<Set<string>>(new Set());
   const router = useRouter();
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
   const cacheKey = `trainer-dash-${profile?.uid ?? ''}`;
@@ -170,6 +184,40 @@ export default function TrainerDashboard() {
   const wk = weekComparison(logs);
   const hoyCero = inicioDelDia(now);
   const pendientes = bandeja(logs, actividadLlamadas, visto);
+  // Por alumno: una fila por alumno con todos sus entrenos nuevos dentro.
+  const grupos = porAlumno(pendientes);
+
+  /** Las pastillas de lo destacado (un récord, una nota, series al fallo…). */
+  const pastillas = (destacados: Destacado[]) =>
+    destacados.length > 0 ? (
+      <View style={styles.destacados}>
+        {destacados.map((d) => (
+          <View
+            key={d.texto}
+            style={[
+              styles.destacado,
+              d.tono === 'logro' && styles.destacadoLogro,
+              d.tono === 'aviso' && styles.destacadoAviso,
+            ]}
+          >
+            <Ionicons
+              name={d.icono}
+              size={11}
+              color={d.tono === 'logro' ? colors.primaryBright : d.tono === 'aviso' ? colors.warning : colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.destacadoTexto,
+                d.tono === 'logro' && { color: colors.primaryBright },
+                d.tono === 'aviso' && { color: colors.warning },
+              ]}
+            >
+              {d.texto}
+            </Text>
+          </View>
+        ))}
+      </View>
+    ) : null;
   // Al abrir algo de la bandeja deja de salir: un entreno lleva a su sesión, y
   // una llamada a la agenda de llamadas.
   const abrirRevisando = (id: string, ruta: string) => {
@@ -353,7 +401,7 @@ export default function TrainerDashboard() {
           milisegundos por detrás del anterior. Es lo que hace que la pantalla
           se sienta viva sin que nada se mueva mientras se usa — una animación
           que sigue en marcha cuando ya estás leyendo, molesta. */}
-      {requests.length > 0 || terminados.length > 0 || sinEntrenar.length > 0 ? (
+      {requests.length > 0 || porRenovar.length > 0 || sinEntrenar.length > 0 ? (
         <FadeIn>
         <Card accent style={styles.section}>
           <View style={styles.titleRow}>
@@ -362,17 +410,39 @@ export default function TrainerDashboard() {
           </View>
           {/* Abre aquí mismo la lista de quién hay que renovar, con su
               botón de +1 mes: la respuesta se da donde se hace la pregunta. */}
-          {terminados.length > 0 ? (
+          {/* Y también los que se acaban ESTA semana: antes solo se veían en
+              un botón "Por renovar" aparte, más abajo, que repetía esto. */}
+          {porRenovar.length > 0 ? (
             <Pressable style={styles.attentionRow} onPress={() => setRenovarOpen(true)}>
-              <View style={[styles.attentionIcon, { backgroundColor: colors.dangerMuted }]}>
-                <Ionicons name="calendar-outline" size={17} color={colors.danger} />
+              <View
+                style={[
+                  styles.attentionIcon,
+                  { backgroundColor: terminados.length > 0 ? colors.dangerMuted : colors.warningMuted },
+                ]}
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={17}
+                  color={terminados.length > 0 ? colors.danger : colors.warning}
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.attentionTitle}>
-                  {terminados.length === 1
-                    ? frase`1 periodo de coaching terminado`
-                    : frase`${terminados.length} periodos de coaching terminados`}
+                  {terminados.length === 0
+                    ? porRenovar.length === 1
+                      ? frase`1 coaching se acaba esta semana`
+                      : frase`${porRenovar.length} coachings se acaban esta semana`
+                    : terminados.length === 1
+                      ? frase`1 periodo de coaching terminado`
+                      : frase`${terminados.length} periodos de coaching terminados`}
                 </Text>
+                {terminados.length > 0 && porRenovar.length > terminados.length ? (
+                  <Text style={styles.attentionSub} numberOfLines={1}>
+                    {porRenovar.length - terminados.length === 1
+                      ? frase`y 1 más se acaba esta semana`
+                      : frase`y ${porRenovar.length - terminados.length} más se acaban esta semana`}
+                  </Text>
+                ) : null}
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
             </Pressable>
@@ -538,35 +608,9 @@ export default function TrainerDashboard() {
         </FadeIn>
       ) : null}
 
-      {/* Los accesos van DESPUÉS de saber cómo va el grupo: son herramientas,
-          y una herramienta antes del diagnóstico se usa a ciegas. */}
-      <FadeIn delay={140}>
-      <View style={styles.quickRow}>
-        <Pressable
-          style={styles.quickBtn}
-          onPress={() => router.push('/(trainer)/exercises/new')}
-        >
-          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Nuevo ejercicio</Text>
-        </Pressable>
-        <Pressable style={styles.quickBtn} onPress={() => router.push('/(trainer)/courses/new')}>
-          <Ionicons name="videocam-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickLabel}>Nuevo curso</Text>
-        </Pressable>
-        <Pressable style={styles.quickBtn} onPress={() => setRenovarOpen(true)}>
-          <View>
-            <Ionicons name="refresh-outline" size={20} color={colors.primary} />
-            {porRenovar.length > 0 ? (
-              <View style={styles.quickBadge}>
-                <Text style={styles.quickBadgeText}>{porRenovar.length}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={styles.quickLabel}>Por renovar</Text>
-        </Pressable>
-      </View>
-      </FadeIn>
-
+      {/* Sin la fila "Nuevo ejercicio · Nuevo curso · Por renovar": los dos
+          primeros tienen su "+ Nuevo" en su pestaña, y lo de renovar sale
+          arriba, en "Necesita tu atención". Eran tres botones que repetían. */}
 
       {/* La semana: tareas, fines de coaching y ciclos, día a día. Va encima de
           la actividad porque es lo que hay que HACER; la actividad es lo que
@@ -618,8 +662,9 @@ export default function TrainerDashboard() {
               </Text>
             </View>
           ) : (
-            (verTodaLaBandeja ? pendientes : pendientes.slice(0, 6)).map((item) => {
-              if (item.clase === 'llamada') {
+            (verTodaLaBandeja ? grupos : grupos.slice(0, GRUPOS_A_LA_VISTA)).map((g) => {
+              if (g.clase === 'llamada') {
+                const item = g.item;
                 const a = item.actividad;
                 const alumno = byId(a.clientId);
                 const cancelada = a.tipo === 'cancelada';
@@ -663,73 +708,86 @@ export default function TrainerDashboard() {
                   </Pressable>
                 );
               }
-              const log = item.log;
-              const client = byId(log.clientId);
-              const destacados = loQueDestaca(
-                log,
-                logs.filter((l) => l.clientId === log.clientId)
-              );
+              /*
+               * UN ALUMNO, UNA FILA. Con un entreno, se abre directamente. Con
+               * varios, dice cuántos y lo destacado de todos sumado, y al
+               * tocarla se despliegan para entrar en cada uno.
+               */
+              const client = byId(g.clientId);
+              const historial = logs.filter((l) => l.clientId === g.clientId);
+              const primero = g.entrenos[0].log;
+              const varios = g.entrenos.length > 1;
+              const abierto = gruposAbiertos.has(g.id);
+              const lineaDe = (l: typeof primero) =>
+                unido(l.dayName, haceCuanto(diasEntre(l.date, now)), frase`${sessionTotals(l.exercises).sets} series`);
               return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => abrirRevisando(log.id, `/(trainer)/clients/${log.clientId}/session?logId=${log.id}`)}
-                  style={styles.activityRow}
-                >
-                  <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
-                    {/* Cuándo, en palabras ("ayer", "hace 3 días"), y cuánto. */}
-                    <Text style={styles.logDetail} numberOfLines={1}>
-                      {unido(
-                        log.dayName,
-                        haceCuanto(diasEntre(log.date, now)),
-                        frase`${sessionTotals(log.exercises).sets} series`
+                <View key={g.id}>
+                  <Pressable
+                    onPress={() => {
+                      if (!varios) {
+                        const log = primero;
+                        abrirRevisando(log.id, `/(trainer)/clients/${log.clientId}/session?logId=${log.id}`);
+                        return;
+                      }
+                      setGruposAbiertos((prev) => {
+                        const n = new Set(prev);
+                        if (n.has(g.id)) n.delete(g.id);
+                        else n.add(g.id);
+                        return n;
+                      });
+                    }}
+                    style={styles.activityRow}
+                  >
+                    <Avatar name={client?.name} photoURL={client?.photoURL} size={38} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.logClient}>{client?.name ?? 'Cliente'}</Text>
+                      <Text style={styles.logDetail} numberOfLines={1}>
+                        {varios
+                          ? unido(
+                              frase`${g.entrenos.length} entrenos nuevos`,
+                              frase`último ${haceCuanto(diasEntre(primero.date, now))}`
+                            )
+                          : lineaDe(primero)}
+                      </Text>
+                      {pastillas(
+                        varios
+                          ? loQueDestacaElGrupo(g.entrenos.map((e) => e.log), historial)
+                          : loQueDestaca(primero, historial)
                       )}
-                    </Text>
-                    {destacados.length > 0 ? (
-                      <View style={styles.destacados}>
-                        {destacados.map((d) => (
-                          <View
-                            key={d.texto}
-                            style={[
-                              styles.destacado,
-                              d.tono === 'logro' && styles.destacadoLogro,
-                              d.tono === 'aviso' && styles.destacadoAviso,
-                            ]}
+                    </View>
+                    {varios ? (
+                      <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textFaint} />
+                    ) : (
+                      <View style={styles.puntoNuevo} />
+                    )}
+                  </Pressable>
+                  {varios && abierto
+                    ? g.entrenos.map((e) => {
+                        const log = e.log;
+                        return (
+                          <Pressable
+                            key={e.id}
+                            onPress={() => abrirRevisando(log.id, `/(trainer)/clients/${log.clientId}/session?logId=${log.id}`)}
+                            style={styles.subFila}
                           >
-                            <Ionicons
-                              name={d.icono}
-                              size={11}
-                              color={
-                                d.tono === 'logro'
-                                  ? colors.primaryBright
-                                  : d.tono === 'aviso'
-                                    ? colors.warning
-                                    : colors.textMuted
-                              }
-                            />
-                            <Text
-                              style={[
-                                styles.destacadoTexto,
-                                d.tono === 'logro' && { color: colors.primaryBright },
-                                d.tono === 'aviso' && { color: colors.warning },
-                              ]}
-                            >
-                              {d.texto}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                  <View style={styles.puntoNuevo} />
-                </Pressable>
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={styles.logDetail} numberOfLines={1}>
+                                {lineaDe(log)}
+                              </Text>
+                              {pastillas(loQueDestaca(log, historial))}
+                            </View>
+                            <View style={styles.puntoNuevo} />
+                          </Pressable>
+                        );
+                      })
+                    : null}
+                </View>
               );
             })
           )}
-          {pendientes.length > 6 && !verTodaLaBandeja ? (
+          {grupos.length > GRUPOS_A_LA_VISTA && !verTodaLaBandeja ? (
             <Pressable onPress={() => setVerTodaLaBandeja(true)} style={styles.bandejaMas} hitSlop={6}>
-              <Text style={styles.bandejaTodo}>{frase`Ver los ${pendientes.length}`}</Text>
+              <Text style={styles.bandejaTodo}>{frase`Ver todo (${pendientes.length})`}</Text>
             </Pressable>
           ) : null}
         </Card>
@@ -817,7 +875,6 @@ export default function TrainerDashboard() {
 const styles = StyleSheet.create({
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   pulseBig: { ...typography.h2, color: colors.text, marginTop: 2, marginBottom: 2 },
-  quickRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -861,36 +918,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   goodNewsText: { ...typography.small, color: colors.textMuted },
-  quickBtn: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  quickLabel: {
-    ...typography.small,
-    color: colors.text,
-    fontFamily: fonts.semiBold,
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  quickBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -10,
-    minWidth: 15,
-    height: 15,
-    borderRadius: 8,
-    backgroundColor: colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  quickBadgeText: { color: colors.white, fontSize: 9, fontFamily: fonts.semiBold },
   section: { marginBottom: spacing.md },
   /* --- Cobros del mes ------------------------------------------------- */
   /*
@@ -928,6 +955,16 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
   sectionTitle: { ...typography.h3, color: colors.text },
   subtleHint: { ...typography.small, color: colors.textFaint, marginTop: -spacing.xs, marginBottom: spacing.sm },
+  // Un entreno dentro de un alumno abierto de "Por revisar".
+  subFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingLeft: 38 + spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   activityRow: {
     flexDirection: 'row',
     alignItems: 'center',

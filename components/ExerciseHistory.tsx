@@ -113,7 +113,9 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
     };
   });
 
-  const visibles = verTodas ? sesiones : sesiones.slice(0, 6);
+  // Los 3 últimos días: la gráfica de arriba ya enseña la tendencia, y la
+  // lista entera era media pantalla de barras casi iguales.
+  const visibles = verTodas ? sesiones : sesiones.slice(0, 3);
   const totalSeries = sesiones.reduce((n, s) => n + s.sets.length, 0);
 
   return (
@@ -239,7 +241,7 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
           );
         })}
 
-        {sesiones.length > 6 ? (
+        {sesiones.length > 3 ? (
           <Pressable onPress={() => setVerTodas((v) => !v)} style={styles.masBoton}>
             <Ionicons
               name={verTodas ? 'chevron-up' : 'chevron-down'}

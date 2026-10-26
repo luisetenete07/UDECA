@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { PressableScale } from './PressableScale';
+import { FilaDelDia } from './FilaDelDia';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /**
@@ -23,9 +24,22 @@ import { colors, fonts, radius, spacing, typography } from '../lib/theme';
  * Se pinta con el color de marca y no como un enlace de texto a propósito. No
  * es un ajuste: es una acción, y compite con el impulso de dejarlo para luego,
  * que es como se pierde.
+ *
+ * `compacto` es la fila de la tarjeta de la semana del inicio: una línea, como
+ * Pasos y Peso, justo debajo de la tira de días donde se ve el hueco.
  */
-export function RegistrarOtroDia() {
+export function RegistrarOtroDia({ compacto = false }: { compacto?: boolean } = {}) {
   const router = useRouter();
+  if (compacto) {
+    return (
+      <FilaDelDia
+        icono="create-outline"
+        etiqueta="Entreno de otro día"
+        accion="Apuntar"
+        onPress={() => router.push('/(client)/registrar')}
+      />
+    );
+  }
   return (
     <PressableScale
       haptic

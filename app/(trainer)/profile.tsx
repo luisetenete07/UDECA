@@ -497,7 +497,8 @@ export default function TrainerProfileScreen() {
         icon="shield-checkmark-outline"
         title="Suscripción"
         hint={admin ? 'Admin' : sub.legacy ? 'Fundador' : sub.active ? 'Activa' : 'Caducada'}
-        defaultOpen={false}
+        // Caducada, abierta: es lo único de aquí que pide hacer algo.
+        defaultOpen={!admin && !sub.legacy && !sub.active}
       >
         <Text style={styles.helperText}>
           {admin
@@ -505,11 +506,15 @@ export default function TrainerProfileScreen() {
             : sub.legacy
               ? 'Cuenta fundadora: acceso completo a CALICO Pro.'
               : // El estado de la cuenta, sin precio (ver lib/subscription.ts).
-                `Plan activo hasta ${
-                  profile?.subscriptionUntil ? fechaCorta(profile.subscriptionUntil) : '—'
-                }.`}
+                sub.active
+                ? frase`Plan activo hasta ${profile?.subscriptionUntil ? fechaCorta(profile.subscriptionUntil) : '—'}.`
+                : profile?.subscriptionUntil
+                  ? frase`Tu plan terminó el ${fechaCorta(profile.subscriptionUntil)}.`
+                  : 'Sin plan activo.'}
         </Text>
-      </CollapsibleCard>
+        {/* El plan y renovarlo, AQUÍ dentro: era otra tarjeta grande más abajo
+            que repetía lo que dice esta fila. */}
+        </CollapsibleCard>
 
       {admin ? (
         <Card accent style={styles.section}>

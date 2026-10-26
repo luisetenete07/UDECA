@@ -359,8 +359,42 @@ export default function ClientDashboard() {
     }
   };
 
-  const targetSessions = routine?.days.length ?? 0;
-  const weekProgress = targetSessions > 0 ? Math.min(sessions / targetSessions, 1) : 0;
+  /*
+   * LA SEMANA, CON UN SOLO NÚMERO.
+   *
+   * Había dos tarjetas contando la semana con números distintos: la del bloque
+   * del plan ("0/4 sesiones") y la de la semana ("0/3"). La segunda contaba
+   * los días de la rutina, también los de descanso. Ahora es una tarjeta: si
+   * el entrenador planificó ESTA semana (un microciclo de 7 días o menos con
+   * sus sesiones), manda lo suyo; si no, los días de la rutina que se entrenan.
+   */
+  const semanaDelPlan = (() => {
+    if (!activeCyc) return null;
+    const bloque = activeCyc.parentId ? (cycles.find((c) => c.id === activeCyc.parentId) ?? null) : null;
+    const raiz = bloque?.parentId ? (cycles.find((c) => c.id === bloque.parentId) ?? bloque) : bloque;
+    const plan = raiz ? planSummary(planCalendar(raiz, cycles, workoutLogs)) : null;
+    const wk =
+      plan && plan.totalWeeks > 0 && plan.week > 0
+        ? { week: plan.week, totalWeeks: plan.totalWeeks }
+        : cycleWeekInfo(activeCyc);
+    const dias =
+      activeCyc.startDate && activeCyc.endDate
+        ? Math.round((activeCyc.endDate - activeCyc.startDate) / 86_400_000) + 1
+        : null;
+    const deUnaSemana = dias !== null && dias <= 7 && (activeCyc.targetSessions ?? 0) > 0;
+    return {
+      fase: bloque ? nombreDeCiclo(bloque.name) : CYCLE_LEVEL_LABEL[activeCyc.level],
+      semana: wk,
+      descarga: !!activeCyc.isDeload,
+      objetivo: activeCyc.goal || bloque?.goal || raiz?.goal || '',
+      sesiones: deUnaSemana ? computeCycleStats(activeCyc, workoutLogs).sessionsDone : null,
+      meta: deUnaSemana ? activeCyc.targetSessions! : null,
+    };
+  })();
+  const diasDeEntreno = routine?.days.filter((d) => !d.isRest && !d.optionalRest).length ?? 0;
+  const targetSessions = semanaDelPlan?.meta ?? diasDeEntreno;
+  const sessionsSemana = semanaDelPlan?.sesiones ?? sessions;
+  const weekProgress = targetSessions > 0 ? Math.min(sessionsSemana / targetSessions, 1) : 0;
 
   // Checklist de bienvenida: se oculta cuando está todo completado.
   const firstSteps = [
@@ -631,67 +665,6 @@ export default function ClientDashboard() {
       ) : null}
 
 
-      {/* Ciclo en curso (solo si el coach usa planificación) */}
-      {activeCyc
-        ? (() => {
-            const cs = computeCycleStats(activeCyc, workoutLogs);
-            // Si el ciclo forma parte de un plan, la semana se cuenta sobre el
-            // plan entero: al alumno le dice más "semana 6 de 12" que "semana 2".
-            const bloque = activeCyc.parentId
-              ? (cycles.find((c) => c.id === activeCyc.parentId) ?? null)
-              : null;
-            const raiz = bloque?.parentId
-              ? (cycles.find((c) => c.id === bloque.parentId) ?? bloque)
-              : bloque;
-            const plan = raiz ? planSummary(planCalendar(raiz, cycles, workoutLogs)) : null;
-            const wk =
-              plan && plan.totalWeeks > 0 && plan.week > 0
-                ? { week: plan.week, totalWeeks: plan.totalWeeks }
-                : cycleWeekInfo(activeCyc);
-            return (
-              <View style={styles.cycleCard}>
-                <View style={styles.cycleTop}>
-                  <Text style={styles.cycleLevel} numberOfLines={1}>
-                    {bloque ? nombreDeCiclo(bloque.name) : CYCLE_LEVEL_LABEL[activeCyc.level]}
-                  </Text>
-                  <View style={styles.cycleWeekBadge}>
-                    <Ionicons name="calendar-outline" size={12} color={colors.primaryBright} />
-                    <Text style={styles.cycleWeekText}>
-                      Semana {wk.week}
-                      {wk.totalWeeks ? frase` de ${wk.totalWeeks}` : ''}
-                    </Text>
-                  </View>
-                  {activeCyc.isDeload ? (
-                    <Text style={styles.cycleDeload}>Semana de descarga</Text>
-                  ) : null}
-                </View>
-                <Text style={styles.cycleName}>
-                  {raiz && raiz !== bloque ? `${nombreDeCiclo(raiz.name)} · ` : ''}
-                  {nombreDeCiclo(activeCyc.name)}
-                </Text>
-                {cs.pctComplete != null ? (
-                  <View style={{ marginTop: spacing.sm }}>
-                    <ProgressBar progress={cs.pctComplete} height={7} />
-                  </View>
-                ) : null}
-                <Text style={styles.cycleMeta}>
-                  {cs.sessionsDone}
-                  {activeCyc.targetSessions ? `/${activeCyc.targetSessions}` : ''} sesiones
-                  {cs.pctComplete != null ? ` · ${Math.round(cs.pctComplete * 100)}%` : ''}
-                  {activeCyc.endDate
-                    ? frase` · hasta ${diaMes(activeCyc.endDate)}`
-                    : ''}
-                </Text>
-                {activeCyc.goal || bloque?.goal || raiz?.goal ? (
-                  <Text style={styles.cycleGoal}>
-                    {activeCyc.goal || bloque?.goal || raiz?.goal}
-                  </Text>
-                ) : null}
-              </View>
-            );
-          })()
-        : null}
-
       {/* Plan semanal: el anillo manda, y debajo la tira de días. */}
       <FadeIn delay={140}>
       <Card style={styles.section}>
@@ -703,16 +676,28 @@ export default function ClientDashboard() {
             <ProgressRing
               progress={weekProgress}
               value={
-                sessions > targetSessions ? String(sessions) : `${sessions}/${targetSessions}`
+                sessionsSemana > targetSessions
+                  ? String(sessionsSemana)
+                  : `${sessionsSemana}/${targetSessions}`
               }
               label="semana"
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.sectionLabel}>Tu semana</Text>
+              {/* Con plan del entrenador, en qué parte va ("Intensificación ·
+                  Semana 6 de 8"); sin él, "Tu semana". */}
+              <Text style={styles.sectionLabel} numberOfLines={2}>
+                {semanaDelPlan
+                  ? unido(
+                      semanaDelPlan.fase,
+                      frase`Semana ${semanaDelPlan.semana.week}${semanaDelPlan.semana.totalWeeks ? frase` de ${semanaDelPlan.semana.totalWeeks}` : ''}`,
+                      semanaDelPlan.descarga ? t('descarga') : null
+                    )
+                  : t('Tu semana')}
+              </Text>
               <Text style={styles.weekBig}>
-                {sessions >= targetSessions
+                {sessionsSemana >= targetSessions
                   ? 'Semana cerrada'
-                  : frase`${targetSessions - sessions} para cerrarla`}
+                  : frase`${targetSessions - sessionsSemana} para cerrarla`}
               </Text>
               {streak > 0 ? (
                 <View style={styles.streakInline}>
@@ -725,11 +710,17 @@ export default function ClientDashboard() {
                 </View>
               ) : (
                 <Text style={styles.weekHint}>
-                  {sessions >= targetSessions
+                  {sessionsSemana >= targetSessions
                     ? 'Objetivo cumplido. Lo que venga es de propina.'
-                    : frase`Llevas ${sessions} de ${targetSessions} sesiones.`}
+                    : frase`Llevas ${sessionsSemana} de ${targetSessions} sesiones.`}
                 </Text>
               )}
+              {/* Lo que busca esta fase, en una línea ("Más carga, menos series"). */}
+              {semanaDelPlan?.objetivo ? (
+                <Text style={styles.weekObjetivo} numberOfLines={2}>
+                  {semanaDelPlan.objetivo}
+                </Text>
+              ) : null}
             </View>
           </View>
         ) : (
@@ -834,22 +825,28 @@ export default function ClientDashboard() {
             </View>
           </View>
         ) : null}
-        <FilaDelDia
-          icono="body-outline"
-          etiqueta="Peso"
-          valor={currentWeight != null ? `${kgCorto(currentWeight)} kg` : 'Sin registrar'}
-          onPress={() => router.push('/(client)/progress?tab=nutricion')}
-        />
+        {/* El peso, solo si hay alguno: "Sin registrar" era una fila para
+            decir que no hay nada (para apuntarlo está Primeros pasos y
+            Progreso). */}
+        {currentWeight != null ? (
+          <FilaDelDia
+            icono="body-outline"
+            etiqueta="Peso"
+            valor={`${kgCorto(currentWeight)} kg`}
+            onPress={() => router.push('/(client)/progress?tab=nutricion')}
+          />
+        ) : null}
+        {/*
+          APUNTAR UN ENTRENO DE OTRO DÍA, COMO UNA FILA MÁS DE LA SEMANA.
+          Era una tarjeta entera con su párrafo. En el menú "⋯" de la sesión
+          ya estuvo y nadie lo encontraba; aquí se ve justo debajo de la tira
+          de la semana, que es donde se nota el hueco del día sin apuntar.
+        */}
+        <RegistrarOtroDia compacto />
       </Card>
       </FadeIn>
 
 
-      {/* APUNTAR UN ENTRENO DE OTRO DÍA.
-          Estaba en Entreno, encima de "Empezar entreno", y ahí estorbaba: esa
-          pantalla es para el entreno de HOY, y quien entra a hacer su día se
-          encuentra antes un botón que habla de otro. Aquí sí: esta es la
-          pantalla del repaso —cómo va la semana, qué falta—, que es cuando uno
-          se acuerda de que el martes entrenó sin el móvil delante. */}
       {llamadas ? (
         <FadeIn delay={200}>
           <TarjetaDeLlamada
@@ -861,9 +858,6 @@ export default function ClientDashboard() {
         </FadeIn>
       ) : null}
 
-      <FadeIn delay={208}>
-        <RegistrarOtroDia />
-      </FadeIn>
 
       {showFirstSteps ? (
         <Card accent style={styles.section}>
@@ -982,46 +976,7 @@ const styles = StyleSheet.create({
     color: colors.primaryBright,
     fontFamily: fonts.semiBold,
   },
-  cycleCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  cycleTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    // "INTENSIFICACIÓN" y "Semana 6 de 8" juntas piden 248 y hay 222: la
-    // segunda baja de línea en lugar de cortar el nombre de la fase.
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  cycleLevel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
-  cycleDeload: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, fontSize: 11 },
-  cycleName: { ...typography.h3, color: colors.text, marginTop: 4 },
-  cycleMeta: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm },
-  cycleGoal: { ...typography.small, color: colors.textFaint, marginTop: 4, fontStyle: 'italic' },
-  cycleWeekBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginLeft: 'auto',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-  },
-  cycleWeekText: {
-    ...typography.small,
-    color: colors.primaryBright,
-    fontFamily: fonts.semiBold,
-    fontSize: 11,
-  },
+  weekObjetivo: { ...typography.small, color: colors.textFaint, fontStyle: 'italic', marginTop: 4 },
   sectionLabel: { ...typography.label, color: colors.textMuted, textTransform: 'uppercase' },
   pausaFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   pausaTitulo: { ...typography.h3, color: colors.text },
