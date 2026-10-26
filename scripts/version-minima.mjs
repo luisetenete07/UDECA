@@ -63,7 +63,18 @@ if (!ficha || !esVersion(ficha.version)) {
 }
 console.log(`App Store: "${ficha.trackName}" ${ficha.version}, publicada el ${ficha.currentVersionReleaseDate}.`);
 
-if (comparaVersiones(ficha.version, minima) < 0) {
+/*
+ * FORZAR=true pone la mínima aunque la tienda aún no la tenga. Todo el que
+ * abra la app en el móvil se queda en el muro hasta que la tienda la publique
+ * (la web sigue entrando: el muro no sale ahí). Solo si se quiere eso.
+ */
+const forzar = process.env.FORZAR === 'true';
+if (comparaVersiones(ficha.version, minima) < 0 && forzar) {
+  console.log(
+    `::warning::En la App Store todavía está la ${ficha.version}. Se pone la mínima en ${minima} igualmente ` +
+      '(FORZAR): hasta que la tienda la publique, en el móvil nadie podrá pasar del muro.'
+  );
+} else if (comparaVersiones(ficha.version, minima) < 0) {
   console.error(
     `En la App Store todavía está la ${ficha.version}. Con la mínima en ${minima} nadie podría ` +
       'entrar en el iPhone. Espera a que Apple la publique y vuelve a lanzarlo.'

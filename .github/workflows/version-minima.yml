@@ -17,6 +17,12 @@ on:
         description: 'Escribirla de verdad (solo con la versión ya publicada en App Store y Google Play)'
         type: boolean
         default: false
+      # Para cortar ya, sin esperar a la tienda: en el móvil nadie pasará del
+      # muro hasta que la versión esté publicada. La web no se ve afectada.
+      forzar:
+        description: 'Ponerla aunque la App Store aún no la tenga (nadie entra en el móvil hasta que salga)'
+        type: boolean
+        default: false
 
 concurrency:
   group: version-minima
@@ -61,6 +67,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
           MINIMA: ${{ inputs.minima }}
           ESCRIBIR: ${{ inputs.escribir }}
+          FORZAR: ${{ inputs.forzar }}
         run: node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/version-minima.mjs
 
       - name: Borrar credencial
