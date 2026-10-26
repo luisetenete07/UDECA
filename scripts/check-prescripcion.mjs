@@ -152,7 +152,11 @@ console.log('\nEl editor guarda lo que se ve');
   ok('el RIR vacío pasa por rirDeTexto', /field === 'rir'\s*\?\s*rirDeTexto\(value\)/.test(editor), 'vuelve a guardarse 0 = al fallo');
   ok('la rutina se guarda con los días limpios', /updateRoutine\(routineId, \{ name, days: dias,/.test(editor) && /days: dias,\s*active: true/.test(editor));
   ok('y la plantilla también', /days: diasAGuardar\(\),/.test(editor));
-  ok('solo en el personalizado', /schedule === 'flex' \? diasParaGuardar\(days, configuracionAGuardar\(\)\) : days/.test(editor));
+  // En el personalizado con su configuración, y en la semana y los días
+  // sueltos con la suya (ya no es solo RIR: letras, RPE, tempo o nada).
+  ok('en los tres tipos de plan, cada uno con su prescripción',
+    /if \(schedule === 'flex'\) return diasParaGuardar\(juntos, configuracionAGuardar\(\)\);/.test(editor) &&
+      /const plan = \{ prescripcion: prescripcionSimpleAGuardar\(\) \};\s*const limpios = diasParaGuardar\(juntos, plan\);/.test(editor));
   /*
    * `useCallback` congela lo que no se declara: sin esto se guardarían las
    * etiquetas de intensidad de cuando se abrió la pantalla.
@@ -169,7 +173,8 @@ console.log('\nEl editor guarda lo que se ve');
 console.log('\nEl alumno ve lo que prescribe su entrenador');
 {
   const entreno = sinComentar(lee('app/(client)/workout.tsx'));
-  ok('junto a cada ejercicio', /textoDePrescripcion\(planned, perso\)/.test(entreno));
+  // `planPrescrito`: la del personalizado o la de la semana / días sueltos.
+  ok('junto a cada ejercicio', /textoDePrescripcion\(planned, planPrescrito\)/.test(entreno) && /const planPrescrito = planDeLaPrescripcion\(routine\);/.test(entreno));
   ok('y ya no el "RIR" a fuego', !/>RIR \{planned\.rir\}</.test(entreno));
   ok('la intensidad, en su escala', /textoDeIntensidadDelDia\(d, perso\)/.test(entreno));
   ok('el resumen de una plantilla se entiende', /Por ejercicio: Tempo/.test(resumenDePrescripcion(con('tempo'))));

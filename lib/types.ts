@@ -1,7 +1,7 @@
 import type { MacrosPorKg } from './macrosPorKg';
 import type { MuscleId } from './muscles';
 import type { PausaPlan } from './pausa';
-import type { EsfuerzoApuntado, PlanPersonalizado } from './planPersonalizado';
+import type { EsfuerzoApuntado, PlanPersonalizado, PrescripcionDelPlan } from './planPersonalizado';
 import type { ModoDelAlumno, QueVeElAlumno } from './visibilidad';
 
 // Dos papeles: el entrenador, que paga la plataforma, y su alumno, que no.
@@ -831,6 +831,14 @@ export interface Routine {
    */
   personalizado?: PlanPersonalizado;
   /**
+   * En la SEMANA y en los DÍAS SUELTOS: qué acompaña a cada ejercicio (RIR,
+   * RPE, % RM, tempo, la escala propia del entrenador —letras— o nada) y, en
+   * los días sueltos, si la intensidad del día va de 1 a 10 o con sus
+   * etiquetas. En el personalizado esto vive dentro de `personalizado`.
+   * Sin nada puesto, lo de siempre: RIR y de 1 a 10.
+   */
+  prescripcion?: PrescripcionDelPlan;
+  /**
    * Qué ve el alumno al entrenar: la intensidad del día y el objetivo de cada
    * ejercicio (RIR, o la variable del personalizado). Vale para los TRES tipos
    * de plan. Sin esto, todo visible, como siempre (ver lib/visibilidad.ts).
@@ -865,6 +873,8 @@ export interface RoutineTemplate {
    * entrenador no quiere volver a montar alumno por alumno.
    */
   personalizado?: PlanPersonalizado;
+  /** La prescripción de la semana o de los días sueltos (ver Routine). */
+  prescripcion?: PrescripcionDelPlan;
   /** Qué ve el alumno al entrenar: también viaja con la plantilla. */
   visibilidad?: QueVeElAlumno;
   /** Y cómo lo ve: en la app o en tabla. */

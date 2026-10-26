@@ -39,10 +39,15 @@ import { TextField } from '../../../../components/TextField';
 import { DragList } from '../../../../components/DragList';
 import { moveItem } from '../../../../lib/useDragReorder';
 import {
+  alUnirConElAnterior,
+  conLoDelBloque,
+  encabezaSuperserie,
   igualarEjercicios,
   numerosHeredados,
   primerDiaLibre,
   resumenDeEjercicios,
+  unificarSuperseries,
+  vaEnSuperserie,
   type Igualar,
 } from '../../../../lib/editorRutina';
 import { showToast } from '../../../../components/Toast';
@@ -83,7 +88,9 @@ import {
   type EscalaDeEsfuerzo,
   type EscalaDeIntensidad,
   type PlanPersonalizado,
+  type PrescripcionDelPlan,
   type VariableDeEjercicio,
+  planDeLaPrescripcion,
 } from '../../../../lib/planPersonalizado';
 import { generateRoutineDraft } from '../../../../lib/routineGenerator';
 import {
@@ -158,6 +165,21 @@ function resumenDeOpciones(ex: RoutineExercise): string {
   return partes.join(' · ');
 }
 
+/** Lo que puede acompañar a cada ejercicio, en los tres tipos de plan. */
+const VARIABLES_DE_EJERCICIO: [VariableDeEjercicio, string][] = [
+  ['rir', 'RIR'],
+  ['rpe', 'RPE'],
+  ['porcentaje', '% RM'],
+  ['tempo', 'Tempo'],
+  ['propia', 'La mía'],
+  ['ninguna', 'Nada'],
+];
+
+/** La superserie se hace toda junta: unas series y un descanso por bloque. */
+function conSuperseriesJuntas(dias: RoutineDay[]): RoutineDay[] {
+  return dias.map((d) => (d.gtg ? d : { ...d, exercises: unificarSuperseries(d.exercises) }));
+}
+
 export default function RoutineEditorScreen() {
   const { id: clientId } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -196,7 +218,7 @@ export default function RoutineEditorScreen() {
   const [menuDia, setMenuDia] = useState<string | null>(null);
   // "Igualar el día": qué día y lo escrito en sus casillas (vacío = no tocar).
   const [igualando, setIgualando] = useState<string | null>(null);
-  const [ig, setIg] = useState({ sets: '', reps: '', segundos: '', rir: '', descanso: '' });
+  const [ig, setIg] = useState({ sets: '', reps: '', segundos: '', rir: '', prescrito: '', descanso: '' });
   /** "Lo que ve el alumno", plegado: se toca poco y ocupaba media pantalla. */
   const [ajustesAbiertos, setAjustesAbiertos] = useState(false);
   /** Los días con "más del día" (EMOM, aproximaciones) a la vista. */
@@ -243,6 +265,19 @@ export default function RoutineEditorScreen() {
     NIVELES_DE_INTENSIDAD_POR_DEFECTO.join(', ')
   );
   const [personalizacionAbierta, setPersonalizacionAbierta] = useState(false);
+  /*
+   * LA PRESCRIPCIÓN DE LA SEMANA Y DE LOS DÍAS SUELTOS.
+   *
+   * Qué acompaña a cada ejercicio no tiene por qué ser el RIR: hay quien
+   * programa con sus letras (A, B, C), con RPE, con tempo o sin nada. Y en los
+   * días sueltos, la intensidad del día puede ir de 1 a 10 o con sus
+   * etiquetas. Va aparte de la del personalizado (`perso`), para que cambiar
+   * de tipo de plan y volver no mezcle una con otra.
+   */
+  const [presSimple, setPresSimple] = useState<PrescripcionDelPlan>({ variable: { tipo: 'rir' } });
+  const [nivelesSimplesTexto, setNivelesSimplesTexto] = useState(
+    NIVELES_DE_INTENSIDAD_POR_DEFECTO.join(', ')
+  );
   /*
    * Qué ve el alumno al entrenar (intensidad del día y objetivo de cada
    * ejercicio). Vale para los tres tipos de plan; ver lib/visibilidad.ts.
@@ -316,6 +351,30 @@ export default function RoutineEditorScreen() {
       },
     };
   };
+  /** La prescripción de la semana o de los días sueltos, limpia para guardar. */
+  const prescripcionSimpleAGuardar = (): PrescripcionDelPlan => {
+    const v = presSimple.variable ?? { tipo: 'rir' as const };
+    const nombre = (v.nombre ?? '').trim().slice(0, LARGO_DEL_NOMBRE_DE_VARIABLE);
+    const conEtiquetas = schedule === 'cycle' && presSimple.intensidad?.escala === 'propia';
+    return {
+      variable: { tipo: v.tipo, ...(v.tipo === 'propia' && nombre ? { nombre } : {}) },
+      ...(conEtiquetas
+        ? {
+            intensidad: {
+              escala: 'propia' as const,
+              niveles: nivelesDeTexto(nivelesSimplesTexto).slice(0, MAX_NIVELES_INTENSIDAD),
+            },
+          }
+        : {}),
+    };
+  };
+  /** Lo que manda en lo que se escribe en cada ejercicio, sea el plan que sea. */
+  const planActivo = (): PlanPersonalizado =>
+    schedule === 'flex' ? configuracionAGuardar() : { prescripcion: prescripcionSimpleAGuardar() };
+  /** En los días sueltos, ¿la intensidad del día va con etiquetas en vez de 1-10? */
+  const cicloConEtiquetas = schedule === 'cycle' && presSimple.intensidad?.escala === 'propia';
+  const cambiaPresSimple = (parte: Partial<PrescripcionDelPlan>) => setPresSimple((prev) => ({ ...prev, ...parte }));
+
   /** Cambia una parte de la prescripción sin pisar el resto. */
   const cambiaPrescripcion = (parte: Partial<NonNullable<PlanPersonalizado['prescripcion']>>) =>
     setPerso((prev) => ({ ...prev, prescripcion: { ...prescripcionDe(prev), ...parte } }));
@@ -362,8 +421,17 @@ export default function RoutineEditorScreen() {
       )
     );
   /** Los días tal y como se guardan: cada valor en su sitio (ver diasParaGuardar). */
-  const diasAGuardar = () =>
-    schedule === 'flex' ? diasParaGuardar(days, configuracionAGuardar()) : days;
+  const diasAGuardar = () => {
+    // La superserie se hace toda junta: unas series y un descanso por bloque.
+    const juntos = conSuperseriesJuntas(days);
+    if (schedule === 'flex') return diasParaGuardar(juntos, configuracionAGuardar());
+    const plan = { prescripcion: prescripcionSimpleAGuardar() };
+    const limpios = diasParaGuardar(juntos, plan);
+    // Con etiquetas, el 1-10 que hubiera debajo no se queda: reaparecería el
+    // día que alguien vuelva a la escala de siempre sin saber de dónde sale.
+    if (plan.prescripcion.intensidad?.escala !== 'propia') return limpios;
+    return limpios.map(({ intensity: _fuera, ...resto }) => resto);
+  };
 
   const [restText, setRestText] = useState<Record<string, string>>({});
   // Ejercicio pendiente de mover/copiar a otro día (abre el selector de día).
@@ -403,7 +471,14 @@ export default function RoutineEditorScreen() {
       if (existing) {
         setRoutineId(existing.id);
         setName(existing.name);
-        setDays(existing.days);
+        // Las superseries ya montadas, con unas series y un descanso por
+        // bloque (sin cambiar lo que el alumno hacía: lib/editorRutina.ts).
+        setDays(conSuperseriesJuntas(existing.days));
+        if (existing.prescripcion) {
+          setPresSimple(existing.prescripcion);
+          const etiquetas = existing.prescripcion.intensidad?.niveles;
+          if (etiquetas?.length) setNivelesSimplesTexto(etiquetas.join(', '));
+        }
         /*
          * UN PLAN VIEJO DE GREASE THE GROOVE SE ABRE COMO PERSONALIZADO.
          *
@@ -722,6 +797,24 @@ export default function RoutineEditorScreen() {
       | 'prescrito',
     value: string
   ) => {
+    // Las series de una superserie son las de todo el bloque: se hacen juntas.
+    if (field === 'sets') {
+      setDays((prev) =>
+        prev.map((d) => {
+          if (d.id !== dayId) return d;
+          const i = d.exercises.findIndex((e) => e.id === exerciseRowId);
+          if (i < 0) return d;
+          const sets = Number(value) || 0;
+          return {
+            ...d,
+            exercises: d.gtg
+              ? d.exercises.map((e, k) => (k === i ? { ...e, sets } : e))
+              : conLoDelBloque(d.exercises, i, { sets }),
+          };
+        })
+      );
+      return;
+    }
     setDays((prev) =>
       prev.map((d) =>
         d.id === dayId
@@ -737,7 +830,7 @@ export default function RoutineEditorScreen() {
                       [field]:
                         field === 'rir'
                           ? rirDeTexto(value)
-                          : field === 'sets' || field === 'restSeconds'
+                          : field === 'restSeconds'
                             ? Number(value) || 0
                             : value,
                     }
@@ -819,18 +912,20 @@ export default function RoutineEditorScreen() {
   };
 
   // Descanso en formato mm:ss; se guarda en segundos.
+  // En una superserie, el descanso es el de todo el bloque (tras la ronda).
   const updateRestSeconds = (dayId: string, exerciseRowId: string, seconds: number) => {
     setDays((prev) =>
-      prev.map((d) =>
-        d.id === dayId
-          ? {
-              ...d,
-              exercises: d.exercises.map((e) =>
-                e.id === exerciseRowId ? { ...e, restSeconds: seconds } : e
-              ),
-            }
-          : d
-      )
+      prev.map((d) => {
+        if (d.id !== dayId) return d;
+        const i = d.exercises.findIndex((e) => e.id === exerciseRowId);
+        if (i < 0) return d;
+        return {
+          ...d,
+          exercises: d.gtg
+            ? d.exercises.map((e, k) => (k === i ? { ...e, restSeconds: seconds } : e))
+            : conLoDelBloque(d.exercises, i, { restSeconds: seconds }),
+        };
+      })
     );
   };
 
@@ -901,22 +996,21 @@ export default function RoutineEditorScreen() {
     );
   };
 
-  // Encadena o desencadena un ejercicio en superserie con el anterior.
+  // Encadena o desencadena un ejercicio en superserie con el anterior. Al
+  // unirlo, se queda con las series y el descanso del primero del bloque: la
+  // superserie se hace toda junta (lib/editorRutina.ts).
   const toggleSuperset = (dayId: string, exerciseRowId: string) => {
     setDays((prev) =>
-      prev.map((d) =>
-        d.id === dayId
-          ? {
-              ...d,
-              exercises: d.exercises.map((e) =>
-                e.id === exerciseRowId
-                  ? { ...e, supersetWithPrevious: !e.supersetWithPrevious }
-                  : e
-              ),
-            }
-          : d
-      )
+      prev.map((d) => {
+        if (d.id !== dayId) return d;
+        const i = d.exercises.findIndex((e) => e.id === exerciseRowId);
+        if (i < 0) return d;
+        const unir = !d.exercises[i].supersetWithPrevious;
+        const exercises = d.exercises.map((e, k) => (k === i ? { ...e, supersetWithPrevious: unir } : e));
+        return { ...d, exercises: unir ? alUnirConElAnterior(exercises, i) : exercises };
+      })
     );
+    setRestText({});
   };
 
   // Mueve o copia un ejercicio a OTRO día sin tener que volver a montarlo
@@ -962,14 +1056,15 @@ export default function RoutineEditorScreen() {
         if (d.id !== dayId) return d;
         const exercises = moveItem(d.exercises, from, to);
         if (exercises === d.exercises) return d;
-        return {
-          ...d,
-          exercises: exercises.map((e, i) =>
-            i === 0 && e.supersetWithPrevious ? { ...e, supersetWithPrevious: false } : e
-          ),
-        };
+        const limpios = exercises.map((e, i) =>
+          i === 0 && e.supersetWithPrevious ? { ...e, supersetWithPrevious: false } : e
+        );
+        // Mover uno puede meterlo en una superserie o sacarlo: cada bloque, con
+        // unas series y un descanso.
+        return { ...d, exercises: d.gtg ? limpios : unificarSuperseries(limpios) };
       })
     );
+    setRestText({});
   };
 
 
@@ -991,11 +1086,13 @@ export default function RoutineEditorScreen() {
       if (source) {
         setName(`${source.name}`);
         setDays(
-          source.days.map((d) => ({
-            ...d,
-            id: nuevoId(),
-            exercises: d.exercises.map((e) => ({ ...e, id: nuevoId() })),
-          }))
+          conSuperseriesJuntas(
+            source.days.map((d) => ({
+              ...d,
+              id: nuevoId(),
+              exercises: d.exercises.map((e) => ({ ...e, id: nuevoId() })),
+            }))
+          )
         );
       }
       setCopyPickerOpen(false);
@@ -1018,6 +1115,11 @@ export default function RoutineEditorScreen() {
     if (t.scheduleLabel) setScheduleLabel(flexLabel(t.scheduleLabel));
     setVisibilidad(queVeElAlumno(t));
     setModoAlumno(modoDelAlumno(t));
+    if (t.prescripcion) {
+      setPresSimple(t.prescripcion);
+      const etiquetas = t.prescripcion.intensidad?.niveles;
+      if (etiquetas?.length) setNivelesSimplesTexto(etiquetas.join(', '));
+    }
     if (t.personalizado) {
       // La prescripción se resuelve aparte: la de POR_DEFECTO (RIR) pisaría la
           // herencia de un plan guardado antes de que existiera (ver prescripcionDe).
@@ -1041,11 +1143,13 @@ export default function RoutineEditorScreen() {
      * puesta, que por defecto es hoy.
      */
     setDays(
-      t.days.map((d) => ({
-        ...d,
-        id: nuevoId(),
-        exercises: d.exercises.map((e) => ({ ...e, id: nuevoId() })),
-      }))
+      conSuperseriesJuntas(
+        t.days.map((d) => ({
+          ...d,
+          id: nuevoId(),
+          exercises: d.exercises.map((e) => ({ ...e, id: nuevoId() })),
+        }))
+      )
     );
     setTemplatesOpen(false);
     showToast('Plantilla aplicada');
@@ -1066,6 +1170,7 @@ export default function RoutineEditorScreen() {
         schedule,
         scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
         personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
+        prescripcion: schedule !== 'flex' ? prescripcionSimpleAGuardar() : undefined,
         visibilidad: visibilidadAGuardar(visibilidad),
         modoAlumno,
         days: diasAGuardar(),
@@ -1104,6 +1209,7 @@ export default function RoutineEditorScreen() {
           cycleStartDateSetAt: schedule === 'cycle' ? Date.now() : undefined,
           scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
           personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
+          prescripcion: schedule !== 'flex' ? prescripcionSimpleAGuardar() : undefined,
           visibilidad: visibilidadAGuardar(visibilidad),
           modoAlumno,
         });
@@ -1143,6 +1249,8 @@ export default function RoutineEditorScreen() {
         // Solo el plan personalizado la lleva: en los otros dos no significa
         // nada, y guardarla ahí sería dejar escrito un ajuste que no se aplica.
         personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
+        // La semana y los días sueltos, con su RIR, sus letras o lo que use.
+        prescripcion: schedule !== 'flex' ? prescripcionSimpleAGuardar() : undefined,
         // Los tres tipos de plan: se guarda siempre, con las dos claves.
         visibilidad: visibilidadAGuardar(visibilidad),
         modoAlumno,
@@ -1203,6 +1311,9 @@ export default function RoutineEditorScreen() {
     // Mismo motivo: sin ella se guardarían las etiquetas de intensidad de
     // cuando se abrió la pantalla, no las que se acaban de escribir.
     nivelesIntensidadTexto,
+    // Y las de la semana o los días sueltos, por lo mismo.
+    presSimple,
+    nivelesSimplesTexto,
     // Lo mismo: sin ella se guardaría lo que se veía al abrir la pantalla.
     visibilidad,
     modoAlumno,
@@ -1519,16 +1630,7 @@ export default function RoutineEditorScreen() {
                   nada en ese.
                 </Text>
                 <View style={styles.persoFichas}>
-                  {(
-                    [
-                      ['rir', 'RIR'],
-                      ['rpe', 'RPE'],
-                      ['porcentaje', '% RM'],
-                      ['tempo', 'Tempo'],
-                      ['propia', 'La mía'],
-                      ['ninguna', 'Nada'],
-                    ] as [VariableDeEjercicio, string][]
-                  ).map(([tipo, texto]) => (
+                  {VARIABLES_DE_EJERCICIO.map(([tipo, texto]) => (
                     <Chip
                       key={tipo}
                       texto={texto}
@@ -1723,6 +1825,73 @@ export default function RoutineEditorScreen() {
         )}
 
         {/*
+          QUÉ VA JUNTO A SERIES Y REPS, TAMBIÉN EN LA SEMANA Y LOS DÍAS SUELTOS.
+          El RIR era fijo y no todo el mundo programa con RIR: hay quien usa
+          sus letras, RPE, tempo o nada. Y en los días sueltos, la intensidad
+          del día puede ir de 1 a 10 o con sus propias etiquetas.
+        */}
+        {schedule !== 'flex' ? (
+          <>
+            <Text style={styles.persoTitulo}>Junto a series y reps</Text>
+            <View style={styles.persoFichas}>
+              {VARIABLES_DE_EJERCICIO.map(([tipo, texto]) => (
+                <Chip
+                  key={tipo}
+                  texto={texto}
+                  activo={(presSimple.variable?.tipo ?? 'rir') === tipo}
+                  compacto
+                  onPress={() => cambiaPresSimple({ variable: { ...presSimple.variable, tipo } })}
+                />
+              ))}
+            </View>
+            {presSimple.variable?.tipo === 'propia' ? (
+              <TextField
+                label="Cómo se llama (lo ve el alumno)"
+                containerStyle={{ marginTop: spacing.sm, marginBottom: 0 }}
+                placeholder="Ej. Nivel, Zona, Carga"
+                maxLength={LARGO_DEL_NOMBRE_DE_VARIABLE}
+                value={presSimple.variable?.nombre ?? ''}
+                onChangeText={(v) => cambiaPresSimple({ variable: { tipo: 'propia', nombre: v } })}
+                style={{ marginTop: spacing.xs, marginBottom: 0 }}
+              />
+            ) : null}
+            {presSimple.variable?.tipo === 'propia' ? (
+              <Text style={[styles.persoAyuda, { marginTop: spacing.xs }]}>
+                En cada ejercicio escribes lo suyo (A, B, C…), y el alumno lo ve así: «Nivel B».
+              </Text>
+            ) : null}
+            {schedule === 'cycle' ? (
+              <>
+                <Text style={styles.persoTitulo}>Intensidad de cada día</Text>
+                <Segmented
+                  compacto
+                  valor={cicloConEtiquetas ? 'propia' : 'diez'}
+                  opciones={[
+                    { valor: 'diez' as const, texto: 'De 1 a 10' },
+                    { valor: 'propia' as const, texto: 'Mis etiquetas' },
+                  ]}
+                  onChange={(v) =>
+                    cambiaPresSimple({
+                      intensidad: v === 'propia' ? { escala: 'propia' } : undefined,
+                    })
+                  }
+                />
+                {cicloConEtiquetas ? (
+                  <TextField
+                    label={frase`Tus niveles, separados por comas (máx. ${MAX_NIVELES_INTENSIDAD})`}
+                    containerStyle={{ marginTop: spacing.sm, marginBottom: 0 }}
+                    placeholder="Ej. A, B, C · Suave, Media, Dura"
+                    value={nivelesSimplesTexto}
+                    onChangeText={setNivelesSimplesTexto}
+                    style={{ marginTop: spacing.xs, marginBottom: 0 }}
+                  />
+                ) : null}
+              </>
+            ) : null}
+          </>
+        ) : null}
+
+        {/*
          * CÓMO LO VE EL ALUMNO: apuntando cada serie en la app, o en una tabla
          * para entrenar sin ella (y al acabar, "Lo he hecho"). Se decide
          * alumno por alumno: va en su rutina.
@@ -1773,8 +1942,7 @@ export default function RoutineEditorScreen() {
           const ve = seMuestra;
           const presc = schedule === 'flex' ? prescripcionDe(perso) : null;
           const hayIntensidad = !presc || presc.intensidad.escala !== 'ninguna';
-          const nombreObjetivo =
-            schedule === 'flex' ? nombreDeLaVariable(configuracionAGuardar()) : 'RIR';
+          const nombreObjetivo = nombreDeLaVariable(planActivo());
           if (!hayIntensidad && !nombreObjetivo) return null;
           return (
             <>
@@ -1838,7 +2006,10 @@ export default function RoutineEditorScreen() {
           else if (day.isRest) summaryParts.push(frase`Día ${dayIndex + 1}`, 'Descanso');
           else {
             summaryParts.push(frase`Día ${dayIndex + 1}`);
-            if (seMuestra.intensidad) summaryParts.push(`Intensidad ${day.intensity ?? 5}`);
+            if (seMuestra.intensidad) {
+              if (!cicloConEtiquetas) summaryParts.push(`Intensidad ${day.intensity ?? 5}`);
+              else if (day.intensityLabel?.trim()) summaryParts.push(frase`Intensidad ${day.intensityLabel.trim()}`);
+            }
           }
         } else if (schedule === 'flex') {
           if (day.isRest) summaryParts.push('Descanso');
@@ -1959,7 +2130,26 @@ export default function RoutineEditorScreen() {
                 reiniciar el ciclo entrenando el Día 1.
               </Text>
             ) : null}
-            {!day.isRest && seMuestra.intensidad ? (
+            {!day.isRest && seMuestra.intensidad && cicloConEtiquetas ? (
+              /* Con las etiquetas del entrenador: se toca la que va, y tocar la
+                 que ya está puesta la quita. */
+              <View style={styles.dayIntensityRow}>
+                <Text style={styles.dayIntensityLabel}>
+                  Intensidad · {day.intensityLabel?.trim() || 'sin poner'}
+                </Text>
+                <View style={styles.persoFichas}>
+                  {nivelesDeIntensidad({ prescripcion: prescripcionSimpleAGuardar() }).map((etiqueta) => (
+                    <Chip
+                      key={etiqueta}
+                      texto={etiqueta}
+                      activo={day.intensityLabel === etiqueta}
+                      compacto
+                      onPress={() => eligeIntensidad(day.id, etiqueta)}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : !day.isRest && seMuestra.intensidad ? (
               <View style={styles.dayIntensityRow}>
                 <Text style={styles.dayIntensityLabel}>
                   Intensidad · {day.intensity ?? 5}/10
@@ -2318,12 +2508,16 @@ export default function RoutineEditorScreen() {
                * filas de casillas grandes debajo de dos filas de botones.
                */}
               <View style={styles.exerciseFields}>
-                <Casilla
-                  etiqueta="Series"
-                  keyboardType="number-pad"
-                  value={String(ex.sets)}
-                  onChangeText={(v) => updateExerciseField(day.id, ex.id, 'sets', v)}
-                />
+                {/* En una superserie, series y descanso van UNA vez, en el
+                    primero: se hace todo junto (A, B, descanso). */}
+                {!day.gtg && vaEnSuperserie(day.exercises, exIndex) ? null : (
+                  <Casilla
+                    etiqueta="Series"
+                    keyboardType="number-pad"
+                    value={String(ex.sets)}
+                    onChangeText={(v) => updateExerciseField(day.id, ex.id, 'sets', v)}
+                  />
+                )}
                 <Casilla
                   etiqueta={
                     isDualMeasure(ex.measure)
@@ -2362,7 +2556,7 @@ export default function RoutineEditorScreen() {
                  * RIR, RPE, % RM, tempo, la suya... o ninguna, y entonces la
                  * casilla desaparece. Vacía, el alumno no ve nada.
                  */}
-                {!seMuestra.objetivo ? null : schedule !== 'flex' || prescripcionDe(perso).variable.tipo === 'rir' ? (
+                {!seMuestra.objetivo ? null : prescripcionDe(planActivo()).variable.tipo === 'rir' ? (
                   <Casilla
                     etiqueta="RIR"
                     keyboardType="number-pad"
@@ -2370,32 +2564,38 @@ export default function RoutineEditorScreen() {
                     onChangeText={(v) => updateExerciseField(day.id, ex.id, 'rir', v)}
                     placeholder="2"
                   />
-                ) : nombreDeLaVariable(configuracionAGuardar()) ? (
+                ) : nombreDeLaVariable(planActivo()) ? (
                   <Casilla
-                    etiqueta={nombreDeLaVariable(configuracionAGuardar())!}
+                    etiqueta={nombreDeLaVariable(planActivo())!}
                     keyboardType={
-                      prescripcionDe(perso).variable.tipo === 'rpe' ||
-                      prescripcionDe(perso).variable.tipo === 'porcentaje'
+                      prescripcionDe(planActivo()).variable.tipo === 'rpe' ||
+                      prescripcionDe(planActivo()).variable.tipo === 'porcentaje'
                         ? 'numbers-and-punctuation'
                         : 'default'
                     }
-                    autoCapitalize="none"
+                    // Las letras se escriben como las pone el entrenador ("B").
+                    autoCapitalize={prescripcionDe(planActivo()).variable.tipo === 'propia' ? 'characters' : 'none'}
                     value={ex.prescrito ?? ''}
                     onChangeText={(v) => updateExerciseField(day.id, ex.id, 'prescrito', v)}
-                    placeholder={ejemploDeLaVariable(perso)}
+                    placeholder={ejemploDeLaVariable(planActivo()) || 'B'}
                   />
                 ) : null}
-                <Casilla
-                  etiqueta="Descanso"
-                  keyboardType="numbers-and-punctuation"
-                  value={restText[ex.id] ?? minutosSegundos(ex.restSeconds)}
-                  onChangeText={(v) => {
-                    setRestText((prev) => ({ ...prev, [ex.id]: v }));
-                    updateRestSeconds(day.id, ex.id, segundosDeTexto(v));
-                  }}
-                  placeholder="3:30"
-                />
+                {!day.gtg && vaEnSuperserie(day.exercises, exIndex) ? null : (
+                  <Casilla
+                    etiqueta="Descanso"
+                    keyboardType="numbers-and-punctuation"
+                    value={restText[ex.id] ?? minutosSegundos(ex.restSeconds)}
+                    onChangeText={(v) => {
+                      setRestText((prev) => ({ ...prev, [ex.id]: v }));
+                      updateRestSeconds(day.id, ex.id, segundosDeTexto(v));
+                    }}
+                    placeholder="3:30"
+                  />
+                )}
               </View>
+              {!day.gtg && encabezaSuperserie(day.exercises, exIndex) ? (
+                <Text style={styles.bloqueNota}>Series y descanso, para toda la superserie</Text>
+              ) : null}
 
               {/*
                * LO DEMÁS, PLEGADO. Carga, agarre, indicaciones, objetivo,
@@ -2871,7 +3071,7 @@ export default function RoutineEditorScreen() {
               icono: 'options-outline',
               texto: 'Igualar series, reps y descanso',
               onPress: cerrarY(() => {
-                setIg({ sets: '', reps: '', segundos: '', rir: '', descanso: '' });
+                setIg({ sets: '', reps: '', segundos: '', rir: '', prescrito: '', descanso: '' });
                 setIgualando(dia.id);
               }),
             });
@@ -2896,12 +3096,16 @@ export default function RoutineEditorScreen() {
         const ejercicios = dia?.exercises ?? [];
         const hayReps = ejercicios.some((e) => !isHoldMeasure(e.measure));
         const haySegundos = ejercicios.some((e) => isHoldMeasure(e.measure));
-        const conRir = seMuestra.objetivo && (schedule !== 'flex' || prescripcionDe(perso).variable.tipo === 'rir');
+        const variable = prescripcionDe(planActivo()).variable.tipo;
+        const conRir = seMuestra.objetivo && variable === 'rir';
+        // RPE, letras, tempo…: con su nombre, como en cada ejercicio.
+        const otraVariable = seMuestra.objetivo && variable !== 'rir' ? nombreDeLaVariable(planActivo()) : null;
         const valores: Igualar = {
           sets: Number.parseInt(ig.sets, 10) > 0 ? Number.parseInt(ig.sets, 10) : undefined,
           reps: ig.reps.trim() || undefined,
           segundos: ig.segundos.trim() || undefined,
           rir: conRir && ig.rir.trim() ? rirDeTexto(ig.rir) : undefined,
+          prescrito: otraVariable && ig.prescrito.trim() ? ig.prescrito.trim() : undefined,
           restSeconds: ig.descanso.trim() ? segundosDeTexto(ig.descanso) || undefined : undefined,
         };
         const algo = Object.values(valores).some((v) => v !== undefined);
@@ -2944,6 +3148,13 @@ export default function RoutineEditorScreen() {
                   onChangeText={(v) => setIg((p) => ({ ...p, rir: v }))}
                   placeholder="2"
                 />
+              ) : otraVariable ? (
+                <Casilla
+                  etiqueta={otraVariable}
+                  value={ig.prescrito}
+                  onChangeText={(v) => setIg((p) => ({ ...p, prescrito: v }))}
+                  placeholder={ejemploDeLaVariable(planActivo()) || 'B'}
+                />
               ) : null}
               <Casilla
                 etiqueta="Descanso"
@@ -2981,7 +3192,11 @@ export default function RoutineEditorScreen() {
         visible={verComoAlumno}
         onClose={() => setVerComoAlumno(false)}
         dias={diasAGuardar()}
-        perso={schedule === 'flex' ? configuracionAGuardar() : undefined}
+        perso={planDeLaPrescripcion({
+          schedule,
+          personalizado: configuracionAGuardar(),
+          prescripcion: prescripcionSimpleAGuardar(),
+        })}
         pedirEsfuerzo={pedirEsfuerzo}
       />
       {profile ? (
@@ -3238,6 +3453,7 @@ const styles = StyleSheet.create({
   enlaceTexto: { ...typography.small, fontSize: 12, color: colors.textFaint, fontFamily: fonts.semiBold },
   enlaceTextoActivo: { color: colors.primaryBright },
   enlaceSeparar: { ...typography.small, fontSize: 12, color: colors.textMuted },
+  bloqueNota: { ...typography.small, fontSize: 12, color: colors.primaryBright, marginTop: spacing.xs },
   exerciseName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
   exerciseRowDragging: { borderColor: colors.hairline },
   exerciseRowLinked: {

@@ -714,6 +714,17 @@ export const EN: Record<string, string> = {
   'Minutos (máximo, opcional)': 'Minutes (maximum, optional)',
   'Más de lo que puso tu entrenador ({0})': 'More than your coach set ({0})',
   'Minutos al día, o un margen (de 20 a 30). Los va sumando y, al llegar al mínimo, queda hecho.': 'Minutes a day, or a range (20 to 30). They add them up and, once they reach the minimum, it\'s done.',
+  // Semana y días sueltos: no solo RIR; superserie con series y descanso únicos (app/(trainer)/clients/[id]/routine.tsx)
+  'Intensidad {0}': 'Intensity {0}',
+  'Junto a series y reps': 'Alongside sets and reps',
+  'Intensidad de cada día': 'Intensity of each day',
+  'Series y descanso, para toda la superserie': 'Sets and rest, for the whole superset',
+  'Ej. Nivel, Zona, Carga': 'E.g. Level, Zone, Load',
+  'Mis etiquetas': 'My labels',
+  'De 1 a 10': 'From 1 to 10',
+  'Cómo se llama (lo ve el alumno)': 'What it\'s called (the student sees it)',
+  'En cada ejercicio escribes lo suyo (A, B, C…), y el alumno lo ve así: «Nivel B».': 'In each exercise you write its value (A, B, C…), and the student sees it like this: "Level B".',
+  'Ej. A, B, C · Suave, Media, Dura': 'E.g. A, B, C · Easy, Medium, Hard',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

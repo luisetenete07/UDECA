@@ -16,6 +16,7 @@ import { Sheet } from './Sheet';
 import { colors, fieldLabel, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { Routine, TrainingCycle, WeekPlanEntry } from '../lib/types';
 import { queVeElAlumno } from '../lib/visibilidad';
+import { planDeLaPrescripcion, prescripcionDe } from '../lib/planPersonalizado';
 
 /**
  * Programar UNA semana: series, repeticiones y RIR de cada ejercicio.
@@ -55,8 +56,12 @@ export function WeekPlanSheet({
 
   const nombres = exerciseNames(routine);
   // Si el entrenador ha apagado el RIR en la rutina, aquí tampoco se pide: no
-  // se programa un número que nadie va a ver. Lo puesto se conserva.
-  const conRir = !routine || queVeElAlumno(routine).objetivo;
+  // se programa un número que nadie va a ver. Lo puesto se conserva. Y si su
+  // plan no va por RIR (letras, RPE, tempo…), tampoco: sería otra unidad.
+  const conRir =
+    !routine ||
+    (queVeElAlumno(routine).objetivo &&
+      prescripcionDe(planDeLaPrescripcion(routine)).variable.tipo === 'rir');
   const previa = semanaAnterior(cycles, micro);
   const yaProgramada = (micro.weekPlan ?? []).length > 0;
 

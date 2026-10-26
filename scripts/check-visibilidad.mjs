@@ -62,7 +62,7 @@ console.log('\nY el alumno solo ve lo que le dejan');
   const entreno = sinComentar(lee('app/(client)/workout.tsx'));
   ok('la cabecera de la sesión', /\|\| !ve\.intensidad( \|\| enMarcha)? \? null : textoIntensidad\(/.test(entreno));
   ok('la ficha de elegir rutina', /ficha\.intensidad && ve\.intensidad && intensidad/.test(entreno));
-  ok('el objetivo del ejercicio', /ve\.objetivo (&&|\?) textoDePrescripcion\(planned, perso\)/.test(entreno));
+  ok('el objetivo del ejercicio', /ve\.objetivo (&&|\?) textoDePrescripcion\(planned, planPrescrito\)/.test(entreno));
   const inicio = sinComentar(lee('app/(client)/dashboard.tsx'));
   ok('la tarjeta de hoy del inicio', /queVeElAlumno\(routine\)\.intensidad &&/.test(inicio));
 }
@@ -72,11 +72,14 @@ console.log('\nY el entrenador tampoco lo ve mientras esté apagado');
   const editor = sinComentar(lee('app/(trainer)/clients/[id]/routine.tsx'));
   ok('la barra de intensidad del ciclo', /!day\.isRest && seMuestra\.intensidad \?/.test(editor));
   ok('la intensidad del personalizado', /day\.gtg \|\| !seMuestra\.intensidad \|\|/.test(editor));
-  ok('el resumen del día (ciclo)', /if \(seMuestra\.intensidad\) summaryParts\.push\(`Intensidad/.test(editor));
+  // De 1 a 10 o con las etiquetas del entrenador: las dos, solo si se ve.
+  ok('el resumen del día (ciclo)', /if \(seMuestra\.intensidad\) \{\s*if \(!cicloConEtiquetas\) summaryParts\.push\(`Intensidad/.test(editor));
   ok('el resumen del día (personalizado)', /seMuestra\.intensidad && textoDeIntensidadDelDia\(day, perso\)/.test(editor));
   ok('la casilla del RIR o la variable', /!seMuestra\.objetivo \? null :/.test(editor));
   const semana = sinComentar(lee('components/WeekPlanSheet.tsx'));
-  ok('la columna de RIR de la semana programada', /conRir = !routine \|\| queVeElAlumno\(routine\)\.objetivo/.test(semana)
+  // Y si el plan no va por RIR (letras, RPE…), tampoco: sería otra unidad.
+  ok('la columna de RIR de la semana programada',
+    /conRir =\s*!routine \|\|\s*\(queVeElAlumno\(routine\)\.objetivo &&\s*prescripcionDe\(planDeLaPrescripcion\(routine\)\)\.variable\.tipo === 'rir'\)/.test(semana)
     && /\{conRir \? \(/.test(semana));
 }
 

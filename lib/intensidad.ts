@@ -6,7 +6,8 @@ import type { RoutineDay, RoutineSchedule } from './types';
  * Hay dos escalas y no es un descuido:
  *
  * - En un CICLO la intensidad es del día que toca, y se lee en la escala del
- *   Método REIN TENA (1-10). Es la que el entrenador ya usa y no se toca.
+ *   Método REIN TENA (1-10), o con las etiquetas propias del entrenador
+ *   (letras, palabras) si así lo elige.
  * - En SENSACIONES no hay día que toca: hay varias rutinas y el alumno elige
  *   según cómo se encuentre. Lo que necesita antes de elegir es cuánto le va a
  *   pedir cada una, y un porcentaje se compara de un vistazo ("hoy no estoy
@@ -38,6 +39,9 @@ export function textoIntensidad(
     if (day.intensityLabel?.trim()) return day.intensityLabel.trim();
     return day.intensityPct ? `${day.intensityPct} %` : null;
   }
+  // En los días sueltos también puede ir con las etiquetas del entrenador
+  // ("B", "Media"): al guardar, con etiquetas no queda el 1-10.
+  if (day.intensityLabel?.trim()) return day.intensityLabel.trim();
   return day.intensity ? `${day.intensity}/10` : null;
 }
 

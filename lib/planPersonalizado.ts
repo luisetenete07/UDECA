@@ -373,6 +373,25 @@ export function prescripcionDe(plan?: PlanPersonalizado): Required<PrescripcionD
   };
 }
 
+/**
+ * EL PLAN QUE MANDA EN LO QUE SE PRESCRIBE, SEA CUAL SEA EL TIPO DE PLAN.
+ *
+ * En el personalizado, su configuración entera. En la semana y en los días
+ * sueltos, solo su prescripción (RIR, letras, tempo…), envuelta para que todo
+ * lo que ya sabe leerla —textoDePrescripcion, nombreDeLaVariable— sirva igual.
+ * Sin prescripción, nada: y nada es lo de siempre, RIR.
+ *
+ * Ojo: esto NO es "el plan personalizado" de un plan semanal. La pregunta del
+ * esfuerzo, el vocabulario y los permisos siguen siendo solo del personalizado.
+ */
+export function planDeLaPrescripcion(
+  routine: { schedule?: string; personalizado?: PlanPersonalizado; prescripcion?: PrescripcionDelPlan } | null | undefined
+): PlanPersonalizado | undefined {
+  if (!routine) return undefined;
+  if (routine.schedule === 'flex') return routine.personalizado;
+  return routine.prescripcion ? { prescripcion: routine.prescripcion } : undefined;
+}
+
 /** Las etiquetas de intensidad propias, limpias y acotadas. */
 export function nivelesDeIntensidad(plan?: PlanPersonalizado): string[] {
   const puestos = (prescripcionDe(plan).intensidad.niveles ?? [])

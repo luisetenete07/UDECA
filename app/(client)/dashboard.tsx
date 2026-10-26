@@ -47,6 +47,7 @@ import { getCached, setCached } from '../../lib/screenCache';
 import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '../../lib/stats';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { queVeElAlumno } from '../../lib/visibilidad';
+import { textoIntensidad } from '../../lib/intensidad';
 import { entrenoDeHoy, esGtg, progresoGtg, textoDelDia } from '../../lib/gtg';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
@@ -545,8 +546,8 @@ export default function ClientDashboard() {
                       todaySession.cycleLabel,
                       // Solo si su entrenador deja que la vea (lib/visibilidad.ts).
                       queVeElAlumno(routine).intensidad &&
-                        todaySession.day?.intensity &&
-                        `Int. ${todaySession.day.intensity}/10`
+                        textoIntensidad(todaySession.day, routine.schedule) &&
+                        `Int. ${textoIntensidad(todaySession.day, routine.schedule)}`
                     )
                   : todaysDay
                     ? `Hoy · ${WEEKDAY_NAMES[todayWeekday()]}`

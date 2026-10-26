@@ -65,6 +65,7 @@ import {
   textoDeEsfuerzo,
   textoDeIntensidadDelDia,
   textoDePrescripcion,
+  planDeLaPrescripcion,
   tocaPreguntarEsfuerzo,
   type EsfuerzoApuntado,
 } from '../../lib/planPersonalizado';
@@ -669,6 +670,13 @@ export default function WorkoutScreen() {
    * alumno que su entrenador haya marcado), y los días se llaman días.
    */
   const perso = isFlex ? routine?.personalizado : undefined;
+  /*
+   * Lo que acompaña a cada ejercicio (RIR, letras, tempo…): en el personalizado
+   * sale de su configuración y en la semana o los días sueltos, de su propia
+   * prescripción. Solo eso: la pregunta del esfuerzo, el vocabulario y los
+   * permisos siguen siendo solo del personalizado (por eso no es `perso`).
+   */
+  const planPrescrito = planDeLaPrescripcion(routine);
   /*
    * Qué ha decidido el entrenador que se vea: la intensidad del día y el
    * objetivo de cada ejercicio. Vale para los tres tipos de plan, y sin nada
@@ -2094,7 +2102,7 @@ export default function WorkoutScreen() {
       const set = d.exercise?.sets[r];
       if (!d.exercise || !set) return null;
       const esAhora = siguiente?.ejercicio === i && siguiente.serie === r;
-      const pres = ve.objetivo && d.planned ? textoDePrescripcion(d.planned, perso) : '';
+      const pres = ve.objetivo && d.planned ? textoDePrescripcion(d.planned, planPrescrito) : '';
       const meta = unido(
         d.planned?.reps ? `${d.planned.reps} ${d.isSeconds ? 's' : 'reps'}` : undefined,
         d.load === 'assisted' ? t('Con goma') : d.load === 'weighted' ? t('Lastrado') : undefined,
@@ -2926,7 +2934,7 @@ export default function WorkoutScreen() {
         <TablaDeEntreno
           day={day}
           medidaDe={(ex) => ex.measure ?? measureByExercise[ex.exerciseId]}
-          objetivoDe={(ex) => (ve.objetivo ? textoDePrescripcion(ex, perso) : null)}
+          objetivoDe={(ex) => (ve.objetivo ? textoDePrescripcion(ex, planPrescrito) : null)}
         />
       ) : null}
 
@@ -3055,7 +3063,7 @@ export default function WorkoutScreen() {
                 {unido(
                   categoriaEjercicio,
                   planned ? `${planned.sets} × ${planned.reps}${isSeconds ? 's' : ''}` : null,
-                  planned && ve.objetivo ? textoDePrescripcion(planned, perso) : null,
+                  planned && ve.objetivo ? textoDePrescripcion(planned, planPrescrito) : null,
                   planned?.restSeconds ? frase`${minutosSegundos(planned.restSeconds, false)} de descanso` : null,
                   load === 'assisted' ? t('Con goma') : load === 'weighted' ? t('Lastrado') : null,
                   planned?.grip ? frase`Agarre ${GRIP_LABEL[planned.grip].toLowerCase()}` : null,

@@ -30,7 +30,7 @@ export function VistaDelAlumno({
   visible: boolean;
   onClose: () => void;
   dias: RoutineDay[];
-  /** La forma de trabajar del plan personalizado (su variable, su vocabulario). */
+  /** Lo que acompaña a cada ejercicio (RIR, letras, tempo…), sea el plan que sea. */
   perso?: PlanPersonalizado;
   /** Fuera del personalizado: si se le pide el RIR. */
   pedirEsfuerzo: boolean;
