@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useKeepAwake } from 'expo-keep-awake';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Text } from './Texto';
@@ -18,23 +20,37 @@ import {
   conMarca,
   conMinutosDeHoy,
   conSeriesDeHoy,
+  cronoVigente,
   cuentaSeries,
   cuentaTiempo,
   hayRutinaDiaria,
   hechosDeHoy,
   marcaDeSerie,
   minutosDeHoy,
+  minutosDelCrono,
+  minutosEnteros,
   NOMBRE_POR_DEFECTO,
   MAX_SERIES,
   progresoDiario,
   seriesDe,
   seriesDelDia,
   textoDeMinutos,
+  textoDelCrono,
   textoDelEjercicio,
   textoDiario,
 } from '../lib/rutinaDiaria';
-import { colors, fonts, gradients, radius, spacing, typography } from '../lib/theme';
+import { colors, fonts, gradients, radius, spacing, tabularNums, typography } from '../lib/theme';
+import type { CronoDiario } from '../lib/rutinaDiaria';
 import type { DiaDeRutinaDiaria, RutinaDiaria, UserProfile } from '../lib/types';
+
+/** Dónde se guarda el crono que está corriendo, para que sobreviva a cerrar la app. */
+const CLAVE_CRONO = 'calico-crono-gtg';
+
+/** Mientras corre el crono, la pantalla no se apaga (el móvil suele estar en el suelo). */
+function PantallaEncendida() {
+  useKeepAwake('crono-gtg', { suppressDeactivateWarnings: true });
+  return null;
+}
 
 /**
  * Lo que toca hacer HOY aparte del entreno, y marcarlo.
@@ -67,6 +83,9 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
   const [rutina, setRutina] = useState<RutinaDiaria | null>(null);
   const [dia, setDia] = useState<DiaDeRutinaDiaria | null>(null);
   const [video, setVideo] = useState<{ url: string; titulo: string } | null>(null);
+  // El crono de lo que va por tiempo, y el "ahora" con el que se pinta.
+  const [crono, setCrono] = useState<CronoDiario | null>(null);
+  const [ahora, setAhora] = useState(() => Date.now());
   const [indicacionesAbiertas, setIndicacionesAbiertas] = useState(false);
   const uid = profile?.uid;
 
@@ -170,6 +189,68 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       }).catch(() => {});
     },
     [uid, rutina, dia]
+  );
+
+  /*
+   * EL CRONO: "EMPEZAR" Y "PARAR".
+   *
+   * Lo que va por tiempo ("20-30 min de pino") se mide con el crono: Empezar,
+   * practicar, Parar, y ese rato se suma a lo de hoy. Se guarda cuándo empezó,
+   * no cuánto lleva: así cuadra aunque el móvil se bloquee o la app se cierre
+   * y se vuelva a abrir. Uno de ayer no se suma a hoy (cronoVigente).
+   */
+  useEffect(() => {
+    if (!uid || !rutina) return;
+    AsyncStorage.getItem(CLAVE_CRONO)
+      .then((txt) => {
+        const guardado = txt ? (JSON.parse(txt) as CronoDiario) : null;
+        const vale = cronoVigente(guardado, uid, rutina);
+        if (vale) setCrono(vale);
+        else if (guardado) AsyncStorage.removeItem(CLAVE_CRONO).catch(() => {});
+      })
+      .catch(() => {});
+  }, [uid, rutina]);
+
+  // Corriendo, se repinta cada segundo (y al volver a la app, al momento).
+  useEffect(() => {
+    if (!crono) return;
+    setAhora(Date.now());
+    const t = setInterval(() => setAhora(Date.now()), 1000);
+    const sub = AppState.addEventListener('change', (estado) => {
+      if (estado === 'active') setAhora(Date.now());
+    });
+    return () => {
+      clearInterval(t);
+      sub.remove();
+    };
+  }, [crono]);
+
+  /** Para el crono y suma el rato a lo de hoy. */
+  const parar = useCallback(() => {
+    if (!crono || !rutina) return;
+    setCrono(null);
+    AsyncStorage.removeItem(CLAVE_CRONO).catch(() => {});
+    const e = rutina.ejercicios.find((x) => x.id === crono.id);
+    const tanda = minutosDelCrono(crono.desde);
+    if (!e || tanda <= 0) return;
+    sumarMinutos(crono.id, minutosDeHoy(e, dia) + tanda);
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+  }, [crono, rutina, dia, sumarMinutos]);
+
+  /** Empieza el crono de un ejercicio (si corría el de otro, se guarda antes). */
+  const empezar = useCallback(
+    (ejercicioId: string) => {
+      if (!uid) return;
+      if (crono) parar();
+      const nuevo: CronoDiario = { uid, id: ejercicioId, desde: Date.now() };
+      setCrono(nuevo);
+      setAhora(nuevo.desde);
+      AsyncStorage.setItem(CLAVE_CRONO, JSON.stringify(nuevo)).catch(() => {});
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    },
+    [uid, crono, parar]
   );
 
   /*
@@ -297,6 +378,10 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
         // Por tiempo: lo que lleva hoy frente al margen ("12 de 20-30 min").
         const porTiempo = cuentaTiempo(e) ? e.minutos : null;
         const llevaMin = porTiempo ? minutosDeHoy(e, dia) : 0;
+        // Con el crono en marcha, lo de hoy más lo que lleva esta tanda.
+        const corriendo = !!porTiempo && crono?.id === e.id;
+        const tanda = corriendo && crono ? minutosDelCrono(crono.desde, ahora) : 0;
+        const totalMin = llevaMin + tanda;
 
         return (
           <View key={e.id} style={styles.fila}>
@@ -323,8 +408,8 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                   <Text style={styles.filaObjetivo} numberOfLines={2}>
                     {conSeries
                       ? frase`${hechasAqui} de ${detalle}`
-                      : porTiempo && llevaMin > 0
-                        ? frase`${llevaMin} de ${detalle}`
+                      : porTiempo && totalMin >= 1
+                        ? frase`${minutosEnteros(totalMin)} de ${detalle}`
                         : detalle}
                   </Text>
                 ) : null}
@@ -356,9 +441,11 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
               ) : null}
 
               {/*
-                POR TIEMPO: una barra con lo que lleva hasta el mínimo, y los
-                minutos de cinco en cinco. Pasarse del máximo se dice, sin
-                celebrarlo: en algo diario, el máximo está para no quemarse.
+                POR TIEMPO: EL CRONO. Empezar y Parar, grandes: es lo que se toca
+                con las manos sucias de magnesio. Mientras corre, el tiempo en
+                grande y la barra subiendo; al parar, el rato se suma solo.
+                "+5" y "−5", pequeños, para corregir o apuntar algo hecho sin
+                el móvil. Pasarse del máximo se dice, sin celebrarlo.
               */}
               {porTiempo ? (
                 <>
@@ -366,36 +453,62 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                     <View
                       style={[
                         styles.minutosRelleno,
-                        { width: `${Math.min(100, (llevaMin / porTiempo.min) * 100)}%` },
+                        { width: `${Math.min(100, (totalMin / porTiempo.min) * 100)}%` },
                       ]}
                     />
                   </View>
-                  <View style={styles.minutosBotones}>
-                    <Pressable
-                      onPress={() => sumarMinutos(e.id, llevaMin - 5)}
-                      disabled={llevaMin <= 0}
-                      hitSlop={4}
-                      style={[styles.minutoBtn, llevaMin <= 0 && styles.ajusteApagado]}
-                      accessibilityLabel="Quitar 5 minutos"
-                    >
-                      <Text style={styles.minutoBtnTexto}>−5</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => sumarMinutos(e.id, llevaMin + 5)}
-                      hitSlop={4}
-                      style={[styles.minutoBtn, styles.minutoBtnMas]}
-                    >
-                      <Text style={[styles.minutoBtnTexto, styles.minutoBtnTextoMas]}>+5 min</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => sumarMinutos(e.id, llevaMin + 10)}
-                      hitSlop={4}
-                      style={[styles.minutoBtn, styles.minutoBtnMas]}
-                    >
-                      <Text style={[styles.minutoBtnTexto, styles.minutoBtnTextoMas]}>+10 min</Text>
-                    </Pressable>
+                  <View style={styles.cronoFila}>
+                    {corriendo ? (
+                      <>
+                        <Text style={styles.cronoTiempo} accessibilityLiveRegion="polite">
+                          {textoDelCrono(tanda)}
+                        </Text>
+                        <Pressable
+                          onPress={parar}
+                          hitSlop={6}
+                          style={[styles.cronoBtn, styles.cronoBtnParar]}
+                          accessibilityLabel="Parar el crono y sumar el tiempo"
+                        >
+                          <Ionicons name="stop" size={16} color={colors.onPrimary} />
+                          <Text style={styles.cronoBtnTexto}>Parar</Text>
+                        </Pressable>
+                      </>
+                    ) : (
+                      <>
+                        <Pressable
+                          onPress={() => empezar(e.id)}
+                          hitSlop={6}
+                          style={styles.cronoBtn}
+                          accessibilityLabel="Empezar el crono"
+                        >
+                          <Ionicons name="play" size={16} color={colors.onPrimary} />
+                          <Text style={styles.cronoBtnTexto}>Empezar</Text>
+                        </Pressable>
+                        <View style={{ flex: 1 }} />
+                        <Pressable
+                          onPress={() => sumarMinutos(e.id, llevaMin - 5)}
+                          disabled={llevaMin <= 0}
+                          hitSlop={4}
+                          style={[styles.minutoBtn, llevaMin <= 0 && styles.ajusteApagado]}
+                          accessibilityLabel="Quitar 5 minutos"
+                        >
+                          <Text style={styles.minutoBtnTexto}>−5</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => sumarMinutos(e.id, llevaMin + 5)}
+                          hitSlop={4}
+                          style={styles.minutoBtn}
+                          accessibilityLabel="Añadir 5 minutos"
+                        >
+                          <Text style={styles.minutoBtnTexto}>+5</Text>
+                        </Pressable>
+                      </>
+                    )}
                   </View>
-                  {porTiempo.max && llevaMin > porTiempo.max ? (
+                  {corriendo && llevaMin < porTiempo.min && totalMin >= porTiempo.min ? (
+                    <Text style={styles.cronoNota}>Ya llegas al mínimo: para cuando quieras.</Text>
+                  ) : null}
+                  {porTiempo.max && totalMin > porTiempo.max ? (
                     <Text style={styles.ajusteNota}>
                       {frase`Más de lo que puso tu entrenador (${textoDeMinutos(porTiempo)})`}
                     </Text>
@@ -448,6 +561,8 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
           </View>
         );
       })}
+
+      {crono ? <PantallaEncendida /> : null}
 
       <VisorDeVideo
         visible={video !== null}
@@ -543,7 +658,21 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   minutosRelleno: { height: '100%', borderRadius: 3, backgroundColor: colors.primary },
-  minutosBotones: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  // El crono: Empezar / Parar grandes, y el tiempo en grande mientras corre.
+  cronoFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  cronoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 44,
+    paddingHorizontal: spacing.md + 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+  },
+  cronoBtnParar: { marginLeft: 'auto' },
+  cronoBtnTexto: { ...typography.body, color: colors.onPrimary, fontFamily: fonts.semiBold },
+  cronoTiempo: { ...typography.h1, color: colors.primaryBright, ...tabularNums },
+  cronoNota: { ...typography.small, fontSize: 12, color: colors.primaryBright },
   minutoBtn: {
     minWidth: 48,
     height: 36,
@@ -554,9 +683,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  minutoBtnMas: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
   minutoBtnTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  minutoBtnTextoMas: { color: colors.primaryBright },
   ajuste: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm },
   ajusteBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   ajusteApagado: { opacity: 0.35 },

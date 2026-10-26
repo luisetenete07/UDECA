@@ -4,13 +4,19 @@
  * En la rutina diaria, cada ejercicio se cuenta por series O por tiempo. Con
  * tiempo, el entrenador pone unos minutos o un margen; el alumno los va
  * sumando a lo largo del día y, al llegar al mínimo, el ejercicio queda hecho.
+ * Para medirlo, un crono: Empezar, practicar, Parar, y ese rato se suma.
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-gtg-tiempo.mjs
  */
 import { readFileSync } from 'node:fs';
 import {
   conMinutosDeHoy,
+  cronoVigente,
   cuentaTiempo,
+  MAX_TANDA_MIN,
+  minutosDelCrono,
+  minutosEnteros,
+  textoDelCrono,
   deLaBiblioteca,
   marcasDeLaRutina,
   MAX_MINUTOS,
@@ -80,6 +86,23 @@ console.log('\nEl alumno suma minutos');
   ok('en uno por series no hace nada', igual(conMinutosDeHoy(rutina, null, 'mun', 10, AHORA), { minutos: {}, hechos: [] }));
 }
 
+console.log('\nEl crono');
+{
+  const DESDE = AHORA - (7 * 60 + 40) * 1000;
+  ok('7 min y 40 s son eso, no 8', Math.abs(minutosDelCrono(DESDE, AHORA) - (7 + 40 / 60)) < 1e-9);
+  ok('y se suman al segundo', Math.abs(conMinutosDeHoy(rutina, null, 'pino', 7 + 40 / 60, AHORA).minutos.pino - (7 + 40 / 60)) < 1e-9);
+  ok('se lee "7:40"', textoDelCrono(7 + 40 / 60) === '7:40' && textoDelCrono(0) === '0:00');
+  ok('con horas, "1:02:05"', textoDelCrono(62 + 5 / 60) === '1:02:05');
+  ok('en la línea, minutos enteros', minutosEnteros(19.99) === 19 && minutosEnteros(20) === 20);
+  ok('uno olvidado no se come la tarde', minutosDelCrono(AHORA - 5 * 3600_000, AHORA) === MAX_TANDA_MIN);
+  ok('ni cuenta hacia atrás', minutosDelCrono(AHORA + 60_000, AHORA) === 0);
+  const c = { uid: 'u', id: 'pino', desde: AHORA - 60_000 };
+  ok('el guardado vale si es de hoy, suyo y de algo por tiempo', cronoVigente(c, 'u', rutina, AHORA) === c);
+  ok('de otro alumno, no', cronoVigente(c, 'otro', rutina, AHORA) === null);
+  ok('de ayer, no', cronoVigente({ ...c, desde: AYER }, 'u', rutina, AHORA) === null);
+  ok('de un ejercicio que ya no va por tiempo, no', cronoVigente({ ...c, id: 'mun' }, 'u', rutina, AHORA) === null);
+}
+
 console.log('\nEn las pantallas');
 {
   const editor = lee('components/RutinaDiariaEditor.tsx');
@@ -88,8 +111,11 @@ console.log('\nEn las pantallas');
   ok('con tiempo, "de [20] a [30] min"', /<CamposDeMinutos/.test(editor) && />a<\/Text>/.test(editor) && />min<\/Text>/.test(editor));
   ok('cambiar de modo quita lo del otro', /modo === 'tiempo' \? \{ \.\.\.e, series: undefined \} : \{ \.\.\.e, minutos: undefined \}/.test(editor));
   const tarjeta = lee('components/RutinaDiariaDelDia.tsx');
-  ok('el alumno: −5, +5 min y +10 min', />−5</.test(tarjeta) && />\+5 min</.test(tarjeta) && />\+10 min</.test(tarjeta));
-  ok('"12 de 20-30 min"', /porTiempo && llevaMin > 0\s*\? frase`\$\{llevaMin\} de \$\{detalle\}`/.test(tarjeta));
+  ok('el alumno: Empezar y Parar, y "−5"/"+5" para corregir', />Empezar</.test(tarjeta) && />Parar</.test(tarjeta) && />−5</.test(tarjeta) && />\+5</.test(tarjeta));
+  ok('"12 de 20-30 min", contando lo que lleva el crono', /porTiempo && totalMin >= 1\s*\? frase`\$\{minutosEnteros\(totalMin\)\} de \$\{detalle\}`/.test(tarjeta) && /const totalMin = llevaMin \+ tanda;/.test(tarjeta));
+  ok('al parar, el rato se suma a lo de hoy', /sumarMinutos\(crono\.id, minutosDeHoy\(e, dia\) \+ tanda\)/.test(tarjeta));
+  ok('el crono se guarda en el móvil y se recupera al volver', /AsyncStorage\.setItem\(CLAVE_CRONO, JSON\.stringify\(nuevo\)\)/.test(tarjeta) && /cronoVigente\(guardado, uid, rutina\)/.test(tarjeta));
+  ok('y mientras corre, la pantalla no se apaga', /\{crono \? <PantallaEncendida \/> : null\}/.test(tarjeta) && /useKeepAwake\(/.test(tarjeta));
   ok('marcar o cambiar series no pierde los minutos de hoy', (tarjeta.match(/dia\?\.minutos && esMismoDia\(dia\.date, Date\.now\(\)\) \? \{ minutos: dia\.minutos \}/g) ?? []).length === 2);
   const guardado = lee('lib/firestore/rutinaDiaria.ts');
   ok('los minutos de hoy se guardan con el día', /\.\.\.\(extra\?\.minutos \? \{ minutos: extra\.minutos \} : \{\}\)/.test(guardado));

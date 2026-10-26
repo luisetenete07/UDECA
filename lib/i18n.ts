@@ -725,6 +725,14 @@ export const EN: Record<string, string> = {
   'Cómo se llama (lo ve el alumno)': 'What it\'s called (the student sees it)',
   'En cada ejercicio escribes lo suyo (A, B, C…), y el alumno lo ve así: «Nivel B».': 'In each exercise you write its value (A, B, C…), and the student sees it like this: "Level B".',
   'Ej. A, B, C · Suave, Media, Dura': 'E.g. A, B, C · Easy, Medium, Hard',
+  // GTG por tiempo: el crono (components/RutinaDiariaDelDia.tsx)
+  'Empezar': 'Start',
+  'Parar': 'Stop',
+  '+5': '+5',
+  'Ya llegas al mínimo: para cuando quieras.': 'You\'ve reached the minimum: stop whenever you like.',
+  'Parar el crono y sumar el tiempo': 'Stop the timer and add the time',
+  'Empezar el crono': 'Start the timer',
+  'Añadir 5 minutos': 'Add 5 minutes',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

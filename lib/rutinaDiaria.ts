@@ -215,7 +215,8 @@ export function conMinutosDeHoy(
   const hechos = hechosDeHoy(dia, ahora);
   if (!e || !cuentaTiempo(e)) return { minutos: deHoy, hechos };
   const antes = minutosDeHoy(e, dia, ahora);
-  const nuevo = Math.min(MAX_MINUTOS, Math.max(0, Math.round(minutos)));
+  // Al segundo: con el crono, 7 min y 40 s son eso, no 8.
+  const nuevo = Math.min(MAX_MINUTOS, Math.max(0, Math.round(minutos * 60) / 60));
   if (nuevo > 0) deHoy[e.id] = nuevo;
   else delete deHoy[e.id];
   const llega = nuevo >= e.minutos.min;
@@ -223,6 +224,63 @@ export function conMinutosDeHoy(
   if (llega) return { minutos: deHoy, hechos: conMarca(hechos, e.id, true) };
   if (llegaba) return { minutos: deHoy, hechos: conMarca(hechos, e.id, false) };
   return { minutos: deHoy, hechos };
+}
+
+/*
+ * EL CRONO: SE PULSA "EMPEZAR" Y SE MIDE EL RATO DE VERDAD.
+ *
+ * Para lo que va por tiempo, el alumno no tiene que calcular cuánto ha
+ * estado: pulsa Empezar, practica y pulsa Parar; ese rato se suma a lo de hoy.
+ * El crono guarda CUÁNDO empezó, no cuánto lleva: así sigue bien aunque el
+ * móvil se bloquee, se cambie de app o se cierre y se vuelva a abrir.
+ */
+
+/** Una tanda de crono no suma más de esto: uno olvidado no se come la tarde. */
+export const MAX_TANDA_MIN = 120;
+
+/** El crono que está corriendo: de qué ejercicio, de quién y desde cuándo. */
+export interface CronoDiario {
+  uid: string;
+  id: string;
+  desde: number;
+}
+
+/** Los minutos (con sus segundos) que lleva el crono, sin pasar del tope. */
+export function minutosDelCrono(desde: number, ahora = Date.now()): number {
+  const segundos = Math.max(0, Math.floor((ahora - desde) / 1000));
+  return Math.min(MAX_TANDA_MIN * 60, segundos) / 60;
+}
+
+/**
+ * ¿Sirve el crono que se quedó guardado? Solo si es de este alumno, empezó
+ * HOY y su ejercicio sigue en la rutina yendo por tiempo. Uno de ayer no se
+ * suma a hoy: se tira.
+ */
+export function cronoVigente(
+  crono: CronoDiario | null | undefined,
+  uid: string,
+  rutina: RutinaDiaria | null | undefined,
+  ahora = Date.now()
+): CronoDiario | null {
+  if (!crono || crono.uid !== uid || !Number.isFinite(crono.desde) || crono.desde > ahora) return null;
+  if (!esMismoDia(crono.desde, ahora)) return null;
+  const e = rutina?.ejercicios.find((x) => x.id === crono.id);
+  return e && cuentaTiempo(e) ? crono : null;
+}
+
+/** "3:07" o "1:02:15": lo que marca el crono. */
+export function textoDelCrono(minutos: number): string {
+  const total = Math.max(0, Math.floor(minutos * 60));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
+/** Lo que lleva hoy, en minutos enteros para leerlo ("12 de 20-30 min"). */
+export function minutosEnteros(minutos: number): number {
+  return Math.floor(minutos + 1e-9);
 }
 
 /** Lo que hace falta de un ejercicio de la biblioteca para traérselo. */
