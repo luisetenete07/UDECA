@@ -16,7 +16,7 @@ import { showToast } from './Toast';
 import { estadoInsignia, numeroFundador } from '../lib/fundador';
 import { getCourseProgress } from '../lib/firestore/courseProgress';
 import { getActiveRoutineForClient } from '../lib/firestore/routines';
-import { getSocialLeaderboard } from '../lib/firestore/social';
+import { comunidadAbierta, getSocialLeaderboard } from '../lib/firestore/social';
 import { getClientsForTrainer } from '../lib/firestore/users';
 import { getWorkoutLogsForClient, getWorkoutLogsForTrainer } from '../lib/firestore/workoutLogs';
 import { currentStreak } from '../lib/stats';
@@ -117,7 +117,13 @@ export function MemberCard() {
           // autoentrena es su propio entrenador: ahí no hay clasificación.
           let puesto: number | undefined;
           let deCuantos: number | undefined;
-          if (profile.trainerId && profile.trainerId !== profile.uid) {
+          // Ni si su entrenador no enseña la comunidad: un puesto de una
+          // clasificación que no puede ver no le dice nada.
+          if (
+            profile.trainerId &&
+            profile.trainerId !== profile.uid &&
+            (await comunidadAbierta(profile.trainerId))
+          ) {
             const tabla = await getSocialLeaderboard(profile.trainerId).catch(() => []);
             if (!vivo) return;
             const n = tabla.findIndex((x) => x.uid === profile.uid);

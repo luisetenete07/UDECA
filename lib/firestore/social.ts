@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -79,6 +80,22 @@ export async function syncMySocialStats(
  */
 export async function deleteSocialStats(uid: string): Promise<void> {
   await deleteDoc(doc(db, 'socialStats', uid));
+}
+
+/**
+ * ¿Deja el entrenador que sus alumnos vean la comunidad? Lo decide él en
+ * Clientes (`comunidadOculta` en su perfil, que el alumno puede leer).
+ *
+ * Si la lectura falla, sí: lo mismo que con la pestaña vacía, esconder algo
+ * que existe es peor que enseñarlo un rato de más.
+ */
+export async function comunidadAbierta(trainerId: string): Promise<boolean> {
+  try {
+    const coach = await getDoc(doc(db, 'users', trainerId));
+    return coach.data()?.comunidadOculta !== true;
+  } catch {
+    return true;
+  }
 }
 
 /** Ranking de miembros del mismo entrenador, ordenado por racha y sesiones. */

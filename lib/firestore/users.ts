@@ -166,6 +166,16 @@ export async function setBrandLogo(uid: string, logo: string | null) {
   });
 }
 
+/**
+ * El entrenador enseña u oculta la comunidad (pestaña Social) a sus alumnos.
+ * Enseñarla borra el campo: sin poner es lo de siempre, que se ve.
+ */
+export async function setComunidadOculta(uid: string, oculta: boolean) {
+  await updateDoc(doc(db, 'users', uid), {
+    comunidadOculta: oculta ? true : deleteField(),
+  });
+}
+
 /** El entrenador cambia el estado (activo/pausa/inactivo) de un cliente suyo. */
 export async function updateClientStatus(
   clientId: string,

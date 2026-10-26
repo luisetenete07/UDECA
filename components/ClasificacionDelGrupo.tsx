@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Texto';
 import { Avatar } from './Avatar';
@@ -10,6 +10,8 @@ import { Sheet } from './Sheet';
 import { showToast } from './Toast';
 import { frase } from '../lib/idioma';
 import { deleteSocialStats, subscribeSocialLeaderboard } from '../lib/firestore/social';
+import { setComunidadOculta } from '../lib/firestore/users';
+import { useAuth } from '../lib/auth-context';
 import { isOnline } from '../lib/presence';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { SocialStats } from '../lib/types';
@@ -54,6 +56,28 @@ export function ClasificacionDelGrupo({ trainerId }: { trainerId: string }) {
     }
   };
   const onlineCount = leaderboard.filter((s) => isOnline(s.lastSeen)).length;
+
+  /*
+   * ENSEÑAR U OCULTAR LA COMUNIDAD A SUS ALUMNOS.
+   *
+   * Hay grupos donde compararse motiva y otros donde no (alumnos que empiezan,
+   * coaching 1:1 donde no hay "grupo"). Lo decide el entrenador. Oculta, sus
+   * alumnos no tienen pestaña Social ni puesto en el carné, la próxima vez que
+   * abran la app o vuelvan a ella.
+   */
+  const { profile, refreshProfile } = useAuth();
+  const [oculta, setOculta] = useState(profile?.comunidadOculta === true);
+  const cambiarVisible = async (visible: boolean) => {
+    setOculta(!visible);
+    try {
+      await setComunidadOculta(trainerId, !visible);
+      refreshProfile().catch(() => {});
+      showToast(visible ? 'Tus alumnos ya ven la comunidad' : 'Comunidad oculta para tus alumnos');
+    } catch {
+      setOculta(visible);
+      showToast('No se pudo guardar');
+    }
+  };
 
   /** Una fila: puesto, cara (con su punto si está en línea), nombre y cifra. */
   const fila = (s: SocialStats, i: number, conBorrar: boolean) => {
@@ -133,6 +157,25 @@ export function ClasificacionDelGrupo({ trainerId }: { trainerId: string }) {
             </Pressable>
           </>
         )}
+
+        {/* Si sus alumnos la ven o no. Aquí y no en el perfil: es donde el
+            entrenador mira a su grupo, y lo que decide está justo encima. */}
+        <View style={styles.visible}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.visibleTitulo}>Que la vean tus alumnos</Text>
+            <Text style={styles.sub}>
+              {oculta
+                ? 'No ven la pestaña Social ni su puesto. Tú la sigues teniendo aquí.'
+                : 'La ven en su pestaña Social, con su puesto.'}
+            </Text>
+          </View>
+          <Switch
+            value={!oculta}
+            onValueChange={cambiarVisible}
+            trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
+            thumbColor={colors.white}
+          />
+        </View>
       </Card>
 
       <Sheet
@@ -240,4 +283,14 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   verTodosTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  visible: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingTop: spacing.md,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  visibleTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
 });

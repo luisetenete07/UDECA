@@ -93,6 +93,13 @@ export interface UserProfile {
    */
   brandLogo?: string;
   /**
+   * (Entrenador) `true` = sus alumnos no ven la comunidad: ni la pestaña
+   * Social ni su puesto en el carné. Sin poner, la ven. Él sigue teniendo la
+   * clasificación en Clientes, y las fichas del grupo se siguen escribiendo:
+   * al volver a enseñarla está al día, sin esperar a que entrenen.
+   */
+  comunidadOculta?: boolean;
+  /**
    * Enlace de cobro de ESTE alumno (Stripe Payment Link, Bizum, PayPal.me…):
    * el que abre para pagar su cuota de un toque desde el aviso de cobro. Lo
    * pone su entrenador en su ficha, junto a la cuota.

@@ -16,7 +16,7 @@ import { clientIsLocked } from '../../lib/subscription';
 import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { getPublishedCourses } from '../../lib/firestore/courses';
-import { getSocialLeaderboard } from '../../lib/firestore/social';
+import { comunidadAbierta, getSocialLeaderboard } from '../../lib/firestore/social';
 import { cursosParaMi, esVip } from '../../lib/vip';
 import { useTabScreenOptions } from '../../lib/navTheme';
 import { t, useT  } from '../../lib/idioma';
@@ -65,6 +65,10 @@ export default function ClientLayout() {
    * un curso o llega un compañero), y lo último que se supo se guarda para que
    * al abrir no salgan y se vayan. Si la consulta falla, se enseñan: esconder
    * algo que sí existe es peor que enseñar algo vacío.
+   *
+   * Y "Social" tampoco si su entrenador ha decidido no enseñarla (Clientes →
+   * Tu grupo). Se mira a la vez y igual de a menudo, así que al volver a la
+   * app ya sale o se va según lo último que eligió.
    */
   const [pestanas, setPestanas] = useState<PestanasConAlgo | null>(null);
   const uid = profile?.uid;
@@ -87,7 +91,9 @@ export default function ClientLayout() {
         getSocialLeaderboard(trainerId)
           .then((filas) => filas.some((f) => f.uid !== uid))
           .catch(() => true),
-      ]).then(([cursos, social]) => {
+        comunidadAbierta(trainerId),
+      ]).then(([cursos, conCompaneros, abierta]) => {
+        const social = conCompaneros && abierta;
         if (!vivo) return;
         mirado = true;
         const nuevas = { cursos, social };

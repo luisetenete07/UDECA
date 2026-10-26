@@ -757,6 +757,12 @@ export const EN: Record<string, string> = {
   'con tu logo': 'with your logo',
   // Ficha: fila del coaching sin fecha de fin
   'Entra siempre': 'Always has access',
+  // Clientes: enseñar u ocultar la comunidad a los alumnos
+  'Comunidad oculta para tus alumnos': 'Community hidden from your clients',
+  'La ven en su pestaña Social, con su puesto.': 'They see it in their Social tab, with their rank.',
+  'No ven la pestaña Social ni su puesto. Tú la sigues teniendo aquí.': 'They don\'t see the Social tab or their rank. You still have it here.',
+  'Que la vean tus alumnos': 'Show it to your clients',
+  'Tus alumnos ya ven la comunidad': 'Your clients can now see the community',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':
