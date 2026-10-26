@@ -1366,6 +1366,15 @@ export interface EjercicioDiario {
    */
   series?: number;
   /**
+   * O un TIEMPO en vez de series: "20-30 min de pino", o "20 min".
+   *
+   * Hay cosas que no se cuentan por series sino por rato de práctica: veinte
+   * minutos de pino repartidos como salgan. Con esto el alumno va sumando
+   * minutos a lo largo del día y el ejercicio se da por hecho al llegar al
+   * mínimo. Es una cosa u otra: con minutos, `series` no se guarda.
+   */
+  minutos?: MargenDeMinutos;
+  /**
    * Enlace al vídeo de la técnica (YouTube o Vimeo).
    *
    * El mismo campo que los ejercicios del plan, y se abre con el mismo visor:
@@ -1379,6 +1388,13 @@ export interface EjercicioDiario {
    * cómo repartirlo, qué notar. El objetivo dice cuánto; esto, cómo.
    */
   indicaciones?: string;
+}
+
+/** Un rato de práctica: un número fijo de minutos o un margen (20-30). */
+export interface MargenDeMinutos {
+  min: number;
+  /** Solo si es un margen; sin él, `min` es el tiempo a secas. */
+  max?: number;
 }
 
 export interface RutinaDiaria {
@@ -1412,6 +1428,8 @@ export interface DiaDeRutinaDiaria {
    * del entrenador.
    */
   series?: Record<string, number>;
+  /** Los minutos que lleva hoy de cada ejercicio que va por tiempo (id → minutos). */
+  minutos?: Record<string, number>;
   /** Cuántas marcas había que hacer ese día, para el historial. */
   total?: number;
   updatedAt: number;

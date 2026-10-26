@@ -700,6 +700,20 @@ export const EN: Record<string, string> = {
   'Día igualado': 'Day matched',
   '· Separar': '· Split',
   'Cada día va a un día de la semana (L-D, abajo); uno nuevo coge el primero libre.': 'Each day goes on a weekday (M-S, below); a new one takes the first free day.',
+  // GTG por tiempo: "20-30 min de pino" (components/RutinaDiariaEditor.tsx, RutinaDiariaDelDia.tsx)
+  'Tiempo': 'Time',
+  'a': 'to',
+  'min': 'min',
+  '{0}-{1} min': '{0}-{1} min',
+  '{0} min': '{0} min',
+  '+5 min': '+5 min',
+  '+10 min': '+10 min',
+  '−5': '−5',
+  'Quitar 5 minutos': 'Remove 5 minutes',
+  'Minutos (mínimo)': 'Minutes (minimum)',
+  'Minutos (máximo, opcional)': 'Minutes (maximum, optional)',
+  'Más de lo que puso tu entrenador ({0})': 'More than your coach set ({0})',
+  'Minutos al día, o un margen (de 20 a 30). Los va sumando y, al llegar al mínimo, queda hecho.': 'Minutes a day, or a range (20 to 30). They add them up and, once they reach the minimum, it\'s done.',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

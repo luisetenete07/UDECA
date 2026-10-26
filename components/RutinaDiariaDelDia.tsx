@@ -16,16 +16,20 @@ import {
 } from '../lib/firestore/rutinaDiaria';
 import {
   conMarca,
+  conMinutosDeHoy,
   conSeriesDeHoy,
   cuentaSeries,
+  cuentaTiempo,
   hayRutinaDiaria,
   hechosDeHoy,
   marcaDeSerie,
+  minutosDeHoy,
   NOMBRE_POR_DEFECTO,
   MAX_SERIES,
   progresoDiario,
   seriesDe,
   seriesDelDia,
+  textoDeMinutos,
   textoDelEjercicio,
   textoDiario,
 } from '../lib/rutinaDiaria';
@@ -94,13 +98,15 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
         clientId: uid,
         date: Date.now(),
         hechos: siguiente,
-        // Las series que hubiera cambiado hoy siguen; las de otro día, no.
+        // Las series y los minutos de hoy siguen; los de otro día, no.
         ...(dia?.series && esMismoDia(dia.date, Date.now()) ? { series: dia.series } : {}),
+        ...(dia?.minutos && esMismoDia(dia.date, Date.now()) ? { minutos: dia.minutos } : {}),
         updatedAt: Date.now(),
       };
       setDia(nuevo);
       setDiaDeRutinaDiaria(uid, siguiente, rutina.trainerId, Date.now(), {
         ...(nuevo.series ? { series: nuevo.series } : {}),
+        ...(nuevo.minutos ? { minutos: nuevo.minutos } : {}),
         total: progresoDiario(rutina, nuevo).total,
       }).catch(() => {});
     },
@@ -124,11 +130,42 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
         date: Date.now(),
         hechos: r.hechos,
         series: r.series,
+        ...(dia?.minutos && esMismoDia(dia.date, Date.now()) ? { minutos: dia.minutos } : {}),
         updatedAt: Date.now(),
       };
       setDia(nuevo);
       setDiaDeRutinaDiaria(uid, r.hechos, rutina.trainerId, Date.now(), {
         series: r.series,
+        total: progresoDiario(rutina, nuevo).total,
+      }).catch(() => {});
+    },
+    [uid, rutina, dia]
+  );
+
+  /*
+   * SUMAR MINUTOS, EN LO QUE VA POR TIEMPO ("20-30 min de pino").
+   *
+   * De cinco en cinco o de diez en diez, que es como se cuenta un rato de
+   * práctica; y "−5" para corregir un toque de más. Al llegar al mínimo se
+   * marca solo (lib/rutinaDiaria.ts, conMinutosDeHoy).
+   */
+  const sumarMinutos = useCallback(
+    (ejercicioId: string, minutos: number) => {
+      if (!uid || !rutina) return;
+      const r = conMinutosDeHoy(rutina, dia, ejercicioId, minutos);
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      const nuevo: DiaDeRutinaDiaria = {
+        id: dia?.id ?? '',
+        clientId: uid,
+        date: Date.now(),
+        hechos: r.hechos,
+        ...(dia?.series && esMismoDia(dia.date, Date.now()) ? { series: dia.series } : {}),
+        minutos: r.minutos,
+        updatedAt: Date.now(),
+      };
+      setDia(nuevo);
+      setDiaDeRutinaDiaria(uid, r.hechos, rutina.trainerId, Date.now(), {
+        minutos: r.minutos,
         total: progresoDiario(rutina, nuevo).total,
       }).catch(() => {});
     },
@@ -257,6 +294,9 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
         const hechasAqui = marcas.filter((m) => hechos.includes(m)).length;
         const entero = hechasAqui === marcas.length;
         const detalle = textoDelEjercicio({ ...e, ...(cuentaSeries(e) ? { series } : {}) });
+        // Por tiempo: lo que lleva hoy frente al margen ("12 de 20-30 min").
+        const porTiempo = cuentaTiempo(e) ? e.minutos : null;
+        const llevaMin = porTiempo ? minutosDeHoy(e, dia) : 0;
 
         return (
           <View key={e.id} style={styles.fila}>
@@ -281,7 +321,11 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                 </Text>
                 {detalle ? (
                   <Text style={styles.filaObjetivo} numberOfLines={2}>
-                    {conSeries ? frase`${hechasAqui} de ${detalle}` : detalle}
+                    {conSeries
+                      ? frase`${hechasAqui} de ${detalle}`
+                      : porTiempo && llevaMin > 0
+                        ? frase`${llevaMin} de ${detalle}`
+                        : detalle}
                   </Text>
                 ) : null}
                 {/* Cómo hacerlo, si el entrenador lo dejó escrito. Entero: es
@@ -309,6 +353,54 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                     );
                   })}
                 </View>
+              ) : null}
+
+              {/*
+                POR TIEMPO: una barra con lo que lleva hasta el mínimo, y los
+                minutos de cinco en cinco. Pasarse del máximo se dice, sin
+                celebrarlo: en algo diario, el máximo está para no quemarse.
+              */}
+              {porTiempo ? (
+                <>
+                  <View style={styles.minutosBarra}>
+                    <View
+                      style={[
+                        styles.minutosRelleno,
+                        { width: `${Math.min(100, (llevaMin / porTiempo.min) * 100)}%` },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.minutosBotones}>
+                    <Pressable
+                      onPress={() => sumarMinutos(e.id, llevaMin - 5)}
+                      disabled={llevaMin <= 0}
+                      hitSlop={4}
+                      style={[styles.minutoBtn, llevaMin <= 0 && styles.ajusteApagado]}
+                      accessibilityLabel="Quitar 5 minutos"
+                    >
+                      <Text style={styles.minutoBtnTexto}>−5</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => sumarMinutos(e.id, llevaMin + 5)}
+                      hitSlop={4}
+                      style={[styles.minutoBtn, styles.minutoBtnMas]}
+                    >
+                      <Text style={[styles.minutoBtnTexto, styles.minutoBtnTextoMas]}>+5 min</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => sumarMinutos(e.id, llevaMin + 10)}
+                      hitSlop={4}
+                      style={[styles.minutoBtn, styles.minutoBtnMas]}
+                    >
+                      <Text style={[styles.minutoBtnTexto, styles.minutoBtnTextoMas]}>+10 min</Text>
+                    </Pressable>
+                  </View>
+                  {porTiempo.max && llevaMin > porTiempo.max ? (
+                    <Text style={styles.ajusteNota}>
+                      {frase`Más de lo que puso tu entrenador (${textoDeMinutos(porTiempo)})`}
+                    </Text>
+                  ) : null}
+                </>
               ) : null}
 
               {/* Una más o una menos, para hoy. Solo en los que cuentan series. */}
@@ -442,6 +534,29 @@ const styles = StyleSheet.create({
   serieTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   serieTextoOn: { color: colors.onPrimary },
   verVideo: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
+  // Por tiempo: la barra fina hasta el mínimo y los botones de minutos.
+  minutosBarra: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  minutosRelleno: { height: '100%', borderRadius: 3, backgroundColor: colors.primary },
+  minutosBotones: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  minutoBtn: {
+    minWidth: 48,
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  minutoBtnMas: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
+  minutoBtnTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  minutoBtnTextoMas: { color: colors.primaryBright },
   ajuste: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.sm },
   ajusteBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   ajusteApagado: { opacity: 0.35 },

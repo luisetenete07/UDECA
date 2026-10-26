@@ -1,6 +1,6 @@
 import { esMismoDia } from './fechas';
 import { frase } from './idioma';
-import type { DiaDeRutinaDiaria, EjercicioDiario, RutinaDiaria } from './types';
+import type { DiaDeRutinaDiaria, EjercicioDiario, MargenDeMinutos, RutinaDiaria } from './types';
 
 /**
  * La rutina diaria: cuánto llevas hoy y qué se te dice.
@@ -90,6 +90,9 @@ export function seriesDelDia(
   dia?: DiaDeRutinaDiaria | null,
   ahora = Date.now()
 ): number {
+  // Por tiempo es una sola cosa que hacer, aunque hoy hubiera tocado series
+  // antes de que el entrenador lo cambiara a minutos.
+  if (cuentaTiempo(e)) return 1;
   const propias = dia && esMismoDia(dia.date, ahora) ? dia.series?.[e.id] : undefined;
   return typeof propias === 'number' ? seriesDe({ series: propias }) : seriesDe(e);
 }
@@ -141,6 +144,87 @@ export function seriesDeTexto(texto: string): number | undefined {
   return Math.min(MAX_SERIES, n);
 }
 
+/*
+ * POR TIEMPO EN VEZ DE POR SERIES: "20-30 MIN DE PINO".
+ *
+ * Hay cosas que se programan por rato de práctica y no por series: veinte o
+ * treinta minutos de pino, repartidos como salgan. El alumno va sumando
+ * minutos a lo largo del día (+5, +10) y, al llegar al mínimo, el ejercicio se
+ * da por hecho solo. Pasarse del máximo no se celebra: en algo que se repite a
+ * diario, el máximo está para no quemarse.
+ */
+
+/** El tope: más de diez horas al día no es una rutina diaria, es un dedo que resbaló. */
+export const MAX_MINUTOS = 600;
+
+/** ¿Va por tiempo? Solo si el entrenador puso unos minutos de verdad. */
+export function cuentaTiempo(e: { minutos?: MargenDeMinutos }): e is { minutos: MargenDeMinutos } {
+  return !!e.minutos && Number.isFinite(e.minutos.min) && e.minutos.min > 0;
+}
+
+/**
+ * Lee los minutos que escribe el entrenador: "20" y "30" en sus dos casillas,
+ * o "20-30" en una. Vacío, nada (sin poner). Al revés ("30" y "20") se ordena,
+ * y un margen de 20 a 20 es un tiempo fijo de 20.
+ */
+export function minutosDeTexto(desde: string, hasta = ''): MargenDeMinutos | undefined {
+  const numeros = `${desde ?? ''} ${hasta ?? ''}`
+    .match(/\d+/g)
+    ?.map((n) => Math.min(MAX_MINUTOS, Number.parseInt(n, 10)))
+    .filter((n) => Number.isFinite(n) && n > 0)
+    .slice(0, 2);
+  if (!numeros?.length) return undefined;
+  const min = Math.min(...numeros);
+  const max = Math.max(...numeros);
+  return max > min ? { min, max } : { min };
+}
+
+/** "20-30 min" o "20 min". */
+export function textoDeMinutos(m: MargenDeMinutos): string {
+  return m.max && m.max > m.min ? frase`${m.min}-${m.max} min` : frase`${m.min} min`;
+}
+
+/** Los minutos que lleva HOY de un ejercicio. Los de ayer no cuentan. */
+export function minutosDeHoy(
+  e: { id: string },
+  dia?: DiaDeRutinaDiaria | null,
+  ahora = Date.now()
+): number {
+  if (!dia || !esMismoDia(dia.date, ahora)) return 0;
+  const n = dia.minutos?.[e.id];
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * EL ALUMNO SUMA (O CORRIGE) MINUTOS DE HOY.
+ *
+ * Devuelve los minutos del día y lo hecho, para guardar. Al llegar al mínimo
+ * el ejercicio se marca solo; si corrige hacia abajo y deja de llegar, se
+ * desmarca. Si lo marcó a mano sin llegar (lo hizo y no lo cronometró), se
+ * respeta: sumar un rato más no le quita la marca.
+ */
+export function conMinutosDeHoy(
+  rutina: RutinaDiaria,
+  dia: DiaDeRutinaDiaria | null | undefined,
+  ejercicioId: string,
+  minutos: number,
+  ahora = Date.now()
+): { minutos: Record<string, number>; hechos: string[] } {
+  const e = rutina.ejercicios.find((x) => x.id === ejercicioId);
+  const deHoy = dia && esMismoDia(dia.date, ahora) ? { ...(dia.minutos ?? {}) } : {};
+  const hechos = hechosDeHoy(dia, ahora);
+  if (!e || !cuentaTiempo(e)) return { minutos: deHoy, hechos };
+  const antes = minutosDeHoy(e, dia, ahora);
+  const nuevo = Math.min(MAX_MINUTOS, Math.max(0, Math.round(minutos)));
+  if (nuevo > 0) deHoy[e.id] = nuevo;
+  else delete deHoy[e.id];
+  const llega = nuevo >= e.minutos.min;
+  const llegaba = antes >= e.minutos.min;
+  if (llega) return { minutos: deHoy, hechos: conMarca(hechos, e.id, true) };
+  if (llegaba) return { minutos: deHoy, hechos: conMarca(hechos, e.id, false) };
+  return { minutos: deHoy, hechos };
+}
+
 /** Lo que hace falta de un ejercicio de la biblioteca para traérselo. */
 export interface EjercicioDeBiblioteca {
   id: string;
@@ -174,7 +258,7 @@ export interface EjercicioDeBiblioteca {
 export function deLaBiblioteca(
   ejercicio: EjercicioDeBiblioteca,
   id: string,
-  extra?: { objetivo?: string; series?: number }
+  extra?: { objetivo?: string; series?: number; minutos?: MargenDeMinutos }
 ): EjercicioDiario {
   const video = ejercicio.videoUrl?.trim();
   return {
@@ -182,7 +266,8 @@ export function deLaBiblioteca(
     exerciseId: ejercicio.id,
     nombre: ejercicio.name.trim(),
     objetivo: extra?.objetivo?.trim() ?? '',
-    ...(extra?.series ? { series: extra.series } : {}),
+    // Una cosa u otra: con minutos, las series no se guardan.
+    ...(extra?.minutos ? { minutos: extra.minutos } : extra?.series ? { series: extra.series } : {}),
     ...(video ? { video } : {}),
   };
 }
@@ -251,14 +336,17 @@ export function moverEjercicio(
 }
 
 /**
- * La línea que acompaña al nombre del ejercicio: las series y el objetivo.
+ * La línea que acompaña al nombre del ejercicio: las series (o los minutos) y
+ * el objetivo.
  *
  * Vive aquí y no en cada pantalla porque la escriben dos —el editor del
  * entrenador y la tarjeta del alumno— y tienen que decir lo mismo.
  */
 export function textoDelEjercicio(e: EjercicioDiario): string {
   const partes: string[] = [];
-  if (typeof e.series === 'number' && e.series > 0) {
+  if (cuentaTiempo(e)) {
+    partes.push(textoDeMinutos(e.minutos));
+  } else if (typeof e.series === 'number' && e.series > 0) {
     const n = seriesDe(e);
     partes.push(n === 1 ? frase`1 serie` : frase`${n} series`);
   }

@@ -11,7 +11,9 @@ import { getRutinaDiaria, setRutinaDiaria } from '../lib/firestore/rutinaDiaria'
 import { frase, t } from '../lib/idioma';
 import { nuevoId } from '../lib/ids';
 import {
+  cuentaTiempo,
   deLaBiblioteca,
+  minutosDeTexto,
   moverEjercicio,
   NOMBRE_POR_DEFECTO,
   seriesDeTexto,
@@ -48,6 +50,12 @@ import type { EjercicioDiario, Exercise } from '../lib/types';
  * quedan. Sin número, el ejercicio se marca entero de un toque — y eso es lo
  * correcto para dos minutos de movilidad, que no se cuentan por series.
  *
+ * O POR TIEMPO
+ *
+ * Hay cosas que no se cuentan por series sino por rato: "20-30 min de pino".
+ * Cada ejercicio elige: Series o Tiempo. Con tiempo, un número de minutos o un
+ * margen, y el alumno los va sumando a lo largo del día.
+ *
  * Y EL ORDEN SE ARRASTRA
  *
  * Porque no es decorativo: quien pone las muñecas antes del pino lo hace para
@@ -79,6 +87,12 @@ export function RutinaDiariaEditor({
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoObjetivo, setNuevoObjetivo] = useState('');
   const [nuevasSeries, setNuevasSeries] = useState('');
+  // Al añadir: si se cuenta por series o por tiempo, y el máximo del margen.
+  const [nuevoModo, setNuevoModo] = useState<ModoDeCuenta>('series');
+  const [nuevoMax, setNuevoMax] = useState('');
+  // El modo de cada ejercicio mientras se edita (sin número puesto aún, el
+  // ejercicio no dice si iba a ser por series o por tiempo).
+  const [modos, setModos] = useState<Record<string, ModoDeCuenta>>({});
   /** Cuál se está editando. Solo uno a la vez: la tarjeta es pequeña. */
   const [editando, setEditando] = useState<string | null>(null);
   /*
@@ -153,23 +167,55 @@ export function RutinaDiariaEditor({
   const anadir = () => {
     const n = nuevoNombre.trim();
     if (!n) return;
-    const series = seriesDeTexto(nuevasSeries);
+    const cuenta = cuentaNueva();
     const lista = [
       ...ejercicios,
-      // `series` solo si de verdad hay un número: sin poner y "una serie" son
-      // cosas distintas, y guardar un campo vacío ensucia el documento.
-      { id: nuevoId(), nombre: n, objetivo: nuevoObjetivo.trim(), ...(series ? { series } : {}) },
+      // `series` (o `minutos`) solo si de verdad hay un número: sin poner y
+      // "una serie" son cosas distintas, y un campo vacío ensucia el documento.
+      { id: nuevoId(), nombre: n, objetivo: nuevoObjetivo.trim(), ...cuenta },
     ];
     setEjercicios(lista);
-    setNuevoNombre('');
-    setNuevoObjetivo('');
-    setNuevasSeries('');
+    limpiarNuevo();
     // El primero que se añade la enciende: nadie escribe una lista para dejarla
     // apagada, y obligar a buscar el interruptor después es un paso de más.
     const encender = !activa && lista.length === 1;
     if (encender) setActiva(true);
     void guardar({ ejercicios: lista, activa: encender ? true : activa });
   };
+
+  /** Lo escrito abajo para el ejercicio nuevo: sus series o sus minutos. */
+  const cuentaNueva = (): Pick<EjercicioDiario, 'series' | 'minutos'> => {
+    if (nuevoModo === 'tiempo') {
+      const minutos = minutosDeTexto(nuevasSeries, nuevoMax);
+      return minutos ? { minutos } : {};
+    }
+    const series = seriesDeTexto(nuevasSeries);
+    return series ? { series } : {};
+  };
+
+  const limpiarNuevo = () => {
+    setNuevoNombre('');
+    setNuevoObjetivo('');
+    setNuevasSeries('');
+    setNuevoMax('');
+  };
+
+  /**
+   * Cambia un ejercicio de series a tiempo o al revés. Lo del otro modo se
+   * quita: es una cosa u otra, y dejar las dos haría dudar al alumno.
+   */
+  const cambiarModo = (id: string, modo: ModoDeCuenta) => {
+    setModos((prev) => ({ ...prev, [id]: modo }));
+    setEjercicios((prev) => {
+      const lista = prev.map((e) =>
+        e.id !== id ? e : modo === 'tiempo' ? { ...e, series: undefined } : { ...e, minutos: undefined }
+      );
+      void guardar({ ejercicios: lista });
+      return lista;
+    });
+  };
+
+  const modoDe = (e: EjercicioDiario): ModoDeCuenta => modos[e.id] ?? (cuentaTiempo(e) ? 'tiempo' : 'series');
 
   const abrirBiblioteca = async () => {
     setBusca('');
@@ -190,7 +236,7 @@ export function RutinaDiariaEditor({
    * seguidas —pino, muñecas, movilidad de cadera— y tener que abrirlo otra vez
    * cada vez es lo que hace que se acabe escribiendo a mano.
    *
-   * Lo que sí se lleva es el objetivo y las series que hubiera escritos abajo,
+   * Lo que sí se lleva es el objetivo y las series (o minutos) escritos abajo,
    * si los hay: quien ha tecleado "30 s" y luego elige el ejercicio espera que
    * se aplique, no que se pierda.
    */
@@ -201,15 +247,10 @@ export function RutinaDiariaEditor({
     }
     const lista = [
       ...ejercicios,
-      deLaBiblioteca(ej, nuevoId(), {
-        objetivo: nuevoObjetivo,
-        series: seriesDeTexto(nuevasSeries),
-      }),
+      deLaBiblioteca(ej, nuevoId(), { objetivo: nuevoObjetivo, ...cuentaNueva() }),
     ];
     setEjercicios(lista);
-    setNuevoNombre('');
-    setNuevoObjetivo('');
-    setNuevasSeries('');
+    limpiarNuevo();
     const encender = !activa && lista.length === 1;
     if (encender) setActiva(true);
     void guardar({ ejercicios: lista, activa: encender ? true : activa });
@@ -401,20 +442,37 @@ export function RutinaDiariaEditor({
                       placeholder={t('Objetivo (p. ej. 30 s por lado)')}
                       placeholderTextColor={colors.textFaint}
                     />
+                    {/* Series o tiempo: "5 series de pino" o "20-30 min de pino". */}
                     <View style={styles.edicionFila}>
-                      <TextInput
-                        style={[styles.campoEjercicio, styles.campoSeries]}
-                        defaultValue={e.series ? String(e.series) : ''}
-                        onChangeText={(t) => cambiar(e.id, { series: seriesDeTexto(t) })}
-                        onBlur={guardarLista}
-                        placeholder={t('Series')}
-                        placeholderTextColor={colors.textFaint}
-                        keyboardType="number-pad"
-                      />
-                      <Text style={styles.pistaSeries}>
-                        Con series, se marcan de una en una a lo largo del día.
-                      </Text>
+                      <SelectorDeCuenta modo={modoDe(e)} onCambiar={(m) => cambiarModo(e.id, m)} />
+                      {modoDe(e) === 'tiempo' ? (
+                        <CamposDeMinutos
+                          // Con clave propia: al cambiar de modo los campos
+                          // vuelven a nacer con lo que haya guardado.
+                          key={`${e.id}-tiempo`}
+                          min={e.minutos ? String(e.minutos.min) : ''}
+                          max={e.minutos?.max ? String(e.minutos.max) : ''}
+                          onCambiar={(min, max) => cambiar(e.id, { minutos: minutosDeTexto(min, max), series: undefined })}
+                          onSalir={guardarLista}
+                        />
+                      ) : (
+                        <TextInput
+                          key={`${e.id}-series`}
+                          style={[styles.campoEjercicio, styles.campoSeries]}
+                          defaultValue={e.series ? String(e.series) : ''}
+                          onChangeText={(t) => cambiar(e.id, { series: seriesDeTexto(t), minutos: undefined })}
+                          onBlur={guardarLista}
+                          placeholder={t('Series')}
+                          placeholderTextColor={colors.textFaint}
+                          keyboardType="number-pad"
+                        />
+                      )}
                     </View>
+                    <Text style={styles.pistaSeries}>
+                      {modoDe(e) === 'tiempo'
+                        ? 'Minutos al día, o un margen (de 20 a 30). Los va sumando y, al llegar al mínimo, queda hecho.'
+                        : 'Con series, se marcan de una en una a lo largo del día.'}
+                    </Text>
                     <TextInput
                       style={[styles.campoEjercicio, styles.campoIndicaciones]}
                       defaultValue={e.indicaciones ?? ''}
@@ -467,6 +525,31 @@ export function RutinaDiariaEditor({
               placeholderTextColor={colors.textFaint}
               returnKeyType="next"
             />
+            {/* Cuánto: series o un rato ("20-30 min de pino"). */}
+            <View style={styles.filaObjetivoNuevo}>
+              <SelectorDeCuenta modo={nuevoModo} onCambiar={setNuevoModo} />
+              {nuevoModo === 'tiempo' ? (
+                <CamposDeMinutos
+                  min={nuevasSeries}
+                  max={nuevoMax}
+                  controlado
+                  onCambiar={(min, max) => {
+                    setNuevasSeries(min);
+                    setNuevoMax(max);
+                  }}
+                />
+              ) : (
+                <TextInput
+                  style={[styles.campoEjercicio, styles.campoSeries]}
+                  value={nuevasSeries}
+                  onChangeText={setNuevasSeries}
+                  placeholder={t('Series')}
+                  placeholderTextColor={colors.textFaint}
+                  keyboardType="number-pad"
+                />
+              )}
+            </View>
+            {/* Y el objetivo, con "Añadir" al lado: es lo último que se escribe. */}
             <View style={styles.filaObjetivoNuevo}>
               <TextInput
                 style={[styles.campoEjercicio, styles.campoObjetivoNuevo]}
@@ -476,14 +559,6 @@ export function RutinaDiariaEditor({
                 placeholderTextColor={colors.textFaint}
                 onSubmitEditing={anadir}
                 returnKeyType="done"
-              />
-              <TextInput
-                style={[styles.campoEjercicio, styles.campoSeries]}
-                value={nuevasSeries}
-                onChangeText={setNuevasSeries}
-                placeholder={t('Series')}
-                placeholderTextColor={colors.textFaint}
-                keyboardType="number-pad"
               />
               <Pressable
                 onPress={anadir}
@@ -567,8 +642,112 @@ export function RutinaDiariaEditor({
   );
 }
 
+type ModoDeCuenta = 'series' | 'tiempo';
+
+/** "Series" o "Tiempo": cómo se cuenta un ejercicio de la rutina diaria. */
+function SelectorDeCuenta({ modo, onCambiar }: { modo: ModoDeCuenta; onCambiar: (m: ModoDeCuenta) => void }) {
+  return (
+    <View style={styles.selector} accessibilityRole="radiogroup">
+      {(
+        [
+          ['series', 'Series'],
+          ['tiempo', 'Tiempo'],
+        ] as const
+      ).map(([valor, texto]) => {
+        const on = modo === valor;
+        return (
+          <Pressable
+            key={valor}
+            onPress={() => onCambiar(valor)}
+            style={[styles.selectorOpcion, on && styles.selectorOpcionOn]}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: on }}
+            hitSlop={4}
+          >
+            <Text style={[styles.selectorTexto, on && styles.selectorTextoOn]}>{texto}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Los minutos: "de [20] a [30] min". El "a" es opcional: con uno solo es un
+ * tiempo fijo. Dos casillas numéricas y no "20-30" en una, porque el teclado
+ * numérico del móvil no tiene guion.
+ */
+function CamposDeMinutos({
+  min,
+  max,
+  onCambiar,
+  onSalir,
+  controlado = false,
+}: {
+  min: string;
+  max: string;
+  onCambiar: (min: string, max: string) => void;
+  onSalir?: () => void;
+  /** En el formulario de añadir, los valores los lleva quien lo usa. */
+  controlado?: boolean;
+}) {
+  // Sin controlar (la fila de un ejercicio): se recuerda lo escrito aquí, y se
+  // guarda al salir del campo, como el resto de la fila.
+  const [a, setA] = useState(min);
+  const [b, setB] = useState(max);
+  const va = controlado ? min : a;
+  const vb = controlado ? max : b;
+  return (
+    <View style={styles.minutos}>
+      <TextInput
+        style={[styles.campoEjercicio, styles.campoMinutos]}
+        value={va}
+        onChangeText={(v) => {
+          setA(v);
+          onCambiar(v, vb);
+        }}
+        onBlur={onSalir}
+        placeholder="20"
+        placeholderTextColor={colors.textFaint}
+        keyboardType="number-pad"
+        accessibilityLabel={t('Minutos (mínimo)')}
+      />
+      <Text style={styles.minutosTexto}>a</Text>
+      <TextInput
+        style={[styles.campoEjercicio, styles.campoMinutos]}
+        value={vb}
+        onChangeText={(v) => {
+          setB(v);
+          onCambiar(va, v);
+        }}
+        onBlur={onSalir}
+        placeholder="30"
+        placeholderTextColor={colors.textFaint}
+        keyboardType="number-pad"
+        accessibilityLabel={t('Minutos (máximo, opcional)')}
+      />
+      <Text style={styles.minutosTexto}>min</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   tarjeta: { marginBottom: spacing.md },
+  selector: {
+    flexDirection: 'row',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
+    padding: 2,
+  },
+  selectorOpcion: { paddingHorizontal: 12, height: 32, borderRadius: radius.full, justifyContent: 'center' },
+  selectorOpcionOn: { backgroundColor: colors.primary },
+  selectorTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
+  selectorTextoOn: { color: colors.onPrimary },
+  minutos: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  campoMinutos: { width: 60, textAlign: 'center' },
+  minutosTexto: { ...typography.small, color: colors.textMuted },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   cabeceraTextos: { flex: 1, minWidth: 0 },
   titulo: { ...typography.h3, color: colors.text },
@@ -647,7 +826,9 @@ const styles = StyleSheet.create({
     // encogerse hasta que el objetivo se quede en dos letras.
     flexWrap: 'wrap',
   },
-  campoObjetivoNuevo: { flexGrow: 1, flexShrink: 1, minWidth: 130 },
+  // Base cero: en la web un campo de texto pide de por sí un ancho que, con el
+  // salto de línea, mandaba "Añadir" a la fila de abajo.
+  campoObjetivoNuevo: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 130 },
   botonAnadir: {
     backgroundColor: colors.primary,
     borderRadius: radius.full,
