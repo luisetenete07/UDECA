@@ -529,6 +529,13 @@ export interface Exercise {
   muscleWeights?: Partial<Record<MuscleId, number>>;
   /** Subgrupo dentro de su categoría (opcional). */
   subgroup?: string;
+  /**
+   * `true` = su forma de anotarse (`measure`) es SUYA: la del grupo no la
+   * cambia, ni al cambiarla para todo el grupo ni al abrirlo en el editor.
+   * Solo la cambia el entrenador en este ejercicio. Sin poner, manda el grupo.
+   * Ver lib/medidaDeGrupo.ts.
+   */
+  medidaPropia?: boolean;
   createdAt: number;
 }
 

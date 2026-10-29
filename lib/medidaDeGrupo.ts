@@ -19,6 +19,13 @@ import { EXERCISE_MEASURES, type Exercise, type ExerciseMeasure } from './types'
  * grupo es quien manda y quien recuerda; la copia en el ejercicio es lo que
  * hace que el resto de la app —rutinas, histórico, estadísticas— siga leyendo
  * un único campo, sin enterarse de que existen los grupos.
+ *
+ * LA EXCEPCIÓN: UN EJERCICIO CON MEDIDA PROPIA
+ *
+ * A veces un grupo va casi entero en segundos pero tiene uno en repeticiones.
+ * Ese ejercicio se marca "solo este ejercicio" (`medidaPropia`) y el grupo deja
+ * de tocarlo: ni lo reescribe al cambiar la medida de todos, ni se la impone
+ * al abrirlo. Su medida solo la cambia el entrenador, en él.
  */
 
 /**
@@ -48,14 +55,17 @@ export function medidaDelGrupo(
 }
 
 /**
- * La medida que le toca a un ejercicio: manda su grupo, y si su grupo no lo
- * ha decidido, la suya. Sin nada, repeticiones, que es lo más común.
+ * La medida que le toca a un ejercicio: manda su grupo, salvo que el
+ * ejercicio tenga medida propia; y si su grupo no lo ha decidido, la suya. Sin
+ * nada, repeticiones, que es lo más común.
  */
 export function medidaEfectiva(
-  ejercicio: Pick<Exercise, 'muscleGroup' | 'subgroup' | 'measure'>,
+  ejercicio: Pick<Exercise, 'muscleGroup' | 'subgroup' | 'measure' | 'medidaPropia'>,
   mapa?: Record<string, ExerciseMeasure>
 ): ExerciseMeasure {
-  const delGrupo = medidaDelGrupo(mapa, ejercicio.muscleGroup, ejercicio.subgroup ?? '');
+  const delGrupo = ejercicio.medidaPropia
+    ? undefined
+    : medidaDelGrupo(mapa, ejercicio.muscleGroup, ejercicio.subgroup ?? '');
   if (delGrupo) return delGrupo;
   return EXERCISE_MEASURES.includes(ejercicio.measure as ExerciseMeasure)
     ? (ejercicio.measure as ExerciseMeasure)
@@ -111,7 +121,8 @@ export function grupoRenombrado(
  *
  * Es la lista de los que hay que reescribir al cambiar la medida del grupo.
  * Se devuelven solo los que cambian de verdad: escribir los demás sería gastar
- * una escritura de Firestore por ejercicio para dejarlo exactamente igual.
+ * una escritura de Firestore por ejercicio para dejarlo exactamente igual. Los
+ * de medida propia no están: el grupo no los toca.
  */
 export function ejerciciosADesactualizar(
   ejercicios: Exercise[],
@@ -121,6 +132,10 @@ export function ejerciciosADesactualizar(
 ): Exercise[] {
   if (!subgrupo) return [];
   return ejercicios.filter(
-    (e) => e.muscleGroup === categoria && (e.subgroup ?? '') === subgrupo && e.measure !== medida
+    (e) =>
+      e.muscleGroup === categoria &&
+      (e.subgroup ?? '') === subgrupo &&
+      e.measure !== medida &&
+      !e.medidaPropia
   );
 }

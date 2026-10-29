@@ -5,7 +5,7 @@ import { Image, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
-import { quitarMedidaDeGrupo, updateUserProfile } from '../../../lib/firestore/users';
+import { updateUserProfile } from '../../../lib/firestore/users';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../components/ScreenContainer';
 import { TextField } from '../../../components/TextField';
@@ -21,6 +21,7 @@ import { propagarNombreDeEjercicio } from '../../../lib/firestore/renombrarEjerc
 import { showToast } from '../../../components/Toast';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { Dialogo } from '../../../components/Dialogo';
+import { Sheet } from '../../../components/Sheet';
 import { Card } from '../../../components/Card';
 import { VisorDeVideo } from '../../../components/VisorDeVideo';
 import { ICONO_DE_MEDIDA } from '../../../components/TarjetaDeEjercicio';
@@ -31,7 +32,6 @@ import { miniaturaDelEnlace, parseVimeoUrl, parseYouTubeId } from '../../../lib/
 import { unido } from '../../../lib/texto';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../lib/theme';
 import {
-  claveGrupo,
   conMedidaDeGrupo,
   ejerciciosADesactualizar,
   grupoRenombrado,
@@ -74,6 +74,9 @@ export default function ExerciseEditorScreen() {
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [measure, setMeasure] = useState<ExerciseMeasure>('reps');
+  // "Solo este ejercicio": su medida es suya y el grupo no la toca.
+  const [medidaPropia, setMedidaPropia] = useState(false);
+  const [alcanceAbierto, setAlcanceAbierto] = useState(false);
   const [subgroup, setSubgroup] = useState<string>('');
   const [newSub, setNewSub] = useState('');
   // Renombrar un subgrupo ya creado, desde el propio editor del ejercicio.
@@ -117,6 +120,7 @@ export default function ExerciseEditorScreen() {
         setDescription(exercise.description ?? '');
         setVideoUrl(exercise.videoUrl ?? '');
         setMeasure(exercise.measure ?? 'reps');
+        setMedidaPropia(exercise.medidaPropia === true);
         setSubgroup(exercise.subgroup ?? '');
         setPesos({ muscles: exercise.muscles, muscleWeights: exercise.muscleWeights });
       }
@@ -153,8 +157,9 @@ export default function ExerciseEditorScreen() {
     try {
       // Si el grupo tiene medida, es la suya y no la que hubiera en pantalla:
       // así un ejercicio que se acaba de mover a "Aguantes" entra ya en
-      // segundos, sin que nadie tenga que acordarse de cambiarlo.
-      const medidaFinal = medidaGrupo ?? measure;
+      // segundos, sin que nadie tenga que acordarse de cambiarlo. Salvo que
+      // sea "solo este ejercicio": entonces manda la que se ha elegido aquí.
+      const medidaFinal = medidaPropia ? measure : medidaGrupo ?? measure;
       const campos = {
         name: name.trim(),
         muscleGroup,
@@ -162,6 +167,9 @@ export default function ExerciseEditorScreen() {
         videoUrl: videoUrl.trim() || undefined,
         measure: medidaFinal,
         subgroup: subgroup || undefined,
+        // Se escribe también el `false`: si antes era propia y ahora vuelve al
+        // grupo, un campo sin escribir dejaría el `true` viejo en Firestore.
+        medidaPropia: medidaPropia ? true : isNew ? undefined : false,
       };
       if (isNew) {
         await createExercise({ trainerId: profile.uid, ...campos });
@@ -275,10 +283,11 @@ export default function ExerciseEditorScreen() {
   }, [profile, muscleGroup, subgroup]);
 
   // Al entrar en un grupo que ya tiene medida, el ejercicio la adopta: es lo
-  // que hace que no haya que ponerla a mano al crear cada uno.
+  // que hace que no haya que ponerla a mano al crear cada uno. Si es "solo
+  // este ejercicio", no: la suya no la cambia nadie más que el entrenador.
   useEffect(() => {
-    if (medidaGrupo) setMeasure(medidaGrupo);
-  }, [medidaGrupo]);
+    if (medidaGrupo && !medidaPropia) setMeasure(medidaGrupo);
+  }, [medidaGrupo, medidaPropia]);
 
   /**
    * Cambia la medida de TODO el grupo y la escribe en cada uno de sus
@@ -318,19 +327,20 @@ export default function ExerciseEditorScreen() {
     }
   };
 
-  /** Suelta la medida del grupo: vuelve a decidirse ejercicio a ejercicio. */
-  const soltarMedidaDelGrupo = async () => {
-    if (!profile || !subgroup) return;
-    setAplicandoGrupo(true);
-    try {
-      await quitarMedidaDeGrupo(profile.uid, claveGrupo(muscleGroup, subgroup));
-      await refreshProfile();
-      showToast(frase`«${subgroup}» ya no impone medida`);
-    } catch {
-      showToast('No se pudo soltar la medida del grupo');
-    } finally {
-      setAplicandoGrupo(false);
-    }
+  /*
+   * A QUÉ SE APLICA: TODO EL GRUPO O SOLO ESTE EJERCICIO.
+   *
+   * Lo normal (y lo que viene puesto) es el grupo: se decide una vez y vale
+   * para todos. "Solo este ejercicio" es la excepción —el único de "Aguantes"
+   * que va en repeticiones—: su medida se queda como está aunque cambie la del
+   * grupo, y solo la cambia el entrenador aquí. Se guarda con "Guardar", como
+   * el resto de la ficha.
+   */
+  const elegirAlcance = (soloEste: boolean) => {
+    setAlcanceAbierto(false);
+    setMedidaPropia(soloEste);
+    // De vuelta al grupo, coge la del grupo (si la tiene): es lo que significa.
+    if (!soloEste && medidaGrupo) setMeasure(medidaGrupo);
   };
 
   /** Crea un subgrupo dentro de la categoría actual y lo deja seleccionado. */
@@ -606,9 +616,20 @@ export default function ExerciseEditorScreen() {
           <Ionicons name="create-outline" size={16} color={colors.primary} />
           <Text style={styles.seccionTitulo}>Cómo se anota</Text>
           <View style={{ flex: 1 }} />
-          {medidaGrupo ? (
-            <Pressable onPress={soltarMedidaDelGrupo} hitSlop={6}>
-              <Text style={styles.catEdit}>Por ejercicio</Text>
+          {/* A qué se aplica: lo dice el propio botón, y al tocarlo salen las
+              dos opciones. Sin subgrupo no hay grupo, así que no hay nada que
+              elegir. */}
+          {subgroup ? (
+            <Pressable
+              onPress={() => setAlcanceAbierto(true)}
+              hitSlop={6}
+              style={styles.alcanceBoton}
+              accessibilityRole="button"
+            >
+              <Text style={styles.catEdit} numberOfLines={1}>
+                {medidaPropia ? 'Solo este ejercicio' : 'Todo el grupo'}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color={colors.primary} />
             </Pressable>
           ) : null}
         </View>
@@ -617,9 +638,11 @@ export default function ExerciseEditorScreen() {
             subgrupo no hay grupo que decida, así que es de este ejercicio. */}
         <Text style={styles.measureHint}>
           {subgroup
-            ? medidaGrupo
-              ? frase`La decide el grupo «${subgroup}»: vale para ${cuantosEnGrupoTexto} y para los que añadas después.`
-              : frase`Se aplicará a ${cuantosEnGrupoTexto} de «${subgroup}» y a los que metas ahí después.`
+            ? medidaPropia
+              ? frase`Solo para este ejercicio: aunque cambies la de «${subgroup}», este se queda como lo dejes aquí.`
+              : medidaGrupo
+                ? frase`La decide el grupo «${subgroup}»: vale para ${cuantosEnGrupoTexto} y para los que añadas después.`
+                : frase`Se aplicará a ${cuantosEnGrupoTexto} de «${subgroup}» y a los que metas ahí después.`
             : 'Solo para este ejercicio.'}
         </Text>
         <View style={styles.medidas}>
@@ -628,7 +651,7 @@ export default function ExerciseEditorScreen() {
             return (
               <Pressable
                 key={m}
-                onPress={() => (subgroup ? aplicarMedidaAlGrupo(m) : setMeasure(m))}
+                onPress={() => (subgroup && !medidaPropia ? aplicarMedidaAlGrupo(m) : setMeasure(m))}
                 disabled={aplicandoGrupo}
                 style={[styles.medida, activa && styles.medidaActiva]}
                 accessibilityRole="radio"
@@ -774,6 +797,49 @@ export default function ExerciseEditorScreen() {
           style={{ marginTop: spacing.md }}
         />
       </Dialogo>
+
+      {/* A qué se aplica "Cómo se anota": las dos opciones, con lo que pasa
+          en cada una dicho al lado, que es lo que hace falta para elegir. */}
+      <Sheet
+        visible={alcanceAbierto}
+        onClose={() => setAlcanceAbierto(false)}
+        titulo="¿A qué se aplica?"
+      >
+        <View style={styles.medidas}>
+          {[
+            {
+              soloEste: false,
+              icono: 'albums-outline' as const,
+              titulo: frase`Todo el grupo «${subgroup}»`,
+              detalle: frase`Predeterminado. Cambiarla aquí la cambia en ${cuantosEnGrupoTexto} y en los que añadas después.`,
+            },
+            {
+              soloEste: true,
+              icono: 'document-outline' as const,
+              titulo: t('Solo este ejercicio'),
+              detalle: t('Se queda con la suya aunque cambies la del grupo. Solo cambia si la tocas aquí.'),
+            },
+          ].map((o) => {
+            const activa = medidaPropia === o.soloEste;
+            return (
+              <Pressable
+                key={String(o.soloEste)}
+                onPress={() => elegirAlcance(o.soloEste)}
+                style={[styles.medida, activa && styles.medidaActiva]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: activa }}
+              >
+                <Ionicons name={o.icono} size={18} color={activa ? colors.primaryBright : colors.textMuted} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.medidaTexto, activa && styles.medidaTextoActiva]}>{o.titulo}</Text>
+                  <Text style={styles.medidaEjemplo}>{o.detalle}</Text>
+                </View>
+                {activa ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      </Sheet>
     </ScreenContainer>
   );
 }
@@ -861,6 +927,7 @@ const styles = StyleSheet.create({
   borrarEnlaceTexto: { ...typography.small, color: colors.textFaint },
   label: fieldLabel,
   catEdit: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  alcanceBoton: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 1 },
   addCatRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   addCatInput: {
     flex: 1,

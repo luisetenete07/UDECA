@@ -9,6 +9,7 @@
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-medida-grupo.mjs
  */
+import { readFileSync } from 'node:fs';
 import {
   claveGrupo,
   conMedidaDeGrupo,
@@ -132,6 +133,34 @@ console.log('\nSoltar el grupo');
     medidaEfectiva(ej('a', 'Planche', 'Aguantes', 'seconds'), tras) === 'seconds'
   );
   comprueba('no toca los demás grupos', Object.keys(sinMedidaDeGrupo(mapa, 'Planche', 'Otro')).length === 1);
+}
+
+console.log('\nUn ejercicio con medida propia');
+{
+  const mapa = conMedidaDeGrupo({}, 'Planche', 'Aguantes', 'seconds');
+  const propio = { ...ej('p', 'Planche', 'Aguantes', 'reps'), medidaPropia: true };
+  comprueba('el grupo no le impone la suya', medidaEfectiva(propio, mapa) === 'reps');
+  comprueba(
+    'y al cambiar la del grupo no se reescribe',
+    !ejerciciosADesactualizar([propio, ej('q', 'Planche', 'Aguantes', 'reps')], 'Planche', 'Aguantes', 'seconds')
+      .some((e) => e.id === 'p')
+  );
+  comprueba(
+    'los demás del grupo sí',
+    ejerciciosADesactualizar([propio, ej('q', 'Planche', 'Aguantes', 'reps')], 'Planche', 'Aguantes', 'seconds')
+      .some((e) => e.id === 'q')
+  );
+
+  // El editor: "Por ejercicio" abre las dos opciones, y con "solo este" tocar
+  // una medida no la lleva al grupo.
+  const editor = readFileSync('app/(trainer)/exercises/[id].tsx', 'utf8');
+  comprueba('el editor ofrece "Todo el grupo" y "Solo este ejercicio"',
+    /Todo el grupo/.test(editor) && /Solo este ejercicio/.test(editor));
+  comprueba('con medida propia, tocar una medida no cambia el grupo',
+    /subgroup && !medidaPropia \? aplicarMedidaAlGrupo\(m\) : setMeasure\(m\)/.test(editor));
+  comprueba('ni el grupo se la impone al abrirlo',
+    /if \(medidaGrupo && !medidaPropia\) setMeasure\(medidaGrupo\)/.test(editor));
+  comprueba('y se guarda la suya', /const medidaFinal = medidaPropia \? measure : medidaGrupo \?\? measure;/.test(editor));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

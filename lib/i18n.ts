@@ -763,6 +763,14 @@ export const EN: Record<string, string> = {
   'No ven la pestaña Social ni su puesto. Tú la sigues teniendo aquí.': 'They don\'t see the Social tab or their rank. You still have it here.',
   'Que la vean tus alumnos': 'Show it to your clients',
   'Tus alumnos ya ven la comunidad': 'Your clients can now see the community',
+  // Ejercicio: cómo se anota, para todo el grupo o solo este
+  'Predeterminado. Cambiarla aquí la cambia en {0} y en los que añadas después.': 'Default. Changing it here changes it for {0} and for any you add later.',
+  'Se queda con la suya aunque cambies la del grupo. Solo cambia si la tocas aquí.': 'It keeps its own even if you change the group\'s. It only changes if you change it here.',
+  'Solo este ejercicio': 'This exercise only',
+  'Solo para este ejercicio: aunque cambies la de «{0}», este se queda como lo dejes aquí.': 'This exercise only: even if you change «{0}», this one stays as you leave it here.',
+  'Todo el grupo': 'Whole group',
+  'Todo el grupo «{0}»': 'Whole «{0}» group',
+  '¿A qué se aplica?': 'What does it apply to?',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

@@ -3,7 +3,6 @@ import {
   deleteDoc,
   deleteField,
   doc,
-  FieldPath,
   getDoc,
   getDocs,
   onSnapshot,
@@ -239,20 +238,6 @@ export async function setClientStepGoal(clientId: string, stepGoal: number | und
   await updateDoc(doc(db, 'users', clientId), {
     stepGoal: stepGoal === undefined ? deleteField() : stepGoal,
   });
-}
-
-/**
- * Suelta la medida de un grupo de ejercicios (ver lib/medidaDeGrupo.ts).
- *
- * Va aparte de `updateUserProfile` porque ese escribe con `merge: true`, y un
- * merge FUNDE los mapas en vez de sustituirlos: mandar el mapa sin esa clave
- * dejaría la vieja intacta en Firestore. Se vería funcionar —el perfil en
- * memoria sí perdería la clave— hasta recargar la app, que es la peor forma de
- * fallar. Hay que borrar el campo anidado a propósito, y con `FieldPath` para
- * que el nombre del grupo no se interprete como una ruta.
- */
-export async function quitarMedidaDeGrupo(uid: string, clave: string) {
-  await updateDoc(doc(db, 'users', uid), new FieldPath('subgroupMeasures', clave), deleteField());
 }
 
 /**
