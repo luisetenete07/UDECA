@@ -1364,6 +1364,8 @@ export default function WorkoutScreen() {
 
   /**
    * REGRESIÓN: la serie se hizo en una progresión más fácil (sin decir cuál).
+   * Solo en los ejercicios en que el entrenador lo permite (`permiteRegresion`
+   * en el plan): sin eso, el botón no sale.
    *
    * Se pone en la serie que toca y en las que quedan por hacer de ese
    * ejercicio: quien baja a la regresión en la segunda serie suele seguir en
@@ -2163,7 +2165,7 @@ export default function WorkoutScreen() {
           conRotulos
           onMarcar={() => updateSet(i, r, 'completed', !set.completed)}
           regresion={set.regresion === true}
-          onRegresion={() => alternarRegresion(i, r)}
+          onRegresion={d.planned?.permiteRegresion ? () => alternarRegresion(i, r) : undefined}
           pie={
             conDetalle ? (
               <View style={styles.ssPasoPie}>
@@ -3183,7 +3185,8 @@ export default function WorkoutScreen() {
                   campos={camposDeSerie(exerciseIndex, setIndex)}
                   onMarcar={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
                   regresion={set.regresion === true}
-                  onRegresion={() => alternarRegresion(exerciseIndex, setIndex)}
+                  // Solo si el entrenador lo permite en este ejercicio.
+                  onRegresion={planned?.permiteRegresion ? () => alternarRegresion(exerciseIndex, setIndex) : undefined}
                 />
               ))}
             </View>

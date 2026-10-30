@@ -778,6 +778,10 @@ export const EN: Record<string, string> = {
   'Hecho en regresión': 'Done as a regression',
   '1 en regresión': '1 in regression',
   '{0} en regresión': '{0} in regression',
+  // Editor de rutina: permitir regresión por ejercicio
+  'El alumno puede aplicar una regresión': 'The client can apply a regression',
+  'Marca las series que haga en una progresión más fácil. No cuentan como récord ni progresión de este ejercicio.': 'They mark the sets done in an easier progression. Those don\'t count as a record or as progress for this exercise.',
+  'Regresión permitida': 'Regression allowed',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

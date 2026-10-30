@@ -102,10 +102,26 @@ console.log('\nEl alumno la marca al apuntar');
   ok('la fila de la serie tiene el botón', /onRegresion\?: \(\) => void;/.test(fila) && /Regresión/.test(fila));
   ok('en la serie que toca y en las que ya la llevan', /const verRegresion = !!onRegresion && \(esAhora \|\| regresion\);/.test(fila));
   const entrenoTsx = lee('app/(client)/workout.tsx');
-  ok('en series sueltas y en superseries', (entrenoTsx.match(/onRegresion=\{\(\) => alternarRegresion\(/g) ?? []).length === 2);
+  // SOLO si el entrenador lo permite en ese ejercicio: sin el permiso, el
+  // botón no sale (onRegresion sin pasar).
+  ok('en series sueltas y en superseries, solo con permiso del entrenador',
+    /onRegresion=\{d\.planned\?\.permiteRegresion \? \(\) => alternarRegresion\(i, r\) : undefined\}/.test(entrenoTsx) &&
+      /onRegresion=\{planned\?\.permiteRegresion \? \(\) => alternarRegresion\(exerciseIndex, setIndex\) : undefined\}/.test(entrenoTsx));
+  ok('ningún botón sin el permiso', !/onRegresion=\{\(\) =>/.test(entrenoTsx));
   ok('se pone también en las que quedan por hacer', /j !== serie && \(j < serie \|\| st\.completed\)/.test(entrenoTsx));
-  ok('y al apuntar otro día, por ejercicio', /alternarRegresion/.test(lee('app/(client)/registrar.tsx')));
+  const registrar = lee('app/(client)/registrar.tsx');
+  ok('y al apuntar otro día, por ejercicio y con permiso',
+    /alternarRegresion/.test(registrar) && /\{enPlan\?\.permiteRegresion \? \(/.test(registrar));
   ok('el historial no compara con lo hecho en regresión', /const deVerdad = sesiones\.filter/.test(lee('components/ExerciseHistory.tsx')));
+}
+
+console.log('\nEl entrenador lo permite, ejercicio a ejercicio');
+{
+  const editor = lee('app/(trainer)/clients/[id]/routine.tsx');
+  ok('interruptor en las opciones del ejercicio', /El alumno puede aplicar una regresión/.test(editor) &&
+    /value=\{ex\.permiteRegresion === true\}/.test(editor));
+  ok('apagado borra el campo (sin poner es "no")', /const \{ permiteRegresion: _p, \.\.\.resto \} = e;/.test(editor));
+  ok('y se lee en el resumen de opciones', /if \(ex\.permiteRegresion\) partes\.push/.test(editor));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

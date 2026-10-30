@@ -3,7 +3,7 @@ import { t, frase  } from '../../../../lib/idioma';
 import { unido } from '../../../../lib/texto';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { Text } from '../../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../../components/Button';
@@ -161,6 +161,7 @@ function resumenDeOpciones(ex: RoutineExercise): string {
   if (ex.grip) partes.push(t(GRIP_LABEL[ex.grip]));
   if (ex.cluster) partes.push(`${t('Clúster')} ${clusterBlocks(ex.cluster)}×${ex.cluster.restSeconds}s`);
   if (ex.goal) partes.push(`${t('Objetivo')}: ${ex.goal}`);
+  if (ex.permiteRegresion) partes.push(t('Regresión permitida'));
   if (ex.notes?.trim()) partes.push(`"${ex.notes.trim()}"`);
   return partes.join(' · ');
 }
@@ -950,6 +951,29 @@ export default function RoutineEditorScreen() {
   // ficha del ejercicio porque las mismas dominadas son prono un día y supinas
   // otro: es cosa del plan, no del ejercicio. Volver a tocar el agarre activo
   // lo quita, para poder dejarlo sin especificar.
+  /**
+   * Que el alumno pueda marcar series de este ejercicio como hechas en
+   * regresión. Apagado se BORRA el campo: sin poner es "no", que es lo de
+   * siempre.
+   */
+  const setExercisePermiteRegresion = (dayId: string, exerciseRowId: string, permite: boolean) => {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              exercises: d.exercises.map((e) => {
+                if (e.id !== exerciseRowId) return e;
+                if (permite) return { ...e, permiteRegresion: true };
+                const { permiteRegresion: _p, ...resto } = e;
+                return resto;
+              }),
+            }
+          : d
+      )
+    );
+  };
+
   const setExerciseGrip = (dayId: string, exerciseRowId: string, grip: GripType) => {
     setDays((prev) =>
       prev.map((d) =>
@@ -2666,6 +2690,24 @@ export default function RoutineEditorScreen() {
                   />
                 </View>
               ) : null}
+              {/* Regresión: que el alumno pueda decir "esta serie la hice en
+                  una progresión más fácil". Sus marcas no cuentan como récord
+                  ni progresión del ejercicio. Apagado, ni ve el botón. */}
+              <View style={styles.regresionFila}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.regresionTitulo}>El alumno puede aplicar una regresión</Text>
+                  <Text style={styles.regresionAyuda}>
+                    Marca las series que haga en una progresión más fácil. No cuentan como récord ni
+                    progresión de este ejercicio.
+                  </Text>
+                </View>
+                <Switch
+                  value={ex.permiteRegresion === true}
+                  onValueChange={(v) => setExercisePermiteRegresion(day.id, ex.id, v)}
+                  trackColor={{ true: colors.primary, false: colors.surfaceAlt }}
+                  thumbColor={colors.white}
+                />
+              </View>
               <TextField
                 label="Indicaciones (opcional)"
                 value={ex.notes ?? ''}
@@ -3510,6 +3552,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
   },
+  regresionFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  regresionTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
+  regresionAyuda: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 17 },
   loadLabel: {
     ...typography.label,
     color: colors.textMuted,

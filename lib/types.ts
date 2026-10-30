@@ -611,6 +611,13 @@ export interface RoutineExercise {
   exerciseId: string;
   name: string;
   sets: number;
+  /**
+   * El entrenador deja que el alumno marque series de ESTE ejercicio como
+   * hechas en regresión (una progresión más fácil, sin decir cuál). Sin poner,
+   * no sale el botón: es una decisión del entrenador, ejercicio a ejercicio.
+   * Ver `LoggedSet.regresion`.
+   */
+  permiteRegresion?: boolean;
   /** Objetivo por serie: repeticiones o segundos según `measure`. */
   reps: string;
   /**
@@ -1089,7 +1096,9 @@ export interface LoggedSet {
   rir?: number;
   /**
    * Hecha en REGRESIÓN: en una progresión más fácil que la del plan (tuck en
-   * vez de straddle, con los pies apoyados…), sin decir cuál.
+   * vez de straddle, con los pies apoyados…), sin decir cuál. Solo se puede
+   * marcar en los ejercicios en los que el entrenador lo permite
+   * (`RoutineExercise.permiteRegresion`).
    *
    * Sus marcas no son de ESTE ejercicio, así que no cuentan para él: ni récord,
    * ni gráfica de progresión, ni objetivo del ciclo, ni sugerencia de subir.

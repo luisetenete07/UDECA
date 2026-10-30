@@ -369,7 +369,9 @@ export default function RegistrarScreen() {
                   </View>
 
                   {/* Regresión: aquí, para el ejercicio entero. Apuntando otro
-                      día se recuerda "lo hice en tuck", no qué serie fue. */}
+                      día se recuerda "lo hice en tuck", no qué serie fue. Solo
+                      si el entrenador lo permite en ese ejercicio. */}
+                  {enPlan?.permiteRegresion ? (
                   <Pressable
                     onPress={() => alternarRegresion(i)}
                     hitSlop={6}
@@ -386,6 +388,7 @@ export default function RegistrarScreen() {
                       {enRegresion(ex) ? 'Hecho en regresión' : 'Regresión'}
                     </Text>
                   </Pressable>
+                  ) : null}
 
                   {ex.sets.map((serie, j) => (
                     <View key={j} style={styles.filaSerie}>
