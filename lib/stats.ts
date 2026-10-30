@@ -1,6 +1,7 @@
 import {
   resolveLoad,
   type RoutineSchedule,
+  cuentaComoMarca,
   setMarks,
   type ExerciseLoad,
   type ExerciseMeasure,
@@ -11,7 +12,7 @@ import {
 import { diasEntre, inicioDeLaSemana, inicioDelDia, masDias, mesLargo } from './fechas';
 import { anclaEfectiva, indiceDelCiclo, type AnclaDelAlumno } from './ciclo';
 import type { PausaPlan } from './pausa';
-import { frase } from './idioma';
+import { frase, t } from './idioma';
 
 /**
  * Convierte a número tolerando la coma decimal española (66,4 → 66.4). Sin
@@ -46,7 +47,9 @@ export function lastPerformanceByExercise(
       // Solo series COMPLETADAS con marca apuntada: si en la última sesión el
       // ejercicio quedó sin hacer, se sigue buscando en sesiones anteriores
       // para no mostrar "última vez" en blanco.
-      const done = ex.sets.filter((s) => s.completed && s.reps.trim() !== '');
+      // Las de regresión no: son de un ejercicio más fácil, y "la última vez"
+      // es para decidir cuánto hacer en ESTE.
+      const done = ex.sets.filter((s) => cuentaComoMarca(s) && s.reps.trim() !== '');
       if (done.length === 0) continue;
       // Serie más DURA por carga efectiva (la goma resta); si ninguna lleva
       // peso, la última hecha. Sin esto, "la última vez" de un ejercicio
@@ -110,6 +113,8 @@ export function textoDeSerieAnterior(
   if (o.segundos) txt = `${txt} s`;
   if (o.combo && set.seconds) txt = `${txt} + ${set.seconds} s`;
   if (o.carga && o.carga !== 'none' && set.weight) txt = `${txt} × ${set.weight}`;
+  // Se dice: un "6" en regresión no es un 6 de este ejercicio que superar.
+  if (set.regresion) txt = `${txt} · ${t('regresión')}`;
   return txt;
 }
 
@@ -468,7 +473,7 @@ export function bestsByExercise(logs: WorkoutLog[]): Record<string, ExerciseBest
         hasUnassisted: false,
       });
       for (const set of ex.sets) {
-        if (!set.completed) continue;
+        if (!cuentaComoMarca(set)) continue;
         const kg = effectiveLoadKg(ex, set.weight);
         const r = parseReps(set.reps);
         if (r === 0 && kg === 0) continue;
@@ -571,7 +576,8 @@ export function detectNewPRs(
     let heavy: { kg: number; r: number } | null = null;
     let maxReps = 0; // máximo de reps/segundos a peso corporal exacto
     for (const set of ex.sets) {
-      if (!set.completed) continue;
+      // En regresión no hay récord: se hizo otro ejercicio, más fácil.
+      if (!cuentaComoMarca(set)) continue;
       const kg = effectiveLoadKg(ex, set.weight);
       const r = parseReps(set.reps);
       if (r === 0 && kg === 0) continue;
@@ -1067,7 +1073,7 @@ export function weeklyExerciseMatrix(
       let heavy: { r: number; w: number } | null = null; // serie más dura
       let topReps: { r: number; w: number } | null = null; // serie con más reps
       for (const set of ex.sets) {
-        if (!set.completed) continue;
+        if (!cuentaComoMarca(set)) continue;
         // Carga EFECTIVA: la goma resta. Sin esto, una serie asistida salía
         // como "la más pesada" y tapaba a la que se hizo sin ayuda.
         const w = effectiveLoadKg(ex, set.weight);
@@ -1176,12 +1182,16 @@ export function exerciseProgression(
     if (!ex) continue;
     name = ex.name;
     if (ex.measure) measure = ex.measure;
+    // Un día hecho entero en regresión no es un punto de esta gráfica: sería
+    // un cero, y parecería que se hundió cuando lo que hizo fue otro ejercicio.
+    if (ex.sets.some((st) => st.completed && st.regresion) && !ex.sets.some(cuentaComoMarca)) continue;
     let bestReps = 0;
     let bestWeight = 0;
     let bestSeconds = 0;
     let cluster = false;
     for (const set of ex.sets) {
-      if (!set.completed) continue;
+      // La gráfica es la de ESTE ejercicio: lo hecho en regresión no entra.
+      if (!cuentaComoMarca(set)) continue;
       // En clúster, la mejor marca es la del mejor bloque.
       if (set.clusters?.length) cluster = true;
       for (const marca of [set.reps, ...(set.clusters ?? [])]) {
@@ -1222,6 +1232,8 @@ export interface ExerciseSetMark {
   weight: number;
   /** La serie se hizo en clúster (varios bloques con pausa corta). */
   cluster: boolean;
+  /** Hecha en regresión: se enseña, pero no compite con las demás. */
+  regresion?: boolean;
 }
 
 /** Un día en que se entrenó un ejercicio, con todas sus series. */
@@ -1281,6 +1293,7 @@ export function exerciseSessions(
         seconds: conAguante ? seconds : 0,
         weight: conPeso ? weight : 0,
         cluster: (st.clusters?.length ?? 0) > 0,
+        ...(st.regresion ? { regresion: true } : {}),
       });
     }
     if (sets.length > 0) {

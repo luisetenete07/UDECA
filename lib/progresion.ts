@@ -1,5 +1,5 @@
 import { frase } from './idioma';
-import { isDualMeasure, isHoldMeasure, resolveLoad, type RoutineExercise, type WorkoutLog } from './types';
+import { cuentaComoMarca, isDualMeasure, isHoldMeasure, resolveLoad, type RoutineExercise, type WorkoutLog } from './types';
 
 /*
  * SUGERENCIA DE PROGRESIÓN.
@@ -64,7 +64,8 @@ export function sugerenciaDeProgresion(
 
   const deSobra = recientes.every((l) => {
     const e = l.exercises.find((x) => x.exerciseId === ex.exerciseId)!;
-    const llegan = e.sets.filter((s) => s.completed && parseInt(s.reps, 10) >= tope).length;
+    // En regresión no se llega: se hizo una versión más fácil.
+    const llegan = e.sets.filter((s) => cuentaComoMarca(s) && parseInt(s.reps, 10) >= tope).length;
     if (llegan < ex.sets) return false;
     // Si dijo que fue al fallo (RIR 0), lo cumplió justo: no es "de sobra".
     if (typeof e.rir === 'number' && e.rir < 1) return false;

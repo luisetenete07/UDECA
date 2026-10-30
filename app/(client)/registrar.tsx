@@ -138,6 +138,29 @@ export default function RegistrarScreen() {
   };
 
   /**
+   * Hecho en regresión (una progresión más fácil, sin decir cuál): todas sus
+   * series. No cuenta para los récords ni la progresión del ejercicio (ver
+   * `cuentaComoMarca` en lib/types.ts).
+   */
+  const enRegresion = (ex: LoggedExercise) => ex.sets.length > 0 && ex.sets.every((s) => s.regresion);
+  const alternarRegresion = (i: number) => {
+    setLog((prev) =>
+      prev.map((ex, a) => {
+        if (a !== i) return ex;
+        const poner = !enRegresion(ex);
+        return {
+          ...ex,
+          sets: ex.sets.map((s) => {
+            if (poner) return { ...s, regresion: true };
+            const { regresion: _r, ...resto } = s;
+            return resto;
+          }),
+        };
+      })
+    );
+  };
+
+  /**
    * Guardar con unos datos concretos, no con lo que haya en pantalla.
    *
    * Existe así por el dictado: cuando la IA rellena y registra de una vez, el
@@ -345,6 +368,25 @@ export default function RegistrarScreen() {
                     </View>
                   </View>
 
+                  {/* Regresión: aquí, para el ejercicio entero. Apuntando otro
+                      día se recuerda "lo hice en tuck", no qué serie fue. */}
+                  <Pressable
+                    onPress={() => alternarRegresion(i)}
+                    hitSlop={6}
+                    style={[styles.regresion, enRegresion(ex) && styles.regresionPuesta]}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: enRegresion(ex) }}
+                  >
+                    <Ionicons
+                      name="trending-down"
+                      size={13}
+                      color={enRegresion(ex) ? colors.warning : colors.textMuted}
+                    />
+                    <Text style={[styles.regresionTexto, enRegresion(ex) && styles.regresionTextoPuesta]}>
+                      {enRegresion(ex) ? 'Hecho en regresión' : 'Regresión'}
+                    </Text>
+                  </Pressable>
+
                   {ex.sets.map((serie, j) => (
                     <View key={j} style={styles.filaSerie}>
                       <Text style={styles.etiquetaSerie}>Serie {j + 1}</Text>
@@ -475,6 +517,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cuantas: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, minWidth: 14, textAlign: 'center' },
+  regresion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  regresionPuesta: { backgroundColor: colors.warningMuted, borderColor: colors.warning },
+  regresionTexto: { ...typography.small, fontSize: 12, color: colors.textMuted, fontFamily: fonts.semiBold },
+  regresionTextoPuesta: { color: colors.warning },
   filaSerie: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   etiquetaSerie: { ...typography.small, color: colors.textMuted, flex: 1 },
   campo: { width: 88, marginBottom: 0 },

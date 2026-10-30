@@ -1,6 +1,6 @@
 import { frase, t } from './idioma';
 import { bestsByExercise, detectNewPRs, effectiveLoadKg, loadLabel, parseReps } from './stats';
-import type { LoggedExercise, LoggedSet, WorkoutLog } from './types';
+import { cuentaComoMarca, type LoggedExercise, type LoggedSet, type WorkoutLog } from './types';
 
 /**
  * ¿La serie que se acaba de marcar es un récord?
@@ -111,7 +111,7 @@ export function contextoDelRecord(
   let pesado: { kg: number; r: number } | null = null;
   let maxReps = 0;
   for (const s of sets) {
-    if (!s.completed) continue;
+    if (!cuentaComoMarca(s)) continue;
     const kg = effectiveLoadKg(exercise, s.weight);
     const r = parseReps(s.reps);
     if (kg !== 0 && (!pesado || kg > pesado.kg || (kg === pesado.kg && r > pesado.r))) pesado = { kg, r };
@@ -136,7 +136,7 @@ export function contextoDelRecord(
     const ex = log.exercises.find((e) => e.exerciseId === exercise.exerciseId);
     if (!ex) continue;
     const la = ex.sets.some(
-      (s) => s.completed && esLaMarca(effectiveLoadKg(ex, s.weight), parseReps(s.reps))
+      (s) => cuentaComoMarca(s) && esLaMarca(effectiveLoadKg(ex, s.weight), parseReps(s.reps))
     );
     if (la && (fecha === null || log.date < fecha)) fecha = log.date;
   }

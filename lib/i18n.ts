@@ -771,6 +771,13 @@ export const EN: Record<string, string> = {
   'Todo el grupo': 'Whole group',
   'Todo el grupo «{0}»': 'Whole «{0}» group',
   '¿A qué se aplica?': 'What does it apply to?',
+  // Series en regresión (progresión más fácil)
+  'Regresión': 'Regression',
+  'regresión': 'regression',
+  'En regresión': 'In regression',
+  'Hecho en regresión': 'Done as a regression',
+  '1 en regresión': '1 in regression',
+  '{0} en regresión': '{0} in regression',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

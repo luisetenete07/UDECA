@@ -1,5 +1,5 @@
 import React from 'react';
-import { frase } from '../lib/idioma';
+import { frase, t } from '../lib/idioma';
 import { diaMes } from '../lib/fechas';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
@@ -67,7 +67,14 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
   // Al cambiar de ejercicio, la lista vuelve a empezar recogida.
   React.useEffect(() => setVerTodas(false), [exerciseId]);
 
-  if (!progresion || sesiones.length === 0) return null;
+  /*
+   * Los días con alguna serie de VERDAD, es decir, no en regresión. Son los que
+   * dicen cuánto hace ahora y cuánto ha mejorado: una serie en regresión es de
+   * un ejercicio más fácil, y compararla con estas daría un hundimiento que no
+   * ha pasado. Los días en regresión se ven igual en la lista, marcados.
+   */
+  const deVerdad = sesiones.filter((s) => s.sets.some((x) => !x.regresion));
+  if (!progresion || deVerdad.length === 0) return null;
 
   /**
    * Cómo se mide este ejercicio.
@@ -84,14 +91,14 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
   const esCombo = medida === 'combo';
   const unidad = progresion.hasWeight ? 'kg' : esAguante ? 's' : 'reps';
   /** Lo que se compara entre sesiones: el lastre si lo hay, y si no la marca. */
-  const valorDe = (s: { sets: { reps: number; weight: number }[] }) =>
-    Math.max(...s.sets.map((x) => (progresion.hasWeight ? x.weight : x.reps)), 0);
+  const valorDe = (s: { sets: { reps: number; weight: number; regresion?: boolean }[] }) =>
+    Math.max(...s.sets.filter((x) => !x.regresion).map((x) => (progresion.hasWeight ? x.weight : x.reps)), 0);
 
   // Ojo con el orden: `sesiones` viene de la más reciente a la más antigua.
-  const ahora = valorDe(sesiones[0]);
-  const primera = valorDe(sesiones[sesiones.length - 1]);
+  const ahora = valorDe(deVerdad[0]);
+  const primera = valorDe(deVerdad[deVerdad.length - 1]);
   const cambio = ahora - primera;
-  const maximo = Math.max(...sesiones.map(valorDe), 1);
+  const maximo = Math.max(...deVerdad.map(valorDe), 1);
   const mejorHistorico = maximo;
 
   /**
@@ -140,7 +147,7 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
             <Text style={styles.heroUnidad}>{unidad}</Text>
           </View>
           <View style={styles.heroLado}>
-            {sesiones.length > 1 ? (
+            {deVerdad.length > 1 ? (
               <View style={styles.cambioFila}>
                 <Ionicons
                   name={cambio > 0 ? 'trending-up' : cambio < 0 ? 'trending-down' : 'remove'}
@@ -160,7 +167,7 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
               </View>
             ) : null}
             <Text style={styles.heroPie}>
-              {sesiones.length > 1 ? 'desde que empezaste' : 'primera vez'}
+              {deVerdad.length > 1 ? 'desde que empezaste' : 'primera vez'}
             </Text>
           </View>
         </View>
@@ -191,11 +198,11 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
           const valor = valorDe(s);
           const esRecord = valor >= mejorHistorico && valor > 0;
           const fecha = new Date(s.date);
-          // La mejor serie del día se marca para que salte a la vista cuál fue.
-          const mejorSerie = Math.max(
-            ...s.sets.map((x) => (progresion.hasWeight ? x.weight : x.reps)),
-            0
-          );
+          // Todo el día en regresión: no hay marca de este ejercicio que poner.
+          const soloRegresion = s.sets.every((x) => x.regresion);
+          // La mejor serie del día se marca para que salte a la vista cuál fue
+          // (de las de verdad: una en regresión no es "la mejor" de nada).
+          const mejorSerie = valor;
           return (
             <View key={s.id} style={styles.dia}>
               <View style={styles.diaCabecera}>
@@ -208,8 +215,8 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
                 {esRecord ? (
                   <Ionicons name="trophy" size={13} color={colors.primary} />
                 ) : null}
-                <Text style={styles.diaValor}>
-                  {num(valor)} {unidad}
+                <Text style={[styles.diaValor, soloRegresion && styles.diaValorRegresion]}>
+                  {soloRegresion ? t('En regresión') : `${num(valor)} ${unidad}`}
                 </Text>
               </View>
               <View style={styles.barra}>
@@ -218,19 +225,32 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
                     styles.barraRelleno,
                     { width: `${Math.max(4, (valor / maximo) * 100)}%` },
                     esRecord && styles.barraRecord,
+                    soloRegresion && styles.barraRegresion,
                   ]}
                 />
               </View>
               <View style={styles.marcas}>
                 {s.sets.map((set, i) => {
                   const suya = progresion.hasWeight ? set.weight : set.reps;
-                  const destaca = suya >= mejorSerie && mejorSerie > 0;
+                  const destaca = !set.regresion && suya >= mejorSerie && mejorSerie > 0;
                   return (
-                    <View key={i} style={[styles.marca, destaca && styles.marcaMejor]}>
+                    <View
+                      key={i}
+                      style={[styles.marca, destaca && styles.marcaMejor, set.regresion && styles.marcaRegresion]}
+                    >
                       {set.cluster ? (
                         <Ionicons name="layers-outline" size={11} color={colors.textMuted} />
                       ) : null}
-                      <Text style={[styles.marcaTexto, destaca && styles.marcaTextoMejor]}>
+                      {set.regresion ? (
+                        <Ionicons name="trending-down" size={11} color={colors.warning} />
+                      ) : null}
+                      <Text
+                        style={[
+                          styles.marcaTexto,
+                          destaca && styles.marcaTextoMejor,
+                          set.regresion && styles.marcaTextoRegresion,
+                        ]}
+                      >
                         {set.label}
                       </Text>
                     </View>
@@ -333,6 +353,7 @@ const styles = StyleSheet.create({
   },
   diaNombre: { ...typography.small, color: colors.textFaint, flex: 1 },
   diaValor: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  diaValorRegresion: { color: colors.warning },
   barra: {
     height: 6,
     borderRadius: 3,
@@ -342,6 +363,7 @@ const styles = StyleSheet.create({
   },
   barraRelleno: { height: '100%', backgroundColor: colors.primaryDark, borderRadius: 3 },
   barraRecord: { backgroundColor: colors.primary },
+  barraRegresion: { backgroundColor: colors.warning },
   marcas: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 7 },
   marca: {
     flexDirection: 'row',
@@ -353,6 +375,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   marcaMejor: { backgroundColor: colors.primaryMuted },
+  // En regresión: se ve, en ámbar, y nunca como la mejor del día.
+  marcaRegresion: { backgroundColor: colors.warningMuted },
+  marcaTextoRegresion: { color: colors.warning },
   marcaTexto: { ...typography.small, color: colors.textMuted, fontSize: 12 },
   marcaTextoMejor: { color: colors.primaryBright, fontFamily: fonts.semiBold },
 

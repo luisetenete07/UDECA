@@ -3,7 +3,7 @@ import { frase } from './idioma';
 import { effectiveLoadKg, loadLabel } from './stats';
 import { planCalendar } from './cyclePlan';
 import { weekSetsByGroup } from './weekPlan';
-import type { Routine, TrainingCycle, WorkoutLog } from './types';
+import { cuentaComoMarca, type Routine, type TrainingCycle, type WorkoutLog } from './types';
 
 /**
  * La vista general de un bloque: volumen, frecuencia y equilibrio de un
@@ -167,7 +167,8 @@ function mejorSerie(log: WorkoutLog, exerciseId: string, seconds: boolean): Marc
   for (const ex of log.exercises) {
     if (ex.exerciseId !== exerciseId) continue;
     for (const set of ex.sets) {
-      if (!set.completed) continue;
+      // Lo hecho en regresión es de otro ejercicio: no es progreso de este.
+      if (!cuentaComoMarca(set)) continue;
       // Con goma la carga es NEGATIVA: quitarse asistencia es progresar, y
       // ponérsela no puede contar como mejora.
       const peso = effectiveLoadKg(ex, set.weight);

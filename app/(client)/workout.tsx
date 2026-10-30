@@ -929,8 +929,13 @@ export default function WorkoutScreen() {
       prev.map((ex, i) => {
         if (i !== exerciseIndex) return ex;
         // La casilla de la marca a apuntar arranca siempre vacía (no hereda la
-        // marca de la serie anterior).
-        return { ...ex, sets: [...ex.sets, { reps: '', weight: '', completed: false }] };
+        // marca de la serie anterior). La regresión sí: si iba en regresión,
+        // la serie de más también.
+        const enRegresion = ex.sets[ex.sets.length - 1]?.regresion === true;
+        return {
+          ...ex,
+          sets: [...ex.sets, { reps: '', weight: '', completed: false, ...(enRegresion ? { regresion: true } : {}) }],
+        };
       })
     );
   };
@@ -1355,6 +1360,36 @@ export default function WorkoutScreen() {
         setViewIndex((cur) => (cur >= avance.inicio && cur <= avance.fin ? avance.destino : cur));
       }, 700);
     }
+  };
+
+  /**
+   * REGRESIÓN: la serie se hizo en una progresión más fácil (sin decir cuál).
+   *
+   * Se pone en la serie que toca y en las que quedan por hacer de ese
+   * ejercicio: quien baja a la regresión en la segunda serie suele seguir en
+   * ella hasta el final, y así no tiene que tocarlo en cada una. Quitarla
+   * también la quita de las que quedan. Las ya hechas no se tocan: lo hecho,
+   * hecho está.
+   *
+   * Sus marcas no cuentan para el ejercicio (récords, progresión…): ver
+   * `cuentaComoMarca` en lib/types.ts.
+   */
+  const alternarRegresion = (ejercicio: number, serie: number) => {
+    const puesta = !log[ejercicio]?.sets[serie]?.regresion;
+    setLog((prev) =>
+      prev.map((ex, i) => {
+        if (i !== ejercicio) return ex;
+        return {
+          ...ex,
+          sets: ex.sets.map((st, j) => {
+            if (j !== serie && (j < serie || st.completed)) return st;
+            if (puesta) return { ...st, regresion: true };
+            const { regresion: _r, ...resto } = st;
+            return resto;
+          }),
+        };
+      })
+    );
   };
 
   /**
@@ -2127,6 +2162,8 @@ export default function WorkoutScreen() {
           // Cada paso es un ejercicio distinto: el rótulo va con su casilla.
           conRotulos
           onMarcar={() => updateSet(i, r, 'completed', !set.completed)}
+          regresion={set.regresion === true}
+          onRegresion={() => alternarRegresion(i, r)}
           pie={
             conDetalle ? (
               <View style={styles.ssPasoPie}>
@@ -3145,6 +3182,8 @@ export default function WorkoutScreen() {
                   hecha={set.completed}
                   campos={camposDeSerie(exerciseIndex, setIndex)}
                   onMarcar={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
+                  regresion={set.regresion === true}
+                  onRegresion={() => alternarRegresion(exerciseIndex, setIndex)}
                 />
               ))}
             </View>

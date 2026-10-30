@@ -1087,6 +1087,29 @@ export interface LoggedSet {
   esfuerzo?: string;
   /** Con escala RIR, también como número (0 = al fallo). */
   rir?: number;
+  /**
+   * Hecha en REGRESIÓN: en una progresión más fácil que la del plan (tuck en
+   * vez de straddle, con los pies apoyados…), sin decir cuál.
+   *
+   * Sus marcas no son de ESTE ejercicio, así que no cuentan para él: ni récord,
+   * ni gráfica de progresión, ni objetivo del ciclo, ni sugerencia de subir.
+   * Sí cuentan como trabajo hecho (series, volumen, constancia), y se ven
+   * marcadas como regresión en el historial y en la sesión del entrenador.
+   * Ver `cuentaComoMarca`.
+   */
+  regresion?: boolean;
+}
+
+/**
+ * ¿Vale esta serie como marca del ejercicio? Hecha y no en regresión.
+ *
+ * Es la puerta de todo lo que mide el progreso (récords, progresión,
+ * objetivos, sugerencias): una serie en regresión se hizo, pero en otro
+ * ejercicio más fácil, y compararla con las de verdad celebraría retrocesos o
+ * los escondería.
+ */
+export function cuentaComoMarca(set: { completed: boolean; regresion?: boolean }): boolean {
+  return set.completed && !set.regresion;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { frase } from './idioma';
-import type { ObjetivoDeCiclo, WorkoutLog } from './types';
+import { cuentaComoMarca, type ObjetivoDeCiclo, type WorkoutLog } from './types';
 
 /**
  * Los objetivos del ciclo: qué se persigue y cuánto falta.
@@ -44,7 +44,8 @@ export function mejorMarca(
     for (const ex of log.exercises ?? []) {
       if (ex.exerciseId !== ejercicioId) continue;
       for (const set of ex.sets ?? []) {
-        if (!set.completed) continue;
+        // Un objetivo del ciclo se cumple en el ejercicio, no en su regresión.
+        if (!cuentaComoMarca(set)) continue;
         if (medida === 'kg') {
           const kg = Number(set.weight);
           if (Number.isFinite(kg) && kg > mejor) mejor = kg;

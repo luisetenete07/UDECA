@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Texto';
 import { TextField } from './TextField';
 import { PressableScale } from './PressableScale';
+import { t } from '../lib/idioma';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 
 /** Una casilla de la fila: reps, segundos, kg, el otro lado, un bloque… */
@@ -37,6 +38,11 @@ export interface CampoDeSerie {
  *    lado del nombre: bajan a una segunda línea, con su rótulo debajo.
  *  - En un móvil estrecho (360 de ancho, muchos Android) las casillas y el ✓
  *    adelgazan un poco: si no, "Serie 1" se partía en dos líneas.
+ *  - "Regresión", debajo del nombre: la serie se hizo en una progresión más
+ *    fácil, sin decir cuál. Sale en la serie que toca (es cuando se sabe) y en
+ *    las que ya la llevan; en las demás no, para no llenar de botones todas
+ *    las filas. Desmarcando una hecha, vuelve a ser la que toca y se puede
+ *    cambiar.
  */
 export function FilaDeSerie({
   letra,
@@ -50,6 +56,8 @@ export function FilaDeSerie({
   campos,
   conRotulos = false,
   onMarcar,
+  regresion = false,
+  onRegresion,
 }: {
   /** La letra del paso en una superserie ("A"), delante del nombre. */
   letra?: string;
@@ -68,9 +76,14 @@ export function FilaDeSerie({
   /** El rótulo debajo de cada casilla (cuando no hay una cabecera común). */
   conRotulos?: boolean;
   onMarcar: () => void;
+  /** Hecha en regresión (ver `LoggedSet.regresion`). */
+  regresion?: boolean;
+  /** Sin esto no hay botón de regresión (p. ej. donde no se apuntan marcas). */
+  onRegresion?: () => void;
 }) {
   const enDosLineas = campos.length > 2;
   const m = useMedidas();
+  const verRegresion = !!onRegresion && (esAhora || regresion);
   const casillas = (
     <View style={[styles.campos, enDosLineas && styles.camposAncho]}>
       {campos.map((c) => (
@@ -114,7 +127,30 @@ export function FilaDeSerie({
               </View>
             ) : null}
           </Pressable>
-          {extra ? <View style={styles.extra}>{extra}</View> : null}
+          {extra || verRegresion ? (
+            <View style={styles.extra}>
+              {extra}
+              {verRegresion ? (
+                <Pressable
+                  onPress={onRegresion}
+                  hitSlop={6}
+                  style={[styles.regresion, regresion && styles.regresionPuesta]}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: regresion }}
+                  accessibilityLabel={t('Regresión')}
+                >
+                  <Ionicons
+                    name="trending-down"
+                    size={12}
+                    color={regresion ? colors.warning : colors.textMuted}
+                  />
+                  <Text style={[styles.regresionTexto, regresion && styles.regresionTextoPuesta]}>
+                    Regresión
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
         {enDosLineas ? null : casillas}
         <PressableScale
@@ -191,7 +227,20 @@ const styles = StyleSheet.create({
   detalle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   antesFila: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   antes: { ...typography.small, fontSize: 12, color: colors.primary, flexShrink: 1, ...tabularNums },
-  extra: { flexDirection: 'row', marginTop: 6 },
+  extra: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  regresion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  regresionPuesta: { backgroundColor: colors.warningMuted, borderColor: colors.warning },
+  regresionTexto: { ...typography.small, fontSize: 11, color: colors.textMuted, fontFamily: fonts.semiBold },
+  regresionTextoPuesta: { color: colors.warning },
   campos: { flexDirection: 'row', gap: 6 },
   camposAncho: { marginTop: spacing.sm },
   campo: { alignItems: 'center' },

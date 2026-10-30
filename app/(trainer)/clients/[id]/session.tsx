@@ -9,7 +9,7 @@ import { EmptyState } from '../../../../components/EmptyState';
 import { LoadingScreen } from '../../../../components/LoadingScreen';
 import { ScreenContainer } from '../../../../components/ScreenContainer';
 import { getWorkoutLog } from '../../../../lib/firestore/workoutLogs';
-import { colors, fonts, spacing, typography } from '../../../../lib/theme';
+import { colors, fonts, radius, spacing, typography } from '../../../../lib/theme';
 import { isDualMeasure, setMarks, type WorkoutLog } from '../../../../lib/types';
 import { textoDeEsfuerzo } from '../../../../lib/planPersonalizado';
 
@@ -100,6 +100,16 @@ export default function SessionDetailScreen() {
                       para lo que se anota así. */}
                   {isDualMeasure(ex.measure) && set.side2 ? ` · ${set.side2} ${unit} (der.)` : ''}
                 </Text>
+                {/* Hecha en una progresión más fácil: no cuenta para sus
+                    récords ni su progresión, y es lo primero que hay que ver
+                    para saber si la progresión le queda grande. Solo en las
+                    hechas: una sin hacer no se hizo en nada. */}
+                {set.completed && set.regresion ? (
+                  <View style={styles.regresion}>
+                    <Ionicons name="trending-down" size={12} color={colors.warning} />
+                    <Text style={styles.regresionTexto}>Regresión</Text>
+                  </View>
+                ) : null}
                 {showLoad ? (
                   <Text style={styles.setValue}>
                     {set.weight ? `${set.weight} ${loadUnit}` : '—'}
@@ -162,6 +172,16 @@ const styles = StyleSheet.create({
   },
   setLabel: { ...typography.small, color: colors.textMuted, width: 56 },
   setValue: { ...typography.body, color: colors.text, flex: 1 },
+  regresion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.warningMuted,
+  },
+  regresionTexto: { ...typography.small, fontSize: 11, color: colors.warning, fontFamily: fonts.semiBold },
   notes: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm, fontStyle: 'italic' },
   esfuerzoEjercicio: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, marginBottom: spacing.xs },
   esfuerzoSerie: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, width: 52, textAlign: 'right' },

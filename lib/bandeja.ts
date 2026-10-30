@@ -86,7 +86,7 @@ export function conRevisado(revisados: string[] | undefined, id: string): string
 }
 
 export interface Destacado {
-  icono: 'trophy' | 'chatbox-ellipses-outline' | 'remove-circle-outline' | 'play-skip-forward-outline' | 'flame-outline';
+  icono: 'trophy' | 'chatbox-ellipses-outline' | 'remove-circle-outline' | 'play-skip-forward-outline' | 'flame-outline' | 'trending-down';
   texto: string;
   tono: 'logro' | 'aviso' | 'normal';
 }
@@ -99,6 +99,8 @@ export interface CuentaDestacada {
   /** Los saltados, por nombre (uno solo se nombra: "Saltó Dominadas"). */
   saltados: string[];
   alFallo: number;
+  /** Ejercicios con alguna serie hecha en regresión (más fácil de lo pautado). */
+  enRegresion: number;
 }
 
 /** Lo contado de un entreno: récords, notas, series sin hacer, saltados y al fallo. */
@@ -112,6 +114,9 @@ export function cuentaDestacada(log: WorkoutLog, historial: WorkoutLog[]): Cuent
       .reduce((n, e) => n + e.sets.filter((s) => !s.completed).length, 0),
     saltados: log.exercises.filter((e) => e.saltado).map((e) => e.name),
     alFallo: log.exercises.filter((e) => e.rir === 0).length,
+    // Que el entrenador lo vea sin abrir el entreno: es lo que le dice que
+    // quizá la progresión que le ha puesto todavía le queda grande.
+    enRegresion: log.exercises.filter((e) => e.sets.some((s) => s.completed && s.regresion)).length,
   };
 }
 
@@ -139,6 +144,13 @@ export function pastillasDe(c: CuentaDestacada): Destacado[] {
     out.push({
       icono: 'play-skip-forward-outline',
       texto: c.saltados.length === 1 ? frase`Saltó ${c.saltados[0]}` : frase`Saltó ${c.saltados.length} ejercicios`,
+      tono: 'aviso',
+    });
+  }
+  if (c.enRegresion > 0) {
+    out.push({
+      icono: 'trending-down',
+      texto: c.enRegresion === 1 ? t('1 en regresión') : frase`${c.enRegresion} en regresión`,
       tono: 'aviso',
     });
   }
@@ -204,7 +216,7 @@ export function porAlumno(items: EnLaBandeja[]): GrupoDeLaBandeja[] {
 
 /** Lo destacado de varios entrenos, sumado ("4 al fallo", "2 récords"). */
 export function loQueDestacaElGrupo(logs: WorkoutLog[], historial: WorkoutLog[]): Destacado[] {
-  const total: CuentaDestacada = { records: 0, notas: 0, sinHacer: 0, saltados: [], alFallo: 0 };
+  const total: CuentaDestacada = { records: 0, notas: 0, sinHacer: 0, saltados: [], alFallo: 0, enRegresion: 0 };
   for (const log of logs) {
     const c = cuentaDestacada(log, historial);
     total.records += c.records;
@@ -212,6 +224,7 @@ export function loQueDestacaElGrupo(logs: WorkoutLog[], historial: WorkoutLog[])
     total.sinHacer += c.sinHacer;
     total.saltados.push(...c.saltados);
     total.alFallo += c.alFallo;
+    total.enRegresion += c.enRegresion;
   }
   return pastillasDe(total);
 }

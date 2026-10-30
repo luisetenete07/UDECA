@@ -3,7 +3,7 @@ import { frase } from './idioma';
 import { setsByMuscleGroup, weeklyExerciseMatrix, workoutsByMonth, type MatrixCell, type MatrixRow } from './stats';
 import { CALICO_LOGO_OSCURO_DATA_URI } from './calicoLogo';
 import { marcaActual } from './marcaActual';
-import type { Routine, UserProfile, WeightLog, WorkoutLog } from './types';
+import { cuentaComoMarca, type Routine, type UserProfile, type WeightLog, type WorkoutLog } from './types';
 
 /**
  * Informe de progreso en PDF.
@@ -76,7 +76,7 @@ export function bestMarks(
       if (muscle[ex.exerciseId] !== group) continue;
       const isSec = measure[ex.exerciseId] === 'seconds' || ex.measure === 'seconds';
       for (const set of ex.sets) {
-        if (!set.completed) continue;
+        if (!cuentaComoMarca(set)) continue;
         const n = parseNum(set.reps);
         if (n <= 0) continue;
         if (isSec) {

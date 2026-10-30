@@ -77,7 +77,16 @@ export function logDelDia(dia: RoutineDay | null | undefined): LoggedExercise[] 
 /** Una serie más en ese ejercicio, vacía. */
 export function conUnaSerieMas(log: LoggedExercise[], i: number): LoggedExercise[] {
   return log.map((ex, j) =>
-    j === i ? { ...ex, sets: [...ex.sets, { reps: '', weight: '', completed: true }] } : ex
+    j === i
+      ? {
+          ...ex,
+          sets: [
+            ...ex.sets,
+            // Si lo estaba haciendo en regresión, la serie de más también.
+            { reps: '', weight: '', completed: true, ...(ex.sets[ex.sets.length - 1]?.regresion ? { regresion: true } : {}) },
+          ],
+        }
+      : ex
   );
 }
 
