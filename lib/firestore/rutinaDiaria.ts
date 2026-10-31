@@ -55,15 +55,15 @@ export async function getDiaDeRutinaDiaria(
  * Guarda lo hecho hoy. Lo escribe el ALUMNO: es él quien las hace.
  *
  * Con `extra`, también las series que haya cambiado hoy, los minutos que
- * lleve de lo que va por tiempo y cuántas marcas había que hacer (lo que el
- * historial compara después).
+ * lleve de lo que va por tiempo y cuántas casillas había que hacer y cuántas
+ * lleva (lo que el historial compara después).
  */
 export async function setDiaDeRutinaDiaria(
   clientId: string,
   hechos: string[],
   trainerId?: string,
   dia = Date.now(),
-  extra?: { series?: Record<string, number>; minutos?: Record<string, number>; total?: number }
+  extra?: { series?: Record<string, number>; minutos?: Record<string, number>; total?: number; cuenta?: number }
 ): Promise<void> {
   const date = inicioDelDia(dia);
   const datos = {
@@ -75,6 +75,7 @@ export async function setDiaDeRutinaDiaria(
     ...(extra?.series ? { series: extra.series } : {}),
     ...(extra?.minutos ? { minutos: extra.minutos } : {}),
     ...(typeof extra?.total === 'number' ? { total: extra.total } : {}),
+    ...(typeof extra?.cuenta === 'number' ? { cuenta: extra.cuenta } : {}),
   };
   // Cada campo que se manda se REEMPLAZA entero (`mergeFields`) y el resto no
   // se toca. Con un merge normal, un ejercicio que vuelve a sus series de

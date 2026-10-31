@@ -1,7 +1,7 @@
 import { inicioDelDia, masDias } from './fechas';
 import { objetivoDelDia, seriesDeHoy } from './gtg';
-import { progresoDiario } from './rutinaDiaria';
-import type { DiaDeRutinaDiaria, Routine, RutinaDiaria, WorkoutLog } from './types';
+import { cuentaTiempo, minutosEnteros, progresoDiario, sinTiempo } from './rutinaDiaria';
+import type { DiaDeRutinaDiaria, EjercicioDiario, Routine, RutinaDiaria, WorkoutLog } from './types';
 
 /**
  * LAS SERIES DEL GREASE THE GROOVE, DÍA A DÍA.
@@ -21,6 +21,13 @@ export interface DiaDeSeries {
   hechas: number;
   /** Lo que se buscaba ese día (0: ese día no tocaba o no se sabe). */
   objetivo: number;
+  /** Si se sabe de otra forma que se cumplió (marcado a mano). Sin él, hechas ≥ objetivo. */
+  cumplido?: boolean;
+}
+
+/** ¿Se llegó a lo que se buscaba ese día? */
+export function diaCumplido(d: DiaDeSeries): boolean {
+  return d.cumplido ?? (d.objetivo > 0 && d.hechas >= d.objetivo);
 }
 
 /** ¿Es este entreno un día de grease the groove? */
@@ -56,23 +63,60 @@ export function seriesGtgPorDia(
   });
 }
 
-/** La rutina diaria: lo marcado cada día frente a lo que había que hacer. */
+/**
+ * La rutina diaria: lo marcado cada día frente a lo que había que hacer.
+ *
+ * Solo las CASILLAS: lo que va por tiempo se enseña aparte, en minutos
+ * (`minutosDiariosPorDia`). Contado aquí sería "1 hecha" por veinte minutos de
+ * pino, que no dice nada de cuánto pino.
+ */
 export function seriesDiariasPorDia(
   dias: DiaDeRutinaDiaria[],
   rutina: RutinaDiaria | null | undefined,
   cuantos = 14,
   ahora = Date.now()
 ): DiaDeSeries[] {
+  const casillas = sinTiempo(rutina);
+  const hayTiempo = !!rutina?.ejercicios.some((e) => cuentaTiempo(e));
   return ultimosDias(cuantos, ahora).map((dia) => {
     const doc = dias.find((d) => inicioDelDia(d.date) === dia);
-    if (!doc) return { dia, hechas: 0, objetivo: dia === inicioDelDia(ahora) ? progresoDiario(rutina, null, ahora).total : 0 };
+    if (!doc) return { dia, hechas: 0, objetivo: dia === inicioDelDia(ahora) ? progresoDiario(casillas, null, ahora).total : 0 };
     // Con lo que había que hacer ESE día si se guardó; si no (días de antes),
     // contado con la rutina de ahora.
-    if (typeof doc.total === 'number') {
+    if (typeof doc.total === 'number' && typeof doc.cuenta === 'number') {
+      return { dia, hechas: Math.min(doc.cuenta, doc.total), objetivo: doc.total };
+    }
+    // Los guardados antes de `cuenta` llevan en el total lo que iba por
+    // tiempo: con algo por tiempo en la rutina, se cuentan de nuevo.
+    if (typeof doc.total === 'number' && !hayTiempo) {
       return { dia, hechas: Math.min(doc.hechos?.length ?? 0, doc.total), objetivo: doc.total };
     }
-    const p = progresoDiario(rutina, doc, doc.date);
+    const p = progresoDiario(casillas, doc, doc.date);
     return { dia, hechas: p.hechos, objetivo: p.total };
+  });
+}
+
+/**
+ * Lo que va por tiempo, en MINUTOS por día: "20-30 min de pino" se registra
+ * como los minutos que hizo, no como una casilla hecha.
+ *
+ * El objetivo es el mínimo. Marcado a mano sin llegar (lo hizo sin el crono),
+ * el día cuenta como cumplido aunque los minutos no lo digan.
+ */
+export function minutosDiariosPorDia(
+  dias: DiaDeRutinaDiaria[],
+  ejercicio: EjercicioDiario,
+  cuantos = 14,
+  ahora = Date.now()
+): DiaDeSeries[] {
+  const minimo = cuentaTiempo(ejercicio) ? ejercicio.minutos.min : 0;
+  return ultimosDias(cuantos, ahora).map((dia) => {
+    const doc = dias.find((d) => inicioDelDia(d.date) === dia);
+    const n = doc?.minutos?.[ejercicio.id];
+    const hechas = typeof n === 'number' && Number.isFinite(n) && n > 0 ? minutosEnteros(n) : 0;
+    const objetivo = doc || dia === inicioDelDia(ahora) ? minimo : 0;
+    const marcado = !!doc?.hechos?.includes(ejercicio.id);
+    return { dia, hechas, objetivo, cumplido: marcado || (objetivo > 0 && hechas >= objetivo) };
   });
 }
 
@@ -91,12 +135,12 @@ export interface ResumenDeSeries {
 
 export function resumenDeSeries(dias: DiaDeSeries[]): ResumenDeSeries {
   const ultimos7 = dias.slice(-7);
-  const conAlgo = ultimos7.filter((d) => d.hechas > 0);
+  const conAlgo = ultimos7.filter((d) => d.hechas > 0 || diaCumplido(d));
   const semana = conAlgo.reduce((n, d) => n + d.hechas, 0);
   return {
     semana,
     dias: conAlgo.length,
-    cumplidos: ultimos7.filter((d) => d.objetivo > 0 && d.hechas >= d.objetivo).length,
+    cumplidos: ultimos7.filter(diaCumplido).length,
     media: conAlgo.length > 0 ? Math.round((semana / conAlgo.length) * 10) / 10 : 0,
     total: dias.reduce((n, d) => n + d.hechas, 0),
   };

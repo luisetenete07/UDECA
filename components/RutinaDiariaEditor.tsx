@@ -208,7 +208,11 @@ export function RutinaDiariaEditor({
     setModos((prev) => ({ ...prev, [id]: modo }));
     setEjercicios((prev) => {
       const lista = prev.map((e) =>
-        e.id !== id ? e : modo === 'tiempo' ? { ...e, series: undefined } : { ...e, minutos: undefined }
+        e.id !== id
+          ? e
+          : modo === 'tiempo'
+            ? { ...e, series: undefined, seriesOpcionales: undefined }
+            : { ...e, minutos: undefined }
       );
       void guardar({ ejercicios: lista });
       return lista;
@@ -216,6 +220,15 @@ export function RutinaDiariaEditor({
   };
 
   const modoDe = (e: EjercicioDiario): ModoDeCuenta => modos[e.id] ?? (cuentaTiempo(e) ? 'tiempo' : 'series');
+
+  /** Opcional o no: se guarda al momento, como el interruptor de la rutina. */
+  const alternarOpcional = (id: string) => {
+    setEjercicios((prev) => {
+      const lista = prev.map((e) => (e.id === id ? { ...e, opcional: e.opcional ? undefined : true } : e));
+      void guardar({ ejercicios: lista });
+      return lista;
+    });
+  };
 
   const abrirBiblioteca = async () => {
     setBusca('');
@@ -400,8 +413,10 @@ export function RutinaDiariaEditor({
                     hitSlop={4}
                   >
                     <Text style={styles.filaNombre}>{e.nombre}</Text>
-                    {textoDelEjercicio(e) ? (
-                      <Text style={styles.filaObjetivo}>{textoDelEjercicio(e)}</Text>
+                    {e.opcional || textoDelEjercicio(e) ? (
+                      <Text style={styles.filaObjetivo}>
+                        {[e.opcional ? t('Opcional') : '', textoDelEjercicio(e)].filter(Boolean).join(' · ')}
+                      </Text>
                     ) : null}
                   </Pressable>
                   {/* Que se vea desde fuera si tiene vídeo: entrar a cada uno a
@@ -456,23 +471,57 @@ export function RutinaDiariaEditor({
                           onSalir={guardarLista}
                         />
                       ) : (
-                        <TextInput
-                          key={`${e.id}-series`}
-                          style={[styles.campoEjercicio, styles.campoSeries]}
-                          defaultValue={e.series ? String(e.series) : ''}
-                          onChangeText={(t) => cambiar(e.id, { series: seriesDeTexto(t), minutos: undefined })}
-                          onBlur={guardarLista}
-                          placeholder={t('Series')}
-                          placeholderTextColor={colors.textFaint}
-                          keyboardType="number-pad"
-                        />
+                        <>
+                          <TextInput
+                            key={`${e.id}-series`}
+                            style={[styles.campoEjercicio, styles.campoSeries]}
+                            defaultValue={e.series ? String(e.series) : ''}
+                            onChangeText={(t) => cambiar(e.id, { series: seriesDeTexto(t), minutos: undefined })}
+                            onBlur={guardarLista}
+                            placeholder={t('Series')}
+                            placeholderTextColor={colors.textFaint}
+                            keyboardType="number-pad"
+                          />
+                          {/* Y las que puede hacer de más: "3 + 2 opcionales". */}
+                          <View style={styles.minutos}>
+                            <Text style={styles.minutosTexto}>+</Text>
+                            <TextInput
+                              key={`${e.id}-opcionales`}
+                              style={[styles.campoEjercicio, styles.campoMinutos]}
+                              defaultValue={e.seriesOpcionales ? String(e.seriesOpcionales) : ''}
+                              onChangeText={(t) => cambiar(e.id, { seriesOpcionales: seriesDeTexto(t) })}
+                              onBlur={guardarLista}
+                              placeholder="0"
+                              placeholderTextColor={colors.textFaint}
+                              keyboardType="number-pad"
+                              accessibilityLabel={t('Series opcionales')}
+                            />
+                            <Text style={styles.minutosTexto}>opcionales</Text>
+                          </View>
+                        </>
                       )}
                     </View>
                     <Text style={styles.pistaSeries}>
                       {modoDe(e) === 'tiempo'
                         ? 'Minutos al día, o un margen (de 20 a 30). Los va sumando y, al llegar al mínimo, queda hecho.'
-                        : 'Con series, se marcan de una en una a lo largo del día.'}
+                        : 'Con series, se marcan de una en una a lo largo del día. Las opcionales no hacen falta para darlo por hecho.'}
                     </Text>
+                    {/* El ejercicio entero, opcional: se marca si se hace, pero
+                        el día queda hecho sin él. */}
+                    <Pressable
+                      style={styles.interruptor}
+                      onPress={() => alternarOpcional(e.id)}
+                      hitSlop={6}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: !!e.opcional }}
+                    >
+                      <View style={[styles.casilla, e.opcional && styles.casillaOn]}>
+                        {e.opcional ? <Ionicons name="checkmark" size={14} color={colors.onPrimary} /> : null}
+                      </View>
+                      <Text style={styles.interruptorTexto}>
+                        Ejercicio opcional: no hace falta para dar el día por hecho
+                      </Text>
+                    </Pressable>
                     <TextInput
                       style={[styles.campoEjercicio, styles.campoIndicaciones]}
                       defaultValue={e.indicaciones ?? ''}

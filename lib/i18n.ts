@@ -782,6 +782,19 @@ export const EN: Record<string, string> = {
   'El alumno puede aplicar una regresión': 'The client can apply a regression',
   'Marca las series que haga en una progresión más fácil. No cuentan como récord ni progresión de este ejercicio.': 'They mark the sets done in an easier progression. Those don\'t count as a record or as progress for this exercise.',
   'Regresión permitida': 'Regression allowed',
+  // Rutina diaria: lo opcional y el registro en minutos (components/RutinaDiariaDelDia.tsx, SeriesDelGtg.tsx).
+  'Serie {0}, opcional': 'Set {0}, optional',
+  'Serie {0}': 'Set {0}',
+  'opcionales': 'optional',
+  'Ejercicio opcional: no hace falta para dar el día por hecho': 'Optional exercise: not needed to complete the day',
+  'Series opcionales': 'Optional sets',
+  'Con series, se marcan de una en una a lo largo del día. Las opcionales no hacen falta para darlo por hecho.': 'With sets, they are ticked one by one through the day. Optional ones aren\'t needed to complete it.',
+  'Todo opcional: lo que caiga suma.': 'All optional: whatever you do counts.',
+  '{0} + 1 opcional': '{0} + 1 optional',
+  '{0} + {1} opcionales': '{0} + {1} optional',
+  '/{0} min': '/{0} min',
+  'min en los últimos 7 días': 'min in the last 7 days',
+  '{0} de 7 días · objetivo cumplido {1} · media {2} min al día': '{0} of 7 days · target hit {1} · {2} min a day on average',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

@@ -5,7 +5,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Text } from './Texto';
-import { frase } from '../lib/idioma';
+import { frase, t } from '../lib/idioma';
 import { esMismoDia } from '../lib/fechas';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from './ProgressBar';
@@ -25,12 +25,13 @@ import {
   cuentaTiempo,
   hayRutinaDiaria,
   hechosDeHoy,
-  marcaDeSerie,
+  marcasDelEjercicio,
   minutosDeHoy,
   minutosDelCrono,
   minutosEnteros,
   NOMBRE_POR_DEFECTO,
   MAX_SERIES,
+  paraElHistorial,
   progresoDiario,
   seriesDe,
   seriesDelDia,
@@ -38,6 +39,8 @@ import {
   textoDelCrono,
   textoDelEjercicio,
   textoDiario,
+  tiempoDeHoy,
+  todoPorTiempo,
 } from '../lib/rutinaDiaria';
 import { colors, fonts, gradients, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { CronoDiario } from '../lib/rutinaDiaria';
@@ -126,7 +129,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       setDiaDeRutinaDiaria(uid, siguiente, rutina.trainerId, Date.now(), {
         ...(nuevo.series ? { series: nuevo.series } : {}),
         ...(nuevo.minutos ? { minutos: nuevo.minutos } : {}),
-        total: progresoDiario(rutina, nuevo).total,
+        ...paraElHistorial(rutina, nuevo),
       }).catch(() => {});
     },
     [uid, rutina, dia]
@@ -155,7 +158,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       setDia(nuevo);
       setDiaDeRutinaDiaria(uid, r.hechos, rutina.trainerId, Date.now(), {
         series: r.series,
-        total: progresoDiario(rutina, nuevo).total,
+        ...paraElHistorial(rutina, nuevo),
       }).catch(() => {});
     },
     [uid, rutina, dia]
@@ -185,7 +188,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       setDia(nuevo);
       setDiaDeRutinaDiaria(uid, r.hechos, rutina.trainerId, Date.now(), {
         minutos: r.minutos,
-        total: progresoDiario(rutina, nuevo).total,
+        ...paraElHistorial(rutina, nuevo),
       }).catch(() => {});
     },
     [uid, rutina, dia]
@@ -267,6 +270,11 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       return;
     }
     const pr = progresoDiario(rutina, dia);
+    // Todo opcional: no hay nada que recordar.
+    if (pr.total === 0) {
+      cancelarAvisosGtg().catch(() => {});
+      return;
+    }
     const t = setTimeout(() => {
       programarAvisosGtg(rutina.nombre || NOMBRE_POR_DEFECTO, pr.total - pr.hechos, pr.total).catch(
         () => {}
@@ -279,6 +287,20 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
 
   const hechos = hechosDeHoy(dia);
   const p = progresoDiario(rutina, dia);
+  /*
+   * TODO POR TIEMPO ("20-30 MIN DE PINO"): ARRIBA, MINUTOS.
+   *
+   * La cuenta grande era "0/1": una cosa de una. Con todo por tiempo lo que se
+   * quiere saber es cuánto rato lleva, así que arriba van los minutos (con lo
+   * que lleve el crono) y la barra sube con ellos, no de golpe al llegar.
+   */
+  const enMinutos = todoPorTiempo(rutina);
+  const tiempo = tiempoDeHoy(
+    rutina,
+    dia,
+    Date.now(),
+    crono ? { id: crono.id, minutos: minutosDelCrono(crono.desde, ahora) } : null
+  );
   const indicaciones = rutina.indicaciones?.trim() ?? '';
   // Larga: dos líneas y "Ver más". La tarjeta se mira varias veces al día y
   // el texto se lee una; entero cada vez empujaría la lista hacia abajo.
@@ -326,14 +348,23 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
             {rutina.nombre || NOMBRE_POR_DEFECTO}
           </Text>
         </View>
-        {/* La cuenta, grande. Es el dato que hace volver: cuánto llevas hoy. */}
-        <View style={styles.marcador}>
-          <Text style={styles.cuenta}>{p.hechos}</Text>
-          <Text style={styles.deTotal}>/{p.total}</Text>
-        </View>
+        {/* La cuenta, grande. Es el dato que hace volver: cuánto llevas hoy.
+            Todo opcional, sin "/0": lo hecho y ya. */}
+        {enMinutos ? (
+          <View style={styles.marcador}>
+            <Text style={styles.cuenta}>{minutosEnteros(tiempo.llevan)}</Text>
+            <Text style={styles.deTotal}>{tiempo.objetivo > 0 ? frase`/${tiempo.objetivo} min` : t('min')}</Text>
+          </View>
+        ) : (
+          <View style={styles.marcador}>
+            <Text style={styles.cuenta}>{p.total > 0 ? p.hechos : p.opcionales}</Text>
+            {p.total > 0 ? <Text style={styles.deTotal}>/{p.total}</Text> : null}
+          </View>
+        )}
       </View>
 
-      <ProgressBar progress={p.ratio} height={8} />
+      {/* Marcado a mano sin el crono también llena: lo hizo. */}
+      <ProgressBar progress={enMinutos ? Math.max(p.ratio, tiempo.ratio) : p.ratio} height={8} />
       <Text style={styles.texto}>{textoDiario(p)}</Text>
 
       {indicaciones ? (
@@ -368,12 +399,13 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
          * lo largo del día y tener que esperar a terminarlas todas para marcar
          * algo, que en el grease the groove es justo lo que no encaja.
          */
-        const conSeries = cuentaSeries(e) && series > 1;
-        const marcas = conSeries
-          ? Array.from({ length: series }, (_, i) => marcaDeSerie(e.id, i + 1))
-          : [e.id];
-        const hechasAqui = marcas.filter((m) => hechos.includes(m)).length;
-        const entero = hechasAqui === marcas.length;
+        const { todas: marcas, cuentan } = marcasDelEjercicio(e, dia);
+        const conSeries = marcas.length > 1;
+        // Las opcionales no hacen falta para tacharlo: hecho es hecho lo que
+        // cuenta. En un ejercicio opcional, todo.
+        const base = cuentan.length > 0 ? cuentan : marcas;
+        const hechasAqui = base.filter((m) => hechos.includes(m)).length;
+        const entero = hechasAqui === base.length;
         const detalle = textoDelEjercicio({ ...e, ...(cuentaSeries(e) ? { series } : {}) });
         // Por tiempo: lo que lleva hoy frente al margen ("12 de 20-30 min").
         const porTiempo = cuentaTiempo(e) ? e.minutos : null;
@@ -401,9 +433,13 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
             )}
             <View style={{ flex: 1, minWidth: 0 }}>
               <Pressable onPress={conSeries ? undefined : () => marcar(e.id)} hitSlop={4}>
-                <Text style={[styles.filaNombre, entero && styles.filaHecha]} numberOfLines={2}>
-                  {e.nombre}
-                </Text>
+                <View style={styles.filaNombreFila}>
+                  <Text style={[styles.filaNombre, entero && styles.filaHecha]} numberOfLines={2}>
+                    {e.nombre}
+                  </Text>
+                  {/* Que se sepa antes de empezar: no hace falta para el día. */}
+                  {e.opcional ? <Text style={styles.etiquetaOpcional}>Opcional</Text> : null}
+                </View>
                 {detalle ? (
                   <Text style={styles.filaObjetivo} numberOfLines={2}>
                     {conSeries
@@ -424,14 +460,18 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                 <View style={styles.series}>
                   {marcas.map((m, i) => {
                     const hecha = hechos.includes(m);
+                    // Las opcionales, detrás y con el borde discontinuo: se
+                    // pueden hacer, pero no hacen falta.
+                    const opcional = !e.opcional && i >= cuentan.length;
                     return (
                       <Pressable
                         key={m}
                         onPress={() => marcar(m)}
                         hitSlop={4}
-                        style={[styles.serie, hecha && styles.serieOn]}
+                        style={[styles.serie, opcional && styles.serieOpcional, hecha && styles.serieOn, hecha && opcional && styles.serieOpcionalOn]}
+                        accessibilityLabel={opcional ? frase`Serie ${i + 1}, opcional` : frase`Serie ${i + 1}`}
                       >
-                        <Text style={[styles.serieTexto, hecha && styles.serieTextoOn]}>
+                        <Text style={[styles.serieTexto, hecha && styles.serieTextoOn, hecha && opcional && styles.serieOpcionalTextoOn]}>
                           {i + 1}
                         </Text>
                       </Pressable>
@@ -648,6 +688,24 @@ const styles = StyleSheet.create({
   serieOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   serieTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   serieTextoOn: { color: colors.onPrimary },
+  // Opcional: discontinua sin hacer; hecha, rellena suave y no del todo, que
+  // no se lea como una que hacía falta.
+  serieOpcional: { borderStyle: 'dashed', borderColor: colors.textFaint },
+  serieOpcionalOn: { backgroundColor: colors.primaryMuted, borderColor: colors.primary, borderStyle: 'solid' },
+  serieOpcionalTextoOn: { color: colors.primaryBright },
+  filaNombreFila: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  etiquetaOpcional: {
+    ...typography.small,
+    fontSize: 11,
+    color: colors.textMuted,
+    fontFamily: fonts.semiBold,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
   verVideo: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
   // Por tiempo: la barra fina hasta el mínimo y los botones de minutos.
   minutosBarra: {
@@ -701,7 +759,7 @@ const styles = StyleSheet.create({
   },
   casillaOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   huecoCasilla: { width: 24 },
-  filaNombre: { ...typography.body, color: colors.text },
+  filaNombre: { ...typography.body, color: colors.text, flexShrink: 1 },
   // Hecho: se atenúa y se tacha. Sigue a la vista para poder desmarcarlo.
   filaHecha: { color: colors.textFaint, textDecorationLine: 'line-through' },
   filaObjetivo: { ...typography.small, color: colors.textMuted, marginTop: 1 },

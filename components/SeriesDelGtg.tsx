@@ -8,12 +8,14 @@ import { inicioDelDia, masDias } from '../lib/fechas';
 import { frase } from '../lib/idioma';
 import { getDiasDeRutinaDiaria, getRutinaDiaria } from '../lib/firestore/rutinaDiaria';
 import {
+  diaCumplido,
+  minutosDiariosPorDia,
   resumenDeSeries,
   seriesDiariasPorDia,
   seriesGtgPorDia,
   type DiaDeSeries,
 } from '../lib/historialGtg';
-import { hayRutinaDiaria, NOMBRE_POR_DEFECTO } from '../lib/rutinaDiaria';
+import { cuentaTiempo, hayRutinaDiaria, NOMBRE_POR_DEFECTO, textoDeMinutos } from '../lib/rutinaDiaria';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import { WEEKDAY_LABELS, weekdayOf } from '../lib/types';
 import type { DiaDeRutinaDiaria, Routine, RutinaDiaria, WorkoutLog } from '../lib/types';
@@ -69,9 +71,15 @@ export function SeriesDelGtg({
   const delPlan = seriesGtgPorDia(workoutLogs, routine, DIAS);
   const planTieneGtg = routine?.schedule === 'gtg' || !!routine?.days.some((d) => d.gtg);
   const diaria = seriesDiariasPorDia(diasDiaria, rutina, DIAS);
+  const activa = hayRutinaDiaria(rutina);
   const verPlan = planTieneGtg || delPlan.some((d) => d.hechas > 0);
-  const verDiaria = hayRutinaDiaria(rutina) || diaria.some((d) => d.hechas > 0);
-  if (!verPlan && !verDiaria) return null;
+  // Las casillas, si queda alguna fuera de lo que va por tiempo.
+  const verDiaria = (activa && !!rutina?.ejercicios.some((e) => !cuentaTiempo(e))) || diaria.some((d) => d.hechas > 0);
+  // Y lo que va por tiempo, en minutos: uno por ejercicio ("Pino · 20-30 min").
+  const porTiempo = (activa ? rutina?.ejercicios ?? [] : [])
+    .filter((e) => cuentaTiempo(e))
+    .map((e) => ({ e, dias: minutosDiariosPorDia(diasDiaria, e, DIAS) }));
+  if (!verPlan && !verDiaria && porTiempo.length === 0) return null;
 
   const nombreGtg = routine?.days.find((d) => d.gtg)?.name || 'Grease the groove';
   return (
@@ -82,20 +90,34 @@ export function SeriesDelGtg({
       {verDiaria ? (
         <Barras titulo={rutina?.nombre || NOMBRE_POR_DEFECTO} icono="repeat-outline" dias={diaria} unidad="hechas" />
       ) : null}
+      {porTiempo.map(({ e, dias }) => (
+        <Barras
+          key={e.id}
+          titulo={e.nombre}
+          subtitulo={cuentaTiempo(e) ? textoDeMinutos(e.minutos) : undefined}
+          icono="stopwatch-outline"
+          dias={dias}
+          unidad="minutos"
+        />
+      ))}
     </>
   );
 }
 
 function Barras({
   titulo,
+  subtitulo,
   icono,
   dias,
   unidad,
 }: {
   titulo: string;
+  /** Debajo del nombre: lo que se busca ("20-30 min"). */
+  subtitulo?: string;
   icono: React.ComponentProps<typeof Ionicons>['name'];
   dias: DiaDeSeries[];
-  unidad: 'series' | 'hechas';
+  /** Por tiempo, en minutos: el registro dice cuánto rato, no "1 hecha". */
+  unidad: 'series' | 'hechas' | 'minutos';
 }) {
   const r = resumenDeSeries(dias);
   const tope = Math.max(1, ...dias.map((d) => Math.max(d.hechas, d.objetivo)));
@@ -110,23 +132,28 @@ function Barras({
           {titulo}
         </Text>
       </View>
+      {subtitulo ? <Text style={styles.subtitulo}>{subtitulo}</Text> : null}
       <View style={styles.semana}>
         <Text style={styles.cifra}>{r.semana}</Text>
         <Text style={styles.cifraTexto}>
-          {unidad === 'series'
-            ? r.semana === 1
-              ? 'serie en los últimos 7 días'
-              : 'series en los últimos 7 días'
-            : r.semana === 1
-              ? 'hecha en los últimos 7 días'
-              : 'hechas en los últimos 7 días'}
+          {unidad === 'minutos'
+            ? 'min en los últimos 7 días'
+            : unidad === 'series'
+              ? r.semana === 1
+                ? 'serie en los últimos 7 días'
+                : 'series en los últimos 7 días'
+              : r.semana === 1
+                ? 'hecha en los últimos 7 días'
+                : 'hechas en los últimos 7 días'}
         </Text>
       </View>
 
       <View style={styles.barras}>
         {dias.map((d) => {
-          const lleno = d.objetivo > 0 && d.hechas >= d.objetivo;
-          const alto = d.hechas > 0 ? Math.max(6, Math.round((d.hechas / tope) * ALTO)) : 0;
+          const lleno = diaCumplido(d);
+          // Marcado a mano sin minutos: hecho, a la altura de lo que se buscaba.
+          const valor = d.hechas > 0 ? d.hechas : lleno ? d.objetivo : 0;
+          const alto = valor > 0 ? Math.max(6, Math.round((valor / tope) * ALTO)) : 0;
           const esHoy = d.dia === hoy;
           return (
             <View key={d.dia} style={styles.columna}>
@@ -134,7 +161,7 @@ function Barras({
                 {d.hechas > 0 ? d.hechas : ''}
               </Text>
               <View style={styles.hueco}>
-                {d.hechas > 0 ? (
+                {valor > 0 ? (
                   <View style={[styles.barra, { height: alto }, lleno ? styles.barraLlena : styles.barraMedia]} />
                 ) : (
                   <View style={styles.punto} />
@@ -147,9 +174,11 @@ function Barras({
       </View>
 
       <Text style={styles.resumen}>
-        {r.semana === 0
+        {r.dias === 0
           ? 'Nada en los últimos 7 días.'
-          : frase`${r.dias} de 7 días · objetivo cumplido ${r.cumplidos} · media ${String(r.media).replace('.', ',')} al día`}
+          : unidad === 'minutos'
+            ? frase`${r.dias} de 7 días · objetivo cumplido ${r.cumplidos} · media ${Math.round(r.media)} min al día`
+            : frase`${r.dias} de 7 días · objetivo cumplido ${r.cumplidos} · media ${String(r.media).replace('.', ',')} al día`}
       </Text>
       <View style={styles.leyenda}>
         <View style={[styles.muestra, styles.barraLlena]} />
@@ -167,6 +196,7 @@ const styles = StyleSheet.create({
   tarjeta: { marginBottom: spacing.md },
   cab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   titulo: { ...typography.h3, color: colors.text, flex: 1, minWidth: 0 },
+  subtitulo: { ...typography.small, color: colors.textMuted, marginTop: 2, marginLeft: 22 },
   semana: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: spacing.xs },
   cifra: { ...typography.h2, color: colors.primaryBright, ...tabularNums },
   cifraTexto: { ...typography.small, color: colors.textMuted },

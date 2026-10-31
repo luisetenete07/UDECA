@@ -109,7 +109,7 @@ console.log('\nEn las pantallas');
   ok('el entrenador elige "Series" o "Tiempo"', /\['series', 'Series'\],\s*\['tiempo', 'Tiempo'\]/.test(editor));
   ok('en cada ejercicio y al añadir uno', (editor.match(/<SelectorDeCuenta /g) ?? []).length === 2);
   ok('con tiempo, "de [20] a [30] min"', /<CamposDeMinutos/.test(editor) && />a<\/Text>/.test(editor) && />min<\/Text>/.test(editor));
-  ok('cambiar de modo quita lo del otro', /modo === 'tiempo' \? \{ \.\.\.e, series: undefined \} : \{ \.\.\.e, minutos: undefined \}/.test(editor));
+  ok('cambiar de modo quita lo del otro', /modo === 'tiempo'\s*\? \{ \.\.\.e, series: undefined, seriesOpcionales: undefined \}\s*: \{ \.\.\.e, minutos: undefined \}/.test(editor));
   const tarjeta = lee('components/RutinaDiariaDelDia.tsx');
   ok('el alumno: Empezar y Parar, y "−5"/"+5" para corregir', />Empezar</.test(tarjeta) && />Parar</.test(tarjeta) && />−5</.test(tarjeta) && />\+5</.test(tarjeta));
   ok('"12 de 20-30 min", contando lo que lleva el crono', /porTiempo && totalMin >= 1\s*\? frase`\$\{minutosEnteros\(totalMin\)\} de \$\{detalle\}`/.test(tarjeta) && /const totalMin = llevaMin \+ tanda;/.test(tarjeta));

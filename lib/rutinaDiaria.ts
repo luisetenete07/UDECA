@@ -42,19 +42,45 @@ export function marcaDeSerie(id: string, serie: number): string {
   return `${id}#${serie}`;
 }
 
-/** Todas las marcas que existen hoy, en orden. Nada fuera de esta lista cuenta. */
+/**
+ * Las casillas de un ejercicio hoy: todas las que se pueden marcar y, de
+ * ellas, las que CUENTAN para dar el día por hecho.
+ *
+ * Las opcionales van detrás de las que cuentan ("3 series + 2 opcionales" son
+ * las casillas 1 a 5, y cuentan la 1, la 2 y la 3). En un ejercicio opcional no
+ * cuenta ninguna.
+ */
+export function marcasDelEjercicio(
+  e: EjercicioDiario,
+  dia?: DiaDeRutinaDiaria | null,
+  ahora = Date.now()
+): { todas: string[]; cuentan: string[] } {
+  const n = seriesDelDia(e, dia, ahora);
+  const total = n + seriesOpcionalesDe(e);
+  const todas =
+    total <= 1 ? [e.id] : Array.from({ length: total }, (_, i) => marcaDeSerie(e.id, i + 1));
+  return { todas, cuentan: e.opcional ? [] : todas.slice(0, n) };
+}
+
+/** Las marcas que CUENTAN hoy, en orden. Nada fuera de esta lista cuenta. */
 export function marcasDeLaRutina(
   r: RutinaDiaria | null | undefined,
   dia?: DiaDeRutinaDiaria | null,
   ahora = Date.now()
 ): string[] {
-  const salida: string[] = [];
-  for (const e of r?.ejercicios ?? []) {
-    const n = seriesDelDia(e, dia, ahora);
-    if (n <= 1) salida.push(e.id);
-    else for (let i = 1; i <= n; i++) salida.push(marcaDeSerie(e.id, i));
-  }
-  return salida;
+  return (r?.ejercicios ?? []).flatMap((e) => marcasDelEjercicio(e, dia, ahora).cuentan);
+}
+
+/** Las marcas opcionales de hoy: se pueden hacer, pero no hacen falta. */
+export function marcasOpcionales(
+  r: RutinaDiaria | null | undefined,
+  dia?: DiaDeRutinaDiaria | null,
+  ahora = Date.now()
+): string[] {
+  return (r?.ejercicios ?? []).flatMap((e) => {
+    const m = marcasDelEjercicio(e, dia, ahora);
+    return m.todas.slice(m.cuentan.length);
+  });
 }
 
 /**
@@ -71,6 +97,16 @@ export function seriesDe(e: { series?: number }): number {
 
 /** El tope. Más que esto no es una rutina diaria, es otra cosa. */
 export const MAX_SERIES = 30;
+
+/**
+ * Las series opcionales de un ejercicio. Solo en los que cuentan series: en
+ * uno por tiempo el margen (20-30 min) ya dice cuánto se puede hacer de más.
+ */
+export function seriesOpcionalesDe(e: { series?: number; seriesOpcionales?: number; minutos?: MargenDeMinutos }): number {
+  const n = e.seriesOpcionales;
+  if (cuentaTiempo(e) || !cuentaSeries(e) || typeof n !== 'number' || !Number.isFinite(n)) return 0;
+  return Math.min(MAX_SERIES, Math.max(0, Math.floor(n)));
+}
 
 /**
  * ¿Se cuenta por series? Solo si el entrenador puso un número: son los que el
@@ -121,12 +157,13 @@ export function conSeriesDeHoy(
   const nuevo = Math.min(MAX_SERIES, Math.max(1, Math.floor(series)));
   const suyas = (m: string) => m === e.id || m.startsWith(`${e.id}#`);
   const hechasAqui = hechos.filter(suyas).length;
-  const marcas = nuevo <= 1 ? [e.id] : Array.from({ length: nuevo }, (_, i) => marcaDeSerie(e.id, i + 1));
   if (nuevo === seriesDe(e)) delete deHoy[e.id];
   else deHoy[e.id] = nuevo;
+  // Con las opcionales detrás: cambian de número, no desaparecen.
+  const { todas } = marcasDelEjercicio(e, { id: '', clientId: '', date: ahora, hechos: [], series: deHoy, updatedAt: 0 }, ahora);
   return {
     series: deHoy,
-    hechos: [...hechos.filter((m) => !suyas(m)), ...marcas.slice(0, Math.min(hechasAqui, nuevo))],
+    hechos: [...hechos.filter((m) => !suyas(m)), ...todas.slice(0, Math.min(hechasAqui, todas.length))],
   };
 }
 
@@ -406,7 +443,11 @@ export function textoDelEjercicio(e: EjercicioDiario): string {
     partes.push(textoDeMinutos(e.minutos));
   } else if (typeof e.series === 'number' && e.series > 0) {
     const n = seriesDe(e);
-    partes.push(n === 1 ? frase`1 serie` : frase`${n} series`);
+    const extra = seriesOpcionalesDe(e);
+    const series = n === 1 ? frase`1 serie` : frase`${n} series`;
+    partes.push(
+      extra === 0 ? series : extra === 1 ? frase`${series} + 1 opcional` : frase`${series} + ${extra} opcionales`
+    );
   }
   if (e.objetivo?.trim()) partes.push(e.objetivo.trim());
   return partes.join(' · ');
@@ -419,6 +460,10 @@ export interface ProgresoDiario {
   ratio: number;
   completa: boolean;
   quedan: number;
+  /** Las opcionales que ha hecho: aparte, que no hacían falta. */
+  opcionales: number;
+  /** Las opcionales que hay hoy. */
+  opcionalesTotal: number;
 }
 
 export function progresoDiario(
@@ -434,17 +479,76 @@ export function progresoDiario(
    * semana, o le baja las series de cinco a tres, lo marcado de más deja de
    * contar: se vería "4 de 3 hechas", que es la clase de número que hace
    * desconfiar de todo lo demás que dice la pantalla.
+   *
+   * Lo opcional tampoco: "5 de 3" porque hizo las dos que le sobraban diría
+   * que el día da más de sí de lo que el entrenador pidió.
    */
   const vivas = new Set(marcasDeLaRutina(rutina, dia, ahora));
+  const opcionales = new Set(marcasOpcionales(rutina, dia, ahora));
   const total = vivas.size;
-  const hechos = hechosDeHoy(dia, ahora).filter((m) => vivas.has(m)).length;
+  const deHoy = hechosDeHoy(dia, ahora);
+  const hechos = deHoy.filter((m) => vivas.has(m)).length;
   return {
     hechos,
     total,
     ratio: total > 0 ? Math.min(1, hechos / total) : 0,
     completa: total > 0 && hechos >= total,
     quedan: Math.max(0, total - hechos),
+    opcionales: deHoy.filter((m) => opcionales.has(m)).length,
+    opcionalesTotal: opcionales.size,
   };
+}
+
+/** La rutina sin lo que va por tiempo: lo que queda se cuenta por casillas. */
+export function sinTiempo(r: RutinaDiaria | null | undefined): RutinaDiaria | null {
+  return r ? { ...r, ejercicios: r.ejercicios.filter((e) => !cuentaTiempo(e)) } : null;
+}
+
+/**
+ * Lo que se guarda con el día para el historial: las casillas que había que
+ * hacer y las hechas. Lo que va por tiempo no entra: se guarda en minutos y el
+ * historial lo enseña en minutos, no como "1 hecha".
+ */
+export function paraElHistorial(
+  r: RutinaDiaria | null | undefined,
+  dia: DiaDeRutinaDiaria | null | undefined,
+  ahora = Date.now()
+): { total: number; cuenta: number } {
+  const p = progresoDiario(sinTiempo(r), dia, ahora);
+  return { total: p.total, cuenta: p.hechos };
+}
+
+/** ¿Va todo por tiempo? Entonces lo que se cuenta arriba son minutos, no cosas. */
+export function todoPorTiempo(r: RutinaDiaria | null | undefined): boolean {
+  return !!r && r.ejercicios.length > 0 && r.ejercicios.every((e) => cuentaTiempo(e));
+}
+
+/**
+ * Los minutos de hoy de todo lo que va por tiempo, y los que se buscan.
+ *
+ * `llevan` es todo lo hecho (con lo que lleve el crono en marcha); `ratio`
+ * cuenta cada ejercicio solo hasta su mínimo, para que los 40 min de pino no
+ * tapen que la movilidad está sin hacer. Lo opcional no entra en lo que se
+ * busca.
+ */
+export function tiempoDeHoy(
+  r: RutinaDiaria | null | undefined,
+  dia: DiaDeRutinaDiaria | null | undefined,
+  ahora = Date.now(),
+  enMarcha?: { id: string; minutos: number } | null
+): { llevan: number; objetivo: number; ratio: number } {
+  let llevan = 0;
+  let objetivo = 0;
+  let hastaElMinimo = 0;
+  for (const e of r?.ejercicios ?? []) {
+    if (!cuentaTiempo(e)) continue;
+    const n = minutosDeHoy(e, dia, ahora) + (enMarcha?.id === e.id ? enMarcha.minutos : 0);
+    llevan += n;
+    if (e.opcional) continue;
+    objetivo += e.minutos.min;
+    hastaElMinimo += Math.min(n, e.minutos.min);
+  }
+  return { llevan, objetivo, ratio: objetivo > 0 ? Math.min(1, hastaElMinimo / objetivo) : 0 };
 }
 
 /**
@@ -474,7 +578,8 @@ export function conMarca(
  * se rompe la racha.
  */
 export function textoDiario(p: ProgresoDiario): string {
-  if (p.total === 0) return '';
+  // Todo opcional: no hay nada que "completar", solo lo que caiga.
+  if (p.total === 0) return p.opcionalesTotal > 0 ? 'Todo opcional: lo que caiga suma.' : '';
   if (p.completa) return 'Hecha. Mañana otra vez.';
   // El singular importa: "1 cosas cortas" delata que nadie ha leído la
   // pantalla, y quien lo lee piensa lo mismo del resto de la app.

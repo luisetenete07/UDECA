@@ -1431,6 +1431,18 @@ export interface EjercicioDiario {
    */
   minutos?: MargenDeMinutos;
   /**
+   * Series OPCIONALES, además de las que cuentan: "3 series + 2 opcionales".
+   *
+   * Se marcan igual, pero no hacen falta para dar el día por hecho: son las
+   * que el entrenador deja hacer si sobra cuerpo. Solo con `series`.
+   */
+  seriesOpcionales?: number;
+  /**
+   * El ejercicio entero es opcional: se puede marcar, pero no cuenta para dar
+   * el día por hecho ni en el historial, ni se recuerda en los avisos.
+   */
+  opcional?: boolean;
+  /**
    * Enlace al vídeo de la técnica (YouTube o Vimeo).
    *
    * El mismo campo que los ejercicios del plan, y se abre con el mismo visor:
@@ -1486,8 +1498,14 @@ export interface DiaDeRutinaDiaria {
   series?: Record<string, number>;
   /** Los minutos que lleva hoy de cada ejercicio que va por tiempo (id → minutos). */
   minutos?: Record<string, number>;
-  /** Cuántas marcas había que hacer ese día, para el historial. */
+  /**
+   * Para el historial: cuántas casillas había que hacer ese día y cuántas se
+   * hicieron. Sin lo que va por tiempo (eso se cuenta en minutos) y sin lo
+   * opcional (no hacía falta). Los días guardados antes de `cuenta` llevan en
+   * `total` también lo que iba por tiempo.
+   */
   total?: number;
+  cuenta?: number;
   updatedAt: number;
 }
 
