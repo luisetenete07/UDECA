@@ -73,14 +73,16 @@ export async function registerForPushNotificationsAsync(uid: string): Promise<vo
 export async function sendPushNotification(
   pushToken: string | undefined | null,
   title: string,
-  body: string
+  body: string,
+  /** Lo que se abre al tocarla (ver components/AbrirDesdeAviso.tsx). */
+  data?: { abrir: 'notificaciones' }
 ): Promise<void> {
   if (!pushToken) return;
   try {
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ to: pushToken, title, body }),
+      body: JSON.stringify({ to: pushToken, title, body, ...(data ? { data } : {}) }),
     });
   } catch {
     // Si falla el envío (sin conexión, token inválido...) lo ignoramos:
@@ -89,9 +91,14 @@ export async function sendPushNotification(
 }
 
 /** Busca el push token de un usuario por su uid y le envía una notificación. */
-export async function notifyUser(uid: string, title: string, body: string): Promise<void> {
+export async function notifyUser(
+  uid: string,
+  title: string,
+  body: string,
+  data?: { abrir: 'notificaciones' }
+): Promise<void> {
   const profile = await getUserProfile(uid);
-  await sendPushNotification(profile?.pushToken, title, body);
+  await sendPushNotification(profile?.pushToken, title, body, data);
 }
 
 

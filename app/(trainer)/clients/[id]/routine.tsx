@@ -66,6 +66,8 @@ import {
 } from '../../../../lib/firestore/routineTemplates';
 import { getClientsForTrainer, getUserProfile, setClientTrackRir } from '../../../../lib/firestore/users';
 import { notifyUser } from '../../../../lib/notifications';
+import { cambiosDelPlan, hayCambios, textoDelAviso, type PlanComparable } from '../../../../lib/avisosDelPlan';
+import { apuntarAvisoDelPlan } from '../../../../lib/firestore/avisos';
 import { flexLabel, nombreDelDia } from '../../../../lib/schedule';
 import { SERIES_POR_DEFECTO } from '../../../../lib/gtg';
 import {
@@ -433,6 +435,37 @@ export default function RoutineEditorScreen() {
     if (plan.prescripcion.intensidad?.escala !== 'propia') return limpios;
     return limpios.map(({ intensity: _fuera, ...resto }) => resto);
   };
+  /** El plan tal y como se guardaría ahora, para ver qué ha cambiado. */
+  const planComoSeGuarda = (dias = diasAGuardar()): PlanComparable => ({
+    name,
+    days: dias,
+    schedule,
+    scheduleLabel: schedule === 'flex' ? flexLabel(scheduleLabel) : undefined,
+    cycleStartDate: schedule === 'cycle' ? cycleStartDate : undefined,
+    personalizado: schedule === 'flex' ? configuracionAGuardar() : undefined,
+    prescripcion: schedule !== 'flex' ? prescripcionSimpleAGuardar() : undefined,
+    visibilidad: visibilidadAGuardar(visibilidad),
+    modoAlumno,
+  });
+  /*
+   * EL PLAN COMO ESTABA AL ABRIRLO, para el aviso al alumno (lib/avisosDelPlan.ts).
+   *
+   * Se toma tal y como se GUARDARÍA sin tocar nada, no tal y como vino de la
+   * base de datos: al abrir, el editor ya ordena algunas cosas (las series de
+   * las superseries, los campos de cada escala), y comparando con lo de la
+   * base de datos esos retoques saldrían como cambios que nadie ha hecho.
+   */
+  const planAlAbrir = useRef<PlanComparable | null>(null);
+  const baseTomada = useRef(false);
+  useEffect(() => {
+    if (loading || baseTomada.current) return;
+    baseTomada.current = true;
+    planAlAbrir.current = routineId ? planComoSeGuarda() : null;
+    // Solo una vez, con todo lo cargado: después, lo de la pantalla es lo nuevo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+  /** La medida de un ejercicio del plan, de la biblioteca si no la trae. */
+  const medidaDe = (ex: RoutineExercise) => ex.measure ?? exercises.find((e) => e.id === ex.exerciseId)?.measure;
 
   const [restText, setRestText] = useState<Record<string, string>>({});
   // Ejercicio pendiente de mover/copiar a otro día (abre el selector de día).
@@ -1239,7 +1272,10 @@ export default function RoutineEditorScreen() {
         });
         await setActiveRoutine(a.uid, nuevaId, profile.uid);
         if (schedule !== 'flex') await setClientTrackRir(a.uid, pedirEsfuerzo).catch(() => {});
-        notifyUser(a.uid, 'Nueva rutina asignada', frase`Tu entrenador ha actualizado tu plan: ${name}`);
+        // Para él es un plan nuevo: en sus notificaciones, con todos sus días.
+        const nuevo = cambiosDelPlan(null, planComoSeGuarda(dias), medidaDe);
+        apuntarAvisoDelPlan({ trainerId: profile.uid, clientId: a.uid, routineId: nuevaId, plan: name, nuevo: true, cambios: nuevo }).catch(() => {});
+        notifyUser(a.uid, 'Nueva rutina asignada', textoDelAviso(name, nuevo, true), { abrir: 'notificaciones' });
         hechos++;
       } catch {
         // Uno que falle no para a los demás; se cuenta abajo.
@@ -1281,6 +1317,16 @@ export default function RoutineEditorScreen() {
       };
       if (cambioLaFecha) fechaAlAbrir.current = cycleStartDate;
       const dias = diasAGuardar();
+      /*
+       * QUÉ HA CAMBIADO, para las notificaciones del alumno: los días tocados,
+       * cada uno con sus ejercicios y lo que cambió. Se mira ANTES de guardar,
+       * con el plan como estaba al abrir (ver `planAlAbrir`).
+       */
+      const plan = planComoSeGuarda(dias);
+      const nuevo = !routineId;
+      const cambios = cambiosDelPlan(nuevo ? null : planAlAbrir.current, plan, medidaDe);
+      if (schedule !== 'flex' && pedirEsfuerzo !== pedirEsfuerzoAlAbrir.current) cambios.ajustes.push('esfuerzo');
+      let guardadaId = routineId;
       if (routineId) {
         await updateRoutine(routineId, { name, days: dias, ...scheduleFields });
         await setActiveRoutine(clientId, routineId, profile.uid);
@@ -1294,16 +1340,27 @@ export default function RoutineEditorScreen() {
           ...scheduleFields,
         });
         await setActiveRoutine(clientId, newId, profile.uid);
+        guardadaId = newId;
       }
       if (schedule !== 'flex' && pedirEsfuerzo !== pedirEsfuerzoAlAbrir.current) {
         await setClientTrackRir(clientId, pedirEsfuerzo);
         pedirEsfuerzoAlAbrir.current = pedirEsfuerzo;
       }
-      notifyUser(
-        clientId,
-        routineId ? 'Rutina actualizada' : 'Nueva rutina asignada',
-        frase`Tu entrenador ha actualizado tu plan: ${name}`
-      );
+      // Guardar sin haber cambiado nada no le avisa de nada. Y sin el plan de
+      // antes (no debería pasar) no se inventa qué cambió: solo el aviso del móvil.
+      const conDetalle = nuevo || !!planAlAbrir.current;
+      if (nuevo || !conDetalle || hayCambios(cambios)) {
+        if (conDetalle && guardadaId) {
+          apuntarAvisoDelPlan({ trainerId: profile.uid, clientId, routineId: guardadaId, plan: name, nuevo, cambios }).catch(() => {});
+        }
+        notifyUser(
+          clientId,
+          nuevo ? 'Nueva rutina asignada' : 'Rutina actualizada',
+          conDetalle ? textoDelAviso(name, cambios, nuevo) : frase`Tu entrenador ha actualizado tu plan: ${name}`,
+          { abrir: 'notificaciones' }
+        );
+      }
+      planAlAbrir.current = plan;
       showToast('Rutina guardada');
       router.back();
     } catch (e) {
@@ -1342,6 +1399,8 @@ export default function RoutineEditorScreen() {
     visibilidad,
     modoAlumno,
     pedirEsfuerzo,
+    // La medida de cada ejercicio, para escribir el aviso ("3 × 30 s").
+    exercises,
     router,
   ]);
 

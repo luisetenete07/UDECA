@@ -217,6 +217,11 @@ export interface UserProfile {
   revisados?: string[];
   /** "Marcar todo como visto": lo llegado antes de esto ya no sale. */
   revisadoHasta?: number;
+  /**
+   * Solo en alumnos: hasta cuándo ha visto sus notificaciones (lib/avisosDelPlan.ts).
+   * Lo llegado después sale como nuevo, con el punto en la campana del inicio.
+   */
+  avisosVistos?: number;
   /** El código con el que este entrenador comparte su biblioteca (lib/firestore/bibliotecas.ts). */
   codigoBiblioteca?: string;
   /** El resumen de la semana por push los domingos (lo manda el servidor). */

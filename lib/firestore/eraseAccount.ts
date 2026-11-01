@@ -24,6 +24,8 @@ const MIAS: { coleccion: string; campo: string }[] = [
   // Sus llamadas reservadas: borrarlas libera el hueco en la agenda del coach.
   { coleccion: 'llamadas', campo: 'clientId' },
   { coleccion: 'actividadLlamadas', campo: 'clientId' },
+  // Sus notificaciones (los cambios del plan): son suyas aunque las apunte su entrenador.
+  { coleccion: 'avisosDelPlan', campo: 'clientId' },
 ];
 
 /** Colecciones que crea el ENTRENADOR y que solo él puede borrar. */
@@ -42,6 +44,7 @@ const DEL_ENTRENADOR: { coleccion: string; campo: string }[] = [
   { coleccion: 'llamadas', campo: 'trainerId' },
   { coleccion: 'llamadasCoach', campo: 'trainerId' },
   { coleccion: 'actividadLlamadas', campo: 'trainerId' },
+  { coleccion: 'avisosDelPlan', campo: 'trainerId' },
   { coleccion: 'payments', campo: 'trainerId' },
 ];
 

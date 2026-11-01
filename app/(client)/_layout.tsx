@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
+import { AbrirDesdeAviso } from '../../components/AbrirDesdeAviso';
 import { markPresence } from '../../lib/presence';
 import { TabIcon } from '../../components/TabIcon';
 import { GlobalRestTimer } from '../../components/GlobalRestTimer';
@@ -225,9 +226,13 @@ export default function ClientLayout() {
       <Tabs.Screen name="registrar" options={{ href: null }} />
       {/* Reservar una llamada 1:1: se abre desde la tarjeta del inicio. */}
       <Tabs.Screen name="llamadas" options={{ href: null }} />
+      {/* Sus notificaciones (los cambios del plan): la campana del inicio. */}
+      <Tabs.Screen name="notificaciones" options={{ href: null }} />
     </Tabs>
     {/* Crono de descanso global: sigue corriendo y visible en cualquier pestaña. */}
     <GlobalRestTimer />
+    {/* Tocar el aviso "Rutina actualizada" abre sus notificaciones. */}
+    {Platform.OS !== 'web' ? <AbrirDesdeAviso /> : null}
     </View>
   );
 }

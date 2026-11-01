@@ -427,6 +427,35 @@ service cloud.firestore {
         && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
     }
 
+    // Las notificaciones del alumno: lo que su entrenador ha cambiado de su
+    // plan, con los días tocados (lib/avisosDelPlan.ts). Las apunta SU
+    // entrenador al guardarle el plan, a nombre de ese alumno y con la hora
+    // del servidor; nadie las cambia después (lo visto va en el perfil del
+    // alumno, `avisosVistos`). Las leen los dos, y las borran los dos (al
+    // borrar la cuenta).
+    match /avisosDelPlan/{id} {
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.trainerId == request.auth.uid
+        && request.resource.data.clientId is string
+        && request.resource.data.clientId != ''
+        && get(/databases/$(database)/documents/users/$(request.resource.data.clientId)).data.get('trainerId', '') == request.auth.uid
+        && request.resource.data.tipo == 'plan'
+        && request.resource.data.routineId is string
+        && request.resource.data.plan is string
+        && request.resource.data.plan.size() <= 120
+        && request.resource.data.dias is list
+        && request.resource.data.dias.size() <= 40
+        && (!('ajustes' in request.resource.data)
+          || (request.resource.data.ajustes is list && request.resource.data.ajustes.size() <= 12))
+        && (!('nuevo' in request.resource.data) || request.resource.data.nuevo is bool)
+        && request.resource.data.cuando == request.time
+        && request.resource.data.keys().hasOnly(['trainerId', 'clientId', 'tipo', 'routineId', 'plan', 'nuevo', 'dias', 'ajustes', 'cuando']);
+      allow delete: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
+    }
+
     // Bibliotecas compartidas con un código (lib/firestore/bibliotecas.ts).
     // Se LEEN sabiendo el código —cualquiera con sesión: es para pasársela a
     // otro entrenador—, pero no se LISTAN: sin el código no se encuentra

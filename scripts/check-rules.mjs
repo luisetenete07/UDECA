@@ -793,6 +793,55 @@ await comprobar('y la puede borrar (al borrar su cuenta)', true, () => deleteDoc
 
 await setDoc(doc(db, 'users', marcosId), { planId: deleteField() }, { merge: true });
 
+/*
+ * Las notificaciones del alumno: lo que su entrenador cambia del plan
+ * (lib/avisosDelPlan.ts). Las apunta SU entrenador, con la hora del servidor.
+ */
+console.log('\nNotificaciones del plan');
+const avisoDePrueba = (extra = {}) => ({
+  trainerId: coachId,
+  clientId: marcosId,
+  tipo: 'plan',
+  routineId: 'r1',
+  plan: 'Fuerza',
+  nuevo: false,
+  dias: [{ dayId: 'd1', nombre: 'Empuje', indice: 0, estado: 'cambiado', ejercicios: [{ nombre: 'Dominadas', cuanto: '4 × 8', estado: 'cambiado', antes: '3 × 8' }] }],
+  ajustes: [],
+  cuando: serverTimestamp(),
+  ...extra,
+});
+let avisoApuntado = null;
+await comprobar('el entrenador avisa a su alumno', true, async () => {
+  avisoApuntado = await addDoc(collection(db, 'avisosDelPlan'), avisoDePrueba());
+});
+await comprobar('a quien no es su alumno, no', false, () =>
+  addDoc(collection(db, 'avisosDelPlan'), avisoDePrueba({ clientId: coachId }))
+);
+await comprobar('a nombre de otro entrenador, no', false, () =>
+  addDoc(collection(db, 'avisosDelPlan'), avisoDePrueba({ trainerId: 'otro-cualquiera' }))
+);
+await comprobar('con otra fecha que la del servidor, no', false, () =>
+  addDoc(collection(db, 'avisosDelPlan'), avisoDePrueba({ cuando: Timestamp.fromMillis(Date.now() + 86400000) }))
+);
+await comprobar('de otro tipo o con campos de más, no', false, () =>
+  addDoc(collection(db, 'avisosDelPlan'), avisoDePrueba({ tipo: 'mensaje', texto: 'hola' }))
+);
+await comprobar('ni se cambia después', false, () =>
+  setDoc(doc(db, 'avisosDelPlan', avisoApuntado.id), { plan: 'Otro' }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
+await comprobar('el alumno ve las suyas', true, () =>
+  getDocs(query(collection(db, 'avisosDelPlan'), where('clientId', '==', marcosId), where('cuando', '>=', Timestamp.fromMillis(Date.now() - 60 * 86400000))))
+);
+await comprobar('pero no se las apunta él', false, () => addDoc(collection(db, 'avisosDelPlan'), avisoDePrueba()));
+await comprobar('y guarda hasta dónde las ha visto', true, () =>
+  setDoc(doc(db, 'users', marcosId), { avisosVistos: Date.now() }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, 'alumno2@demo.test', PW);
+await comprobar('otro alumno no la ve', false, () => getDoc(doc(db, 'avisosDelPlan', avisoApuntado.id)));
+await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
+await comprobar('y la borra con su cuenta', true, () => deleteDoc(doc(db, 'avisosDelPlan', avisoApuntado.id)));
+
 console.log(
   fallos === 0
     ? '\n✔ Todas las comprobaciones de reglas pasan.\n'

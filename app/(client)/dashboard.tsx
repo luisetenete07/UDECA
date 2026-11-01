@@ -4,6 +4,8 @@ import { diaLargo, diaMes, diaYMes, esHoy, inicioDelDia } from '../../lib/fechas
 import { datosDelWidget, guardarDatosDelWidget } from '../../lib/widgetHoy';
 import { TarjetaDeLlamada } from '../../components/TarjetaDeLlamada';
 import { getAjustesLlamadas, getLlamadasDelAlumno } from '../../lib/firestore/llamadas';
+import { getAvisosDelAlumno } from '../../lib/firestore/avisos';
+import { avisosSinVer } from '../../lib/avisosDelPlan';
 import type { AjustesLlamadas, Llamada } from '../../lib/llamadas';
 import { unido } from '../../lib/texto';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -224,6 +226,25 @@ export default function ClientDashboard() {
       let vivo = true;
       Promise.all([getAjustesLlamadas(trainerId), getLlamadasDelAlumno(profile.uid, trainerId)])
         .then(([ajustes, mias]) => vivo && setLlamadas({ ajustes, mias }))
+        .catch(() => {});
+      return () => {
+        vivo = false;
+      };
+    }, [profile])
+  );
+
+  /*
+   * La campana: cuántas notificaciones no ha visto (los cambios que su
+   * entrenador ha hecho en su plan). Aparte y sin bloquear nada: si falla, la
+   * campana sale sin punto.
+   */
+  const [sinVer, setSinVer] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile) return;
+      let vivo = true;
+      getAvisosDelAlumno(profile.uid)
+        .then((avisos) => vivo && setSinVer(avisosSinVer(avisos, profile.avisosVistos)))
         .catch(() => {});
       return () => {
         vivo = false;
@@ -482,6 +503,27 @@ export default function ClientDashboard() {
           <Text style={styles.greetingLabel}>Bienvenido de nuevo</Text>
           <Text style={styles.greeting}>{profile?.name?.split(' ')[0]}</Text>
         </View>
+        {/* Sus notificaciones: lo que su entrenador ha cambiado del plan. */}
+        <Pressable
+          onPress={() => router.push('/(client)/notificaciones')}
+          style={styles.campana}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={
+            sinVer === 0
+              ? t('Notificaciones')
+              : sinVer === 1
+                ? t('Notificaciones, 1 nueva')
+                : frase`Notificaciones, ${sinVer} nuevas`
+          }
+        >
+          <Ionicons name={sinVer > 0 ? 'notifications' : 'notifications-outline'} size={22} color={colors.text} />
+          {sinVer > 0 ? (
+            <View style={styles.campanaPunto}>
+              <Text style={styles.campanaNumero}>{sinVer > 9 ? '9+' : String(sinVer)}</Text>
+            </View>
+          ) : null}
+        </Pressable>
         <Pressable onPress={() => router.push('/(client)/profile')}>
           <Avatar name={profile?.name} photoURL={profile?.photoURL} size={52} />
         </Pressable>
@@ -900,6 +942,32 @@ export default function ClientDashboard() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg },
+  campana: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: spacing.sm + 2,
+  },
+  campanaPunto: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  campanaNumero: { fontSize: 10, lineHeight: 12, fontFamily: fonts.semiBold, color: colors.onPrimary },
   // Los hábitos, como una fila más de la tarjeta del día (ver FilaDelDia).
   habitosFila: {
     gap: spacing.sm,

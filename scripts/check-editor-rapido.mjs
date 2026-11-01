@@ -154,7 +154,8 @@ console.log('\nSemana y días sueltos: no solo RIR');
   ok('y sin etiqueta, el 1-10 de siempre', textoIntensidad({ intensity: 8 }, 'cycle') === '8/10');
   ok('el entrenador lo elige en la semana y en los días sueltos', /schedule !== 'flex' \? \(\s*<>\s*<Text style=\{styles\.persoTitulo\}>Junto a series y reps<\/Text>/.test(editor));
   ok('y la intensidad de los días sueltos: de 1 a 10 o sus etiquetas', /texto: 'De 1 a 10'/.test(editor) && /texto: 'Mis etiquetas'/.test(editor));
-  ok('se guarda con la rutina, la plantilla y al aplicar a otros', (editor.match(/prescripcion: schedule !== 'flex' \? prescripcionSimpleAGuardar\(\) : undefined/g) ?? []).length === 3);
+  // La cuarta es el plan con que se compara para avisar al alumno (lib/avisosDelPlan.ts).
+  ok('se guarda con la rutina, la plantilla y al aplicar a otros', (editor.match(/prescripcion: schedule !== 'flex' \? prescripcionSimpleAGuardar\(\) : undefined/g) ?? []).length === 4);
   const w = lee('app/(client)/workout.tsx');
   ok('el alumno lo ve en su entreno (y en la tabla)', (w.match(/textoDePrescripcion\([^)]*, planPrescrito\)/g) ?? []).length === 3 && !/textoDePrescripcion\([^)]*, perso\)/.test(w));
 }

@@ -58,6 +58,14 @@
         { "fieldPath": "trainerId", "order": "ASCENDING" },
         { "fieldPath": "cuando", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "avisosDelPlan",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "cuando", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
