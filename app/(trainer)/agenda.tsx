@@ -18,6 +18,7 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { ListSkeleton } from '../../components/Skeleton';
 import { TaskEditSheet } from '../../components/TaskEditSheet';
+import { PendientesDelCoach } from '../../components/PendientesDelCoach';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import {
@@ -143,18 +144,9 @@ export default function CoachCalendarScreen() {
   );
 
   /*
-   * Lo que quedó de las listas de "Semana" y "Mes".
-   *
-   * Esas dos ya no existen, pero lo que se apuntó en ellas sí. Aparece aquí
-   * para poder ponerle día de un toque, y esta sección desaparece sola en
-   * cuanto no queda ninguna. Hacer desaparecer lo que alguien escribió, aunque
-   * sea de una función retirada, es la clase de cosa que hace desconfiar de una
-   * app para siempre.
+   * Lo que quedó de las listas de "Semana" y "Mes" sale ahora en PENDIENTES
+   * (lib/pendientes.ts): eran justo eso, cosas sin día.
    */
-  const sinDia = useMemo(
-    () => tasks.filter((t) => (t.scope === 'week' || t.scope === 'month') && !t.done),
-    [tasks]
-  );
 
   const haptic = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -211,6 +203,31 @@ export default function CoachCalendarScreen() {
     }
   };
 
+  /** Un pendiente: sin día, a la lista (lib/pendientes.ts). */
+  const addPendiente = async (title: string) => {
+    if (!profile) return;
+    const temp: CoachTask = {
+      id: `tmp-${Date.now()}`,
+      trainerId: profile.uid,
+      title,
+      scope: 'pending',
+      done: false,
+      order: Date.now(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    animate();
+    setTasks((prev) => [...prev, temp]);
+    haptic();
+    try {
+      const id = await createCoachTask({ trainerId: profile.uid, title, scope: 'pending', done: false, order: temp.order });
+      setTasks((prev) => prev.map((t) => (t.id === temp.id ? { ...t, id } : t)));
+    } catch {
+      showToast('No se pudo guardar');
+      setTasks((prev) => prev.filter((t) => t.id !== temp.id));
+    }
+  };
+
   const toggleDone = (task: CoachTask) => {
     haptic();
     animate();
@@ -233,14 +250,15 @@ export default function CoachCalendarScreen() {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, progress: v, done: v >= 100 } : t)));
     updateCoachTask(task.id, { progress: v, done: v >= 100 }).catch(() => {});
   };
-  // Mueve una tarea a otro día del calendario (fija su fecha a las 00:00).
+  // Mueve una tarea a otro día del calendario (fija su fecha a las 00:00). Un
+  // pendiente al que se le pone día deja de serlo: pasa a ese día.
   const moveTask = (task: CoachTask, dayTs: number) => {
     haptic();
     const dueDate = inicioDelDia(dayTs);
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, dueDate } : t)));
-    updateCoachTask(task.id, { dueDate }).catch(() => {});
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, dueDate, scope: 'day' } : t)));
+    updateCoachTask(task.id, { dueDate, scope: 'day' }).catch(() => {});
     setMovingTask(null);
-    showToast('Tarea movida');
+    showToast(task.scope === 'day' ? 'Tarea movida' : 'Pendiente pasado al calendario');
   };
 
   // ---------- CALENDARIO: eventos ----------
@@ -559,23 +577,6 @@ export default function CoachCalendarScreen() {
         </>
       ) : null}
 
-      {/* Lo que se apuntó en las antiguas listas de Semana y Mes. Se le pone
-          día de un toque, y esta sección desaparece cuando no queda ninguna. */}
-      {sinDia.length > 0 ? (
-        <View style={styles.sinDia}>
-          <Text style={styles.sinDiaTitulo}>Sin día · ponles uno</Text>
-          {sinDia.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              onToggle={() => toggleDone(task)}
-              onFlag={() => toggleFlag(task)}
-              onEdit={() => setEditing(task)}
-              onMover={() => setMovingTask(task)}
-            />
-          ))}
-        </View>
-      ) : null}
     </View>
   );
 
@@ -600,7 +601,7 @@ export default function CoachCalendarScreen() {
       <View style={styles.screenHeader}>
         <Text style={styles.screenTitle}>Calendario</Text>
         <Text style={styles.screenSubtitle}>
-          Llamadas, fin de coaching, ciclos y tus tareas. Toca un día y apunta lo que quieras.
+          Llamadas, fin de coaching, ciclos y tus tareas. Toca un día y apunta lo que quieras, o déjalo en pendientes.
         </Text>
       </View>
 
@@ -617,6 +618,16 @@ export default function CoachCalendarScreen() {
       </Pressable>
 
       {calendarContent}
+      {/* Lo que hay que hacer sin día (lib/pendientes.ts). */}
+      <PendientesDelCoach
+        tasks={tasks}
+        enTarjeta={false}
+        onAdd={addPendiente}
+        onToggle={toggleDone}
+        onFlag={toggleFlag}
+        onEdit={setEditing}
+        onPonerDia={setMovingTask}
+      />
       {objetivosContent}
 
       <MoveTaskModal
@@ -1024,20 +1035,6 @@ const styles = StyleSheet.create({
   },
   objetivosTitulo: { ...typography.h3, color: colors.text, flexShrink: 1, flexGrow: 1 },
   objetivosPista: { ...typography.small, color: colors.textFaint, flexShrink: 0 },
-  sinDia: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  sinDiaTitulo: {
-    ...typography.small,
-    color: colors.textFaint,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontFamily: fonts.semiBold,
-    marginBottom: spacing.sm,
-  },
 
   // Tareas
   addRow: {

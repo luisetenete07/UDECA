@@ -1017,10 +1017,16 @@ export interface TrainingCycle {
  * semana / este mes) y objetivos de emprendimiento con progreso. Privadas del
  * entrenador; no tienen nada que ver con las rutinas de los alumnos.
  */
-export type TaskScope = 'day' | 'week' | 'month' | 'goal';
+/*
+ * 'day': en un día del calendario. 'pending': un pendiente, sin día
+ * (lib/pendientes.ts). 'goal': un objetivo con porcentaje. 'week' y 'month'
+ * son de las antiguas listas y se leen como pendientes.
+ */
+export type TaskScope = 'day' | 'pending' | 'week' | 'month' | 'goal';
 
 export const TASK_SCOPE_LABEL: Record<TaskScope, string> = {
   day: 'Hoy',
+  pending: 'Pendientes',
   week: 'Semana',
   month: 'Mes',
   goal: 'Objetivos',

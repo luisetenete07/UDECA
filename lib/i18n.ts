@@ -834,6 +834,22 @@ export const EN: Record<string, string> = {
   '{0} quitados': '{0} removed',
   '{0} y {1}': '{0} and {1}',
   'Nueva': 'New',
+  // Los pendientes del entrenador (lib/pendientes.ts, components/PendientesDelCoach.tsx).
+  'Pendientes': 'To-dos',
+  'Pendiente': 'To-do',
+  'Apuntar un pendiente': 'Add a to-do',
+  'Lo que tengas que hacer sin fecha: llamar a alguien, grabar un vídeo, preparar un plan. Sin día, sin que se pierda.': 'Things to do with no date: call someone, film a video, prepare a plan. No day, and nothing gets lost.',
+  'Ver 1 más': 'See 1 more',
+  'Ver {0} más': 'See {0} more',
+  '1 hecho estos días': '1 done recently',
+  '{0} hechos estos días': '{0} done recently',
+  'Ponerle día': 'Give it a day',
+  'Quitar prioridad': 'Remove priority',
+  'Destacar': 'Highlight',
+  'Con día': 'With a day',
+  'Pendiente pasado al calendario': 'To-do moved to the calendar',
+  'Llamadas, fin de coaching, ciclos y tus tareas. Toca un día y apunta lo que quieras, o déjalo en pendientes.': 'Calls, coaching end dates, cycles and your tasks. Tap a day and note anything, or leave it in your to-dos.',
+  'Editar tarea': 'Edit task',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

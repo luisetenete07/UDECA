@@ -16,6 +16,8 @@ import { UpgradePopup } from '../../components/UpgradeCard';
 import { createCoachTask, getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { SemanaDelCoach } from '../../components/SemanaDelCoach';
+import { PendientesDelCoach } from '../../components/PendientesDelCoach';
+import { TaskEditSheet } from '../../components/TaskEditSheet';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { PressableScale } from '../../components/PressableScale';
 import { FadeIn } from '../../components/FadeIn';
@@ -94,6 +96,8 @@ export default function TrainerDashboard() {
   const [clients, setClients] = useState<UserProfile[]>(cached?.clients ?? []);
   const [logs, setLogs] = useState<WorkoutLog[]>(cached?.logs ?? []);
   const [tasks, setTasks] = useState<import('../../lib/types').CoachTask[]>([]);
+  // El pendiente (o la tarea) que se está editando.
+  const [editandoTarea, setEditandoTarea] = useState<import('../../lib/types').CoachTask | null>(null);
   const [llamadas, setLlamadas] = useState<Llamada[]>([]);
   // Lo que han hecho los alumnos con sus llamadas (reservar, cancelar): va a
   // "Por revisar" junto a los entrenos.
@@ -319,6 +323,46 @@ export default function TrainerDashboard() {
       setTasks((prev) => prev.filter((x) => x.id !== temp.id));
       showToast('No se pudo guardar');
     }
+  };
+
+  /*
+   * LOS PENDIENTES (lib/pendientes.ts): lo que hay que hacer sin día. Igual
+   * que las tareas de la semana: se pinta al momento y se guarda detrás.
+   */
+  const handleAddPendiente = async (title: string) => {
+    if (!profile) return;
+    const temp: import('../../lib/types').CoachTask = {
+      id: `tmp-${Date.now()}`,
+      trainerId: profile.uid,
+      title,
+      scope: 'pending',
+      done: false,
+      order: Date.now(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setTasks((prev) => [...prev, temp]);
+    try {
+      const id = await createCoachTask({ trainerId: profile.uid, title, scope: 'pending', done: false, order: temp.order });
+      setTasks((prev) => prev.map((x) => (x.id === temp.id ? { ...x, id } : x)));
+    } catch {
+      setTasks((prev) => prev.filter((x) => x.id !== temp.id));
+      showToast('No se pudo guardar');
+    }
+  };
+  const handleFlagTask = (t: import('../../lib/types').CoachTask) => {
+    const flagged = !t.flagged;
+    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, flagged } : x)));
+    updateCoachTask(t.id, { flagged: flagged || undefined }).catch(() => {
+      setTasks((prev) => prev.map((x) => (x.id === t.id ? t : x)));
+      showToast('No se pudo guardar');
+    });
+  };
+  const recargarTareas = () => {
+    if (!profile) return;
+    getCoachTasks(profile.uid)
+      .then(setTasks)
+      .catch(() => {});
   };
 
   const handleApproveRequest = async (req: JoinRequest) => {
@@ -627,6 +671,20 @@ export default function TrainerDashboard() {
           onVerMes={() => router.push('/(trainer)/agenda')}
         />
       </FadeIn>
+
+      {/* Lo que hay que hacer sin día: una lista, como la del papel en la
+          nevera. Los primeros a la vista; el resto, en "Ver más". */}
+      <FadeIn delay={240}>
+        <PendientesDelCoach
+          tasks={tasks}
+          max={5}
+          onAdd={handleAddPendiente}
+          onToggle={handleToggleTask}
+          onFlag={handleFlagTask}
+          onEdit={setEditandoTarea}
+        />
+      </FadeIn>
+      <TaskEditSheet task={editandoTarea} onClose={() => setEditandoTarea(null)} onChanged={recargarTareas} />
 
       {/*
        * POR REVISAR (lib/bandeja.ts). Era "Actividad reciente": lo último, sin

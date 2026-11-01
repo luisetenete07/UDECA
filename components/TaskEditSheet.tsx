@@ -9,9 +9,19 @@ import { deleteCoachTask, updateCoachTask } from '../lib/firestore/coachTasks';
 import { Segmented } from './Segmented';
 import { Sheet } from './Sheet';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../lib/theme';
-import { TASK_SCOPE_LABEL, type CoachTask, type TaskScope } from '../lib/types';
+import { inicioDelDia } from '../lib/fechas';
+import { esPendiente } from '../lib/pendientes';
+import type { CoachTask } from '../lib/types';
 
-const MOVE_SCOPES: TaskScope[] = ['day', 'week', 'month'];
+/**
+ * Una tarea va en un día del calendario o en la lista de pendientes, sin día
+ * (lib/pendientes.ts). Las de las antiguas "Semana" y "Mes" son pendientes.
+ */
+type Donde = 'day' | 'pending';
+const DONDE: { valor: Donde; texto: string }[] = [
+  { valor: 'day', texto: 'Con día' },
+  { valor: 'pending', texto: 'Pendiente' },
+];
 
 interface Props {
   task: CoachTask | null;
@@ -22,7 +32,7 @@ interface Props {
 /** Hoja para editar una tarea u objetivo: texto, cubo, prioridad, notas, borrar. */
 export function TaskEditSheet({ task, onClose, onChanged }: Props) {
   const [title, setTitle] = useState('');
-  const [scope, setScope] = useState<TaskScope>('day');
+  const [scope, setScope] = useState<Donde>('day');
   const [flagged, setFlagged] = useState(false);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -32,7 +42,7 @@ export function TaskEditSheet({ task, onClose, onChanged }: Props) {
   useEffect(() => {
     if (!task) return;
     setTitle(task.title);
-    setScope(task.scope);
+    setScope(esPendiente(task) ? 'pending' : 'day');
     setFlagged(!!task.flagged);
     setNotes(task.notes ?? '');
   }, [task]);
@@ -46,9 +56,12 @@ export function TaskEditSheet({ task, onClose, onChanged }: Props) {
     }
     setSaving(true);
     try {
+      // Un pendiente que pasa a tener día va a HOY; desde ahí se mueve en el calendario.
+      const aUnDia = !isGoal && scope === 'day' && task.scope !== 'day';
       await updateCoachTask(task.id, {
         title: title.trim(),
         scope: isGoal ? 'goal' : scope,
+        ...(aUnDia ? { dueDate: inicioDelDia(Date.now()) } : {}),
         flagged: flagged || undefined,
         notes: notes.trim() || undefined,
       });
@@ -86,7 +99,7 @@ export function TaskEditSheet({ task, onClose, onChanged }: Props) {
         <>
           <Text style={styles.label}>¿Para cuándo?</Text>
           <Segmented
-            opciones={MOVE_SCOPES.map((s) => ({ valor: s, texto: TASK_SCOPE_LABEL[s] }))}
+            opciones={DONDE}
             valor={scope}
             onChange={setScope}
           />
