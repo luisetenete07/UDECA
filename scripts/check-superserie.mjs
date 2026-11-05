@@ -127,7 +127,7 @@ console.log('\nEn la pantalla del entreno');
     // Sin descanso entre los de la ronda. La única pausa posible es la que el
     // entrenador ponga para cambiar de ejercicio al fusionar rutinas
     // (lib/combinarRutinas.ts), y solo si la puso.
-    const m = /if \(despues\.tipo === 'encadenar'\) \{([\s\S]{0,900}?)\} else \{\s*const rest = descansoTrasRonda/.exec(w);
+    const m = /if \(despues\.tipo === 'encadenar'\) \{([\s\S]{0,900}?)\} else \{[\s\S]{0,200}?const rest =\s*descansoTrasSerie/.exec(w);
     const rama = m?.[1] ?? '';
     const pausas = rama.match(/startRest\(/g) ?? [];
     ok(
@@ -149,7 +149,7 @@ console.log('\nEn la pantalla del entreno');
   ok('y antes de empezar ya se ve como bloque', /Superserie · sin descanso entre ellos/.test(w));
   ok('la serie suelta se avisa en la tarjeta', /Esta va sola: \$\{terminaron\} ya ha hecho sus series\./.test(w));
   ok('y antes de empezar', /la última de \$\{quien\} va sola/.test(w));
-  ok('su descanso es el suyo', /descansoTrasRonda\(plan, conLaMarca, bloque, setIndex\)/.test(w));
+  ok('su descanso es el suyo (y tras la última, el del siguiente)', /descansoTrasSerie\(plan, conLaMarca, bloque, setIndex, despues\.siguiente, despues\.bloqueTerminado\)/.test(w));
 }
 
 console.log(fallos === 0 ? '\n✔ La superserie se hace como se entrena: A, B y descanso' : `\n${fallos} fallo(s)`);

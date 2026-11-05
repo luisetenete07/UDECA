@@ -136,6 +136,33 @@ export function descansoTrasRonda(plan: EnElPlan[], log: EnCurso[], b: Bloque, r
   return descansoDelBloque(plan, b);
 }
 
+/**
+ * El descanso que corre después de marcar una serie.
+ *
+ * Entre series del mismo ejercicio (o rondas de la misma superserie), el suyo.
+ * Pero al acabar la ÚLTIMA, ese descanso ya es para llegar al SIGUIENTE, y
+ * manda el del siguiente: dominadas con 3 min y luego fondos con 2, tras la
+ * última de dominadas se descansan 2. Si el siguiente no tiene descanso
+ * puesto, el de siempre.
+ */
+export function descansoTrasSerie(
+  plan: EnElPlan[],
+  log: EnCurso[],
+  b: Bloque,
+  r: number,
+  siguiente: Paso | null,
+  bloqueTerminado: boolean
+): number {
+  if (bloqueTerminado && siguiente) {
+    const suyo = bloqueDe(plan, siguiente.ejercicio, log.length);
+    if (suyo.inicio !== b.inicio) {
+      const delSiguiente = descansoDelBloque(plan, suyo);
+      if (delSiguiente > 0) return delSiguiente;
+    }
+  }
+  return descansoTrasRonda(plan, log, b, r);
+}
+
 export type TrasLaSerie =
   /** Otro ejercicio de la misma ronda: se hace YA, sin descanso. */
   | { tipo: 'encadenar'; siguiente: Paso }

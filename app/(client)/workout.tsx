@@ -108,10 +108,12 @@ import { tabScreenOptions } from '../../lib/navTheme';
 import { cancelarAvisosOlvido, notifyUser } from '../../lib/notifications';
 import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
 import { shareRecordImage, shareSessionImage } from '../../lib/brandCards';
-import { startRest, stopRest, useActiveRest } from '../../lib/restTimerStore';
+import { getRest, startRest, stopRest, stopRestSiEs, useActiveRest } from '../../lib/restTimerStore';
+import { calentamientoParaVer } from '../../lib/calentamiento';
 import {
   bloqueDe,
   descansoTrasRonda,
+  descansoTrasSerie,
   enLaRonda,
   esSuperserie,
   miembros as miembrosDelBloque,
@@ -717,6 +719,34 @@ export default function WorkoutScreen() {
    * respuesta para pasar al siguiente ejercicio (y "Siguiente" sigue ahí).
    */
   const [pendienteEsfuerzo, setPendienteEsfuerzo] = useState<{ ejercicio: number; serie: number } | null>(null);
+  /*
+   * DESHACER UNA SERIE MARCADA SIN QUERER.
+   *
+   * Marcar una serie hace tres cosas: la apunta, arranca el descanso y, si era
+   * la última, pasa solo al siguiente ejercicio. Tocar el ✓ otra vez la
+   * desmarcaba, pero el descanso seguía corriendo y la pantalla ya se había
+   * ido a otro ejercicio. Ahora, al marcar, sale "Deshacer" unos segundos: la
+   * desmarca, para su descanso y vuelve a donde estaba. Y desmarcarla con el ✓
+   * hace lo mismo.
+   */
+  const ultimaMarcada = useRef<{
+    ejercicio: number;
+    serie: number;
+    /** El descanso que arrancó al marcarla (si arrancó alguno). */
+    restId: number | null;
+    /** El paso automático al siguiente ejercicio, si lo hubo. */
+    avance: ReturnType<typeof setTimeout> | null;
+    /** El ejercicio que se estaba viendo al marcarla. */
+    vista: number;
+    /** Si celebró un récord. */
+    record: boolean;
+  } | null>(null);
+  const [deshacer, setDeshacer] = useState<{ ejercicio: number; serie: number } | null>(null);
+  useEffect(() => {
+    if (!deshacer) return;
+    const fuera = setTimeout(() => setDeshacer(null), 8000);
+    return () => clearTimeout(fuera);
+  }, [deshacer]);
   /** Si al contestar hay que pasar al siguiente bloque (porque se acabó este). */
   const avanceTrasEsfuerzo = useRef<{ inicio: number; fin: number; destino: number } | null>(null);
   /** El panel para añadir un ejercicio de otra rutina del plan. */
@@ -1168,6 +1198,22 @@ export default function WorkoutScreen() {
     // Desmarcada: si era la que se estaba preguntando, se deja de preguntar.
     if (field === 'completed' && value === false) {
       setPendienteEsfuerzo((p) => (p && p.ejercicio === exerciseIndex && p.serie === setIndex ? null : p));
+      // Y si es la que se acaba de marcar, se deshace lo que hizo al marcarla:
+      // su descanso y el paso al siguiente ejercicio.
+      const u = ultimaMarcada.current;
+      if (u && u.ejercicio === exerciseIndex && u.serie === setIndex) {
+        ultimaMarcada.current = null;
+        setDeshacer(null);
+        if (u.avance) clearTimeout(u.avance);
+        if (u.restId !== null) stopRestSiEs(u.restId);
+        const avance = avanceTrasEsfuerzo.current;
+        if (avance && exerciseIndex >= avance.inicio && exerciseIndex <= avance.fin) avanceTrasEsfuerzo.current = null;
+        if (u.record) {
+          const id = log[exerciseIndex]?.exerciseId;
+          if (id) prCelebrados.current.delete(id);
+          setPrVivo(null);
+        }
+      }
     }
     // Marcada: se pregunta su esfuerzo (si el plan lo pide) mientras descansa.
     if (field === 'completed' && value === true && pideEsfuerzoPorEjercicio) {
@@ -1186,6 +1232,7 @@ export default function WorkoutScreen() {
       // ¿Acaba de batir su marca? Se comprueba con el estado NUEVO, porque el
       // de React todavía no se ha actualizado cuando llega aquí.
       const ejercicio = log[exerciseIndex];
+      let conRecord = false;
       if (ejercicio && !prCelebrados.current.has(ejercicio.exerciseId)) {
         const conLaSerie = ejercicio.sets.map((s2, j) =>
           j === setIndex ? { ...s2, completed: true } : s2
@@ -1194,8 +1241,12 @@ export default function WorkoutScreen() {
         if (record) {
           prCelebrados.current.add(record.exerciseId);
           setPrVivo(record);
+          conRecord = true;
         }
       }
+      // Para poder deshacerla (ver `ultimaMarcada`).
+      let restIniciado: number | null = null;
+      let avanceIniciado: ReturnType<typeof setTimeout> | null = null;
       /*
        * QUÉ TOCA AHORA (lib/superserie.ts), con la serie ya marcada: el estado
        * de React todavía no la tiene.
@@ -1222,10 +1273,16 @@ export default function WorkoutScreen() {
         const transicion = plan[despues.siguiente.ejercicio]?.transicionSegundos ?? 0;
         if (transicion > 0) {
           startRest(transicion, frase`Ahora: ${conLaMarca[despues.siguiente.ejercicio]?.name ?? ''}`);
+          restIniciado = getRest()?.id ?? null;
         }
       } else {
-        const rest = descansoTrasRonda(plan, conLaMarca, bloque, setIndex) || DEFAULT_REST_SECONDS;
+        // Tras la última serie, el descanso es el del SIGUIENTE ejercicio (ver
+        // `descansoTrasSerie`): es el que hace falta para llegar a él.
+        const rest =
+          descansoTrasSerie(plan, conLaMarca, bloque, setIndex, despues.siguiente, despues.bloqueTerminado) ||
+          DEFAULT_REST_SECONDS;
         startRest(rest, queTocaTrasDescansar(conLaMarca, plan, despues.siguiente, exerciseIndex));
+        restIniciado = getRest()?.id ?? null;
 
         // Autoavance: con el bloque COMPLETO (el ejercicio, o la superserie
         // entera) pasa solo a lo siguiente, dejando ver el ✓ un instante.
@@ -1240,13 +1297,31 @@ export default function WorkoutScreen() {
           if (pideEsfuerzoPorEjercicio) {
             avanceTrasEsfuerzo.current = { inicio: bloque.inicio, fin: bloque.fin, destino };
           } else {
-            setTimeout(() => {
+            avanceIniciado = setTimeout(() => {
               setViewIndex((cur) => (cur >= bloque.inicio && cur <= bloque.fin ? destino : cur));
             }, 900);
           }
         }
       }
+      ultimaMarcada.current = {
+        ejercicio: exerciseIndex,
+        serie: setIndex,
+        restId: restIniciado,
+        avance: avanceIniciado,
+        vista: viewIndex,
+        record: conRecord,
+      };
+      setDeshacer({ ejercicio: exerciseIndex, serie: setIndex });
     }
+  };
+
+  /** "Deshacer": la serie que se acaba de marcar, sin marcar, y de vuelta a ella. */
+  const deshacerSerie = () => {
+    const u = ultimaMarcada.current;
+    if (!u) return;
+    const vista = u.vista;
+    updateSet(u.ejercicio, u.serie, 'completed', false);
+    setViewIndex(vista);
   };
 
   /** El rótulo del descanso: qué viene cuando acabe. */
@@ -1398,6 +1473,19 @@ export default function WorkoutScreen() {
    * La pregunta del esfuerzo de la serie que se acaba de hacer, encima del
    * crono de descanso. Solo si esa serie es de lo que está en pantalla.
    */
+  /** La serie recién marcada, con "Deshacer" (ver `ultimaMarcada`). */
+  const barraDeshacer = deshacer ? (
+    <View style={styles.deshacer}>
+      <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+      <Text style={styles.deshacerTexto} numberOfLines={1}>
+        {frase`${enTitulo(palabraSerie)} ${deshacer.serie + 1} de ${log[deshacer.ejercicio]?.name ?? ''}, hecha`}
+      </Text>
+      <Pressable onPress={deshacerSerie} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Deshacer')}>
+        <Text style={styles.deshacerAccion}>Deshacer</Text>
+      </Pressable>
+    </View>
+  ) : null;
+
   const preguntaDeSerie = (b: { inicio: number; fin: number }) => {
     if (!pideEsfuerzoPorEjercicio || !pendienteEsfuerzo) return null;
     const { ejercicio, serie } = pendienteEsfuerzo;
@@ -2294,6 +2382,7 @@ export default function WorkoutScreen() {
 
           {/* El esfuerzo de la serie que se acaba de hacer y el descanso,
               aquí dentro, debajo de la ronda: es donde se está mirando. */}
+          {barraDeshacer}
           {preguntaDeSerie(b)}
           {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
 
@@ -2875,37 +2964,60 @@ export default function WorkoutScreen() {
 
       {/* El calentamiento va en la portada: es lo que se hace ANTES. Dentro del
           entreno estorbaba, y es de las cosas que se leen una vez. */}
-      {!enMarcha && day && !day.isRest ? (
-        <View style={styles.warmupCard}>
-          <Pressable onPress={() => setWarmupOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
-            <Ionicons name="flame-outline" size={15} color={colors.primary} />
-            <Text style={styles.warmupTitle}>Calentamiento</Text>
-            <Ionicons
-              name={warmupOpen ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color={colors.textMuted}
-            />
-          </Pressable>
-          {warmupOpen ? (
-            <View style={styles.warmupList}>
-              {[
-                'Cardio suave · 5 min',
-                'Movilidad con gomas y activación',
-                day.approachesNote?.trim()
-                  ? `Aproximaciones · ${day.approachesNote.trim()}`
-                  : 'Aproximaciones (series progresivas hacia tu peso de trabajo)',
-              ].map((item, i) => (
-                <View key={i} style={styles.warmupStep}>
-                  <View style={styles.warmupNum}>
-                    <Text style={styles.warmupNumText}>{i + 1}</Text>
+      {/* El de su entrenador si lo ha puesto (un vídeo, un vídeo por
+          ejercicio o solo ejercicios: lib/calentamiento.ts); si no, el de
+          siempre. El suyo sale abierto: lo ha preparado para que se vea. */}
+      {!enMarcha && day && !day.isRest
+        ? (() => {
+            const cal = calentamientoParaVer(day);
+            const abierto = cal.propio ? !warmupOpen : warmupOpen;
+            return (
+              <View style={styles.warmupCard}>
+                <Pressable onPress={() => setWarmupOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
+                  <Ionicons name="flame-outline" size={15} color={colors.primary} />
+                  <Text style={styles.warmupTitle}>Calentamiento</Text>
+                  <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+                </Pressable>
+                {abierto ? (
+                  <View style={styles.warmupList}>
+                    {cal.video ? (
+                      <Pressable
+                        onPress={() => setVideoAbierto({ url: cal.video!, titulo: t('Calentamiento') })}
+                        style={styles.warmupVideo}
+                        accessibilityRole="button"
+                      >
+                        <Ionicons name="play-circle" size={22} color={colors.primary} />
+                        <Text style={styles.warmupVideoTexto}>Ver el vídeo de calentamiento</Text>
+                      </Pressable>
+                    ) : null}
+                    {cal.nota ? <Text style={styles.warmupNota}>{cal.nota}</Text> : null}
+                    {cal.pasos.map((paso, i) => (
+                      <View key={i} style={styles.warmupStep}>
+                        <View style={styles.warmupNum}>
+                          <Text style={styles.warmupNumText}>{i + 1}</Text>
+                        </View>
+                        <Text style={styles.warmupText}>
+                          {paso.texto}
+                          {paso.cuanto ? <Text style={styles.warmupCuanto}>{` · ${paso.cuanto}`}</Text> : null}
+                        </Text>
+                        {paso.video ? (
+                          <Pressable
+                            onPress={() => setVideoAbierto({ url: paso.video!, titulo: paso.texto })}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={frase`Vídeo de ${paso.texto}`}
+                          >
+                            <Ionicons name="play-circle-outline" size={22} color={colors.primary} />
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    ))}
                   </View>
-                  <Text style={styles.warmupText}>{item}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </View>
-      ) : null}
+                ) : null}
+              </View>
+            );
+          })()
+        : null}
 
       {enMarcha && day && !day.isRest && day.showIntervalTimer ? (
         <View style={styles.warmupCard}>
@@ -3196,6 +3308,7 @@ export default function WorkoutScreen() {
               "Anterior" y "Siguiente". (En las demás pestañas sigue flotando:
               components/GlobalRestTimer.)
             */}
+            {barraDeshacer}
             {preguntaDeSerie({ inicio: exerciseIndex, fin: exerciseIndex })}
             {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
             {cluster || isFlex ? (
@@ -3729,6 +3842,20 @@ const styles = StyleSheet.create({
   },
   exerciseName: { ...typography.h3, color: colors.text, flex: 1 },
   exerciseNameCurrent: { color: colors.primaryBright },
+  deshacer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  deshacerTexto: { ...typography.small, color: colors.textMuted, flex: 1 },
+  deshacerAccion: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
   restoredBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3803,6 +3930,18 @@ const styles = StyleSheet.create({
   },
   warmupNumText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
   warmupText: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 18 },
+  warmupCuanto: { color: colors.text, fontFamily: fonts.semiBold },
+  warmupNota: { ...typography.small, color: colors.text, lineHeight: 18 },
+  warmupVideo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryMuted,
+  },
+  warmupVideoTexto: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
   restoredAction: {
     ...typography.small,
     color: colors.primary,

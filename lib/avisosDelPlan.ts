@@ -275,6 +275,7 @@ const CAMPO_DEL_DIA: Record<string, string | null> = {
   gtgIndicaciones: 'indicaciones',
   showIntervalTimer: 'temporizador',
   approachesNote: 'calentamiento',
+  calentamiento: 'calentamiento',
 };
 
 function cabeceraDelDia(d: RoutineDay, indice: number, ciclo: boolean) {

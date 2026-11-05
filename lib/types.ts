@@ -761,7 +761,36 @@ export interface RoutineDay {
    * el coach (paso 3 del calentamiento). Vacío = usa el texto por defecto.
    */
   approachesNote?: string;
+  /**
+   * El calentamiento de este día, si el entrenador lo pone a su manera (ver
+   * lib/calentamiento.ts): un vídeo general y ya, un vídeo por ejercicio o
+   * solo los ejercicios. Sin esto, el de siempre (cardio, movilidad y
+   * aproximaciones).
+   */
+  calentamiento?: CalentamientoDelDia;
   exercises: RoutineExercise[];
+}
+
+/** Cómo es el calentamiento que pone el entrenador. */
+export type ModoDeCalentamiento = 'video' | 'videos' | 'ejercicios';
+
+export interface EjercicioDeCalentamiento {
+  id: string;
+  nombre: string;
+  /** "2 × 10", "30 s", "1 min": lo que se hace, en texto. */
+  cuanto?: string;
+  /** Solo en el modo 'videos': su vídeo. */
+  video?: string;
+}
+
+export interface CalentamientoDelDia {
+  modo: ModoDeCalentamiento;
+  /** Solo en el modo 'video': el vídeo entero. */
+  video?: string;
+  /** Una indicación para todo el calentamiento ("síguelo entero, sin pausar"). */
+  nota?: string;
+  /** En los modos 'videos' y 'ejercicios'. */
+  ejercicios?: EjercicioDeCalentamiento[];
 }
 
 /**

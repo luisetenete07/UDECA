@@ -104,12 +104,20 @@ import {
 } from '../../../../lib/visibilidad';
 import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
 import { nuevoId } from '../../../../lib/ids';
+import {
+  calentamientoParaGuardar,
+  MODOS_DE_CALENTAMIENTO,
+  resumenDelCalentamiento,
+} from '../../../../lib/calentamiento';
 import { medidaDelGrupo } from '../../../../lib/medidaDeGrupo';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../../lib/theme';
 import {
   CLUSTER_DEFAULT,
   clusterBlocks,
+  type CalentamientoDelDia,
   type ClusterConfig,
+  type EjercicioDeCalentamiento,
+  type ModoDeCalentamiento,
   type Exercise,
   type ExerciseLoad,
   type ExerciseMeasure,
@@ -426,7 +434,11 @@ export default function RoutineEditorScreen() {
   /** Los días tal y como se guardan: cada valor en su sitio (ver diasParaGuardar). */
   const diasAGuardar = () => {
     // La superserie se hace toda junta: unas series y un descanso por bloque.
-    const juntos = conSuperseriesJuntas(days);
+    // Y el calentamiento, sin huecos (o fuera, si se quedó vacío).
+    const juntos = conSuperseriesJuntas(days).map((d) => ({
+      ...d,
+      calentamiento: calentamientoParaGuardar(d.calentamiento),
+    }));
     if (schedule === 'flex') return diasParaGuardar(juntos, configuracionAGuardar());
     const plan = { prescripcion: prescripcionSimpleAGuardar() };
     const limpios = diasParaGuardar(juntos, plan);
@@ -943,6 +955,44 @@ export default function RoutineEditorScreen() {
 
   const updateApproaches = (dayId: string, value: string) => {
     setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, approachesNote: value } : d)));
+  };
+
+  /*
+   * EL CALENTAMIENTO DEL DÍA (lib/calentamiento.ts): el de siempre, un vídeo,
+   * un vídeo por ejercicio o solo ejercicios.
+   */
+  const cambiarCalentamiento = (dayId: string, cambio: (c: CalentamientoDelDia | undefined) => CalentamientoDelDia | undefined) =>
+    setDays((prev) => prev.map((d) => (d.id === dayId ? { ...d, calentamiento: cambio(d.calentamiento) } : d)));
+  const modoDeCalentamiento = (dayId: string, modo: ModoDeCalentamiento | 'defecto') =>
+    cambiarCalentamiento(dayId, (c) => {
+      if (modo === 'defecto') return undefined;
+      const ejercicios = c?.ejercicios?.length ? c.ejercicios : [{ id: nuevoId(), nombre: '' }];
+      return { ...(c ?? {}), modo, ejercicios: modo === 'video' ? c?.ejercicios : ejercicios };
+    });
+  const cambiarEjercicioDeCalentamiento = (dayId: string, id: string, parte: Partial<EjercicioDeCalentamiento>) =>
+    cambiarCalentamiento(dayId, (c) =>
+      c ? { ...c, ejercicios: (c.ejercicios ?? []).map((e) => (e.id === id ? { ...e, ...parte } : e)) } : c
+    );
+  const anadirEjercicioDeCalentamiento = (dayId: string) =>
+    cambiarCalentamiento(dayId, (c) => (c ? { ...c, ejercicios: [...(c.ejercicios ?? []), { id: nuevoId(), nombre: '' }] } : c));
+  const quitarEjercicioDeCalentamiento = (dayId: string, id: string) =>
+    cambiarCalentamiento(dayId, (c) => (c ? { ...c, ejercicios: (c.ejercicios ?? []).filter((e) => e.id !== id) } : c));
+  /** El mismo calentamiento en todos los días de entreno (cada uno con su copia). */
+  const calentamientoEnTodos = (dayId: string) => {
+    const origen = days.find((d) => d.id === dayId)?.calentamiento;
+    setDays((prev) =>
+      prev.map((d) =>
+        d.isRest || d.id === dayId
+          ? d
+          : {
+              ...d,
+              calentamiento: origen
+                ? { ...origen, ejercicios: origen.ejercicios?.map((e) => ({ ...e, id: nuevoId() })) }
+                : undefined,
+            }
+      )
+    );
+    showToast('Calentamiento puesto en todos los días');
   };
 
   // Descanso en formato mm:ss; se guarda en segundos.
@@ -2396,7 +2446,7 @@ export default function RoutineEditorScreen() {
           </View>
           )}
 
-          {!day.isRest && !(masDelDia.has(day.id) || day.showIntervalTimer || day.approachesNote) ? (
+          {!day.isRest && !(masDelDia.has(day.id) || day.showIntervalTimer || day.approachesNote || day.calentamiento) ? (
             <Pressable
               onPress={() => setMasDelDia((prev) => new Set(prev).add(day.id))}
               style={styles.masDelDia}
@@ -2406,8 +2456,92 @@ export default function RoutineEditorScreen() {
               <Text style={styles.masDelDiaTexto}>Calentamiento y temporizador</Text>
             </Pressable>
           ) : null}
-          {!day.isRest && (masDelDia.has(day.id) || day.showIntervalTimer || day.approachesNote) ? (
+          {!day.isRest && (masDelDia.has(day.id) || day.showIntervalTimer || day.approachesNote || day.calentamiento) ? (
             <View style={styles.dayTools}>
+              {/* El calentamiento: el de siempre, un vídeo, uno por ejercicio o
+                  solo ejercicios (lib/calentamiento.ts). */}
+              <Text style={styles.calRotulo}>Calentamiento</Text>
+              <Opciones
+                opciones={MODOS_DE_CALENTAMIENTO}
+                valor={day.calentamiento?.modo ?? 'defecto'}
+                onChange={(v) => v && modoDeCalentamiento(day.id, v)}
+                envuelve
+              />
+              {day.calentamiento?.modo === 'video' ? (
+                <TextField
+                  label="Enlace del vídeo (YouTube o Vimeo)"
+                  placeholder="https://youtu.be/…"
+                  value={day.calentamiento.video ?? ''}
+                  onChangeText={(v) => cambiarCalentamiento(day.id, (c) => (c ? { ...c, video: v } : c))}
+                  autoCapitalize="none"
+                />
+              ) : null}
+              {day.calentamiento && day.calentamiento.modo !== 'video' ? (
+                <View style={styles.calLista}>
+                  {(day.calentamiento.ejercicios ?? []).map((e, i) => (
+                    <View key={e.id} style={styles.calFila}>
+                      <Text style={styles.calNumero}>{i + 1}</Text>
+                      <View style={{ flex: 1, gap: spacing.xs }}>
+                        <View style={styles.calCampos}>
+                          <TextField
+                            placeholder="Ej. Rotaciones de hombro"
+                            value={e.nombre}
+                            onChangeText={(v) => cambiarEjercicioDeCalentamiento(day.id, e.id, { nombre: v })}
+                            containerStyle={{ flex: 1, marginBottom: 0 }}
+                            accessibilityLabel={t('Ejercicio de calentamiento')}
+                          />
+                          <TextField
+                            placeholder="2 × 10"
+                            value={e.cuanto ?? ''}
+                            onChangeText={(v) => cambiarEjercicioDeCalentamiento(day.id, e.id, { cuanto: v })}
+                            containerStyle={{ width: 92, marginBottom: 0 }}
+                            accessibilityLabel={t('Cuánto')}
+                          />
+                        </View>
+                        {day.calentamiento?.modo === 'videos' ? (
+                          <TextField
+                            placeholder={t('Enlace de su vídeo')}
+                            value={e.video ?? ''}
+                            onChangeText={(v) => cambiarEjercicioDeCalentamiento(day.id, e.id, { video: v })}
+                            autoCapitalize="none"
+                            containerStyle={{ marginBottom: 0 }}
+                            accessibilityLabel={t('Enlace de su vídeo')}
+                          />
+                        ) : null}
+                      </View>
+                      <Pressable
+                        onPress={() => quitarEjercicioDeCalentamiento(day.id, e.id)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('Quitar')}
+                      >
+                        <Ionicons name="close" size={18} color={colors.textFaint} />
+                      </Pressable>
+                    </View>
+                  ))}
+                  <Pressable onPress={() => anadirEjercicioDeCalentamiento(day.id)} style={styles.calAnadir} hitSlop={6}>
+                    <Ionicons name="add" size={16} color={colors.primary} />
+                    <Text style={styles.calAnadirTexto}>Añadir ejercicio</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+              {day.calentamiento ? (
+                <TextField
+                  label="Indicaciones (opcional)"
+                  placeholder="Ej. Síguelo entero, sin pausas"
+                  value={day.calentamiento.nota ?? ''}
+                  onChangeText={(v) => cambiarCalentamiento(day.id, (c) => (c ? { ...c, nota: v } : c))}
+                />
+              ) : null}
+              {day.calentamiento && days.filter((d) => !d.isRest).length > 1 ? (
+                <Pressable onPress={() => calentamientoEnTodos(day.id)} style={styles.calAnadir} hitSlop={6}>
+                  <Ionicons name="copy-outline" size={15} color={colors.primary} />
+                  <Text style={styles.calAnadirTexto}>Usar este calentamiento en todos los días</Text>
+                </Pressable>
+              ) : null}
+              {day.calentamiento ? (
+                <Text style={styles.calResumen}>{resumenDelCalentamiento(day.calentamiento)}</Text>
+              ) : null}
               <Pressable
                 onPress={() => toggleIntervalTimer(day.id)}
                 style={styles.checkRow}
@@ -2423,7 +2557,7 @@ export default function RoutineEditorScreen() {
                 </Text>
               </Pressable>
               <TextField
-                label="Aproximaciones (calentamiento · paso 3)"
+                label={day.calentamiento ? 'Aproximaciones (al final, opcional)' : 'Aproximaciones (calentamiento · paso 3)'}
                 placeholder="Ej. 2 series al 60% y 70% del peso de trabajo"
                 value={day.approachesNote ?? ''}
                 onChangeText={(v) => updateApproaches(day.id, v)}
@@ -3358,6 +3492,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  calRotulo: { ...fieldLabel, marginBottom: 0 },
+  calLista: { gap: spacing.sm },
+  calFila: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  calNumero: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, width: 16, marginTop: 12 },
+  calCampos: { flexDirection: 'row', gap: spacing.sm },
+  calAnadir: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  calAnadirTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  calResumen: { ...typography.small, color: colors.textMuted },
   checkLabel: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
   // El panel de personalización: cerrado por defecto para que el editor siga
   // empezando por lo de siempre —los ejercicios—, y abierto de un toque para
