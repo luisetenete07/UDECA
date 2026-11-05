@@ -70,6 +70,7 @@ import { CollapsibleCard } from '../../../../components/CollapsibleCard';
 import { PlanDelAlumno } from '../../../../components/PlanDelAlumno';
 import { SeriesDelGtg } from '../../../../components/SeriesDelGtg';
 import { PausaPlanSheet } from '../../../../components/PausaPlanSheet';
+import { InformeDeCambiosSheet } from '../../../../components/InformeDeCambiosSheet';
 import { pausaActiva, textoRango, type PausaPlan } from '../../../../lib/pausa';
 import { Segmented } from '../../../../components/Segmented';
 import { diaMes, diasEntre, fechaCorta, fechaNumerica } from '../../../../lib/fechas';
@@ -150,6 +151,8 @@ export default function ClientDetailScreen() {
   const [coachNote, setCoachNote] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
   const [pausaAbierta, setPausaAbierta] = useState(false);
+  // El informe de cambios en PDF (lib/informeDeCambios.ts).
+  const [informeAbierto, setInformeAbierto] = useState(false);
   // El coaching, en una línea; alargar o cambiar la fecha, en su hoja.
   const [coachingAbierto, setCoachingAbierto] = useState(false);
   // El historial, los 3 últimos hasta que se piden más.
@@ -761,6 +764,19 @@ export default function ClientDetailScreen() {
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
             </Pressable>
 
+            {/* Todo lo que se le ha ido cambiando, por día de cambio, en PDF:
+                para enseñar el trabajo hecho (a él, en un vídeo…). */}
+            <Pressable style={styles.pausaFila} onPress={() => setInformeAbierto(true)}>
+              <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.navTitle}>Informe de cambios (PDF)</Text>
+                <Text style={styles.navHint}>
+                  Planes, ejercicios y series que le has cambiado, día a día.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+            </Pressable>
+
             {/* Cambio de urgencia: unos días sin entrenar sin tocar la rutina.
                 Va dentro de esta tarjeta porque es lo que se hace cuando la rutina
                 asignada no encaja con la semana que tiene el alumno delante. */}
@@ -1118,6 +1134,18 @@ export default function ClientDetailScreen() {
         </>
       ) : null}
 
+      {profile ? (
+        <InformeDeCambiosSheet
+          visible={informeAbierto}
+          onClose={() => setInformeAbierto(false)}
+          client={client}
+          trainerId={profile.uid}
+          coachName={profile.name}
+          routines={routines}
+          workoutLogs={workoutLogs}
+          measureByExercise={measureByExercise}
+        />
+      ) : null}
       <PausaPlanSheet
         visible={pausaAbierta}
         onClose={() => setPausaAbierta(false)}

@@ -42,6 +42,34 @@ export async function apuntarAvisoDelPlan(a: {
   });
 }
 
+/**
+ * Todos los de un alumno, para su ENTRENADOR (el informe de cambios). Por los
+ * dos campos, que es lo que las reglas piden para dejar listar al entrenador;
+ * las fechas se filtran después, así no hace falta otro índice.
+ */
+export async function getAvisosParaElEntrenador(trainerId: string, clientId: string): Promise<AvisoDelPlan[]> {
+  const snap = await getDocs(
+    query(collection(db, 'avisosDelPlan'), where('trainerId', '==', trainerId), where('clientId', '==', clientId))
+  );
+  return snap.docs.map((x) => aviso(x.id, x.data())).sort((a, b) => a.cuando - b.cuando);
+}
+
+function aviso(id: string, d: Record<string, unknown>, ahora = Date.now()): AvisoDelPlan {
+  return {
+    id,
+    trainerId: String(d.trainerId ?? ''),
+    clientId: String(d.clientId ?? ''),
+    tipo: 'plan',
+    routineId: String(d.routineId ?? ''),
+    plan: String(d.plan ?? ''),
+    nuevo: d.nuevo === true,
+    dias: Array.isArray(d.dias) ? (d.dias as AvisoDelPlan['dias']) : [],
+    ajustes: Array.isArray(d.ajustes) ? (d.ajustes as string[]) : [],
+    // Recién escrito, la hora del servidor aún no ha vuelto: es ahora.
+    cuando: d.cuando instanceof Timestamp ? d.cuando.toMillis() : Number(d.cuando ?? ahora),
+  };
+}
+
 /** Los de los últimos días, del más nuevo al más viejo. */
 export async function getAvisosDelAlumno(clientId: string, ahora = Date.now()): Promise<AvisoDelPlan[]> {
   const snap = await getDocs(
@@ -51,22 +79,5 @@ export async function getAvisosDelAlumno(clientId: string, ahora = Date.now()): 
       where('cuando', '>=', Timestamp.fromMillis(ahora - DIAS_DE_AVISOS * 86_400_000))
     )
   );
-  return snap.docs
-    .map((x) => {
-      const d = x.data();
-      return {
-        id: x.id,
-        trainerId: String(d.trainerId ?? ''),
-        clientId: String(d.clientId ?? ''),
-        tipo: 'plan' as const,
-        routineId: String(d.routineId ?? ''),
-        plan: String(d.plan ?? ''),
-        nuevo: d.nuevo === true,
-        dias: Array.isArray(d.dias) ? d.dias : [],
-        ajustes: Array.isArray(d.ajustes) ? d.ajustes : [],
-        // Recién escrito, la hora del servidor aún no ha vuelto: es ahora.
-        cuando: d.cuando instanceof Timestamp ? d.cuando.toMillis() : Number(d.cuando ?? ahora),
-      };
-    })
-    .sort((a, b) => b.cuando - a.cuando);
+  return snap.docs.map((x) => aviso(x.id, x.data(), ahora)).sort((a, b) => b.cuando - a.cuando);
 }
