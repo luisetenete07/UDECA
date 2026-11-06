@@ -2519,6 +2519,11 @@ export default function RoutineEditorScreen() {
                       </Pressable>
                     </View>
                   ))}
+                  {/* Sin líneas ni indicaciones no queda nada suyo: que se sepa
+                      qué verá el alumno antes de guardar. */}
+                  {!(day.calentamiento.ejercicios ?? []).some((e) => e.nombre.trim()) && !day.calentamiento.nota?.trim() ? (
+                    <Text style={styles.calResumen}>Sin ejercicios ni indicaciones, el alumno verá el calentamiento de siempre.</Text>
+                  ) : null}
                   <Pressable onPress={() => anadirEjercicioDeCalentamiento(day.id)} style={styles.calAnadir} hitSlop={6}>
                     <Ionicons name="add" size={16} color={colors.primary} />
                     <Text style={styles.calAnadirTexto}>Añadir ejercicio</Text>

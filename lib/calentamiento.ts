@@ -68,32 +68,39 @@ export function calentamientoParaVer(
 /**
  * El calentamiento tal y como se guarda: sin huecos, y sin lo que no es de su
  * modo (un vídeo general en "solo ejercicios", vídeos sueltos en "un vídeo").
- * Si no queda nada que hacer, nada: vuelve el de siempre.
+ *
+ * SE QUEDA MIENTRAS LE QUEDE ALGO: una línea, el vídeo o las indicaciones.
+ * Antes, al quitar la última línea se perdía todo —también las indicaciones
+ * que el entrenador había escrito— y al alumno le volvía el de siempre,
+ * plegado: a sus ojos, la sección del calentamiento había desaparecido. Solo
+ * si no queda nada de nada vuelve el de siempre.
  */
 export function calentamientoParaGuardar(c: CalentamientoDelDia | undefined): CalentamientoDelDia | undefined {
   if (!c) return undefined;
   const nota = c.nota?.trim() || undefined;
   if (c.modo === 'video') {
     const video = c.video?.trim();
-    return video ? { modo: 'video', video, ...(nota ? { nota } : {}) } : undefined;
+    return video || nota ? { modo: 'video', ...(video ? { video } : {}), ...(nota ? { nota } : {}) } : undefined;
   }
   const ejercicios = (c.ejercicios ?? [])
     .map((e) => ({
       id: e.id,
-      nombre: e.nombre.trim(),
+      nombre: (e.nombre ?? '').trim(),
       ...(e.cuanto?.trim() ? { cuanto: e.cuanto.trim() } : {}),
       ...(c.modo === 'videos' && e.video?.trim() ? { video: e.video.trim() } : {}),
     }))
     .filter((e) => e.nombre);
-  return ejercicios.length > 0 ? { modo: c.modo, ejercicios, ...(nota ? { nota } : {}) } : undefined;
+  if (ejercicios.length === 0 && !nota) return undefined;
+  return { modo: c.modo, ...(ejercicios.length > 0 ? { ejercicios } : {}), ...(nota ? { nota } : {}) };
 }
 
 /** "Un vídeo", "4 ejercicios", "El de siempre": lo que hay puesto, en una línea. */
 export function resumenDelCalentamiento(c: CalentamientoDelDia | undefined): string {
   const g = calentamientoParaGuardar(c);
   if (!g) return t('El de siempre');
-  if (g.modo === 'video') return t('Un vídeo');
+  if (g.modo === 'video') return g.video ? t('Un vídeo') : t('Solo las indicaciones');
   const n = g.ejercicios?.length ?? 0;
+  if (n === 0) return t('Solo las indicaciones');
   const conVideo = (g.ejercicios ?? []).filter((e) => e.video).length;
   const ejercicios = n === 1 ? t('1 ejercicio') : frase`${n} ejercicios`;
   return g.modo === 'videos' ? frase`${ejercicios} · ${conVideo} con vídeo` : ejercicios;

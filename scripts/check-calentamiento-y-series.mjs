@@ -52,7 +52,13 @@ console.log('\n1. El calentamiento');
   ok('y las aproximaciones al final, si las hay', videos.pasos[2]?.texto === 'Aproximaciones · 2 series al 60%');
   const soloEj = calentamientoParaVer({ calentamiento: { modo: 'ejercicios', ejercicios: [{ id: '1', nombre: 'Gato-camello', video: 'https://youtu.be/y' }] } });
   ok('solo ejercicios: sin vídeos aunque quedara alguno', !soloEj.pasos[0].video && !soloEj.video);
-  ok('vacío vuelve el de siempre', calentamientoParaGuardar({ modo: 'video', video: '  ' }) === undefined && calentamientoParaGuardar({ modo: 'ejercicios', ejercicios: [{ id: '1', nombre: ' ' }] }) === undefined);
+  ok('vacío del todo vuelve el de siempre', calentamientoParaGuardar({ modo: 'video', video: '  ' }) === undefined && calentamientoParaGuardar({ modo: 'ejercicios', ejercicios: [{ id: '1', nombre: ' ' }] }) === undefined);
+  // Lo que pasó: quitó la última línea y se fue todo, también las indicaciones.
+  const soloNota = calentamientoParaGuardar({ modo: 'ejercicios', ejercicios: [], nota: 'Sin prisa' });
+  ok('quitar la última línea no se lleva las indicaciones', igual(soloNota, { modo: 'ejercicios', nota: 'Sin prisa' }), JSON.stringify(soloNota));
+  ok('y el alumno las sigue viendo, abiertas', calentamientoParaVer({ calentamiento: soloNota }).propio && calentamientoParaVer({ calentamiento: soloNota }).nota === 'Sin prisa');
+  ok('lo mismo con un vídeo que se quita', igual(calentamientoParaGuardar({ modo: 'video', video: ' ', nota: 'Entero' }), { modo: 'video', nota: 'Entero' }));
+  ok('y se dice así en el editor: "Solo las indicaciones"', resumenDelCalentamiento(soloNota) === 'Solo las indicaciones');
   ok('se guarda sin huecos', igual(calentamientoParaGuardar({ modo: 'videos', ejercicios: [{ id: '1', nombre: ' A ', cuanto: ' ', video: ' v ' }, { id: '2', nombre: '' }] }), { modo: 'videos', ejercicios: [{ id: '1', nombre: 'A', video: 'v' }] }));
   ok('el resumen: "2 ejercicios · 1 con vídeo"', resumenDelCalentamiento({ modo: 'videos', ejercicios: [{ id: '1', nombre: 'A', video: 'v' }, { id: '2', nombre: 'B' }] }) === '2 ejercicios · 1 con vídeo');
   const antes = { name: 'P', days: [{ id: 'd', name: 'Empuje', exercises: [] }] };

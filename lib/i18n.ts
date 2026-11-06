@@ -933,6 +933,9 @@ export const EN: Record<string, string> = {
   'Deshacer': 'Undo',
   'Ej. Rotaciones de hombro': 'E.g. Shoulder rotations',
   'Cardio suave · 5 min': 'Light cardio · 5 min',
+  // Calentamiento: solo indicaciones (lib/calentamiento.ts).
+  'Solo las indicaciones': 'Notes only',
+  'Sin ejercicios ni indicaciones, el alumno verá el calentamiento de siempre.': 'With no exercises or notes, the client will see the usual warm-up.',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':
