@@ -1,4 +1,5 @@
 import {
+  deleteField,
   addDoc,
   collection,
   deleteDoc,
@@ -52,8 +53,18 @@ export async function createCourse(
   return ref.id;
 }
 
+/**
+ * Guarda un curso. Lo que llega como `undefined` a propósito (la portada
+ * quitada, la descripción vaciada) se BORRA: `stripUndefined` lo quitaba del
+ * envío y `updateDoc` dejaba el valor de antes, así que la portada quitada
+ * volvía a salir al abrir el curso.
+ */
 export async function updateCourse(id: string, data: Partial<Course>) {
-  await updateDoc(doc(db, 'courses', id), stripUndefined({ ...data, updatedAt: Date.now() }));
+  const borrar = (['coverURL', 'description'] as const).filter((k) => k in data && data[k] === undefined);
+  await updateDoc(doc(db, 'courses', id), {
+    ...stripUndefined({ ...data, updatedAt: Date.now() }),
+    ...Object.fromEntries(borrar.map((k) => [k, deleteField()])),
+  });
 }
 
 export async function deleteCourse(id: string) {

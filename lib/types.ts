@@ -1594,6 +1594,12 @@ export interface ContenidoDeCurso {
    * para eso serían dos cursos que mantener a la vez.
    */
   vip?: boolean;
+  /**
+   * El entrenador ha QUITADO la miniatura: se queda vacía, sin la subida y sin
+   * la que pondría la plataforma del vídeo (YouTube, Vimeo). Sin esto, quitar
+   * la subida dejaba ver la del vídeo, y no había forma de dejarla en blanco.
+   */
+  sinMiniatura?: boolean;
 }
 
 /**

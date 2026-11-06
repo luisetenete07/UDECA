@@ -87,8 +87,10 @@ export function MiniaturaCurso({
   style?: StyleProp<ViewStyle>;
 }) {
   const esPdf = esEbook(contenido);
-  const deVimeo = useMiniaturaDeVimeo(esPdf ? undefined : contenido.videoUrl);
-  const imagen = thumbURL ?? miniaturaDelEnlace(contenido.videoUrl) ?? deVimeo;
+  // Quitada por el entrenador: vacía, ni la subida ni la de la plataforma.
+  const vacia = contenido.sinMiniatura === true;
+  const deVimeo = useMiniaturaDeVimeo(esPdf || vacia ? undefined : contenido.videoUrl);
+  const imagen = vacia ? null : (thumbURL ?? miniaturaDelEnlace(contenido.videoUrl) ?? deVimeo);
   const medida =
     tamano === 'ancha' ? styles.ancha : tamano === 'mini' ? styles.mini : styles.fila;
 

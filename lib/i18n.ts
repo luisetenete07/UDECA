@@ -936,6 +936,13 @@ export const EN: Record<string, string> = {
   // Calentamiento: solo indicaciones (lib/calentamiento.ts).
   'Solo las indicaciones': 'Notes only',
   'Sin ejercicios ni indicaciones, el alumno verá el calentamiento de siempre.': 'With no exercises or notes, the client will see the usual warm-up.',
+  // Quitar miniaturas y portadas de los cursos (components/EditorDeLeccion.tsx).
+  'Cambiar miniatura': 'Change thumbnail',
+  'Usar la del vídeo': 'Use the video\'s',
+  'Sin miniatura.': 'No thumbnail.',
+  'Cambiar portada': 'Change cover',
+  'Quitar portada': 'Remove cover',
+  'Quitar portada de la sección': 'Remove section cover',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

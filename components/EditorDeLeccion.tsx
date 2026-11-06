@@ -118,20 +118,35 @@ function CamposDeContenido({
             placeholder="Duración (ej. 12 min)"
             containerStyle={{ marginBottom: spacing.xs }}
           />
-          {onMiniatura ? (
-            <Pressable
-              onPress={thumbURL ? onQuitarMiniatura : onMiniatura}
-              hitSlop={6}
-            >
-              <Text style={styles.enlaceMiniatura}>
-                {thumbURL ? 'Quitar miniatura' : 'Subir miniatura'}
-              </Text>
-            </Pressable>
-          ) : (
+          {/* Subir, quitar (y dejarla VACÍA, sin la del vídeo) o volver a la
+              del vídeo. Las mini clases no suben, pero sí se pueden vaciar. */}
+          <View style={styles.accionesMiniatura}>
+            {onMiniatura ? (
+              <Pressable onPress={onMiniatura} hitSlop={6}>
+                <Text style={styles.enlaceMiniatura}>{thumbURL ? 'Cambiar miniatura' : 'Subir miniatura'}</Text>
+              </Pressable>
+            ) : null}
+            {contenido.sinMiniatura ? (
+              <Pressable onPress={() => onCambiar({ sinMiniatura: undefined })} hitSlop={6}>
+                <Text style={styles.enlaceMiniatura}>Usar la del vídeo</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  onQuitarMiniatura?.();
+                  onCambiar({ sinMiniatura: true });
+                }}
+                hitSlop={6}
+              >
+                <Text style={[styles.enlaceMiniatura, styles.enlaceQuitar]}>Quitar miniatura</Text>
+              </Pressable>
+            )}
+          </View>
+          {!onMiniatura ? (
             <Text style={styles.pistaMiniatura}>
-              La miniatura la pone la plataforma del vídeo.
+              {contenido.sinMiniatura ? 'Sin miniatura.' : 'La miniatura la pone la plataforma del vídeo.'}
             </Text>
-          )}
+          ) : null}
         </View>
       </View>
     </>
@@ -323,6 +338,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   enlaceMiniatura: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
+  enlaceQuitar: { color: colors.danger },
+  accionesMiniatura: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   pistaMiniatura: { ...typography.small, color: colors.textFaint, fontSize: 11 },
   filaMinis: {
     flexDirection: 'row',

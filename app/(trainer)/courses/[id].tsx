@@ -189,6 +189,17 @@ export default function CourseEditorScreen() {
           </View>
         )}
       </Pressable>
+      {/* Quitarla: el curso se queda sin portada (al alumno le sale el icono). */}
+      {coverURL ? (
+        <View style={styles.portadaAcciones}>
+          <Pressable onPress={() => elegirImagen(setCoverURL)} hitSlop={6}>
+            <Text style={styles.portadaAccion}>Cambiar portada</Text>
+          </Pressable>
+          <Pressable onPress={() => setCoverURL(undefined)} hitSlop={6}>
+            <Text style={[styles.portadaAccion, styles.portadaQuitar]}>Quitar portada</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <Card style={styles.publishRow}>
         <View style={{ flex: 1 }}>
@@ -252,6 +263,19 @@ export default function CourseEditorScreen() {
                 </>
               )}
             </Pressable>
+            {section.coverURL ? (
+              <Pressable
+                onPress={() =>
+                  setSections((prev) =>
+                    prev.map((x) => (x.id === section.id ? { ...x, coverURL: undefined } : x))
+                  )
+                }
+                hitSlop={6}
+                style={{ marginTop: spacing.xs }}
+              >
+                <Text style={[styles.portadaAccion, styles.portadaQuitar]}>Quitar portada de la sección</Text>
+              </Pressable>
+            ) : null}
 
             {/* Las lecciones se arrastran por el asa y no por toda la fila:
                 dentro hay campos de texto, y colocar el cursor en uno no puede
@@ -275,7 +299,7 @@ export default function CourseEditorScreen() {
                   onMiniatura={() =>
                     elegirImagen((url) =>
                       setSections((prev) =>
-                        conLeccionCambiada(prev, section.id, lesson.id, { thumbURL: url })
+                        conLeccionCambiada(prev, section.id, lesson.id, { thumbURL: url, sinMiniatura: undefined })
                       )
                     )
                   }
@@ -378,6 +402,9 @@ const styles = StyleSheet.create({
   },
   sectionCoverImage: { width: 120, height: 68, borderRadius: radius.sm },
   sectionCoverText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  portadaAcciones: { flexDirection: 'row', gap: spacing.lg, marginTop: -spacing.xs, marginBottom: spacing.md },
+  portadaAccion: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  portadaQuitar: { color: colors.danger },
   publishRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
   publishTitle: { ...typography.h3, color: colors.text },
   publishHint: { ...typography.small, color: colors.textMuted, marginTop: 2 },
