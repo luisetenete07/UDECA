@@ -943,6 +943,16 @@ export const EN: Record<string, string> = {
   'Cambiar portada': 'Change cover',
   'Quitar portada': 'Remove cover',
   'Quitar portada de la sección': 'Remove section cover',
+  // Los hábitos del entrenador (lib/habitosCoach.ts, components/HabitosDelCoach.tsx).
+  'Lo que quieres hacer cada día. Se desmarcan solos al día siguiente.': 'What you want to do every day. They reset on their own the next day.',
+  'Todos hechos hoy. Mañana, otra vez.': 'All done today. Again tomorrow.',
+  '{0} de {1} hoy': '{0} of {1} today',
+  'Cambiar o borrar el hábito': 'Change or delete the habit',
+  'Racha de 1 día': '1-day streak',
+  'Nuevo hábito (ej. leer 20 min)': 'New habit (e.g. read 20 min)',
+  'Nuevo hábito': 'New habit',
+  'Hábito': 'Habit',
+  'Borrar el hábito': 'Delete the habit',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

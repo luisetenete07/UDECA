@@ -1048,14 +1048,16 @@ export interface TrainingCycle {
  */
 /*
  * 'day': en un día del calendario. 'pending': un pendiente, sin día
- * (lib/pendientes.ts). 'goal': un objetivo con porcentaje. 'week' y 'month'
- * son de las antiguas listas y se leen como pendientes.
+ * (lib/pendientes.ts). 'goal': un objetivo con porcentaje. 'habit': un hábito
+ * diario del entrenador, que se marca cada día (lib/habitosCoach.ts). 'week' y
+ * 'month' son de las antiguas listas y se leen como pendientes.
  */
-export type TaskScope = 'day' | 'pending' | 'week' | 'month' | 'goal';
+export type TaskScope = 'day' | 'pending' | 'week' | 'month' | 'goal' | 'habit';
 
 export const TASK_SCOPE_LABEL: Record<TaskScope, string> = {
   day: 'Hoy',
   pending: 'Pendientes',
+  habit: 'Hábitos',
   week: 'Semana',
   month: 'Mes',
   goal: 'Objetivos',
@@ -1073,6 +1075,11 @@ export interface CoachTask {
   notes?: string;
   /** Solo objetivos: progreso 0-100. */
   progress?: number;
+  /**
+   * Solo hábitos: los días en que se marcó (las 00:00 de cada uno). "Hecho
+   * hoy" es que esté el de hoy, así que al día siguiente sale sin marcar solo.
+   */
+  dias?: number[];
   /**
    * Solo tareas de día: fecha concreta en el calendario (00:00). Si falta, la
    * tarea se entiende "para hoy". El coach puede moverla a otro día.
