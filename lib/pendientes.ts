@@ -26,6 +26,23 @@ export function pendientesPorHacer(tasks: CoachTask[]): CoachTask[] {
     .sort((a, b) => Number(!!b.flagged) - Number(!!a.flagged) || a.order - b.order);
 }
 
+/**
+ * Al llegar la lista del servidor, lo que se acaba de apuntar y aún se está
+ * guardando (id provisional `tmp-`) no se pierde: si no, apuntar algo justo
+ * mientras el panel carga lo borraba de la pantalla.
+ */
+export function conLoQueSeEstaGuardando(delServidor: CoachTask[], enPantalla: CoachTask[]): CoachTask[] {
+  const guardando = enPantalla.filter((t) => t.id.startsWith('tmp-'));
+  return guardando.length ? [...delServidor, ...guardando] : delServidor;
+}
+
+/** Ya guardado: el provisional pasa a tener su id. Si la carga ya lo trajo, no sale dos veces. */
+export function conIdGuardado(lista: CoachTask[], provisional: string, id: string): CoachTask[] {
+  return lista.some((t) => t.id === id)
+    ? lista.filter((t) => t.id !== provisional)
+    : lista.map((t) => (t.id === provisional ? { ...t, id } : t));
+}
+
 /** Cuántos días se enseñan los ya tachados (para poder deshacer un toque sin querer). */
 export const DIAS_DE_HECHOS = 7;
 

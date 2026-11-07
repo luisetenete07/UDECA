@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { conHoyAlternado, DIAS_GUARDADOS, habitos, hechoHoy, racha, resumenDeHoy, ultimaSemana } from '../lib/habitosCoach.ts';
 import { inicioDelDia, masDias } from '../lib/fechas.ts';
-import { esPendiente } from '../lib/pendientes.ts';
+import { conIdGuardado, conLoQueSeEstaGuardando, esPendiente } from '../lib/pendientes.ts';
 
 let fallos = 0;
 const ok = (desc, bien, extra = '') => {
@@ -57,6 +57,23 @@ console.log('\nNo se mezclan con lo demás');
   ok('solo los hábitos, en su orden', habitos(tareas).map((t) => t.id).join() === 'h1,h2');
   ok('un hábito no es un pendiente', !esPendiente({ scope: 'habit' }));
   ok('ni sale en el calendario', /if \(t\.scope !== 'day' \|\| t\.done\) continue;/.test(lee('lib/calendarioCoach.ts')));
+}
+
+console.log('\nSin límite, y lo apuntado mientras carga no se pierde');
+{
+  const muchos = Array.from({ length: 12 }, (_, i) => ({ id: `h${i}`, scope: 'habit', order: i, title: `H${i}` }));
+  ok('doce hábitos, los doce', habitos(muchos).length === 12);
+  const c = lee('components/HabitosDelCoach.tsx');
+  ok('la tarjeta no recorta la lista', /\{lista\.map\(\(h\) =>/.test(c) && !/lista\.slice|habitos\(tasks\)\.slice/.test(c));
+  const servidor = [{ id: 'a', scope: 'habit' }, { id: 'b', scope: 'habit' }];
+  const pantalla = [{ id: 'a', scope: 'habit' }, { id: 'tmp-1', scope: 'habit', title: 'Leer' }];
+  const cargada = conLoQueSeEstaGuardando(servidor, pantalla);
+  ok('la carga trae lo del servidor y conserva lo que se está guardando', cargada.map((t) => t.id).join() === 'a,b,tmp-1');
+  ok('sin nada guardándose, lo del servidor tal cual', conLoQueSeEstaGuardando(servidor, servidor) === servidor);
+  ok('al guardarse, el provisional pasa a tener su id', conIdGuardado(cargada, 'tmp-1', 'c').map((t) => t.id).join() === 'a,b,c');
+  ok('y si la carga ya lo trajo, no sale dos veces', conIdGuardado([...servidor, { id: 'tmp-1' }], 'tmp-1', 'b').map((t) => t.id).join() === 'a,b');
+  const d = lee('app/(trainer)/dashboard.tsx');
+  ok('el panel lo usa al cargar y al guardar', (d.match(/conLoQueSeEstaGuardando\(/g) ?? []).length === 2 && (d.match(/conIdGuardado\(prev, temp\.id, id\)/g) ?? []).length === 3 && !/setTasks\(taskData\)|\.then\(setTasks\)/.test(d));
 }
 
 console.log('\nEn el panel del entrenador');

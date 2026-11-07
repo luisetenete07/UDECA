@@ -16,6 +16,7 @@ import { UpgradePopup } from '../../components/UpgradeCard';
 import { createCoachTask, deleteCoachTask, getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
 import { HabitosDelCoach } from '../../components/HabitosDelCoach';
 import { conHoyAlternado } from '../../lib/habitosCoach';
+import { conIdGuardado, conLoQueSeEstaGuardando } from '../../lib/pendientes';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { SemanaDelCoach } from '../../components/SemanaDelCoach';
 import { PendientesDelCoach } from '../../components/PendientesDelCoach';
@@ -135,7 +136,7 @@ export default function TrainerDashboard() {
           if (cancelled) return;
           setClients(clientData);
           setLogs(logData);
-          setTasks(taskData);
+          setTasks((prev) => conLoQueSeEstaGuardando(taskData, prev));
           setCycles(cycleData);
           setLlamadas(llamadaData);
           setActividadLlamadas(actividadData);
@@ -320,7 +321,7 @@ export default function TrainerDashboard() {
         done: false,
         order: temp.order,
       });
-      setTasks((prev) => prev.map((x) => (x.id === temp.id ? { ...x, id } : x)));
+      setTasks((prev) => conIdGuardado(prev, temp.id, id));
     } catch {
       setTasks((prev) => prev.filter((x) => x.id !== temp.id));
       showToast('No se pudo guardar');
@@ -346,7 +347,7 @@ export default function TrainerDashboard() {
     setTasks((prev) => [...prev, temp]);
     try {
       const id = await createCoachTask({ trainerId: profile.uid, title, scope: 'pending', done: false, order: temp.order });
-      setTasks((prev) => prev.map((x) => (x.id === temp.id ? { ...x, id } : x)));
+      setTasks((prev) => conIdGuardado(prev, temp.id, id));
     } catch {
       setTasks((prev) => prev.filter((x) => x.id !== temp.id));
       showToast('No se pudo guardar');
@@ -382,7 +383,7 @@ export default function TrainerDashboard() {
     setTasks((prev) => [...prev, temp]);
     try {
       const id = await createCoachTask({ trainerId: profile.uid, title, scope: 'habit', done: false, dias: [], order: temp.order });
-      setTasks((prev) => prev.map((x) => (x.id === temp.id ? { ...x, id } : x)));
+      setTasks((prev) => conIdGuardado(prev, temp.id, id));
     } catch {
       setTasks((prev) => prev.filter((x) => x.id !== temp.id));
       showToast('No se pudo guardar');
@@ -411,7 +412,7 @@ export default function TrainerDashboard() {
   const recargarTareas = () => {
     if (!profile) return;
     getCoachTasks(profile.uid)
-      .then(setTasks)
+      .then((t) => setTasks((prev) => conLoQueSeEstaGuardando(t, prev)))
       .catch(() => {});
   };
 
