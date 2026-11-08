@@ -58,6 +58,8 @@ import {
 } from '../../lib/bandeja';
 import { getActividadDeLlamadas, getLlamadasEntre } from '../../lib/firestore/llamadas';
 import type { ActividadDeLlamada, Llamada } from '../../lib/llamadas';
+import { getLlamadasGrupales } from '../../lib/firestore/llamadasGrupales';
+import type { LlamadaGrupal } from '../../lib/llamadaGrupal';
 import { notifyUser } from '../../lib/notifications';
 import { getCached, setCached } from '../../lib/screenCache';
 import { sessionTotals, weekComparison } from '../../lib/stats';
@@ -102,6 +104,8 @@ export default function TrainerDashboard() {
   // El pendiente (o la tarea) que se está editando.
   const [editandoTarea, setEditandoTarea] = useState<import('../../lib/types').CoachTask | null>(null);
   const [llamadas, setLlamadas] = useState<Llamada[]>([]);
+  // Las llamadas grupales que ha programado (lib/llamadaGrupal.ts), para su semana.
+  const [grupales, setGrupales] = useState<LlamadaGrupal[]>([]);
   // Lo que han hecho los alumnos con sus llamadas (reservar, cancelar): va a
   // "Por revisar" junto a los entrenos.
   const [actividadLlamadas, setActividadLlamadas] = useState<ActividadDeLlamada[]>([]);
@@ -122,7 +126,7 @@ export default function TrainerDashboard() {
       (async () => {
         try {
           const hoy = inicioDelDia(Date.now());
-          const [clientData, logData, requestData, taskData, cycleData, llamadaData, actividadData] = await Promise.all([
+          const [clientData, logData, requestData, taskData, cycleData, llamadaData, actividadData, grupalData] = await Promise.all([
             getClientsForTrainer(profile.uid),
             getWorkoutLogsForTrainer(profile.uid),
             getJoinRequestsForTrainer(profile.uid),
@@ -132,6 +136,7 @@ export default function TrainerDashboard() {
             // Y las llamadas 1:1 de estas semanas (la tira se mueve de semana en semana).
             getLlamadasEntre(profile.uid, masDias(hoy, -21), masDias(hoy, 42)).catch(() => []),
             getActividadDeLlamadas(profile.uid, masDias(hoy, -DIAS_DE_BANDEJA)).catch(() => []),
+            getLlamadasGrupales(profile.uid, masDias(hoy, -21)).catch(() => []),
           ]);
           if (cancelled) return;
           setClients(clientData);
@@ -140,6 +145,7 @@ export default function TrainerDashboard() {
           setCycles(cycleData);
           setLlamadas(llamadaData);
           setActividadLlamadas(actividadData);
+          setGrupales(grupalData);
           setRequests(requestData);
           setCached(cacheKey, {
             clients: clientData,
@@ -713,6 +719,7 @@ export default function TrainerDashboard() {
       <FadeIn delay={210}>
         <SemanaDelCoach
           llamadas={llamadas}
+          grupales={grupales}
           clients={clients}
           cycles={cycles}
           tasks={tasks}

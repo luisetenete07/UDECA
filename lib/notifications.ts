@@ -7,6 +7,8 @@ import { frase, t } from './idioma';
 import { getUserProfile } from './firestore/users';
 import { DIAS_VISTA, diasPendientes, horasDeAviso, textoDeAviso, TOPE_AVISOS } from './olvido';
 import { avisosDelGtg } from './avisosDiarios';
+import { diaLargo, horaCorta } from './fechas';
+import { avisosDeGrupal, type LlamadaGrupal } from './llamadaGrupal';
 import type { ContextoDelCiclo } from './schedule';
 import type { Routine } from './types';
 
@@ -349,4 +351,55 @@ export async function programarAvisoDeLlamada(id: string, inicio: number, como: 
 export async function cancelarAvisoDeLlamada(id: string): Promise<void> {
   if (Platform.OS === 'web') return;
   await Notifications.cancelScheduledNotificationAsync(`${LLAMADA_PREFIJO}${id}`).catch(() => {});
+}
+
+const GRUPAL_PREFIJO = 'grupal-';
+
+/**
+ * Los avisos de las llamadas grupales en el móvil del alumno
+ * (lib/llamadaGrupal.ts, `avisosDeGrupal`): el día que empieza a tenerla
+ * fijada y una hora antes.
+ *
+ * Se rehacen enteros cada vez que abre el inicio: así una llamada que el
+ * entrenador cambia de hora o cancela no deja un aviso viejo programado.
+ * No pide permiso (ya lo piden los recordatorios del entreno): sin él, la
+ * llamada sigue fijada en su inicio.
+ */
+export async function programarAvisosDeGrupales(lista: LlamadaGrupal[], ahora = Date.now()): Promise<number> {
+  if (Platform.OS === 'web') return 0;
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return 0;
+    const puestos = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      puestos
+        .filter((n) => n.identifier.startsWith(GRUPAL_PREFIJO))
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier))
+    );
+    let n = 0;
+    for (const l of lista) {
+      for (const aviso of avisosDeGrupal(l, ahora)) {
+        await Notifications.scheduleNotificationAsync({
+          identifier: `${GRUPAL_PREFIJO}${l.id}-${aviso.tipo}`,
+          content:
+            aviso.tipo === 'fijada'
+              ? {
+                  title: frase`Llamada grupal: ${l.titulo}`,
+                  body: frase`${diaLargo(l.inicio)} a las ${horaCorta(l.inicio)}. La tienes fijada en tu inicio.`,
+                  data: { abrir: 'notificaciones' },
+                }
+              : {
+                  title: t('Llamada grupal en 1 hora'),
+                  body: l.titulo,
+                  data: { abrir: 'notificaciones' },
+                },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(aviso.cuando) },
+        });
+        n++;
+      }
+    }
+    return n;
+  } catch {
+    return 0;
+  }
 }

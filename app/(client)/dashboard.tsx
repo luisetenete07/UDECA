@@ -7,6 +7,9 @@ import { getAjustesLlamadas, getLlamadasDelAlumno } from '../../lib/firestore/ll
 import { getAvisosDelAlumno } from '../../lib/firestore/avisos';
 import { avisosSinVer } from '../../lib/avisosDelPlan';
 import type { AjustesLlamadas, Llamada } from '../../lib/llamadas';
+import { LlamadaGrupalFijada } from '../../components/LlamadaGrupalFijada';
+import { getLlamadasGrupales } from '../../lib/firestore/llamadasGrupales';
+import { fijadasAhora, grupalesSinVer, type LlamadaGrupal } from '../../lib/llamadaGrupal';
 import { unido } from '../../lib/texto';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -62,7 +65,7 @@ import { nombreDeCiclo, planCalendar, planSummary } from '../../lib/cyclePlan';
 import { anclaDelAlumno } from '../../lib/cycleAnchor';
 import type { AnclaDelAlumno } from '../../lib/ciclo';
 import { diasDePausa, diasQueQuedan, pausaActiva } from '../../lib/pausa';
-import { cancelarAvisosOlvido, programarAvisosOlvido } from '../../lib/notifications';
+import { cancelarAvisosOlvido, programarAvisosDeGrupales, programarAvisosOlvido } from '../../lib/notifications';
 import { fonts, colors, gradients, radius, shadows, spacing, typography } from '../../lib/theme';
 import {
   CYCLE_LEVEL_LABEL,
@@ -234,11 +237,37 @@ export default function ClientDashboard() {
   );
 
   /*
-   * La campana: cuántas notificaciones no ha visto (los cambios que su
-   * entrenador ha hecho en su plan). Aparte y sin bloquear nada: si falla, la
-   * campana sale sin punto.
+   * Las llamadas grupales de su entrenador (lib/llamadaGrupal.ts): las que le
+   * tocan ya salen fijadas arriba, y su móvil programa los avisos (el día que
+   * empiezan a estar fijadas y una hora antes). Aparte y sin bloquear nada.
    */
-  const [sinVer, setSinVer] = useState(0);
+  const [grupales, setGrupales] = useState<LlamadaGrupal[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      const trainerId = profile?.trainerId;
+      if (!trainerId) return;
+      let vivo = true;
+      getLlamadasGrupales(trainerId, Date.now() - 6 * 3600_000)
+        .then((lista) => {
+          if (!vivo) return;
+          setGrupales(lista);
+          programarAvisosDeGrupales(lista).catch(() => {});
+        })
+        .catch(() => {});
+      return () => {
+        vivo = false;
+      };
+    }, [profile?.trainerId])
+  );
+  const grupalesFijadas = fijadasAhora(grupales);
+
+  /*
+   * La campana: cuántas notificaciones no ha visto (los cambios que su
+   * entrenador ha hecho en su plan, y las llamadas grupales que le han
+   * llegado). Aparte y sin bloquear nada: si falla, la campana sale sin punto.
+   */
+  const [delPlanSinVer, setSinVer] = useState(0);
+  const sinVer = delPlanSinVer + grupalesSinVer(grupales, profile?.avisosVistos);
   useFocusEffect(
     useCallback(() => {
       if (!profile) return;
@@ -594,6 +623,15 @@ export default function ClientDashboard() {
           </Card>
         </FadeIn>
       ) : null}
+
+      {/* La llamada grupal que su entrenador ha programado, FIJADA: desde los
+          días antes que él eligió hasta que termina. Va delante del día porque
+          tiene fecha y hora, y se pasa si no se ve. */}
+      {grupalesFijadas.map((l) => (
+        <FadeIn key={l.id}>
+          <LlamadaGrupalFijada llamada={l} />
+        </FadeIn>
+      ))}
 
       {/* La acción del día va PRIMERO: es a lo que se entra. Todo lo
           demás —avisos, plan, frase— se lee después de saber si hoy toca

@@ -2,6 +2,7 @@ import type { Ionicons } from '@expo/vector-icons';
 import { nombreDeCiclo } from './cyclePlan';
 import { horaCorta, inicioDelDia } from './fechas';
 import type { Llamada } from './llamadas';
+import { finDe, type LlamadaGrupal } from './llamadaGrupal';
 import { frase } from './idioma';
 import { colors } from './theme';
 import {
@@ -62,15 +63,17 @@ export function diaDeLaTarea(t: CoachTask, ahora: number = Date.now()): number {
 /**
  * Todos los eventos del calendario, agrupados por día: fin de coaching de cada
  * alumno, inicio y fin de sus ciclos, las tareas de día sin terminar y las
- * llamadas 1:1 que han reservado sus alumnos (estas, las primeras del día y
- * por hora: son lo único con hora fija).
+ * llamadas: las 1:1 que han reservado sus alumnos y las grupales que él ha
+ * programado (estas, las primeras del día y por hora: son lo único con hora
+ * fija).
  */
 export function eventosPorDia(
   clients: UserProfile[],
   cycles: TrainingCycle[],
   tareas: CoachTask[],
   ahora: number = Date.now(),
-  llamadas: Llamada[] = []
+  llamadas: Llamada[] = [],
+  grupales: LlamadaGrupal[] = []
 ): Map<number, EventoDelCalendario[]> {
   const map = new Map<number, EventoDelCalendario[]>();
   const add = (e: EventoDelCalendario) => map.set(e.day, [...(map.get(e.day) ?? []), e]);
@@ -105,17 +108,31 @@ export function eventosPorDia(
         ruta,
       });
   }
-  for (const l of [...llamadas].sort((a, b) => a.inicio - b.inicio)) {
-    const quien = clients.find((c) => c.uid === l.clientId)?.name ?? 'alumno';
-    add({
-      day: inicioDelDia(l.inicio),
-      type: 'call',
-      title: frase`Llamada · ${quien}`,
-      subtitle: `${horaCorta(l.inicio)} – ${horaCorta(l.fin)}`,
-      ruta: `/(trainer)/clients/${l.clientId}`,
-      llamada: l,
-    });
-  }
+  // Las 1:1 y las grupales, juntas y por hora: en el día van por orden.
+  const conHora: { inicio: number; evento: EventoDelCalendario }[] = [
+    ...llamadas.map((l) => ({
+      inicio: l.inicio,
+      evento: {
+        day: inicioDelDia(l.inicio),
+        type: 'call' as const,
+        title: frase`Llamada · ${clients.find((c) => c.uid === l.clientId)?.name ?? 'alumno'}`,
+        subtitle: `${horaCorta(l.inicio)} – ${horaCorta(l.fin)}`,
+        ruta: `/(trainer)/clients/${l.clientId}`,
+        llamada: l,
+      },
+    })),
+    ...grupales.map((g) => ({
+      inicio: g.inicio,
+      evento: {
+        day: inicioDelDia(g.inicio),
+        type: 'call' as const,
+        title: frase`Llamada grupal · ${g.titulo}`,
+        subtitle: `${horaCorta(g.inicio)} – ${horaCorta(finDe(g))}`,
+        ruta: '/(trainer)/llamadas',
+      },
+    })),
+  ];
+  for (const { evento } of conHora.sort((a, b) => a.inicio - b.inicio)) add(evento);
   for (const t of tareas) {
     if (t.scope !== 'day' || t.done) continue;
     add({

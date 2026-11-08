@@ -15,6 +15,7 @@ import { frase, t } from '../lib/idioma';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 import type { CoachTask, TrainingCycle, UserProfile } from '../lib/types';
 import type { Llamada } from '../lib/llamadas';
+import type { LlamadaGrupal } from '../lib/llamadaGrupal';
 
 const LETRAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
@@ -40,12 +41,15 @@ export function SemanaDelCoach({
   onOpen,
   onVerMes,
   llamadas = [],
+  grupales = [],
 }: {
   clients: UserProfile[];
   cycles: TrainingCycle[];
   tasks: CoachTask[];
   /** Las llamadas 1:1 reservadas (lib/llamadas.ts). */
   llamadas?: Llamada[];
+  /** Las llamadas grupales que ha programado (lib/llamadaGrupal.ts). */
+  grupales?: LlamadaGrupal[];
   onToggleTask: (t: CoachTask) => void;
   onAddTask: (titulo: string, dia: number) => void;
   onOpen: (ruta: string) => void;
@@ -57,8 +61,8 @@ export function SemanaDelCoach({
   const [nueva, setNueva] = useState('');
 
   const eventos = useMemo(
-    () => eventosPorDia(clients, cycles, tasks, Date.now(), llamadas),
-    [clients, cycles, tasks, llamadas]
+    () => eventosPorDia(clients, cycles, tasks, Date.now(), llamadas, grupales),
+    [clients, cycles, tasks, llamadas, grupales]
   );
   const dias = Array.from({ length: 7 }, (_, i) => masDias(lunes, i));
 

@@ -29,6 +29,8 @@ import {
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import { getLlamadasEntre } from '../../lib/firestore/llamadas';
 import type { Llamada } from '../../lib/llamadas';
+import { getLlamadasGrupales } from '../../lib/firestore/llamadasGrupales';
+import type { LlamadaGrupal } from '../../lib/llamadaGrupal';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { Segmented } from '../../components/Segmented';
 import { Dialogo } from '../../components/Dialogo';
@@ -67,6 +69,8 @@ export default function CoachCalendarScreen() {
   const [cycles, setCycles] = useState<TrainingCycle[]>([]);
   // Las llamadas 1:1 reservadas por sus alumnos (lib/llamadas.ts).
   const [llamadas, setLlamadas] = useState<Llamada[]>([]);
+  // Y las grupales que ha programado (lib/llamadaGrupal.ts).
+  const [grupales, setGrupales] = useState<LlamadaGrupal[]>([]);
 
   // --- Tareas ---
   const [draft, setDraft] = useState('');
@@ -88,17 +92,19 @@ export default function CoachCalendarScreen() {
   const load = useCallback(async () => {
     if (!profile) return;
     const hoy = inicioDelDia(Date.now());
-    const [taskData, clientData, cycleData, llamadaData] = await Promise.all([
+    const [taskData, clientData, cycleData, llamadaData, grupalData] = await Promise.all([
       getCoachTasks(profile.uid).catch(() => []),
       getClientsForTrainer(profile.uid).catch(() => []),
       getCyclesForTrainer(profile.uid).catch(() => []),
       // De dos meses atrás a tres por delante: lo que se mira en un calendario.
       getLlamadasEntre(profile.uid, masDias(hoy, -62), masDias(hoy, 93)).catch(() => []),
+      getLlamadasGrupales(profile.uid, masDias(hoy, -62)).catch(() => []),
     ]);
     setTasks(taskData);
     setClients(clientData);
     setCycles(cycleData);
     setLlamadas(llamadaData);
+    setGrupales(grupalData);
     setLoading(false);
   }, [profile]);
 
@@ -265,7 +271,7 @@ export default function CoachCalendarScreen() {
   const dayTasks = useMemo(() => tasks.filter((t) => t.scope === 'day' && !t.done), [tasks]);
   const eventsByDay = useMemo(() => {
     const map = new Map<number, CalEvent[]>();
-    for (const [dia, eventos] of eventosPorDia(clients, cycles, dayTasks, Date.now(), llamadas)) {
+    for (const [dia, eventos] of eventosPorDia(clients, cycles, dayTasks, Date.now(), llamadas, grupales)) {
       map.set(
         dia,
         eventos.map((e) => ({
@@ -279,7 +285,7 @@ export default function CoachCalendarScreen() {
       );
     }
     return map;
-  }, [clients, cycles, dayTasks, llamadas, router]);
+  }, [clients, cycles, dayTasks, llamadas, grupales, router]);
 
   if (loading) {
     return (
@@ -605,14 +611,14 @@ export default function CoachCalendarScreen() {
         </Text>
       </View>
 
-      {/* Las llamadas 1:1: cuándo estás disponible y qué incluye cada plan. */}
+      {/* Las llamadas: las grupales con todos y las 1:1 (horarios y planes). */}
       <Pressable onPress={() => router.push('/(trainer)/llamadas')} style={styles.llamadasBtn}>
         <View style={styles.llamadasIcono}>
           <Ionicons name="call-outline" size={17} color={colors.success} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.llamadasTitulo}>Llamadas 1:1</Text>
-          <Text style={styles.llamadasSub}>Tus horarios y los planes de tus alumnos</Text>
+          <Text style={styles.llamadasTitulo}>Llamadas</Text>
+          <Text style={styles.llamadasSub}>Grupales con todos tus alumnos, y tus horarios para las 1:1</Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
       </Pressable>

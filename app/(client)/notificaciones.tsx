@@ -12,6 +12,9 @@ import { diaMes, diasEntre, horaCorta } from '../../lib/fechas';
 import { frase, t } from '../../lib/idioma';
 import { unido } from '../../lib/texto';
 import { getAvisosDelAlumno } from '../../lib/firestore/avisos';
+import { getLlamadasGrupales } from '../../lib/firestore/llamadasGrupales';
+import { fijadasAhora, ultimaEnLlegar, type LlamadaGrupal } from '../../lib/llamadaGrupal';
+import { LlamadaGrupalFijada } from '../../components/LlamadaGrupalFijada';
 import { updateUserProfile } from '../../lib/firestore/users';
 import {
   ETIQUETA_DEL_PLAN,
@@ -56,24 +59,33 @@ export default function NotificacionesScreen() {
   // Días abiertos, por aviso y día ("aviso|día").
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
 
+  // Las llamadas grupales que tiene fijadas (lib/llamadaGrupal.ts), arriba.
+  const [grupales, setGrupales] = useState<LlamadaGrupal[]>([]);
+
   const uid = profile?.uid;
+  const trainerId = profile?.trainerId;
   useFocusEffect(
     useCallback(() => {
       if (!uid) return;
       let vivo = true;
       const antes = profile?.avisosVistos;
-      getAvisosDelAlumno(uid)
-        .then((lista) => {
+      Promise.all([
+        getAvisosDelAlumno(uid),
+        trainerId ? getLlamadasGrupales(trainerId, Date.now() - 6 * 3600_000).catch(() => []) : Promise.resolve([]),
+      ])
+        .then(([lista, deSuEntrenador]) => {
           if (!vivo) return;
           setVistosAntes(antes);
           setAvisos(lista);
+          setGrupales(fijadasAhora(deSuEntrenador));
           /*
            * Visto hasta AHORA, o hasta el último aviso si llegó "del futuro":
            * la hora del aviso es la del servidor y la de ahora la del móvil, y
            * con el móvil atrasado el aviso recién leído volvería a salir nuevo.
            */
-          const hasta = Math.max(Date.now(), lista[0]?.cuando ?? 0);
-          if (lista.length > 0 && (antes ?? 0) < (lista[0]?.cuando ?? 0)) {
+          const ultimo = Math.max(lista[0]?.cuando ?? 0, ultimaEnLlegar(deSuEntrenador));
+          const hasta = Math.max(Date.now(), ultimo);
+          if (ultimo > 0 && (antes ?? 0) < ultimo) {
             updateUserProfile(uid, { avisosVistos: hasta })
               .then(() => refreshProfile())
               .catch(() => {});
@@ -84,7 +96,7 @@ export default function NotificacionesScreen() {
         vivo = false;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [uid])
+    }, [uid, trainerId])
   );
 
   const volver = (
@@ -111,9 +123,16 @@ export default function NotificacionesScreen() {
     <ScreenContainer maxWidth={620}>
       {volver}
       <Text style={styles.titulo}>Notificaciones</Text>
-      <Text style={styles.subtitulo}>Lo que tu entrenador cambia de tu plan, con el día exacto.</Text>
+      <Text style={styles.subtitulo}>
+        Las llamadas grupales de tu entrenador y lo que cambia de tu plan, con el día exacto.
+      </Text>
 
-      {avisos.length === 0 ? (
+      {/* Las llamadas grupales que tiene por delante: tienen fecha, van primero. */}
+      {grupales.map((l) => (
+        <LlamadaGrupalFijada key={l.id} llamada={l} />
+      ))}
+
+      {avisos.length === 0 && grupales.length === 0 ? (
         <EmptyState
           icon="notifications-outline"
           title="Sin notificaciones"

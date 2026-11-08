@@ -14,9 +14,26 @@ import { ScreenContainer } from '../../components/ScreenContainer';
 import { ListSkeleton } from '../../components/Skeleton';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
-import { diaLargo, horaCorta, inicioDelDia, masDias, zonaDelDispositivo } from '../../lib/fechas';
+import { diaDeLaSemana, diaLargo, diaMes, horaCorta, inicioDelDia, masDias, zonaDelDispositivo } from '../../lib/fechas';
 import { frase, t } from '../../lib/idioma';
-import { notifyUser } from '../../lib/notifications';
+import { notifyUser, sendPushNotification } from '../../lib/notifications';
+import { LlamadaGrupalSheet } from '../../components/LlamadaGrupalSheet';
+import {
+  borrarLlamadaGrupal,
+  crearLlamadaGrupal,
+  editarLlamadaGrupal,
+  getLlamadasGrupales,
+} from '../../lib/firestore/llamadasGrupales';
+import {
+  avisarAlCrear,
+  cambioQueAvisar,
+  estaFijada,
+  fijadaDesde,
+  grupalParaGuardar,
+  proximasGrupales,
+  type BorradorDeGrupal,
+  type LlamadaGrupal,
+} from '../../lib/llamadaGrupal';
 import { getClientsForTrainer } from '../../lib/firestore/users';
 import {
   cancelarLlamada,
@@ -74,21 +91,93 @@ export default function LlamadasDelCoach() {
   const [hasta, setHasta] = useState('');
   const [aCancelar, setACancelar] = useState<Llamada | null>(null);
   const [planABorrar, setPlanABorrar] = useState<PlanDelCoach | null>(null);
+  // Las llamadas grupales (lib/llamadaGrupal.ts): la que se está programando
+  // o cambiando ('nueva' si es nueva) y la que se va a cancelar.
+  const [grupales, setGrupales] = useState<LlamadaGrupal[]>([]);
+  const [editandoGrupal, setEditandoGrupal] = useState<LlamadaGrupal | 'nueva' | null>(null);
+  const [guardandoGrupal, setGuardandoGrupal] = useState(false);
+  const [grupalABorrar, setGrupalABorrar] = useState<LlamadaGrupal | null>(null);
 
   const cargar = useCallback(async () => {
     if (!profile) return;
     const hoy = inicioDelDia(Date.now());
-    const [ajustes, lista, gente] = await Promise.all([
+    const [ajustes, lista, gente, deGrupo] = await Promise.all([
       getAjustesLlamadas(profile.uid),
       getLlamadasEntre(profile.uid, masDias(hoy, -1), masDias(hoy, 90)).catch(() => []),
       getClientsForTrainer(profile.uid).catch(() => []),
+      getLlamadasGrupales(profile.uid, Date.now() - 6 * 3600_000).catch(() => []),
     ]);
     setGuardado(ajustes);
     setA(ajustes);
     setLlamadas(lista);
     setAlumnos(gente);
+    setGrupales(deGrupo);
     setCargando(false);
   }, [profile]);
+
+  /** El aviso al móvil de cada alumno (lo que se programa y lo que cambia ya fijado). */
+  const avisarATodos = (titulo: string, cuerpo: string) => {
+    for (const x of alumnos) sendPushNotification(x.pushToken, titulo, cuerpo, { abrir: 'notificaciones' }).catch(() => {});
+  };
+
+  const guardarGrupal = async (b: BorradorDeGrupal) => {
+    if (!profile) return;
+    const antes = editandoGrupal === 'nueva' ? null : editandoGrupal;
+    setGuardandoGrupal(true);
+    try {
+      if (antes) {
+        await editarLlamadaGrupal(antes.id, b);
+        const l: LlamadaGrupal = { ...antes, nota: undefined, enlace: undefined, ...grupalParaGuardar(b) };
+        setGrupales((prev) => prev.map((x) => (x.id === l.id ? l : x)).sort((x, y) => x.inicio - y.inicio));
+        // Si ya la tenían fijada y cambia cuándo o por dónde, se les avisa.
+        if (estaFijada(l) && cambioQueAvisar(antes, l)) {
+          avisarATodos(
+            frase`Cambio en la llamada grupal: ${l.titulo}`,
+            frase`Ahora es el ${diaLargo(l.inicio)} a las ${horaCorta(l.inicio)}.`
+          );
+        }
+        showToast('Llamada grupal guardada');
+      } else {
+        const l = await crearLlamadaGrupal(profile.uid, b);
+        setGrupales((prev) => [...prev, l].sort((x, y) => x.inicio - y.inicio));
+        // Si ya le toca estar fijada, el aviso sale ahora; si no, ese día
+        // (lo programa el móvil de cada alumno).
+        if (avisarAlCrear(l)) {
+          avisarATodos(
+            frase`Llamada grupal: ${l.titulo}`,
+            frase`${diaLargo(l.inicio)} a las ${horaCorta(l.inicio)}. La tienes fijada en tu inicio.`
+          );
+        }
+        showToast('Llamada grupal programada');
+      }
+      setEditandoGrupal(null);
+    } catch {
+      showToast('No se pudo guardar');
+    } finally {
+      setGuardandoGrupal(false);
+    }
+  };
+
+  const confirmarCancelarGrupal = async () => {
+    const l = grupalABorrar;
+    if (!l) return;
+    setGrupalABorrar(null);
+    setGrupales((prev) => prev.filter((x) => x.id !== l.id));
+    try {
+      await borrarLlamadaGrupal(l.id);
+      // A quien ya la tenía fijada se le dice; a los demás no les llegó nada.
+      if (estaFijada(l)) {
+        avisarATodos(
+          'Llamada grupal cancelada',
+          frase`Tu entrenador ha cancelado "${l.titulo}" del ${diaLargo(l.inicio)} a las ${horaCorta(l.inicio)}.`
+        );
+      }
+      showToast('Llamada grupal cancelada');
+    } catch {
+      setGrupales((prev) => [...prev, l].sort((x, y) => x.inicio - y.inicio));
+      showToast('No se pudo cancelar');
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -244,11 +333,58 @@ export default function LlamadasDelCoach() {
       <Pressable onPress={() => router.push('/(trainer)/agenda')} style={styles.atras} hitSlop={8}>
         <Ionicons name="chevron-back" size={22} color={colors.text} />
       </Pressable>
-      <Text style={styles.titulo}>Llamadas 1:1</Text>
+      <Text style={styles.titulo}>Llamadas</Text>
       <Text style={styles.subtitulo}>
-        Tus alumnos reservan en tus huecos libres y te sale en el calendario. La llamada, por WhatsApp,
-        teléfono o tu enlace.
+        Grupales con todos tus alumnos a la vez, o 1:1 en tus huecos libres. Todas te salen en el calendario.
       </Text>
+
+      {/* GRUPALES: con todos a la vez, fijadas en su inicio los días que elija. */}
+      <Card style={styles.seccion}>
+        <View style={styles.cab}>
+          <Ionicons name="people-outline" size={16} color={colors.primary} />
+          <Text style={styles.seccionTitulo}>Llamadas grupales</Text>
+        </View>
+        <Text style={styles.ayuda}>
+          Con todos tus alumnos a la vez. Les llega el aviso y la tienen fijada en su inicio desde los días antes
+          que elijas hasta que empieza.
+        </Text>
+        {proximasGrupales(grupales).map((l) => (
+          <View key={l.id} style={styles.llamada}>
+            <View style={styles.grupalDia}>
+              <Text style={styles.grupalDiaSemana}>{diaDeLaSemana(l.inicio)}</Text>
+              <Text style={styles.grupalDiaNumero}>{String(new Date(l.inicio).getDate())}</Text>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.llamadaNombre} numberOfLines={1}>
+                {l.titulo}
+              </Text>
+              <Text style={styles.llamadaHora}>{`${diaLargo(l.inicio)} · ${horaCorta(l.inicio)}`}</Text>
+              <Text style={[styles.grupalFijada, estaFijada(l) && styles.grupalFijadaYa]}>
+                {estaFijada(l)
+                  ? t('Fijada ahora en el inicio de tus alumnos')
+                  : frase`Se fija a tus alumnos el ${diaMes(fijadaDesde(l))}`}
+              </Text>
+            </View>
+            <View style={styles.grupalAcciones}>
+              <Pressable onPress={() => setEditandoGrupal(l)} hitSlop={8} accessibilityRole="button">
+                <Text style={styles.cambiar}>Cambiar</Text>
+              </Pressable>
+              <Pressable onPress={() => setGrupalABorrar(l)} hitSlop={8} accessibilityRole="button">
+                <Text style={styles.cancelar}>Cancelar</Text>
+              </Pressable>
+            </View>
+          </View>
+        ))}
+        <Button
+          title="Programar llamada grupal"
+          variant="secondary"
+          compacto
+          onPress={() => setEditandoGrupal('nueva')}
+          style={{ marginTop: spacing.md }}
+        />
+      </Card>
+
+      <Text style={styles.bloque}>Llamadas 1:1</Text>
 
       {/* ENCENDIDAS O NO: mientras se monta el horario, mejor apagadas. */}
       <Card style={styles.seccion}>
@@ -586,6 +722,31 @@ export default function LlamadasDelCoach() {
           setPlanABorrar(null);
         }}
       />
+      {editandoGrupal ? (
+        <LlamadaGrupalSheet
+          inicial={editandoGrupal === 'nueva' ? null : editandoGrupal}
+          alumnos={alumnos.length}
+          guardando={guardandoGrupal}
+          onGuardar={guardarGrupal}
+          onClose={() => setEditandoGrupal(null)}
+        />
+      ) : null}
+      <Dialogo
+        visible={!!grupalABorrar}
+        onClose={() => setGrupalABorrar(null)}
+        icono="people-outline"
+        titulo="¿Cancelar la llamada grupal?"
+        texto={
+          grupalABorrar
+            ? estaFijada(grupalABorrar)
+              ? frase`"${grupalABorrar.titulo}", el ${diaLargo(grupalABorrar.inicio)} a las ${horaCorta(grupalABorrar.inicio)}. Desaparece del inicio de tus alumnos y les avisamos.`
+              : frase`"${grupalABorrar.titulo}", el ${diaLargo(grupalABorrar.inicio)} a las ${horaCorta(grupalABorrar.inicio)}. Aún no la veían: desaparece sin avisar a nadie.`
+            : ''
+        }
+        accion="Sí, cancelarla"
+        onAccion={confirmarCancelarGrupal}
+        cancelar="No"
+      />
     </ScreenContainer>
   );
 }
@@ -658,6 +819,28 @@ const styles = StyleSheet.create({
   llamadaPlan: { ...typography.small, color: colors.primaryBright, fontSize: 11 },
   llamadaHora: { ...typography.small, color: colors.textMuted, marginTop: 1 },
   cancelar: { ...typography.small, color: colors.textFaint },
+  cambiar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
+  bloque: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontFamily: fonts.semiBold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  grupalDia: {
+    width: 44,
+    paddingVertical: 4,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    backgroundColor: colors.primaryMuted,
+  },
+  grupalDiaSemana: { ...typography.small, color: colors.primaryBright, fontSize: 11, textTransform: 'uppercase' },
+  grupalDiaNumero: { ...typography.h3, color: colors.text, ...tabularNums },
+  grupalFijada: { ...typography.small, color: colors.textFaint, fontSize: 12, marginTop: 2 },
+  grupalFijadaYa: { color: colors.success },
+  grupalAcciones: { alignItems: 'flex-end', gap: spacing.sm },
   dia: { paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   diaCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   diaInicial: {

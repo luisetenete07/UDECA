@@ -66,6 +66,14 @@
         { "fieldPath": "clientId", "order": "ASCENDING" },
         { "fieldPath": "cuando", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "llamadasGrupales",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "trainerId", "order": "ASCENDING" },
+        { "fieldPath": "inicio", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

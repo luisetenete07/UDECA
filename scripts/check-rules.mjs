@@ -842,6 +842,74 @@ await comprobar('otro alumno no la ve', false, () => getDoc(doc(db, 'avisosDelPl
 await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
 await comprobar('y la borra con su cuenta', true, () => deleteDoc(doc(db, 'avisosDelPlan', avisoApuntado.id)));
 
+/*
+ * Las llamadas grupales (lib/llamadaGrupal.ts): las programa el entrenador y
+ * las ven todos sus alumnos (las tienen fijadas en su inicio).
+ */
+console.log('\nLlamadas grupales');
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+const enUnaSemana = Math.floor((Date.now() + 7 * 86400000) / 60000) * 60000;
+const grupal = (extra = {}) => ({
+  trainerId: coachId,
+  titulo: 'Preguntas y respuestas',
+  nota: 'Traed vuestras dudas',
+  enlace: 'https://meet.google.com/abc-defg-hij',
+  inicio: enUnaSemana,
+  duracionMin: 60,
+  diasAntes: 7,
+  createdAt: Date.now(),
+  ...extra,
+});
+let grupalHecha = null;
+await comprobar('el entrenador programa una para todos sus alumnos', true, async () => {
+  grupalHecha = await addDoc(collection(db, 'llamadasGrupales'), grupal());
+});
+await comprobar('sin enlace ni nota, también', true, async () => {
+  const sinNada = grupal();
+  delete sinNada.enlace;
+  delete sinNada.nota;
+  await deleteDoc(await addDoc(collection(db, 'llamadasGrupales'), sinNada));
+});
+await comprobar('en el pasado, no', false, () =>
+  addDoc(collection(db, 'llamadasGrupales'), grupal({ inicio: Date.now() - 3600000 }))
+);
+await comprobar('a nombre de otro entrenador, no', false, () =>
+  addDoc(collection(db, 'llamadasGrupales'), grupal({ trainerId: 'otro-cualquiera' }))
+);
+await comprobar('con un enlace que no es un enlace, no', false, () =>
+  addDoc(collection(db, 'llamadasGrupales'), grupal({ enlace: 'javascript:alert(1)' }))
+);
+await comprobar('fijada más de 60 días antes, no', false, () =>
+  addDoc(collection(db, 'llamadasGrupales'), grupal({ diasAntes: 90 }))
+);
+await comprobar('con campos de más, no', false, () =>
+  addDoc(collection(db, 'llamadasGrupales'), grupal({ alumnos: [marcosId] }))
+);
+await comprobar('la cambia (y le quita el enlace)', true, () =>
+  setDoc(doc(db, 'llamadasGrupales', grupalHecha.id), { titulo: 'Q&A de noviembre', enlace: deleteField() }, { merge: true })
+);
+await signInWithEmailAndPassword(auth, 'alumno@demo.test', PW);
+await comprobar('su alumno ve las de su entrenador', true, () =>
+  getDocs(query(collection(db, 'llamadasGrupales'), where('trainerId', '==', coachId), where('inicio', '>=', Date.now() - 6 * 3600000)))
+);
+await comprobar('y la abre', true, () => getDoc(doc(db, 'llamadasGrupales', grupalHecha.id)));
+await comprobar('pero no las de otro entrenador', false, () =>
+  getDocs(query(collection(db, 'llamadasGrupales'), where('trainerId', '==', 'otro-cualquiera')))
+);
+await comprobar('ni programa una él', false, () =>
+  addDoc(collection(db, 'llamadasGrupales'), grupal({ trainerId: marcosId }))
+);
+await comprobar('ni la cambia', false, () =>
+  setDoc(doc(db, 'llamadasGrupales', grupalHecha.id), { titulo: 'Otra' }, { merge: true })
+);
+await comprobar('ni la borra', false, () => deleteDoc(doc(db, 'llamadasGrupales', grupalHecha.id)));
+await signInWithEmailAndPassword(auth, 'alumno2@demo.test', PW);
+await comprobar('otro alumno del mismo entrenador también la ve', true, () =>
+  getDoc(doc(db, 'llamadasGrupales', grupalHecha.id))
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('el entrenador la cancela', true, () => deleteDoc(doc(db, 'llamadasGrupales', grupalHecha.id)));
+
 console.log(
   fallos === 0
     ? '\n✔ Todas las comprobaciones de reglas pasan.\n'

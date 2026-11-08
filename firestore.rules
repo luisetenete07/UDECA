@@ -427,6 +427,48 @@ service cloud.firestore {
         && (resource.data.trainerId == request.auth.uid || resource.data.clientId == request.auth.uid);
     }
 
+    // LLAMADAS GRUPALES (lib/llamadaGrupal.ts): el entrenador con todos sus
+    // alumnos a la vez. Las crea, cambia y borra el entrenador, a su nombre.
+    // Las leen él y quien lo tenga de entrenador (todos sus alumnos). Solo los
+    // campos de la llamada, con sus tamaños, y se crean para más adelante.
+    match /llamadasGrupales/{id} {
+      function miEntrenador() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('trainerId', '');
+      }
+      function bienHecha() {
+        return request.resource.data.trainerId == request.auth.uid
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'trainer'
+          && request.resource.data.titulo is string
+          && request.resource.data.titulo.size() > 0
+          && request.resource.data.titulo.size() <= 80
+          && (!('nota' in request.resource.data)
+            || (request.resource.data.nota is string && request.resource.data.nota.size() <= 500))
+          && (!('enlace' in request.resource.data)
+            || (request.resource.data.enlace is string
+              && request.resource.data.enlace.size() <= 500
+              && request.resource.data.enlace.matches('(?i)https?://\\S+')))
+          && request.resource.data.inicio is int
+          && request.resource.data.duracionMin is int
+          && request.resource.data.duracionMin >= 5
+          && request.resource.data.duracionMin <= 240
+          && request.resource.data.diasAntes is int
+          && request.resource.data.diasAntes >= 0
+          && request.resource.data.diasAntes <= 60
+          && request.resource.data.createdAt is int
+          && request.resource.data.keys().hasOnly(['trainerId', 'titulo', 'nota', 'enlace', 'inicio', 'duracionMin', 'diasAntes', 'createdAt']);
+      }
+      allow read: if request.auth != null
+        && (resource.data.trainerId == request.auth.uid || resource.data.trainerId == miEntrenador());
+      allow create: if request.auth != null
+        && bienHecha()
+        && request.resource.data.inicio > request.time.toMillis();
+      allow update: if request.auth != null
+        && resource.data.trainerId == request.auth.uid
+        && bienHecha();
+      allow delete: if request.auth != null
+        && resource.data.trainerId == request.auth.uid;
+    }
+
     // Las notificaciones del alumno: lo que su entrenador ha cambiado de su
     // plan, con los días tocados (lib/avisosDelPlan.ts). Las apunta SU
     // entrenador al guardarle el plan, a nombre de ese alumno y con la hora
