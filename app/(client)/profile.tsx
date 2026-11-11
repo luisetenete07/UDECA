@@ -369,8 +369,8 @@ export default function ClientProfileScreen() {
               </Pressable>
             </View>
             <Text style={styles.reminderHint}>
-              Mientras te quede algo por marcar, te aviso a las 10, 13, 16 y 19 h.
-              Cuando lo terminas, paran.
+              Si a las 18 h te queda algo por marcar, te aviso una vez. Si ya
+              lo has terminado, no suena.
             </Text>
           </>
         ) : null}

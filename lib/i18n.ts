@@ -284,10 +284,10 @@ export const EN: Record<string, string> = {
   // Los avisos de la rutina de cada día (lib/notifications.ts, perfil del alumno).
   'Te queda 1. Un momento y está.': 'Just 1 left. One moment and done.',
   'Te quedan {0} de {1}. Una ahora, que son cortas.': '{0} of {1} left. Do one now, they are short.',
-  'Hoy toca: {0} cosas cortas repartidas por el día.': 'Today: {0} short things spread through the day.',
+  'Hoy toca: {0} cosas cortas. Aún estás a tiempo.': "Today: {0} short things. There's still time.",
   'Tu rutina de cada día': 'Your daily routine',
-  'Mientras te quede algo por marcar, te aviso a las 10, 13, 16 y 19 h. Cuando lo terminas, paran.':
-    "While something is left to tick, I'll remind you at 10, 13, 16 and 19 h. Once you finish, they stop.",
+  'Si a las 18 h te queda algo por marcar, te aviso una vez. Si ya lo has terminado, no suena.':
+    "If something is left to tick at 6 pm, I'll remind you once. If you've finished, it stays quiet.",
   // Los pasos del sistema: Salud en iPhone, la grabación de Google en Android.
   'Se leen solos de Salud: iPhone y Apple Watch': 'Read automatically from Health: iPhone and Apple Watch',
   'Se cuentan solos, también con la app cerrada': 'Counted automatically, even with the app closed',

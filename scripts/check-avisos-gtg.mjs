@@ -21,8 +21,8 @@ const hoy = (l) => l.filter((x) => x.esHoy);
 console.log('\nHoy, solo lo que queda por delante');
 {
   const l = avisosDelGtg(4, a(8));
-  ok('dos al día: a las 10:00 y a las 18:00', HORAS_DEL_GTG.join(',') === '10,18', HORAS_DEL_GTG.join(','));
-  ok('a las 8, los dos de hoy', hoy(l).map((x) => new Date(x.cuando).getHours()).join(',') === '10,18');
+  ok('uno al día como máximo, a las 18:00', HORAS_DEL_GTG.join(',') === '18', HORAS_DEL_GTG.join(','));
+  ok('a las 8, solo el de las 18 de hoy', hoy(l).map((x) => new Date(x.cuando).getHours()).join(',') === '18');
   ok('en punto', l.every((x) => new Date(x.cuando).getMinutes() === 0));
   const tarde = avisosDelGtg(2, a(14, 30));
   ok('a las 14:30, solo el de las 18', hoy(tarde).map((x) => new Date(x.cuando).getHours()).join(',') === '18');
@@ -43,8 +43,12 @@ console.log('\nLos días siguientes, puestos');
   const l = avisosDelGtg(3, a(20));
   const dias = new Set(l.map((x) => new Date(x.cuando).getDate()));
   ok(`${DIAS_DE_AVISOS_GTG - 1} días más por delante`, dias.size === DIAS_DE_AVISOS_GTG - 1, [...dias].join(','));
-  ok('cada día, los mismos dos', l.length === (DIAS_DE_AVISOS_GTG - 1) * 2);
-  ok('ni uno fuera de las 10 y las 18', l.every((x) => [10, 18].includes(new Date(x.cuando).getHours())));
+  ok('cada día, uno solo', l.length === DIAS_DE_AVISOS_GTG - 1);
+  ok('ni uno fuera de las 18', l.every((x) => new Date(x.cuando).getHours() === 18));
+  const dosDias = avisosDelGtg(5, a(7));
+  const porDia = new Map();
+  for (const x of dosDias) porDia.set(new Date(x.cuando).getDate(), (porDia.get(new Date(x.cuando).getDate()) ?? 0) + 1);
+  ok('nunca dos el mismo día', [...porDia.values()].every((n) => n === 1));
 }
 
 console.log('\nY la app los usa');
@@ -53,6 +57,7 @@ console.log('\nY la app los usa');
   ok('la tarjeta los rehace con lo que queda', /programarAvisosGtg\([^)]*pr\.total - pr\.hechos, pr\.total\)/.test(tarjeta));
   ok('y los quita sin rutina o apagados', /if \(!rutina \|\| !hayRutinaDiaria\(rutina\) \|\| !avisosOn\) \{\s*cancelarAvisosGtg\(\)/.test(tarjeta));
   const perfil = readFileSync('app/(client)/profile.tsx', 'utf8');
+  ok('y el perfil dice la verdad: una vez, a las 18', /Si a las 18 h te queda algo por marcar, te aviso una vez\./.test(perfil.replace(/\s+/g, ' ')));
   ok('el alumno puede apagarlos', /dailyRoutineRemindersEnabled: next/.test(perfil) && /if \(!next\) await cancelarAvisosGtg\(\);/.test(perfil));
 }
 

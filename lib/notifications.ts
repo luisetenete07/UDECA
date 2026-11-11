@@ -288,7 +288,7 @@ export async function programarAvisosGtg(
             ? quedanHoy === 1
               ? t('Te queda 1. Un momento y está.')
               : frase`Te quedan ${quedanHoy} de ${total}. Una ahora, que son cortas.`
-            : frase`Hoy toca: ${total} cosas cortas repartidas por el día.`,
+            : frase`Hoy toca: ${total} cosas cortas. Aún estás a tiempo.`,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
