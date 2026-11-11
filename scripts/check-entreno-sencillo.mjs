@@ -42,7 +42,8 @@ console.log('\nEl descanso, dentro de la pantalla de entreno');
 {
   // Flotando abajo tapaba "Anterior" y "Siguiente".
   const enLinea = (w.match(/<RestTimer key=\{activeRest\.id\} rest=\{activeRest\} enLinea \/>/g) ?? []).length;
-  ok('va dentro: en el ejercicio suelto y en la superserie', enLinea === 2, String(enLinea));
+  // Y una tercera para el alumno sin rutina, con su temporizador suelto (lib/cronoLibre.ts).
+  ok('va dentro: en el ejercicio suelto, en la superserie y sin rutina', enLinea === 3, String(enLinea));
   ok('sin el hueco de abajo que se reservaba para el flotante', !/restSpacer/.test(w));
   ok('la tarjeta no se apaga mientras descansa', /isDone && !activeRest && styles\.exerciseCardDone/.test(w));
   const flotante = lee('components/GlobalRestTimer.tsx');

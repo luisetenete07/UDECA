@@ -1005,6 +1005,17 @@ export const EN: Record<string, string> = {
   'Llamada grupal · {0}': 'Group call · {0}',
   'Grupales con todos tus alumnos, y tus horarios para las 1:1': 'Group calls with all your students, and your hours for 1:1 calls',
   'Las llamadas grupales de tu entrenador y lo que cambia de tu plan, con el día exacto.': 'Your coach\'s group calls and what changes in your plan, with the exact day.',
+  // El temporizador de descanso suelto (lib/cronoLibre.ts).
+  'Temporizador de descanso': 'Rest timer',
+  'Elige cuánto quieres descansar entre series. Suena al terminar, aunque cambies de pantalla.': 'Choose how long you want to rest between sets. It rings when it ends, even if you switch screens.',
+  'Quitar 15 segundos': 'Remove 15 seconds',
+  'Añadir 15 segundos': 'Add 15 seconds',
+  'Tiempo de descanso': 'Rest time',
+  'Toca el tiempo para escribirlo (ej. 1:20)': 'Tap the time to type it (e.g. 1:20)',
+  'Escribe el tiempo así: 1:30, o en segundos: 90': 'Type the time like this: 1:30, or in seconds: 90',
+  'Empezar descanso': 'Start rest',
+  'Volver a empezar': 'Start again',
+  'Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, controla tus descansos con el temporizador.': 'Your coach has not assigned you a routine in the app yet. Meanwhile, keep track of your rests with the timer.',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':

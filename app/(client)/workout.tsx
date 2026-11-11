@@ -22,6 +22,7 @@ import {
 import { FadeIn } from '../../components/FadeIn';
 import { EmptyState } from '../../components/EmptyState';
 import { IntervalTimer } from '../../components/IntervalTimer';
+import { CronoDeDescanso } from '../../components/CronoDeDescanso';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { VisorDeVideo } from '../../components/VisorDeVideo';
@@ -1980,10 +1981,19 @@ export default function WorkoutScreen() {
           <Text style={styles.exitText}>Volver a inicio</Text>
         </Pressable>
         <Text style={styles.title}>Mi entrenamiento</Text>
+        {/* Sin rutina para apuntar, el descanso no salta solo al marcar una
+            serie: aquí lo lanza a mano, con el tiempo que quiera. La cuenta
+            atrás va encima, dentro (en esta pantalla no flota). */}
+        {activeRest ? (
+          <View style={{ marginBottom: spacing.md }}>
+            <RestTimer key={activeRest.id} rest={activeRest} enLinea />
+          </View>
+        ) : null}
+        <CronoDeDescanso />
         <EmptyState
           icon="barbell-outline"
           title="Sin rutina asignada"
-          subtitle="Tu entrenador todavía no te ha asignado una rutina. Vuelve a comprobarlo pronto."
+          subtitle="Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, controla tus descansos con el temporizador."
         />
       </ScreenContainer>
     );

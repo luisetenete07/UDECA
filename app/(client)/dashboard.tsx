@@ -8,6 +8,7 @@ import { getAvisosDelAlumno } from '../../lib/firestore/avisos';
 import { avisosSinVer } from '../../lib/avisosDelPlan';
 import type { AjustesLlamadas, Llamada } from '../../lib/llamadas';
 import { LlamadaGrupalFijada } from '../../components/LlamadaGrupalFijada';
+import { CronoDeDescanso } from '../../components/CronoDeDescanso';
 import { getLlamadasGrupales } from '../../lib/firestore/llamadasGrupales';
 import { fijadasAhora, grupalesSinVer, type LlamadaGrupal } from '../../lib/llamadaGrupal';
 import { unido } from '../../lib/texto';
@@ -722,6 +723,14 @@ export default function ClientDashboard() {
         </LinearGradient>
       </Pressable>
       </FadeIn>
+
+      {/* Sin rutina para apuntar marcas: el temporizador de descanso, a mano
+          y con el tiempo que quiera (lib/cronoLibre.ts). */}
+      {!loading && !routine ? (
+        <FadeIn delay={80}>
+          <CronoDeDescanso />
+        </FadeIn>
+      ) : null}
 
       {/* LO QUE TOCA A DIARIO, aparte del plan: el pino, la movilidad.
           Va JUSTO DEBAJO de la sesión de hoy, y no al final, porque las dos
