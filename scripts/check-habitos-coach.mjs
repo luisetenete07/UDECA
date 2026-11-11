@@ -79,7 +79,7 @@ console.log('\nSin límite, y lo apuntado mientras carga no se pierde');
 console.log('\nEn el panel del entrenador');
 {
   const d = lee('app/(trainer)/dashboard.tsx');
-  ok('justo encima de los pendientes', /<HabitosDelCoach[\s\S]{0,400}<\/FadeIn>[\s{}]*<FadeIn delay=\{240\}>\s*<PendientesDelCoach/.test(d));
+  ok('justo debajo de "Por revisar"', /<Text style=\{styles\.bandejaTitulo\}>Por revisar<\/Text>[\s\S]*?<\/Card>\s*<\/FadeIn>[\s{}]*<FadeIn delay=\{300\}>\s*<HabitosDelCoach/.test(d));
   ok('marcar guarda los días', /const dias = conHoyAlternado\(h\.dias\);/.test(d) && /updateCoachTask\(h\.id, \{ dias \}\)/.test(d));
   ok('y se crean como hábitos', /scope: 'habit', done: false, dias: \[\]/.test(d));
   const c = lee('components/HabitosDelCoach.tsx');

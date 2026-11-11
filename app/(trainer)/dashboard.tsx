@@ -730,18 +730,6 @@ export default function TrainerDashboard() {
         />
       </FadeIn>
 
-      {/* Sus hábitos de cada día, justo encima de los pendientes: un toque y
-          hecho, y mañana salen sin marcar (lib/habitosCoach.ts). */}
-      <FadeIn delay={225}>
-        <HabitosDelCoach
-          tasks={tasks}
-          onAdd={handleAddHabito}
-          onToggle={handleToggleHabito}
-          onRename={handleRenombrarHabito}
-          onDelete={handleBorrarHabito}
-        />
-      </FadeIn>
-
       {/* Lo que hay que hacer sin día: una lista, como la del papel en la
           nevera. Los primeros a la vista; el resto, en "Ver más". */}
       <FadeIn delay={240}>
@@ -919,6 +907,18 @@ export default function TrainerDashboard() {
             </Pressable>
           ) : null}
         </Card>
+      </FadeIn>
+
+      {/* Sus hábitos de cada día, debajo de "Por revisar": un toque y hecho,
+          y mañana salen sin marcar (lib/habitosCoach.ts). */}
+      <FadeIn delay={300}>
+        <HabitosDelCoach
+          tasks={tasks}
+          onAdd={handleAddHabito}
+          onToggle={handleToggleHabito}
+          onRename={handleRenombrarHabito}
+          onDelete={handleBorrarHabito}
+        />
       </FadeIn>
 
       {/* Los periodos que se acaban esta semana o ya se acabaron, con +1 mes
