@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { frase } from '../../../lib/idioma';
+import { frase, t } from '../../../lib/idioma';
 import { useLocalSearchParams } from 'expo-router';
 import { Image, Modal, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Text } from '../../../components/Texto';
@@ -18,11 +18,9 @@ import {
   EmbeddedDoc,
   LectorAPantallaCompleta,
 } from '../../../components/LectorDePdf';
-import { BotonAmpliar, VisorDeVideo } from '../../../components/VisorDeVideo';
-import { mereceAmpliar, tamanoDelVisor } from '../../../lib/visorDeVideo';
+import { VisorDeVideo } from '../../../components/VisorDeVideo';
 import { esEbook } from '../../../lib/visorDeEbook';
 import {
-  MarcaDeAgua,
   useProteccionDePantalla,
   useSinCopiaEnWeb,
 } from '../../../components/MarcaDeAgua';
@@ -344,13 +342,24 @@ function ReproductorLeccion({
 }) {
   const esPdf = esEbook(contenido);
   const [pillado, setPillado] = useState(false);
+  /** La clase abierta a pantalla completa (components/VisorDeVideo). */
   const [ampliado, setAmpliado] = useState(false);
   /** El e-book de apoyo de una clase de vídeo, abierto a pantalla completa. */
   const [leyendo, setLeyendo] = useState(false);
-  // El vídeo ya no cabe en la columna de texto: se calcula el 16:9 más grande
-  // que entra en esta pantalla (ver lib/visorDeVideo).
-  const { width: ancho, height: alto } = useWindowDimensions();
-  const tamVideo = tamanoDelVisor(ancho, alto);
+  /**
+   * Si esta ventana ya ha terminado de abrirse.
+   *
+   * La clase se abre a pantalla completa ENCIMA de esta ventana, y en el
+   * iPhone una ventana no se puede abrir mientras la de debajo todavía está
+   * entrando: el sistema la descarta sin avisar y el vídeo no sale. Así que se
+   * espera a que esta termine (`onShow`) y entonces se abre la otra.
+   */
+  const [mostrada, setMostrada] = useState(false);
+  const conVideo = !!contenido?.videoUrl && !esPdf;
+  // La portada, del ancho de la columna de texto: es una foto con un play,
+  // no el vídeo, y a lo ancho de un monitor sería un cartel.
+  const { width: ancho } = useWindowDimensions();
+  const anchoPortada = Math.max(0, Math.min(ancho - spacing.md * 2, 860));
   // Mientras hay una clase abierta, el sistema no deja grabar la pantalla
   // (Android e iOS). Se apaga al cerrar: bloquearlo todo el rato impediría al
   // alumno hacerle una captura a su propio entreno.
@@ -358,20 +367,44 @@ function ReproductorLeccion({
   // El aviso de captura es para donde el bloqueo no llega (un iOS antiguo): se
   // tapa la clase y hay que volver a destaparla a mano. No es una cerradura
   // —quien lo intenta ya tiene su captura—, es que sepa que se ha visto.
-  useProteccionDePantalla(!!contenido, () => setPillado(true));
+  //
+  // Y si salta con la clase a pantalla completa, se cierra: la tapa va en esta
+  // ventana, y por encima seguiría viéndose el vídeo.
+  useProteccionDePantalla(!!contenido, () => {
+    setPillado(true);
+    setAmpliado(false);
+  });
   // Y el PDF de una lección también es material del curso: mientras esté
   // abierto, en el navegador no hay menú, ni selección, ni arrastrar fuera.
   useSinCopiaEnWeb(!!contenido);
-  // Al encadenar con la siguiente, lo que estuviera ampliado se cierra. Este
-  // reproductor no se desmonta entre lecciones —cambia lo que enseña—, así que
-  // sin esto la lección nueva se abriría con el visor de la anterior encima.
+  /*
+   * ABRIR UNA CLASE ES VERLA, A PANTALLA COMPLETA.
+   *
+   * Al tocar una clase de vídeo, el vídeo se abre directamente a pantalla
+   * completa y empieza solo. Al cerrarlo queda esta ventana, con el texto de la
+   * lección, el botón de marcarla vista y la portada para volver a verla.
+   *
+   * Lo mismo al encadenar con la siguiente ("Vista · ir a la siguiente"): este
+   * reproductor no se desmonta entre lecciones —cambia lo que enseña—, y la
+   * lección nueva se abre igual que si se hubiera tocado en la lista. El
+   * e-book de la anterior, en cambio, se cierra.
+   */
   useEffect(() => {
-    setAmpliado(false);
+    if (!contenido) setMostrada(false);
+  }, [!!contenido]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setAmpliado(mostrada && conVideo);
     setLeyendo(false);
-  }, [contenido?.id]);
+  }, [contenido?.id, mostrada, conVideo]);
   if (!contenido) return null;
   return (
-    <Modal visible animationType="slide" onRequestClose={onCerrar} transparent={false}>
+    <Modal
+      visible
+      animationType="slide"
+      onRequestClose={onCerrar}
+      onShow={() => setMostrada(true)}
+      transparent={false}
+    >
       <View style={styles.repFondo}>
         <View style={styles.repCabecera}>
           <Pressable onPress={onCerrar} hitSlop={10} style={styles.repCerrar}>
@@ -428,17 +461,36 @@ function ReproductorLeccion({
               impide copiar: hace que la copia lleve el nombre de quien la
               filtró, que contra una cámara apuntando a la pantalla es lo
               único que queda. */}
-          {/* El vídeo, tan ancho como caben 16:9 en esta pantalla y no atado a
-              la columna de texto: en un ordenador esa columna dejaba la clase
-              en un tercio de la pantalla, que para ver una técnica no da. */}
-          <View style={[styles.repVideo, { width: tamVideo.width, height: tamVideo.height }]}>
-            <MarcaDeAgua profile={profile}>
-              <VideoPlayer url={contenido.videoUrl} protectedContent />
-            </MarcaDeAgua>
-          </View>
-          {mereceAmpliar(tamVideo.width, ancho, alto) ? (
-            <BotonAmpliar onPress={() => setAmpliado(true)} />
-          ) : null}
+          {/* El vídeo no se ve aquí: se ve a pantalla completa, que es donde se
+              abre al entrar en la clase. Aquí queda su portada para volver a
+              verlo. Un solo reproductor a la vez: dos cargados eran dos
+              vídeos sonando y el doble de datos. */}
+          {contenido.videoUrl ? (
+            <Pressable
+              onPress={() => setAmpliado(true)}
+              style={[styles.portada, { width: anchoPortada }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('Ver la clase a pantalla completa')}
+            >
+              <MiniaturaCurso
+                contenido={contenido}
+                thumbURL={leccion && contenido.id === leccion.id ? leccion.thumbURL : undefined}
+                tamano="ancha"
+                vista={vista}
+                style={styles.portadaImagen}
+              />
+              <View style={styles.portadaVelo} pointerEvents="none">
+                <View style={styles.portadaPlay}>
+                  <Ionicons name="play" size={30} color={colors.onPrimary} style={{ marginLeft: 3 }} />
+                </View>
+                <Text style={styles.portadaTexto}>Ver a pantalla completa</Text>
+              </View>
+            </Pressable>
+          ) : (
+            <View style={{ width: anchoPortada }}>
+              <VideoPlayer url={undefined} />
+            </View>
+          )}
           <VisorDeVideo
             visible={ampliado}
             url={contenido.videoUrl}
@@ -674,7 +726,30 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  repVideo: { borderRadius: radius.md, overflow: 'hidden', backgroundColor: '#000' },
+  portada: { borderRadius: radius.md, overflow: 'hidden', backgroundColor: '#000' },
+  portadaImagen: { borderRadius: radius.md, borderWidth: 0 },
+  portadaVelo: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  portadaPlay: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  portadaTexto: {
+    ...typography.small,
+    color: '#fff',
+    fontFamily: fonts.semiBold,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 6,
+  },
   repTexto: { width: '100%', maxWidth: 860 },
   lessonTitle: { ...typography.h2, color: colors.text, marginTop: spacing.md },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.xs },

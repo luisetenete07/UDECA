@@ -91,13 +91,93 @@ export function relacionDelVideo(url: string | undefined | null): number {
   return url && esVertical(url) ? RELACION_VERTICAL : RELACION;
 }
 
-/**
- * ¿Merece la pena ofrecer "ampliar"?
+/*
+ * LA PANTALLA COMPLETA, LA NUESTRA
  *
- * En un móvil el vídeo ya ocupa casi todo el ancho: un botón para agrandarlo
- * un 4 % es un botón que miente. Se ofrece cuando de verdad se gana tamaño.
+ * Lo que se pidió: que un vídeo de técnica o de un curso, al abrirlo, se vea a
+ * pantalla completa y en la mejor calidad. La pantalla completa del sistema
+ * sigue sin valer —encima de ella no hay marca de agua ni tapa de la barra de
+ * YouTube—, así que es una pantalla completa DENTRO de la app: el vídeo ocupa
+ * la pantalla entera, de borde a borde, y sigue siendo un elemento nuestro.
+ *
+ * Y la calidad sale de aquí también. YouTube no deja pedirle una calidad desde
+ * fuera (quitó esa opción); la elige él según el tamaño del reproductor y la
+ * conexión. Cuanto más grande es el reproductor, más alta la que escoge, así
+ * que darle la pantalla entera es lo que de verdad sube la calidad.
+ *
+ * EL MÓVIL DE PIE
+ *
+ * La app va siempre en vertical, y un vídeo apaisado en un móvil de pie se
+ * queda en una franja: 390×219 en una pantalla de 390×844, un cuarto de lo que
+ * hay. Se hace lo que hacen todas las apps de vídeo: el vídeo se pinta GIRADO,
+ * para ver con el móvil tumbado, y entonces ocupa 693×390, el triple.
+ *
+ * Se gira el vídeo y no la app porque la app tiene la orientación bloqueada, y
+ * desbloquearla es tocar la configuración nativa de las dos tiendas para todas
+ * las pantallas. Esto solo toca el visor.
+ *
+ * Donde la ventana YA está tumbada (un ordenador, una tablet girada, el
+ * navegador del móvil al girarlo) no se gira nada: ya cabe tal cual. Y los
+ * verticales (Shorts) nunca: de pie es justo como se ven enteros.
  */
-export function mereceAmpliar(anchoDelVideo: number, anchoVentana: number, altoVentana: number): boolean {
-  const { width } = tamanoDelVisor(anchoVentana, altoVentana);
-  return width > anchoDelVideo * 1.15;
+
+/** Cómo se coloca el vídeo cuando se abre a pantalla completa. */
+export interface PantallaCompleta {
+  /** Si se pinta girado 90° para verlo con el móvil tumbado. */
+  girado: boolean;
+  /** El lienzo donde va el vídeo, ya en su orientación (girado, el ancho es el alto de la pantalla). */
+  ancho: number;
+  alto: number;
+  /** El vídeo dentro del lienzo: lo más grande que cabe sin deformarlo. */
+  video: TamanoDelVisor;
+}
+
+/** ¿Tiene sentido girar este vídeo en esta ventana? Apaisado en una ventana de pie. */
+export function sePuedeGirar(anchoVentana: number, altoVentana: number, relacion = RELACION): boolean {
+  return relacion > 1 && altoVentana > anchoVentana;
+}
+
+/**
+ * El vídeo a toda la pantalla.
+ *
+ * `enVertical` es la elección de quien mira: hay quien prefiere no tumbar el
+ * móvil (lo tiene apoyado, está con una mano), y para eso está el botón de
+ * girar. Por defecto se gira, que es lo que llena la pantalla.
+ */
+export function pantallaCompleta(
+  anchoVentana: number,
+  altoVentana: number,
+  relacion = RELACION,
+  enVertical = false
+): PantallaCompleta {
+  const w = Math.max(0, anchoVentana);
+  const h = Math.max(0, altoVentana);
+  const r = relacion > 0 ? relacion : RELACION;
+  const girado = !enVertical && sePuedeGirar(w, h, r);
+  const ancho = girado ? h : w;
+  const alto = girado ? w : h;
+  let vw = ancho;
+  let vh = vw / r;
+  if (vh > alto) {
+    vh = alto;
+    vw = vh * r;
+  }
+  return { girado, ancho, alto, video: { width: Math.round(vw), height: Math.round(vh) } };
+}
+
+/**
+ * Los márgenes seguros del sistema (muesca, barra de inicio) vistos desde el
+ * lienzo GIRADO.
+ *
+ * Girado 90° a la derecha, lo de arriba del lienzo es el lado derecho del
+ * móvil, su derecha es la parte de abajo (donde está la barra de inicio), su
+ * abajo es el lado izquierdo y su izquierda es arriba, donde está la muesca.
+ * Sin este cambio, el botón de cerrar caería debajo de la barra de inicio.
+ */
+export function margenesDelLienzo(
+  m: { top: number; right: number; bottom: number; left: number },
+  girado: boolean
+): { top: number; right: number; bottom: number; left: number } {
+  if (!girado) return m;
+  return { top: m.right, right: m.bottom, bottom: m.left, left: m.top };
 }

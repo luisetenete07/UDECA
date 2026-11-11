@@ -111,6 +111,44 @@ export function youTubeEmbedUrl(id: string): string {
 }
 
 /**
+ * El embed tal y como se abre a PANTALLA COMPLETA: que empiece solo y, donde
+ * se puede pedir, en la calidad más alta.
+ *
+ * Que empiece solo porque abrirlo ya es darle al play: quien toca "Técnica" o
+ * entra en una clase viene a verla, y hacerle tocar otra vez dentro es un paso
+ * de más.
+ *
+ * LA CALIDAD, SIN PROMETER LO QUE NO SE PUEDE
+ *
+ * - VIMEO sí deja pedirla (`quality`), en las cuentas de pago. Se pide 1080p:
+ *   es la más alta que tiene sentido en un móvil, y pedir 4K a quien está con
+ *   datos es pedirle que se quede cargando. Si el vídeo no la tiene o la cuenta
+ *   es gratuita, Vimeo se queda con la mejor que pueda.
+ * - YOUTUBE no. Quitó el parámetro y elige él según el tamaño del reproductor y
+ *   la conexión. Lo que sube la calidad ahí es que el reproductor ocupe la
+ *   pantalla entera, y eso lo hace el visor (lib/visorDeVideo.ts).
+ * - Un archivo suelto (.mp4) tiene la calidad con la que se subió.
+ *
+ * Los demás enlaces (Drive, Dropbox) se dejan como están: cada sitio entiende
+ * sus parámetros, y uno que no conoce puede romper la reproducción.
+ */
+export const CALIDAD_VIMEO = '1080p';
+
+export function paraPantallaCompleta(embedUrl: string): string {
+  try {
+    const u = new URL(embedUrl);
+    const host = u.hostname.replace(/^www\./, '');
+    const deVimeo = host === 'player.vimeo.com';
+    if (!deVimeo && !esEmbedDeYouTube(embedUrl)) return embedUrl;
+    u.searchParams.set('autoplay', '1');
+    if (deVimeo) u.searchParams.set('quality', CALIDAD_VIMEO);
+    return u.toString();
+  } catch {
+    return embedUrl;
+  }
+}
+
+/**
  * EL ORIGEN QUE SE LE PRESTA AL REPRODUCTOR EN EL MÓVIL.
  *
  * EL ERROR 153, CONTADO ENTERO

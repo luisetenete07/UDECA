@@ -8,6 +8,7 @@ import {
   esEmbedDeYouTube,
   ORIGEN_DE_LA_APP,
   paginaDeEmbed,
+  paraPantallaCompleta,
   parseVimeoUrl,
   parseYouTubeId,
   seQuedaDentro,
@@ -34,13 +35,47 @@ import { colors, radius, spacing, typography } from '../lib/theme';
  * Nota: ningún reproductor web puede impedir al 100% la grabación de
  * pantalla; esto disuade la descarga y el reparto de enlaces.
  */
-export function VideoPlayer({
+/**
+ * Las esquinas del vídeo. Redondeadas dentro de una página, como todo lo
+ * demás; a pantalla completa, rectas: un vídeo de borde a borde con las
+ * esquinas comidas parece recortado.
+ */
+const Radio = React.createContext<number>(radius.md);
+
+type PropsDelReproductor = {
+  url?: string;
+  /** Cursos: refuerza las protecciones (sin PiP, sin menú contextual). */
+  protectedContent?: boolean;
+  /**
+   * Va en el visor a pantalla completa (components/VisorDeVideo): empieza
+   * solo y pide la calidad más alta donde se puede pedir (ver
+   * `paraPantallaCompleta` en lib/video.ts).
+   */
+  pantallaCompleta?: boolean;
+};
+
+export function VideoPlayer(props: PropsDelReproductor) {
+  return (
+    <Radio.Provider value={props.pantallaCompleta ? 0 : radius.md}>
+      <Reproductor {...props} />
+    </Radio.Provider>
+  );
+}
+
+function Reproductor({
   url,
   protectedContent = false,
+  pantallaCompleta = false,
 }: {
   url?: string;
   /** Cursos: refuerza las protecciones (sin PiP, sin menú contextual). */
   protectedContent?: boolean;
+  /**
+   * Va en el visor a pantalla completa (components/VisorDeVideo): empieza
+   * solo y pide la calidad más alta donde se puede pedir (ver
+   * `paraPantallaCompleta` en lib/video.ts).
+   */
+  pantallaCompleta?: boolean;
 }) {
   if (!url) {
     return (
@@ -73,24 +108,31 @@ export function VideoPlayer({
    * mantiene: la marca de agua con el nombre de quien mira, no poder navegar
    * fuera de la app y no tener pantalla completa.
    */
-  const blindado =
+  // A pantalla completa, el embed empieza solo y con la mejor calidad que se
+  // pueda pedir. Fuera del visor se queda como siempre.
+  const embed = (e: string) => (pantallaCompleta ? paraPantallaCompleta(e) : e);
+
+  const fuente =
     protectedContent && Platform.OS === 'web'
       ? fuenteBlindada(url, origenDelReproductor())
       : null;
+  const blindado = fuente
+    ? { ...fuente, src: embed(fuente.src), srcNormal: embed(fuente.srcNormal) }
+    : null;
   if (blindado) return <VideoBlindado fuente={blindado} relacion={relacionDelVideo(url)} />;
 
   // Enlaces de Vimeo: se reproducen con el player oficial embebido, que
   // respeta la privacidad "solo donde esté incrustado" configurada en Vimeo.
   const vimeo = parseVimeoUrl(url);
   if (vimeo) {
-    return <VimeoVideo embedUrl={vimeoEmbedUrl(vimeo)} protectedContent={protectedContent} />;
+    return <VimeoVideo embedUrl={embed(vimeoEmbedUrl(vimeo))} protectedContent={protectedContent} />;
   }
 
   const youtubeId = parseYouTubeId(url);
   if (youtubeId) {
     return (
       <VimeoVideo
-        embedUrl={youTubeEmbedUrl(youtubeId)}
+        embedUrl={embed(youTubeEmbedUrl(youtubeId))}
         protectedContent={protectedContent}
         relacion={relacionDelVideo(url)}
       />
@@ -100,7 +142,11 @@ export function VideoPlayer({
   // Archivo de vídeo directo (mp4, HLS...): reproductor propio.
   const looksLikeFile = /\.(mp4|webm|mov|m4v|m3u8)(\?|#|$)/i.test(url);
   if (looksLikeFile) {
-    return Platform.OS === 'web' ? <WebVideo url={url} /> : <NativeVideo url={url} />;
+    return Platform.OS === 'web' ? (
+      <WebVideo url={url} solo={pantallaCompleta} />
+    ) : (
+      <NativeVideo url={url} solo={pantallaCompleta} />
+    );
   }
 
   // Cualquier otro enlace (Drive, Dropbox, etc.): se muestra embebido DENTRO
@@ -161,6 +207,7 @@ function VideoBlindado({
   fuente: NonNullable<ReturnType<typeof fuenteBlindada>>;
   relacion?: number;
 }) {
+  const radio = React.useContext(Radio);
   const html = React.useMemo(() => paginaDelReproductor(fuente), [fuente.src]);
   const [seRindio, setSeRindio] = React.useState(false);
   const base = fuente.dialecto === 'youtube' ? BASE_NATIVA : 'https://player.vimeo.com';
@@ -187,7 +234,7 @@ function VideoBlindado({
         width: '100%',
         aspectRatio: String(relacion),
         backgroundColor: '#000',
-        borderRadius: radius.md,
+        borderRadius: radio,
         border: 'none',
       },
     });
@@ -195,7 +242,7 @@ function VideoBlindado({
 
   const { WebView } = require('react-native-webview');
   return (
-    <View style={styles.video}>
+    <View style={[styles.video, { borderRadius: radio }]}>
       <WebView
         source={{ html, baseUrl: base }}
         originWhitelist={['*']}
@@ -224,7 +271,7 @@ function VideoBlindado({
         onRenderProcessGone={() => setSeRindio(true)}
         allowsLinkPreview={false}
         suppressMenuItems={['copy', 'share', 'select', 'selectAll', 'lookup', 'translate']}
-        style={{ flex: 1, backgroundColor: '#000', borderRadius: radius.md }}
+        style={{ flex: 1, backgroundColor: '#000', borderRadius: radio }}
       />
     </View>
   );
@@ -245,6 +292,7 @@ function VimeoVideo({
   protectedContent?: boolean;
   relacion?: number;
 }) {
+  const radio = React.useContext(Radio);
   if (Platform.OS === 'web') {
     return React.createElement('iframe', {
       src: embedUrl,
@@ -258,7 +306,7 @@ function VimeoVideo({
         width: '100%',
         aspectRatio: String(relacion),
         backgroundColor: '#000',
-        borderRadius: radius.md,
+        borderRadius: radio,
         border: 'none',
       },
     });
@@ -304,6 +352,7 @@ function VideoEnWebView({
   protectedContent?: boolean;
   relacion?: number;
 }) {
+  const radio = React.useContext(Radio);
   const [fallo, setFallo] = React.useState(false);
   // Cambiar la clave vuelve a montar el WebView entero: es la forma de
   // reintentar de verdad, y no de pedirle que recargue lo que ya falló.
@@ -349,7 +398,7 @@ function VideoEnWebView({
     ? { html: paginaDeEmbed(embedUrl), baseUrl: ORIGEN_DE_LA_APP }
     : { uri: embedUrl };
   return (
-    <View style={[styles.video, { aspectRatio: relacion }]}>
+    <View style={[styles.video, { aspectRatio: relacion, borderRadius: radio }]}>
       <WebView
         key={intento}
         source={fuente}
@@ -400,7 +449,7 @@ function VideoEnWebView({
               suppressMenuItems: ['copy', 'share', 'select', 'selectAll', 'lookup', 'translate'],
             }
           : null)}
-        style={{ flex: 1, backgroundColor: '#000', borderRadius: radius.md }}
+        style={{ flex: 1, backgroundColor: '#000', borderRadius: radio }}
       />
       {protectedContent ? <TapaLaBarraDeYouTube /> : null}
     </View>
@@ -447,25 +496,30 @@ function VideoEnWebView({
 const ALTO_DE_LA_BARRA = 72;
 
 function TapaLaBarraDeYouTube() {
+  const radio = React.useContext(Radio);
   return (
     <LinearGradient
       // Sin `pointerEvents="none"`: esta capa TIENE que quedarse los toques.
       // Es justo lo que hace que el botón de compartir no responda.
       colors={['rgba(0,0,0,1)', 'rgba(0,0,0,1)', 'rgba(0,0,0,0)']}
       locations={[0, 0.62, 1]}
-      style={styles.tapa}
+      style={[styles.tapa, { borderTopLeftRadius: radio, borderTopRightRadius: radio }]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     />
   );
 }
 
-function NativeVideo({ url }: { url: string }) {
-  const player = useVideoPlayer(url);
+/** `solo`: que empiece sin tocar nada (a pantalla completa, abrirlo ya es darle al play). */
+function NativeVideo({ url, solo = false }: { url: string; solo?: boolean }) {
+  const radio = React.useContext(Radio);
+  const player = useVideoPlayer(url, (p) => {
+    if (solo) p.play();
+  });
   return (
     <VideoView
       player={player}
-      style={styles.video}
+      style={[styles.video, { borderRadius: radio }]}
       contentFit="contain"
       nativeControls
       allowsPictureInPicture={false}
@@ -473,31 +527,39 @@ function NativeVideo({ url }: { url: string }) {
   );
 }
 
-function WebVideo({ url }: { url: string }) {
+function WebVideo({ url, solo = false }: { url: string; solo?: boolean }) {
   // En web renderizamos un <video> nativo para poder desactivar la descarga.
+  const radio = React.useContext(Radio);
   const ref = React.useRef<HTMLVideoElement | null>(null);
 
   React.useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.setAttribute('controlsList', 'nodownload noplaybackrate noremoteplayback');
+    // A pantalla completa, sin el botón de pantalla completa del navegador:
+    // ya lo está, y la del navegador pinta el vídeo por encima de la marca de
+    // agua.
+    el.setAttribute(
+      'controlsList',
+      `nodownload noplaybackrate noremoteplayback${solo ? ' nofullscreen' : ''}`
+    );
     el.setAttribute('disablePictureInPicture', 'true');
     el.setAttribute('disableRemotePlayback', 'true');
     const block = (e: Event) => e.preventDefault();
     el.addEventListener('contextmenu', block);
     return () => el.removeEventListener('contextmenu', block);
-  }, [url]);
+  }, [url, solo]);
 
   return React.createElement('video', {
     ref,
     src: url,
     controls: true,
     playsInline: true,
+    autoPlay: solo,
     style: {
       width: '100%',
       aspectRatio: '16 / 9',
       backgroundColor: '#000',
-      borderRadius: radius.md,
+      borderRadius: radio,
     },
   });
 }

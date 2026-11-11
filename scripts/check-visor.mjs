@@ -13,7 +13,6 @@ import { readFileSync } from 'node:fs';
 import {
   ALTO_MAXIMO,
   ANCHO_MAXIMO,
-  mereceAmpliar,
   RELACION,
   RELACION_VERTICAL,
   relacionDelVideo,
@@ -112,15 +111,6 @@ console.log('\nEs de verdad más grande que lo de antes');
   comprueba('en un monitor grande, mucho más', grande.width > 1600, String(grande.width));
 }
 
-console.log('\nNo se ofrece ampliar cuando no se gana nada');
-{
-  // En un móvil el vídeo ya ocupa casi todo: un botón para agrandarlo un 4 %
-  // es un botón que miente.
-  comprueba('en móvil no se ofrece', !mereceAmpliar(358, 390, 844), String(tamanoDelVisor(390, 844).width));
-  comprueba('en un portátil sí', mereceAmpliar(828, 1440, 900));
-  comprueba('en un monitor grande, también', mereceAmpliar(828, 2560, 1440));
-}
-
 console.log('\nNada raro rompe la cuenta');
 {
   const cero = tamanoDelVisor(0, 0);
@@ -148,8 +138,11 @@ console.log('\nNada por encima del reproductor que le quite el toque');
    * ve pero el play no responde", que es justo como se vive desde fuera que
    * "el reproductor no funciona".
    *
-   * Ahora el fondo va DETRÁS, como una capa suelta, y el marco del vídeo es una
-   * View a secas.
+   * Después el fondo fue DETRÁS, como una capa suelta. Y desde que el visor es
+   * a pantalla completa ya no hay fondo que cierre: alrededor del vídeo solo
+   * queda la franja negra, y un toque ahí buscando la barra del vídeo no puede
+   * cerrar la clase. Se cierra con su botón (o con atrás). El marco del vídeo
+   * sigue siendo una View a secas.
    *
    *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-visor.mjs
    */
@@ -157,8 +150,8 @@ console.log('\nNada por encima del reproductor que le quite el toque');
   const marco = visor.slice(visor.indexOf('<Modal'), visor.indexOf('</Modal>'));
 
   comprueba(
-    'el fondo que cierra va detrás, no envolviendo',
-    /<Pressable style=\{StyleSheet\.absoluteFill\} onPress=\{onCerrar\} \/>/.test(marco)
+    'nada envolviendo el vídeo que cierre al tocar',
+    !/<Pressable style=\{StyleSheet\.absoluteFill\}/.test(marco) && (marco.match(/onPress=\{onCerrar\}/g) || []).length === 1
   );
   comprueba(
     'el marco del vídeo es una View, no un pulsable',

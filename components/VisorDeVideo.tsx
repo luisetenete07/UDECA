@@ -1,33 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MarcaDeAgua } from './MarcaDeAgua';
 import { VideoPlayer } from './VideoPlayer';
-import { avisoDeProteccion } from '../lib/marcaDeAgua';
-import { relacionDelVideo, tamanoDelVisor } from '../lib/visorDeVideo';
-import { colors, fonts, radius, spacing, typography } from '../lib/theme';
+import { t } from '../lib/idioma';
+import { margenesDelLienzo, pantallaCompleta, relacionDelVideo, sePuedeGirar } from '../lib/visorDeVideo';
+import { colors, spacing } from '../lib/theme';
 import type { UserProfile } from '../lib/types';
 
 /**
- * Un vídeo a casi toda la pantalla, SIN salir de la app.
+ * Un vídeo a PANTALLA COMPLETA, sin salir de la app.
  *
- * Es el término medio que hacía falta. Por un lado, el vídeo metido en la
- * columna de contenido se queda pequeño en un ordenador y no sirve para lo
- * único que sirve un vídeo de técnica: mirar de cerca dónde va el codo. Por
- * otro, la pantalla completa de verdad —la del navegador o la del sistema— no
- * se puede usar: ahí el vídeo lo pinta el sistema POR ENCIMA de todo, y con él
- * se van la marca de agua con el nombre de quien mira y el cristal que tapa los
- * controles de YouTube. Se ganaría tamaño y se perdería el blindaje entero.
+ * Se abre así siempre: un vídeo de técnica durante el entreno y una clase de
+ * un curso. Abrirlo ya es darle al play, así que empieza solo, y ocupa la
+ * pantalla entera de borde a borde, que es además lo que hace que YouTube
+ * escoja su mejor calidad (ver lib/visorDeVideo y `paraPantallaCompleta` en
+ * lib/video).
  *
- * Así que se amplía dentro: el vídeo sigue siendo un elemento nuestro, con su
- * marca de agua encima y sin acceso a los controles de la plataforma, y ocupa
- * casi todo (ver `lib/visorDeVideo` para las medidas).
+ * Es una pantalla completa NUESTRA, no la del sistema. La del sistema —la del
+ * navegador o la del reproductor— pinta el vídeo POR ENCIMA de todo, y con él
+ * se van la marca de agua con el nombre de quien mira y la tapa de la barra de
+ * YouTube. Aquí el vídeo sigue siendo un elemento de la app: se ve igual de
+ * grande y sigue protegido.
  *
- * Se usa en los dos sitios donde hay vídeo —la técnica de un ejercicio durante
- * el entreno y las clases de los cursos— porque las protecciones tienen que ser
- * las mismas en los dos. Dos visores distintos serían dos sitios donde se puede
- * colar un botón de compartir.
+ * En el móvil de pie un vídeo apaisado se pinta GIRADO, para verlo tumbando el
+ * móvil; si alguien prefiere no girarlo, tiene el botón de al lado de cerrar.
+ *
+ * Se usa en todos los sitios donde hay vídeo porque las protecciones tienen que
+ * ser las mismas en todos. Dos visores distintos serían dos sitios donde se
+ * puede colar un botón de compartir.
  */
 export function VisorDeVideo({
   url,
@@ -57,107 +60,190 @@ export function VisorDeVideo({
    * cualquiera puede buscar, sale carísimo.
    *
    * Lo que NO cambia con esto: la marca de agua sigue encima, el vídeo sigue
-   * sin poder navegar fuera de la app y sigue sin pantalla completa.
+   * sin poder navegar fuera de la app y sin la pantalla completa del sistema.
    */
   protegido?: boolean;
 }) {
-  const { width, height } = useWindowDimensions();
-  // Un vertical ampliado a lo ancho sería una raya: el marco toma la forma del
-  // vídeo (ver lib/visorDeVideo.ts).
-  const tam = tamanoDelVisor(width, height, relacionDelVideo(url));
+  const ventana = useWindowDimensions();
+  const seguros = useSafeAreaInsets();
+  /*
+   * LA MEDIDA ES LA DEL PROPIO VISOR, NO LA DE LA VENTANA.
+   *
+   * En Android, según el móvil, la ventana cuenta o no la barra de navegación,
+   * y un lienzo girado que no mide exactamente lo que la pantalla se queda
+   * descentrado: con el vídeo asomando por un lado y una franja por el otro.
+   * La ventana solo vale para el primer fotograma, antes de que se mida.
+   */
+  const [medida, setMedida] = useState<{ width: number; height: number } | null>(null);
+  const [enVertical, setEnVertical] = useState(false);
+  const relacion = relacionDelVideo(url);
+  const ancho = medida?.width ?? ventana.width;
+  const alto = medida?.height ?? ventana.height;
+  const pc = pantallaCompleta(ancho, alto, relacion, enVertical);
+  const m = margenesDelLienzo(seguros, pc.girado);
+
+  // Cada vídeo se abre como se abre por defecto: girado si toca.
+  useEffect(() => {
+    if (!visible) setEnVertical(false);
+  }, [visible]);
+
+  usePantallaCompletaDelNavegador(visible, relacion > 1);
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onCerrar}>
-      <View style={styles.fondo}>
-        {/*
-         * EL FONDO CIERRA AL TOCARLO, Y VA DETRÁS, NO ALREDEDOR.
-         *
-         * Antes era un `Pressable` que envolvía TODO, con otro por dentro
-         * rodeando el vídeo para que tocarlo no cerrara. O sea, que el
-         * reproductor colgaba de dos capas que se disputan cada toque. En el
-         * ordenador da igual —el `stopPropagation` del navegador corta la
-         * cadena—, pero en el móvil ese método ni siquiera existe: quien
-         * decide quién se queda el toque es el sistema de responders de React
-         * Native, y ahí un WebView metido debajo de dos pulsables es la receta
-         * conocida de "el vídeo se ve pero el play no responde".
-         *
-         * Puesto detrás como una capa suelta, el gesto de cerrar sigue igual y
-         * ya no hay nada por encima del reproductor que le pueda quitar el
-         * toque.
-         */}
-        <Pressable style={StyleSheet.absoluteFill} onPress={onCerrar} />
-        <View style={styles.barra}>
-          <Text style={styles.titulo} numberOfLines={1}>
-            {titulo ?? 'Vídeo'}
-          </Text>
-          <Pressable onPress={onCerrar} hitSlop={12} style={styles.cerrar}>
-            <Ionicons name="close" size={22} color={colors.text} />
-          </Pressable>
-        </View>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={false}
+      onRequestClose={onCerrar}
+      // De borde a borde: el vídeo también va por debajo de las barras del
+      // sistema, que en esta pantalla no pintan nada.
+      statusBarTranslucent
+      navigationBarTranslucent
+      supportedOrientations={['portrait', 'landscape']}
+    >
+      {visible ? <StatusBar hidden /> : null}
+      <View
+        style={styles.fondo}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setMedida((antes) =>
+            antes && antes.width === width && antes.height === height ? antes : { width, height }
+          );
+        }}
+      >
+        <View
+          accessibilityLabel={titulo}
+          style={[
+            styles.lienzo,
+            {
+              width: pc.ancho,
+              height: pc.alto,
+              // Centrado a mano y no con flex: girado, el lienzo es más ancho
+              // que la pantalla, y así no depende de cómo reparta cada
+              // plataforma lo que se sale.
+              left: (ancho - pc.ancho) / 2,
+              top: (alto - pc.alto) / 2,
+              transform: pc.girado ? [{ rotate: '90deg' }] : [],
+            },
+          ]}
+        >
+          {/* Una View a secas: ahí dentro están los controles del reproductor,
+              y no puede haber nada por encima que le robe el toque. */}
+          <View style={[styles.marco, { width: pc.video.width, height: pc.video.height }]}>
+            <MarcaDeAgua profile={profile}>
+              <VideoPlayer url={url} protectedContent={protegido} pantallaCompleta />
+            </MarcaDeAgua>
+          </View>
 
-        {/* Una View a secas: ahí dentro están los controles del reproductor, y
-            no puede haber nada por encima que le robe el toque. */}
-        <View style={[styles.marco, { width: tam.width, height: tam.height }]}>
-          <MarcaDeAgua profile={profile}>
-            <VideoPlayer url={url} protectedContent={protegido} />
-          </MarcaDeAgua>
-        </View>
-
-        <View style={styles.aviso} pointerEvents="none">
-          <Ionicons name="shield-checkmark-outline" size={13} color={colors.textFaint} />
-          <Text style={styles.avisoTexto}>{avisoDeProteccion(Platform.OS)}</Text>
+          {/*
+           * LOS BOTONES, EN COLUMNA Y PEGADOS A LA ESQUINA.
+           *
+           * En el móvil girado el vídeo deja una franja negra a cada lado, y en
+           * columna caben dentro: no tapan ni un píxel de la imagen. En fila se
+           * meterían encima del vídeo.
+           */}
+          <View
+            style={[
+              styles.botones,
+              { top: Math.max(spacing.md, m.top + spacing.xs), right: Math.max(spacing.md, m.right + spacing.xs) },
+            ]}
+          >
+            <Pressable
+              onPress={onCerrar}
+              hitSlop={10}
+              style={styles.boton}
+              accessibilityRole="button"
+              accessibilityLabel={t('Cerrar vídeo')}
+            >
+              <Ionicons name="close" size={22} color={colors.text} />
+            </Pressable>
+            {sePuedeGirar(ancho, alto, relacion) ? (
+              <Pressable
+                onPress={() => setEnVertical((v) => !v)}
+                hitSlop={10}
+                style={styles.boton}
+                accessibilityRole="button"
+                accessibilityLabel={t(pc.girado ? 'Ver sin girar' : 'Ver en horizontal')}
+              >
+                <Ionicons
+                  name={pc.girado ? 'phone-portrait-outline' : 'phone-landscape-outline'}
+                  size={19}
+                  color={colors.text}
+                />
+              </Pressable>
+            ) : null}
+          </View>
         </View>
       </View>
     </Modal>
   );
 }
 
-/** El enlace que abre el visor. Mismo aspecto en el entreno y en los cursos. */
-export function BotonAmpliar({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={styles.ampliar} hitSlop={8}>
-      <Ionicons name="scan-outline" size={14} color={colors.primary} />
-      <Text style={styles.ampliarTexto}>Ver más grande</Text>
-    </Pressable>
-  );
+/**
+ * En el navegador, además, fuera las barras del propio navegador.
+ *
+ * Se pone a pantalla completa la PÁGINA entera, no el vídeo: así lo que ocupa
+ * la pantalla sigue siendo nuestro, con la marca de agua y la tapa encima. Si
+ * fuera el vídeo, el navegador lo pintaría solo y se perdería todo eso.
+ *
+ * Donde el navegador lo deja (Chrome en Android), se tumba la pantalla para un
+ * vídeo apaisado, y entonces el visor ya no necesita girarlo. Donde no (el
+ * iPhone, que no tiene pantalla completa de página), no pasa nada: el visor ya
+ * ocupa toda la ventana igualmente.
+ *
+ * Solo se sale de la pantalla completa si la ha pedido el visor: si quien mira
+ * ya estaba en ella por su cuenta, se queda como estaba.
+ */
+function usePantallaCompletaDelNavegador(activo: boolean, apaisado: boolean) {
+  useEffect(() => {
+    if (!activo || Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const raiz = document.documentElement as HTMLElement & {
+      requestFullscreen?: (o?: { navigationUI?: string }) => Promise<void>;
+    };
+    if (document.fullscreenElement || typeof raiz.requestFullscreen !== 'function') return;
+    let vivo = true;
+    let pedida = false;
+    const orientacion = (typeof screen !== 'undefined' ? screen.orientation : undefined) as
+      | (ScreenOrientation & { lock?: (o: string) => Promise<void> })
+      | undefined;
+    try {
+      pedida = true;
+      raiz
+        .requestFullscreen({ navigationUI: 'hide' })
+        .then(() => {
+          if (vivo && apaisado && orientacion?.lock) orientacion.lock('landscape').catch(() => {});
+        })
+        .catch(() => {
+          pedida = false;
+        });
+    } catch {
+      pedida = false;
+    }
+    return () => {
+      vivo = false;
+      try {
+        orientacion?.unlock?.();
+      } catch {
+        /* sin bloqueo que quitar */
+      }
+      if (pedida && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    };
+  }, [activo, apaisado]);
 }
 
 const styles = StyleSheet.create({
-  fondo: {
-    flex: 1,
-    // Negro casi opaco y no del todo: se sigue intuyendo la app detrás, así
-    // que se entiende que esto es una ventana y no otra pantalla.
-    backgroundColor: 'rgba(0,0,0,0.96)',
+  fondo: { flex: 1, backgroundColor: '#000', overflow: 'hidden' },
+  lienzo: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  marco: { overflow: 'hidden', backgroundColor: '#000' },
+  botones: { position: 'absolute', gap: spacing.sm },
+  boton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
+    backgroundColor: 'rgba(20,20,20,0.72)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
-  barra: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    width: '100%',
-    maxWidth: 1400,
-  },
-  titulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
-  cerrar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
-  },
-  marco: { borderRadius: radius.md, overflow: 'hidden', backgroundColor: '#000' },
-  aviso: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 520 },
-  avisoTexto: { ...typography.small, color: colors.textFaint, fontSize: 11, flex: 1 },
-  ampliar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.sm,
-  },
-  ampliarTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
 });

@@ -1016,6 +1016,12 @@ export const EN: Record<string, string> = {
   'Empezar descanso': 'Start rest',
   'Volver a empezar': 'Start again',
   'Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, controla tus descansos con el temporizador.': 'Your coach has not assigned you a routine in the app yet. Meanwhile, keep track of your rests with the timer.',
+  // Vídeo a pantalla completa
+  'Cerrar vídeo': 'Close video',
+  'Ver sin girar': 'View without rotating',
+  'Ver en horizontal': 'View in landscape',
+  'Ver la clase a pantalla completa': 'Watch the class full screen',
+  'Ver a pantalla completa': 'Watch full screen',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno.':
@@ -2085,7 +2091,6 @@ export const EN: Record<string, string> = {
   'Correo de verificación reenviado': 'Verification email resent',
   'Vídeo no disponible': 'Video not available',
   'No se ha podido cargar el vídeo': 'The video could not be loaded',
-  'Ver más grande': 'View larger',
   'Este alumno no tiene rutina activa, así que todavía no hay ejercicios que programar. Créale una y vuelve.':
     'This student has no active routine, so there is nothing to programme yet. Create one and come back.',
   'Sugerir +1 rep': 'Suggest +1 rep',
