@@ -102,6 +102,7 @@ import {
   type ModoDelAlumno,
   type QueVeElAlumno,
 } from '../../../../lib/visibilidad';
+import { SE_APUNTA_EL_ENTRENO } from '../../../../lib/modoDeEntreno';
 import { minutosSegundos, segundosDeTexto } from '../../../../lib/duracion';
 import { nuevoId } from '../../../../lib/ids';
 import {
@@ -2035,7 +2036,8 @@ export default function RoutineEditorScreen() {
             {!ajustesAbiertos ? (
               <Text style={styles.ajustesResumen} numberOfLines={1}>
                 {unido(
-                  modoAlumno === 'tabla' ? t('En tabla') : t('Apunta en la app'),
+                  // Sin entreno en directo, todos lo ven en tabla (lib/modoDeEntreno.ts).
+                  !SE_APUNTA_EL_ENTRENO ? null : modoAlumno === 'tabla' ? t('En tabla') : t('Apunta en la app'),
                   seMuestra.intensidad ? t('intensidad') : null,
                   seMuestra.objetivo ? t('objetivo') : null,
                   schedule !== 'flex' && pedirEsfuerzo ? t('esfuerzo') : null
@@ -2047,6 +2049,10 @@ export default function RoutineEditorScreen() {
         </Pressable>
         {ajustesAbiertos ? (
         <>
+        {/* Apuntar en la app o en tabla ya no se elige: sin entreno en
+            directo, todos ven su plan en tabla (lib/modoDeEntreno.ts). */}
+        {SE_APUNTA_EL_ENTRENO ? (
+          <>
         <Segmented<ModoDelAlumno>
           opciones={[
             { valor: 'app', texto: 'Apunta en la app', icono: 'checkbox-outline' },
@@ -2061,6 +2067,12 @@ export default function RoutineEditorScreen() {
             ? 'Ve su plan en una tabla para entrenar sin la app, y al acabar marca "Lo he hecho".'
             : 'Empieza el entreno en la app y marca cada serie.'}
         </Text>
+          </>
+        ) : (
+          <Text style={styles.persoAyuda}>
+            Ve su plan en una tabla, con la técnica de cada ejercicio, y tiene cronómetro y cuenta atrás. Si quiere, apunta sus marcas.
+          </Text>
+        )}
 
         {/*
          * QUÉ VE EL ALUMNO AL ENTRENAR. En los tres tipos de plan.

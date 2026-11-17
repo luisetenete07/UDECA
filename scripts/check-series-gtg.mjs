@@ -98,7 +98,6 @@ console.log('\nPantallas, reglas e índices');
 {
   ok('la pantalla GTG tiene "Añadir serie" y "Quitar serie"', /onCambiarObjetivo\(p\.objetivo \+ 1\)/.test(lee('components/PantallaGtg.tsx')) && /onCambiarObjetivo\(p\.objetivo - 1\)/.test(lee('components/PantallaGtg.tsx')));
   const entreno = lee('app/(client)/workout.tsx');
-  ok('el entreno lo guarda con el día', /updateWorkoutLog\(gtgLog\.id, \{ gtg: \{ objetivo: n \} \}\)/.test(entreno) && /gtg,\n\s*\}\);/.test(entreno));
   ok('la rutina diaria tiene su más y su menos', /cambiarSeries\(e\.id, series \+ 1\)/.test(lee('components/RutinaDiariaDelDia.tsx')));
   ok('el alumno lo ve en Progreso', /<SeriesDelGtg clientId=\{uid\}/.test(lee('app/(client)/progress.tsx')));
   ok('y el entrenador en su ficha', /<SeriesDelGtg\s+clientId=\{id\}\s+trainerId=\{profile\.uid\}/.test(lee('app/(trainer)/clients/[id]/index.tsx')));

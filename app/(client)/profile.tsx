@@ -35,6 +35,7 @@ import {
 } from '../../lib/objetivos';
 import { Chip, ChipRow } from '../../components/Chip';
 import { colors, fieldLabel, fonts, radius, spacing, tabularNums, typography } from '../../lib/theme';
+import { SE_APUNTA_EL_ENTRENO } from '../../lib/modoDeEntreno';
 import { EXPERIENCE_LEVELS, type ExperienceLevel } from '../../lib/types';
 
 const two = (n: number) => String(n).padStart(2, '0');
@@ -336,6 +337,11 @@ export default function ClientProfileScreen() {
           los días que TOCA entrenar y aún no hay sesión, y calla en cuanto la
           hay. */}
       <Card style={styles.section}>
+        {/* Sin entreno en directo (lib/modoDeEntreno.ts) no hay sesión que
+            registrar, así que "insistir si se me olvida" no tiene de qué
+            avisar: queda la cabecera de los avisos y los que siguen. */}
+        {SE_APUNTA_EL_ENTRENO ? (
+          <>
         <View style={styles.reminderTopRow}>
           <View style={styles.reminderHeader}>
             <Ionicons name="alarm-outline" size={18} color={colors.primary} />
@@ -355,6 +361,13 @@ export default function ClientProfileScreen() {
           22:00. En cuanto la registres, paran.
           {Platform.OS === 'web' ? ' (Suena en la app de móvil.)' : ''}
         </Text>
+          </>
+        ) : (
+          <View style={[styles.reminderHeader, { marginBottom: spacing.md }]}>
+            <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Avisos</Text>
+          </View>
+        )}
 
         {tieneRutinaDiaria ? (
           <>
@@ -369,8 +382,9 @@ export default function ClientProfileScreen() {
               </Pressable>
             </View>
             <Text style={styles.reminderHint}>
-              Si a las 18 h te queda algo por marcar, te aviso una vez. Si ya
-              lo has terminado, no suena.
+              {SE_APUNTA_EL_ENTRENO
+                ? 'Si a las 18 h te queda algo por marcar, te aviso una vez. Si ya lo has terminado, no suena.'
+                : 'Te la recuerdo una vez al día, a las 18 h.'}
             </Text>
           </>
         ) : null}

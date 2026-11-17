@@ -20,7 +20,13 @@ import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/
  * sigue aunque cambie de pantalla, suena y vibra al acabar. El último tiempo
  * se recuerda en el móvil, que casi siempre es el mismo serie tras serie.
  */
-export function CronoDeDescanso() {
+export function CronoDeDescanso({ sinTarjeta = false }: {
+  /**
+   * Dentro de otra tarjeta (los relojes del entreno, components/RelojesDelEntreno):
+   * sin su marco ni su cabecera, que ya los pone la de fuera.
+   */
+  sinTarjeta?: boolean;
+} = {}) {
   const [segundos, setSegundos] = useState<number>(tiempoGuardado(null));
   const [escribiendo, setEscribiendo] = useState<string | null>(null);
   const corriendo = useActiveRest();
@@ -44,8 +50,10 @@ export function CronoDeDescanso() {
     setEscribiendo(null);
   };
 
+  const Marco = sinTarjeta ? View : Card;
   return (
-    <Card style={styles.tarjeta}>
+    <Marco style={sinTarjeta ? undefined : styles.tarjeta}>
+      {sinTarjeta ? null : (
       <View style={styles.cabecera}>
         <View style={styles.icono}>
           <Ionicons name="hourglass-outline" size={18} color={colors.primaryBright} />
@@ -57,6 +65,7 @@ export function CronoDeDescanso() {
           </Text>
         </View>
       </View>
+      )}
 
       <View style={styles.reloj}>
         <Pressable
@@ -106,7 +115,7 @@ export function CronoDeDescanso() {
         onPress={() => startRest(segundos)}
         style={styles.empezar}
       />
-    </Card>
+    </Marco>
   );
 }
 

@@ -151,17 +151,11 @@ console.log('\nQué rutina va primero');
 console.log('\nPantallas');
 {
   const entreno = readFileSync('app/(client)/workout.tsx', 'utf8');
-  ok('el entreno combina con lo que decidió el entrenador', /combinarRutinas\(chosen, modoCombinar, fusion\)/.test(entreno));
-  ok('y al guardar junta los tramos', /juntarTramos\(baseLog, day\.exercises\)/.test(entreno));
-  ok('y enseña cómo queda antes de empezar', /rondasDeLaCombinacion\(/.test(entreno));
   const editor = readFileSync('app/(trainer)/clients/[id]/routine.tsx', 'utf8');
   ok('el entrenador lo elige en su plan', /cambiaPerso\(\{ combinar:/.test(editor));
   ok('y sus tiempos, su orden y qué va aislado', /descansoFusion:/.test(editor) && /transicionFusion:/.test(editor) && /ordenFusion:/.test(editor) && /setAislado\(/.test(editor));
-  ok('el entreno usa sus tiempos', /combinarRutinas\(chosen, modoCombinar, fusion\)/.test(entreno) && /transicionSegundos/.test(entreno));
   // Solo lo decide el entrenador: el alumno lo lee de su plan y no tiene con
   // qué cambiarlo, y la vista previa en superseries solo sale si es lo que hay.
-  ok('el alumno no lo puede cambiar', /const modoCombinar = comoSeCombinan\(perso\)/.test(entreno) && !/combinar:/.test(entreno));
-  ok('la vista de superseries, solo si el plan lo dice', /modoCombinar === 'superseries' \? \(\s*<>/.test(entreno));
 }
 
 console.log(fallos === 0 ? '\n✔ Las rutinas se combinan como dice el entrenador' : `\n${fallos} fallo(s)`);

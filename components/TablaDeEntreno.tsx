@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Texto';
 import { textoDeDescanso } from '../lib/combinarRutinas';
@@ -32,12 +32,18 @@ export function TablaDeEntreno({
   day,
   medidaDe,
   objetivoDe,
+  videoDe,
+  onVideo,
 }: {
   day: RoutineDay;
   /** La medida de cada ejercicio (si no la trae el plan, la de la biblioteca). */
   medidaDe: (ex: RoutineExercise) => ExerciseMeasure | undefined;
   /** "RIR 1", "RPE 8"… o null si no se enseña o no lleva. */
   objetivoDe: (ex: RoutineExercise) => string | null;
+  /** El vídeo de técnica de cada ejercicio, si el entrenador lo puso. */
+  videoDe?: (ex: RoutineExercise) => string | undefined;
+  /** Abrir ese vídeo (a pantalla completa, components/VisorDeVideo). */
+  onVideo?: (url: string, titulo: string) => void;
 }) {
   const ejercicios = day.exercises;
   const conObjetivo = ejercicios.some((ex) => !!objetivoDe(ex));
@@ -101,6 +107,23 @@ export function TablaDeEntreno({
                 </Text>
                 {detalle.length > 0 ? <Text style={styles.detalle}>{detalle.join(' · ')}</Text> : null}
                 {ex.notes ? <Text style={styles.nota}>{ex.notes}</Text> : null}
+                {/* La técnica, debajo de su ejercicio: es lo que se mira justo
+                    antes de hacerlo. */}
+                {(() => {
+                  const video = videoDe?.(ex)?.trim();
+                  return video && onVideo ? (
+                    <Pressable
+                      onPress={() => onVideo(video, ex.name)}
+                      style={styles.tecnica}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel={frase`Técnica de ${ex.name}`}
+                    >
+                      <Ionicons name="play-circle" size={16} color={colors.primary} />
+                      <Text style={styles.tecnicaTexto}>Técnica</Text>
+                    </Pressable>
+                  ) : null;
+                })()}
               </View>
               <Text style={[styles.celda, styles.colNum]}>{ex.sets || 1}</Text>
               <Text style={[styles.celda, styles.colReps]}>{reps}</Text>
@@ -175,6 +198,8 @@ const styles = StyleSheet.create({
   letra: { color: colors.primaryBright, fontFamily: fonts.heading },
   detalle: { ...typography.small, fontSize: 12, color: colors.primaryBright, marginTop: 1 },
   nota: { ...typography.small, fontSize: 12, color: colors.textMuted, fontStyle: 'italic', marginTop: 2 },
+  tecnica: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 5 },
+  tecnicaTexto: { ...typography.small, fontSize: 12, color: colors.primary, fontFamily: fonts.semiBold },
   celda: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, ...tabularNums },
   superserie: {
     flexDirection: 'row',

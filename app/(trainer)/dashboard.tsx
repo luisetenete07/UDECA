@@ -36,6 +36,7 @@ import {
 import { FREE_CLIENT_LIMIT, trainerAtFreeLimit } from '../../lib/subscription';
 import { alargar, coachingDe } from '../../lib/coaching';
 import { alumnosSinEntrenar, DIAS_SIN_ENTRENAR } from '../../lib/sinEntrenar';
+import { SE_APUNTA_EL_ENTRENO } from '../../lib/modoDeEntreno';
 import { haceCuanto } from '../../lib/ultimoEntreno';
 import { unido } from '../../lib/texto';
 import { colorDelPeriodo, textoDelPeriodo } from '../../components/PeriodoDeCoaching';
@@ -266,7 +267,9 @@ export default function TrainerDashboard() {
   );
 
   /** Quién lleva días sin entrenar (ver lib/sinEntrenar.ts). */
-  const sinEntrenar = alumnosSinEntrenar(clients, logs, now);
+  // Sin apuntar cada entreno (lib/modoDeEntreno.ts), "sin entrenar" sería
+  // todo el grupo: el alumno entrena y no lo registra.
+  const sinEntrenar = SE_APUNTA_EL_ENTRENO ? alumnosSinEntrenar(clients, logs, now) : [];
 
   /** +1 mes desde la lista, sin abrir la ficha: es lo que se hace casi siempre. */
   const handleRenovar = async (c: UserProfile) => {
@@ -662,7 +665,8 @@ export default function TrainerDashboard() {
       {/* El pulso del grupo: cuántos alumnos han entrenado ESTA semana. Es el
           número que un entrenador mira primero, y el que dice si hay que
           escribirle a alguien hoy. */}
-      {clients.length > 0 ? (
+      {/* Solo si se apunta cada entreno: sin eso diría que nadie entrena. */}
+      {SE_APUNTA_EL_ENTRENO && clients.length > 0 ? (
         <FadeIn delay={70}>
         <Card style={styles.section}>
           <View style={styles.pulseRow}>

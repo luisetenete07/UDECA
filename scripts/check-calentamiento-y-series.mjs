@@ -71,19 +71,12 @@ console.log('\n1. El calentamiento');
   ok('y puede ponerlo en todos los días', /calentamientoEnTodos\(day\.id\)/.test(editor));
   ok('se guarda limpio', /calentamiento: calentamientoParaGuardar\(d\.calentamiento\)/.test(editor));
   const w = lee('app/(client)/workout.tsx');
-  ok('el alumno lo ve: el vídeo, y el de cada ejercicio', /const cal = calentamientoParaVer\(day\);/.test(w) && /setVideoAbierto\(\{ url: cal\.video!/.test(w) && /setVideoAbierto\(\{ url: paso\.video!/.test(w));
-  ok('el del entrenador sale abierto', /const abierto = cal\.propio \? !warmupOpen : warmupOpen;/.test(w));
+  ok('el alumno lo ve: el vídeo, y el de cada ejercicio', /const cal = day && !day\.isRest \? calentamientoParaVer\(day\) : null;/.test(w) && /setVideoAbierto\(\{ url: cal\.video!/.test(w) && /setVideoAbierto\(\{ url: paso\.video!/.test(w));
+  ok('el del entrenador sale abierto', /const calAbierto = cal \? \(cal\.propio \? !warmupOpen : warmupOpen\) : false;/.test(w));
 }
 
-console.log('\n2. Deshacer una serie marcada sin querer');
-{
-  const w = lee('app/(client)/workout.tsx');
-  ok('al marcarla se apunta qué arrancó (descanso y paso al siguiente)', /ultimaMarcada\.current = \{\s*ejercicio: exerciseIndex,\s*serie: setIndex,\s*restId: restIniciado,\s*avance: avanceIniciado,/.test(w));
-  ok('sale "Deshacer" justo debajo de las series (suelta y superserie)', (w.match(/\{barraDeshacer\}\s*\{preguntaDeSerie\(/g) ?? []).length === 2 && />Deshacer</.test(w));
-  ok('desmarcarla para su descanso y el paso al siguiente', /if \(u\.avance\) clearTimeout\(u\.avance\);\s*if \(u\.restId !== null\) stopRestSiEs\(u\.restId\);/.test(w));
-  ok('y vuelve al ejercicio en que estaba', /updateSet\(u\.ejercicio, u\.serie, 'completed', false\);\s*setViewIndex\(vista\);/.test(w));
-  ok('si celebró un récord, se deshace también', /prCelebrados\.current\.delete\(id\);\s*setPrVivo\(null\);/.test(w));
-}
+// 2. "Deshacer una serie marcada sin querer" se fue con el entreno en directo
+// (lib/modoDeEntreno.ts): ya no se marcan series en la app.
 
 console.log('\n3. Tras la última serie, el descanso del siguiente');
 {

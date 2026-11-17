@@ -11,6 +11,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { ProgressBar } from './ProgressBar';
 import { VisorDeVideo } from './VisorDeVideo';
 import { cancelarAvisosGtg, programarAvisosGtg } from '../lib/notifications';
+import { SE_APUNTA_EL_ENTRENO } from '../lib/modoDeEntreno';
+
+/**
+ * Solo para ver (lib/modoDeEntreno.ts): lo que toca cada día, con su técnica,
+ * sin casillas, sin series que marcar y sin crono propio. El reloj está en la
+ * pestaña Entreno.
+ */
+const SOLO_VER = !SE_APUNTA_EL_ENTRENO;
 import {
   getDiaDeRutinaDiaria,
   getRutinaDiaria,
@@ -275,8 +283,10 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       cancelarAvisosGtg().catch(() => {});
       return;
     }
+    // Solo para ver no hay nada marcado: el aviso es el mismo cada día.
+    const quedan = SOLO_VER ? pr.total : pr.total - pr.hechos;
     const t = setTimeout(() => {
-      programarAvisosGtg(rutina.nombre || NOMBRE_POR_DEFECTO, pr.total - pr.hechos, pr.total).catch(
+      programarAvisosGtg(rutina.nombre || NOMBRE_POR_DEFECTO, quedan, pr.total).catch(
         () => {}
       );
     }, 1500);
@@ -327,11 +337,11 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       style={styles.tarjeta}
     >
       <View style={styles.cabecera}>
-        <View style={[styles.icono, p.completa && styles.iconoHecho]}>
+        <View style={[styles.icono, !SOLO_VER && p.completa && styles.iconoHecho]}>
           <Ionicons
-            name={p.completa ? 'checkmark' : 'repeat'}
+            name={!SOLO_VER && p.completa ? 'checkmark' : 'repeat'}
             size={19}
-            color={p.completa ? colors.onPrimary : colors.primaryBright}
+            color={!SOLO_VER && p.completa ? colors.onPrimary : colors.primaryBright}
           />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -350,7 +360,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
         </View>
         {/* La cuenta, grande. Es el dato que hace volver: cuánto llevas hoy.
             Todo opcional, sin "/0": lo hecho y ya. */}
-        {enMinutos ? (
+        {SOLO_VER ? null : enMinutos ? (
           <View style={styles.marcador}>
             <Text style={styles.cuenta}>{minutosEnteros(tiempo.llevan)}</Text>
             <Text style={styles.deTotal}>{tiempo.objetivo > 0 ? frase`/${tiempo.objetivo} min` : t('min')}</Text>
@@ -364,8 +374,14 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
       </View>
 
       {/* Marcado a mano sin el crono también llena: lo hizo. */}
-      <ProgressBar progress={enMinutos ? Math.max(p.ratio, tiempo.ratio) : p.ratio} height={8} />
-      <Text style={styles.texto}>{textoDiario(p)}</Text>
+      {SOLO_VER ? (
+        <Text style={styles.texto}>Repártelo a lo largo del día. Sin ir al fallo.</Text>
+      ) : (
+        <>
+          <ProgressBar progress={enMinutos ? Math.max(p.ratio, tiempo.ratio) : p.ratio} height={8} />
+          <Text style={styles.texto}>{textoDiario(p)}</Text>
+        </>
+      )}
 
       {indicaciones ? (
         <Pressable
@@ -420,7 +436,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
             {/* El hueco de la casilla se reserva SIEMPRE, lleve casilla o no:
                 si no, los ejercicios con series empiezan pegados al borde y los
                 de casilla más adentro, y la lista queda dentada. */}
-            {conSeries ? (
+            {SOLO_VER ? null : conSeries ? (
               <View style={styles.huecoCasilla} />
             ) : (
               <Pressable
@@ -432,9 +448,9 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
               </Pressable>
             )}
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Pressable onPress={conSeries ? undefined : () => marcar(e.id)} hitSlop={4}>
+              <Pressable onPress={SOLO_VER || conSeries ? undefined : () => marcar(e.id)} hitSlop={4}>
                 <View style={styles.filaNombreFila}>
-                  <Text style={[styles.filaNombre, entero && styles.filaHecha]} numberOfLines={2}>
+                  <Text style={[styles.filaNombre, !SOLO_VER && entero && styles.filaHecha]} numberOfLines={2}>
                     {e.nombre}
                   </Text>
                   {/* Que se sepa antes de empezar: no hace falta para el día. */}
@@ -442,7 +458,9 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                 </View>
                 {detalle ? (
                   <Text style={styles.filaObjetivo} numberOfLines={2}>
-                    {conSeries
+                    {SOLO_VER
+                      ? detalle
+                      : conSeries
                       ? frase`${hechasAqui} de ${detalle}`
                       : porTiempo && totalMin >= 1
                         ? frase`${minutosEnteros(totalMin)} de ${detalle}`
@@ -456,7 +474,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                 ) : null}
               </Pressable>
 
-              {conSeries ? (
+              {!SOLO_VER && conSeries ? (
                 <View style={styles.series}>
                   {marcas.map((m, i) => {
                     const hecha = hechos.includes(m);
@@ -487,7 +505,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                 "+5" y "−5", pequeños, para corregir o apuntar algo hecho sin
                 el móvil. Pasarse del máximo se dice, sin celebrarlo.
               */}
-              {porTiempo ? (
+              {!SOLO_VER && porTiempo ? (
                 <>
                   <View style={styles.minutosBarra}>
                     <View
@@ -557,7 +575,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
               ) : null}
 
               {/* Una más o una menos, para hoy. Solo en los que cuentan series. */}
-              {cuentaSeries(e) ? (
+              {!SOLO_VER && cuentaSeries(e) ? (
                 <View style={styles.ajuste}>
                   <Pressable
                     onPress={() => cambiarSeries(e.id, series - 1)}

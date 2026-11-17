@@ -60,9 +60,8 @@ console.log('\nEl editor lo guarda en los tres tipos de plan');
 console.log('\nY el alumno solo ve lo que le dejan');
 {
   const entreno = sinComentar(lee('app/(client)/workout.tsx'));
-  ok('la cabecera de la sesión', /\|\| !ve\.intensidad( \|\| enMarcha)? \? null : textoIntensidad\(/.test(entreno));
-  ok('la ficha de elegir rutina', /ficha\.intensidad && ve\.intensidad && intensidad/.test(entreno));
-  ok('el objetivo del ejercicio', /ve\.objetivo (&&|\?) textoDePrescripcion\(planned, planPrescrito\)/.test(entreno));
+  ok('la intensidad del día', /ve\.intensidad && !diaGtg\s*\?\s*\(?/.test(entreno));
+  ok('el objetivo del ejercicio', /ve\.objetivo \? textoDePrescripcion\(ex, planPrescrito\)/.test(entreno));
   const inicio = sinComentar(lee('app/(client)/dashboard.tsx'));
   ok('la tarjeta de hoy del inicio', /queVeElAlumno\(routine\)\.intensidad &&/.test(inicio));
 }

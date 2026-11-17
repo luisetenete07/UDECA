@@ -100,7 +100,6 @@ console.log('\nLa intensidad de cada rutina');
   ok('una rutina, su etiqueta', etiquetaCombinada([{ intensityLabel: 'Media' }]) === 'Media');
   ok('varias, todas y sin repetir', etiquetaCombinada([{ intensityLabel: 'A' }, {}, { intensityLabel: 'C' }, { intensityLabel: 'A' }]) === 'A + C');
   ok('ninguna, nada', etiquetaCombinada([{}, { intensityLabel: ' ' }]) === undefined);
-  ok('la sesión la lleva', /intensityLabel: etiquetaCombinada\(chosen\)/.test(sinComentar(lee('app/(client)/workout.tsx'))));
 }
 
 console.log('\nBorrar el RIR lo quita, no prescribe el fallo');
@@ -174,9 +173,9 @@ console.log('\nEl alumno ve lo que prescribe su entrenador');
 {
   const entreno = sinComentar(lee('app/(client)/workout.tsx'));
   // `planPrescrito`: la del personalizado o la de la semana / días sueltos.
-  ok('junto a cada ejercicio', /textoDePrescripcion\(planned, planPrescrito\)/.test(entreno) && /const planPrescrito = planDeLaPrescripcion\(routine\);/.test(entreno));
+  ok('junto a cada ejercicio', /textoDePrescripcion\(ex, planPrescrito\)/.test(entreno) && /const planPrescrito = planDeLaPrescripcion\(routine\);/.test(entreno));
   ok('y ya no el "RIR" a fuego', !/>RIR \{planned\.rir\}</.test(entreno));
-  ok('la intensidad, en su escala', /textoDeIntensidadDelDia\(d, perso\)/.test(entreno));
+  ok('la intensidad, en su escala', /textoDeIntensidadDelDia\(day, routine\.personalizado\)/.test(entreno));
   ok('el resumen de una plantilla se entiende', /Por ejercicio: Tempo/.test(resumenDePrescripcion(con('tempo'))));
 }
 

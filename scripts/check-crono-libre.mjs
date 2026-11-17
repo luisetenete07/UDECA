@@ -45,8 +45,9 @@ console.log('\nDónde sale');
   ok('lanza la cuenta atrás de siempre (sigue al cambiar de pantalla y avisa)', /onPress=\{\(\) => startRest\(segundos\)\}/.test(c));
   ok('y recuerda el último tiempo en el móvil', /AsyncStorage\.setItem\(CLAVE, String\(s\)\)/.test(c));
   const w = lee('app/(client)/workout.tsx');
-  const sinRutina = w.slice(w.indexOf('if (!routine || routine.days.length === 0) {'), w.indexOf('// ---------- Resumen post-entreno'));
-  ok('en Entreno, sin rutina: el temporizador y su cuenta atrás dentro', /<RestTimer key=\{activeRest\.id\} rest=\{activeRest\} enLinea \/>/.test(sinRutina) && /<CronoDeDescanso \/>/.test(sinRutina) && sinRutina.indexOf('<RestTimer') < sinRutina.indexOf('<CronoDeDescanso'));
+  const sinRutina = w.slice(w.indexOf('if (!routine || routine.days.length === 0) {'), w.indexOf('const esHoy ='));
+  ok('en Entreno, sin rutina: el reloj (cuenta atrás y cronómetro)', /<RelojesDelEntreno \/>/.test(sinRutina));
+  ok('que lleva dentro esta misma cuenta atrás', /<CronoDeDescanso sinTarjeta \/>/.test(lee('components/RelojesDelEntreno.tsx')));
   const d = lee('app/(client)/dashboard.tsx');
   ok('y en el inicio, solo si no tiene rutina', /\{!loading && !routine \? \(\s*<FadeIn delay=\{80\}>\s*<CronoDeDescanso \/>/.test(d));
 }

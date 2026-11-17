@@ -54,7 +54,8 @@ import { currentStreak, sessionsThisWeek as weekSessions, trainingDays } from '.
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
 import { queVeElAlumno } from '../../lib/visibilidad';
 import { textoIntensidad } from '../../lib/intensidad';
-import { entrenoDeHoy, esGtg, progresoGtg, textoDelDia } from '../../lib/gtg';
+import { entrenoDeHoy, esGtg, objetivoDelDia, progresoGtg, textoDelDia } from '../../lib/gtg';
+import { SE_APUNTA_EL_ENTRENO } from '../../lib/modoDeEntreno';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
 import { coachingDe } from '../../lib/coaching';
@@ -174,7 +175,9 @@ export default function ClientDashboard() {
        *
        * Es idempotente: borra los anteriores y los vuelve a poner enteros.
        */
-      if (profile.missedWorkoutRemindersEnabled) {
+      // Sin entreno en directo (lib/modoDeEntreno.ts) no hay sesión que
+      // registrar, y el aviso insistiría cada día de entreno hasta las 22:00.
+      if (SE_APUNTA_EL_ENTRENO && profile.missedWorkoutRemindersEnabled) {
         const entrenoHoy = workoutData.some((l) => esHoy(l.date));
         programarAvisosOlvido(routineData, entrenoHoy, profile.reminderHour ?? 18, {
           alumno: anchor,
@@ -337,7 +340,9 @@ export default function ClientDashboard() {
    */
   const enPausa = pausaActiva(profile?.planPauses);
   const ciclo = { alumno: cycleAnchor, pausas: profile?.planPauses };
-  const streak = currentStreak(workoutLogs, {
+  // Sin apuntar cada entreno, la racha contaría solo los días con marca:
+  // diría que no entrena quien entrena todos los días (lib/modoDeEntreno.ts).
+  const streak = !SE_APUNTA_EL_ENTRENO ? 0 : currentStreak(workoutLogs, {
     routine,
     cycleAnchor,
     pausas: profile?.planPauses,
@@ -356,7 +361,7 @@ export default function ClientDashboard() {
   // Grease the groove: la tarjeta de hoy no es "empezar sesión" sino "cuántas
   // series llevas", porque a esta pantalla se vuelve seis veces al día.
   const esModoGtg = esGtg(routine);
-  const progresoDelDia = esModoGtg
+  const progresoDelDia = esModoGtg && SE_APUNTA_EL_ENTRENO
     ? progresoGtg(routine, entrenoDeHoy(workoutLogs, routine!.id))
     : null;
 
@@ -451,8 +456,12 @@ export default function ClientDashboard() {
   const firstSteps = [
     { key: 'photo', label: 'Sube tu foto de perfil', done: Boolean(profile?.photoURL), go: '/(client)/profile' as const },
     { key: 'weight', label: 'Registra tu peso inicial', done: weightLogs.length > 0, go: '/(client)/progress?tab=nutricion' as const },
-    { key: 'workout', label: 'Completa tu primer entrenamiento', done: workoutLogs.length > 0, go: '/(client)/workout' as const },
-  ] as const;
+    // Sin entreno en directo, el primer paso es conocer el programa: no hay
+    // un "primer entreno" que completar en la app.
+    SE_APUNTA_EL_ENTRENO
+      ? { key: 'workout', label: 'Completa tu primer entrenamiento', done: workoutLogs.length > 0, go: '/(client)/workout' as const }
+      : null,
+  ].filter((s) => s !== null);
   const showFirstSteps = firstSteps.some((s) => !s.done);
 
   const stepsDone = firstSteps.filter((s) => s.done).length;
@@ -692,13 +701,21 @@ export default function ClientDashboard() {
                 <Text style={styles.todayTitle}>
                   {flexLabel(routine.scheduleLabel, 'Rutina personalizada')}
                 </Text>
-                <Text style={styles.todaySub}>Tú eliges qué hacer hoy. Entra y empieza.</Text>
+                <Text style={styles.todaySub}>
+                  {SE_APUNTA_EL_ENTRENO ? 'Tú eliges qué hacer hoy. Entra y empieza.' : 'Tú eliges qué hacer hoy. Entra y mira tus rutinas.'}
+                </Text>
               </>
             ) : routine && nextDay ? (
               <>
                 <Text style={styles.todayTitle}>{nextDay.name}</Text>
                 <Text style={styles.todaySub}>
-                  {nextDay.exercises.length} ejercicios · Empezar sesión
+                  {/* Sin entreno en directo no hay sesión que empezar: se entra
+                      a ver el programa (lib/modoDeEntreno.ts). */}
+                  {esModoGtg && !SE_APUNTA_EL_ENTRENO
+                    ? frase`${objetivoDelDia(routine, nextDay)} series sueltas a lo largo del día · Ver el programa`
+                    : SE_APUNTA_EL_ENTRENO
+                      ? frase`${nextDay.exercises.length} ejercicios · Empezar sesión`
+                      : frase`${nextDay.exercises.length} ejercicios · Ver el programa`}
                 </Text>
               </>
             ) : (
@@ -713,7 +730,9 @@ export default function ClientDashboard() {
             return (
               <View style={canTrain ? styles.todayPlay : styles.todayRest}>
                 <Ionicons
-                  name={canTrain ? 'play' : 'bed-outline'}
+                  // Sin entreno en directo se entra a ver el programa, no a
+                  // empezar nada: una flecha y no un play.
+                  name={canTrain ? (SE_APUNTA_EL_ENTRENO ? 'play' : 'arrow-forward') : 'bed-outline'}
                   size={canTrain ? 26 : 24}
                   color={canTrain ? colors.onPrimary : colors.primaryBright}
                 />
@@ -757,7 +776,9 @@ export default function ClientDashboard() {
       {/* Plan semanal: el anillo manda, y debajo la tira de días. */}
       <FadeIn delay={140}>
       <Card style={styles.section}>
-        {targetSessions > 0 ? (
+        {/* El anillo de sesiones, solo si se apunta cada entreno: sin eso se
+            quedaría en 0 toda la semana entrenando o no (lib/modoDeEntreno.ts). */}
+        {SE_APUNTA_EL_ENTRENO && targetSessions > 0 ? (
           <View style={styles.weekTop}>
             {/* Pasada la meta, "2/1" se lee como un error, no como un logro:
                 el anillo ya está cerrado y lo que queda por decir es cuántas
@@ -814,11 +835,19 @@ export default function ClientDashboard() {
           </View>
         ) : (
           <View style={styles.weekHeader}>
-            <Text style={styles.sectionLabel}>Tu semana</Text>
+            <Text style={styles.sectionLabel}>
+              {semanaDelPlan
+                ? unido(
+                    semanaDelPlan.fase,
+                    frase`Semana ${semanaDelPlan.semana.week}${semanaDelPlan.semana.totalWeeks ? frase` de ${semanaDelPlan.semana.totalWeeks}` : ''}`,
+                    semanaDelPlan.descarga ? t('descarga') : null
+                  )
+                : t('Tu semana')}
+            </Text>
           </View>
         )}
 
-        <WeekStrip routine={routine} trainedDays={trainingDays(workoutLogs)} />
+        <WeekStrip routine={routine} trainedDays={SE_APUNTA_EL_ENTRENO ? trainingDays(workoutLogs) : new Set<number>()} />
 
         {targetSessions > 0 ? null : (
           <Text style={styles.weekHint}>
@@ -827,10 +856,12 @@ export default function ClientDashboard() {
         )}
 
         <View style={styles.weekLegend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, styles.legendDone]} />
-            <Text style={styles.legendText}>Hecho</Text>
-          </View>
+          {SE_APUNTA_EL_ENTRENO ? (
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, styles.legendDone]} />
+              <Text style={styles.legendText}>Hecho</Text>
+            </View>
+          ) : null}
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, styles.legendPlanned]} />
             <Text style={styles.legendText}>Planificado</Text>
@@ -931,7 +962,9 @@ export default function ClientDashboard() {
           ya estuvo y nadie lo encontraba; aquí se ve justo debajo de la tira
           de la semana, que es donde se nota el hueco del día sin apuntar.
         */}
-        <RegistrarOtroDia compacto />
+        {/* Sin entreno en directo no se registran entrenos enteros: se apunta
+            una marca suelta desde Entreno (lib/modoDeEntreno.ts). */}
+        {SE_APUNTA_EL_ENTRENO ? <RegistrarOtroDia compacto /> : null}
       </Card>
       </FadeIn>
 

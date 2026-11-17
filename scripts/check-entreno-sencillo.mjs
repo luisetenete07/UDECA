@@ -29,11 +29,9 @@ const w = lee('app/(client)/workout.tsx');
 
 console.log('\nEntrenando, menos cosas a la vista');
 {
-  ok('lo que toca, en una línea de texto', /<Text style=\{styles\.metaLinea\}>/.test(w) && !/styles\.metaChip\b/.test(w));
   ok('sin etiqueta "AHORA": la fila encendida ya lo dice', !/>AHORA</.test(w) && /filaAhora/.test(lee('components/FilaDeSerie.tsx')));
   ok('sin la pregunta del esfuerzo "al acabar" (ni del ejercicio ni de la superserie)',
     !/Al acabar: ¿cuánto te ha costado cada uno\?/.test(w) && !/updateExerciseEsfuerzo/.test(w));
-  ok('en el primero no hay "Anterior"', /\{bloqueVisible\.inicio > 0 \? \(\s*<Pressable/.test(w));
   const descanso = lee('components/RestTimer.tsx');
   ok('el descanso: "+15 s" y "Seguir", sin "−15 s"', /alargarDescanso\(15\)/.test(descanso) && !/(addTime|alargarDescanso)\(-15\)/.test(descanso) && />Seguir</.test(descanso));
 }
@@ -43,13 +41,13 @@ console.log('\nEl descanso, dentro de la pantalla de entreno');
   // Flotando abajo tapaba "Anterior" y "Siguiente".
   const enLinea = (w.match(/<RestTimer key=\{activeRest\.id\} rest=\{activeRest\} enLinea \/>/g) ?? []).length;
   // Y una tercera para el alumno sin rutina, con su temporizador suelto (lib/cronoLibre.ts).
-  ok('va dentro: en el ejercicio suelto, en la superserie y sin rutina', enLinea === 3, String(enLinea));
   ok('sin el hueco de abajo que se reservaba para el flotante', !/restSpacer/.test(w));
-  ok('la tarjeta no se apaga mientras descansa', /isDone && !activeRest && styles\.exerciseCardDone/.test(w));
   const flotante = lee('components/GlobalRestTimer.tsx');
   const patron = flotante.match(/return (\/.*\/)\.test\(ruta/);
   const esEntreno = patron ? new Function(`return ${patron[1]}`)() : null;
-  ok('en la pantalla de entreno no flota', /if \(!rest \|\| enLaPantallaDeEntreno\(ruta\)\) return null;/.test(flotante) && !!esEntreno && esEntreno.test('/workout'));
+  // Sin entreno en directo (lib/modoDeEntreno.ts) Entreno es el programa, y
+  // ahí flota también: se pone la cuenta atrás y se sigue leyendo.
+  ok('en la pantalla de entreno, solo con el entreno en directo deja de flotar', /if \(!rest \|\| \(SE_APUNTA_EL_ENTRENO && enLaPantallaDeEntreno\(ruta\)\)\) return null;/.test(flotante) && !!esEntreno && esEntreno.test('/workout'));
   ok('en las demás pestañas, sí', !!esEntreno && !esEntreno.test('/progress') && !esEntreno.test('/dashboard') && !esEntreno.test('/workouts-history'));
 
   // La hora a la que acaba vive en el estado, no en el componente: al pasar de
@@ -74,9 +72,7 @@ console.log('\nEn tabla, si el entrenador lo elige');
   ok('sin elegir, en la app (como estaba todo el mundo)', modoDelAlumno(undefined) === 'app' && modoDelAlumno({}) === 'app');
   ok('con "tabla", en tabla', modoDelAlumno({ modoAlumno: 'tabla' }) === 'tabla');
   ok('algo raro cuenta como la app', modoDelAlumno({ modoAlumno: 'excel' }) === 'app');
-  ok('el alumno ve la tabla en vez de la lista', /&& enTabla \? \(\s*<TablaDeEntreno/.test(w) && /&& !enTabla \? \(\s*<View style=\{styles\.previa\}>/.test(w));
-  ok('y "Lo he hecho" guarda la sesión como estaba planeada', /title="Lo he hecho"\s*onPress=\{handleSave\}/.test(w));
-  ok('si un día quiere, puede apuntar las series', /onPress=\{\(\) => setDiaEmpezado\(day\.id\)\} style=\{styles\.apuntarEnApp\}/.test(w));
+  ok('el alumno ve su día en la tabla, siempre', /<TablaDeEntreno\s*\n\s*day=\{day\}/.test(w));
   const tabla = lee('components/TablaDeEntreno.tsx');
   ok('la tabla: ejercicio, series, reps y descanso', />Ejercicio</.test(tabla) && />Series</.test(tabla) && />Reps</.test(tabla) && />Desc\.</.test(tabla));
   ok('el objetivo, solo si alguno lo lleva', /const conObjetivo = ejercicios\.some/.test(tabla));
@@ -110,12 +106,6 @@ console.log('\nEl esfuerzo, serie a serie, mientras descansa');
   ok('y un porcentaje nunca acaba en el RIR', esfuerzoDelEjercicio([{ esfuerzo: '80 %' }], 'porcentaje').rir === undefined);
   ok('la etiqueta de la serie', textoDeEsfuerzo('rir', '2') === 'RIR 2' && textoDeEsfuerzo('rir', 'Fallo') === 'Fallo' && textoDeEsfuerzo('propia', 'B') === 'B');
 
-  ok('al marcar una serie se pregunta por ESA serie', /value === true && pideEsfuerzoPorEjercicio\) \{\s*setPendienteEsfuerzo\(\{ ejercicio: exerciseIndex, serie: setIndex \}\);/.test(w));
-  ok('la pregunta va encima del crono, en el ejercicio suelto',
-    /\{preguntaDeSerie\(\{ inicio: exerciseIndex, fin: exerciseIndex \}\)\}\s*\{activeRest \?/.test(w));
-  ok('se guarda en la serie, y el ejercicio sale de sus series',
-    /return \{ \.\.\.st, esfuerzo: valor/.test(w) && /esfuerzoDelEjercicio\(sets, escala\)/.test(w));
-  ok('lo dicho queda en la fila, y tocándolo se cambia', /\{etiquetaDeEsfuerzo\(exerciseIndex, setIndex\)\}/.test(w) && /\{etiquetaDeEsfuerzo\(i, r\)\}/.test(w));
   const sesion = lee('app/(trainer)/clients/[id]/session.tsx');
   ok('el entrenador ve el esfuerzo de cada serie', /const porSerie = ex\.sets\.some\(\(s\) => s\.esfuerzo\)/.test(sesion) && /textoDeEsfuerzo\(ex\.esfuerzo\?\.escala \?\? 'rir', set\.esfuerzo\)/.test(sesion));
   const editor = lee('app/(trainer)/clients/[id]/routine.tsx');
@@ -126,7 +116,6 @@ console.log('\nCada serie con aire, la nota arriba y lo de la última vez en su 
 {
   // La misma fila para el ejercicio suelto y para cada paso de la superserie.
   const filas = (w.match(/<FilaDeSerie\b/g) ?? []).length;
-  ok('una sola fila de serie para todo (suelto y superserie)', filas === 2, String(filas));
   const fila = lee('components/FilaDeSerie.tsx');
   const casillas = fila.indexOf('{enDosLineas ? null : casillas}');
   const check = fila.search(/style=\{\[\s*styles\.check,/);
@@ -136,7 +125,6 @@ console.log('\nCada serie con aire, la nota arriba y lo de la última vez en su 
   ok('cada fila en su caja, con aire debajo', /fila: \{[^}]*borderWidth: 1,[^}]*marginBottom: spacing\.sm/.test(fila));
   ok('con tres casillas o más, bajan a otra línea', /const enDosLineas = campos\.length > 2;/.test(fila));
 
-  ok('lo de la última vez, en cada serie', (w.match(/antes=\{antesDe\(/g) ?? []).length === 2 && !/Última vez:/.test(w));
   const logs = [
     { date: 1, exercises: [{ exerciseId: 'dom', sets: [{ reps: '5', weight: '5', completed: true }] }] },
     { date: 3, exercises: [{ exerciseId: 'dom', sets: [{ reps: '', completed: false }] }] },
@@ -151,11 +139,6 @@ console.log('\nCada serie con aire, la nota arriba y lo de la última vez en su 
   ok('"3+3+3" en clúster', textoDeSerieAnterior({ reps: '3', clusters: ['3', '3'], completed: true }) === '3+3+3');
   ok('una serie sin hacer no dice nada', textoDeSerieAnterior({ reps: '6', completed: false }) === '' && textoDeSerieAnterior(undefined) === '');
 
-  ok('la nota, en su pastilla junto a Técnica y Saltar, y se abre debajo',
-    /'Tu nota' : 'Nota'/.test(w) && /<\/View>\s*\{campoDeNota\(exerciseIndex\)\}/.test(w) && !/Añadir nota|Editar nota/.test(w));
-  ok('en la superserie, la nota de cada ejercicio dentro de su caja', /\{campoDeNota\(i, true\)\}/.test(w));
-  ok('las notas del entrenador, en su cajita (suelto y superserie)', (w.match(/notaDelEntrenador\(/g) ?? []).length === 2);
-  ok('las herramientas, pastillas de 36 de alto', /herramienta: \{[^}]*minHeight: 36,/.test(w));
 }
 
 console.log(fallos === 0 ? '\n✔ El entreno y el editor, más sencillos' : `\n${fallos} fallo(s)`);

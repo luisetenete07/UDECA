@@ -157,7 +157,7 @@ console.log('\nSemana y días sueltos: no solo RIR');
   // La cuarta es el plan con que se compara para avisar al alumno (lib/avisosDelPlan.ts).
   ok('se guarda con la rutina, la plantilla y al aplicar a otros', (editor.match(/prescripcion: schedule !== 'flex' \? prescripcionSimpleAGuardar\(\) : undefined/g) ?? []).length === 4);
   const w = lee('app/(client)/workout.tsx');
-  ok('el alumno lo ve en su entreno (y en la tabla)', (w.match(/textoDePrescripcion\([^)]*, planPrescrito\)/g) ?? []).length === 3 && !/textoDePrescripcion\([^)]*, perso\)/.test(w));
+  ok('el alumno lo ve en su entreno, en la tabla', (w.match(/textoDePrescripcion\([^)]*, planPrescrito\)/g) ?? []).length >= 1 && !/textoDePrescripcion\([^)]*, perso\)/.test(w));
 }
 
 console.log(fallos === 0 ? '\n✔ El editor de rutinas, más rápido' : `\n${fallos} fallo(s)`);

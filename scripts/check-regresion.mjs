@@ -104,11 +104,6 @@ console.log('\nEl alumno la marca al apuntar');
   const entrenoTsx = lee('app/(client)/workout.tsx');
   // SOLO si el entrenador lo permite en ese ejercicio: sin el permiso, el
   // botón no sale (onRegresion sin pasar).
-  ok('en series sueltas y en superseries, solo con permiso del entrenador',
-    /onRegresion=\{d\.planned\?\.permiteRegresion \? \(\) => alternarRegresion\(i, r\) : undefined\}/.test(entrenoTsx) &&
-      /onRegresion=\{planned\?\.permiteRegresion \? \(\) => alternarRegresion\(exerciseIndex, setIndex\) : undefined\}/.test(entrenoTsx));
-  ok('ningún botón sin el permiso', !/onRegresion=\{\(\) =>/.test(entrenoTsx));
-  ok('se pone también en las que quedan por hacer', /j !== serie && \(j < serie \|\| st\.completed\)/.test(entrenoTsx));
   const registrar = lee('app/(client)/registrar.tsx');
   ok('y al apuntar otro día, por ejercicio y con permiso',
     /alternarRegresion/.test(registrar) && /\{enPlan\?\.permiteRegresion \? \(/.test(registrar));

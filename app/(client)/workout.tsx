@@ -1,438 +1,143 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { t, frase  } from '../../lib/idioma';
-import { diaLargo, diaSemanaCorto, esMismoDia, inicioDelDia, masDias } from '../../lib/fechas';
-import { unido } from '../../lib/texto';
-import { useFocusEffect, useNavigation, useRouter } from 'expo-router';
-import { AppState, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { frase, t } from '../../lib/idioma';
+import { diaLargo } from '../../lib/fechas';
+import { useFocusEffect } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { ResumenEntreno, TarjetaTerminado } from '../../components/DespuesDelEntreno';
-import { PRBurst } from '../../components/PRBurst';
-import {
-  checkLivePR,
-  contextoDelRecord,
-  contextoEnUnaLinea,
-  marcaAnterior,
-  type LivePR,
-} from '../../lib/livePR';
-import { FadeIn } from '../../components/FadeIn';
+import { Chip, ChipRow } from '../../components/Chip';
 import { EmptyState } from '../../components/EmptyState';
+import { FadeIn } from '../../components/FadeIn';
 import { IntervalTimer } from '../../components/IntervalTimer';
-import { CronoDeDescanso } from '../../components/CronoDeDescanso';
 import { LoadingScreen } from '../../components/LoadingScreen';
+import { RelojesDelEntreno } from '../../components/RelojesDelEntreno';
+import { ApuntarMarca } from '../../components/ApuntarMarca';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { ScreenHeader } from '../../components/ScreenHeader';
+import { Sheet } from '../../components/Sheet';
+import { TablaDeEntreno } from '../../components/TablaDeEntreno';
 import { VisorDeVideo } from '../../components/VisorDeVideo';
-import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
+import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
+import { fetchSyncState, setCycleAnchorRemote } from '../../lib/firestore/sync';
 import { applyWeekPlan } from '../../lib/weekPlan';
-import { esfuerzoDePct, etiquetaCombinada, pctCombinado, textoIntensidad } from '../../lib/intensidad';
-import { modoDelAlumno, queVeElAlumno } from '../../lib/visibilidad';
-import { TablaDeEntreno } from '../../components/TablaDeEntreno';
-import { RestTimer } from '../../components/RestTimer';
-import { CabeceraDeSeries, FilaDeSerie, type CampoDeSerie } from '../../components/FilaDeSerie';
-import { SelectorDeEsfuerzo } from '../../components/SelectorDeEsfuerzo';
-import { diasDePausa, pausaActiva } from '../../lib/pausa';
-import { PressableScale } from '../../components/PressableScale';
-import { UltimoEntreno } from '../../components/UltimoEntreno';
-import { SessionHeader } from '../../components/SessionHeader';
-import type { AccionRapida } from '../../components/QuickSheet';
-import {
-  createWorkoutLog,
-  deleteWorkoutLog,
-  getWorkoutLogsForClient,
-  updateWorkoutLog,
-} from '../../lib/firestore/workoutLogs';
-import { syncMySocialStats } from '../../lib/firestore/social';
+import { textoIntensidad } from '../../lib/intensidad';
+import { queVeElAlumno } from '../../lib/visibilidad';
+import { pausaActiva } from '../../lib/pausa';
 import { flexLabel, resolveTodaySession } from '../../lib/schedule';
-import {
-  comoLlamaALaRutina,
-  comoLlamaALaSerie,
-  comoRir,
-  enTitulo,
-  esfuerzoDelEjercicio,
-  gruposDeLaRutina,
-  minutosEstimados,
-  preguntaDeEsfuerzo,
-  prescripcionDe,
-  rirComoValor,
-  textoDeEsfuerzo,
-  textoDeIntensidadDelDia,
-  textoDePrescripcion,
-  planDeLaPrescripcion,
-  tocaPreguntarEsfuerzo,
-  type EsfuerzoApuntado,
-} from '../../lib/planPersonalizado';
-import {
-  conSerieAnadida,
-  entrenoDeHoy,
-  esGtg,
-  MAX_OBJETIVO,
-  objetivoDeHoy,
-  objetivoDelDia,
-  sinLaUltimaSerie,
-} from '../../lib/gtg';
-import { PantallaGtg } from '../../components/PantallaGtg';
-import {
-  ajustesDeFusion,
-  combinarRutinas,
-  comoSeCombinan,
-  juntarTramos,
-  ordenParaFusionar,
-  rondasDeLaCombinacion,
-  textoDeDescanso,
-} from '../../lib/combinarRutinas';
-import {
-  anclaDeLaCuenta,
-  getCycleAnchor,
-  setCycleAnchorForIndex,
-  setCycleAnchorToday,
-} from '../../lib/cycleAnchor';
+import { planDeLaPrescripcion, textoDeIntensidadDelDia, textoDePrescripcion } from '../../lib/planPersonalizado';
+import { esGtg, objetivoDelDia } from '../../lib/gtg';
+import { anclaDeLaCuenta, getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import { anclaQueManda, type AnclaDelAlumno } from '../../lib/ciclo';
-import { ultimoEntrenoDe } from '../../lib/ultimoEntreno';
-import {
-  addFlexRestDay,
-  removeFlexRestDay,
-  clearActiveSession,
-  fetchSyncState,
-  saveActiveSession,
-  setCycleAnchorRemote,
-} from '../../lib/firestore/sync';
-import { tabScreenOptions } from '../../lib/navTheme';
-import { cancelarAvisosOlvido, notifyUser } from '../../lib/notifications';
-import { enqueueWorkout, flushPendingWorkouts } from '../../lib/offlineQueue';
-import { shareRecordImage, shareSessionImage } from '../../lib/brandCards';
-import { getRest, startRest, stopRest, stopRestSiEs, useActiveRest } from '../../lib/restTimerStore';
 import { calentamientoParaVer } from '../../lib/calentamiento';
+import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
-  bloqueDe,
-  descansoTrasRonda,
-  descansoTrasSerie,
-  enLaRonda,
-  esSuperserie,
-  miembros as miembrosDelBloque,
-  rondasDe,
-  serieSuelta,
-  siguienteDelBloque,
-  trasMarcarSerie,
-} from '../../lib/superserie';
-import {
-  computeAchievements,
-  currentStreak,
-  detectNewPRs,
-  lastPerformanceByExercise,
-  seriesAnteriores,
-  sessionTotals,
-  textoDeSerieAnterior,
-  type Achievement,
-  type LastPerformance,
-  type PersonalRecord,
-} from '../../lib/stats';
-import { Sheet } from '../../components/Sheet';
-import { Chip, ChipRow } from '../../components/Chip';
-import { minutosSegundos } from '../../lib/duracion';
-import { fonts, colors, radius, shadows, spacing, tabularNums, typography } from '../../lib/theme';
-import {
-  clusterBlocks,
-  EXERCISE_MEASURES,
-  GRIP_LABEL,
-  type ExerciseMeasure,
-  isDualMeasure,
-  isHoldMeasure,
-  resolveLoad,
   todayWeekday,
   WEEKDAY_NAMES,
-  type LoggedExercise,
+  type ExerciseMeasure,
   type Routine,
   type RoutineDay,
   type RoutineExercise,
   type WorkoutLog,
 } from '../../lib/types';
 
-const DEFAULT_REST_SECONDS = 90;
-// Una sesión a medias se conserva hasta 3 días: dentro del MISMO día se retoma
-// sola; si es de un día anterior, se ofrece el botón "Rellenar último entreno".
-const DRAFT_TTL_MS = 72 * 60 * 60 * 1000;
-
-interface WorkoutDraft {
-  routineId: string;
-  dayId: string;
-  dayName?: string;
-  log: LoggedExercise[];
-  startedAt: number | null;
-  savedAt: number;
-  /** Ejercicio que se estaba viendo, para reanudar justo donde se dejó. */
-  viewIndex?: number;
-}
-
-const draftKey = (uid: string) => `calico-workout-draft-${uid}`;
-// Entreno de un día anterior que quedó sin finalizar (se guarda aparte para que
-// empezar uno nuevo hoy no lo borre).
-const pendingKey = (uid: string) => `calico-workout-pending-${uid}`;
-// Un borrador merece restaurarse si contiene CUALQUIER dato del alumno, no solo
-// series marcadas: reps o pesos tecleados y notas cuentan igual. Solo se
-// escriben borradores que difieren de la plantilla del día (ver pristineRef),
-// así que basta con comprobar que hay algo dentro.
-const draftHasProgress = (d: WorkoutDraft) =>
-  d.log.some(
-    (ex) =>
-      (ex.notes ?? '').trim() !== '' ||
-      ex.sets.some(
-        (st) => st.completed || (st.reps ?? '').trim() !== '' || (st.weight ?? '').trim() !== ''
-      )
-  );
-
-function buildLog(day: RoutineDay): LoggedExercise[] {
-  return day.exercises.map((ex) => {
-    // Si el coach fijó un número exacto (p. ej. "10"), lo precargamos para
-    // ahorrar tecleo. Si puso un RANGO ("8-12") o texto ("AMRAP"), dejamos el
-    // campo VACÍO y mostramos ese objetivo como pista: así el alumno escribe
-    // las repeticiones que de verdad ha hecho.
-    const target = (ex.reps ?? '').trim();
-    const prefill = /^\d+$/.test(target) ? target : '';
-    return {
-      exerciseId: ex.exerciseId,
-      name: ex.name,
-      measure: ex.measure ?? 'reps',
-      load: resolveLoad(ex),
-      sets: Array.from({ length: ex.sets || 1 }, () => ({
-        reps: prefill,
-        weight: '',
-        completed: false,
-      })),
-    };
-  });
-}
-
-interface SessionSummary {
-  durationMin: number;
-  sets: number;
-  reps: number;
-  seconds: number;
-  volumeKg: number;
-  prs: PersonalRecord[];
-  streak: number;
-  newAchievements: Achievement[];
-}
-
+/**
+ * ENTRENO: EL PROGRAMA A LA VISTA Y UN RELOJ.
+ *
+ * Ya no se entrena en directo con la app (ver lib/modoDeEntreno.ts). Esta
+ * pestaña es la hoja del entrenador, bien ordenada, y lo que se usa con el
+ * móvil en la mano:
+ *
+ *  - Los días del plan, con el de hoy marcado y abierto.
+ *  - El calentamiento y, del día, cada ejercicio con sus series, sus
+ *    repeticiones, su descanso, las notas del entrenador y su técnica en vídeo.
+ *  - La cuenta atrás y el cronómetro.
+ *  - "Apuntar una marca", para quien quiera ir viendo su progreso. Opcional:
+ *    no hay nada que empezar ni que terminar.
+ *
+ * Antes esta pantalla era el entreno entero —4.000 líneas: series, borradores
+ * entre dispositivos, récords en directo, resumen al acabar—. Está en el
+ * historial del repositorio si algún día vuelve a hacer falta.
+ */
 export default function WorkoutScreen() {
   const { profile } = useAuth();
-  const navigation = useNavigation();
-  const router = useRouter();
-
-  // Modo inmersivo: oculta la barra de pestañas mientras se entrena para
-  // concentrarse; la restaura al salir de la pantalla.
-  useFocusEffect(
-    useCallback(() => {
-      const parent = navigation.getParent();
-      parent?.setOptions({ tabBarStyle: { display: 'none' } });
-      return () => parent?.setOptions({ tabBarStyle: tabScreenOptions.tabBarStyle });
-    }, [navigation])
-  );
 
   const [routine, setRoutine] = useState<Routine | null>(null);
-  // Récord que se está celebrando ahora mismo, y los ya celebrados en esta
-  // sesión: el mismo ejercicio no vuelve a saltar aunque siga subiendo serie a
-  // serie, o el aviso pasaría de premio a ruido.
-  const [prVivo, setPrVivo] = useState<LivePR | null>(null);
-  const prCelebrados = useRef<Set<string>>(new Set());
-  const [history, setHistory] = useState<import('../../lib/types').WorkoutLog[]>([]);
+  const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
-  /**
-   * Si ya se ha pulsado "Empezar entreno" para el día que está en pantalla.
-   *
-   * Guarda el ID del día y no un sí/no: al cambiar de día hay que volver a
-   * empezar, porque lo que se abre es OTRO entreno.
-   */
-  const [diaEmpezado, setDiaEmpezado] = useState<string | null>(null);
-  const [log, setLog] = useState<LoggedExercise[]>([]);
-  const [lastPerf, setLastPerf] = useState<Record<string, LastPerformance>>({});
-  // Las series de la última vez, una a una: cada fila dice lo de SU serie.
-  const anteriores = useMemo(() => seriesAnteriores(history), [history]);
+  const [cycleAnchor, setCycleAnchor] = useState<AnclaDelAlumno | null>(null);
   const [videoByExercise, setVideoByExercise] = useState<Record<string, string>>({});
-  // Medida ACTUAL de cada ejercicio en la biblioteca (reps/segundos). Manda
-  // sobre la copia guardada en la rutina por si el coach la cambió después.
-  const [measureByExercise, setMeasureByExercise] =
-    useState<Record<string, import('../../lib/types').ExerciseMeasure>>({});
-  // Grupo muscular de cada ejercicio (para el calentamiento sugerido del día).
-  const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
+  const [measureByExercise, setMeasureByExercise] = useState<Record<string, ExerciseMeasure>>({});
+  const [videoAbierto, setVideoAbierto] = useState<{ url: string; titulo: string } | null>(null);
   const [warmupOpen, setWarmupOpen] = useState(false);
   const [intervalOpen, setIntervalOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<SessionSummary | null>(null);
-  const [restored, setRestored] = useState(false);
-  // Borrador sin finalizar de un DÍA ANTERIOR: se ofrece rellenarlo o dejarlo.
-  const [pastDraft, setPastDraft] = useState<WorkoutDraft | null>(null);
-  const [pastDismissed, setPastDismissed] = useState(false);
-  // Si estamos rellenando un entreno de otro día, se registra con SU fecha.
-  const [resumeDate, setResumeDate] = useState<number | null>(null);
-  // Id de la sesión que se está corrigiendo, si se reabrió una ya guardada.
-  const [corrigiendo, setCorrigiendo] = useState<string | null>(null);
-  // Evita que el efecto de recuperación pise una recuperación manual.
-  const resumeGuard = useRef(false);
-  // Descanso activo: cuando corre, el crono flota abajo; añadimos hueco al
-  // final para que no tape los botones Anterior/Siguiente ni el de Terminar.
-  const activeRest = useActiveRest();
-  // Índice del ejercicio que se muestra en el modo enfocado (1 por pantalla).
-  const [viewIndex, setViewIndex] = useState(0);
-  const [rondasAbiertas, setRondasAbiertas] = useState<Set<string>>(() => new Set());
-  // Índice del ejercicio con el vídeo de técnica desplegado (null = ninguno).
-  // El vídeo de técnica se abre en el visor, a casi toda la pantalla y con
-  // las mismas protecciones que los cursos (ver components/VisorDeVideo). En
-  // una tira de 200 px metida entre dos series no se ve dónde va el codo, que
-  // es lo único que se viene a mirar.
-  const [videoAbierto, setVideoAbierto] = useState<{ url: string; titulo: string } | null>(null);
-  // Índice del ejercicio con el campo de nota abierto (null = ninguno).
-  const [noteOpenIndex, setNoteOpenIndex] = useState<number | null>(null);
-  // Ancla local del ciclo (Método REIN TENA): el alumno puede reiniciar en Día 1.
-  const [cycleAnchor, setCycleAnchor] = useState<AnclaDelAlumno | null>(null);
-  // Elección del descanso opcional (Día 7 TENA): pendiente hasta que decide.
-  const [optionalResolved, setOptionalResolved] = useState(false);
-  const [restingToday, setRestingToday] = useState(false);
   const [dayPickerOpen, setDayPickerOpen] = useState(false);
-  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
-  // Modo "Sensaciones": selección múltiple de rutinas (en orden) y descanso.
-  const [flexSelection, setFlexSelection] = useState<string[]>([]);
-  const [combinedDay, setCombinedDay] = useState<RoutineDay | null>(null);
-  // Sensaciones: el alumno pide hacer un SEGUNDO entreno el mismo día. Ignora
-  // temporalmente la tarjeta de "ya completado" para volver a elegir rutina.
-  const [flexAgain, setFlexAgain] = useState(false);
-  // Sensaciones: "hoy descanso" se recuerda entre sesiones (persistido en
-  // flexRestDays), así al cerrar y reabrir la app el día sigue como descanso.
-  const [flexResting, setFlexResting] = useState<boolean>(() => {
-    const today = inicioDelDia(Date.now());
-    return (profile?.flexRestDays ?? []).some((d) => inicioDelDia(d) === today);
-  });
-  const startedAt = useRef<number | null>(null);
-  // Log "en blanco" del día tal y como lo genera la plantilla. Sirve para saber
-  // si el alumno ha tocado algo: en cuanto el log difiere de esto, hay datos que
-  // conservar y el borrador empieza a guardarse.
-  const pristineRef = useRef<string>('');
-  // Sesión en curso traída de la cuenta (otro dispositivo). Se compara con el
-  // borrador local para recuperar siempre la versión más reciente.
-  const remoteDraftRef = useRef<WorkoutDraft | null>(null);
-  // Temporizador para no escribir en Firestore en cada tecla (debounce).
-  const remoteSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [apuntando, setApuntando] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       if (!profile) return;
       let cancelled = false;
       (async () => {
-        // Sube entrenos que quedaron pendientes por falta de conexión.
-        const uploaded = await flushPendingWorkouts().catch(() => 0);
-        if (uploaded > 0) showToast(frase`${uploaded} entreno(s) pendiente(s) subido(s) ✓`);
-        const [data, logs, ciclos] = await Promise.all([
+        const [data, historial, ciclos] = await Promise.all([
           getActiveRoutineForClient(profile.uid),
-          getWorkoutLogsForClient(profile.uid),
+          getWorkoutLogsForClient(profile.uid).catch(() => [] as WorkoutLog[]),
           // Si el entrenador programó ESTA semana (4×8 la primera, 5×8 la
-          // tercera), es eso lo que hay que entrenar hoy. Sin ciclos, la
-          // rutina se usa tal cual y aquí no cambia nada.
+          // tercera), es eso lo que se enseña hoy.
           getCyclesForClientSelf(profile.uid).catch(() => []),
         ]);
         if (cancelled) return;
-        setRoutine(applyWeekPlan(data, ciclos));
-        prCelebrados.current = new Set();
-        setHistory(logs);
-        setLastPerf(lastPerformanceByExercise(logs));
-        // Vídeos de técnica de la biblioteca del entrenador (no bloquea).
+        const rutina = applyWeekPlan(data, ciclos);
+        setRoutine(rutina);
+        setLogs(historial);
+        // Vídeos de técnica y medidas de la biblioteca del entrenador. La
+        // medida de la biblioteca manda sobre la copia de la rutina, por si el
+        // entrenador la cambió después.
         if (profile.trainerId) {
           getExerciseLibrary(profile.trainerId)
             .then((library) => {
               if (cancelled) return;
-              const map: Record<string, string> = {};
-              const measures: Record<string, import('../../lib/types').ExerciseMeasure> = {};
-              const muscles: Record<string, string> = {};
+              const videos: Record<string, string> = {};
+              const medidas: Record<string, ExerciseMeasure> = {};
               for (const ex of library) {
-                if (ex.videoUrl) map[ex.id] = ex.videoUrl;
-                measures[ex.id] = ex.measure ?? 'reps';
-                muscles[ex.id] = ex.muscleGroup;
+                if (ex.videoUrl) videos[ex.id] = ex.videoUrl;
+                medidas[ex.id] = ex.measure ?? 'reps';
               }
-              setVideoByExercise(map);
-              setMeasureByExercise(measures);
-              setMuscleByExercise(muscles);
+              setVideoByExercise(videos);
+              setMeasureByExercise(medidas);
             })
             .catch(() => {});
         }
-        // Estado sincronizado de la cuenta (sesión en curso + ancla del ciclo),
-        // para que cualquier dispositivo con la misma cuenta vaya al día.
-        const sync = await fetchSyncState(profile.uid);
-        if (cancelled) return;
-        remoteDraftRef.current = sync.activeSession ?? null;
-        /*
-         * El ancla del ciclo es la que se DECIDIÓ más tarde, entre la de este
-         * dispositivo y la de la cuenta. Antes se cogía la fecha más grande, y
-         * como fijar "hoy es el Día 5" guardaba una fecha futura para ganar esa
-         * comparación, un reinicio hecho en otro móvil podía perder contra una
-         * elección de la semana pasada.
-         */
-        const anchor = anclaQueManda(
-          data ? await getCycleAnchor(data.id) : null,
-          data ? anclaDeLaCuenta({ cycleAnchors: sync.cycleAnchors, cycleAnchorsSetAt: sync.cycleAnchorsSetAt }, data.id) : null
-        );
+        // En qué día del ciclo va: el ancla que se decidió más tarde entre
+        // este móvil y la cuenta (lib/ciclo.ts).
+        const sync = await fetchSyncState(profile.uid).catch(() => null);
+        const anchor = rutina
+          ? anclaQueManda(
+              await getCycleAnchor(rutina.id),
+              sync ? anclaDeLaCuenta({ cycleAnchors: sync.cycleAnchors, cycleAnchorsSetAt: sync.cycleAnchorsSetAt }, rutina.id) : null
+            )
+          : null;
         if (cancelled) return;
         setCycleAnchor(anchor);
-        if (data && data.days.length > 0) {
-          // Preselecciona el día que toca hoy. Prioridad: sesión en curso en
-          // otro dispositivo → día ya entrenado hoy → día que toca → primero.
-          const session = resolveTodaySession(data, {
-            alumno: anchor,
-            pausas: profile.planPauses,
-          });
-          const remoteFresh =
-            sync.activeSession &&
-            sync.activeSession.routineId === data.id &&
-            Date.now() - sync.activeSession.savedAt < DRAFT_TTL_MS &&
-            sync.activeSession.log.some((ex) => ex.sets.some((st) => st.completed))
-              ? data.days.find((d) => d.id === sync.activeSession!.dayId)
-              : undefined;
-          const doneToday = logs.find(
-            (l) => l.routineId === data.id && esMismoDia(l.date)
+        if (rutina && rutina.days.length > 0) {
+          // Se abre el día que toca hoy, sea de entrenar o de descansar: la
+          // portada dice lo mismo, y dos pantallas que cuentan días distintos
+          // hacen dudar del plan. Con "a elección", la primera rutina.
+          const hoy = resolveTodaySession(rutina, { alumno: anchor, pausas: profile.planPauses });
+          const porDefecto = rutina.days.find((d) => !d.isRest) ?? rutina.days[0];
+          setSelectedDayId(
+            (prev) =>
+              (prev && rutina.days.some((d) => d.id === prev) ? prev : null) ??
+              (rutina.schedule === 'flex' ? null : hoy.day?.id ?? hoy.diaDeHoy?.id) ??
+              porDefecto.id
           );
-          const doneTodayDay = doneToday
-            ? data.days.find((d) => d.name === doneToday.dayName)
-            : undefined;
-          if (data.schedule === 'flex') {
-            // Modo a elección ("Sensaciones"): el alumno elige rutina antes de
-            // empezar; solo preseleccionamos si hay sesión en curso o ya entrenó.
-            setSelectedDayId((prev) => prev ?? remoteFresh?.id ?? doneTodayDay?.id ?? null);
-          } else {
-            /*
-             * SI HOY TOCA DESCANSAR, SE ABRE EL DÍA DE DESCANSO.
-             *
-             * Antes se saltaba: `days.find((d) => !d.isRest)` buscaba el primer
-             * día de ENTRENAR, así que en un día de descanso el alumno abría la
-             * pestaña y se encontraba cargado el Día 1 —o el último que hubiera
-             * hecho— con sus ejercicios y su botón de empezar. Su portada le
-             * decía "Día 6, descanso" y esta pantalla le enseñaba otro día
-             * distinto: dos sitios de la misma app contando cosas diferentes
-             * sobre el mismo día, que es de las cosas que más hacen dudar de un
-             * plan.
-             *
-             * Abriendo el día que de verdad toca sale la tarjeta de descanso, y
-             * quien quiera entrenar igualmente solo tiene que tocar otro día en
-             * la tira de arriba, que sigue estando entera.
-             */
-            const fallback = data.days.find((d) => !d.isRest) ?? data.days[0];
-            setSelectedDayId(
-              (prev) =>
-                prev ??
-                remoteFresh?.id ??
-                doneTodayDay?.id ??
-                session.day?.id ??
-                session.diaDeHoy?.id ??
-                fallback.id
-            );
-          }
         }
         setLoading(false);
       })();
@@ -442,2137 +147,257 @@ export default function WorkoutScreen() {
     }, [profile])
   );
 
-  useEffect(() => {
-    if (!routine || !selectedDayId || !profile) return;
-    const day = routine.days.find((d) => d.id === selectedDayId);
-    if (!day) return;
-    // Estamos en un día REAL de la rutina: si quedó pegado un "día combinado"
-    // de Sensaciones de una sesión anterior, lo limpiamos. Si no, el nombre del
-    // entreno (dayName) se guardaría con el del combinado antiguo aunque los
-    // ejercicios sean los de este día (p. ej. salía "Core" en un Tirón suave).
-    setCombinedDay(null);
-    // Una recuperación manual (botón "Rellenar último entreno") ya ha fijado el
-    // log; no lo pisamos.
-    if (resumeGuard.current) {
-      resumeGuard.current = false;
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const uid = profile.uid;
-      const today = inicioDelDia(Date.now());
-      // 1) Carry-over: entreno de un día anterior sin finalizar (guardado aparte).
-      let pending: WorkoutDraft | null = null;
-      try {
-        const rawP = await AsyncStorage.getItem(pendingKey(uid));
-        if (rawP) pending = JSON.parse(rawP) as WorkoutDraft;
-      } catch {
-        // ilegible: se ignora
-      }
-      if (
-        !pending ||
-        !draftHasProgress(pending) ||
-        Date.now() - pending.savedAt >= DRAFT_TTL_MS ||
-        inicioDelDia(pending.startedAt ?? pending.savedAt) >= today
-      ) {
-        if (pending) AsyncStorage.removeItem(pendingKey(uid)).catch(() => {});
-        pending = null;
-      }
-
-      // 2) Borrador principal: local vs. cuenta (otro dispositivo), gana el más reciente.
-      let draft: WorkoutDraft | null = null;
-      try {
-        const raw = await AsyncStorage.getItem(draftKey(uid));
-        if (raw) draft = JSON.parse(raw) as WorkoutDraft;
-      } catch {
-        // ilegible
-      }
-      const remote = remoteDraftRef.current;
-      if (remote && (!draft || remote.savedAt > draft.savedAt)) draft = remote;
-
-      let restoredHere = false;
-      if (draft && draftHasProgress(draft) && Date.now() - draft.savedAt < DRAFT_TTL_MS) {
-        const draftDay = inicioDelDia(draft.startedAt ?? draft.savedAt);
-        if (draftDay === today && draft.routineId === routine.id && draft.dayId === selectedDayId) {
-          // Mismo día: se retoma sin preguntar.
-          if (cancelled) return;
-          // La referencia sigue siendo la plantilla del día: el borrador difiere
-          // de ella, así que los cambios se seguirán guardando.
-          pristineRef.current = JSON.stringify(buildLog(day));
-          setLog(draft.log);
-          startedAt.current = draft.startedAt;
-          setRestored(true);
-          setResumeDate(null);
-          setSummary(null);
-          // Vuelve al ejercicio que estaba viendo; si no consta, al primero sin
-          // terminar.
-          const resume = draft.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
-          setViewIndex(draft.viewIndex ?? (resume >= 0 ? resume : 0));
-          restoredHere = true;
-        } else if (draftDay < today) {
-          // El borrador principal es de un día anterior: se guarda como
-          // "pendiente" ANTES de olvidarlo, para que empezar hoy no lo borre.
-          // El orden importa: al revés se perdería el entreno de ayer.
-          AsyncStorage.setItem(pendingKey(uid), JSON.stringify(draft)).catch(() => {});
-          olvidarBorrador();
-          pending = draft;
-        }
-      }
-
-      if (cancelled) return;
-      setPastDraft(pending);
-      if (!restoredHere) {
-        const fresh = buildLog(day);
-        pristineRef.current = JSON.stringify(fresh);
-        setLog(fresh);
-        setRestored(false);
-        setResumeDate(null);
-        setSummary(null);
-        setViewIndex(0);
-        startedAt.current = null;
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [routine, selectedDayId, profile]);
-
-  // Guarda el borrador con cada cambio: al instante en el dispositivo y, con un
-  // pequeño retardo, en la cuenta (Firestore) para sincronizar entre móviles.
-  useEffect(() => {
-    if (!profile || !routine || !selectedDayId || log.length === 0) return;
-    // Hay algo que guardar en cuanto el log deja de ser la plantilla del día:
-    // basta con teclear unas repeticiones, un peso o una nota, sin necesidad de
-    // marcar ninguna serie como completada.
-    if (!pristineRef.current || JSON.stringify(log) === pristineRef.current) return;
-    const draft: WorkoutDraft = {
-      routineId: routine.id,
-      dayId: selectedDayId,
-      dayName:
-        combinedDay?.name ?? routine.days.find((d) => d.id === selectedDayId)?.name ?? undefined,
-      log,
-      startedAt: startedAt.current,
-      savedAt: Date.now(),
-      viewIndex,
-    };
-    AsyncStorage.setItem(draftKey(profile.uid), JSON.stringify(draft)).catch(() => {});
-    remoteDraftRef.current = draft;
-    // Debounce: sube a la cuenta como mucho ~1,5 s después del último cambio.
-    if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
-    remoteSaveTimer.current = setTimeout(() => {
-      saveActiveSession(profile.uid, draft);
-    }, 1500);
-  }, [log, viewIndex, combinedDay, profile, routine, selectedDayId]);
-
-  // Si la app pasa a segundo plano (bloqueo de pantalla, llamada, cambio de
-  // app), no esperamos al debounce: subimos el borrador ya, para que la sesión
-  // siga intacta aunque el sistema cierre la app sin previo aviso.
-  useEffect(() => {
-    if (!profile) return;
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') return;
-      const draft = remoteDraftRef.current;
-      if (!draft) return;
-      if (remoteSaveTimer.current) {
-        clearTimeout(remoteSaveTimer.current);
-        remoteSaveTimer.current = null;
-      }
-      saveActiveSession(profile.uid, draft);
-    });
-    return () => sub.remove();
-  }, [profile]);
-
-  // Al salir de la pantalla, cancela cualquier subida pendiente en cola.
-  useEffect(() => {
-    return () => {
-      if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
-    };
-  }, []);
-
-  /**
-   * Olvida el borrador de la sesión, entero.
-   *
-   * Un borrador vive en TRES sitios —el disco de este móvil, la cuenta (para
-   * que otro dispositivo lo recoja) y la subida en cola que aún no ha salido—
-   * y olvidarlo mal es peor que no olvidarlo: si se borra el del disco pero no
-   * el de la cuenta, vuelve solo al abrir la pantalla y el alumno se encuentra
-   * un entreno que creía terminado. Estaba escrito cinco veces, y cada copia
-   * era una ocasión de dejarse uno de los tres.
-   *
-   * `tambienElPendiente` borra además el de arrastre, el de un día anterior
-   * que quedó sin terminar. Solo se hace al guardar de verdad: en los demás
-   * casos ese entreno sigue esperando y no hay por qué tirarlo.
-   */
-  const olvidarBorrador = ({ tambienElPendiente = false } = {}) => {
-    if (profile) {
-      AsyncStorage.removeItem(draftKey(profile.uid)).catch(() => {});
-      if (tambienElPendiente) AsyncStorage.removeItem(pendingKey(profile.uid)).catch(() => {});
-      clearActiveSession(profile.uid);
-    }
-    remoteDraftRef.current = null;
-    if (remoteSaveTimer.current) clearTimeout(remoteSaveTimer.current);
-  };
-
-  /**
-   * Devuelve la pantalla al día tal y como está en la rutina, sin nada
-   * apuntado. Es lo que hay que hacer después de guardar o de cancelar: si el
-   * log se quedara lleno de series marcadas, la pantalla creería que hay un
-   * entreno en curso.
-   */
-  const dejarElDiaLimpio = () => {
-    const diaReal = routine?.days.find((d) => d.id === selectedDayId);
-    const limpio = diaReal ? buildLog(diaReal) : [];
-    setLog(limpio);
-    pristineRef.current = JSON.stringify(limpio);
-    setViewIndex(0);
-  };
-
-  const discardDraft = () => {
-    if (!routine || !selectedDayId) return;
-    olvidarBorrador();
-    dejarElDiaLimpio();
-    startedAt.current = null;
-    setRestored(false);
-  };
-
-  // Rellenar el entreno de un día anterior que quedó sin finalizar. Carga su
-  // log y lo deja listo para completar y guardar (se registrará con SU fecha).
-  const resumePastDraft = () => {
-    if (!routine || !pastDraft) return;
-    const d = pastDraft;
-    setLog(d.log);
-    startedAt.current = d.startedAt;
-    setRestored(true);
-    setResumeDate(inicioDelDia(d.startedAt ?? d.savedAt));
-    setPastDraft(null);
-    setSummary(null);
-    const realDay = routine.days.find((x) => x.id === d.dayId);
-    if (realDay && d.dayId !== selectedDayId) {
-      // Cambiar de día re-dispara el efecto de recuperación: lo bloqueamos una vez.
-      resumeGuard.current = true;
-      setCombinedDay(null);
-      setSelectedDayId(d.dayId);
-    } else if (!realDay) {
-      // Rutina de Sensaciones (día combinado) o día ya inexistente: día sintético.
-      setCombinedDay({ id: d.dayId, name: d.dayName || 'Entreno', exercises: [] });
-    }
-    const resume = d.log.findIndex((ex) => ex.sets.some((st) => !st.completed));
-    setViewIndex(resume >= 0 ? resume : 0);
-  };
-
-  // Dejar el entreno de ayer para más tarde: se oculta el aviso y se puede
-  // empezar uno nuevo hoy (el borrador se conserva para volver a ofrecerlo).
-  const dismissPastDraft = () => setPastDismissed(true);
-
-  const isFlex = routine?.schedule === 'flex';
-  /*
-   * LA CONFIGURACIÓN DEL PLAN PERSONALIZADO, Y SOLO SI ES ESE PLAN.
-   *
-   * En los otros dos modos no existe y todo se comporta como siempre: el RIR se
-   * le pregunta a quien sabe contestarlo (el atleta, que se autoentrena, y el
-   * alumno que su entrenador haya marcado), y los días se llaman días.
-   */
-  const perso = isFlex ? routine?.personalizado : undefined;
-  /*
-   * Lo que acompaña a cada ejercicio (RIR, letras, tempo…): en el personalizado
-   * sale de su configuración y en la semana o los días sueltos, de su propia
-   * prescripción. Solo eso: la pregunta del esfuerzo, el vocabulario y los
-   * permisos siguen siendo solo del personalizado (por eso no es `perso`).
-   */
-  const planPrescrito = planDeLaPrescripcion(routine);
-  /*
-   * Qué ha decidido el entrenador que se vea: la intensidad del día y el
-   * objetivo de cada ejercicio. Vale para los tres tipos de plan, y sin nada
-   * puesto se ve todo, como siempre (ver lib/visibilidad.ts).
-   */
+  const todaySession = resolveTodaySession(routine, { alumno: cycleAnchor, pausas: profile?.planPauses });
+  const day = routine?.days.find((d) => d.id === selectedDayId) ?? null;
   const ve = queVeElAlumno(routine);
-  // Su entrenador le ha puesto el entreno en tabla (para entrenar sin la app).
-  const enTabla = modoDelAlumno(routine) === 'tabla';
-  const esfuerzoDelPlan = perso?.esfuerzo;
-  /** Lo de siempre: a quién se le pregunta cuando el plan no dice nada. */
-  const preguntaHeredada = profile?.trackRir === true;
-  const pideEsfuerzoPorEjercicio = perso
-    ? tocaPreguntarEsfuerzo(perso, 'ejercicio')
-    : preguntaHeredada;
-  const pideEsfuerzoAlFinal = perso ? tocaPreguntarEsfuerzo(perso, 'sesion') : false;
-  /** Cómo llama este plan a una rutina y a una serie (Día y Serie por defecto). */
-  const palabraRutina = comoLlamaALaRutina(perso);
-  const palabraSerie = comoLlamaALaSerie(perso);
-  /**
-   * Qué se enseña de cada rutina en la pantalla de elegir.
-   *
-   * Sin plan personalizado (o sin tocar nada), lo de siempre: el porcentaje de
-   * intensidad y cuántos ejercicios lleva.
-   */
-  const ficha = perso?.ficha ?? { intensidad: true, ejercicios: true };
-  /** El esfuerzo de la sesión entera, cuando se pregunta una sola vez al final. */
-  const [esfuerzoSesion, setEsfuerzoSesion] = useState<EsfuerzoApuntado | undefined>();
-  /*
-   * EL ESFUERZO, SERIE A SERIE, MIENTRAS DESCANSA.
-   *
-   * Al marcar una serie con ✓ empieza el descanso y, justo encima del crono,
-   * se pregunta cuánto le ha costado ESA serie. Es el mejor momento: no está
-   * haciendo nada, la sensación está fresca y es un toque. Si hizo menos de
-   * lo previsto, la marca la corrige en la misma fila, que tiene encima.
-   *
-   * No bloquea: si no contesta y marca la siguiente, se pregunta por la
-   * nueva. Solo al terminar la última serie de un bloque espera a la
-   * respuesta para pasar al siguiente ejercicio (y "Siguiente" sigue ahí).
-   */
-  const [pendienteEsfuerzo, setPendienteEsfuerzo] = useState<{ ejercicio: number; serie: number } | null>(null);
-  /*
-   * DESHACER UNA SERIE MARCADA SIN QUERER.
-   *
-   * Marcar una serie hace tres cosas: la apunta, arranca el descanso y, si era
-   * la última, pasa solo al siguiente ejercicio. Tocar el ✓ otra vez la
-   * desmarcaba, pero el descanso seguía corriendo y la pantalla ya se había
-   * ido a otro ejercicio. Ahora, al marcar, sale "Deshacer" unos segundos: la
-   * desmarca, para su descanso y vuelve a donde estaba. Y desmarcarla con el ✓
-   * hace lo mismo.
-   */
-  const ultimaMarcada = useRef<{
-    ejercicio: number;
-    serie: number;
-    /** El descanso que arrancó al marcarla (si arrancó alguno). */
-    restId: number | null;
-    /** El paso automático al siguiente ejercicio, si lo hubo. */
-    avance: ReturnType<typeof setTimeout> | null;
-    /** El ejercicio que se estaba viendo al marcarla. */
-    vista: number;
-    /** Si celebró un récord. */
-    record: boolean;
-  } | null>(null);
-  const [deshacer, setDeshacer] = useState<{ ejercicio: number; serie: number } | null>(null);
-  useEffect(() => {
-    if (!deshacer) return;
-    const fuera = setTimeout(() => setDeshacer(null), 8000);
-    return () => clearTimeout(fuera);
-  }, [deshacer]);
-  /** Si al contestar hay que pasar al siguiente bloque (porque se acabó este). */
-  const avanceTrasEsfuerzo = useRef<{ inicio: number; fin: number; destino: number } | null>(null);
-  /** El panel para añadir un ejercicio de otra rutina del plan. */
-  const [anadirAbierto, setAnadirAbierto] = useState(false);
-  const day = combinedDay ?? routine?.days.find((d) => d.id === selectedDayId) ?? null;
-  /*
-   * El día de grease the groove, si toca. Puede venir de dos sitios: de una
-   * rutina entera en ese modo (se entrena su primer día) o de Sensaciones, si
-   * el coach marcó así una de las rutinas entre las que el alumno elige.
-   */
-  const diaGtg = esGtg(routine) ? routine?.days[0] ?? null : esGtg(routine, day) ? day : null;
-  const esModoGtg = !!diaGtg;
-  // El nombre con el que se guarda el entreno del día. Se calcula UNA vez
-  // porque sirve también para encontrarlo: con dos expresiones distintas, un
-  // día sin nombre se buscaría por '' y se guardaría por otra cosa, y cada
-  // serie acabaría creando su propio entreno.
-  const nombreGtg = diaGtg ? diaGtg.name || 'Grease the groove' : undefined;
-  /*
-   * Con el plan en pausa el ciclo está congelado, así que el día que se propone
-   * es el que se dejó, no el que tocaría si los días de pausa hubieran contado.
-   * La pantalla no se bloquea: una pausa quita obligaciones, no permisos, y si
-   * un día de baja apetece entrenar, ese entreno cuenta como cualquier otro.
-   */
+  const planPrescrito = planDeLaPrescripcion(routine);
   const enPausa = pausaActiva(profile?.planPauses);
-  const todaySession = resolveTodaySession(routine, {
-    alumno: cycleAnchor,
-    pausas: profile?.planPauses,
-  });
-
-  /*
-   * Sensaciones: alterna una rutina en la selección (guarda el orden de
-   * elección).
-   *
-   * Una rutina de grease the groove va sola. No es una sesión que se encadene
-   * con otra: es el día entero repartido en series sueltas, así que "Empuje +
-   * dominadas todo el día" no significa nada. Elegirla descarta lo demás, y
-   * elegir cualquier otra la descarta a ella.
-   */
-  const toggleFlexRoutine = (id: string) => {
-    const esta = routine?.days.find((d) => d.id === id);
-    setFlexSelection((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (esta?.gtg) return [id];
-      const sinGtg = prev.filter((x) => !routine?.days.find((d) => d.id === x)?.gtg);
-      return [...sinGtg, id];
-    });
-  };
-
-  const modoCombinar = comoSeCombinan(perso);
-  const fusion = ajustesDeFusion(perso);
-  /*
-   * Las elegidas, en el orden en que se juntan: el que marcó el alumno, o el
-   * del plan si al fusionar así lo decidió el entrenador.
-   */
-  const enOrden = (dias: RoutineDay[]) =>
-    modoCombinar === 'superseries' ? ordenParaFusionar(dias, routine?.days ?? [], perso?.ordenFusion) : dias;
-  const elegidas = enOrden(
-    flexSelection
-      .map((id) => routine?.days.find((d) => d.id === id))
-      .filter((d): d is RoutineDay => !!d && !d.gtg)
+  const esCiclo = routine?.schedule === 'cycle';
+  const esFlex = routine?.schedule === 'flex';
+  const medidaDe = useCallback(
+    (ex: RoutineExercise) => ex.measure ?? measureByExercise[ex.exerciseId],
+    [measureByExercise]
   );
-
-  // Sensaciones: monta el entreno combinando las rutinas elegidas, en orden.
-  const startFlexSession = () => {
-    if (!routine || flexSelection.length === 0) return;
-    const chosen = enOrden(
-      flexSelection
-        .map((id) => routine.days.find((d) => d.id === id))
-        .filter((d): d is RoutineDay => !!d)
-    );
-    // Grease the groove no se monta como sesión: se entra en su pantalla tal
-    // cual, con su propio día.
-    if (chosen.length === 1 && chosen[0].gtg) {
-      setCombinedDay(chosen[0]);
-      setLog([]);
-      setViewIndex(0);
-      startedAt.current = null;
-      return;
-    }
-    const combined: RoutineDay = {
-      id: `flex-${Date.now()}`,
-      name: chosen.map((d) => d.name || 'Rutina').join(' + '),
-      // Una detrás de otra o fusionadas en superseries: lo decide el
-      // entrenador en su plan (lib/combinarRutinas.ts).
-      exercises: combinarRutinas(chosen, modoCombinar, fusion),
-      // Encadenando rutinas manda la más dura: un día suave ANTES de uno fuerte
-      // no hace la sesión medio fuerte, la hace fuerte y con más fatiga.
-      intensityPct: pctCombinado(chosen),
-      // Y la etiqueta, si el entrenador mide con las suyas. Sin esto, la
-      // sesión se quedaba sin intensidad en cuanto se empezaba.
-      intensityLabel: etiquetaCombinada(chosen),
-    };
-    setCombinedDay(combined);
-    setLog(buildLog(combined));
-    setViewIndex(0);
-    startedAt.current = null;
-  };
-
-  /*
-   * LO QUE EL ALUMNO PUEDE TOCAR, SI SU PLAN SE LO PERMITE.
-   *
-   * Las tres cosas cambian el ORDEN o el CONTENIDO de la sesión, y eso obliga a
-   * mover dos listas a la vez: `log` (lo que se apunta) y los ejercicios del
-   * día (lo planificado: las repeticiones objetivo, el descanso, la superserie).
-   * La pantalla las cruza POR POSICIÓN, así que mover una sola las descoloca y
-   * el alumno acabaría viendo el objetivo de otro ejercicio.
-   *
-   * Por eso el día se "materializa" en una copia local (`combinedDay`) en
-   * cuanto se toca algo: la rutina del entrenador no se modifica nunca —lo que
-   * el alumno cambia es SU sesión de hoy—, y las dos listas se mueven juntas.
-   */
-  const diaEditable = (): RoutineDay | null => {
-    if (combinedDay) return combinedDay;
-    const base = routine?.days.find((d) => d.id === selectedDayId);
-    return base ? { ...base, id: `propio-${Date.now()}`, exercises: [...base.exercises] } : null;
-  };
-
-  const puedeSaltar = !!perso?.permisos?.saltar;
-  const puedeReordenar = !!perso?.permisos?.reordenar;
-  const puedeAnadir = !!perso?.permisos?.anadir;
-
-  /** Sube o baja un ejercicio, moviendo a la vez lo apuntado y lo planificado. */
-  const moverEjercicio = (desde: number, hacia: number) => {
-    const dia = diaEditable();
-    if (!dia || hacia < 0 || hacia >= log.length) return;
-    const mueve = <T,>(lista: T[]): T[] => {
-      const copia = [...lista];
-      const [fuera] = copia.splice(desde, 1);
-      copia.splice(hacia, 0, fuera);
-      return copia;
-    };
-    setCombinedDay({ ...dia, exercises: mueve(dia.exercises) });
-    setLog((prev) => mueve(prev));
-    setViewIndex(hacia);
-  };
-
-  /**
-   * Saltarse un ejercicio: se marca y se queda a la vista, tachado.
-   *
-   * No se borra a propósito. Borrarlo dejaría una sesión que parece completa y
-   * un entrenador que no se entera de que ese ejercicio lleva tres semanas sin
-   * hacerse, que es justo el dato que necesita. Marcado, el alumno avanza y el
-   * coach lo ve.
-   */
-  const alternarSaltado = (indice: number) => {
-    setLog((prev) =>
-      prev.map((ex, i) =>
-        i === indice
-          ? {
-              ...ex,
-              saltado: !ex.saltado,
-              // Al saltarlo, lo que hubiera apuntado deja de contar como hecho.
-              sets: ex.saltado ? ex.sets : ex.sets.map((set) => ({ ...set, completed: false })),
-            }
-          : ex
-      )
-    );
-  };
-
-  /** Añade a la sesión de hoy un ejercicio de otra rutina del mismo plan. */
-  const anadirEjercicio = (ex: RoutineExercise) => {
-    const dia = diaEditable();
-    if (!dia) return;
-    // Sin superserie: encadenarlo con el anterior sería heredar una relación
-    // que existía en OTRA rutina, donde iba detrás de otro ejercicio.
-    const suelto: RoutineExercise = { ...ex, id: `extra-${Date.now()}`, supersetWithPrevious: false };
-    setCombinedDay({ ...dia, exercises: [...dia.exercises, suelto] });
-    setLog((prev) => [
-      ...prev,
-      {
-        exerciseId: suelto.exerciseId,
-        name: suelto.name,
-        measure: suelto.measure,
-        load: suelto.load,
-        sets: Array.from({ length: Math.max(1, suelto.sets) }, () => ({
-          reps: '',
-          completed: false,
-        })),
-      },
-    ]);
-    setAnadirAbierto(false);
-    setViewIndex(log.length);
-    showToast(frase`${suelto.name}, añadido a la sesión de hoy`);
-  };
-
-  // Sensaciones: marca hoy como descanso (no afecta a la racha).
-  const chooseFlexRest = async () => {
-    setFlexResting(true);
-    if (profile) {
-      addFlexRestDay(profile.uid, inicioDelDia(Date.now())).catch(() => {});
-    }
-  };
-
-  // Sensaciones: cancela el entreno en curso y vuelve a la selección de rutinas.
-  const cancelFlexSession = () => {
-    setCombinedDay(null);
-    setFlexSelection([]);
-    setFlexResting(false);
-    setLog([]);
-    setViewIndex(0);
-    setRestored(false);
-    startedAt.current = null;
-    olvidarBorrador();
-    stopRest();
-  };
-
-  // Sensaciones: alumno añade/quita una serie a un ejercicio según se sienta.
-  const addSet = (exerciseIndex: number) => {
-    setLog((prev) =>
-      prev.map((ex, i) => {
-        if (i !== exerciseIndex) return ex;
-        // La casilla de la marca a apuntar arranca siempre vacía (no hereda la
-        // marca de la serie anterior). La regresión sí: si iba en regresión,
-        // la serie de más también.
-        const enRegresion = ex.sets[ex.sets.length - 1]?.regresion === true;
-        return {
-          ...ex,
-          sets: [...ex.sets, { reps: '', weight: '', completed: false, ...(enRegresion ? { regresion: true } : {}) }],
-        };
-      })
-    );
-  };
-  const removeSet = (exerciseIndex: number) => {
-    setLog((prev) => {
-      const ex = prev[exerciseIndex];
-      if (!ex) return prev;
-      // Sensaciones: si se quita la única serie, el ejercicio sale del día.
-      if (ex.sets.length <= 1) {
-        const next = prev.filter((_, i) => i !== exerciseIndex);
-        setViewIndex((v) => Math.max(0, Math.min(v, next.length - 1)));
-        return next;
-      }
-      return prev.map((e, i) => (i === exerciseIndex ? { ...e, sets: e.sets.slice(0, -1) } : e));
-    });
-  };
-
-  // Historial de los últimos 7 días (para decidir qué toca hoy en Sensaciones).
-  const last7FlexDays = (() => {
-    const out: { ts: number; label: string; what: string }[] = [];
-    const rest = new Set((profile?.flexRestDays ?? []).map((t) => inicioDelDia(t)));
-    for (let i = 0; i < 7; i++) {
-      const ts = masDias(Date.now(), -i);
-      const d = new Date(ts);
-      const logsThatDay = history.filter(
-        (l) => routine && l.routineId === routine.id && inicioDelDia(l.date) === ts
-      );
-      // Un día pasado sin nada registrado ES un descanso, lo haya marcado el
-      // alumno o no: si no entrenó, descansó. Antes salía un guion, que no
-      // dice nada y deja el historial lleno de huecos.
-      //
-      // HOY se queda sin marcar a propósito: el día no ha terminado y darlo
-      // por descanso a media mañana sería contarle un día que aún puede hacer.
-      const what = logsThatDay.length
-        ? logsThatDay.map((l) => l.dayName).join(', ')
-        : rest.has(ts)
-          ? 'Descanso'
-          : i === 0
-            ? '—'
-            : 'Descanso';
-      out.push({
-        ts,
-        label:
-          i === 0
-            ? 'Hoy'
-            : i === 1
-              ? 'Ayer'
-              : diaSemanaCorto(d),
-        what,
-      });
-    }
-    return out;
-  })();
-
-  // Descanso opcional (Día 7 TENA): reinicia el ciclo entrenando el Día 1 hoy.
-  const handleStartCycleToday = async () => {
-    if (!routine || routine.days.length === 0) return;
-    const decision = await setCycleAnchorToday(routine.id, profile?.planPauses);
-    setCycleAnchor(decision);
-    // Sincroniza el día del ciclo con el resto de dispositivos de la cuenta.
-    if (profile) setCycleAnchorRemote(profile.uid, routine.id, decision.ancla, decision.decididaEn);
-    setOptionalResolved(true);
-    setRestingToday(false);
-    const firstDay = routine.days[0];
-    setSelectedDayId(firstDay.id);
-    setViewIndex(0);
-    startedAt.current = null;
-    showToast('Ciclo reiniciado · hoy es el Día 1');
-  };
+  const ejerciciosDelDia = useMemo(() => day?.exercises ?? [], [day]);
 
   // Fija qué día del ciclo es HOY (plan desfasado o entreno pospuesto).
-  const handleSetTodayIndex = async (index: number) => {
+  const fijarHoy = async (index: number) => {
     if (!routine || routine.days.length === 0) return;
     const decision = await setCycleAnchorForIndex(routine.id, index, profile?.planPauses);
     setCycleAnchor(decision);
     if (profile) setCycleAnchorRemote(profile.uid, routine.id, decision.ancla, decision.decididaEn);
-    setOptionalResolved(true);
-    setRestingToday(false);
     setSelectedDayId(routine.days[index].id);
-    setViewIndex(0);
     setDayPickerOpen(false);
     showToast(frase`Hoy es el Día ${index + 1}`);
   };
 
-  const isOptionalRestToday = routine?.schedule === 'cycle' && todaySession.optionalRest;
-  const showOptionalChoice = isOptionalRestToday && !optionalResolved;
-  const showRestingCard = isOptionalRestToday && optionalResolved && restingToday;
-
-  const handleShareSummary = async () => {
-    if (!summary || !routine) return;
-    // Imagen de marca (mucho más vistosa que el texto). Si por lo que sea no
-    // se puede generar, se comparte el resumen escrito.
-    try {
-      const result = await shareSessionImage({
-        routineName: routine.name,
-        dayName: day?.name,
-        durationMin: summary.durationMin,
-        sets: summary.sets,
-        reps: summary.reps,
-        seconds: summary.seconds,
-        volumeKg: summary.volumeKg,
-        streak: summary.streak,
-        prCount: summary.prs.length,
-        date: Date.now(),
-      });
-      if (result === 'downloaded') showToast('Imagen de la sesión descargada');
-      if (result) return;
-    } catch {
-      // Caemos al texto.
-    }
-    const parts = [
-      `Sesión completada en CALICO: ${day?.name ?? routine.name}`,
-      summary.durationMin > 0 ? `${summary.durationMin} min` : null,
-      frase`${summary.sets} series`,
-      summary.reps > 0 ? `${summary.reps} reps` : null,
-      summary.seconds > 0 ? `${summary.seconds}s isométrico` : null,
-      summary.volumeKg > 0 ? frase`${summary.volumeKg} kg de volumen` : null,
-      summary.prs.length > 0
-        ? `${summary.prs.length} récord${summary.prs.length > 1 ? 's' : ''} personal${
-            summary.prs.length > 1 ? 'es' : ''
-          }`
-        : null,
-      summary.streak > 1 ? frase`Racha: ${summary.streak} días` : null,
-    ].filter(Boolean);
-    const message = frase`${parts.join(' · ')}\n\nEntreno con CALICO — Calisthenics Coaches`;
-    try {
-      await Share.share({ message });
-    } catch {
-      // El usuario canceló o el navegador no soporta compartir: copiamos.
-      try {
-        await navigator.clipboard.writeText(message);
-        showToast('Resumen copiado, pégalo donde quieras');
-      } catch {
-        showToast('No se pudo compartir');
-      }
-    }
-  };
-
-  // Comparte una sesión YA guardada hoy (pantalla "entrenamiento terminado"),
-  // reconstruyendo las estadísticas desde el registro guardado.
-  const handleShareCompleted = async (logToShare: WorkoutLog) => {
-    if (!routine) return;
-    const t = sessionTotals(logToShare.exercises, measureByExercise);
-    try {
-      const result = await shareSessionImage({
-        routineName: logToShare.routineName ?? routine.name,
-        dayName: logToShare.dayName,
-        durationMin: logToShare.durationMin ?? 0,
-        sets: t.sets,
-        reps: t.reps,
-        seconds: t.seconds,
-        volumeKg: t.volumeKg,
-        streak: 0,
-        prCount: 0,
-        date: logToShare.date,
-      });
-      if (result === 'downloaded') showToast('Imagen de la sesión descargada');
-      if (result) return;
-    } catch {
-      // Caemos al texto.
-    }
-    const parts = [
-      `Sesión completada en CALICO: ${logToShare.dayName ?? routine.name}`,
-      logToShare.durationMin ? `${logToShare.durationMin} min` : null,
-      frase`${t.sets} series`,
-      t.reps > 0 ? `${t.reps} reps` : null,
-      t.seconds > 0 ? `${t.seconds}s isométrico` : null,
-      t.volumeKg > 0 ? frase`${t.volumeKg} kg de volumen` : null,
-    ].filter(Boolean);
-    const message = frase`${parts.join(' · ')}\n\nEntreno con CALICO — Calisthenics Coaches`;
-    try {
-      await Share.share({ message });
-    } catch {
-      try {
-        await navigator.clipboard.writeText(message);
-        showToast('Resumen copiado, pégalo donde quieras');
-      } catch {
-        showToast('No se pudo compartir');
-      }
-    }
-  };
-
-  // Comparte el récord como IMAGEN de marca (canvas 1080×1350, para stories).
-  // Si la imagen no es posible (nativo antiguo, canvas no disponible), texto.
-  const handleShareRecord = async () => {
-    if (!summary || summary.prs.length === 0) return;
-    try {
-      const result = await shareRecordImage({
-        prs: summary.prs.map((p) => ({ exerciseName: p.exerciseName, label: p.label })),
-        streak: summary.streak,
-      });
-      if (result === 'downloaded') showToast('Imagen del récord descargada');
-      if (result) return;
-    } catch {
-      // Caemos al texto.
-    }
-    const lines = summary.prs.map((pr) => `${pr.exerciseName}: ${pr.label}`);
-    const message = `NUEVO RÉCORD PERSONAL\n\n${lines.join('\n')}\n\n${
-      summary.streak > 1 ? frase`Racha de ${summary.streak} días\n` : ''
-    }Entrenando con CALICO — Calisthenics Coaches\nwww.udeca.app`;
-    try {
-      await Share.share({ message });
-    } catch {
-      try {
-        await navigator.clipboard.writeText(message);
-        showToast('Récord copiado, pégalo donde quieras');
-      } catch {
-        showToast('No se pudo compartir');
-      }
-    }
-  };
-
-  const updateSet = (
-    exerciseIndex: number,
-    setIndex: number,
-    field: 'reps' | 'seconds' | 'side2' | 'weight' | 'completed',
-    value: string | boolean
-  ) => {
-    setLog((prev) =>
-      prev.map((ex, i) =>
-        i === exerciseIndex
-          ? {
-              ...ex,
-              sets: ex.sets.map((s, j) => (j === setIndex ? { ...s, [field]: value } : s)),
-            }
-          : ex
-      )
-    );
-
-    // Desmarcada: si era la que se estaba preguntando, se deja de preguntar.
-    if (field === 'completed' && value === false) {
-      setPendienteEsfuerzo((p) => (p && p.ejercicio === exerciseIndex && p.serie === setIndex ? null : p));
-      // Y si es la que se acaba de marcar, se deshace lo que hizo al marcarla:
-      // su descanso y el paso al siguiente ejercicio.
-      const u = ultimaMarcada.current;
-      if (u && u.ejercicio === exerciseIndex && u.serie === setIndex) {
-        ultimaMarcada.current = null;
-        setDeshacer(null);
-        if (u.avance) clearTimeout(u.avance);
-        if (u.restId !== null) stopRestSiEs(u.restId);
-        const avance = avanceTrasEsfuerzo.current;
-        if (avance && exerciseIndex >= avance.inicio && exerciseIndex <= avance.fin) avanceTrasEsfuerzo.current = null;
-        if (u.record) {
-          const id = log[exerciseIndex]?.exerciseId;
-          if (id) prCelebrados.current.delete(id);
-          setPrVivo(null);
-        }
-      }
-    }
-    // Marcada: se pregunta su esfuerzo (si el plan lo pide) mientras descansa.
-    if (field === 'completed' && value === true && pideEsfuerzoPorEjercicio) {
-      setPendienteEsfuerzo({ ejercicio: exerciseIndex, serie: setIndex });
-    }
-
-    // Al completar una serie: arranca el crono de descanso del ejercicio.
-    // (En clúster, el descanso CORTO entre bloques se pide aparte: ver
-    // `descansoDeBloque`. Este es el descanso largo, el de la serie entera.)
-    if (field === 'completed' && value === true) {
-      if (!startedAt.current) startedAt.current = Date.now();
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-
-      // ¿Acaba de batir su marca? Se comprueba con el estado NUEVO, porque el
-      // de React todavía no se ha actualizado cuando llega aquí.
-      const ejercicio = log[exerciseIndex];
-      let conRecord = false;
-      if (ejercicio && !prCelebrados.current.has(ejercicio.exerciseId)) {
-        const conLaSerie = ejercicio.sets.map((s2, j) =>
-          j === setIndex ? { ...s2, completed: true } : s2
-        );
-        const record = checkLivePR(history, ejercicio, conLaSerie);
-        if (record) {
-          prCelebrados.current.add(record.exerciseId);
-          setPrVivo(record);
-          conRecord = true;
-        }
-      }
-      // Para poder deshacerla (ver `ultimaMarcada`).
-      let restIniciado: number | null = null;
-      let avanceIniciado: ReturnType<typeof setTimeout> | null = null;
-      /*
-       * QUÉ TOCA AHORA (lib/superserie.ts), con la serie ya marcada: el estado
-       * de React todavía no la tiene.
-       *
-       * En superserie, si a la ronda le queda otro ejercicio no hay descanso:
-       * su serie ya está debajo, en la misma tarjeta, y se enciende como la
-       * siguiente. El descanso llega al acabar la ronda entera.
-       */
-      const plan = day?.exercises ?? [];
-      const conLaMarca = log.map((ex, i) =>
-        i === exerciseIndex
-          ? { ...ex, sets: ex.sets.map((s2, j) => (j === setIndex ? { ...s2, completed: true } : s2)) }
-          : ex
-      );
-      const despues = trasMarcarSerie(conLaMarca, plan, exerciseIndex, setIndex);
-      const bloque = bloqueDe(plan, exerciseIndex, log.length);
-      if (despues.tipo === 'encadenar') {
-        // Un segundo toque, más suave: "y ahora el otro".
-        if (Platform.OS !== 'web') {
-          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), 180);
-        }
-        // Si el entrenador dejó unos segundos para cambiar de ejercicio dentro
-        // de la superserie (rutinas fusionadas), corren ahora; si no, seguido.
-        const transicion = plan[despues.siguiente.ejercicio]?.transicionSegundos ?? 0;
-        if (transicion > 0) {
-          startRest(transicion, frase`Ahora: ${conLaMarca[despues.siguiente.ejercicio]?.name ?? ''}`);
-          restIniciado = getRest()?.id ?? null;
-        }
-      } else {
-        // Tras la última serie, el descanso es el del SIGUIENTE ejercicio (ver
-        // `descansoTrasSerie`): es el que hace falta para llegar a él.
-        const rest =
-          descansoTrasSerie(plan, conLaMarca, bloque, setIndex, despues.siguiente, despues.bloqueTerminado) ||
-          DEFAULT_REST_SECONDS;
-        startRest(rest, queTocaTrasDescansar(conLaMarca, plan, despues.siguiente, exerciseIndex));
-        restIniciado = getRest()?.id ?? null;
-
-        // Autoavance: con el bloque COMPLETO (el ejercicio, o la superserie
-        // entera) pasa solo a lo siguiente, dejando ver el ✓ un instante.
-        // Salvo si el plan pide el esfuerzo: entonces se queda a que conteste
-        // el de esta última serie, y al contestarlo avanza (ver
-        // `apuntarEsfuerzoDeSerie`).
-        if (despues.bloqueTerminado && bloque.fin < log.length - 1) {
-          const destino =
-            despues.siguiente && despues.siguiente.ejercicio > bloque.fin
-              ? despues.siguiente.ejercicio
-              : bloque.fin + 1;
-          if (pideEsfuerzoPorEjercicio) {
-            avanceTrasEsfuerzo.current = { inicio: bloque.inicio, fin: bloque.fin, destino };
-          } else {
-            avanceIniciado = setTimeout(() => {
-              setViewIndex((cur) => (cur >= bloque.inicio && cur <= bloque.fin ? destino : cur));
-            }, 900);
-          }
-        }
-      }
-      ultimaMarcada.current = {
-        ejercicio: exerciseIndex,
-        serie: setIndex,
-        restId: restIniciado,
-        avance: avanceIniciado,
-        vista: viewIndex,
-        record: conRecord,
-      };
-      setDeshacer({ ejercicio: exerciseIndex, serie: setIndex });
-    }
-  };
-
-  /** "Deshacer": la serie que se acaba de marcar, sin marcar, y de vuelta a ella. */
-  const deshacerSerie = () => {
-    const u = ultimaMarcada.current;
-    if (!u) return;
-    const vista = u.vista;
-    updateSet(u.ejercicio, u.serie, 'completed', false);
-    setViewIndex(vista);
-  };
-
-  /** El rótulo del descanso: qué viene cuando acabe. */
-  const queTocaTrasDescansar = (
-    sesion: LoggedExercise[],
-    plan: RoutineExercise[],
-    siguiente: { ejercicio: number; serie: number } | null,
-    desde: number
-  ): string => {
-    if (!siguiente) return 'Última serie hecha · guarda la sesión';
-    const b = bloqueDe(plan, siguiente.ejercicio, sesion.length);
-    // En superserie, la ronda con quienes la hacen. Si es una serie suelta (el
-    // otro ya terminó las suyas), se nombra como la de un ejercicio solo.
-    if (esSuperserie(b) && serieSuelta(sesion, b, siguiente.serie) === null) {
-      const nombres = enLaRonda(sesion, b, siguiente.serie)
-        .map((i) => sesion[i]?.name ?? '')
-        .join(' + ');
-      return `${frase`Ahora`}: ${t('Ronda')} ${siguiente.serie + 1} · ${nombres}`;
-    }
-    const nombre = sesion[siguiente.ejercicio]?.name ?? '';
-    return siguiente.ejercicio === desde || esSuperserie(b)
-      ? `${frase`Ahora`}: ${enTitulo(palabraSerie)} ${siguiente.serie + 1} · ${nombre}`
-      : `Ahora: ${nombre}`;
-  };
-
-  /**
-   * Marca de un bloque de una serie en clúster. El bloque 1 es la casilla de
-   * siempre (`reps`); estos son los siguientes, y viven en `clusters` para no
-   * tocar nada de lo que ya lee la marca principal.
-   */
-  const updateCluster = (
-    exerciseIndex: number,
-    setIndex: number,
-    blockIndex: number,
-    value: string
-  ) => {
-    setLog((prev) =>
-      prev.map((ex, i) =>
-        i === exerciseIndex
-          ? {
-              ...ex,
-              sets: ex.sets.map((s, j) => {
-                if (j !== setIndex) return s;
-                const marcas = [...(s.clusters ?? [])];
-                while (marcas.length <= blockIndex) marcas.push('');
-                marcas[blockIndex] = value;
-                return { ...s, clusters: marcas };
-              }),
-            }
-          : ex
-      )
-    );
-  };
-
-  /** Descanso corto entre bloques de un clúster, el que fija el entrenador. */
-  const descansoDeBloque = (segundos: number, exName: string) => {
-    if (!startedAt.current) startedAt.current = Date.now();
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    startRest(segundos, `Ahora: siguiente bloque · ${exName}`);
-  };
-
-  // Nota escrita del alumno sobre un ejercicio (p. ej. "hice la variante X").
-  const updateExerciseNote = (exerciseIndex: number, value: string) => {
-    setLog((prev) =>
-      prev.map((ex, i) => (i === exerciseIndex ? { ...ex, notes: value } : ex))
-    );
-  };
-
-  /**
-   * Esfuerzo del ejercicio, en la escala que use el plan.
-   *
-   * Se guarda con su escala al lado, y además como número en `rir` CUANDO ES UN
-   * RIR: así todo lo que ya leía ese campo —la media del bloque que ve el
-   * coach, el plan de la semana, los informes— sigue funcionando, y no se
-   * escribe nunca un porcentaje ni una letra donde se esperan repeticiones.
-   *
-   * Se puede desmarcar volviendo a pulsar: si no se puede quitar un dato que se
-   * ha metido sin querer, la gente deja de meterlo.
-   */
-  const apuntarEsfuerzoDeSerie = (ejercicio: number, serie: number, valor: string) => {
-    const escala = esfuerzoDelPlan?.escala ?? 'rir';
-    const puesto = log[ejercicio]?.sets[serie]?.esfuerzo;
-    const quitando = puesto === valor;
-    setLog((prev) =>
-      prev.map((ex, i) => {
-        if (i !== ejercicio) return ex;
-        const sets: LoggedExercise['sets'] = ex.sets.map((st, j) => {
-          if (j !== serie) return st;
-          if (quitando) {
-            const { esfuerzo: _e, rir: _r, ...resto } = st;
-            return resto;
-          }
-          const rir = comoRir(escala, valor);
-          return { ...st, esfuerzo: valor, ...(rir !== undefined ? { rir } : {}) };
-        });
-        // El del ejercicio sale de sus series (el más duro en RIR), para todo
-        // lo que ya lo leía: ver `esfuerzoDelEjercicio`.
-        const { esfuerzo, rir } = esfuerzoDelEjercicio(sets, escala);
-        return { ...ex, sets, esfuerzo, rir };
-      })
-    );
-    if (quitando) return;
-    setPendienteEsfuerzo(null);
-    // Si era la última serie del bloque, ahora sí, al siguiente.
-    const avance = avanceTrasEsfuerzo.current;
-    if (avance && ejercicio >= avance.inicio && ejercicio <= avance.fin) {
-      avanceTrasEsfuerzo.current = null;
-      setTimeout(() => {
-        setViewIndex((cur) => (cur >= avance.inicio && cur <= avance.fin ? avance.destino : cur));
-      }, 700);
-    }
-  };
-
-  /**
-   * REGRESIÓN: la serie se hizo en una progresión más fácil (sin decir cuál).
-   * Solo en los ejercicios en que el entrenador lo permite (`permiteRegresion`
-   * en el plan): sin eso, el botón no sale.
-   *
-   * Se pone en la serie que toca y en las que quedan por hacer de ese
-   * ejercicio: quien baja a la regresión en la segunda serie suele seguir en
-   * ella hasta el final, y así no tiene que tocarlo en cada una. Quitarla
-   * también la quita de las que quedan. Las ya hechas no se tocan: lo hecho,
-   * hecho está.
-   *
-   * Sus marcas no cuentan para el ejercicio (récords, progresión…): ver
-   * `cuentaComoMarca` en lib/types.ts.
-   */
-  const alternarRegresion = (ejercicio: number, serie: number) => {
-    const puesta = !log[ejercicio]?.sets[serie]?.regresion;
-    setLog((prev) =>
-      prev.map((ex, i) => {
-        if (i !== ejercicio) return ex;
-        return {
-          ...ex,
-          sets: ex.sets.map((st, j) => {
-            if (j !== serie && (j < serie || st.completed)) return st;
-            if (puesta) return { ...st, regresion: true };
-            const { regresion: _r, ...resto } = st;
-            return resto;
-          }),
-        };
-      })
-    );
-  };
-
-  /**
-   * La pregunta del esfuerzo de la serie que se acaba de hacer, encima del
-   * crono de descanso. Solo si esa serie es de lo que está en pantalla.
-   */
-  /** La serie recién marcada, con "Deshacer" (ver `ultimaMarcada`). */
-  const barraDeshacer = deshacer ? (
-    <View style={styles.deshacer}>
-      <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-      <Text style={styles.deshacerTexto} numberOfLines={1}>
-        {frase`${enTitulo(palabraSerie)} ${deshacer.serie + 1} de ${log[deshacer.ejercicio]?.name ?? ''}, hecha`}
-      </Text>
-      <Pressable onPress={deshacerSerie} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('Deshacer')}>
-        <Text style={styles.deshacerAccion}>Deshacer</Text>
-      </Pressable>
-    </View>
-  ) : null;
-
-  const preguntaDeSerie = (b: { inicio: number; fin: number }) => {
-    if (!pideEsfuerzoPorEjercicio || !pendienteEsfuerzo) return null;
-    const { ejercicio, serie } = pendienteEsfuerzo;
-    if (ejercicio < b.inicio || ejercicio > b.fin) return null;
-    const ex = log[ejercicio];
-    const st = ex?.sets[serie];
-    if (!ex || !st?.completed) return null;
-    const enSuperserie = b.fin > b.inicio;
-    return (
-      <View style={styles.preguntaSerie}>
-        <SelectorDeEsfuerzo
-          esfuerzo={esfuerzoDelPlan}
-          etiqueta={`${enTitulo(palabraSerie)} ${serie + 1}${enSuperserie ? ` · ${ex.name}` : ''} · ${t(preguntaDeEsfuerzo(esfuerzoDelPlan))}`}
-          value={st.esfuerzo}
-          onChange={(v) => apuntarEsfuerzoDeSerie(ejercicio, serie, v)}
-        />
-      </View>
-    );
-  };
-
-  /** La etiqueta del esfuerzo de una serie hecha ("RIR 2"): tocándola, se cambia. */
-  const etiquetaDeEsfuerzo = (ejercicio: number, serie: number) => {
-    const st = log[ejercicio]?.sets[serie];
-    if (!pideEsfuerzoPorEjercicio || !st?.esfuerzo) return null;
-    return (
-      <Pressable
-        onPress={() => setPendienteEsfuerzo({ ejercicio, serie })}
-        style={[styles.esfuerzoChip, st.rir === 0 && styles.esfuerzoChipFallo]}
-        hitSlop={6}
-      >
-        <Text style={[styles.esfuerzoChipTexto, st.rir === 0 && styles.esfuerzoChipTextoFallo]}>
-          {textoDeEsfuerzo(esfuerzoDelPlan?.escala ?? 'rir', st.esfuerzo)}
-        </Text>
-      </Pressable>
-    );
-  };
-
-  // Lo saltado no cuenta para el progreso: si contara, la sesión pediría
-  // series que el alumno ya ha decidido no hacer y el contador no llegaría
-  // nunca a completo.
-  const totalSets = log.reduce((acc, ex) => acc + (ex.saltado ? 0 : ex.sets.length), 0);
-  const doneSets = log.reduce((acc, ex) => acc + ex.sets.filter((s) => s.completed).length, 0);
-  // Índice visible en el modo enfocado (acotado por si la lista cambió).
-  const safeIndex = Math.min(viewIndex, Math.max(0, log.length - 1));
-  // Lo que se ve es un BLOQUE: un ejercicio suelto, o la superserie entera en
-  // una tarjeta. Anterior y Siguiente saltan de bloque en bloque.
-  const bloqueVisible = bloqueDe(day?.exercises ?? [], safeIndex, log.length);
-  const isLastExercise = bloqueVisible.fin >= log.length - 1;
-  const bloqueVisibleHecho = siguienteDelBloque(log, bloqueVisible) === null;
-  // Rondas de superserie ya hechas que el alumno ha vuelto a abrir para corregir.
-  const rondaAbierta = (b: { inicio: number }, r: number) => rondasAbiertas.has(`${b.inicio}:${r}`);
-
-  // ¿Ya se ha entrenado HOY (rutina semanal, ciclo o Sensaciones)? Si hay una
-  // sesión guardada hoy y no hay otra en curso, mostramos "entrenamiento
-  // terminado" con estadísticas y compartir, sin dejar entrenar de nuevo hasta
-  // el día siguiente.
-  const completedTodayLog = routine
-    ? history.find((l) => l.routineId === routine.id && esMismoDia(l.date))
-    : undefined;
-  const inProgress = doneSets > 0 || restored;
-  /**
-   * ¿Ha empezado ya de verdad?
-   *
-   * Más pronto que `inProgress`: cuenta desde que se escribe la primera
-   * repetición, no desde que se cierra la primera serie. Se usa para quitar de
-   * en medio lo que solo tiene sentido antes de empezar.
-   */
-  const sesionEmpezada =
-    inProgress || (!!pristineRef.current && JSON.stringify(log) !== pristineRef.current);
-
-  /**
-   * ¿Está el entreno en marcha en la pantalla?
-   *
-   * O se ha pulsado "Empezar entreno", o ya hay algo escrito —un borrador
-   * recuperado, una corrección, un entreno a medias de antes—. Ese segundo
-   * caso importa: quien vuelve a una sesión empezada no tiene que volver a
-   * pulsar nada, se encuentra sus series donde las dejó.
-   *
-   * Antes de eso, la pantalla enseña con qué se llega —el último entreno, la
-   * rutina diaria y apuntar otro día— y nada más. Las tres cosas dejan de
-   * tener sentido en el momento en que se está entrenando, que es cuando
-   * estorban: es entonces cuando la pantalla tiene que ser solo el ejercicio.
-   */
-  const enMarcha = sesionEmpezada || diaEmpezado === (day?.id ?? null);
-
-  /**
-   * Por dónde ibas: el último entreno de ESTA rutina.
-   *
-   * Es lo que permite retomar un ciclo en vez de reiniciarlo. Se calcula aquí,
-   * con el historial ya cargado, y se le pasa a la tarjeta de arriba.
-   */
-  const ultimoEntreno = ultimoEntrenoDe(history, routine);
-  // En Sensaciones, "flexAgain" permite ignorar la tarjeta de completado para
-  // encadenar un segundo entreno el mismo día.
-  const showCompleted = !!completedTodayLog && !inProgress && !corrigiendo && !(isFlex && flexAgain);
-
-  /**
-   * Vuelve a abrir el entreno ya guardado para corregirlo.
-   *
-   * "Terminar entreno" es un botón grande al final de una lista de series: se
-   * pulsa sin querer, y se pulsa faltando la última serie por apuntar. Hasta
-   * ahora la única salida era borrar la sesión y rehacerla entera —perdiendo la
-   * hora, la duración y todo lo demás—, así que en la práctica el alumno se
-   * quedaba con el dato mal. Esto lo reabre tal cual estaba: al guardar se
-   * ACTUALIZA la misma sesión, no se crea otra.
-   */
-  const corregirEntreno = () => {
-    if (!completedTodayLog) return;
-    // Se monta un día a partir de la propia sesión guardada, y no se confía en
-    // el día seleccionado: en Sensaciones el entreno pudo ser una combinación
-    // que ya no existe como día de la rutina, y sin día `handleSave` se rinde
-    // en la primera línea y el botón de guardar no haría nada.
-    setCombinedDay({
-      id: `corregir-${completedTodayLog.id}`,
-      name: completedTodayLog.dayName || 'Entreno',
-      exercises: completedTodayLog.exercises.map((ex, i) => ({
-        id: `${completedTodayLog.id}-${i}`,
-        exerciseId: ex.exerciseId,
-        name: ex.name,
-        sets: ex.sets.length,
-        reps: '',
-        measure: ex.measure,
-        load: ex.load,
-      })),
-    });
-    setCorrigiendo(completedTodayLog.id);
-    setLog(completedTodayLog.exercises);
-    setEsfuerzoSesion(completedTodayLog.esfuerzo);
-    // La referencia pasa a ser lo ya guardado: así no se escribe un borrador
-    // por el simple hecho de abrir la corrección, solo si se cambia algo.
-    pristineRef.current = JSON.stringify(completedTodayLog.exercises);
-    setViewIndex(0);
-    setSummary(null);
-    // La duración ya está calculada y guardada: corregir series no significa
-    // que la sesión haya durado desde ahora hasta que se pulse guardar.
-    startedAt.current = null;
-    showToast('Corrigiendo el entreno. Al guardar se actualiza el mismo.');
-  };
-
-  /** Sale de la corrección sin escribir nada: la sesión se queda como estaba. */
-  const cancelarCorreccion = () => {
-    if (!routine) return;
-    setCorrigiendo(null);
-    setCombinedDay(null);
-    dejarElDiaLimpio();
-    olvidarBorrador();
-  };
-
-  // Lo que se toca una vez al mes vive detrás del punto de la cabecera, no
-  // ocupando dos filas encima de la primera serie.
-  const accionesSesion: AccionRapida[] = [
-    ...(routine?.schedule === 'cycle'
-      ? ([
-          {
-            icono: 'refresh' as const,
-            texto: todaySession.cycleLabel
-              ? `Reiniciar ciclo (hoy: ${todaySession.cycleLabel})`
-              : 'Reiniciar ciclo',
-            onPress: () => {
-              handleStartCycleToday();
-            },
-          },
-          {
-            icono: 'calendar-outline' as const,
-            texto: 'Fijar el día de hoy',
-            onPress: () => setDayPickerOpen(true),
-          },
-        ] satisfies AccionRapida[])
-      : []),
-    ...(isFlex && combinedDay && !corrigiendo
-      ? ([
-          {
-            icono: 'close-circle-outline' as const,
-            texto: 'Cancelar este entreno',
-            onPress: cancelFlexSession,
-            peligro: true,
-          },
-        ] satisfies AccionRapida[])
-      : []),
-    // Salir de la corrección sin tocar nada. Quien entra por error a arreglar
-    // algo tiene que poder salir por donde entró, con su sesión intacta.
-    ...(corrigiendo
-      ? ([
-          {
-            icono: 'arrow-undo-outline' as const,
-            texto: 'Dejar el entreno como estaba',
-            onPress: cancelarCorreccion,
-          },
-        ] satisfies AccionRapida[])
-      : []),
-  ];
-
-  /*
-   * ---------- Grease the groove ----------
-   *
-   * Aquí no se abre una sesión: se entra, se apunta una serie y se sale, seis u
-   * ocho veces al día. Por eso no pasa por el borrador ni por "Terminar
-   * entreno": cada serie se escribe directamente en el registro del día, que es
-   * UNO solo. Si cada serie creara su entreno, la racha contaría ocho días en
-   * uno y el histórico tendría ocho filas por jornada.
-   */
-  const gtgLog =
-    routine && esModoGtg ? entrenoDeHoy(history, routine.id, Date.now(), nombreGtg) : null;
-
-  /*
-   * Las series de hoy, si el alumno las cambia ANTES de apuntar ninguna: aún no
-   * hay entreno del día donde guardarlas (crearlo vacío contaría como día
-   * entrenado), así que esperan aquí y se guardan con la primera serie.
-   */
-  const [objetivoGtgHoy, setObjetivoGtgHoy] = useState<number | null>(null);
-  const objetivoGtgAGuardar = () => objetivoDeHoy(routine, gtgLog, diaGtg, objetivoGtgHoy);
-
-  const cambiarObjetivoGtg = async (series: number) => {
-    const n = Math.min(MAX_OBJETIVO, Math.max(1, Math.round(series)));
-    if (!gtgLog) {
-      setObjetivoGtgHoy(n);
-      return;
-    }
-    // Con el entreno del día ya hecho, se guarda en él: así lo ve también el
-    // entrenador y el historial compara con lo que se buscaba ese día.
-    const antes = history;
-    setHistory((prev) => prev.map((l) => (l.id === gtgLog.id ? { ...l, gtg: { objetivo: n } } : l)));
-    try {
-      await updateWorkoutLog(gtgLog.id, { gtg: { objetivo: n } });
-    } catch {
-      setHistory(antes);
-      showToast('No se pudo cambiar');
-    }
-  };
-
-  const anadirSerieGtg = async (exerciseId: string, nombre: string, marca: string) => {
-    if (!profile || !routine) return;
-    const enPlan = diaGtg?.exercises.find((e) => e.exerciseId === exerciseId);
-    const measure = enPlan?.measure ?? measureByExercise[exerciseId] ?? 'reps';
-    setSaving(true);
-    try {
-      const exercises = conSerieAnadida(
-        gtgLog?.exercises ?? [],
-        { exerciseId, name: nombre, measure },
-        marca
-      );
-      // Con lo que se buscaba hoy: el historial lo necesita y marca el
-      // entreno como de grease the groove.
-      const gtg = { objetivo: objetivoGtgAGuardar() };
-      if (gtgLog) {
-        await updateWorkoutLog(gtgLog.id, { exercises, ...(gtgLog.gtg ? {} : { gtg }) });
-      } else {
-        await createWorkoutLog({
-          trainerId: routine.trainerId,
-          clientId: profile.uid,
-          routineId: routine.id,
-          routineName: routine.name,
-          dayName: nombreGtg ?? 'Grease the groove',
-          date: Date.now(),
-          exercises,
-          gtg,
-        });
-        setObjetivoGtgHoy(null);
-        // Con la primera serie el día ya está empezado: sobra el aviso de las
-        // ocho de la tarde diciendo que no ha entrenado.
-        cancelarAvisosOlvido().catch(() => {});
-      }
-      const freshLogs = await getWorkoutLogsForClient(profile.uid);
-      setHistory(freshLogs);
-      if (!gtgLog) syncMySocialStats(profile, freshLogs).catch(() => {});
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-      }
-    } catch {
-      // Sin la cola de offline a propósito: la cola solo sabe CREAR entrenos, y
-      // aquí casi todas las series son una actualización del registro del día.
-      // Encolarlas crearía un entreno suelto por serie, que es justo lo que
-      // este modo evita.
-      showToast('No se pudo apuntar la serie. Inténtalo en un momento.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const quitarSerieGtg = async () => {
-    if (!profile || !gtgLog) return;
-    setSaving(true);
-    try {
-      const exercises = sinLaUltimaSerie(gtgLog.exercises);
-      // Si era la única serie del día, el entreno entero se va: un registro sin
-      // series contaría como día entrenado en la racha sin haber hecho nada.
-      if (exercises.length === 0) await deleteWorkoutLog(gtgLog.id);
-      else await updateWorkoutLog(gtgLog.id, { exercises });
-      setHistory(await getWorkoutLogsForClient(profile.uid));
-    } catch {
-      showToast('No se pudo quitar la serie');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!profile || !routine || !day) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const durationMin = startedAt.current
-        ? Math.max(1, Math.round((Date.now() - startedAt.current) / 60000))
-        : 0;
-      // Si no marcó ninguna serie, damos la sesión por hecha igualmente (para
-      // que cuente): marcamos todas las series como completadas.
-      const baseLog =
-        doneSets > 0
-          ? log
-          : log.map((ex) => ({ ...ex, sets: ex.sets.map((s) => ({ ...s, completed: true })) }));
-      // Sella la medida ACTUAL de cada ejercicio para que el histórico y las
-      // estadísticas la interpreten bien años después, aunque el entrenador
-      // cambie la ficha del ejercicio. Manda la del plan; si no la trae, la de
-      // la biblioteca; y si tampoco, reps.
-      // Los tramos de un mismo ejercicio (rutinas fusionadas serie a serie)
-      // vuelven a ser una fila: "Tuck planche, 6 series".
-      const finalLog: LoggedExercise[] = juntarTramos(baseLog, day.exercises).map((ex) => {
-        const candidata = ex.measure ?? measureByExercise[ex.exerciseId];
-        const measure: ExerciseMeasure = EXERCISE_MEASURES.includes(
-          candidata as ExerciseMeasure
-        )
-          ? (candidata as ExerciseMeasure)
-          : 'reps';
-        return { ...ex, measure };
-      });
-      // Corrigiendo, la sesión que se edita NO cuenta como historial contra el
-      // que compararse: si contara, cada marca se compararía consigo misma y no
-      // habría récord posible ni aunque el alumno acabe de apuntar su mejor
-      // serie, que es justo lo que se estaba corrigiendo.
-      const historyBase = corrigiendo ? history.filter((l) => l.id !== corrigiendo) : history;
-      // Cada récord, con su historia: cuánto ha subido y desde cuándo.
-      const prs = detectNewPRs(historyBase, finalLog).map((pr) => {
-        const ex = finalLog.find((e) => e.name === pr.exerciseName);
-        if (!ex) return pr;
-        const esDeCarga = pr.label.includes('kg');
-        return {
-          ...pr,
-          contexto: contextoEnUnaLinea(
-            contextoDelRecord(historyBase, ex, ex.sets, esDeCarga),
-            marcaAnterior(historyBase, ex, esDeCarga)
-          ),
-        };
-      });
-      const totals = sessionTotals(finalLog);
-      // Logros que estaban desbloqueados antes de esta sesión (base entrenos).
-      const beforeUnlocked = new Set(
-        computeAchievements(historyBase, []).filter((a) => a.unlocked).map((a) => a.id)
-      );
-
-      const payload = {
-        trainerId: routine.trainerId,
-        clientId: profile.uid,
-        routineId: routine.id,
-        routineName: routine.name,
-        dayName: day.name,
-        // Si estamos rellenando el entreno de otro día, se registra con SU fecha.
-        date: resumeDate ?? Date.now(),
-        exercises: finalLog,
-        ...(esfuerzoSesion ? { esfuerzo: esfuerzoSesion } : {}),
-        ...(durationMin > 0 ? { durationMin } : {}),
-      };
-
-      /*
-       * Corrigiendo se ACTUALIZA la sesión, no se crea otra. Es la diferencia
-       * entre arreglar un dedo y acabar con dos entrenos el mismo día.
-       *
-       * Y sin la red de la cola de offline: encolar una corrección crearía un
-       * duplicado al subirse (la cola solo sabe crear), así que si no hay
-       * conexión es mejor decirlo y que el alumno lo intente luego, con su
-       * sesión original intacta.
-       */
-      if (corrigiendo) {
-        await updateWorkoutLog(corrigiendo, {
-          exercises: finalLog,
-          ...(esfuerzoSesion ? { esfuerzo: esfuerzoSesion } : {}),
-          // La duración no se recalcula: la sesión duró lo que duró, y el rato
-          // que se tarde en corregirla no es tiempo entrenando.
-          ...(completedTodayLog?.durationMin ? { durationMin: completedTodayLog.durationMin } : {}),
-        });
-        const freshLogs = await getWorkoutLogsForClient(profile.uid);
-        setHistory(freshLogs);
-        setCorrigiendo(null);
-        setCombinedDay(null);
-        // Se vuelve a dejar el día como está: si el log siguiera lleno de
-        // series marcadas, la pantalla creería que hay un entreno en curso y
-        // no volvería a enseñar la tarjeta de terminado. Y el borrador que se
-        // haya ido escribiendo mientras se corregía ya no vale: si se quedara,
-        // mañana se ofrecería como "entreno sin terminar".
-        dejarElDiaLimpio();
-        olvidarBorrador();
-        showToast('Entreno corregido');
-        return;
-      }
-
-      let freshLogs: WorkoutLog[];
-      let savedOffline = false;
-      try {
-        await createWorkoutLog(payload);
-        freshLogs = await getWorkoutLogsForClient(profile.uid);
-        syncMySocialStats(
-          profile,
-          freshLogs,
-          prs.length > 0
-            ? { exerciseName: prs[0].exerciseName, label: prs[0].label, date: Date.now() }
-            : undefined
-        ).catch(() => {});
-        // Aviso al coach en tiempo real (nunca bloquea el guardado).
-        notifyUser(
-          routine.trainerId,
-          'Sesión completada',
-          `${profile.name.split(' ')[0]} ha terminado ${day.name} (${totals.sets} series${
-            prs.length > 0 ? `, ${prs.length} récord${prs.length > 1 ? 's' : ''}` : ''
-          }).`
-        ).catch(() => {});
-      } catch {
-        // Sin conexión (o Firestore caído): el entreno se encola en el
-        // dispositivo y se subirá solo. La sesión NUNCA se pierde.
-        await enqueueWorkout(payload);
-        savedOffline = true;
-        freshLogs = [
-          { id: `pending-${Date.now()}`, ...payload, createdAt: Date.now() } as WorkoutLog,
-          ...history,
-        ];
-      }
-      const newAchievements = computeAchievements(freshLogs, []).filter(
-        (a) => a.unlocked && !beforeUnlocked.has(a.id)
-      );
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      // Sesión registrada: fuera los avisos de "se te ha olvidado subirlo".
-      // Va aquí y no solo en el guardado en línea porque un entreno encolado
-      // sin conexión también está hecho: el aviso de las 20:00 no puede saltar
-      // si a las 19:40 el alumno ya lo ha dado por terminado.
-      cancelarAvisosOlvido().catch(() => {});
-      stopRest();
-      // También el de arrastre: la sesión ya está registrada, así que ese
-      // entreno de un día anterior deja de estar esperando.
-      olvidarBorrador({ tambienElPendiente: true });
-      setRestored(false);
-      setResumeDate(null);
-      setPastDraft(null);
-      setPastDismissed(false);
-      setFlexAgain(false); // consumido: tras guardar vuelve la tarjeta de completado
-      // Limpia el "día combinado" de Sensaciones para que no contamine la
-      // próxima sesión (evita que un entreno futuro herede este nombre).
-      setCombinedDay(null);
-      // Deja el estado detrás del resumen "limpio": el día queda como completado
-      // (doneSets 0), de modo que nunca se vuelven a mostrar sus ejercicios.
-      if (day) setLog(buildLog(day));
-      setViewIndex(0);
-      startedAt.current = null;
-      setSummary({
-        durationMin,
-        ...totals,
-        prs,
-        streak: currentStreak(freshLogs, {
-          routine,
-          cycleAnchor,
-          pausas: profile?.planPauses,
-          // Los días de pausa entran igual que en la pantalla de inicio. Sin
-          // ellos, la racha del resumen del entreno salía más corta que la de
-          // la portada, en la misma app y en el mismo minuto.
-          restDays: [...(profile?.flexRestDays ?? []), ...diasDePausa(profile?.planPauses)],
-        }),
-        newAchievements,
-      });
-      if (savedOffline) {
-        showToast('Sin conexión: la sesión se subirá sola al recuperarla');
-      } else if (newAchievements.length > 0) {
-        showToast(`¡Logro desbloqueado: ${newAchievements[0].title}!`);
-      }
-      setHistory(freshLogs);
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'No se pudo guardar la sesión.');
-    } finally {
-      setSaving(false);
-    }
+  const reiniciarCiclo = async () => {
+    if (!routine || routine.days.length === 0) return;
+    const decision = await setCycleAnchorToday(routine.id, profile?.planPauses);
+    setCycleAnchor(decision);
+    if (profile) setCycleAnchorRemote(profile.uid, routine.id, decision.ancla, decision.decididaEn);
+    setSelectedDayId(routine.days[0].id);
+    showToast('Ciclo reiniciado · hoy es el Día 1');
   };
 
   if (loading) return <LoadingScreen />;
 
+  // Sin rutina: el reloj igualmente, que para descansar entre series no hace
+  // falta plan.
   if (!routine || routine.days.length === 0) {
     return (
       <ScreenContainer>
-        <Pressable
-          onPress={() => router.push('/(client)/dashboard')}
-          style={styles.exitBtn}
-          hitSlop={8}
-        >
-          <Ionicons name="chevron-back" size={18} color={colors.textMuted} />
-          <Text style={styles.exitText}>Volver a inicio</Text>
-        </Pressable>
-        <Text style={styles.title}>Mi entrenamiento</Text>
-        {/* Sin rutina para apuntar, el descanso no salta solo al marcar una
-            serie: aquí lo lanza a mano, con el tiempo que quiera. La cuenta
-            atrás va encima, dentro (en esta pantalla no flota). */}
-        {activeRest ? (
-          <View style={{ marginBottom: spacing.md }}>
-            <RestTimer key={activeRest.id} rest={activeRest} enLinea />
-          </View>
-        ) : null}
-        <CronoDeDescanso />
+        <ScreenHeader title={t('Entreno')} />
+        <RelojesDelEntreno />
         <EmptyState
           icon="barbell-outline"
           title="Sin rutina asignada"
-          subtitle="Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, controla tus descansos con el temporizador."
+          subtitle="Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, tienes el reloj para tus descansos."
         />
       </ScreenContainer>
     );
   }
 
-  // ---------- Resumen post-entreno ----------
-  if (summary) {
-    return (
-      <ResumenEntreno
-        cifras={summary}
-        titulo="¡Entrenamiento completado!"
-        subtitulo={unido(routine.name, day?.name)}
-        prs={summary.prs}
-        logros={summary.newAchievements}
-        racha={summary.streak}
-        onCompartir={handleShareSummary}
-        onCompartirRecord={handleShareRecord}
-        onIrAInicio={() => router.push('/(client)/dashboard')}
-        onCorregir={() => {
-          setSummary(null);
-          corregirEntreno();
-        }}
-      />
-    );
-  }
+  const esHoy = (d: RoutineDay, i: number) =>
+    esFlex ? false : esCiclo ? todaySession.cycleIndex === i : d.weekday === todayWeekday();
+  const diaGtg = day && (esGtg(routine) || esGtg(routine, day)) ? day : null;
+  // La intensidad, si su entrenador deja verla (lib/visibilidad.ts). En un
+  // plan personalizado, en SU escala (porcentaje o sus etiquetas).
+  const intensidad =
+    day && ve.intensidad && !diaGtg
+      ? (esFlex ? textoDeIntensidadDelDia(day, routine.personalizado) : textoIntensidad(day, routine.schedule)) || null
+      : null;
+  const cal = day && !day.isRest ? calentamientoParaVer(day) : null;
+  const calAbierto = cal ? (cal.propio ? !warmupOpen : warmupOpen) : false;
+  const indiceDelDia = day ? routine.days.findIndex((d) => d.id === day.id) : -1;
 
-  /** Lo que hace falta para pintar las series de un ejercicio: medida, carga, clúster… */
-  const infoDe = (i: number) => {
-    const exercise = log[i];
-    const planned = day?.exercises[i];
-    // La medida que manda: la del plan si la trae, si no la del registro y,
-    // en último caso, la de la biblioteca del entrenador. Así una plancha
-    // marcada como segundos nunca se muestra como reps.
-    const medida =
-      planned?.measure ?? exercise?.measure ?? measureByExercise[exercise?.exerciseId ?? ''];
-    const isSeconds = isHoldMeasure(medida);
-    return {
-      exercise,
-      planned,
-      prev: exercise ? lastPerf[exercise.exerciseId] : undefined,
-      load: planned ? resolveLoad(planned) : ('none' as const),
-      isSeconds,
-      // Combo: reps Y aguante en la misma serie (dos casillas).
-      isCombo: medida === 'combo',
-      // Por lados: la segunda casilla es el otro brazo, no otra cosa.
-      isDual: isDualMeasure(medida),
-      // Clúster: una casilla por bloque y un botón para la pausa corta.
-      cluster: planned?.cluster,
-      bloques: planned?.cluster ? clusterBlocks(planned.cluster) : 1,
-    };
-  };
-
-  /**
-   * Las casillas de una serie, iguales en un ejercicio suelto y en un paso de
-   * superserie: las reps (o el primer bloque, o el lado izquierdo), los demás
-   * bloques, el aguante o el otro lado, y los kilos.
-   */
-  const camposDeSerie = (i: number, r: number): CampoDeSerie[] => {
-    const d = infoDe(i);
-    const set = d.exercise?.sets[r];
-    if (!set) return [];
-    const objetivo = d.planned?.reps || (d.isSeconds ? 'seg' : 'reps');
-    const campos: CampoDeSerie[] = [
-      {
-        clave: 'reps',
-        valor: set.reps,
-        onChange: (v) => updateSet(i, r, 'reps', v),
-        placeholder: objetivo,
-        rotulo: d.cluster
-          ? 'BLOQUE 1'
-          : d.isDual
-            ? d.isSeconds ? 'IZQ. S' : 'IZQ.'
-            : d.isSeconds ? 'SEGUNDOS' : 'REPS',
-      },
-    ];
-    // Un bloque más de la misma serie: se apunta lo que salió en cada uno,
-    // que es justo lo que un clúster quiere medir.
-    for (let k = 0; k < d.bloques - 1; k++) {
-      campos.push({
-        clave: `bloque-${k}`,
-        valor: set.clusters?.[k] ?? '',
-        onChange: (v) => updateCluster(i, r, k, v),
-        placeholder: objetivo,
-        rotulo: `BLOQUE ${k + 2}`,
-      });
-    }
-    if (d.isCombo) {
-      campos.push({
-        clave: 'aguante',
-        valor: set.seconds ?? '',
-        onChange: (v) => updateSet(i, r, 'seconds', v),
-        placeholder: d.planned?.seconds ? String(d.planned.seconds) : 'seg',
-        rotulo: 'AGUANTE S',
-      });
-    } else if (d.isDual) {
-      campos.push({
-        clave: 'der',
-        valor: set.side2 ?? '',
-        onChange: (v) => updateSet(i, r, 'side2', v),
-        placeholder: d.planned?.side2 || objetivo,
-        rotulo: d.isSeconds ? 'DER. S' : 'DER.',
-      });
-    }
-    if (d.load !== 'none') {
-      campos.push({
-        clave: 'kg',
-        valor: set.weight ?? '',
-        onChange: (v) => updateSet(i, r, 'weight', v),
-        // El peso de la última vez, de fondo: si repite carga, no teclea nada.
-        placeholder: d.prev?.weight || '—',
-        rotulo: d.load === 'assisted' ? 'GOMA KG' : 'KG',
-        decimal: true,
-      });
-    }
-    return campos;
-  };
-
-  /** Lo que hizo en esa misma serie la última vez ("6 × 10"). */
-  const antesDe = (i: number, r: number) => {
-    const d = infoDe(i);
-    if (!d.exercise) return '';
-    return textoDeSerieAnterior(anteriores[d.exercise.exerciseId]?.[r], {
-      segundos: d.isSeconds,
-      combo: d.isCombo,
-      lados: d.isDual,
-      carga: d.load,
-    });
-  };
-
-  /**
-   * Una herramienta del ejercicio, en pastilla: Técnica, Nota, Saltar, Subir…
-   * Todas iguales y en una fila, con hueco para el dedo; antes eran enlaces
-   * sueltos de 12 px repartidos por la tarjeta.
-   */
-  const herramienta = (
-    clave: string,
-    icono: React.ComponentProps<typeof Ionicons>['name'],
-    texto: string,
-    onPress: () => void,
-    o: { activa?: boolean; apagada?: boolean; principal?: boolean } = {}
-  ) => (
-    <Pressable
-      key={clave}
-      onPress={onPress}
-      disabled={o.apagada}
-      style={[styles.herramienta, o.activa && styles.herramientaActiva, o.apagada && styles.herramientaApagada]}
-      hitSlop={4}
-    >
-      <Ionicons
-        name={icono}
-        size={15}
-        color={o.activa || o.principal ? colors.primaryBright : colors.textMuted}
-      />
-      <Text style={[styles.herramientaTexto, (o.activa || o.principal) && styles.herramientaTextoActiva]}>
-        {texto}
-      </Text>
-    </Pressable>
-  );
-
-  /** Lo que el entrenador escribió para ese ejercicio, en su cajita (antes, cursiva suelta). */
-  const notaDelEntrenador = (texto: string) => (
-    <View style={styles.notaCoach}>
-      <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.primary} style={styles.notaCoachIcono} />
-      <Text style={styles.notaCoachTexto}>{texto}</Text>
-    </View>
-  );
-
-  /** La nota del alumno sobre un ejercicio: se abre con su pastilla y se queda si tiene algo. */
-  const notaVisible = (i: number) => noteOpenIndex === i || !!log[i]?.notes;
-  const campoDeNota = (i: number, enPaso = false) =>
-    notaVisible(i) ? (
-      <TextField
-        value={log[i]?.notes ?? ''}
-        onChangeText={(v) => updateExerciseNote(i, v)}
-        placeholder="Para tu entrenador: variante, molestias, cómo ha ido..."
-        multiline
-        style={styles.noteField}
-        containerStyle={enPaso ? styles.noteCajaEnPaso : styles.noteCaja}
-      />
-    ) : null;
-
-  /*
-   * LA SUPERSERIE: UNA RONDA A LA VISTA, COMO UNA SECUENCIA.
-   *
-   * Lo único desplegado es la ronda que toca, y se lee de arriba abajo como se
-   * hace: A, "sin descanso", B, "luego, descanso 1:30". Cada paso lleva junto
-   * todo lo suyo —nombre, objetivo, la última vez, las casillas—, sin una ficha
-   * aparte arriba que obligue a cruzar datos. El que toca se enciende ("AHORA");
-   * al marcarlo, se enciende el siguiente.
-   *
-   * Lo hecho y lo que queda, en dos líneas pequeñas al pie: lo hecho se abre
-   * para corregir; lo que queda solo se cuenta. Arriba, una barra por ronda.
-   *
-   * La pregunta del esfuerzo sale en la última ronda, que es cuando se puede
-   * contestar sabiendo de qué se habla; antes era ruido debajo de cada ronda.
-   */
-  const tarjetaDeSuperserie = (b: { inicio: number; fin: number }) => {
-    const plan = day?.exercises ?? [];
-    const ids = miembrosDelBloque(b);
-    const activos = ids.filter((i) => !log[i]?.saltado);
-    const rondas = rondasDe(log, b);
-    const siguiente = siguienteDelBloque(log, b);
-    const hecho = activos.length > 0 && siguiente === null;
-    const letra = (i: number) => String.fromCharCode(65 + (i - b.inicio));
-    const clave = (x: string | number) => `${b.inicio}:${x}`;
-    const todasLasRondas = Array.from({ length: rondas }, (_, r) => r);
-    const enRonda = (r: number) => enLaRonda(log, b, r);
-    const rondaHecha = (r: number) =>
-      enRonda(r).length > 0 && enRonda(r).every((i) => log[i]?.sets[r].completed);
-    const actual = siguiente?.serie ?? null;
-    const hechas = todasLasRondas.filter((r) => r !== actual && rondaHecha(r));
-    const quedan = actual === null ? 0 : todasLasRondas.filter((r) => r > actual && !rondaHecha(r)).length;
-    const verHechas = rondasAbiertas.has(clave('hechas'));
-    // Ronda de un solo ejercicio porque el otro ya terminó (2 series de A, 3
-    // de B): va aislada, con su aviso y su descanso.
-    const suelta = actual === null ? null : serieSuelta(log, b, actual);
-    const terminaron =
-      suelta === null
-        ? ''
-        : activos
-            .filter((j) => j !== suelta && actual !== null && actual >= (log[j]?.sets.length ?? 0))
-            .map(letra)
-            .join(' y ');
-    const sueltasPendientes =
-      actual === null
-        ? []
-        : todasLasRondas.filter((r) => r > actual && !rondaHecha(r) && serieSuelta(log, b, r) !== null);
-    const alternar = (k: string) =>
-      setRondasAbiertas((prev) => {
-        const n = new Set(prev);
-        if (n.has(k)) n.delete(k);
-        else n.add(k);
-        return n;
-      });
-
-    const info = infoDe;
-
-    /** Un paso de la ronda: un ejercicio, con todo lo suyo junto y en su caja. */
-    const paso = (i: number, r: number, conDetalle: boolean) => {
-      const d = info(i);
-      const set = d.exercise?.sets[r];
-      if (!d.exercise || !set) return null;
-      const esAhora = siguiente?.ejercicio === i && siguiente.serie === r;
-      const pres = ve.objetivo && d.planned ? textoDePrescripcion(d.planned, planPrescrito) : '';
-      const meta = unido(
-        d.planned?.reps ? `${d.planned.reps} ${d.isSeconds ? 's' : 'reps'}` : undefined,
-        d.load === 'assisted' ? t('Con goma') : d.load === 'weighted' ? t('Lastrado') : undefined,
-        pres || undefined,
-        d.planned?.grip ? `${t('Agarre')} ${GRIP_LABEL[d.planned.grip].toLowerCase()}` : undefined,
-        d.cluster ? frase`Clúster ${d.bloques} bloques · ${d.cluster.restSeconds}s` : undefined,
-        conDetalle && d.planned?.goal ? frase`Objetivo: ${d.planned.goal}` : undefined
-      );
-      const video = videoByExercise[d.exercise.exerciseId];
-      const nombre = d.exercise.name;
-      return (
-        <FilaDeSerie
-          key={i}
-          letra={letra(i)}
-          titulo={nombre}
-          detalle={meta}
-          antes={antesDe(i, r)}
-          extra={etiquetaDeEsfuerzo(i, r)}
-          esAhora={esAhora}
-          hecha={set.completed}
-          campos={camposDeSerie(i, r)}
-          // Cada paso es un ejercicio distinto: el rótulo va con su casilla.
-          conRotulos
-          onMarcar={() => updateSet(i, r, 'completed', !set.completed)}
-          regresion={set.regresion === true}
-          onRegresion={d.planned?.permiteRegresion ? () => alternarRegresion(i, r) : undefined}
-          pie={
-            conDetalle ? (
-              <View style={styles.ssPasoPie}>
-                {d.planned?.notes ? notaDelEntrenador(d.planned.notes) : null}
-                <View style={styles.herramientas}>
-                  {video
-                    ? herramienta('tecnica', 'play-circle-outline', 'Técnica', () => setVideoAbierto({ url: video, titulo: nombre }), { principal: true })
-                    : null}
-                  {d.cluster
-                    ? herramienta(
-                        'bloques',
-                        'timer-outline',
-                        frase`Entre bloques · ${d.cluster.restSeconds}s`,
-                        () => descansoDeBloque(d.cluster!.restSeconds, nombre),
-                        { principal: true }
-                      )
-                    : null}
-                  {herramienta(
-                    'nota',
-                    d.exercise.notes ? 'create' : 'create-outline',
-                    'Nota',
-                    () => setNoteOpenIndex(noteOpenIndex === i ? null : i),
-                    { activa: notaVisible(i) }
-                  )}
-                  {puedeSaltar
-                    ? herramienta('saltar', 'play-skip-forward-outline', 'Saltar', () => alternarSaltado(i))
-                    : null}
-                </View>
-                {campoDeNota(i, true)}
-              </View>
-            ) : null
-          }
-        />
-      );
-    };
-
-    /** La ronda como secuencia: A, "sin descanso", B… y al final, el descanso. */
-    const ronda = (r: number, conDetalle: boolean) => {
-      const pasos = enRonda(r);
-      return pasos.map((i, k) => (
-        <React.Fragment key={i}>
-          {paso(i, r, conDetalle)}
-          {k < pasos.length - 1 ? (
-            <View style={styles.ssEnlace}>
-              <View style={styles.ssEnlaceLinea} />
-              {/* La pausa para cambiar, si el entrenador la puso al fusionar. */}
-              <Text style={styles.ssEnlaceTexto}>
-                {plan[pasos[k + 1]]?.transicionSegundos
-                  ? frase`${textoDeDescanso(plan[pasos[k + 1]].transicionSegundos!)} para cambiar`
-                  : 'sin descanso'}
-              </Text>
-            </View>
-          ) : null}
-        </React.Fragment>
-      ));
-    };
-
-    /** Lo apuntado en una serie, en corto, para la línea de una ronda hecha. */
-    const enCorto = (i: number, r: number) => {
-      const d = info(i);
-      const s = d.exercise?.sets[r];
-      if (!s) return '';
-      const marca = s.reps ? `${s.reps}${d.isSeconds ? ' s' : ''}` : '✓';
-      return `${letra(i)} ${marca}${s.weight ? ` · ${s.weight} kg` : ''}`;
-    };
-
-    const ultimaRonda = rondas - 1;
-
-    return (
-      <FadeIn key={`superserie-${b.inicio}`}>
-        <Card accent style={styles.exerciseCard}>
-          {/* Arriba: qué es y por dónde va, en una línea y una barra. */}
-          <View style={styles.ssCab}>
-            <Ionicons name="link" size={15} color={colors.primaryBright} />
-            <Text style={styles.ssTitulo}>Superserie</Text>
-            <View style={{ flex: 1 }} />
-            {hecho ? (
-              <View style={styles.ssHecha}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                <Text style={styles.ssHechaTexto}>Hecha</Text>
-              </View>
-            ) : actual !== null ? (
-              <Text style={styles.ssCuenta}>{frase`Ronda ${actual + 1} de ${rondas}`}</Text>
-            ) : null}
-          </View>
-          <View style={styles.ssBarra}>
-            {todasLasRondas.map((r) => (
-              <View
-                key={r}
-                style={[
-                  styles.ssTramo,
-                  rondaHecha(r) && styles.ssTramoHecho,
-                  r === actual && styles.ssTramoActual,
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* La ronda que toca, entera y con todo. */}
-          {actual !== null ? (
-            <>
-              {suelta !== null ? (
-                <View style={styles.ssSuelta}>
-                  <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
-                  <Text style={styles.ssSueltaTexto}>
-                    {frase`Esta va sola: ${terminaron} ya ha hecho sus series.`}
-                  </Text>
-                </View>
-              ) : null}
-              {/* Cada paso se marca con su ✓ (el que toca va encendido). Sin
-                  botón grande aparte: eran dos formas de hacer lo mismo. */}
-              {ronda(actual, true)}
-              <View style={styles.ssFinRonda}>
-                <Ionicons name="timer-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.ssFinRondaTexto}>
-                  {actual === ultimaRonda
-                    ? 'Última ronda'
-                    : frase`Luego, descanso de ${minutosSegundos(
-                        descansoTrasRonda(plan, log, b, actual) || DEFAULT_REST_SECONDS,
-                        false
-                      )}`}
-                </Text>
-              </View>
-            </>
-          ) : null}
-
-          {/* El esfuerzo de la serie que se acaba de hacer y el descanso,
-              aquí dentro, debajo de la ronda: es donde se está mirando. */}
-          {barraDeshacer}
-          {preguntaDeSerie(b)}
-          {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
-
-          {/* Y al pie, lo hecho (se abre para corregir) y lo que queda. */}
-          {hechas.length > 0 ? (
-            <Pressable onPress={() => alternar(clave('hechas'))} style={styles.ssPie} hitSlop={4}>
-              <Ionicons name="checkmark-circle" size={15} color={colors.primary} />
-              <Text style={styles.ssPieTexto}>
-                {hechas.length === 1
-                  ? frase`Ronda ${hechas[0] + 1} hecha`
-                  : frase`${hechas.length} rondas hechas`}
-              </Text>
-              <Text style={styles.ssPieResumen} numberOfLines={1}>
-                {!verHechas && hechas.length === 1
-                  ? enRonda(hechas[0]).map((i) => enCorto(i, hechas[0])).join('  ·  ')
-                  : ''}
-              </Text>
-              <Ionicons name={verHechas ? 'chevron-up' : 'chevron-down'} size={15} color={colors.textFaint} />
-            </Pressable>
-          ) : null}
-          {verHechas
-            ? hechas.map((r) =>
-                rondaAbierta(b, r) ? (
-                  <View key={r} style={styles.ssRondaCorregir}>
-                    <View style={styles.ssRondaCorregirCab}>
-                      <Text style={styles.ssRondaCorregirTitulo}>{frase`Ronda ${r + 1}`}</Text>
-                      <Pressable onPress={() => alternar(clave(r))} hitSlop={8}>
-                        <Text style={styles.ssPlegar}>Listo</Text>
-                      </Pressable>
-                    </View>
-                    {ronda(r, false)}
-                  </View>
-                ) : (
-                  <Pressable key={r} onPress={() => alternar(clave(r))} style={styles.ssRondaLinea} hitSlop={4}>
-                    <Text style={styles.ssRondaLineaTitulo}>{frase`Ronda ${r + 1}`}</Text>
-                    <Text style={styles.ssPieResumen} numberOfLines={1}>
-                      {enRonda(r).map((i) => enCorto(i, r)).join('  ·  ')}
-                    </Text>
-                    <Ionicons name="create-outline" size={14} color={colors.textFaint} />
-                  </Pressable>
-                )
-              )
-            : null}
-          {quedan > 0 ? (
-            <View style={styles.ssPie}>
-              <Ionicons name="ellipse-outline" size={15} color={colors.textFaint} />
-              <Text style={styles.ssPieTextoSuave}>
-                {quedan === 1 ? 'Queda 1 ronda más' : frase`Quedan ${quedan} rondas más`}
-                {sueltasPendientes.length > 0
-                  ? ` · ${sueltasPendientes
-                      .map((r) => frase`la ${r + 1}.ª, solo ${letra(serieSuelta(log, b, r)!)}`)
-                      .join(', ')}`
-                  : ''}
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Saltados: se dicen, y se pueden recuperar. */}
-          {ids
-            .filter((i) => log[i]?.saltado)
-            .map((i) => (
-              <Pressable key={i} onPress={() => alternarSaltado(i)} style={styles.ssPie} hitSlop={4}>
-                <Ionicons name="play-skip-forward" size={14} color={colors.textFaint} />
-                <Text style={styles.ssPieTextoSuave} numberOfLines={1}>
-                  {frase`${letra(i)} · ${log[i]?.name ?? ''}, saltado hoy`}
-                </Text>
-                <Text style={styles.ssPlegar}>Recuperar</Text>
-              </Pressable>
-            ))}
-
-          {isFlex ? (
-            <View style={[styles.herramientas, styles.herramientasPie]}>
-              {herramienta('quitar-ronda', 'remove', 'Quitar ronda', () =>
-                activos.forEach((i) => (log[i]?.sets.length ?? 0) > 1 && removeSet(i))
-              )}
-              {herramienta('anadir-ronda', 'add', 'Añadir ronda', () => activos.forEach((i) => addSet(i)), {
-                principal: true,
-              })}
-            </View>
-          ) : null}
-        </Card>
-      </FadeIn>
-    );
-  };
-
-  // ---------- Modo entreno ----------
   return (
     <ScreenContainer>
-      {prVivo ? (
-        <PRBurst
-          key={`${prVivo.exerciseId}-${prVivo.label}`}
-          exerciseName={prVivo.exerciseName}
-          label={prVivo.label}
-          previous={prVivo.previous}
-          mejora={prVivo.mejora}
-          desde={prVivo.desde}
-          onDone={() => setPrVivo(null)}
-        />
-      ) : null}
-
-      <SessionHeader
-        titulo={routine.name}
-        dia={day && !showCompleted && !esModoGtg ? day.name : null}
-        // La intensidad del día se ve antes de empezar; entrenando ya no
-        // decide nada y es una pastilla más en la cabecera.
-        intensidad={
-          showCompleted || esModoGtg || !ve.intensidad || enMarcha ? null : textoIntensidad(day, routine.schedule)
+      <ScreenHeader
+        title={routine.name || t('Entreno')}
+        subtitle={
+          esFlex
+            ? frase`${flexLabel(routine.scheduleLabel)} · eliges tú según cómo estés`
+            : esCiclo && todaySession.cycleLabel
+              ? todaySession.cycleLabel
+              : undefined
         }
-        hechas={doneSets}
-        // En grease the groove el anillo del día lo lleva su propia pantalla,
-        // con las series repartidas; dos anillos distintos en la misma pantalla
-        // se leen mal.
-        // En tabla tampoco: no se marcan series, y un "0/14" que no se
-        // mueve nunca parece que falta algo.
-        totales={showCompleted || esModoGtg || (enTabla && !enMarcha) ? 0 : totalSets}
-        acciones={accionesSesion}
-        onSalir={() => {
-          // Con la sesión en marcha no se sale a la ligera: confirmación.
-          if (inProgress) setExitConfirmOpen(true);
-          else router.push('/(client)/dashboard');
-        }}
       />
 
-      {/* Plan en pausa. Se avisa, pero no se cierra la pantalla: si hoy apetece
-          entrenar, este entreno cuenta igual que cualquier otro. */}
-      {enPausa && !showCompleted ? (
+      {/* Plan en pausa: se dice, pero el programa se sigue pudiendo ver. */}
+      {enPausa ? (
         <View style={styles.pausaAviso}>
           <Ionicons name="pause-circle-outline" size={18} color={colors.primary} />
           <Text style={styles.pausaAvisoTexto}>
-            Tu plan está en pausa hasta el {diaLargo(enPausa.hasta)}. Hoy no se
-            espera nada, pero si entrenas cuenta igual.
+            Tu plan está en pausa hasta el {diaLargo(enPausa.hasta)}. Hoy no se espera nada.
           </Text>
         </View>
       ) : null}
 
-      {/* Entreno de un día anterior sin finalizar: rellenarlo o dejarlo para luego. */}
-      {pastDraft && !pastDismissed && !restored ? (
-        <FadeIn>
-          <View style={styles.pastDraftCard}>
-            <Ionicons name="time-outline" size={18} color={colors.primary} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pastDraftTitle}>Tienes un entreno sin terminar</Text>
-              <Text style={styles.pastDraftSub}>
-                {`${pastDraft.dayName ? `${pastDraft.dayName} · ` : ''}${diaSemanaCorto(
-                  pastDraft.startedAt ?? pastDraft.savedAt
-                )}`}
-              </Text>
-            </View>
-            <View style={styles.pastDraftActions}>
-              <Pressable onPress={resumePastDraft} style={styles.pastDraftFill} hitSlop={6}>
-                <Text style={styles.pastDraftFillText}>Rellenar datos</Text>
-              </Pressable>
-              <Pressable onPress={dismissPastDraft} hitSlop={6}>
-                <Text style={styles.pastDraftLater}>Más tarde</Text>
-              </Pressable>
-            </View>
-          </View>
-        </FadeIn>
+      {/* Los días del plan. El de hoy, marcado. */}
+      <ChipRow scroll>
+        {routine.days.map((d, i) => (
+          <Chip
+            key={d.id}
+            texto={
+              (esCiclo
+                ? frase`Día ${i + 1}`
+                : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`) +
+              (d.optionalRest ? t(' · descanso opcional') : d.isRest ? t(' · descanso') : '') +
+              (esHoy(d, i) ? t('  ·  HOY') : '')
+            }
+            activo={selectedDayId === d.id}
+            onPress={() => setSelectedDayId(d.id)}
+          />
+        ))}
+      </ChipRow>
+
+      {esCiclo ? (
+        <Pressable onPress={() => setDayPickerOpen(true)} style={styles.cambiarDia} hitSlop={6}>
+          <Ionicons name="swap-horizontal-outline" size={14} color={colors.primary} />
+          <Text style={styles.cambiarDiaTexto}>¿No vas por este día? Cambiar el día de hoy</Text>
+        </Pressable>
       ) : null}
 
-      {/* Apuntar un entreno de otro día, a la vista y no en el menú de los tres
-          puntos: es aquí donde uno se da cuenta de que ayer no lo apuntó.
+      {!day ? (
+        <Card style={styles.aviso}>
+          <Text style={styles.avisoTexto}>Elige arriba qué rutina quieres ver.</Text>
+        </Card>
+      ) : day.isRest || day.optionalRest ? (
+        <FadeIn>
+          <Card accent style={styles.aviso}>
+            <View style={styles.avisoCab}>
+              <Ionicons name="bed" size={18} color={colors.primary} />
+              <Text style={styles.avisoTitulo}>{day.optionalRest ? 'Descanso opcional' : 'Día de descanso'}</Text>
+            </View>
+            <Text style={styles.avisoTexto}>
+              {day.optionalRest
+                ? 'Puedes descansar hoy, o empezar el ciclo de nuevo por el Día 1. Tú decides.'
+                : 'Hoy toca recuperar: el descanso también es parte del entrenamiento.'}
+            </Text>
+            {day.optionalRest ? (
+              <Button
+                title="Empezar de nuevo por el Día 1"
+                variant="secondary"
+                onPress={reiniciarCiclo}
+                style={{ marginTop: spacing.sm }}
+              />
+            ) : null}
+          </Card>
+        </FadeIn>
+      ) : (
+        <FadeIn key={day.id}>
+          <View style={styles.diaCab}>
+            <Text style={styles.diaNombre}>
+              {esCiclo ? frase`Día ${indiceDelDia + 1}${day.name ? ` · ${day.name}` : ''}` : day.name}
+            </Text>
+            <Text style={styles.diaSub}>
+              {diaGtg
+                ? frase`Todo el día · ${objetivoDelDia(routine, day)} series sueltas, ninguna al fallo`
+                : [
+                    day.exercises.length === 1 ? t('1 ejercicio') : frase`${day.exercises.length} ejercicios`,
+                    intensidad ? frase`Intensidad ${intensidad}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join('  ·  ')}
+            </Text>
+          </View>
 
-          Solo AL PRINCIPIO. En cuanto se toca algo desaparece, porque lo que
-          toca entonces es entrenar y no ponerse a rellenar el martes pasado.
+          {/* El calentamiento, antes que nada: es lo que se hace ANTES. El de
+              su entrenador sale abierto; el de siempre, plegado. */}
+          {cal ? (
+            <View style={styles.warmupCard}>
+              <Pressable onPress={() => setWarmupOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
+                <Ionicons name="flame-outline" size={15} color={colors.primary} />
+                <Text style={styles.warmupTitle}>Calentamiento</Text>
+                <Ionicons name={calAbierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+              </Pressable>
+              {calAbierto ? (
+                <View style={styles.warmupList}>
+                  {cal.video ? (
+                    <Pressable
+                      onPress={() => setVideoAbierto({ url: cal.video!, titulo: t('Calentamiento') })}
+                      style={styles.warmupVideo}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="play-circle" size={22} color={colors.primary} />
+                      <Text style={styles.warmupVideoTexto}>Ver el vídeo de calentamiento</Text>
+                    </Pressable>
+                  ) : null}
+                  {cal.nota ? <Text style={styles.warmupNota}>{cal.nota}</Text> : null}
+                  {cal.pasos.map((paso, i) => (
+                    <View key={i} style={styles.warmupStep}>
+                      <View style={styles.warmupNum}>
+                        <Text style={styles.warmupNumText}>{i + 1}</Text>
+                      </View>
+                      <Text style={styles.warmupText}>
+                        {paso.texto}
+                        {paso.cuanto ? <Text style={styles.warmupCuanto}>{` · ${paso.cuanto}`}</Text> : null}
+                      </Text>
+                      {paso.video ? (
+                        <Pressable
+                          onPress={() => setVideoAbierto({ url: paso.video!, titulo: paso.texto })}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={frase`Vídeo de ${paso.texto}`}
+                        >
+                          <Ionicons name="play-circle-outline" size={22} color={colors.primary} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
 
-          Antes bastaba con `inProgress`, y `inProgress` solo es verdad cuando
-          ya se ha COMPLETADO una serie. Entre "he escrito 8 repeticiones" y
-          "he cerrado la primera serie" hay un rato entero en el que la persona
-          ya está entrenando y le seguía saliendo. Ahora se compara el entreno
-          con el que salió en blanco: si difiere en algo, es que está en
-          marcha. */}
+          {/* EL PROGRAMA DEL DÍA: una fila por ejercicio, con su técnica. */}
+          {day.exercises.length > 0 ? (
+            <TablaDeEntreno
+              day={day}
+              medidaDe={medidaDe}
+              objetivoDe={(ex) => (ve.objetivo ? textoDePrescripcion(ex, planPrescrito) : null)}
+              videoDe={(ex) => videoByExercise[ex.exerciseId]}
+              onVideo={(url, titulo) => setVideoAbierto({ url, titulo })}
+            />
+          ) : (
+            <Card style={styles.aviso}>
+              <Text style={styles.avisoTexto}>Tu entrenador aún no ha puesto ejercicios en este día.</Text>
+            </Card>
+          )}
 
+          {day.exercises.length > 0 && profile ? (
+            <Pressable onPress={() => setApuntando(true)} style={styles.apuntar} accessibilityRole="button">
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
+              <Text style={styles.apuntarTexto}>Apuntar una marca</Text>
+              <Text style={styles.apuntarHint}>Opcional, para ver tu progreso</Text>
+            </Pressable>
+          ) : null}
 
-      {/* La técnica del ejercicio, a casi toda la pantalla y dentro de la app.
-          Sin blindar, a diferencia de las clases de un curso: esto es un enlace
-          público que el entrenador ha pegado, no material de pago, y el
-          blindaje es la parte más frágil del reproductor (ver
-          components/VisorDeVideo). Sigue con marca de agua y sin poder navegar
-          fuera de la app. */}
+          {day.showIntervalTimer ? (
+            <View style={styles.warmupCard}>
+              <Pressable onPress={() => setIntervalOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
+                <Ionicons name="timer-outline" size={15} color={colors.primary} />
+                <Text style={styles.warmupTitle}>Temporizador de intervalos</Text>
+                <Ionicons name={intervalOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
+              </Pressable>
+              {intervalOpen ? (
+                <View style={{ marginTop: spacing.sm }}>
+                  <IntervalTimer />
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </FadeIn>
+      )}
+
+      {/* EL RELOJ: lo único que se usa con el móvil en la mano. La cuenta atrás,
+          al empezar, flota abajo y sigue a la vista mientras se lee el
+          programa (components/GlobalRestTimer). */}
+      <RelojesDelEntreno />
+      {/* Hueco para que el descanso flotando no tape lo último de la pantalla. */}
+      <View style={{ height: 96 }} />
+
       <VisorDeVideo
         visible={videoAbierto !== null}
         url={videoAbierto?.url}
@@ -2582,1303 +407,43 @@ export default function WorkoutScreen() {
         protegido={false}
       />
 
-      <Modal
-        visible={exitConfirmOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setExitConfirmOpen(false)}
-      >
-        <View style={styles.exitBackdrop}>
-          <Card accent style={styles.exitCard}>
-            <Ionicons name="barbell" size={26} color={colors.primary} style={{ alignSelf: 'center' }} />
-            <Text style={styles.exitTitle}>Estás entrenando</Text>
-            <Text style={styles.exitMsg}>
-              Termina tu sesión antes de salir: tu progreso lo merece. Si sales, la sesión queda
-              guardada y podrás retomarla.
-            </Text>
-            <Button
-              title="Seguir entrenando"
-              onPress={() => setExitConfirmOpen(false)}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Salir (emergencia)"
-              variant="ghost"
-              onPress={() => {
-                setExitConfirmOpen(false);
-                router.push('/(client)/dashboard');
-              }}
-              style={{ marginTop: spacing.xs }}
-            />
-          </Card>
-        </View>
-      </Modal>
-
-      {/* Elegir el día: en la portada. En directo la pantalla es el ejercicio y
-          nada más; cambiar de día a mitad de una serie no es una función, es
-          una forma de perder lo apuntado. */}
-      {enMarcha || isFlex || esModoGtg ? null : (
-        <ChipRow scroll>
-          {routine.days.map((d, i) => {
-            const isCycle = routine.schedule === 'cycle';
-            const isToday = isCycle
-              ? todaySession.cycleIndex === i
-              : d.weekday === todayWeekday();
-            return (
-              <Chip
-                key={d.id}
-                texto={
-                  (isCycle
-                    ? frase`Día ${i + 1}`
-                    : `${d.weekday !== undefined ? `${WEEKDAY_NAMES[d.weekday].slice(0, 3)} · ` : ''}${d.name}`) +
-                  (d.optionalRest ? ' · descanso opcional' : d.isRest ? ' · descanso' : '') +
-                  (isToday ? '  ·  HOY' : '')
-                }
-                activo={selectedDayId === d.id}
-                onPress={() => {
-                  setSelectedDayId(d.id);
-                  // Tocar un día resuelve el descanso opcional: se entrena ese día.
-                  setOptionalResolved(true);
-                  setRestingToday(false);
-                }}
-              />
-            );
-          })}
-        </ChipRow>
-      )}
-
-      {!showCompleted && isFlex && flexResting ? (
-        <FadeIn>
-          <Card accent style={styles.optionalCard}>
-            <View style={styles.optionalHeader}>
-              <Ionicons name="bed" size={18} color={colors.primary} />
-              <Text style={styles.optionalTitle}>Día de descanso</Text>
-            </View>
-            <Text style={styles.optionalText}>
-              Hoy descansas. No cuenta contra tu racha. Vuelve mañana con todo.
-            </Text>
-            <Button
-              title="Mejor entrenar"
-              variant="secondary"
-              onPress={() => {
-                setFlexResting(false);
-                // Deshace el descanso persistido para que no reaparezca al volver.
-                if (profile) removeFlexRestDay(profile.uid, inicioDelDia(Date.now())).catch(() => {});
-              }}
-              style={{ marginTop: spacing.sm }}
-            />
-          </Card>
-        </FadeIn>
-      ) : !showCompleted && isFlex && !combinedDay ? (
-        <FadeIn>
-          <Card accent style={styles.optionalCard}>
-            <View style={styles.optionalHeader}>
-              <Ionicons name="options-outline" size={18} color={colors.primary} />
-              <Text style={styles.optionalTitle}>{flexLabel(routine.scheduleLabel)}</Text>
-            </View>
-            <Text style={styles.optionalText}>
-              ¿Cómo te sientes hoy? Marca una o varias rutinas (en el orden que quieras hacerlas):
-            </Text>
-            {routine.days.map((d) => {
-              const pos = flexSelection.indexOf(d.id);
-              const on = pos >= 0;
-              return (
-                <Pressable
-                  key={d.id}
-                  onPress={() => toggleFlexRoutine(d.id)}
-                  style={[styles.flexPick, on && styles.flexPickOn]}
-                >
-                  <View style={[styles.flexCheck, on && styles.flexCheckOn]}>
-                    {on ? <Text style={styles.flexCheckNum}>{pos + 1}</Text> : null}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.flexPickText, on && styles.flexPickTextOn]}>
-                      {d.name || enTitulo(palabraRutina)}
-                      {ficha.ejercicios && d.exercises.length
-                        ? ` · ${d.exercises.length} ${d.exercises.length === 1 ? 'ejercicio' : 'ejercicios'}`
-                        : ''}
-                    </Text>
-                    {/*
-                      LO QUE VA A PEDIR ESA RUTINA, ANTES DE ELEGIRLA.
-                      
-                      Es el dato sobre el que se decide "cómo me siento hoy", y
-                      cuál de ellos ayuda depende del método: al que programa por
-                      intensidad le sirve el porcentaje; al que tiene veinte
-                      minutos, la duración; al que reparte por grupos, los
-                      grupos. Por eso lo elige el entrenador en su plan en vez de
-                      enseñarlo todo y convertir la pantalla en una ficha técnica.
-                    */}
-                    {d.gtg ? (
-                      <Text style={styles.flexPickPct}>
-                        Todo el día · {objetivoDelDia(routine, d)} series sueltas, ninguna al fallo
-                      </Text>
-                    ) : (
-                      (() => {
-                        const partes: string[] = [];
-                        // La intensidad en la escala del entrenador: el
-                        // porcentaje con su palabra ("Exigente · 80 %"), o su
-                        // etiqueta tal cual.
-                        const intensidad = textoDeIntensidadDelDia(d, perso);
-                        if (ficha.intensidad && ve.intensidad && intensidad) {
-                          partes.push(
-                            prescripcionDe(perso).intensidad.escala === 'porcentaje'
-                              ? `${esfuerzoDePct(d.intensityPct)} · ${intensidad}`
-                              : frase`Intensidad ${intensidad}`
-                          );
-                        }
-                        if (ficha.duracion) {
-                          const min = minutosEstimados(d.exercises);
-                          if (min > 0) partes.push(frase`≈ ${min} min`);
-                        }
-                        if (ficha.grupos) {
-                          const grupos = gruposDeLaRutina(d.exercises);
-                          if (grupos.length > 0) partes.push(grupos.join(' · '));
-                        }
-                        return partes.length > 0 ? (
-                          <Text style={styles.flexPickPct}>{partes.join('  ·  ')}</Text>
-                        ) : null;
-                      })()
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
-            {/*
-              CÓMO VA A QUEDAR, ANTES DE EMPEZAR.
-
-              Con dos o más marcadas se enseña el entreno ya montado: si el
-              entrenador las fusiona en superseries, ronda a ronda ("Flexiones +
-              Dominadas"); si van seguidas, en qué orden. Empezar a ciegas y
-              descubrir a mitad que el tirón iba intercalado es justo lo que
-              hace abandonar una sesión combinada.
-            */}
-            {elegidas.length > 1 ? (
-              <View style={styles.combinado}>
-                <View style={styles.combinadoCab}>
-                  <Ionicons
-                    name={modoCombinar === 'superseries' ? 'git-merge-outline' : 'arrow-down-outline'}
-                    size={15}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.combinadoTitulo}>
-                    {modoCombinar === 'superseries' ? 'Fusionadas en superseries' : 'Una detrás de otra'}
-                  </Text>
-                </View>
-                {modoCombinar === 'superseries' ? (
-                  <>
-                    <Text style={styles.combinadoTexto}>
-                      {fusion.transicion
-                        ? frase`Una serie de cada una con ${textoDeDescanso(fusion.transicion)} para cambiar, y después descansas`
-                        : 'Una serie de cada una, seguidas, y después descansas'}
-                      {fusion.descanso ? ` ${textoDeDescanso(fusion.descanso)}` : ''}.{' '}
-                      {perso?.ordenFusion === 'plan'
-                        ? 'El orden lo pone tu entrenador.'
-                        : 'Empieza la que has marcado primero.'}
-                    </Text>
-                    {rondasDeLaCombinacion(combinarRutinas(elegidas, 'superseries', fusion)).map((ronda, i) => (
-                      <View key={i} style={styles.combinadoRonda}>
-                        <Text style={styles.combinadoNum}>{i + 1}</Text>
-                        <Text style={styles.combinadoEjercicios} numberOfLines={2}>
-                          {ronda.nombres.join('  +  ')}
-                          {ronda.series > 1 ? <Text style={styles.combinadoVeces}>{`  ×${ronda.series}`}</Text> : null}
-                          {ronda.aislado ? (
-                            <Text style={styles.combinadoAislado}>{t('  · aislado, con su descanso')}</Text>
-                          ) : ronda.nombres.length === 1 ? (
-                            <Text style={styles.combinadoAislado}>{t('  · sola')}</Text>
-                          ) : null}
-                        </Text>
-                      </View>
-                    ))}
-                  </>
-                ) : (
-                  <Text style={styles.combinadoTexto}>
-                    {elegidas.map((d) => d.name || enTitulo(palabraRutina)).join('  →  ')}
-                  </Text>
-                )}
-              </View>
-            ) : null}
-            <Button
-              title={
-                flexSelection.length > 1
-                  ? `Empezar (${flexSelection.length} rutinas)`
-                  : 'Empezar'
-              }
-              onPress={startFlexSession}
-              disabled={flexSelection.length === 0}
-              style={{ marginTop: spacing.md }}
-            />
-            <Button
-              title="Hoy descanso"
-              variant="ghost"
-              onPress={chooseFlexRest}
-              style={{ marginTop: spacing.xs }}
-            />
-
-            {/* Últimos 7 días para saber qué te toca hoy. */}
-            <View style={styles.flexHistory}>
-              <Text style={styles.flexHistoryLabel}>Tus últimos 7 días</Text>
-              {last7FlexDays.map((h) => (
-                <View key={h.ts} style={styles.flexHistoryRow}>
-                  <Text style={styles.flexHistoryDate}>{h.label}</Text>
-                  <Text style={styles.flexHistoryWhat}>{h.what}</Text>
-                </View>
-              ))}
-            </View>
-          </Card>
-        </FadeIn>
-      ) : null}
-
-      {/* Fijar qué día del ciclo es HOY (plan desactualizado o día pospuesto). */}
-      <Sheet
-        visible={dayPickerOpen}
-        onClose={() => setDayPickerOpen(false)}
-        titulo="¿Qué día del plan es hoy?"
-        descripcion="Si pospusiste un entreno o el plan va desfasado, elige el día que te toca hoy y toda la programación se recoloca desde ahí."
-      >
-        {routine.days.map((d, i) => (
-          <Button
-            key={d.id}
-            title={frase`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? t(' (descanso)') : ''}`}
-            variant={todaySession.cycleIndex === i ? 'primary' : 'secondary'}
-            onPress={() => handleSetTodayIndex(i)}
-            style={{ marginTop: spacing.sm }}
-          />
-        ))}
-      </Sheet>
-
-      {esModoGtg ? (
-        <PantallaGtg
-          routine={routine}
-          dia={diaGtg}
-          entrenoDeHoy={gtgLog}
-          ajusteObjetivo={objetivoGtgHoy}
-          onCambiarObjetivo={cambiarObjetivoGtg}
-          guardando={saving}
-          onAnadirSerie={anadirSerieGtg}
-          onDeshacer={quitarSerieGtg}
-        />
-      ) : showOptionalChoice ? (
-        <FadeIn>
-          <Card accent style={styles.optionalCard}>
-            <View style={styles.optionalHeader}>
-              <Ionicons name="shuffle" size={18} color={colors.primary} />
-              <Text style={styles.optionalTitle}>Hoy: descanso opcional</Text>
-            </View>
-            <Text style={styles.optionalText}>
-              {todaySession.cycleLabel ? `${todaySession.cycleLabel}. ` : ''}Puedes descansar hoy, o
-              reiniciar el ciclo y entrenar el Día 1 ahora. Tú decides.
-            </Text>
-            <Button
-              title="Entrenar Día 1 ahora"
-              onPress={handleStartCycleToday}
-              style={{ marginTop: spacing.sm }}
-            />
-            <Button
-              title="Descansar hoy"
-              variant="secondary"
-              onPress={() => {
-                setOptionalResolved(true);
-                setRestingToday(true);
-              }}
-              style={{ marginTop: spacing.sm }}
-            />
-          </Card>
-        </FadeIn>
-      ) : showRestingCard ? (
-        <FadeIn>
-          <Card accent style={styles.optionalCard}>
-            <View style={styles.optionalHeader}>
-              <Ionicons name="bed" size={18} color={colors.primary} />
-              <Text style={styles.optionalTitle}>Día de descanso</Text>
-            </View>
-            <Text style={styles.optionalText}>
-              Disfruta tu descanso. El ciclo continuará solo con el Día 1.
-            </Text>
-            <Button
-              title="He cambiado de idea: entrenar Día 1"
-              variant="secondary"
-              onPress={handleStartCycleToday}
-              style={{ marginTop: spacing.sm }}
-            />
-          </Card>
-        </FadeIn>
-      ) : day?.isRest ? (
-        // Día de descanso normal: solo informa. No hay nada que completar y
-        // no afecta a la racha (la racha cuenta días entrenados).
-        <FadeIn>
-          <Card accent style={styles.optionalCard}>
-            <View style={styles.optionalHeader}>
-              <Ionicons name="bed" size={18} color={colors.primary} />
-              <Text style={styles.optionalTitle}>Día de descanso</Text>
-            </View>
-            <Text style={styles.optionalText}>
-              Hoy toca recuperar: el descanso también es parte del entrenamiento. No tienes que
-              marcar nada.
-            </Text>
-          </Card>
-        </FadeIn>
-      ) : showCompleted && completedTodayLog ? (
-        <TarjetaTerminado
-          cifras={{
-            ...sessionTotals(completedTodayLog.exercises, measureByExercise),
-            durationMin: completedTodayLog.durationMin,
-          }}
-          titulo={`${completedTodayLog.routineName || routine.name}${
-            completedTodayLog.dayName ? ` · ${completedTodayLog.dayName}` : ''
-          }`}
-          onCompartir={() => handleShareCompleted(completedTodayLog)}
-          onVerProgreso={() => router.push('/(client)/progress')}
-          onIrAInicio={() => router.push('/(client)/dashboard')}
-          onCorregir={corregirEntreno}
-          onOtroEntreno={
-            isFlex
-              ? () => {
-                  setCombinedDay(null);
-                  setFlexSelection([]);
-                  setFlexResting(false);
-                  setFlexAgain(true);
-                }
-              : undefined
-          }
-        />
-      ) : isFlex && (!combinedDay || flexResting) ? null : (
-      <>
-      {/* El cuánto llevas lo dice el anillo de la cabecera; aquí solo queda el
-          salto entre ejercicios, que es navegación y no información. */}
-      {enMarcha && totalSets > 0 && log.length > 1 ? (
-        <View style={styles.exDotsRow}>
-          {log.map((ex, i) => {
-            const exDone = ex.sets.length > 0 && ex.sets.every((s) => s.completed);
-            const current = i >= bloqueVisible.inicio && i <= bloqueVisible.fin;
-            return (
-              <Pressable
-                key={i}
-                onPress={() => setViewIndex(i)}
-                hitSlop={8}
-                style={[styles.exDot, exDone && styles.exDotDone, current && styles.exDotCurrent]}
-              />
-            );
-          })}
-        </View>
-      ) : null}
-
-      {restored ? (
-        <View style={styles.restoredBanner}>
-          <Ionicons name="refresh-circle-outline" size={16} color={colors.primary} />
-          <Text style={styles.restoredText}>Sesión anterior recuperada</Text>
-          <Pressable onPress={discardDraft} hitSlop={6}>
-            <Text style={styles.restoredAction}>Empezar de cero</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {/* El calentamiento va en la portada: es lo que se hace ANTES. Dentro del
-          entreno estorbaba, y es de las cosas que se leen una vez. */}
-      {/* El de su entrenador si lo ha puesto (un vídeo, un vídeo por
-          ejercicio o solo ejercicios: lib/calentamiento.ts); si no, el de
-          siempre. El suyo sale abierto: lo ha preparado para que se vea. */}
-      {!enMarcha && day && !day.isRest
-        ? (() => {
-            const cal = calentamientoParaVer(day);
-            const abierto = cal.propio ? !warmupOpen : warmupOpen;
-            return (
-              <View style={styles.warmupCard}>
-                <Pressable onPress={() => setWarmupOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
-                  <Ionicons name="flame-outline" size={15} color={colors.primary} />
-                  <Text style={styles.warmupTitle}>Calentamiento</Text>
-                  <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
-                </Pressable>
-                {abierto ? (
-                  <View style={styles.warmupList}>
-                    {cal.video ? (
-                      <Pressable
-                        onPress={() => setVideoAbierto({ url: cal.video!, titulo: t('Calentamiento') })}
-                        style={styles.warmupVideo}
-                        accessibilityRole="button"
-                      >
-                        <Ionicons name="play-circle" size={22} color={colors.primary} />
-                        <Text style={styles.warmupVideoTexto}>Ver el vídeo de calentamiento</Text>
-                      </Pressable>
-                    ) : null}
-                    {cal.nota ? <Text style={styles.warmupNota}>{cal.nota}</Text> : null}
-                    {cal.pasos.map((paso, i) => (
-                      <View key={i} style={styles.warmupStep}>
-                        <View style={styles.warmupNum}>
-                          <Text style={styles.warmupNumText}>{i + 1}</Text>
-                        </View>
-                        <Text style={styles.warmupText}>
-                          {paso.texto}
-                          {paso.cuanto ? <Text style={styles.warmupCuanto}>{` · ${paso.cuanto}`}</Text> : null}
-                        </Text>
-                        {paso.video ? (
-                          <Pressable
-                            onPress={() => setVideoAbierto({ url: paso.video!, titulo: paso.texto })}
-                            hitSlop={8}
-                            accessibilityRole="button"
-                            accessibilityLabel={frase`Vídeo de ${paso.texto}`}
-                          >
-                            <Ionicons name="play-circle-outline" size={22} color={colors.primary} />
-                          </Pressable>
-                        ) : null}
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            );
-          })()
-        : null}
-
-      {enMarcha && day && !day.isRest && day.showIntervalTimer ? (
-        <View style={styles.warmupCard}>
-          <Pressable
-            onPress={() => setIntervalOpen((o) => !o)}
-            style={styles.warmupHead}
-            hitSlop={6}
-          >
-            <Ionicons name="timer-outline" size={15} color={colors.primary} />
-            <Text style={styles.warmupTitle}>Temporizador de intervalos</Text>
-            <Ionicons
-              name={intervalOpen ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color={colors.textMuted}
-            />
-          </Pressable>
-          {intervalOpen ? (
-            <View style={{ marginTop: spacing.sm }}>
-              <IntervalTimer />
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-
-
-      {/* Y AL FINAL, lo de mirar hacia atrás.
-
-          Por dónde ibas y apuntar un entreno de otro día son cosas que se
-          hacen ANTES de entrenar, pero no son lo de hoy: van después del día y
-          del calentamiento, justo encima del botón, para que lo primero que se
-          lee al abrir sea qué toca. */}
-      {!enMarcha && routine ? (
-        <UltimoEntreno
-          ultimo={ultimoEntreno}
-          routine={routine}
-          onSeguirPor={handleSetTodayIndex}
-          onElegirDia={() => setDayPickerOpen(true)}
-        />
-      ) : null}
-
-      {/* Aquí estaba "Registrar un entreno de otro día", y se ha ido a Inicio.
-          Esta pantalla es la del entreno de HOY: quien entra a hacer su día se
-          encontraba, justo encima del botón de empezar, uno que habla de otro
-          día. En Inicio —la pantalla del repaso— es donde uno se acuerda de que
-          el martes entrenó sin el móvil delante. */}
-
-      {/* EMPEZAR ENTRENO, lo último de la portada.
-
-          Antes de él va todo lo que uno quiere mirar sin haber empezado: por
-          dónde iba, qué día toca y el calentamiento. Al
-          pulsarlo, todo eso desaparece y la pantalla pasa a ser el ejercicio y
-          nada más: ni tarjetas al lado, ni botones que no sean los de la serie
-          que se está haciendo.
-
-          No sale en un día de descanso ni con el entreno ya terminado: ahí no
-          hay nada que empezar. Y no vuelve a salir al recuperar un borrador,
-          porque quien vuelve a una sesión a medias ya la empezó. */}
-      {/* LO QUE TOCA, antes de empezar: nombre y series de cada ejercicio, una
-          línea cada uno. Sin esto la portada solo decía "Empezar entreno", y
-          para saber si hacía falta la barra o la goma había que entrar. */}
-      {/* EN TABLA, si su entrenador lo ha elegido así: el plan del día
-          entero, ordenado como una hoja de cálculo, para entrenar sin la app.
-          Sustituye a la lista corta de aquí abajo. */}
-      {!enMarcha && day && !day.isRest && !showCompleted && day.exercises.length > 0 && enTabla ? (
-        <TablaDeEntreno
-          day={day}
-          medidaDe={(ex) => ex.measure ?? measureByExercise[ex.exerciseId]}
-          objetivoDe={(ex) => (ve.objetivo ? textoDePrescripcion(ex, planPrescrito) : null)}
-        />
-      ) : null}
-
-      {!enMarcha && day && !day.isRest && !showCompleted && day.exercises.length > 0 && !enTabla ? (
-        <View style={styles.previa}>
-          <Text style={styles.previaTitulo}>
-            {day.exercises.length === 1 ? frase`1 ejercicio` : frase`${day.exercises.length} ejercicios`}
-          </Text>
-          {day.exercises.map((ex, i) => {
-            const enSegundos = isHoldMeasure(ex.measure ?? measureByExercise[ex.exerciseId]);
-            const cuanto = enSegundos ? `${ex.seconds || ex.reps} s` : ex.reps;
-            // La superserie se ve como lo que es desde antes de empezar: un
-            // bloque, con su rótulo, y no un "+" delante de un nombre.
-            const b = bloqueDe(day.exercises, i);
-            const enlazado = esSuperserie(b);
-            return (
-              <React.Fragment key={ex.id ?? i}>
-                {enlazado && i === b.inicio ? (
-                  <View style={styles.previaSuperserie}>
-                    <Ionicons name="link" size={12} color={colors.primaryBright} />
-                    <Text style={styles.previaSuperserieTexto}>
-                      {day.exercises[b.inicio + 1]?.transicionSegundos
-                        ? frase`Superserie · ${textoDeDescanso(day.exercises[b.inicio + 1].transicionSegundos!)} para cambiar`
-                        : 'Superserie · sin descanso entre ellos'}
-                    </Text>
-                  </View>
-                ) : null}
-                <View style={[styles.previaFila, enlazado && styles.previaFilaEnlazada]}>
-                  <Text style={styles.previaNombre} numberOfLines={1}>
-                    {enlazado ? `${String.fromCharCode(65 + i - b.inicio)} · ` : ''}
-                    {ex.name}
-                  </Text>
-                  <Text style={styles.previaSeries}>
-                    {cuanto ? `${ex.sets} × ${cuanto}` : frase`${ex.sets} series`}
-                  </Text>
-                </View>
-                {/* Series desiguales (2 de A, 3 de B): se dice antes de empezar
-                    que lo que sobra va solo, para que no pille por sorpresa. */}
-                {enlazado && i === b.fin
-                  ? (() => {
-                      const ids = miembrosDelBloque(b);
-                      const menos = Math.min(...ids.map((j) => day.exercises[j].sets));
-                      const sobran = ids
-                        .filter((j) => day.exercises[j].sets > menos)
-                        .map((j) => {
-                          const n = day.exercises[j].sets - menos;
-                          const quien = String.fromCharCode(65 + j - b.inicio);
-                          return n === 1
-                            ? frase`la última de ${quien} va sola`
-                            : frase`las ${n} últimas de ${quien} van solas`;
-                        });
-                      return sobran.length > 0 ? (
-                        <Text style={styles.previaSobran}>{enTitulo(sobran.join(' · '))}</Text>
-                      ) : null;
-                    })()
-                  : null}
-              </React.Fragment>
-            );
-          })}
-        </View>
-      ) : null}
-
-      {!enMarcha && day && !day.isRest && !showCompleted && log.length > 0 ? (
-        enTabla ? (
-          <>
-            {/* En tabla no se apunta nada: entrena mirando la tabla y al
-                acabar lo da por hecho, tal y como estaba planeado. Es lo
-                mismo que "Terminar" sin marcar series. Si un día quiere
-                apuntar, puede. */}
-            <Button
-              title="Lo he hecho"
-              onPress={handleSave}
-              loading={saving}
-              style={{ marginTop: spacing.sm }}
-            />
-            <Pressable onPress={() => setDiaEmpezado(day.id)} style={styles.apuntarEnApp} hitSlop={8}>
-              <Text style={styles.apuntarEnAppTexto}>Prefiero apuntar las series</Text>
-            </Pressable>
-            {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
-          </>
-        ) : (
-          <Button
-            title="Empezar entreno"
-            onPress={() => setDiaEmpezado(day.id)}
-            style={{ marginTop: spacing.sm, marginBottom: spacing.md }}
-          />
-        )
-      ) : null}
-
-      {(() => {
-        // Los ejercicios, solo con el entreno en marcha. Es lo que hace que la
-        // pantalla de antes de empezar sea corta y diga una sola cosa.
-        if (!enMarcha) return null;
-        if (esSuperserie(bloqueVisible)) return tarjetaDeSuperserie(bloqueVisible);
-        const exerciseIndex = safeIndex;
-        const exercise = log[exerciseIndex];
-        if (!exercise) return null;
-        const { planned, load, isSeconds, cluster, bloques } = infoDe(exerciseIndex);
-        const isDone = exercise.sets.length > 0 && exercise.sets.every((s) => s.completed);
-        // La primera serie sin hacer: la que se enciende.
-        const serieQueToca = exercise.sets.findIndex((s) => !s.completed);
-        const categoriaEjercicio = unido(
-          planned?.muscleGroup ?? muscleByExercise[exercise.exerciseId],
-          planned?.subgroup
-        );
-        const video = videoByExercise[exercise.exerciseId];
-        return (
-          <FadeIn key={exercise.exerciseId + exerciseIndex}>
-          <Card accent style={[styles.exerciseCard, isDone && !activeRest && styles.exerciseCardDone]}>
-            <View style={styles.exerciseHeader}>
-              <Text style={[styles.exerciseName, styles.exerciseNameCurrent]}>{exercise.name}</Text>
-              {isDone && !exercise.saltado ? (
-                <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-              ) : null}
-            </View>
-            {/*
-              LO QUE TOCA, EN UNA LÍNEA. Eran hasta siete pastillas (series,
-              RIR, descanso, goma, agarre, objetivo, clúster) más la categoría
-              en otra línea: entrenando, con el pulso alto, se leía como una
-              pared. Ahora es una frase: "Tirón · 5 × 6 · RIR 1 · 2:00 de
-              descanso". La categoría va delante: dos ejercicios que se llaman
-              parecido se distinguen por ella.
-            */}
-            {planned || categoriaEjercicio ? (
-              <Text style={styles.metaLinea}>
-                {unido(
-                  categoriaEjercicio,
-                  planned ? `${planned.sets} × ${planned.reps}${isSeconds ? 's' : ''}` : null,
-                  planned && ve.objetivo ? textoDePrescripcion(planned, planPrescrito) : null,
-                  planned?.restSeconds ? frase`${minutosSegundos(planned.restSeconds, false)} de descanso` : null,
-                  load === 'assisted' ? t('Con goma') : load === 'weighted' ? t('Lastrado') : null,
-                  planned?.grip ? frase`Agarre ${GRIP_LABEL[planned.grip].toLowerCase()}` : null,
-                  planned?.goal ? frase`Objetivo: ${planned.goal}` : null,
-                  cluster ? frase`Clúster ${bloques} bloques · ${cluster.restSeconds}s` : null
-                )}
-              </Text>
-            ) : null}
-            {planned?.notes ? notaDelEntrenador(planned.notes) : null}
-
-            {/*
-              LAS HERRAMIENTAS DEL EJERCICIO, JUNTAS Y ANTES DE LAS SERIES.
-
-              Técnica, la nota, saltar y (si el plan lo deja) subir o bajar: son
-              cosas que se miran o se deciden ANTES de empezar o mientras se
-              descansa, no al marcar. Antes estaban repartidas: la técnica
-              arriba, saltar en otra fila y "Añadir nota" al final, debajo del
-              descanso, donde nadie la veía. La nota, al abrirse, sale aquí
-              mismo, debajo de su pastilla: se escribe donde se ha tocado.
-            */}
-            <View style={[styles.herramientas, styles.herramientasArriba]}>
-              {video
-                ? herramienta('tecnica', 'play-circle-outline', 'Técnica', () => setVideoAbierto({ url: video, titulo: exercise.name }), { principal: true })
-                : null}
-              {herramienta(
-                'nota',
-                exercise.notes ? 'create' : 'create-outline',
-                exercise.notes ? 'Tu nota' : 'Nota',
-                () => setNoteOpenIndex(noteOpenIndex === exerciseIndex ? null : exerciseIndex),
-                { activa: notaVisible(exerciseIndex) }
-              )}
-              {puedeSaltar
-                ? herramienta(
-                    'saltar',
-                    exercise.saltado ? 'play-skip-forward' : 'play-skip-forward-outline',
-                    exercise.saltado ? 'Saltado' : 'Saltar',
-                    () => alternarSaltado(exerciseIndex),
-                    { activa: exercise.saltado }
-                  )
-                : null}
-              {puedeReordenar ? (
-                <>
-                  {herramienta('subir', 'arrow-up', 'Subir', () => moverEjercicio(exerciseIndex, exerciseIndex - 1), {
-                    apagada: exerciseIndex === 0,
-                  })}
-                  {herramienta('bajar', 'arrow-down', 'Bajar', () => moverEjercicio(exerciseIndex, exerciseIndex + 1), {
-                    apagada: exerciseIndex >= log.length - 1,
-                  })}
-                </>
-              ) : null}
-            </View>
-            {campoDeNota(exerciseIndex)}
-            {/* Saltado: se queda a la vista y se dice por qué. Borrarlo dejaría
-                una sesión que parece completa y un entrenador que no se entera
-                de que ese ejercicio lleva semanas sin hacerse. */}
-            {exercise.saltado ? (
-              <Text style={styles.saltadoAviso}>
-                Saltado hoy. Se guarda así para que tu entrenador lo sepa.
-              </Text>
-            ) : null}
-
-            {/*
-              LAS SERIES: una caja por serie, con aire entre una y otra, las
-              casillas grandes y el ✓ a la derecha, donde cae el pulgar. Lo de
-              la última vez va en cada serie ("◷ 6 × 10"), no en una
-              línea suelta para todo el ejercicio. "Serie" solo si el plan no
-              la llama de otra forma (rondas, vueltas…). La que toca, encendida.
-            */}
-            <View style={styles.series}>
-              <CabeceraDeSeries rotulos={camposDeSerie(exerciseIndex, 0).map((c) => c.rotulo)} />
-              {exercise.sets.map((set, setIndex) => (
-                <FilaDeSerie
-                  key={setIndex}
-                  titulo={`${enTitulo(palabraSerie)} ${setIndex + 1}`}
-                  antes={antesDe(exerciseIndex, setIndex)}
-                  // Lo que le costó, si lo ha dicho: tocándolo se cambia.
-                  extra={etiquetaDeEsfuerzo(exerciseIndex, setIndex)}
-                  esAhora={!exercise.saltado && setIndex === serieQueToca}
-                  hecha={set.completed}
-                  campos={camposDeSerie(exerciseIndex, setIndex)}
-                  onMarcar={() => updateSet(exerciseIndex, setIndex, 'completed', !set.completed)}
-                  regresion={set.regresion === true}
-                  // Solo si el entrenador lo permite en este ejercicio.
-                  onRegresion={planned?.permiteRegresion ? () => alternarRegresion(exerciseIndex, setIndex) : undefined}
-                />
-              ))}
-            </View>
-            {/*
-              EL ESFUERZO DE ESA SERIE Y EL DESCANSO, DENTRO. Justo debajo de
-              las series, donde se acaba de tocar el ✓. Flotando abajo tapaba
-              "Anterior" y "Siguiente". (En las demás pestañas sigue flotando:
-              components/GlobalRestTimer.)
-            */}
-            {barraDeshacer}
-            {preguntaDeSerie({ inicio: exerciseIndex, fin: exerciseIndex })}
-            {activeRest ? <RestTimer key={activeRest.id} rest={activeRest} enLinea /> : null}
-            {cluster || isFlex ? (
-              <View style={[styles.herramientas, styles.herramientasPie]}>
-                {cluster
-                  ? herramienta(
-                      'bloques',
-                      'timer-outline',
-                      frase`Descanso entre bloques · ${cluster.restSeconds}s`,
-                      () => descansoDeBloque(cluster.restSeconds, exercise.name),
-                      { principal: true }
-                    )
-                  : null}
-                {isFlex ? (
-                  <>
-                    {/* Quitar la única serie saca el ejercicio del día (Sensaciones). */}
-                    {herramienta('quitar-serie', 'remove', frase`Quitar ${palabraSerie.toLowerCase()}`, () => removeSet(exerciseIndex))}
-                    {herramienta('anadir-serie', 'add', frase`Añadir ${palabraSerie.toLowerCase()}`, () => addSet(exerciseIndex), {
-                      principal: true,
-                    })}
-                  </>
-                ) : null}
-              </View>
-            ) : null}
-          </Card>
-          </FadeIn>
-        );
-      })()}
-
-      {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
-
-      {/*
-        EL ESFUERZO DE LA SESIÓN, UNA SOLA VEZ.
-        
-        Cuando el entrenador prefiere preguntar una vez al terminar en vez de
-        ejercicio por ejercicio, la pregunta va AQUÍ: pegada al botón de
-        terminar, en el último ejercicio, que es el único momento en el que
-        alguien puede contestar "cómo ha ido el día" sabiendo de qué habla.
-      */}
-      {/* Añadir a la sesión de hoy un ejercicio de otra rutina del plan. Sale
-          al final, con el entreno en marcha: es una decisión de sobre la
-          marcha, no de antes de empezar. */}
-      {enMarcha && puedeAnadir ? (
-        <Pressable
-          onPress={() => setAnadirAbierto(true)}
-          style={styles.anadirBtn}
-          hitSlop={6}
+      {esCiclo ? (
+        <Sheet
+          visible={dayPickerOpen}
+          onClose={() => setDayPickerOpen(false)}
+          titulo={t('¿Qué día te toca hoy?')}
+          descripcion={t('Si te has saltado un día o lo has cambiado, dile a la app por dónde vas.')}
         >
-          <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
-          <Text style={styles.anadirTexto}>Añadir un ejercicio</Text>
-        </Pressable>
-      ) : null}
-
-      {enMarcha && isLastExercise && pideEsfuerzoAlFinal ? (
-        <View style={styles.esfuerzoFinal}>
-          <SelectorDeEsfuerzo
-            esfuerzo={esfuerzoDelPlan}
-            etiqueta="¿Cómo ha ido la sesión?"
-            value={esfuerzoSesion?.valor}
-            onChange={(v) =>
-              setEsfuerzoSesion((prev) =>
-                prev?.valor === v
-                  ? undefined
-                  : { escala: esfuerzoDelPlan?.escala ?? 'rir', valor: v }
-              )
-            }
-          />
-        </View>
-      ) : null}
-
-      {enMarcha && isLastExercise && doneSets === 0 ? (
-        <Text style={styles.saveHint}>
-          Marca cada serie con ✓, o pulsa “Terminar” para dar la sesión por hecha
-          sin apuntar nada.
-        </Text>
-      ) : null}
-
-      {enMarcha ? (
-      <View style={styles.navRow}>
-        {/* En el primero no hay "Anterior": un botón apagado que ocupa media
-            fila no ayuda a nada. */}
-        {bloqueVisible.inicio > 0 ? (
-        <Pressable
-          onPress={() =>
-            setViewIndex(
-              bloqueDe(day?.exercises ?? [], Math.max(0, bloqueVisible.inicio - 1), log.length).inicio
-            )
-          }
-          disabled={bloqueVisible.inicio === 0}
-          style={[styles.navBtn, bloqueVisible.inicio === 0 && styles.navBtnDisabled]}
-          hitSlop={6}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={22}
-            color={bloqueVisible.inicio === 0 ? colors.textFaint : colors.text}
-          />
-          <Text style={[styles.navBtnText, bloqueVisible.inicio === 0 && styles.navBtnTextDisabled]}>
-            Anterior
-          </Text>
-        </Pressable>
-        ) : null}
-
-        {isLastExercise ? (
-          <Button
-            title={
-              // Corrigiendo, el botón dice lo que hace: guardar los cambios en
-              // la sesión que ya existe. "Terminar sesión" ahí daría a entender
-              // que se está registrando otro entreno.
-              corrigiendo
-                ? 'Guardar corrección'
-                : doneSets === 0
-                  ? 'Terminar (sin apuntar)'
-                  : doneSets < totalSets
-                    ? `Terminar (${doneSets}/${totalSets})`
-                    : 'Terminar sesión'
-            }
-            onPress={handleSave}
-            loading={saving}
-            style={{ flex: 1, marginLeft: bloqueVisible.inicio > 0 ? spacing.sm : 0 }}
-          />
-        ) : (
-          <Pressable
-            onPress={() => setViewIndex(Math.min(log.length - 1, bloqueVisible.fin + 1))}
-            // Dorado solo con el bloque hecho: mientras quedan series, lo
-            // principal es "Hecha", y dos botones dorados no dicen cuál toca.
-            style={[styles.navBtn, styles.navSiguiente, bloqueVisibleHecho && styles.navNext]}
-            hitSlop={6}
-          >
-            <Text style={[styles.navBtnText, bloqueVisibleHecho && styles.navNextText]}>Siguiente</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={22}
-              color={bloqueVisibleHecho ? colors.onPrimary : colors.text}
+          {routine.days.map((d, i) => (
+            <Button
+              key={d.id}
+              title={frase`Día ${i + 1}${d.name ? ` · ${d.name}` : ''}${d.isRest ? t(' (descanso)') : ''}`}
+              variant={todaySession.cycleIndex === i ? 'primary' : 'secondary'}
+              onPress={() => fijarHoy(i)}
+              style={{ marginTop: spacing.sm }}
             />
-          </Pressable>
-        )}
-      </View>
+          ))}
+        </Sheet>
       ) : null}
-      </>
-      )}
 
-      {/*
-        AÑADIR UN EJERCICIO: DE OTRA RUTINA DEL MISMO PLAN, NO DE LA NADA.
-        
-        Es deliberado. Un ejercicio escrito a mano entra sin identidad —sin
-        biblioteca, sin categoría, sin historial— y a partir de ahí sus marcas
-        no se comparan con nada y el mapa muscular no lo cuenta. Eligiendo de lo
-        que el entrenador ya ha puesto en el plan, lo añadido es un ejercicio de
-        verdad, con su histórico y sus récords desde el primer día.
-      */}
-      <Sheet
-        visible={anadirAbierto}
-        onClose={() => setAnadirAbierto(false)}
-        titulo="Añadir a la sesión de hoy"
-        descripcion="De las otras rutinas de tu plan. Solo para hoy: tu plan no cambia."
-      >
-        {(() => {
-          const yaPuestos = new Set(log.map((e) => e.exerciseId));
-          const candidatos = (routine?.days ?? [])
-            .flatMap((d) => d.exercises)
-            .filter((ex, i, todos) => {
-              if (yaPuestos.has(ex.exerciseId)) return false;
-              // Sin repetir: el mismo ejercicio puede estar en varias rutinas.
-              return todos.findIndex((o) => o.exerciseId === ex.exerciseId) === i;
-            });
-          if (candidatos.length === 0) {
-            return (
-              <Text style={styles.anadirVacio}>
-                Ya tienes en la sesión todos los ejercicios de tu plan.
-              </Text>
-            );
-          }
-          return candidatos.map((ex) => (
-            <Pressable key={ex.exerciseId} onPress={() => anadirEjercicio(ex)} style={styles.anadirFila}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.anadirNombre}>{ex.name}</Text>
-                <Text style={styles.anadirMeta}>
-                  {ex.sets} × {ex.reps}
-                  {ex.muscleGroup ? ` · ${ex.muscleGroup}` : ''}
-                </Text>
-              </View>
-              <Ionicons name="add" size={18} color={colors.primary} />
-            </Pressable>
-          ));
-        })()}
-      </Sheet>
+      {day && profile ? (
+        <ApuntarMarca
+          visible={apuntando}
+          onClose={() => setApuntando(false)}
+          profile={profile}
+          routine={routine}
+          dayName={day.name}
+          ejercicios={ejerciciosDelDia}
+          medidaDe={medidaDe}
+          logs={logs}
+          onGuardada={setLogs}
+        />
+      ) : null}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  // ----- La tarjeta del ejercicio: herramientas, notas y series -----
-  // Técnica, Nota, Saltar…: pastillas de 36 de alto, para el dedo y no para la uña.
-  herramientas: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  herramientasArriba: { marginTop: spacing.xs, marginBottom: spacing.md },
-  herramientasPie: { marginTop: spacing.md },
-  herramienta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: 36,
-    paddingHorizontal: 12,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  herramientaActiva: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
-  herramientaApagada: { opacity: 0.4 },
-  herramientaTexto: { ...typography.small, fontSize: 13, color: colors.textMuted, fontFamily: fonts.semiBold },
-  herramientaTextoActiva: { color: colors.primaryBright },
-  // Lo que escribió el entrenador, en su cajita: se distingue de lo demás sin cursiva.
-  notaCoach: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm + 2,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
-    marginBottom: spacing.sm,
-  },
-  notaCoachIcono: { marginTop: 2 },
-  notaCoachTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 19 },
-  noteField: { minHeight: 48, textAlignVertical: 'top' },
-  noteCaja: { marginTop: -spacing.xs, marginBottom: spacing.md },
-  noteCajaEnPaso: { marginTop: spacing.sm, marginBottom: 0 },
-  series: { marginTop: spacing.xs },
-  // Lo de cada ejercicio de la superserie, dentro de su caja y bajo una raya.
-  ssPasoPie: { marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
-  // La lista de lo que toca, antes de empezar.
-  previa: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  apuntarEnApp: { alignSelf: 'center', paddingVertical: spacing.sm, marginBottom: spacing.md },
-  // La pregunta del esfuerzo de la serie, encima del crono.
-  preguntaSerie: { marginTop: spacing.sm },
-  // El esfuerzo de una serie hecha, en su fila ("RIR 2"); "Fallo", en ámbar.
-  esfuerzoChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  esfuerzoChipFallo: { backgroundColor: colors.warningMuted, borderColor: colors.warning },
-  esfuerzoChipTexto: { ...typography.small, fontSize: 11, color: colors.primaryBright, fontFamily: fonts.semiBold },
-  esfuerzoChipTextoFallo: { color: colors.warning },
-  apuntarEnAppTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  previaTitulo: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    paddingVertical: spacing.xs,
-  },
-  previaFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  previaNombre: { ...typography.body, color: colors.text, flex: 1 },
-  previaSuperserie: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingTop: spacing.sm,
-    paddingBottom: 2,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  previaSuperserieTexto: {
-    ...typography.small,
-    color: colors.primaryBright,
-    fontFamily: fonts.semiBold,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
-  previaSobran: { ...typography.small, color: colors.textMuted, fontSize: 12, paddingLeft: spacing.sm + 4, paddingBottom: 4 },
-  // Los de una superserie, cosidos por el filo dorado de la izquierda.
-  previaFilaEnlazada: {
-    borderTopWidth: 0,
-    borderLeftWidth: 2,
-    borderLeftColor: colors.primary,
-    paddingLeft: spacing.sm,
-    marginLeft: 2,
-  },
-  // ----- Superserie: una ronda a la vista, como secuencia -----
-  ssCab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ssTitulo: {
-    ...typography.small,
-    color: colors.primaryBright,
-    fontFamily: fonts.semiBold,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  ssCuenta: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, ...tabularNums },
-  ssHecha: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ssHechaTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  // Una barra por ronda: lo hecho en dorado, la de ahora más clara.
-  ssBarra: { flexDirection: 'row', gap: 4, marginTop: spacing.sm, marginBottom: spacing.md },
-  ssTramo: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
-  ssTramoHecho: { backgroundColor: colors.primary },
-  ssTramoActual: { backgroundColor: colors.hairline },
-  // "Sin descanso": el hilo que cose la caja de un paso con la del siguiente.
-  ssEnlace: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingLeft: spacing.md + 2,
-    height: 24,
-    marginTop: -spacing.sm,
-  },
-  ssEnlaceLinea: { width: 2, alignSelf: 'stretch', borderRadius: 1, backgroundColor: colors.primary },
-  ssEnlaceTexto: {
-    ...typography.small,
-    color: colors.primaryBright,
-    fontFamily: fonts.semiBold,
-    fontSize: 11,
-    marginLeft: spacing.sm,
-  },
-  ssFinRonda: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  ssFinRondaTexto: { ...typography.small, color: colors.textMuted },
-  ssPie: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs + 2 },
-  ssPieTexto: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  ssPieTextoSuave: { ...typography.small, color: colors.textFaint, flex: 1 },
-  ssPieResumen: { ...typography.small, color: colors.textMuted, flex: 1, ...tabularNums },
-  ssRondaLinea: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs + 2,
-    paddingLeft: 23,
-  },
-  ssRondaLineaTitulo: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  ssRondaCorregir: {
-    marginVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  ssRondaCorregirCab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: spacing.sm,
-  },
-  ssRondaCorregirTitulo: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  ssPlegar: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
-  ssSuelta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: spacing.sm,
-    paddingVertical: 6,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceAlt,
-  },
-  ssSueltaTexto: { ...typography.small, color: colors.textMuted, flex: 1 },
-  // Algo más estrechas que las de un ejercicio suelto: van varias en fila.
-  // Sin el margen de un campo de formulario: el rótulo va pegado a su casilla.
-  previaSeries: { ...typography.body, color: colors.textMuted, fontFamily: fonts.semiBold, ...tabularNums },
-  title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
-  // Hueco al pie para que el crono flotante de descanso no tape la navegación.
-  exitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  exitText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
-  exitBackdrop: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-    backgroundColor: colors.scrim,
-  },
-  exitCard: { paddingVertical: spacing.lg },
-  flexPick: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-    marginTop: spacing.sm,
-  },
-  flexPickOn: { borderColor: colors.primary, backgroundColor: colors.primaryMuted },
-  flexCheck: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flexCheckOn: { borderColor: colors.primary, backgroundColor: colors.primary },
-  flexCheckNum: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.heading, fontSize: 12 },
-  flexPickText: { ...typography.body, color: colors.textMuted, flex: 1 },
-  flexPickPct: { ...typography.small, color: colors.primary, fontSize: 11, marginTop: 2 },
-  flexPickTextOn: { color: colors.text, fontFamily: fonts.semiBold },
-  combinado: {
-    marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-    gap: spacing.xs,
-  },
-  combinadoCab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  combinadoTitulo: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  combinadoTexto: { ...typography.small, color: colors.textMuted, lineHeight: 18 },
-  combinadoRonda: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginTop: 2 },
-  combinadoNum: {
-    ...typography.small,
-    color: colors.textFaint,
-    fontFamily: fonts.semiBold,
-    width: 16,
-    textAlign: 'right',
-    ...tabularNums,
-  },
-  combinadoEjercicios: { ...typography.small, color: colors.text, flex: 1 },
-  combinadoAislado: { color: colors.textFaint },
-  combinadoVeces: { color: colors.primary, fontFamily: fonts.semiBold },
-  flexHistory: {
-    marginTop: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  flexHistoryLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-  },
-  flexHistoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md, paddingVertical: 3 },
-  flexHistoryDate: { ...typography.small, color: colors.textFaint, width: 74 },
-  flexHistoryWhat: { ...typography.small, color: colors.textMuted, flex: 1, textAlign: 'right' },
-  exitTitle: { ...typography.h2, color: colors.text, textAlign: 'center', marginTop: spacing.sm },
-  exitMsg: {
-    ...typography.small,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginTop: spacing.xs,
-  },
-  // Tira de puntos: un ejercicio por punto (dorado = hecho, aro = actual).
-  exDotsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: spacing.md,
-  },
-  exDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  exDotDone: { backgroundColor: colors.primary, borderColor: colors.primary },
-  exDotCurrent: {
-    width: 20,
-    borderRadius: 4,
-    borderColor: colors.primaryBright,
-    backgroundColor: colors.primaryMuted,
-  },
-  navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  navBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  navBtnDisabled: { opacity: 0.4 },
-  navBtnText: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  navBtnTextDisabled: { color: colors.textFaint },
-  navSiguiente: { flex: 1 },
-  navNext: { backgroundColor: colors.primary, borderColor: colors.primary },
-  navNextText: { color: colors.onPrimary },
-  exerciseCard: { marginBottom: spacing.md },
-  exerciseCardDone: { opacity: 0.55 },
-  exerciseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  exerciseName: { ...typography.h3, color: colors.text, flex: 1 },
-  exerciseNameCurrent: { color: colors.primaryBright },
-  deshacer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  deshacerTexto: { ...typography.small, color: colors.textMuted, flex: 1 },
-  deshacerAccion: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  restoredBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  restoredText: { ...typography.small, color: colors.primaryBright, flex: 1 },
   pausaAviso: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3892,29 +457,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   pausaAvisoTexto: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 18 },
-  pastDraftCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  pastDraftTitle: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
-  pastDraftSub: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 1 },
-  pastDraftActions: { alignItems: 'flex-end', gap: 4 },
-  pastDraftFill: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-  },
-  pastDraftFillText: { ...typography.small, color: colors.onPrimary, fontFamily: fonts.semiBold, fontSize: 12 },
-  pastDraftLater: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  cambiarDia: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingVertical: spacing.xs, marginBottom: spacing.sm },
+  cambiarDiaTexto: { ...typography.small, color: colors.primary },
+  aviso: { marginBottom: spacing.md },
+  avisoCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  avisoTitulo: { ...typography.h3, color: colors.primaryBright },
+  avisoTexto: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
+  diaCab: { marginTop: spacing.xs, marginBottom: spacing.md },
+  diaNombre: { ...typography.h2, color: colors.text },
+  diaSub: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   warmupCard: {
     backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
@@ -3952,68 +503,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   warmupVideoTexto: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, flex: 1 },
-  restoredAction: {
-    ...typography.small,
-    color: colors.primary,
-    fontFamily: fonts.semiBold,
-    textDecorationLine: 'underline',
-  },
-  saveError: {
-    ...typography.small,
-    color: colors.danger,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  // La pregunta del día va separada del botón de terminar por un hueco: pegada
-  // a él se lee como parte del botón y se contesta sin mirar.
-  esfuerzoFinal: { marginTop: spacing.sm, marginBottom: spacing.sm },
-  anadirBtn: {
+  apuntar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  anadirTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  anadirFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+    flexWrap: 'wrap',
+    gap: 6,
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.hairlineFaint,
+    marginBottom: spacing.md,
   },
-  anadirNombre: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  anadirMeta: { ...typography.small, color: colors.textMuted, marginTop: 1 },
-  anadirVacio: { ...typography.small, color: colors.textMuted, paddingVertical: spacing.md },
-  saltadoAviso: {
-    ...typography.small,
-    color: colors.textFaint,
-    fontSize: 12,
-    marginTop: spacing.xs,
-  },
-  saveHint: {
-    ...typography.small,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  // Lo que toca, en una línea de texto (antes, una fila de pastillas).
-  metaLinea: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold, marginTop: 2, marginBottom: spacing.sm },
-  // Técnica y última vez, en una sola fila.
-  /*
-   * El `flex` va aquí, en el propio pulsable.
-   *
-   * Antes hacía falta envolverlo en otra vista, porque `PressableScale` ponía
-   * el estilo en una capa interna y el flex no llegaba al pulsable. Eso ya no
-   * pasa: el pulsable ES la capa animada. La envoltura se ha quitado, y con
-   * ella el comentario que la explicaba — que había pasado a decir lo
-   * contrario de lo que hace el código.
-   */
-  // ----- Descanso opcional (Día 7 TENA) -----
-  optionalCard: { marginBottom: spacing.md },
-  optionalHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  optionalTitle: { ...typography.h3, color: colors.primaryBright },
-  optionalText: { ...typography.small, color: colors.textMuted, lineHeight: 19 },
-  // ----- Día ya completado hoy -----
-  // ----- Resumen -----
+  apuntarTexto: { ...typography.body, color: colors.primary, fontFamily: fonts.semiBold },
+  apuntarHint: { ...typography.small, color: colors.textFaint },
 });

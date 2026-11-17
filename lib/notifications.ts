@@ -7,6 +7,7 @@ import { frase, t } from './idioma';
 import { getUserProfile } from './firestore/users';
 import { DIAS_VISTA, diasPendientes, horasDeAviso, textoDeAviso, TOPE_AVISOS } from './olvido';
 import { avisosDelGtg } from './avisosDiarios';
+import { SE_APUNTA_EL_ENTRENO } from './modoDeEntreno';
 import { diaLargo, horaCorta } from './fechas';
 import { avisosDeGrupal, type LlamadaGrupal } from './llamadaGrupal';
 import type { ContextoDelCiclo } from './schedule';
@@ -284,7 +285,11 @@ export async function programarAvisosGtg(
         identifier: `${GTG_PREFIJO}${cuando}`,
         content: {
           title: nombre,
-          body: esHoy
+          // Solo para ver (lib/modoDeEntreno.ts) no hay nada marcado: el
+          // mismo recordatorio cada día, sin cuentas de lo que queda.
+          body: !SE_APUNTA_EL_ENTRENO
+            ? frase`Hoy toca: ${total} cosas cortas. Aún estás a tiempo.`
+            : esHoy
             ? quedanHoy === 1
               ? t('Te queda 1. Un momento y está.')
               : frase`Te quedan ${quedanHoy} de ${total}. Una ahora, que son cortas.`

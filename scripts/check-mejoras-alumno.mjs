@@ -28,14 +28,11 @@ const AHORA = Date.UTC(2026, 9, 15, 12);
 console.log('\n1. Modo foco');
 {
   const w = lee('app/(client)/workout.tsx');
-  ok('la serie que toca se enciende', /const serieQueToca = exercise\.sets\.findIndex\(\(s\) => !s\.completed\);/.test(w) && /esAhora=\{!exercise\.saltado && setIndex === serieQueToca\}/.test(w));
-  ok('cada serie se marca con su ✓', /updateSet\(exerciseIndex, setIndex, 'completed', !set\.completed\)/.test(w));
   // Sin el botón grande "Hecha · Serie N" debajo: dos formas de hacer lo
   // mismo, una al lado de la otra, era justo el exceso de botones.
   ok('sin botón grande "Hecha" aparte, ni suelto ni en la superserie',
     !/updateSet\(exerciseIndex, serieQueToca, 'completed', true\)/.test(w) &&
       !/updateSet\(siguiente\.ejercicio, siguiente\.serie, 'completed', true\)/.test(w));
-  ok('"Siguiente" solo en dorado con el bloque hecho', /bloqueVisibleHecho && styles\.navNext/.test(w));
 }
 
 console.log('\n2. Widget "Hoy"');
@@ -82,7 +79,6 @@ console.log('\n4. El récord con su historia');
   ok('cuánto ha subido', c.mejora === '+3 reps', c.mejora);
   ok('desde cuándo tenía la marca', c.desde === 'hace 6 semanas', c.desde);
   ok('en una línea', contextoEnUnaLinea(c, '8 reps') === '+3 reps · antes 8 reps, hace 6 semanas');
-  ok('el aviso del momento lo enseña', /mejora=\{prVivo\.mejora\}/.test(lee('app/(client)/workout.tsx')));
   ok('y el resumen del final', /pr\.contexto/.test(lee('components/DespuesDelEntreno.tsx')));
 }
 

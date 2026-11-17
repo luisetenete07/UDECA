@@ -93,10 +93,6 @@ ok(
   /personalizado: schedule === 'flex' \? configuracionAGuardar\(\) : undefined/.test(editorCoach),
   'guardarla en los otros dos sería dejar escrito un ajuste que no se aplica'
 );
-ok(
-  'y en el entreno solo se lee en ese modo',
-  /const perso = isFlex \? routine\?\.personalizado : undefined;/.test(entreno)
-);
 
 /*
  * Y QUE LO QUE SE GUARDA SEA LO QUE EL ENTRENADOR ACABA DE TOCAR.
@@ -137,12 +133,6 @@ ok('"Fallo" son cero repeticiones', comoRir('rir', 'Fallo') === 0);
 ok('"4+" son cuatro', comoRir('rir', '4+') === 4);
 ok('un porcentaje NO se guarda como RIR', comoRir('porcentaje', '80 %') === undefined);
 ok('una etiqueta propia tampoco', comoRir('propia', 'B') === undefined);
-ok(
-  'y el entreno escribe el número por ese camino',
-  // Serie a serie: el número va al `rir` de la serie solo si comoRir lo da.
-  /const rir = comoRir\(escala, valor\);/.test(entreno) && /\.\.\.\(rir !== undefined \? \{ rir \} : \{\}\)/.test(entreno),
-  'si se escribiera el valor a pelo, un "80 %" acabaría en el campo del RIR'
-);
 // Ida y vuelta: lo ya guardado se tiene que poder volver a enseñar marcado.
 for (const [rir, etiqueta] of [
   [0, 'Fallo'],
@@ -192,10 +182,6 @@ const nunca = { esfuerzo: { escala: 'rir', cuando: 'nunca' } };
 ok('con "nunca", en ningún sitio', !tocaPreguntarEsfuerzo(nunca, 'ejercicio') && !tocaPreguntarEsfuerzo(nunca, 'sesion'));
 // El de la sesión entera va en su propio campo del registro, no en el último
 // ejercicio: son dos preguntas distintas.
-ok(
-  'el esfuerzo del día se guarda aparte',
-  /\.\.\.\(esfuerzoSesion \? \{ esfuerzo: esfuerzoSesion \} : \{\}\)/.test(entreno)
-);
 
 // =========================================================================
 console.log('\n6 · Lo que se ve antes de elegir');
@@ -244,32 +230,6 @@ ok(
 console.log('\n8 · Lo que puede tocar el alumno');
 // =========================================================================
 ok('nada, mientras no se active', !POR_DEFECTO.permisos.saltar && !POR_DEFECTO.permisos.anadir);
-ok(
-  'saltar deja el ejercicio a la vista, no lo borra',
-  /saltado: !ex\.saltado/.test(entreno) && /Saltado hoy/.test(entreno),
-  'borrarlo dejaría una sesión que parece completa y un coach que no se entera'
-);
-ok(
-  'y lo saltado no cuenta para el progreso',
-  /ex\.saltado \? 0 : ex\.sets\.length/.test(entreno)
-);
-ok(
-  'al reordenar se mueven las DOS listas',
-  /setCombinedDay\(\{ \.\.\.dia, exercises: mueve\(dia\.exercises\) \}\)/.test(entreno) &&
-    /setLog\(\(prev\) => mueve\(prev\)\)/.test(entreno),
-  'la pantalla las cruza por posición: mover una sola enseña el objetivo de otro ejercicio'
-);
-ok(
-  'lo añadido sale del propio plan, no de la nada',
-  /routine\?\.days \?\? \[\]\)\s*\.flatMap\(\(d\) => d\.exercises\)/.test(entreno),
-  'un ejercicio escrito a mano entra sin biblioteca, sin categoría y sin histórico'
-);
-ok(
-  'y la rutina del entrenador no se toca',
-  /const diaEditable = \(\): RoutineDay \| null =>/.test(entreno) &&
-    /id: `propio-\$\{Date\.now\(\)\}`/.test(entreno),
-  'lo que el alumno cambia es SU sesión de hoy'
-);
 
 console.log(
   fallos === 0 ? '\n✔ El plan personalizado es del entrenador, y solo ese' : `\n${fallos} fallo(s)`

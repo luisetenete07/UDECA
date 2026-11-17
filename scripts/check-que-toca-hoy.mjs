@@ -244,7 +244,7 @@ console.log('\nUn día de descanso sigue teniendo nombre');
    */
   const entrenoTsx = readFileSync(new URL('../app/(client)/workout.tsx', import.meta.url), 'utf8');
   ok('la pantalla de entreno abre el día que toca, aunque sea de descanso',
-    /session\.day\?\.id \?\?\s*\n?\s*session\.diaDeHoy\?\.id/.test(entrenoTsx));
+    /hoy\.day\?\.id \?\? hoy\.diaDeHoy\?\.id/.test(entrenoTsx));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

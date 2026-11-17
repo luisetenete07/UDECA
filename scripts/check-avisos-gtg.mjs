@@ -54,7 +54,11 @@ console.log('\nLos días siguientes, puestos');
 console.log('\nY la app los usa');
 {
   const tarjeta = readFileSync('components/RutinaDiariaDelDia.tsx', 'utf8');
-  ok('la tarjeta los rehace con lo que queda', /programarAvisosGtg\([^)]*pr\.total - pr\.hechos, pr\.total\)/.test(tarjeta));
+  ok('la tarjeta los rehace con lo que queda (o con todo, si es solo para ver)', /const quedan = SOLO_VER \? pr\.total : pr\.total - pr\.hechos;/.test(tarjeta) && /programarAvisosGtg\([^)]*quedan, pr\.total\)/.test(tarjeta));
+  // Solo para ver (lib/modoDeEntreno.ts) no hay nada marcado: el aviso no
+  // cuenta lo que queda, recuerda lo que toca.
+  const avisos = readFileSync('lib/notifications.ts', 'utf8');
+  ok('solo para ver, el aviso recuerda lo que toca sin contar', /body: !SE_APUNTA_EL_ENTRENO\s*\?\s*frase`Hoy toca: \$\{total\} cosas cortas\. Aún estás a tiempo\.`/.test(avisos));
   ok('y los quita sin rutina o apagados', /if \(!rutina \|\| !hayRutinaDiaria\(rutina\) \|\| !avisosOn\) \{\s*cancelarAvisosGtg\(\)/.test(tarjeta));
   const perfil = readFileSync('app/(client)/profile.tsx', 'utf8');
   ok('y el perfil dice la verdad: una vez, a las 18', /Si a las 18 h te queda algo por marcar, te aviso una vez\./.test(perfil.replace(/\s+/g, ' ')));
