@@ -754,8 +754,13 @@ export interface RoutineDay {
    * de ningún ejercicio en concreto.
    */
   gtgIndicaciones?: string;
-  /** El coach activa el temporizador de intervalos (EMOM) para este día. */
+  /**
+   * Día EMOM: el alumno tiene en Entreno un contador por rondas (lib/emom.ts).
+   * El nombre viene de cuando era un temporizador suelto que se abría a mano.
+   */
   showIntervalTimer?: boolean;
+  /** Solo con `showIntervalTimer`: cada cuántos segundos empieza una ronda (60 si no). */
+  emomSegundos?: number;
   /**
    * Texto de las "aproximaciones" del calentamiento para este día, editable por
    * el coach (paso 3 del calentamiento). Vacío = usa el texto por defecto.

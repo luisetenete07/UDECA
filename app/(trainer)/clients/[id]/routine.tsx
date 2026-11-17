@@ -111,6 +111,14 @@ import {
   resumenDelCalentamiento,
 } from '../../../../lib/calentamiento';
 import { medidaDelGrupo } from '../../../../lib/medidaDeGrupo';
+import {
+  INTERVALO_POR_DEFECTO,
+  INTERVALOS,
+  intervaloDelDia,
+  resumenDelEmom,
+  rondasDelEmom,
+  textoDelIntervalo,
+} from '../../../../lib/emom';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../../../../lib/theme';
 import {
   CLUSTER_DEFAULT,
@@ -951,6 +959,17 @@ export default function RoutineEditorScreen() {
   const toggleIntervalTimer = (dayId: string) => {
     setDays((prev) =>
       prev.map((d) => (d.id === dayId ? { ...d, showIntervalTimer: !d.showIntervalTimer } : d))
+    );
+  };
+
+  /** Cada cuánto empieza una ronda del EMOM. Un minuto no se guarda: es lo de siempre. */
+  const cambiarIntervaloDelEmom = (dayId: string, segundos: number) => {
+    setDays((prev) =>
+      prev.map((d) => {
+        if (d.id !== dayId) return d;
+        const { emomSegundos: _fuera, ...resto } = d;
+        return segundos === INTERVALO_POR_DEFECTO ? resto : { ...resto, emomSegundos: segundos };
+      })
     );
   };
 
@@ -2570,9 +2589,27 @@ export default function RoutineEditorScreen() {
                   color={day.showIntervalTimer ? colors.primary : colors.textMuted}
                 />
                 <Text style={styles.checkLabel}>
-                  Temporizador de intervalos (EMOM) este día
+                  Día EMOM: el alumno tiene un contador por rondas
                 </Text>
               </Pressable>
+              {/* El EMOM: las rondas salen de las series que ya están puestas
+                  (lib/emom.ts); aquí solo se elige cada cuánto empieza una. */}
+              {day.showIntervalTimer ? (
+                <View style={styles.emom}>
+                  <Text style={styles.calRotulo}>Una ronda cada</Text>
+                  <Opciones
+                    opciones={INTERVALOS.map((s) => ({ valor: String(s), texto: textoDelIntervalo(s) }))}
+                    valor={String(intervaloDelDia(day))}
+                    onChange={(v) => v && cambiarIntervaloDelEmom(day.id, Number(v))}
+                    envuelve
+                  />
+                  <Text style={styles.calResumen}>
+                    {day.exercises.length > 0
+                      ? frase`Verá ${resumenDelEmom(rondasDelEmom(day.exercises).length, intervaloDelDia(day))}. Cada ejercicio hace tantas rondas como series le pongas y, si hay varios, se turnan; una superserie va entera en la misma ronda.`
+                      : t('Añade los ejercicios: cada uno hará tantas rondas como series le pongas.')}
+                  </Text>
+                </View>
+              ) : null}
               <TextField
                 label={day.calentamiento ? 'Aproximaciones (al final, opcional)' : 'Aproximaciones (calentamiento · paso 3)'}
                 placeholder="Ej. 2 series al 60% y 70% del peso de trabajo"
@@ -3509,6 +3546,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  emom: { gap: spacing.xs, paddingLeft: 28 },
   calRotulo: { ...fieldLabel, marginBottom: 0 },
   calLista: { gap: spacing.sm },
   calFila: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },

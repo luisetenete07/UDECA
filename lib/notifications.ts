@@ -27,12 +27,17 @@ import type { Routine } from './types';
  */
 try {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
+    // Las rondas del EMOM, con la app abierta, solo suenan: el contador ya está
+    // en la pantalla y un cartel cada minuto lo taparía.
+    handleNotification: async (n) => {
+      const ronda = esAvisoDelEmom(n?.request?.identifier);
+      return {
+        shouldShowBanner: !ronda,
+        shouldShowList: !ronda,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      };
+    },
   });
 } catch {
   /* los avisos se verán como los ponga el sistema; entrar es más importante */
@@ -148,6 +153,63 @@ export async function cancelRestEndNotification(): Promise<void> {
   } catch {
     // Si no existía, no pasa nada.
   }
+}
+
+/*
+ * EL EMOM CON EL MÓVIL BLOQUEADO (lib/emom.ts).
+ *
+ * En el móvil la app solo vibra, y con el móvil en el suelo una vibración no
+ * se oye. Así que cada ronda que empieza es un aviso del sistema, con su
+ * sonido: suena con la app abierta, en segundo plano y bloqueado. Se programan
+ * al empezar o seguir, y se quitan todos al pausar o reiniciar.
+ */
+const EMOM_PREFIJO = 'emom-';
+/** iOS guarda como mucho 64 avisos pendientes, y los demás avisos también cuentan. */
+export const TOPE_AVISOS_EMOM = 40;
+
+function esAvisoDelEmom(id: string | undefined): boolean {
+  return !!id && id.startsWith(EMOM_PREFIJO);
+}
+
+export async function programarAvisosDelEmom(avisos: { enMs: number; titulo: string; cuerpo?: string }[]): Promise<void> {
+  if (Platform.OS === 'web' || avisos.length === 0) return;
+  try {
+    const existing = await Notifications.getPermissionsAsync();
+    let granted = existing.status === 'granted';
+    if (!granted && existing.status !== 'denied') {
+      const req = await Notifications.requestPermissionsAsync();
+      granted = req.status === 'granted';
+    }
+    if (!granted) return;
+    await quitarAvisosDelEmom();
+    await Promise.all(
+      avisos.slice(0, TOPE_AVISOS_EMOM).map((a, i) =>
+        Notifications.scheduleNotificationAsync({
+          identifier: `${EMOM_PREFIJO}${i}`,
+          content: { title: a.titulo, ...(a.cuerpo ? { body: a.cuerpo } : {}) },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+            seconds: Math.max(1, Math.round(a.enMs / 1000)),
+            repeats: false,
+          },
+        })
+      )
+    );
+  } catch {
+    // No crítico: con la app abierta el contador vibra igualmente.
+  }
+}
+
+/** Quita las rondas que falten y las que ya sonaron y siguen en la lista. */
+export async function quitarAvisosDelEmom(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const ids = Array.from({ length: TOPE_AVISOS_EMOM }, (_, i) => `${EMOM_PREFIJO}${i}`);
+  await Promise.all(
+    ids.flatMap((id) => [
+      Notifications.cancelScheduledNotificationAsync(id).catch(() => {}),
+      Notifications.dismissNotificationAsync(id).catch(() => {}),
+    ])
+  );
 }
 
 const WORKOUT_REMINDER_ID = 'daily-workout-reminder';

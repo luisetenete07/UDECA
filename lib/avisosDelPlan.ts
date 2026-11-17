@@ -274,6 +274,7 @@ const CAMPO_DEL_DIA: Record<string, string | null> = {
   gtgSetsPerDay: 'gtg',
   gtgIndicaciones: 'indicaciones',
   showIntervalTimer: 'temporizador',
+  emomSegundos: 'temporizador',
   approachesNote: 'calentamiento',
   calentamiento: 'calentamiento',
 };

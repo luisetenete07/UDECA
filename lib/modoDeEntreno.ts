@@ -12,7 +12,9 @@
  *
  *  - Su PROGRAMA a la vista: los días, los ejercicios con sus series, sus
  *    repeticiones y sus descansos, las notas y la técnica en vídeo.
- *  - Un CRONÓMETRO y una CUENTA ATRÁS, que es lo único que se usa entrenando.
+ *  - Los TIEMPOS que puso el entrenador, de un toque: el descanso de cada
+ *    ejercicio lanza su cuenta atrás, y un día EMOM trae su contador por
+ *    rondas (lib/emom.ts). Es lo único que se usa con el móvil en la mano.
  *  - Apuntar una MARCA cuando él quiera, para ver su progreso. Opcional: no
  *    hay "Hecho" ni nada que cerrar al acabar.
  *  - La rutina de cada día, solo para ver, con un aviso fijo a las 18:00.

@@ -10,9 +10,9 @@ import { Card } from '../../components/Card';
 import { Chip, ChipRow } from '../../components/Chip';
 import { EmptyState } from '../../components/EmptyState';
 import { FadeIn } from '../../components/FadeIn';
-import { IntervalTimer } from '../../components/IntervalTimer';
+import { ContadorEmom } from '../../components/ContadorEmom';
+import { CronoDeDescanso } from '../../components/CronoDeDescanso';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { RelojesDelEntreno } from '../../components/RelojesDelEntreno';
 import { ApuntarMarca } from '../../components/ApuntarMarca';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
@@ -36,6 +36,7 @@ import { esGtg, objetivoDelDia } from '../../lib/gtg';
 import { anclaDeLaCuenta, getCycleAnchor, setCycleAnchorForIndex, setCycleAnchorToday } from '../../lib/cycleAnchor';
 import { anclaQueManda, type AnclaDelAlumno } from '../../lib/ciclo';
 import { calentamientoParaVer } from '../../lib/calentamiento';
+import { intervaloDelDia, resumenDelEmom, rondasDelEmom } from '../../lib/emom';
 import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
 import {
   todayWeekday,
@@ -48,7 +49,7 @@ import {
 } from '../../lib/types';
 
 /**
- * ENTRENO: EL PROGRAMA A LA VISTA Y UN RELOJ.
+ * ENTRENO: EL PROGRAMA A LA VISTA Y SUS TIEMPOS.
  *
  * Ya no se entrena en directo con la app (ver lib/modoDeEntreno.ts). Esta
  * pestaña es la hoja del entrenador, bien ordenada, y lo que se usa con el
@@ -57,7 +58,9 @@ import {
  *  - Los días del plan, con el de hoy marcado y abierto.
  *  - El calentamiento y, del día, cada ejercicio con sus series, sus
  *    repeticiones, su descanso, las notas del entrenador y su técnica en vídeo.
- *  - La cuenta atrás y el cronómetro.
+ *  - Los tiempos que puso el entrenador, de un toque: el descanso de cada
+ *    ejercicio lanza su cuenta atrás (components/TablaDeEntreno), y un día
+ *    EMOM trae su contador por rondas (components/ContadorEmom).
  *  - "Apuntar una marca", para quien quiera ir viendo su progreso. Opcional:
  *    no hay nada que empezar ni que terminar.
  *
@@ -77,7 +80,6 @@ export default function WorkoutScreen() {
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, ExerciseMeasure>>({});
   const [videoAbierto, setVideoAbierto] = useState<{ url: string; titulo: string } | null>(null);
   const [warmupOpen, setWarmupOpen] = useState(false);
-  const [intervalOpen, setIntervalOpen] = useState(false);
   const [dayPickerOpen, setDayPickerOpen] = useState(false);
   const [apuntando, setApuntando] = useState(false);
 
@@ -182,17 +184,17 @@ export default function WorkoutScreen() {
 
   if (loading) return <LoadingScreen />;
 
-  // Sin rutina: el reloj igualmente, que para descansar entre series no hace
-  // falta plan.
+  // Sin rutina no hay descansos del entrenador: el temporizador suelto, que
+  // para descansar entre series no hace falta plan.
   if (!routine || routine.days.length === 0) {
     return (
       <ScreenContainer>
         <ScreenHeader title={t('Entreno')} />
-        <RelojesDelEntreno />
+        <CronoDeDescanso />
         <EmptyState
           icon="barbell-outline"
           title="Sin rutina asignada"
-          subtitle="Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, tienes el reloj para tus descansos."
+          subtitle="Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, tienes el temporizador para tus descansos."
         />
       </ScreenContainer>
     );
@@ -201,6 +203,8 @@ export default function WorkoutScreen() {
   const esHoy = (d: RoutineDay, i: number) =>
     esFlex ? false : esCiclo ? todaySession.cycleIndex === i : d.weekday === todayWeekday();
   const diaGtg = day && (esGtg(routine) || esGtg(routine, day)) ? day : null;
+  // Un día EMOM: el tiempo lo marca su contador, no los descansos.
+  const diaEmom = day && !diaGtg && day.showIntervalTimer && day.exercises.length > 0 ? day : null;
   // La intensidad, si su entrenador deja verla (lib/visibilidad.ts). En un
   // plan personalizado, en SU escala (porcentaje o sus etiquetas).
   const intensidad =
@@ -295,7 +299,11 @@ export default function WorkoutScreen() {
               {diaGtg
                 ? frase`Todo el día · ${objetivoDelDia(routine, day)} series sueltas, ninguna al fallo`
                 : [
-                    day.exercises.length === 1 ? t('1 ejercicio') : frase`${day.exercises.length} ejercicios`,
+                    diaEmom
+                      ? frase`EMOM · ${resumenDelEmom(rondasDelEmom(diaEmom.exercises).length, intervaloDelDia(diaEmom))}`
+                      : day.exercises.length === 1
+                        ? t('1 ejercicio')
+                        : frase`${day.exercises.length} ejercicios`,
                     intensidad ? frase`Intensidad ${intensidad}` : null,
                   ]
                     .filter(Boolean)
@@ -359,12 +367,17 @@ export default function WorkoutScreen() {
               objetivoDe={(ex) => (ve.objetivo ? textoDePrescripcion(ex, planPrescrito) : null)}
               videoDe={(ex) => videoByExercise[ex.exerciseId]}
               onVideo={(url, titulo) => setVideoAbierto({ url, titulo })}
+              conCuentaAtras
+              sinDescansos={!!diaEmom || !!diaGtg}
             />
           ) : (
             <Card style={styles.aviso}>
               <Text style={styles.avisoTexto}>Tu entrenador aún no ha puesto ejercicios en este día.</Text>
             </Card>
           )}
+
+          {/* EL EMOM: su contador, justo debajo de lo que se hace en cada ronda. */}
+          {diaEmom ? <ContadorEmom day={diaEmom} medidaDe={medidaDe} /> : null}
 
           {day.exercises.length > 0 && profile ? (
             <Pressable onPress={() => setApuntando(true)} style={styles.apuntar} accessibilityRole="button">
@@ -373,29 +386,11 @@ export default function WorkoutScreen() {
               <Text style={styles.apuntarHint}>Opcional, para ver tu progreso</Text>
             </Pressable>
           ) : null}
-
-          {day.showIntervalTimer ? (
-            <View style={styles.warmupCard}>
-              <Pressable onPress={() => setIntervalOpen((o) => !o)} style={styles.warmupHead} hitSlop={6}>
-                <Ionicons name="timer-outline" size={15} color={colors.primary} />
-                <Text style={styles.warmupTitle}>Temporizador de intervalos</Text>
-                <Ionicons name={intervalOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
-              </Pressable>
-              {intervalOpen ? (
-                <View style={{ marginTop: spacing.sm }}>
-                  <IntervalTimer />
-                </View>
-              ) : null}
-            </View>
-          ) : null}
         </FadeIn>
       )}
 
-      {/* EL RELOJ: lo único que se usa con el móvil en la mano. La cuenta atrás,
-          al empezar, flota abajo y sigue a la vista mientras se lee el
-          programa (components/GlobalRestTimer). */}
-      <RelojesDelEntreno />
-      {/* Hueco para que el descanso flotando no tape lo último de la pantalla. */}
+      {/* Hueco para que el descanso flotando (components/GlobalRestTimer) no
+          tape lo último de la pantalla. */}
       <View style={{ height: 96 }} />
 
       <VisorDeVideo

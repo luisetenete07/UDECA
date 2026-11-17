@@ -46,8 +46,7 @@ console.log('\nDónde sale');
   ok('y recuerda el último tiempo en el móvil', /AsyncStorage\.setItem\(CLAVE, String\(s\)\)/.test(c));
   const w = lee('app/(client)/workout.tsx');
   const sinRutina = w.slice(w.indexOf('if (!routine || routine.days.length === 0) {'), w.indexOf('const esHoy ='));
-  ok('en Entreno, sin rutina: el reloj (cuenta atrás y cronómetro)', /<RelojesDelEntreno \/>/.test(sinRutina));
-  ok('que lleva dentro esta misma cuenta atrás', /<CronoDeDescanso sinTarjeta \/>/.test(lee('components/RelojesDelEntreno.tsx')));
+  ok('en Entreno, sin rutina: este temporizador (no hay descansos del entrenador)', /<CronoDeDescanso \/>/.test(sinRutina));
   const d = lee('app/(client)/dashboard.tsx');
   ok('y en el inicio, solo si no tiene rutina', /\{!loading && !routine \? \(\s*<FadeIn delay=\{80\}>\s*<CronoDeDescanso \/>/.test(d));
 }

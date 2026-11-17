@@ -28,6 +28,27 @@ export function primeAudio() {
   getCtx();
 }
 
+/** Un pitido corto: la cuenta de los últimos segundos de una ronda del EMOM. */
+export function playTick() {
+  const c = getCtx();
+  if (!c) return;
+  try {
+    const now = c.currentTime;
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 660;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.16, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+    osc.connect(gain).connect(c.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  } catch {
+    // Silencio si el navegador bloquea el audio.
+  }
+}
+
 /** Chime de dos notas al terminar el descanso. */
 export function playBeep() {
   const c = getCtx();
