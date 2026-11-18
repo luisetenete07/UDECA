@@ -7,24 +7,8 @@
   var C = window.CALICO || {};
 
   /**
-   * El código de un creador, si se llega con él: udeca.app/?codigo=ANA65.
-   *
-   * Pasa al botón de pagar y allí SUSTITUYE al descuento del primer año (lo
-   * decide el endpoint). Así un creador comparte un enlace a la web, que es lo
-   * que convence, y no un código que su seguidor tiene que acordarse de teclear.
-   */
-  var codigo = '';
-  try {
-    codigo = (new URLSearchParams(location.search).get('codigo') || '')
-      .toUpperCase()
-      .replace(/[^A-Z0-9_-]/g, '')
-      .slice(0, 40);
-  } catch (e) {}
-
-  /**
-   * "Pruébalo gratis": a donde se crea la cuenta, que es donde empieza la
-   * prueba. Ver `pruebaEnTiendas` en config.js: mientras las tiendas tengan la
-   * versión sin prueba, todo va a la app web.
+   * "Crear mi cuenta": a donde se crea la cuenta. Ver `pruebaEnTiendas` en
+   * config.js.
    */
   (function () {
     var d = C.descargas || {};
@@ -39,21 +23,6 @@
       el.rel = 'noopener';
     });
   })();
-
-  /** Enlaces de pago del alta. */
-  document.querySelectorAll('[data-pago]').forEach(function (el) {
-    var url = (C.pagos || {})[el.getAttribute('data-pago')];
-    if (url && codigo && url.indexOf('/api/pagar') !== -1) {
-      url += (url.indexOf('?') === -1 ? '?' : '&') + 'codigo=' + encodeURIComponent(codigo);
-    }
-    if (url) {
-      el.href = url;
-      el.rel = 'noopener';
-    } else {
-      // Sin enlace configurado: mejor un correo que un botón que no hace nada.
-      el.href = 'mailto:' + (C.contacto || '') + '?subject=Quiero%20empezar%20en%20CALICO';
-    }
-  });
 
   /**
    * Descargas.
@@ -85,15 +54,11 @@
     }
     el.addEventListener('click', function (e) {
       e.preventDefault();
-      var destino = document.getElementById('comunidad');
-      if (destino) destino.scrollIntoView({ behavior: 'smooth' });
     });
   });
 
   var enlaces = [
     ['[data-app]', C.appUrl],
-    ['[data-comunidad]', C.comunidad],
-    ['[data-discord]', C.discord],
     ['[data-instagram]', C.instagram],
   ];
   enlaces.forEach(function (par) {

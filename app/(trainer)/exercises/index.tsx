@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { frase } from '../../../lib/idioma';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Modal, Platform, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../../components/Button';
@@ -17,22 +17,13 @@ import { ScreenContainer } from '../../../components/ScreenContainer';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { TextField } from '../../../components/TextField';
 import { useAuth } from '../../../lib/auth-context';
-import { isAdmin } from '../../../lib/subscription';
 import {
   createExercise,
-  deleteExercise,
   getExercisesForTrainer,
   updateExercise,
 } from '../../../lib/firestore/exercises';
 import { getTemplateExercises } from '../../../lib/firestore/templateExercises';
 import { updateUserProfile } from '../../../lib/firestore/users';
-import { type ExportedExercise } from '../../../lib/exerciseTemplateIO';
-import {
-  compartirBiblioteca,
-  leerBiblioteca,
-  queLeFaltan,
-  type BibliotecaCompartida,
-} from '../../../lib/firestore/bibliotecas';
 import { grupoRenombrado, medidaDelGrupo } from '../../../lib/medidaDeGrupo';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { STARTER_LIBRARY } from '../../../lib/starterLibrary';
@@ -67,17 +58,6 @@ export default function ExercisesScreen() {
   const [soloSinVideo, setSoloSinVideo] = useState(false);
   const [importing, setImporting] = useState(false);
   const [template, setTemplate] = useState<TemplateExercise[]>([]);
-  // Import/export de plantillas entre entrenadores.
-  const [pendingImport, setPendingImport] = useState<ExportedExercise[] | null>(null);
-  const [replacing, setReplacing] = useState(false);
-  // Compartir e importar con un código.
-  const [compartiendo, setCompartiendo] = useState(false);
-  const [codigoMostrado, setCodigoMostrado] = useState<string | null>(null);
-  const [importarAbierto, setImportarAbierto] = useState(false);
-  const [codigoEscrito, setCodigoEscrito] = useState('');
-  const [buscando, setBuscando] = useState(false);
-  const [encontrada, setEncontrada] = useState<BibliotecaCompartida | null>(null);
-  const [anadiendo, setAnadiendo] = useState(false);
   // Gestión de categorías del entrenador (Tren superior, Empuje…).
   const [editCats, setEditCats] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -85,9 +65,6 @@ export default function ExercisesScreen() {
   // Color de categoría: un único diálogo por categoría (paleta + personalizado),
   // en vez de una parrilla de muestras repetida en cada fila.
   const [colorTarget, setColorTarget] = useState<string | null>(null);
-  // Confirmación previa de "Actualizar a pack CALICO": es destructivo (sustituye
-  // toda la biblioteca), así que nunca se ejecuta a la primera pulsación.
-  const [confirmPack, setConfirmPack] = useState(false);
   // Renombrar subgrupos dentro de la categoría filtrada.
   const [subEdit, setSubEdit] = useState(false);
   const [renameSub, setRenameSub] = useState<{ group: string; from: string } | null>(null);
@@ -194,8 +171,8 @@ export default function ExercisesScreen() {
     }
   };
 
-  // Pack a precargar: la plantilla oficial de CALICO (editada por el CEO) si
-  // existe; si no, el pack estático de calistenia. Cada ejercicio arrastra sus
+  // Ejercicios base: la plantilla guardada en Firestore si existe; si no, el
+  // pack estático de calistenia. Cada ejercicio arrastra sus
   // músculos para el cuerpo anatómico.
   const packItems = useMemo(
     () =>
@@ -231,13 +208,13 @@ export default function ExercisesScreen() {
     return packItems.filter((p) => !existing.has(p.name.trim().toLowerCase()));
   }, [packItems, exercises]);
 
-  // Importa el pack CALICO saltando los ejercicios que ya existen (por nombre).
+  // Importa los ejercicios base saltando los ejercicios que ya existen (por nombre).
   const handleImportPack = async () => {
     if (!profile) return;
     setImporting(true);
     try {
       if (missingPack.length === 0) {
-        showToast('Ya tienes todos los ejercicios del pack');
+        showToast('Ya tienes todos los ejercicios base');
         return;
       }
       await Promise.all(
@@ -259,214 +236,6 @@ export default function ExercisesScreen() {
       await load();
     } finally {
       setImporting(false);
-    }
-  };
-
-  // ACTUALIZAR pack (solo la cuenta admin de CALICO): deja la biblioteca
-  // exactamente como el pack actual. Actualiza por nombre (conservando el id,
-  // para que las rutinas que referencian el ejercicio no se rompan, y su
-  // vídeo), crea los nuevos, BORRA los que ya no están en el pack y reemplaza
-  // las categorías por las del pack, en su orden.
-  const handleUpdatePackFull = async () => {
-    if (!profile || packItems.length === 0) return;
-    setConfirmPack(false);
-    setImporting(true);
-    try {
-      const key = (n: string) => n.trim().toLowerCase();
-      const byName = new Map(exercises.map((e) => [key(e.name), e]));
-      const packNames = new Set(packItems.map((p) => key(p.name)));
-      const ops: Promise<unknown>[] = [];
-      for (const p of packItems) {
-        const existing = byName.get(key(p.name));
-        if (existing) {
-          ops.push(
-            updateExercise(existing.id, {
-              muscleGroup: p.muscleGroup,
-              measure: p.measure,
-              description: p.description || undefined,
-              muscles: p.muscles,
-              muscleWeights: p.muscleWeights,
-              subgroup: p.subgroup,
-            })
-          );
-        } else {
-          ops.push(
-            createExercise({
-              trainerId: profile.uid,
-              name: p.name,
-              muscleGroup: p.muscleGroup,
-              measure: p.measure,
-              description: p.description || undefined,
-              videoUrl: undefined,
-              muscles: p.muscles,
-              muscleWeights: p.muscleWeights,
-              subgroup: p.subgroup,
-            })
-          );
-        }
-      }
-      for (const e of exercises) {
-        if (!packNames.has(key(e.name))) ops.push(deleteExercise(e.id));
-      }
-      await Promise.all(ops);
-      // Categorías del pack, en su orden de aparición.
-      const cats: string[] = [];
-      for (const p of packItems) {
-        if (!cats.includes(p.muscleGroup)) cats.push(p.muscleGroup);
-      }
-      if (cats.length > 0) {
-        // Las categorías del pack conservan el color que ya tuvieran; a las
-        // nuevas se les asigna uno de la paleta para que ninguna quede sin él.
-        const colors_: Record<string, string> = {};
-        cats.forEach((c, i) => {
-          colors_[c] =
-            profile.categoryColors?.[c] ?? CATEGORY_PALETTE[i % CATEGORY_PALETTE.length];
-        });
-        // Subgrupos que trae el pack, por categoría y en su orden.
-        const subs: Record<string, string[]> = {};
-        for (const p of packItems) {
-          if (!p.subgroup) continue;
-          const list = subs[p.muscleGroup] ?? [];
-          if (!list.includes(p.subgroup)) subs[p.muscleGroup] = [...list, p.subgroup];
-        }
-        await updateUserProfile(profile.uid, {
-          exerciseCategories: cats,
-          categoryColors: colors_,
-          categorySubgroups: { ...(profile.categorySubgroups ?? {}), ...subs },
-        });
-        await refreshProfile();
-      }
-      showToast('Biblioteca sincronizada con el pack CALICO');
-      await load();
-    } catch {
-      showToast('No se pudo actualizar el pack');
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  /*
-   * COMPARTIR E IMPORTAR CON UN CÓDIGO (lib/firestore/bibliotecas.ts).
-   *
-   * Sustituye al archivo y al texto para pegar: un código de seis letras se
-   * dicta o se manda por mensaje, y al otro lado basta con escribirlo.
-   */
-  const handleCompartir = async () => {
-    if (!profile) return;
-    if (exercises.length === 0) {
-      showToast('No tienes ejercicios que compartir');
-      return;
-    }
-    setCompartiendo(true);
-    try {
-      const codigo = await compartirBiblioteca(
-        profile.uid,
-        profile.name ?? '',
-        exercises,
-        profile.codigoBiblioteca
-      );
-      if (codigo !== profile.codigoBiblioteca) {
-        await updateUserProfile(profile.uid, { codigoBiblioteca: codigo });
-        await refreshProfile();
-      }
-      setCodigoMostrado(codigo);
-    } catch {
-      showToast('No se pudo compartir');
-    } finally {
-      setCompartiendo(false);
-    }
-  };
-
-  const handleBuscarCodigo = async () => {
-    setBuscando(true);
-    setEncontrada(null);
-    try {
-      const b = await leerBiblioteca(codigoEscrito);
-      if (!b) {
-        showToast('No hay ninguna biblioteca con ese código');
-        return;
-      }
-      setEncontrada(b);
-    } catch {
-      showToast('No se pudo buscar el código');
-    } finally {
-      setBuscando(false);
-    }
-  };
-
-  /** Añade solo los que no tiene: lo seguro, y casi siempre lo que se quiere. */
-  const handleAnadirNuevos = async () => {
-    if (!profile || !encontrada) return;
-    const nuevos = queLeFaltan(exercises, encontrada.ejercicios);
-    if (nuevos.length === 0) {
-      showToast('Ya tienes todos esos ejercicios');
-      return;
-    }
-    setAnadiendo(true);
-    try {
-      await Promise.all(
-        nuevos.map((e) =>
-          createExercise({
-            trainerId: profile.uid,
-            name: e.name,
-            muscleGroup: e.muscleGroup,
-            measure: e.measure,
-            description: e.description,
-            videoUrl: e.videoUrl,
-            muscles: e.muscles,
-            muscleWeights: e.muscleWeights,
-            subgroup: e.subgroup,
-            load: e.load,
-            band: e.band,
-          })
-        )
-      );
-      cerrarImportar();
-      await load();
-      showToast(frase`${nuevos.length} ejercicios añadidos a tu biblioteca`);
-    } catch {
-      showToast('No se pudieron añadir');
-    } finally {
-      setAnadiendo(false);
-    }
-  };
-
-  const cerrarImportar = () => {
-    setImportarAbierto(false);
-    setCodigoEscrito('');
-    setEncontrada(null);
-  };
-
-  // Sustituye TODA la biblioteca por la plantilla importada.
-  const confirmReplace = async () => {
-    if (!profile || !pendingImport) return;
-    setReplacing(true);
-    try {
-      await Promise.all(exercises.map((e) => deleteExercise(e.id)));
-      await Promise.all(
-        pendingImport.map((e) =>
-          createExercise({
-            trainerId: profile.uid,
-            name: e.name,
-            muscleGroup: e.muscleGroup,
-            measure: e.measure,
-            description: e.description,
-            videoUrl: e.videoUrl,
-            muscles: e.muscles,
-            muscleWeights: e.muscleWeights,
-            subgroup: e.subgroup,
-            load: e.load,
-            band: e.band,
-          })
-        )
-      );
-      setPendingImport(null);
-      await load();
-      showToast('Plantilla importada');
-    } catch {
-      showToast('No se pudo importar la plantilla');
-    } finally {
-      setReplacing(false);
     }
   };
 
@@ -584,9 +353,8 @@ export default function ExercisesScreen() {
         }
       />
 
-      {/* Todo lo que se toca una vez cada muchos meses —el pack, importar,
-          exportar, renombrar categorías, la plantilla del CEO— vive aquí
-          detrás. Antes ocupaba cinco filas por encima de los ejercicios, que
+      {/* Todo lo que se toca una vez cada muchos meses —los ejercicios base y
+          las categorías— vive aquí detrás. Antes ocupaba cinco filas por encima de los ejercicios, que
           es lo que sí se mira todos los días. */}
       <QuickSheet
         visible={menuOpen}
@@ -598,7 +366,7 @@ export default function ExercisesScreen() {
             ? [
                 {
                   icono: 'cube-outline' as const,
-                  texto: frase`Añadir el pack CALICO (${missingPack.length} ejercicios)`,
+                  texto: frase`Añadir los ejercicios base (${missingPack.length})`,
                   onPress: () => {
                     setMenuOpen(false);
                     handleImportPack();
@@ -614,47 +382,6 @@ export default function ExercisesScreen() {
               setEditCats((v) => !v);
             },
           },
-          {
-            icono: 'share-social-outline' as const,
-            texto: compartiendo ? 'Compartiendo…' : 'Compartir mi biblioteca',
-            onPress: () => {
-              setMenuOpen(false);
-              handleCompartir();
-            },
-          },
-          {
-            icono: 'download-outline' as const,
-            texto: 'Importar con un código',
-            onPress: () => {
-              setMenuOpen(false);
-              setImportarAbierto(true);
-            },
-          },
-          ...(isAdmin(profile)
-            ? [
-                {
-                  icono: 'shield-checkmark' as const,
-                  texto: 'Plantilla CALICO (CEO)',
-                  onPress: () => {
-                    setMenuOpen(false);
-                    router.push('/(trainer)/exercises/template');
-                  },
-                },
-                ...(packItems.length > 0
-                  ? [
-                      {
-                        icono: 'sync-outline' as const,
-                        texto: 'Actualizar a pack CALICO',
-                        peligro: true,
-                        onPress: () => {
-                          setMenuOpen(false);
-                          setConfirmPack(true);
-                        },
-                      },
-                    ]
-                  : []),
-              ]
-            : []),
         ]}
       />
 
@@ -810,14 +537,14 @@ export default function ExercisesScreen() {
           title="No hay ejercicios"
           subtitle={
             exercises.length === 0 && missingPack.length > 0
-              ? 'Empieza con el pack CALICO o crea el primero con «+ Nuevo».'
+              ? 'Empieza con los ejercicios base o crea el primero con «+ Nuevo».'
               : 'Prueba con otra búsqueda o categoría.'
           }
           // Con la biblioteca vacía el pack es LA acción a hacer, así que aquí
           // sí se muestra en grande (en la cabecera va como pastilla pequeña).
           actionLabel={
             exercises.length === 0 && missingPack.length > 0
-              ? `Importar pack CALICO (${missingPack.length})`
+              ? frase`Añadir los ejercicios base (${missingPack.length})`
               : undefined
           }
           onAction={
@@ -869,20 +596,6 @@ export default function ExercisesScreen() {
           );
         })
       )}
-
-      {/* Confirmación previa de "Actualizar a pack CALICO" (destructivo) */}
-      <Dialogo
-        visible={confirmPack}
-        onClose={() => setConfirmPack(false)}
-        icono="warning-outline"
-        titulo="¿Actualizar a pack CALICO?"
-        texto={`Tu biblioteca quedará EXACTAMENTE igual que el pack CALICO actual (${packItems.length} ejercicios): se sustituyen los datos de los que ya tienes, se añaden los que falten y se BORRAN tus ${exercises.length} ${
-          exercises.length === 1 ? 'ejercicio' : 'ejercicios'
-        } que no estén en el pack. También se reemplazan tus categorías. No se puede deshacer.`}
-        accion="Sí, sustituirlo todo"
-        onAccion={handleUpdatePackFull}
-        cargando={importing}
-      />
 
       {/* Color de una categoría: solo la paleta. Escribir un código de color
           a mano era una puerta a colores que no casan con la app. */}
@@ -936,114 +649,6 @@ export default function ExercisesScreen() {
         />
       </Dialogo>
 
-      {/* El código para compartir la biblioteca, grande y para copiar. */}
-      <Dialogo
-        visible={!!codigoMostrado}
-        onClose={() => setCodigoMostrado(null)}
-        icono="share-social-outline"
-        tono="normal"
-        titulo="Tu código de biblioteca"
-        texto={frase`Quien lo escriba en «Importar con un código» recibe tus ${exercises.length} ejercicios. Si cambias tu biblioteca, vuelve a compartir: el código no cambia.`}
-        accion="Enviar el código"
-        onAccion={() => {
-          Share.share({
-            message: frase`Mi biblioteca de ejercicios en CALICO: ${codigoMostrado ?? ''}. Ábrela en Ejercicios › … › Importar con un código.`,
-          }).catch(() => {});
-        }}
-        cancelar="Cerrar"
-      >
-        <Text style={styles.codigoGrande} selectable>
-          {codigoMostrado}
-        </Text>
-      </Dialogo>
-
-      {/* Importar con un código: se escribe, se ve qué trae y se elige. */}
-      <Dialogo
-        visible={importarAbierto}
-        onClose={cerrarImportar}
-        icono="download-outline"
-        tono="normal"
-        titulo="Importar con un código"
-        texto="Escribe el código que te ha pasado otro entrenador."
-        cancelar="Cerrar"
-      >
-        <View style={styles.codigoFila}>
-          <TextInput
-            value={codigoEscrito}
-            onChangeText={(v) => {
-              setCodigoEscrito(v);
-              setEncontrada(null);
-            }}
-            placeholder="ABC123"
-            placeholderTextColor={colors.textFaint}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            maxLength={8}
-            style={[styles.addCatInput, styles.codigoInput]}
-            onSubmitEditing={handleBuscarCodigo}
-            returnKeyType="search"
-          />
-        </View>
-        {/* Debajo y a lo ancho: al lado del campo no cabía en un móvil. */}
-        {encontrada ? null : (
-          <Button
-            title="Buscar"
-            variant="secondary"
-            onPress={handleBuscarCodigo}
-            loading={buscando}
-            disabled={codigoEscrito.trim().length < 6}
-            style={{ marginTop: spacing.sm }}
-          />
-        )}
-        {encontrada ? (
-          <View style={styles.encontrada}>
-            <Text style={styles.encontradaTitulo}>
-              {encontrada.nombre
-                ? frase`Biblioteca de ${encontrada.nombre}`
-                : 'Biblioteca encontrada'}
-            </Text>
-            <Text style={styles.encontradaTexto}>
-              {frase`${encontrada.ejercicios.length} ejercicios · ${queLeFaltan(exercises, encontrada.ejercicios).length} que no tienes`}
-            </Text>
-            <Button
-              title={
-                queLeFaltan(exercises, encontrada.ejercicios).length === 0
-                  ? 'Ya los tienes todos'
-                  : frase`Añadir los ${queLeFaltan(exercises, encontrada.ejercicios).length} que no tengo`
-              }
-              onPress={handleAnadirNuevos}
-              loading={anadiendo}
-              disabled={queLeFaltan(exercises, encontrada.ejercicios).length === 0}
-              style={{ marginTop: spacing.md }}
-            />
-            <Pressable
-              onPress={() => {
-                const lista = encontrada.ejercicios;
-                cerrarImportar();
-                setPendingImport(lista);
-              }}
-              hitSlop={8}
-              style={styles.sustituirEnlace}
-            >
-              <Text style={styles.sustituirTexto}>O sustituir toda mi biblioteca por esta</Text>
-            </Pressable>
-          </View>
-        ) : null}
-      </Dialogo>
-
-      {/* Aviso de confirmación al importar (sustituye TODA la biblioteca) */}
-      <Dialogo
-        visible={!!pendingImport}
-        onClose={() => setPendingImport(null)}
-        icono="warning-outline"
-        titulo="¿Sustituir tu plantilla actual?"
-        texto={`Esto borrará tus ${exercises.length} ${
-          exercises.length === 1 ? 'ejercicio' : 'ejercicios'
-        } y los reemplazará por los ${pendingImport?.length ?? 0} de la plantilla importada. No se puede deshacer.`}
-        accion={frase`Sustituir por ${pendingImport?.length ?? 0} ejercicios`}
-        onAccion={confirmReplace}
-        cargando={replacing}
-      />
     </ScreenContainer>
   );
 }
@@ -1146,26 +751,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryMuted,
   },
   addCatText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  codigoGrande: {
-    ...typography.h1,
-    color: colors.primaryBright,
-    textAlign: 'center',
-    letterSpacing: 6,
-    marginTop: spacing.md,
-    ...tabularNums,
-  },
-  codigoFila: { marginTop: spacing.md },
-  codigoInput: { flex: 0, letterSpacing: 3, fontFamily: fonts.semiBold, textAlign: 'center' },
-  encontrada: {
-    marginTop: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.primaryMuted,
-  },
-  encontradaTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  encontradaTexto: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  sustituirEnlace: { alignSelf: 'center', marginTop: spacing.md },
-  sustituirTexto: { ...typography.small, color: colors.textMuted, textDecorationLine: 'underline' },
 });

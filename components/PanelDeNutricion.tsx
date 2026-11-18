@@ -518,7 +518,7 @@ export function PanelDeNutricion() {
         `Sheet` es el panel que usa toda la app —el de registrar una comida está
         diez líneas más abajo— y resuelve eso: se cierra tocando fuera, tiene su
         scroll con los toques que atraviesan el teclado, y es lo que ya funciona
-        en los móviles de verdad de quienes usan CALICO.
+        en los móviles de verdad de quienes usan la app.
       */}
       <Sheet
         visible={calcOpen}

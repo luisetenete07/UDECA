@@ -7,6 +7,7 @@ import { GateScreen } from './GateScreen';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
 import { useAuth } from '../lib/auth-context';
+import { idDelCoach } from '../lib/coachUnico';
 import { getTrainerIdForInviteCode } from '../lib/firestore/users';
 import {
   deleteJoinRequest,
@@ -17,13 +18,23 @@ import { colors, spacing, typography } from '../lib/theme';
 import type { JoinRequest } from '../lib/types';
 
 /**
- * Pantalla que ve un alumno todavía sin entrenador: introduce el código para
- * ENVIAR una solicitud, o espera a que el entrenador la apruebe. En cuanto el
- * coach acepta (le pone el trainerId), al comprobar entra en la app.
+ * Lo que ve un alumno que todavía no está dentro: su solicitud, esperando a que
+ * Luis la acepte. En cuanto la acepta (le pone el trainerId), al comprobar
+ * entra en la app.
+ *
+ * Normalmente la solicitud ya salió al crear la cuenta. Esta pantalla cubre el
+ * resto: quien la canceló y quiere volver a pedirla, o quien la creó sin red.
+ *
+ * El código del entrenador solo aparece si la app todavía no sabe quién es el
+ * coach (`config/coach` sin apuntar, ver lib/coachUnico.ts). Es el camino de
+ * antes, y se queda como red: mejor pedir un código que dejar a alguien sin
+ * poder pedir entrar.
  */
 export function LinkTrainerScreen() {
   const { profile, refreshProfile, signOut } = useAuth();
   const [pending, setPending] = useState<JoinRequest | null>(null);
+  // undefined = mirando; null = no se sabe quién es el coach (sale el código).
+  const [coach, setCoach] = useState<string | null | undefined>(undefined);
   const [code, setCode] = useState('');
   const [sending, setSending] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -31,8 +42,12 @@ export function LinkTrainerScreen() {
 
   const reload = useCallback(async () => {
     if (!profile) return;
-    const reqs = await getMyJoinRequests(profile.uid);
+    const [reqs, id] = await Promise.all([
+      getMyJoinRequests(profile.uid).catch(() => [] as JoinRequest[]),
+      idDelCoach(),
+    ]);
     setPending(reqs[0] ?? null);
+    setCoach(id);
   }, [profile]);
 
   useFocusEffect(
@@ -41,25 +56,34 @@ export function LinkTrainerScreen() {
     }, [reload])
   );
 
+  const enviar = async (trainerId: string) => {
+    if (!profile) return;
+    await sendJoinRequest(trainerId, profile);
+    setCode('');
+    await reload();
+    showToast('Solicitud enviada');
+  };
+
   const handleSend = async () => {
     if (!profile) return;
     setError(null);
-    const clean = code.trim().toUpperCase();
-    if (!clean) {
-      setError('Introduce el código de tu entrenador.');
-      return;
-    }
     setSending(true);
     try {
+      if (coach) {
+        await enviar(coach);
+        return;
+      }
+      const clean = code.trim().toUpperCase();
+      if (!clean) {
+        setError('Introduce el código de tu entrenador.');
+        return;
+      }
       const trainerId = await getTrainerIdForInviteCode(clean);
       if (!trainerId) {
         setError('Ese código no es válido. Revísalo con tu entrenador.');
         return;
       }
-      await sendJoinRequest(trainerId, profile);
-      setCode('');
-      await reload();
-      showToast('Solicitud enviada');
+      await enviar(trainerId);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo enviar la solicitud.');
     } finally {
@@ -84,52 +108,75 @@ export function LinkTrainerScreen() {
     showToast('Solicitud cancelada');
   };
 
-  // Las dos caras de la misma puerta: mandar el código o esperar la respuesta.
+  // Las dos caras de la misma puerta: pedir entrar o esperar la respuesta.
   // Comparten marco a propósito —quien envía la solicitud vuelve aquí a los
   // dos minutos a ver si le han aceptado, y encontrarse otra pantalla haría
   // dudar de si la envió bien.
-  return pending ? (
-    <GateScreen
-      icono="hourglass-outline"
-      titulo="Solicitud enviada"
-      texto="Tu entrenador tiene que aceptarte en su grupo. Cuando lo haga, entrarás automáticamente. Pulsa “Ya me han aceptado” para comprobarlo."
-      onSalir={signOut}
-    >
-      <Button
-        title="Ya me han aceptado"
-        onPress={handleCheck}
-        loading={checking}
-        style={{ marginTop: spacing.lg }}
-      />
-      <Button
-        title="Cancelar solicitud"
-        variant="ghost"
-        onPress={handleCancel}
-        style={{ marginTop: spacing.sm }}
-      />
-    </GateScreen>
-  ) : (
+  if (pending) {
+    return (
+      <GateScreen
+        icono="hourglass-outline"
+        titulo="Solicitud enviada"
+        texto="Luis tiene que aceptarte en el grupo. Cuando lo haga, entrarás automáticamente. Pulsa “Ya me han aceptado” para comprobarlo."
+        onSalir={signOut}
+      >
+        <Button
+          title="Ya me han aceptado"
+          onPress={handleCheck}
+          loading={checking}
+          style={{ marginTop: spacing.lg }}
+        />
+        <Button
+          title="Cancelar solicitud"
+          variant="ghost"
+          onPress={handleCancel}
+          style={{ marginTop: spacing.sm }}
+        />
+      </GateScreen>
+    );
+  }
+
+  if (coach === null) {
+    return (
+      <GateScreen
+        icono="person-add-outline"
+        titulo="Pide entrar en el grupo"
+        texto="Introduce el código que te ha dado Luis. Le llegará una solicitud con tu nombre y foto para aceptarte."
+        onSalir={signOut}
+      >
+        <TextField
+          label="Código del entrenador"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          value={code}
+          onChangeText={setCode}
+          placeholder="Ej. LUISTENA"
+          style={{ marginTop: spacing.md }}
+        />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Button
+          title="Enviar solicitud"
+          onPress={handleSend}
+          loading={sending}
+          disabled={!code.trim()}
+        />
+      </GateScreen>
+    );
+  }
+
+  return (
     <GateScreen
       icono="person-add-outline"
-      titulo="Vincúlate con tu entrenador"
-      texto="Introduce el código que te ha dado tu entrenador. Le llegará una solicitud con tu nombre y foto para aceptarte."
+      titulo="Pide entrar en el grupo"
+      texto="Le llegará a Luis una solicitud con tu nombre y foto. Entras en cuanto te acepte."
       onSalir={signOut}
     >
-      <TextField
-        label="Código del entrenador"
-        autoCapitalize="characters"
-        autoCorrect={false}
-        value={code}
-        onChangeText={setCode}
-        placeholder="Ej. LUISTENA"
-        style={{ marginTop: spacing.md }}
-      />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={[styles.error, { marginTop: spacing.md }]}>{error}</Text> : null}
       <Button
-        title="Enviar solicitud"
+        title="Enviar mi solicitud"
         onPress={handleSend}
-        loading={sending}
-        disabled={!code.trim()}
+        loading={sending || coach === undefined}
+        style={{ marginTop: spacing.lg }}
       />
     </GateScreen>
   );

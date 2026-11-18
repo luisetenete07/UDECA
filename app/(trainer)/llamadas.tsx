@@ -552,7 +552,7 @@ export default function LlamadasDelCoach() {
         </ChipRow>
       </Card>
 
-      {/* CÓMO: CALICO no hace la llamada; dice por dónde va. */}
+      {/* CÓMO: La app no hace la llamada; dice por dónde va. */}
       <Card style={styles.seccion}>
         <View style={styles.cab}>
           <Ionicons name="chatbubbles-outline" size={16} color={colors.primary} />

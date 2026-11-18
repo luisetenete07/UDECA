@@ -3,65 +3,42 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>CALICO · Calisthenics Coaches</title>
-<meta name="description" content="La plataforma de calistenia de CALICO: planes, progreso medido de verdad y seguimiento del entrenador. Para entrenadores que viven de esto, y gratis para sus alumnos." />
+<title>Maestría en Calistenia · Luis Tena</title>
+<meta name="description" content="Maestría en Calistenia es la app de entrenamiento de Luis Tena para sus alumnos: tu plan del día, tus marcas, tu progreso y los cursos. Privada: entras cuando Luis te acepta." />
 <meta name="theme-color" content="#000000" />
 <link rel="icon" href="/assets/favicon.png" />
 <link rel="canonical" href="https://www.udeca.app/" />
-<meta property="og:title" content="CALICO · Calisthenics Coaches" />
-<meta property="og:description" content="Entrena con método. Mide lo que de verdad importa." />
+<meta property="og:title" content="Maestría en Calistenia · Luis Tena" />
+<meta property="og:description" content="La app de entrenamiento de Luis Tena para sus alumnos." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://www.udeca.app" />
-<meta property="og:site_name" content="CALICO" />
+<meta property="og:site_name" content="Maestría en Calistenia" />
 <meta property="og:locale" content="es_ES" />
-<!-- La imagen de compartir es una tarjeta 1200x630 hecha para eso, y no una
-     captura de móvil: una imagen de 780x1688 en WhatsApp o en X sale recortada
-     a una tira central donde no se lee nada. Ver docs/WEB.md. -->
-<meta property="og:image" content="https://www.udeca.app/assets/compartir.png" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="CALICO: entrena con método, mide lo que importa" />
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="CALICO · Calisthenics Coaches" />
-<meta name="twitter:description" content="Entrena con método. Mide lo que de verdad importa." />
-<meta name="twitter:image" content="https://www.udeca.app/assets/compartir.png" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Maestría en Calistenia · Luis Tena" />
+<meta name="twitter:description" content="La app de entrenamiento de Luis Tena para sus alumnos." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/styles.css" />
 
 <!--
-  Lo que Google necesita para entender qué es esto.
-
-  Sin estos datos, un buscador ve una página negra con mucho texto y tiene que
-  adivinar que hay una app detrás, en qué tiendas está y cuánto cuesta. Con
-  ellos puede enseñar el precio y las dos tiendas directamente en el resultado.
-
-  Las cifras tienen que coincidir con las de la página y con las de la app
-  (lib/precios.ts). Un precio distinto aquí no se ve en pantalla —no lo pinta
-  nadie— y es de los que se descubren tarde y desde fuera, así que lo vigila
-  scripts/check-web-tiendas.mjs.
+  Lo que Google necesita para entender qué es esto: una app, en qué tiendas
+  está y de quién es. Sin precios: Maestría en Calistenia no vende nada dentro
+  de la app ni desde esta página. Se entra cuando Luis acepta.
 -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "CALICO",
-  "alternateName": "Calisthenics Coaches",
+  "name": "Maestría en Calistenia",
+  "alternateName": "MASTERY",
   "applicationCategory": "HealthApplication",
   "operatingSystem": "Android, iOS, Web",
   "url": "https://www.udeca.app",
   "inLanguage": "es",
-  "description": "Plataforma de calistenia: planes, progreso medido de verdad y seguimiento del entrenador.",
-  "offers": [
-    {
-      "@type": "Offer",
-      "name": "Entrenador · primer año",
-      "price": "120",
-      "priceCurrency": "EUR",
-      "category": "Suscripción anual con alumnos ilimitados, primer año a mitad de precio (después 240 €)"
-    }
-  ]
+  "description": "La app de entrenamiento de calistenia de Luis Tena para sus alumnos.",
+  "author": { "@type": "Person", "name": "Luis Tena" }
 }
 </script>
 </head>
@@ -72,45 +49,27 @@
      recorrerse el menú entero en cada página. -->
 <a class="saltar" href="#top">Saltar al contenido</a>
 
-<!--
-  LA CABECERA VA FLOTANDO, NO PEGADA AL BORDE.
-
-  Antes era una barra de lado a lado, con una línea debajo. Flotando —una
-  cápsula con fondo difuminado y aire alrededor— la página respira por arriba y
-  el contenido se ve pasar por detrás, que es lo que da la sensación de
-  aplicación y no de documento.
--->
 <header>
   <div class="nav">
-    <a class="brand" href="#top">
-      <img class="logotipo" src="/assets/calico.svg" alt="CALICO" />
+    <!-- El nombre escrito, hasta que haya un logotipo dibujado. -->
+    <a class="brand marca-texto" href="#top" aria-label="Maestría en Calistenia">
+      MAESTRÍA<small>EN CALISTENIA</small>
     </a>
     <nav class="nav-links">
       <a href="#como">Cómo funciona</a>
-      <a href="#app">La app</a>
-      <a href="#planes">Planes</a>
-      <a href="#preguntas">Preguntas</a>
+      <a href="#descargas">Descargar</a>
     </nav>
-    <a class="btn btn-primary btn-sm" data-prueba href="#planes">Probar gratis</a>
+    <a class="btn btn-primary btn-sm" data-prueba href="#descargas">Crear mi cuenta</a>
   </div>
 </header>
 
 <!-- ============ PORTADA ============ -->
 <section class="hero" id="top">
   <div class="wrap">
-    <!--
-      LOS SELLOS DE ARRIBA SON VERDAD, Y POR ESO NO SON CIFRAS.
-
-      El sitio en el que nos hemos fijado abre con "4,8 de 50.000 reseñas" y
-      "+500k atletas". Nosotros no tenemos esos números, y ponerlos inventados
-      sería la forma más rápida de perder lo único que todavía no hemos gastado.
-      Lo que sí es cierto y además importa más a quien nos va a pagar: quién
-      está detrás, y que la app está publicada de verdad en las dos tiendas.
-    -->
     <div class="sellos reveal">
       <span class="sello">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 8.3l5-.7z"/></svg>
-        Hecha por entrenadores en activo
+        by Luis Tena
       </span>
       <span class="sello">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
@@ -118,87 +77,47 @@
       </span>
     </div>
 
-    <!-- LA PRUEBA, LO PRIMERO QUE SE LEE. Cada entrada cuenta más que cada
-         cobro ahora mismo: quien la usa una semana es quien paga después. -->
-    <span class="pildora prueba-pildora reveal">14 días gratis · sin tarjeta</span>
-    <h1>Entrena con método.<br /><em>Mide lo que importa.</em></h1>
+    <span class="pildora reveal">Privada · solo alumnos de Luis</span>
+    <h1>Maestría en Calistenia.<br /><em>Entrena con método.</em></h1>
     <p class="lead">
-      La calistenia deja de ser una libreta suelta: plan, marcas, progreso semana
-      a semana e informes que se entienden de un vistazo. Para el entrenador que
-      vive de esto, y gratis para sus alumnos.
+      La app donde sigues el plan que Luis te prepara: el programa de cada día
+      con sus descansos, tus marcas, tu progreso semana a semana y los cursos de
+      técnica. Creas tu cuenta y entras cuando Luis te acepta.
     </p>
 
     <div class="cta-prueba reveal">
-      <a class="btn btn-primary btn-lg" data-prueba href="#">Pruébalo gratis</a>
-      <p class="hero-note">Sin tarjeta. 14 días con todo. Si no te convence, no pagas nada.</p>
+      <a class="btn btn-primary btn-lg" data-prueba href="#">Crear mi cuenta</a>
+      <p class="hero-note">Al crearla, a Luis le llega tu solicitud. Entras en cuanto te acepte.</p>
     </div>
 
-    <!-- Las insignias oficiales, en la portada: son la prueba más rápida de que
-         esto es una app de verdad y no una página que promete una. -->
     <div class="badges reveal">
-      <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar CALICO en la App Store">
+      <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar MASTERY en la App Store">
         <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
       </a>
-      <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar CALICO en Google Play">
+      <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar MASTERY en Google Play">
         <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
       </a>
     </div>
-    <p class="hero-note">Después, el primer año a mitad de precio: 10 €/mes · Tus alumnos, gratis</p>
-
-    <div class="shots reveal">
-      <div class="phone"><img src="/assets/app-entreno.webp" alt="Pantalla de entrenamiento de CALICO" loading="lazy" /></div>
-      <div class="phone"><img src="/assets/app-inicio.webp" alt="Inicio del alumno en CALICO" loading="lazy" /></div>
-      <div class="phone"><img src="/assets/app-coach.webp" alt="Panel del entrenador en CALICO" loading="lazy" /></div>
-    </div>
   </div>
 </section>
 
-<!-- ============ CIFRAS ============ -->
-<!--
-  CIFRAS DEL PRODUCTO, NO DE POPULARIDAD.
-
-  La rejilla de cuatro cuadros es de las cosas que mejor funcionan de la web en
-  la que nos hemos fijado. Lo que cambia es qué se mete dentro: ellos ponen
-  descargas y usuarios activos; nosotros no tenemos esos números todavía y no
-  se van a inventar. Estas cuatro son comprobables una por una en la propia
-  página, y a un entrenador le dicen más que un contador de descargas.
--->
-<section class="cifras-sec">
-  <div class="wrap">
-    <div class="cifras">
-      <!-- Estas cuatro cifras tienen que ser las de lib/precios.ts. Aquí se
-           quedó un cambio de precios entero con el mensual antiguo escrito,
-           porque el guardián comprobaba que estuvieran los precios NUEVOS y no
-           que hubieran desaparecido los viejos. Ahora comprueba las dos. -->
-      <div class="cifra reveal"><b>Sin tope</b><span>de alumnos por entrenador</span></div>
-      <div class="cifra reveal"><b>3</b><span>formas de montar un plan</span></div>
-      <div class="cifra reveal"><b>0 €</b><span>para los alumnos de un entrenador</span></div>
-      <div class="cifra reveal"><b>14 días</b><span>gratis y sin tarjeta</span></div>
-    </div>
-  </div>
-</section>
+<hr class="rule" />
 
 <!-- ============ CÓMO FUNCIONA ============ -->
 <section id="como">
   <div class="wrap">
     <p class="eyebrow">Cómo funciona</p>
-    <h2 class="section-title big">De la libreta al método<em> en tres pasos</em></h2>
-    <p class="lead">
-      No hay curva de aprendizaje ni configuración de media tarde. Se monta una
-      vez y a partir de ahí la app trabaja sola.
-    </p>
+    <h2 class="section-title big">Tu plan, en el móvil<em> y sin perder nada</em></h2>
 
     <ol class="pasos">
       <li class="paso reveal">
         <div class="paso-num" aria-hidden="true">01</div>
         <div>
           <p class="paso-rotulo"><i></i> Paso 01</p>
-          <h3>El plan, montado a tu manera</h3>
+          <h3>Pides tu plaza</h3>
           <p>
-            Por días de la semana, por días sueltos que rotan en bucle o montado
-            por ti de cero: tu escala de esfuerzo, tu vocabulario y qué puede
-            tocar el alumno. Con superseries, clústeres, isométricos, lastre y
-            descansos configurados serie a serie.
+            Te descargas la app y creas tu cuenta con Google o con Apple. A Luis
+            le llega tu solicitud y, cuando te acepta, entras.
           </p>
         </div>
       </li>
@@ -206,12 +125,11 @@
         <div class="paso-num" aria-hidden="true">02</div>
         <div>
           <p class="paso-rotulo"><i></i> Paso 02</p>
-          <h3>Entrenas, y se apunta solo</h3>
+          <h3>Entrenas con el programa delante</h3>
           <p>
-            Cronómetro de descanso, marcas de la última vez y récords que saltan
-            sin pedirlos. Cada serie queda registrada mientras entrenas, no
-            después de memoria. ¿Entrenaste sin el móvil delante? Se apunta con
-            su fecha y cuenta igual.
+            Cada día ves qué toca: series, repeticiones y el descanso que ha
+            puesto Luis, que se lanza de un toque. Los días EMOM tienen su propio
+            contador por rondas.
           </p>
         </div>
       </li>
@@ -219,185 +137,15 @@
         <div class="paso-num" aria-hidden="true">03</div>
         <div>
           <p class="paso-rotulo"><i></i> Paso 03</p>
-          <h3>El progreso sale solo, y se puede enseñar</h3>
+          <h3>Ves cómo avanzas</h3>
           <p>
-            La mejor serie de cada ejercicio, semana a semana, sin rellenar
-            formularios. Y un informe en PDF con tu marca, listo para entregarle
-            a un alumno el día que pregunte si está mejorando.
+            Tus marcas, tu constancia y tu progreso semana a semana, y los cursos
+            con la técnica de cada movimiento. Luis lo ve también y ajusta tu
+            plan.
           </p>
         </div>
       </li>
     </ol>
-
-    <div class="cta-centro reveal">
-      <a class="btn btn-primary btn-lg" data-prueba href="#">Pruébalo gratis</a>
-      <p class="hero-note">Sin tarjeta. Después, el primer año a mitad de precio. <a href="#planes" style="color:var(--muted)">Ver los planes</a></p>
-    </div>
-  </div>
-</section>
-
-<hr class="rule" />
-
-<!-- ============ QUÉ HACE ============ -->
-<section id="app">
-  <div class="wrap">
-    <p class="eyebrow">La app</p>
-    <h2 class="section-title big">Todo lo que hace falta.<em> Nada que sobre.</em></h2>
-    <p class="lead">
-      Cada función existe porque resuelve algo que pasa de verdad en un entrenamiento
-      o en la gestión de un grupo. Si no, no está.
-    </p>
-
-    <!--
-      LAS TARJETAS SE ENCIENDEN AL PASAR POR ELLAS.
-
-      Es el mecanismo que hace que esa lista se lea en vez de saltársela: la que
-      tienes delante se ilumina y las demás se apagan. Lo que NO se copia es el
-      color: allí cada función tiene el suyo —azul, morado, naranja— y aquí todo
-      es el oro de la casa, con más o menos intensidad. Un arcoíris dentro de
-      una marca de dos colores no es vistoso, es otra marca.
-
-      Sin JavaScript funciona igual: se encienden con el ratón y con el teclado
-      (:hover y :focus-within). Lo de main.js solo añade que, al desplazarte por
-      el móvil, se encienda sola la que está en el centro de la pantalla.
-    -->
-    <!--
-      UNA LISTA QUE SE ELIGE, Y LA PANTALLA DE LO ELEGIDO AL LADO.
-
-      Antes esto eran DOS cosas seguidas: seis tarjetas explicando las funciones
-      y, debajo, una galería con las mismas seis pantallas y sus pies de foto.
-      Se contaba lo mismo dos veces y ninguna de las dos se quedaba con la
-      atención: quien leía las tarjetas se saltaba la galería, y quien miraba
-      las pantallas no sabía qué estaba viendo.
-
-      Ahora es una sola: eliges una función y ves ESA pantalla.
-
-      SIN JAVASCRIPT. Va con radios y etiquetas, no con guiones: es un patrón de
-      CSS de toda la vida, se maneja con el teclado —flechas, como cualquier
-      grupo de opciones— y lo lee un lector de pantalla como lo que es. Un
-      carrusel que se cae si falla un archivo .js deja la mitad de la página en
-      blanco, y aquí esa mitad es justo lo que se vende.
-    -->
-    <div class="funciones">
-      <input type="radio" name="fn" id="fn1" checked />
-      <input type="radio" name="fn" id="fn2" />
-      <input type="radio" name="fn" id="fn3" />
-      <input type="radio" name="fn" id="fn4" />
-      <input type="radio" name="fn" id="fn5" />
-      <input type="radio" name="fn" id="fn6" />
-
-      <div class="fn-lista">
-        <label class="fn" for="fn1">
-          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9.5V13l2.4 1.6"/><path d="M9.5 3h5"/></svg></span>
-          <span>
-            <b>Entreno guiado</b>
-            <small>Cronómetro de descanso, EMOM, clústeres, marcas de la última vez y récords que saltan solos.</small>
-          </span>
-          <i class="fn-punto" aria-hidden="true"></i>
-        </label>
-        <label class="fn" for="fn2">
-          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-6 4 3.5L20 7"/><path d="M16 7h4v4"/></svg></span>
-          <span>
-            <b>Progreso real</b>
-            <small>La mejor serie de cada ejercicio, semana a semana. De dónde vienes, dónde estás y qué se ha estancado.</small>
-          </span>
-          <i class="fn-punto" aria-hidden="true"></i>
-        </label>
-        <label class="fn" for="fn3">
-          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v15H4z"/><path d="M4 9.5h16"/><path d="M9 5v15"/></svg></span>
-          <span>
-            <b>Planes que se siguen</b>
-            <small>Por semana, por días sueltos que rotan o montado por ti: tu escala de esfuerzo y tu vocabulario.</small>
-          </span>
-          <i class="fn-punto" aria-hidden="true"></i>
-        </label>
-        <label class="fn" for="fn4">
-          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 6h18"/><path d="M7 22l-4-4 4-4"/><path d="M21 18H3"/></svg></span>
-          <span>
-            <b>Lo de cada día</b>
-            <small>El pino, la movilidad, las series sueltas repartidas por el día. Se marca de camino, sin abrir una sesión.</small>
-          </span>
-          <i class="fn-punto" aria-hidden="true"></i>
-        </label>
-        <label class="fn" for="fn5">
-          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 8.3l5-.7z"/></svg></span>
-          <span>
-            <b>Comunidad y ranking</b>
-            <small>El ranking mide a cada uno contra sí mismo, no contra el resto. Con cursos y tablón del grupo.</small>
-          </span>
-          <i class="fn-punto" aria-hidden="true"></i>
-        </label>
-        <label class="fn" for="fn6">
-          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16.5 11.5a2.8 2.8 0 1 0 0-5.6"/><path d="M17.5 20a5.4 5.4 0 0 0-2-4.2"/></svg></span>
-          <span>
-            <b>Panel del entrenador</b>
-            <small>Alumnos, cobros, avisos de impago y de quién lleva días sin entrenar. La gestión, resuelta.</small>
-          </span>
-          <i class="fn-punto" aria-hidden="true"></i>
-        </label>
-      </div>
-
-      <div class="fn-vista">
-        <div class="phone">
-          <img class="fn-shot s1" src="/assets/app-entreno.webp" alt="Entrenamiento en directo en CALICO" loading="lazy" />
-          <img class="fn-shot s2" src="/assets/app-progreso.webp" alt="Progreso del alumno en CALICO" loading="lazy" />
-          <img class="fn-shot s3" src="/assets/app-rutina.webp" alt="Editor de rutina del entrenador en CALICO" loading="lazy" />
-          <img class="fn-shot s4" src="/assets/app-diaria.webp" alt="Rutina diaria en CALICO" loading="lazy" />
-          <img class="fn-shot s5" src="/assets/app-comunidad.webp" alt="Comunidad y ranking en CALICO" loading="lazy" />
-          <img class="fn-shot s6" src="/assets/app-coach.webp" alt="Panel del entrenador en CALICO" loading="lazy" />
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="rule" />
-
-<!-- ============ PLANES ============ -->
-<section id="planes">
-  <div class="wrap">
-    <p class="eyebrow">Planes</p>
-    <h2 class="section-title big">Un solo plan.<em> Sin topes y sin letra pequeña</em></h2>
-    <p class="lead">
-      Empiezas gratis, sin tarjeta: 14 días con la plataforma entera. Si te
-      quedas, el primer año cuesta la mitad; después se renueva sola al precio de
-      siempre, y se cancela cuando quieras.
-    </p>
-
-    <div class="plans plans-uno">
-      <article class="plan featured reveal">
-        <span class="tag">Para profesionales</span>
-        <p class="who">Entrenador</p>
-        <h3>Vives de entrenar a gente</h3>
-        <div class="price"><b>10 €</b><span>/mes el primer año</span></div>
-        <p class="sub">120 € el primer año. Luego 240 € al año, 20 € al mes.</p>
-        <ul>
-          <!-- Lo primero de la lista es lo que antes echaba a la puerta al
-               mejor cliente posible: un entrenador con doce alumnos leía
-               "hasta 5" y se iba. -->
-          <li><b>Alumnos ilimitados</b>, cada uno con su cuenta</li>
-          <li><b>Tus alumnos no pagan nada</b>, ni el alta</li>
-          <li>Tu método, no el nuestro: tu escala de esfuerzo y tu vocabulario</li>
-          <li>Rutinas, ciclos y biblioteca de ejercicios</li>
-          <li>Cobros, avisos de impago y control de cuotas</li>
-          <li>Informes de progreso con tu marca</li>
-          <li>Cursos, tablón y ranking del grupo</li>
-        </ul>
-        <a class="btn btn-primary" data-prueba href="#">Pruébalo 14 días gratis</a>
-        <a class="pagar-ya" data-pago="altaCoach" href="#">o empieza ya · 120 € el primer año</a>
-        <p class="after">
-          Se renueva sola a 240 € al año. Cancelas cuando quieras, y tus alumnos,
-          sus rutinas y su historial siguen ahí pase lo que pase.
-        </p>
-        <p class="after" style="margin-top:6px">
-          <a href="/condiciones" style="color:var(--faint)">Condiciones de contratación</a>
-        </p>
-      </article>
-    </div>
-
-    <p class="hero-note" style="margin-top:26px">
-      ¿Eres alumno de un entrenador de CALICO? No pagas nada: pídele su código y entra gratis.
-    </p>
   </div>
 </section>
 
@@ -409,21 +157,17 @@
     <p class="eyebrow">Descargar</p>
     <h2 class="section-title big">En tu móvil<em> y en tu ordenador</em></h2>
     <p class="lead">
-      Ya está publicada en las dos tiendas. Es la misma app y la misma cuenta:
-      entras en el móvil y sigues en el ordenador donde lo dejaste.
+      En el móvil se llama MASTERY. Es la misma app y la misma cuenta: entras en
+      el móvil y sigues en el ordenador donde lo dejaste.
     </p>
 
-    <!-- LAS INSIGNIAS SON LAS OFICIALES, no un dibujo nuestro.
-         La de Apple sale de developer.apple.com y la de Google Play es su
-         artwork oficial, las dos sin retocar y servidas desde aquí, que es lo
-         que piden las dos guías de marca.
-         Los altos son distintos a propósito: la de Google trae su propio
-         margen de respeto dentro del archivo. Ver .badge en styles.css. -->
+    <!-- LAS INSIGNIAS SON LAS OFICIALES, no un dibujo nuestro. Ver .badge en
+         styles.css. -->
     <div class="badges">
-      <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar CALICO en la App Store">
+      <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar MASTERY en la App Store">
         <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
       </a>
-      <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar CALICO en Google Play">
+      <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar MASTERY en Google Play">
         <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
       </a>
     </div>
@@ -440,174 +184,6 @@
       </span>
       <span class="state ready-siempre">Abrir</span>
     </a>
-
-  </div>
-</section>
-
-<hr class="rule" />
-
-<!-- ============ HISTORIA ============ -->
-<section id="historia">
-  <div class="wrap">
-    <p class="eyebrow">Quiénes somos</p>
-    <h2 class="section-title big">Nacida en el entrenamiento,<em> no en una reunión</em></h2>
-
-    <div class="story">
-      <div>
-        <p>
-          CALICO —Calisthenics Coaches— nace de años entrenando y enseñando
-          calistenia con un problema que no se iba: el trabajo estaba en el móvil, en
-          notas sueltas, en capturas de pantalla y en mensajes que se perdían. Nadie
-          sabía con certeza si el alumno había mejorado, ni en qué.
-        </p>
-        <p>
-          Así que construimos la herramienta que nos faltaba. Primero para nuestro
-          propio grupo, midiendo cada serie de verdad. Después para cualquier
-          entrenador que quiera dejar de administrar y volver a entrenar.
-        </p>
-        <p class="quote">
-          Si no se mide, no se entrena: se hace ejercicio.
-        </p>
-        <p>
-          Hoy CALICO es un método y una plataforma. El método viene de la sala; la
-          plataforma solo se encarga de que no se pierda nada por el camino.
-        </p>
-      </div>
-
-      <div>
-        <div class="card">
-          <h3>El equipo</h3>
-          <div class="people">
-            <div class="person">
-              <div class="av">LT</div>
-              <div>
-                <b>Luis Tena</b>
-                <small>Fundador · Entrenador</small>
-              </div>
-            </div>
-          </div>
-          <p style="margin-top:18px">
-            Detrás de CALICO hay entrenadores en activo. Cada función sale de una
-            necesidad real de la sala, no de una lluvia de ideas.
-          </p>
-        </div>
-
-        <div class="card" style="margin-top:18px">
-          <h3>Socios y colaboradores</h3>
-          <p>
-            Trabajamos con entrenadores y centros que comparten la misma idea del
-            entrenamiento. ¿Quieres formar parte?
-            <a data-contacto href="#" style="color:var(--azul-claro)">Escríbenos</a>.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="rule" />
-
-<!-- ============ COMUNIDAD ============ -->
-<section id="comunidad">
-  <div class="wrap">
-    <div class="community reveal">
-      <p class="eyebrow">Comunidad privada</p>
-      <h2>Entra en la comunidad de CALICO</h2>
-      <p>
-        Un grupo cerrado donde compartimos progresiones, correcciones de técnica y
-        lo que estamos probando antes de que llegue a la app.
-      </p>
-      <a class="btn btn-primary" data-comunidad href="#">Quiero entrar</a>
-    </div>
-  </div>
-</section>
-
-<hr class="rule" />
-
-<!-- ============ PREGUNTAS ============ -->
-<section id="preguntas">
-  <div class="wrap">
-    <p class="eyebrow">Preguntas</p>
-    <h2 class="section-title big">Lo que todo el mundo<em> pregunta</em></h2>
-
-    <div style="margin-top:26px">
-      <details open>
-        <summary>¿Puedo probarlo gratis?</summary>
-        <p>Sí, y sin tarjeta: 14 días con todo incluido. Creas tu cuenta y empiezas; no se te cobra nada. Al acabar decides si te quedas, y si no, no pasa nada.</p>
-      </details>
-      <details>
-        <summary>Soy alumno de un entrenador de CALICO, ¿tengo que pagar?</summary>
-        <p>No. Los alumnos entran gratis con el código de su entrenador; quien paga la plataforma es él.</p>
-      </details>
-      <details>
-        <summary>¿Qué incluye?</summary>
-        <p>La plataforma entera desde el primer día, sin recortes ni funciones reservadas para un plan superior. El primer año vale la mitad: 120 €. Después se renueva a 240 € al año, y no se cobra nada más por el camino.</p>
-      </details>
-      <details>
-        <summary>Soy entrenador, ¿cuántos alumnos puedo llevar?</summary>
-        <p>Los que quieras. No hay tope, ni escalones de precio por número de alumnos, ni nada que pagar por el sexto ni por el sesenta. Y ninguno de ellos paga nada a CALICO: entran gratis con tu código.</p>
-      </details>
-      <details>
-        <summary>¿Cómo activo mi cuenta después de pagar?</summary>
-        <p>Paga aquí y crea tu cuenta en la app con <b>el mismo correo</b>. La suscripción se reconoce sola; si tarda, hay un botón para comprobarlo al momento.</p>
-      </details>
-      <details>
-        <summary>¿Qué pasa cuando termina el año?</summary>
-        <p>Se renueva sola al precio de siempre: 240 € al año. Lo sabes desde que pagas, te avisamos antes de cobrar y cancelas cuando quieras desde tu cuenta, sin llamar a nadie ni dar explicaciones. Si cancelas no se borra nada: tus rutinas, tus marcas y tus alumnos te esperan intactos hasta que vuelvas.</p>
-      </details>
-      <details>
-        <summary>¿Y si un día dejo CALICO? ¿Me quedo sin los datos de mis alumnos?</summary>
-        <p>No. El progreso de cada alumno se descarga en PDF cuando quieras, y sus rutinas y su historial siguen en su cuenta aunque tú te vayas. CALICO tampoco toca el dinero de tus alumnos: les cobras tú, con tu enlace, así que si te vas no tienes que mover ningún cobro.</p>
-      </details>
-      <details>
-        <summary>¿Dónde me la descargo?</summary>
-        <p>Ya está en la App Store y en Google Play. En el ordenador se abre en el navegador y se puede instalar desde ahí: queda con su icono y su propia ventana, y se actualiza sola.</p>
-      </details>
-      <details>
-        <summary>¿Sirve si entreno en casa, sin material?</summary>
-        <p>Sí. La calistenia es peso corporal; la app contempla lastre y gomas cuando los hay, pero no hacen falta.</p>
-      </details>
-    </div>
-  </div>
-</section>
-
-<!-- ============ CIERRE ============ -->
-<!--
-  EL CIERRE REPITE LAS DOS TIENDAS, Y NO ES REDUNDANTE.
-
-  Quien llega hasta aquí ha leído la página entera y ya ha decidido. Obligarle a
-  subir hasta la portada para encontrar el botón es la forma más tonta de perder
-  a alguien convencido.
-
-  Las tres garantías de abajo son literalmente ciertas y se pueden comprobar en
-  esta misma página: no hay permanencia, no hay cobro automático, y los alumnos
-  de un entrenador entran gratis.
--->
-<section class="cierre">
-  <div class="wrap">
-    <div class="cierre-caja reveal">
-      <span class="pildora">Calisthenics Coaches</span>
-      <h2>Empieza a medir<br /><em>lo que ya estás haciendo</em></h2>
-      <p>
-        Pruébalo gratis y sin tarjeta durante 14 días. Y si entrenas con un
-        entrenador de CALICO, gratis siempre.
-      </p>
-      <p><a class="btn btn-primary btn-lg" data-prueba href="#">Pruébalo gratis</a></p>
-      <div class="badges centradas">
-        <a class="badge" data-descarga="appStore" href="#" aria-label="Descargar CALICO en la App Store">
-          <img class="badge-apple" src="/assets/badge-app-store.svg" alt="Download on the App Store" width="120" height="40" />
-        </a>
-        <a class="badge" data-descarga="playStore" href="#" aria-label="Descargar CALICO en Google Play">
-          <img class="badge-play" src="/assets/badge-google-play.svg" alt="Get it on Google Play" width="155" height="60" />
-        </a>
-      </div>
-      <ul class="garantias">
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Sin tarjeta para probar</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Sin permanencia</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Cancelas cuando quieras</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Los alumnos entran gratis</li>
-      </ul>
-    </div>
   </div>
 </section>
 
@@ -615,39 +191,35 @@
   <div class="wrap">
     <div class="foot">
       <div class="foot-marca">
-        <a class="brand" href="#top">
-          <img class="logotipo" src="/assets/calico.svg" alt="CALICO" />
+        <a class="brand marca-texto" href="#top" aria-label="Maestría en Calistenia">
+          MAESTRÍA<small>EN CALISTENIA</small>
         </a>
         <p class="foot-lema">
-          Calisthenics Coaches. El método viene de la sala; la plataforma
-          solo se encarga de que no se pierda nada por el camino.
+          La app de entrenamiento de Luis Tena para sus alumnos.
         </p>
       </div>
       <nav class="foot-col">
         <h4>La app</h4>
         <ul>
           <li><a href="#como">Cómo funciona</a></li>
-          <li><a href="#app">Qué hace</a></li>
-          <li><a href="#planes">Planes</a></li>
           <li><a href="#descargas">Descargar</a></li>
+          <li><a href="/soporte">Ayuda</a></li>
         </ul>
       </nav>
       <nav class="foot-col">
-        <h4>CALICO</h4>
+        <h4>Luis Tena</h4>
         <ul>
-          <li><a href="#historia">Quiénes somos</a></li>
-          <li><a data-comunidad href="#">Comunidad privada</a></li>
           <li><a data-instagram href="#">Instagram</a></li>
-          <li><a data-contacto href="#">Escríbenos</a></li>
+          <li><a data-contacto href="#">Escríbeme</a></li>
         </ul>
       </nav>
     </div>
     <p class="legal">
-      © <span id="year"></span> CALICO · Calisthenics Coaches. Todos los derechos reservados.
+      © <span id="year"></span> Maestría en Calistenia · Luis Tena. Todos los derechos reservados.
       <!-- Apuntan aquí y no a la app: son las URLs que se declaran en Google Play
            y en App Store, y tienen que abrirse sin JavaScript y sin sesión. -->
       <a href="/privacidad" style="color:var(--muted)">Política de privacidad</a> ·
-      <a href="/condiciones" style="color:var(--muted)">Condiciones de contratación</a> ·
+      <a href="/condiciones" style="color:var(--muted)">Condiciones de uso</a> ·
       <a href="/eliminar-cuenta" style="color:var(--muted)">Eliminar tu cuenta</a>.
     </p>
   </div>

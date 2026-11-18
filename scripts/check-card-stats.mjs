@@ -8,7 +8,6 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-card-stats.mjs
  */
 import {
-  numeroFundador,
   tarjetaDeAtleta,
   tarjetaDeEntrenador,
   textoDesde,
@@ -31,42 +30,27 @@ function comprueba(nombre, condicion, detalle = '') {
 const etiquetas = (l) => l.map((x) => x.etiqueta).join(' | ');
 const valorDe = (l, et) => l.find((x) => x.etiqueta === et)?.valor;
 
-console.log('\nEl número de fundador');
-comprueba('siempre a cuatro cifras', numeroFundador(7) === '#0007');
-comprueba('y no se recorta si tiene más', numeroFundador(12345) === '#12345');
-
 console.log('\nEntrenador');
-const coachNuevo = tarjetaDeEntrenador(
-  { createdAt: AHORA - 3 * DIA, alumnos: 0, entrenosDirigidos: 0 },
-  AHORA
-);
+const coachNuevo = tarjetaDeEntrenador({ createdAt: AHORA - 3 * DIA, alumnos: 0, entrenosDirigidos: 0 });
 comprueba(
   'recién llegado y sin alumnos: no enseña ceros',
-  coachNuevo.length === 1 && coachNuevo[0].valor === 'CALICO',
+  coachNuevo.length === 1 && coachNuevo[0].valor === 'MAESTRÍA',
   etiquetas(coachNuevo)
 );
-const coachPocos = tarjetaDeEntrenador(
-  { createdAt: AHORA - 10 * DIA, alumnos: 2, entrenosDirigidos: 4 },
-  AHORA
-);
+const coachPocos = tarjetaDeEntrenador({ createdAt: AHORA - 10 * DIA, alumnos: 2, entrenosDirigidos: 4 });
 comprueba(
   'con 4 entrenos dirigidos, esa cifra aún no cuenta',
   valorDe(coachPocos, 'Entrenos dirigidos') === undefined,
   etiquetas(coachPocos)
 );
 comprueba('pero 2 alumnos sí', valorDe(coachPocos, 'Alumnos a tu cargo') === '2');
-comprueba('y menos de un mes no sale como "En CALICO"', valorDe(coachPocos, 'En CALICO') === undefined);
 
-const coachHecho = tarjetaDeEntrenador(
-  {
-    founderNumber: 7,
-    createdAt: AHORA - 8 * MES,
-    alumnos: 1,
-    entrenosDirigidos: 1240,
-  },
-  AHORA
-);
-comprueba('el fundador manda y va el primero', coachHecho[0].valor === '#0007');
+const coachHecho = tarjetaDeEntrenador({
+  createdAt: AHORA - 8 * MES,
+  alumnos: 1,
+  entrenosDirigidos: 1240,
+});
+comprueba('sin número de fundador: esa campaña era de la app de muchos entrenadores', !coachHecho.some((x) => x.valor.startsWith('#')));
 comprueba('un alumno en singular', valorDe(coachHecho, 'Alumno a tu cargo') === '1');
 // En español un número de cuatro cifras va SIN punto (1240) y se agrupa a
 // partir de cinco (12.400). Es la regla de la RAE y la que aplica el idioma
@@ -75,11 +59,18 @@ comprueba('cuatro cifras, sin punto', valorDe(coachHecho, 'Entrenos dirigidos') 
 comprueba(
   'cinco cifras, con punto',
   valorDe(
-    tarjetaDeEntrenador({ alumnos: 3, entrenosDirigidos: 12400 }, AHORA),
+    tarjetaDeEntrenador({ alumnos: 3, entrenosDirigidos: 12400 }),
     'Entrenos dirigidos'
   ) === '12.400'
 );
-comprueba('ocho meses', valorDe(coachHecho, 'En CALICO') === '8 meses');
+comprueba(
+  'el alumno cuenta los meses con Luis',
+  valorDe(tarjetaDeAtleta({ createdAt: AHORA - 8 * MES, entrenos: 3, racha: 0 }, AHORA), 'Con Luis Tena') === '8 meses'
+);
+comprueba(
+  'y menos de un mes no sale',
+  valorDe(tarjetaDeAtleta({ createdAt: AHORA - 10 * DIA, entrenos: 3, racha: 0 }, AHORA), 'Con Luis Tena') === undefined
+);
 
 console.log('\nAtleta y alumno');
 const novato = tarjetaDeAtleta(
@@ -135,37 +126,10 @@ comprueba(
 );
 comprueba('sin fecha, no hay texto', textoDesde(undefined) === undefined);
 
-console.log('\nCon el número ya impreso en la tarjeta');
-const sinFund = tarjetaDeEntrenador(
-  { founderNumber: 7, createdAt: AHORA - 8 * MES, alumnos: 4, entrenosDirigidos: 300 },
-  AHORA,
-  { conFundador: false }
-);
-comprueba(
-  'el número sale de la rotación: ya está impreso, no compite',
-  !sinFund.some((x) => x.valor.startsWith('#')),
-  etiquetas(sinFund)
-);
-comprueba('pero el resto de cifras siguen', sinFund.length === 3, etiquetas(sinFund));
-const atletaSinFund = tarjetaDeAtleta(
-  { founderNumber: 43, createdAt: AHORA - 5 * MES, entrenos: 40, racha: 5 },
-  AHORA,
-  { conFundador: false }
-);
-comprueba(
-  'igual en el atleta',
-  !atletaSinFund.some((x) => x.valor.startsWith('#')),
-  etiquetas(atletaSinFund)
-);
-comprueba(
-  'y por defecto sigue saliendo, como antes',
-  tarjetaDeEntrenador({ founderNumber: 7, alumnos: 1, entrenosDirigidos: 0 }, AHORA)[0].valor === '#0007'
-);
-
 console.log('\nNunca se queda vacía');
 comprueba(
   'entrenador sin nada, una cifra',
-  tarjetaDeEntrenador({ alumnos: 0, entrenosDirigidos: 0 }, AHORA).length >= 1
+  tarjetaDeEntrenador({ alumnos: 0, entrenosDirigidos: 0 }).length >= 1
 );
 comprueba(
   'atleta sin nada, una cifra',

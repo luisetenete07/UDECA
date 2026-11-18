@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "CALICO — Calisthenics Coaches",
-  "short_name": "CALICO",
-  "description": "Plataforma de coaching de calistenia by Luis Tena.",
+  "name": "Maestría en Calistenia",
+  "short_name": "MASTERY",
+  "description": "La app de entrenamiento de calistenia de Luis Tena para sus alumnos.",
   "lang": "es",
   "start_url": ".",
   "scope": ".",

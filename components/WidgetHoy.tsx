@@ -42,9 +42,9 @@ export function WidgetHoy({ datos, ahora }: { datos: DatosDelWidget | null; ahor
       }}
     >
       <FlexWidget style={{ flexDirection: 'column', width: 'match_parent' }}>
-        <TextWidget text="CALICO · HOY" style={{ fontSize: 11, color: AZUL, letterSpacing: 0.12, fontWeight: '600' }} />
+        <TextWidget text="MASTERY · HOY" style={{ fontSize: 11, color: AZUL, letterSpacing: 0.12, fontWeight: '600' }} />
         <TextWidget
-          text={vigente ? vigente.titulo : 'Abre CALICO'}
+          text={vigente ? vigente.titulo : 'Abre MASTERY'}
           maxLines={1}
           truncate="END"
           style={{ fontSize: 19, color: TEXTO, fontWeight: '700', marginTop: 4 }}

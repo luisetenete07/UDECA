@@ -31,8 +31,18 @@ service cloud.firestore {
       allow read: if request.auth != null
         && (resource.data.clientId == request.auth.uid
           || resource.data.trainerId == request.auth.uid);
+      //
+      // Con la app de un solo entrenador, la solicitud solo puede ir a él: al
+      // que esté apuntado en config/coach (lib/coachUnico.ts). Mientras no lo
+      // esté, vale cualquiera, que es lo que necesitan las versiones de la app
+      // que todavía piden el código.
       allow create: if request.auth != null
-        && request.resource.data.clientId == request.auth.uid;
+        && request.resource.data.clientId == request.auth.uid
+        && (
+          !exists(/databases/$(database)/documents/config/coach)
+          || request.resource.data.trainerId
+               == get(/databases/$(database)/documents/config/coach).data.trainerId
+        );
       allow delete: if request.auth != null
         && (resource.data.clientId == request.auth.uid
           || resource.data.trainerId == request.auth.uid);
@@ -50,47 +60,6 @@ service cloud.firestore {
             'luistenaf@gmail.com'
           ];
       }
-      /**
-       * ¿Le caben más alumnos al entrenador que llama?
-       *
-       * Se apoya en `clientCount`, que solo puede escribir el servidor (ver la
-       * regla de update de abajo): por eso es un dato de confianza y sirve para
-       * imponer aquí el límite del plan gratuito. Si lo escribiera el propio
-       * coach, bastaría con ponerlo a cero para tener alumnos infinitos gratis.
-       *
-       * El 5 de abajo es FREE_CLIENT_LIMIT (los alumnos que incluye el primer
-       * año del entrenador). Vive en tres sitios que no pueden importarse
-       * entre sí: lib/subscription.ts (app), payments-webhook/api/join.js
-       * (servidor) y aquí. Si lo cambias, cámbialo en los tres.
-       *
-       * `clientSlots` lo escribe SOLO el servidor y baja ese tope a cero cuando
-       * se pagó con una tarjeta que ya había gastado sus plazas en otra cuenta
-       * de entrenador.
-       *
-       * TENER ACCESO NO ES NO TENER TOPE. Con el modelo del primer año, el
-       * entrenador paga al entrar (27 €), así que tiene `subscriptionUntil` en
-       * el futuro desde el primer minuto. Si el tope siguiera atado a eso —como
-       * estaba—, esta regla de respaldo dejaría meter alumnos sin límite a
-       * cualquiera recién dado de alta y el plan sin tope (180 €) no lo pagaría
-       * nadie. Lo que quita el tope es el PLAN ('annual'), que solo escribe el
-       * servidor al cobrar la suscripción.
-       *
-       * Las cuentas anteriores al cambio (createdAt < PRIMER_ANO_DESDE,
-       * 1789084800000 = 2026-09-11) conservan la regla vieja: a ellas se les
-       * vendió que con la suscripción activa no había tope.
-       */
-      function coachWithinPlan() {
-        let coach = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        let activa = !('subscriptionUntil' in coach)
-          || coach.subscriptionUntil > request.time.toMillis();
-        let sinTope = activa
-          && (
-            coach.get('subscriptionPlan', '') == 'annual'
-            || coach.get('createdAt', 0) < 1789084800000
-          );
-        return sinTope
-          || coach.get('clientCount', 0) < coach.get('clientSlots', 5);
-      }
       allow read: if request.auth != null
         && (
           request.auth.uid == userId
@@ -100,35 +69,29 @@ service cloud.firestore {
           || userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.trainerId
           || isCalicoAdmin()
         );
-      // Al crearse, nadie puede regalarse tiempo de suscripción. La excepción
-      // es la PRUEBA GRATUITA del entrenador: 14 días (DIAS_DE_PRUEBA_ENTRENADOR,
-      // en lib/planBase.ts). Aquí se acota para que nadie pida más.
+      // SOLO DOS ROLES, Y NADIE NACE CON ENTRENADOR. Un alumno lo consigue
+      // cuando el coach le acepta.
       //
-      // SOLO DOS ROLES, Y NADIE NACE CON ENTRENADOR. El atleta que se entrenaba
-      // solo ya no existe: era el único que nacía con `trainerId` (el suyo
-      // propio). Un alumno lo consigue cuando su entrenador le acepta.
+      // Y ENTRENADOR SOLO PUEDE SER LUIS. Maestría en Calistenia es de un solo
+      // entrenador: una cuenta nueva de entrenador solo se puede crear con uno
+      // de sus correos, verificado. Cualquier otra nace alumno. Sin esta línea,
+      // una versión vieja de la app —o una llamada a mano— podría seguir dando
+      // de alta entrenadores que ya no existen.
       //
-      // LOS DOS DÍAS DE MÁS NO SON UN DESCUIDO. El fin de la prueba lo calcula
-      // la app con el reloj DEL MÓVIL y lo comprueba esta regla con el reloj
-      // DEL SERVIDOR. Ajustando el tope a los 28 días exactos, a un móvil un
-      // segundo adelantado —que es la mitad de los móviles— le sale un valor
-      // MAYOR que el tope y Firestore le rechaza la escritura: el usuario ve
-      // "missing or insufficient permissions" al crearse la cuenta y no puede
-      // entrar. Pasaba de verdad. El margen absorbe cualquier desajuste real
-      // de reloj y lo único que concede en el peor de los casos es un par de
-      // días de prueba a quien tenga la hora mal puesta a propósito.
+      // Nadie nace con tiempo de suscripción: la app ya no cobra, y ese campo
+      // solo lo dejaban escribir las pruebas gratuitas de los entrenadores.
       allow create: if request.auth != null && request.auth.uid == userId
         && request.resource.data.role in ['trainer', 'client']
         && !('trainerId' in request.resource.data)
+        && !('subscriptionUntil' in request.resource.data)
         && (
-          // Los alumnos entran gratis: no llevan suscripción.
           request.resource.data.role == 'client'
-          || !('subscriptionUntil' in request.resource.data)
-          || request.resource.data.subscriptionUntil <= request.time.toMillis()
           || (
-            request.resource.data.role == 'trainer'
-            && request.resource.data.subscriptionUntil
-                 <= request.time.toMillis() + (14 + 2) * 24 * 60 * 60 * 1000
+            request.auth.token.email_verified == true
+            && request.auth.token.email in [
+              'luisetenete07@gmail.com',
+              'luistenaf@gmail.com'
+            ]
           )
         );
       // El propio usuario edita su perfil (sin tocar su suscripción); el
@@ -224,16 +187,12 @@ service cloud.firestore {
           // Aprobar solicitud: el entrenador se vincula a un alumno que le ha
           // enviado una solicitud (existe joinRequests/{clientId}_{coach}).
           //
-          // Se mantiene como RESPALDO de las versiones ya publicadas de la app:
-          // la actual aprueba por el servidor (payments-webhook/api/join), que
-          // cuenta los alumnos con permisos de administrador. Aquí se impone el
-          // mismo límite apoyándose en `clientCount`, que solo escribe el
-          // servidor, para que este camino no sirva de puerta trasera.
+          // Es el camino de la app actual. Sin tope de alumnos: la app es de un
+          // solo entrenador y no tiene planes que limitar.
           request.resource.data.trainerId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerId'])
           && exists(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid))
           && get(/databases/$(database)/documents/joinRequests/$(userId + '_' + request.auth.uid)).data.clientId == userId
-          && coachWithinPlan()
         )
       );
       // El propio usuario puede borrar su cuenta (su documento de perfil);
@@ -948,6 +907,30 @@ service cloud.firestore {
     match /config/version {
       allow read: if true;
       allow write: if false;
+    }
+
+    /**
+     * Quién es EL coach de la app (lib/coachUnico.ts): a quién le llega la
+     * solicitud de un alumno nuevo sin que tenga que escribir un código.
+     *
+     * Lo lee cualquiera con sesión, porque el alumno lo necesita antes de estar
+     * en ningún grupo. Lo escribe solo una cuenta de ENTRENADOR con uno de los
+     * correos de Luis, verificado, y solo apuntándose a sí misma: si cualquiera
+     * pudiera escribirlo, podría desviar hacia su cuenta las solicitudes de
+     * todos los alumnos nuevos.
+     */
+    match /config/coach {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'luisetenete07@gmail.com',
+          'luistenaf@gmail.com'
+        ]
+        && request.resource.data.keys().hasOnly(['trainerId', 'updatedAt'])
+        && request.resource.data.trainerId == request.auth.uid
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'trainer';
+      allow delete: if false;
     }
 
     match /config/{docId} {

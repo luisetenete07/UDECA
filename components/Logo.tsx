@@ -1,63 +1,31 @@
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
-import { useAuth } from '../lib/auth-context';
-import { MARCA_POR_DEFECTO } from '../lib/marcaPropia';
-import { Emblema, Logotipo } from './MarcaCalico';
+import { FIRMA, MARCA, MARCA_ABAJO, MARCA_ARRIBA } from '../lib/marca';
 import { colors, fonts, spacing } from '../lib/theme';
 
 /**
- * El logo. Con la marca de quien mira, cuando hay alguien mirando.
+ * El nombre de la app como rótulo: "MAESTRÍA" grande y "EN CALISTENIA" debajo.
  *
- * `sinSesion` lo usan las pantallas de entrar y registrarse: ahí todavía no se
- * sabe de quién es nadie, así que la marca es la de la app. En el resto —las
- * pantallas de puerta, que salen con la sesión ya abierta— se lee la del
- * entrenador o la del atleta.
+ * Va escrito con la tipografía de la casa mientras no haya un logotipo
+ * dibujado. Partido en dos líneas porque las veintidós letras seguidas, con el
+ * espaciado de un rótulo, no caben en un móvil de 320 px sin bajar tanto el
+ * tamaño que deja de parecer un nombre.
  */
-export function Logo({ compact, sinSesion }: { compact?: boolean; sinSesion?: boolean }) {
-  const { marca, logo } = useAuth();
-  // Con sesión y logo propio, el emblema es el del entrenador.
-  const suyo = !sinSesion && !!logo;
-  const propia = !sinSesion && (marca !== MARCA_POR_DEFECTO || suyo);
+export function Logo({ compact }: { compact?: boolean }) {
   return (
-    <View style={compact ? styles.containerCompact : styles.container}>
-      {/*
-        LA MARCA DE LA CASA: el logotipo de CALICO tal cual, en vector, con su
-        C y sus letras dibujadas. Escrito con una fuente parecida no sería el
-        logo, sería otra cosa que se le parece.
-
-        Con marca propia, lo del entrenador: su logo (o el emblema si no tiene)
-        y su nombre, con un "con CALICO" pequeño debajo — la app es suya, pero
-        quien la mira sabe con qué está hecha.
-      */}
-      {!propia ? (
-        <>
-          <View style={compact ? styles.logotipoCompact : styles.logotipo}>
-            <Logotipo ancho={compact ? 156 : 220} />
-          </View>
-          <Text style={styles.subtitle}>Calisthenics Coaches</Text>
-          {!compact ? <Text style={styles.credit}>by Luis Tena</Text> : null}
-        </>
-      ) : (
-        <>
-          {suyo ? (
-            <Image
-              source={{ uri: logo! }}
-              style={compact ? styles.emblemCompact : styles.emblem}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={compact ? styles.emblemCompact : styles.emblem}>
-              <Emblema alto={compact ? 44 : 60} />
-            </View>
-          )}
-          <Text style={[styles.mark, compact && styles.markCompact]} numberOfLines={1}>
-            {marca}
-          </Text>
-          <View style={styles.rule} />
-          <Text style={styles.credit}>con CALICO</Text>
-        </>
-      )}
+    <View
+      style={compact ? styles.containerCompact : styles.container}
+      accessibilityRole="header"
+      accessibilityLabel={MARCA}
+    >
+      <Text style={[styles.arriba, compact && styles.arribaCompact]} numberOfLines={1}>
+        {MARCA_ARRIBA}
+      </Text>
+      <Text style={[styles.abajo, compact && styles.abajoCompact]} numberOfLines={1}>
+        {MARCA_ABAJO}
+      </Text>
+      {!compact ? <Text style={styles.credit}>{FIRMA}</Text> : null}
     </View>
   );
 }
@@ -71,49 +39,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  emblem: {
-    width: 72,
-    height: 72,
-    marginBottom: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emblemCompact: {
-    width: 52,
-    height: 52,
-    marginBottom: spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logotipo: { marginBottom: spacing.md },
-  logotipoCompact: { marginBottom: spacing.sm },
-  mark: {
-    fontSize: 30,
+  arriba: {
+    fontSize: 34,
     fontFamily: fonts.display,
-    letterSpacing: 3,
+    letterSpacing: 5,
     color: colors.primary,
   },
-  markCompact: {
-    fontSize: 22,
-  },
-  rule: {
-    width: 36,
-    height: 2,
-    backgroundColor: colors.primary,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: 11,
+  arribaCompact: { fontSize: 26, letterSpacing: 4 },
+  abajo: {
+    fontSize: 12,
     fontFamily: fonts.semiBold,
-    letterSpacing: 2,
-    textTransform: 'uppercase',
+    letterSpacing: 4.5,
     color: colors.textMuted,
+    marginTop: 2,
   },
+  abajoCompact: { fontSize: 10, letterSpacing: 3.5 },
   credit: {
     fontSize: 11,
     fontFamily: fonts.body,
     color: colors.textFaint,
-    marginTop: 2,
+    marginTop: spacing.sm,
   },
 });

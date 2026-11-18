@@ -69,7 +69,7 @@ export function Onboarding({
     const base: Slide[] = [
       {
         icon: 'flame',
-        title: name ? frase`Bienvenido a CALICO, ${name.split(' ')[0]}` : t('Bienvenido a CALICO'),
+        title: name ? frase`Bienvenido a Maestría en Calistenia, ${name.split(' ')[0]}` : t('Bienvenido a Maestría en Calistenia'),
         lines: [
           'Tu entrenador te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.',
           'Este es tu campo base. Vamos a verlo en 20 segundos.',
@@ -99,11 +99,11 @@ export function Onboarding({
         lines: isIOSWeb()
           ? [
               'En Safari: toca el botón Compartir (cuadrado con flecha, abajo).',
-              'Elige “Añadir a pantalla de inicio” y confirma. CALICO quedará como una app más.',
+              'Elige “Añadir a pantalla de inicio” y confirma. Quedará como una app más.',
             ]
           : [
               'En Chrome: toca el menú ⋮ (arriba a la derecha).',
-              'Elige “Instalar aplicación” o “Añadir a pantalla de inicio”. CALICO quedará como una app más.',
+              'Elige “Instalar aplicación” o “Añadir a pantalla de inicio”. Quedará como una app más.',
             ],
       });
     }

@@ -3,7 +3,6 @@ import { frase } from '../../lib/idioma';
 import { Link } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BotonApple } from '../../components/BotonApple';
 import { BotonGoogle } from '../../components/BotonGoogle';
@@ -14,7 +13,6 @@ import { useAppleSignIn } from '../../lib/appleAuth';
 import { useGoogleSignIn } from '../../lib/googleAuth';
 import { mensajeDeEntrada } from '../../lib/enlazarCuenta';
 import { trackOnce } from '../../lib/analytics';
-import { FREE_CLIENT_LIMIT } from '../../lib/subscription';
 import { colors, fonts, gradients, spacing, typography } from '../../lib/theme';
 
 /**
@@ -26,25 +24,10 @@ import { colors, fonts, gradients, spacing, typography } from '../../lib/theme';
  * recordarla.
  *
  * Ahora se entra primero y se pregunta después: al volver de Google o de Apple,
- * `app/(auth)/completar.tsx` pide el nombre, el rol y el código si hace falta.
- * Es el mismo trabajo, pero cuando ya se está dentro y no cuesta lo mismo.
- *
- * Los dos tipos de cuenta se cuentan aquí igualmente, sin poder elegirlos: no
- * es un formulario, es saber a qué vienes.
+ * `app/(auth)/completar.tsx` enseña el nombre y crea la cuenta de alumno, que
+ * le manda la solicitud a Luis. No hay rol que elegir: la app tiene un solo
+ * entrenador, y su cuenta ya existe.
  */
-
-const TIPOS: { titulo: string; icono: keyof typeof Ionicons.glyphMap; texto: string }[] = [
-  {
-    titulo: 'Alumno',
-    icono: 'person-outline',
-    texto: 'Entrenas con tu entrenador, que te manda el plan. Necesitas su código.',
-  },
-  {
-    titulo: 'Entrenador',
-    icono: 'people-outline',
-    texto: frase`Tus alumnos, tus cobros y tu negocio. El alta incluye ${FREE_CLIENT_LIMIT} alumnos.`,
-  },
-];
 
 export default function RegisterScreen() {
   const google = useGoogleSignIn();
@@ -76,7 +59,7 @@ export default function RegisterScreen() {
           style={styles.heroGlow}
           pointerEvents="none"
         />
-        <Logo sinSesion />
+        <Logo />
         <Text style={styles.title}>Crea tu cuenta</Text>
         <Text style={styles.subtitle}>En un toque. Sin contraseñas que recordar.</Text>
       </View>
@@ -110,23 +93,16 @@ export default function RegisterScreen() {
         ) : null}
 
         <Text style={styles.legal}>
-          Al crear tu cuenta aceptas los términos y la política de privacidad de CALICO.
+          Al crear tu cuenta aceptas los términos y la política de privacidad de Maestría en
+          Calistenia.
         </Text>
       </Card>
 
-      <Text style={styles.tiposTitulo}>Puedes entrar como</Text>
-      {TIPOS.map((tipo) => (
-        <View key={tipo.titulo} style={styles.tipo}>
-          <View style={styles.tipoIcono}>
-            <Ionicons name={tipo.icono} size={18} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.tipoTitulo}>{tipo.titulo}</Text>
-            <Text style={styles.tipoTexto}>{tipo.texto}</Text>
-          </View>
-        </View>
-      ))}
-      <Text style={styles.tiposPie}>Lo eliges al terminar de entrar.</Text>
+      {/* Qué pasa después, dicho antes: quien crea la cuenta y se encuentra una
+          pantalla de espera sin aviso cree que algo ha fallado. */}
+      <Text style={styles.despues}>
+        Al crear tu cuenta, Luis recibe tu solicitud. Entras en cuanto te acepte.
+      </Text>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
@@ -166,36 +142,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     lineHeight: 18,
   },
-  tiposTitulo: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
-  },
-  tipo: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  tipoIcono: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tipoTitulo: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  tipoTexto: { ...typography.small, color: colors.textMuted, marginTop: 2, lineHeight: 18 },
-  tiposPie: {
+  despues: {
     ...typography.small,
-    color: colors.textFaint,
-    marginTop: spacing.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+    lineHeight: 19,
   },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: spacing.xl },
   footerText: { ...typography.body, color: colors.textMuted },

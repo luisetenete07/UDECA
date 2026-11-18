@@ -27,7 +27,7 @@ export function AvisoDeVersionNueva({
         <View style={styles.icono}>
           <Ionicons name="arrow-up-circle" size={30} color={colors.primary} />
         </View>
-        <Text style={styles.titulo}>Hay una versión nueva de CALICO</Text>
+        <Text style={styles.titulo}>Hay una versión nueva de la app</Text>
         <Text style={styles.texto}>
           Actualiza para tener lo último. Tus datos, tus rutinas y tu progreso
           siguen igual.

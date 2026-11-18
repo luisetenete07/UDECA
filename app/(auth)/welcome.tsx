@@ -8,16 +8,15 @@ import { Button } from '../../components/Button';
 import { Logo } from '../../components/Logo';
 import { markIntroSeen } from '../../lib/intro';
 import { trackOnce } from '../../lib/analytics';
-import { FREE_CLIENT_LIMIT } from '../../lib/subscription';
 import { colors, fonts, gradients, radius, spacing, typography } from '../../lib/theme';
 
 const NATIVE = Platform.OS !== 'web';
 
 /**
- * Presentación de la esencia de CALICO para quien abre la app por primera vez y
- * todavía no tiene cuenta. Son tres ideas, no un manual: qué entrenamos, cómo
- * lo entrenamos y con quién. Termina invitando a entrar con la prueba gratuita
- * por delante, para que la primera pantalla nunca sea un muro de pago.
+ * Presentación de Maestría en Calistenia para quien abre la app por primera vez
+ * y todavía no tiene cuenta. Son tres ideas, no un manual: qué entrenamos, cómo
+ * lo entrenamos y con quién. Termina invitando a pedir plaza: la app es de un
+ * solo entrenador y se entra cuando él acepta.
  */
 
 interface Slide {
@@ -39,8 +38,8 @@ const SLIDES: Slide[] = [
   },
   {
     icon: 'people-outline',
-    title: 'Con tu entrenador',
-    body: 'Entrena con tu entrenador y tu grupo: te manda el plan y lo sigues desde el móvil.',
+    title: 'Con Luis Tena',
+    body: 'Te prepara el plan, lo sigues desde el móvil y ve cómo avanzas. Creas tu cuenta y te acepta en el grupo.',
   },
 ];
 
@@ -87,8 +86,8 @@ export default function WelcomeScreen() {
     <View style={styles.root}>
       <LinearGradient colors={gradients.halo} style={styles.halo} pointerEvents="none" />
 
-      {/* Salida directa, visible desde la primera diapositiva. Quien llega con
-          el código de su entrenador ya viene convertido y solo quiere entrar. */}
+      {/* Salida directa, visible desde la primera diapositiva. Quien llega
+          porque Luis le ha dicho que se descargue la app solo quiere entrar. */}
       <Pressable onPress={() => go('/(auth)/register')} hitSlop={10} style={styles.skip}>
         <Text style={styles.skipText}>Saltar</Text>
       </Pressable>
@@ -104,7 +103,7 @@ export default function WelcomeScreen() {
           },
         ]}
       >
-        <Logo sinSesion />
+        <Logo />
       </Animated.View>
 
       <ScrollView
@@ -174,11 +173,8 @@ export default function WelcomeScreen() {
 
       <View style={styles.footer}>
         <Button title={isLast ? 'Empezar' : 'Siguiente'} onPress={next} />
-        {/* Sin precios (ver lib/subscription.ts): lo que aquí importa es que
-            hay una forma de entrar para cada uno, no lo que cuesta. */}
         <Text style={styles.trialNote}>
-          Con tu entrenador o por tu cuenta, con un año entero por delante. Y si
-          entrenas a otros, empiezas con {FREE_CLIENT_LIMIT} alumnos.
+          Es privada: creas tu cuenta y entras cuando Luis te acepta.
         </Text>
         <Pressable onPress={() => go('/(auth)/login')} hitSlop={8} style={styles.loginLink}>
           <Text style={styles.loginText}>Ya tengo cuenta</Text>

@@ -18,7 +18,6 @@ import { ScreenHeader } from '../../../components/ScreenHeader';
 import { TextField } from '../../../components/TextField';
 import { showToast } from '../../../components/Toast';
 import { useAuth } from '../../../lib/auth-context';
-import { syncClientCountOnServer } from '../../../lib/join';
 import {
   getClientsForTrainer,
   setCoachingHasta,
@@ -187,10 +186,6 @@ export default function ClientsScreen() {
         (data) => {
           setClients(data);
           setCached(cacheKey, data);
-          // El recuento que decide el acceso lo escribe el SERVIDOR, no la
-          // app: aquí solo se le pide que lo recalcule cuando el número visible
-          // no cuadra con el guardado (p. ej. tras quitar a alguien del grupo).
-          if (data.length !== profile.clientCount) void syncClientCountOnServer();
         },
         // Si la escucha se cae (permisos, red), hay que enterarse: en silencio
         // parecería que "no llegan alumnos nuevos" sin motivo aparente.

@@ -1,24 +1,17 @@
 /*
- * Las condiciones de contratación.
+ * Las condiciones de uso (web/condiciones.html).
  *
- * NO ES UNA PÁGINA MÁS. Es la URL que se le da a Stripe como condiciones de
- * servicio, y sin ella la casilla "exigir que los clientes acepten las
- * condiciones" sale en gris y no se puede activar. Esa casilla es la que deja
- * constancia de que alguien las aceptó al pagar.
- *
- * Y dentro está el apartado que permite empezar a prestar el servicio de
- * inmediato en vez de quedar catorce días a merced de una devolución. Para que
- * eso valga no basta con escribirlo: la ley pide que el consumidor lo pida
- * expresamente y reconozca que pierde el derecho. Si ese párrafo desaparece un
- * día en una reescritura, nadie se entera hasta la primera reclamación.
+ * Antes eran las de contratación de CALICO, la suscripción que pagaban los
+ * entrenadores, con sus precios, su renovación y su derecho de desistimiento.
+ * Maestría en Calistenia no cobra nada, así que eso se fue: lo que se protege
+ * ahora es que la página siga existiendo (la piden las tiendas y la cuenta de
+ * Stripe de Luis), que no vuelva a anunciar un precio que ya no existe y que
+ * siga dejando claro que el entrenamiento personal tiene sus propias
+ * condiciones.
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-condiciones.mjs
  */
 import { readFileSync } from 'node:fs';
-import {
-  ANNUAL_PRICE_EUR,
-  COACH_FIRST_YEAR_EUR,
-} from '../lib/precios.ts';
 
 let fallos = 0;
 const ok = (n, c, porQue = '') => {
@@ -35,59 +28,27 @@ console.log('\nExiste y se puede llegar a ella');
 {
   ok('la página está', doc.length > 1000);
   ok('se enlaza desde el pie', /href="\/condiciones"/.test(inicio));
-  // Y desde donde se decide pagar, que es donde la ley la quiere y donde de
-  // verdad la mira alguien.
-  const tarjetas = [...inicio.matchAll(/<article class="plan[^"]*"[\s\S]*?<\/article>/g)].map((m) => m[0]);
-  ok('y desde la tarjeta del plan', tarjetas.length === 1 && tarjetas.every((t) => t.includes('/condiciones')));
   // Autocontenida, por lo mismo que privacidad.html: la abren revisores que
   // piden el HTML y no ejecutan nada.
   ok('sin depender de ningún fichero externo', !/<link[^>]+stylesheet|<script/i.test(doc));
 }
 
-console.log('\nEl derecho de desistimiento, dicho como hay que decirlo');
+console.log('\nEs de la app de un solo entrenador, y gratis');
 {
-  // Las tres piezas. Con dos no vale: la renuncia solo se sostiene si el
-  // consumidor PIDE el inicio inmediato y RECONOCE que por eso lo pierde.
-  ok('menciona los 14 días', /14 días naturales/.test(visible));
-  ok('pide el inicio inmediato', /solicitas expresamente que el servicio comience de inmediato/i.test(visible));
-  ok(
-    'y dice que por eso se pierde el derecho',
-    /pierdes el derecho de desistimiento/i.test(visible)
-  );
-  // La salida para quien NO quiera renunciar. Sin ella la renuncia deja de ser
-  // una elección, y una renuncia que no se puede rechazar no es una renuncia.
-  ok('deja salida a quien prefiera conservarlo', /no aceptes el inicio inmediato/i.test(visible));
-  ok('y aclara que al profesional no le aplica', /profesional o empresa/i.test(visible));
-}
-
-console.log('\nLo que se cobra es lo que dice lib/precios.ts');
-{
-  for (const [que, n] of [
-    ['la cuota del entrenador', ANNUAL_PRICE_EUR],
-    ['el primer año del entrenador', COACH_FIRST_YEAR_EUR],
-  ]) {
-    ok(`${que} (${n} €)`, visible.includes(`${n} €`), 'no está escrito en las condiciones');
-  }
-  // Lo que más reclamaciones genera si no está dicho antes de cobrar.
-  ok('avisa de que se renueva sola', /se renueva autom/i.test(visible));
-  ok('y de que no se devuelve lo no consumido', /no se devuelve la parte del periodo no consumido/i.test(visible));
-  ok('y de que cancelar no borra nada', /cancelar no borra nada/i.test(visible));
+  ok('con el nombre de la app', /Maestría en Calistenia/.test(visible));
+  ok('y sin rastro de CALICO', !/CALICO/.test(visible));
+  ok('dice que es gratis', /La app es gratis/.test(visible));
+  ok('sin un solo precio', !/\d\s*€/.test(visible), 'una cifra en euros anunciaría algo que ya no se vende');
+  ok('y sin suscripción que renovar', !/se renueva autom/i.test(visible));
+  ok('explica que se entra cuando Luis acepta', /solo entra quien Luis acepta/i.test(visible));
 }
 
 console.log('\nY deja claro que NO cubre el entrenamiento personal');
 {
-  /*
-   * La URL de condiciones es de la CUENTA de Stripe, no del enlace de pago, y
-   * bajo la misma entidad se cobran dos cosas: la suscripción a CALICO y el
-   * entrenamiento personal del entrenador. Los dos checkouts van a enseñar
-   * este documento.
-   *
-   * El entrenamiento tiene sus propias condiciones, así que aquí no se
-   * escriben: lo único que hace falta es que quien lo contrate y acabe leyendo
-   * esta página sepa que no es la suya. Una línea, y evita que alguien crea
-   * que su seguimiento se rige por las reglas de una app.
-   */
-  ok('acota el documento a la suscripción', /y solo\s+eso/i.test(visible));
+  // La URL de condiciones es de la CUENTA de Stripe de Luis, y con ella se
+  // cobra su entrenamiento personal. Ese tiene sus propias condiciones: aquí
+  // basta con que quien llegue desde un cobro sepa que esta no es la suya.
+  ok('acota el documento a la app', /y\s+solo\s+eso/i.test(visible));
   ok(
     'y remite el entrenamiento a sus propias condiciones',
     /sus propias\s+condiciones/i.test(visible) && /no se les aplica/i.test(visible)
@@ -111,10 +72,7 @@ console.log('\nY no sale a la calle a medio rellenar');
    */
   const aMedias = /PENDIENTE/.test(visible);
   if (aMedias) {
-    console.log('  ⚠ FALTA por rellenar: titular, NIF y domicilio (apartado 1)');
-    console.log('    Hasta entonces, NO le des esta URL a Stripe como condiciones');
-    console.log('    de servicio: publicar unas condiciones sin identificar a quién');
-    console.log('    cobra es peor que no tenerlas.');
+    console.log('  ⚠ FALTA por rellenar: NIF y domicilio del titular (apartado 1)');
   } else {
     ok('los datos del titular están rellenos', true);
     // Y una vez puestos, que no vuelvan a irse.

@@ -1,3 +1,10 @@
+> **Ya no se cobra nada (noviembre de 2026).** La app pasó a ser Maestría en
+> Calistenia, de un solo entrenador: no hay alta, ni plan, ni muro de pago, ni
+> enlaces a Stripe en la app ni en la web. Lo que sigue es la historia de cómo
+> se cobraba en CALICO, por si hace falta entender un dato antiguo de una
+> cuenta. El servidor de cobros (`payments-webhook/`) sigue desplegado en
+> Vercel, pero ya no lo llama nada.
+
 # Cómo se cobra en CALICO
 
 Un solo documento con las tres cosas que se cobran, quién las paga y —lo que

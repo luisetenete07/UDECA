@@ -3,24 +3,17 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Condiciones de contratación · CALICO</title>
-<meta name="description" content="Qué se contrata al suscribirse a CALICO: precios, renovación, cancelación y derecho de desistimiento." />
+<title>Condiciones de uso · Maestría en Calistenia</title>
+<meta name="description" content="Condiciones de uso de Maestría en Calistenia, la app de entrenamiento de Luis Tena para sus alumnos." />
 <!--
   ESTA PÁGINA NO DEPENDE DE NADA, igual que privacidad.html y por lo mismo: la
   abren revisores automáticos que piden el HTML y no ejecutan JavaScript. Todo
   va dentro y no hay ni una petición al exterior.
 
-  Y ADEMÁS ES LA URL DE CONDICIONES QUE SE LE DA A STRIPE.
-
-  Sin ella, la casilla "Exigir que los clientes acepten las condiciones de
-  servicio" sale en gris y no se puede activar. Esa casilla es la que deja
-  constancia de que alguien aceptó estas condiciones al pagar — y dentro de
-  estas condiciones está el apartado 6, que es el que permite empezar a prestar
-  el servicio de inmediato sin quedar catorce días a merced de una devolución.
-
-  Los precios de aquí tienen que ser los de lib/precios.ts. Lo vigila
-  scripts/check-condiciones.mjs, que también se queja si queda algún dato del
-  titular sin rellenar.
+  Antes eran las condiciones de contratación de CALICO, la suscripción que
+  pagaban los entrenadores. Con la app de un solo entrenador ya no se contrata
+  nada aquí: son las condiciones de USO de la app, que es gratis para los
+  alumnos de Luis. Lo vigila scripts/check-condiciones.mjs.
 -->
 <style>
   :root {
@@ -79,121 +72,75 @@
 <body>
 
 <header>
-  <div class="wrap"><a class="brand" href="https://www.udeca.app">CALICO</a></div>
+  <div class="wrap"><a class="brand" href="https://www.udeca.app">MAESTRÍA EN CALISTENIA</a></div>
 </header>
 
 <main>
   <div class="wrap">
     <p class="eyebrow">Legal</p>
-    <h1>Condiciones de contratación</h1>
-    <p class="fecha">Última actualización: septiembre de 2026</p>
-
+    <h1>Condiciones de uso</h1>
+    <p class="fecha">Última actualización: noviembre de 2026</p>
     <p>
-      Estas condiciones regulan <b>la suscripción a CALICO</b> (Calisthenics Coaches), y solo
-      eso. Al suscribirte las aceptas. Están escritas para leerse: si algo no se entiende,
-      escríbenos a <b>luistenaf@gmail.com</b> antes de pagar.
+      Estas condiciones regulan el uso de la app Maestría en Calistenia (MASTERY en el móvil), y
+      solo eso. Al crear tu cuenta las aceptas. Están escritas para leerse: si algo no se
+      entiende, escribe a <b>luistenaf@gmail.com</b>.
     </p>
     <p>
-      Los servicios de entrenamiento personal que presta el mismo titular se rigen por sus propias
-      condiciones, que se entregan al contratarlos. Este documento no se les aplica.
-    </p>
-
-    <h2>1. Quién presta el servicio</h2>
-    <p>
-      <!-- RELLENAR ANTES DE PUBLICAR. Nombre o razón social, NIF y domicilio
-           fiscal. No los invento: son datos legales y tienen que ser los tuyos
-           de verdad. La LSSI obliga a identificar al prestador, y Stripe pide
-           esta URL como condiciones de servicio.
-           check-condiciones.mjs falla mientras esto siga sin rellenar. -->
-      PENDIENTE: titular, NIF y domicilio.
-      Correo de contacto: <b>luistenaf@gmail.com</b>.
+      Los servicios de entrenamiento personal de Luis Tena se rigen por sus propias condiciones,
+      que se entregan al contratarlos. Este documento no se les aplica.
     </p>
 
-    <h2>2. Qué se contrata</h2>
+    <h2>1. Quién está detrás</h2>
     <p>
-      El acceso a la plataforma CALICO (aplicación móvil y web) durante el periodo contratado, con
-      todas sus funciones. No hay funciones reservadas a un plan superior ni límite de alumnos
-      para las cuentas de entrenador.
+      La app es de Luis Tena, entrenador de calistenia.
+      <!-- RELLENAR. NIF y domicilio: son datos legales y tienen que ser los
+           tuyos de verdad; la LSSI obliga a identificar al titular.
+           check-condiciones.mjs avisa mientras esto siga sin rellenar. -->
+      PENDIENTE: NIF y domicilio.
+    </p>
+    <p>Correo de contacto: <b>luistenaf@gmail.com</b>.</p>
+
+    <h2>2. Qué es la app</h2>
+    <p>
+      La herramienta con la que Luis lleva a sus alumnos: el plan de entrenamiento, el registro
+      de lo que haces, tu progreso, la nutrición y los cursos. Funciona en el móvil y en el
+      navegador, con la misma cuenta.
     </p>
 
-    <h2>3. Precios</h2>
-    <ul>
-      <li><b>Entrenador:</b> 240 € al año. El primer año, 120 €.</li>
-      <li><b>Alumnos de un entrenador:</b> gratis. No pagan nada a CALICO.</li>
-    </ul>
+    <h2>3. Precio</h2>
     <p>
-      Los precios incluyen los impuestos aplicables. El descuento del primer año se aplica una
-      sola vez, en la primera factura.
+      La app es gratis. No hay compras dentro de ella ni se cobra nada desde ella ni desde esta
+      web. Lo que pagas por el entrenamiento personal es entre Luis y tú, y no pasa por la app.
     </p>
 
-    <h2>4. Renovación</h2>
+    <h2>4. Quién puede entrar</h2>
     <p>
-      La suscripción <b>se renueva automáticamente</b> cada año al precio ordinario indicado en el
-      apartado 3, salvo que la canceles antes. Te avisamos por correo antes de cada renovación.
+      La app es privada. Cualquiera puede crear una cuenta, pero solo entra quien Luis acepta en
+      su grupo. Luis puede dejar de dar acceso a una cuenta, por ejemplo cuando termina el
+      periodo de entrenamiento acordado; en ese caso la app queda en pausa y tus datos se
+      conservan.
     </p>
 
-    <h2>5. Cancelación</h2>
+    <h2>5. Tu cuenta y tus datos</h2>
     <p>
-      Puedes cancelar cuando quieras desde tu cuenta, sin dar explicaciones y sin penalización. Al
-      cancelar conservas el acceso hasta el final del periodo que ya has pagado, y a partir de ahí
-      no se te cobra nada más. <b>No se devuelve la parte del periodo no consumido.</b>
-    </p>
-    <p>
-      Cancelar no borra nada: tus rutinas, tus marcas, tu historial y —si eres entrenador— tus
-      alumnos siguen en la cuenta. Si vuelves, están donde los dejaste.
+      La cuenta es personal. Lo que registras (entrenos, marcas, fotos, medidas) es tuyo y solo se
+      trata para prestarte el servicio, como se explica en la
+      <a href="/privacidad">política de privacidad</a>. Puedes borrar tu cuenta cuando quieras
+      desde la app o desde <a href="/eliminar-cuenta">esta página</a>.
     </p>
 
-    <h2>6. Derecho de desistimiento</h2>
+    <h2>6. Los contenidos</h2>
     <p>
-      Si contratas como consumidor, la ley te da <b>14 días naturales</b> para desistir del
-      contrato sin dar explicaciones.
-    </p>
-    <p>
-      Ahora bien: CALICO es un servicio digital que empieza a prestarse en el momento en que se
-      activa tu cuenta, que es inmediatamente después del pago. Por eso, al suscribirte
-      <b>solicitas expresamente que el servicio comience de inmediato</b> y
-      <b>reconoces que, una vez ejecutado por completo, pierdes el derecho de desistimiento</b>.
-      Así lo prevé el artículo 103.m) del texto refundido de la Ley General para la Defensa de los
-      Consumidores y Usuarios.
-    </p>
-    <p>
-      Si prefieres conservar tus 14 días, no aceptes el inicio inmediato: escríbenos antes de
-      pagar a <b>luistenaf@gmail.com</b> y lo activamos al terminar el plazo.
-    </p>
-    <p>
-      Este apartado no se aplica si contratas como profesional o empresa: en ese caso no existe
-      derecho de desistimiento.
+      Las rutinas, los vídeos y los cursos son de Luis Tena. Son para tu uso personal: no se
+      pueden copiar, grabar ni compartir fuera de la app.
     </p>
 
-    <h2>7. Impagos</h2>
+    <h2>7. Cambios</h2>
     <p>
-      Si un cobro de renovación no se puede completar, lo reintentamos y te avisamos. Si aun así
-      no entra, la cuenta deja de estar activa. Los datos no se borran por un impago.
+      Si cambiamos estas condiciones, publicaremos aquí la versión nueva con su fecha.
     </p>
 
-    <h2>8. Uso del servicio</h2>
-    <p>
-      La cuenta es personal. Un entrenador no puede compartir su cuenta con otros entrenadores:
-      cada uno necesita la suya. El contenido que subes (rutinas, fotos, cursos) sigue siendo
-      tuyo; solo lo tratamos para prestarte el servicio, como se explica en la
-      <a href="/privacidad">política de privacidad</a>.
-    </p>
-
-    <h2>9. Entrenadores y alumnos</h2>
-    <p>
-      CALICO es la herramienta, no la parte. La relación entre un entrenador y sus alumnos —lo que
-      cobra, cómo lo cobra y qué les entrega— es entre ellos. El dinero de esa relación no pasa
-      por CALICO: cada entrenador cobra a sus alumnos con sus propios medios.
-    </p>
-
-    <h2>10. Cambios</h2>
-    <p>
-      Si cambiamos estas condiciones o los precios, te avisamos con antelación suficiente y el
-      cambio solo te afecta en la siguiente renovación, nunca en el periodo que ya has pagado.
-      Si no te conviene, cancelas.
-    </p>
-
-    <h2>11. Ley aplicable</h2>
+    <h2>8. Ley aplicable</h2>
     <p>
       Se aplica la legislación española. Si eres consumidor, puedes acudir a los tribunales de tu
       domicilio y a la plataforma europea de resolución de litigios en línea.
@@ -204,7 +151,7 @@
 <footer>
   <div class="wrap">
     <p>
-      © 2026 CALICO · Calisthenics Coaches ·
+      © 2026 Maestría en Calistenia · Luis Tena ·
       <a href="/eliminar-cuenta">Eliminar tu cuenta</a>
     </p>
   </div>

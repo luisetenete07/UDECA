@@ -1,0 +1,149 @@
+/*
+ * Maestría en Calistenia es de UN entrenador. Que siga siéndolo.
+ *
+ * La app fue CALICO: una plataforma para muchos entrenadores, cada uno con su
+ * alta, su plan, su marca y su código de invitación. Todo eso se quitó cuando
+ * pasó a ser la app de Luis Tena para sus alumnos. Lo que se protege aquí es
+ * que no vuelva a colarse por una puerta de atrás:
+ *
+ *  1. Nadie se registra como entrenador desde la app, y las reglas no dejan
+ *     crear uno que no sea con los correos de Luis.
+ *  2. El alumno no necesita código: la solicitud va a quien esté apuntado como
+ *     el coach (config/coach), y solo Luis puede apuntarse.
+ *  3. No queda nada que cobre: ni muros de pago, ni enlaces a Stripe, ni
+ *     precios.
+ *  4. El nombre es el nuevo, en la app, en el móvil y en la web.
+ *
+ *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-un-solo-coach.mjs
+ */
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { MARCA, MARCA_CORTA } from '../lib/marca.ts';
+import { ADMIN_EMAILS, isAdmin } from '../lib/planBase.ts';
+
+let fallos = 0;
+const ok = (desc, bien, extra = '') => {
+  console.log(`  ${bien ? '✔' : '✖'} ${desc}${bien || !extra ? '' : ` — ${extra}`}`);
+  if (!bien) fallos++;
+};
+const lee = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+const hay = (f) => existsSync(new URL(`../${f}`, import.meta.url));
+/** Sin comentarios: lo que se comprueba es lo que corre, no lo que se cuenta. */
+const sinComentarios = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+console.log('\n1 · Alta solo de alumnos');
+{
+  const auth = sinComentarios(lee('lib/auth-context.tsx'));
+  ok('el contexto ya no sabe registrar entrenadores', !/registerTrainer/.test(auth));
+  ok("crear la cuenta siempre crea un alumno", /role: 'client'/.test(auth) && !/role: 'trainer'/.test(auth));
+  ok('y manda la solicitud al coach en el mismo paso', /pedirEntrada\(nuevo\)/.test(auth));
+
+  const completar = sinComentarios(lee('app/(auth)/completar.tsx'));
+  ok('completar la cuenta no pregunta el rol', !/Entrenador/.test(completar) && !/setRole/.test(completar));
+  ok('ni pide código', !/codigo/i.test(completar));
+
+  const registro = sinComentarios(lee('app/(auth)/register.tsx'));
+  ok('el registro no ofrece ser entrenador', !/'Entrenador'/.test(registro));
+
+  const reglas = lee('firestore.rules');
+  const crear = reglas.slice(reglas.indexOf('match /users/{userId}'), reglas.indexOf('allow update', reglas.indexOf('match /users/{userId}')));
+  ok(
+    'las reglas solo dejan crear entrenadores con los correos de Luis',
+    /request\.resource\.data\.role == 'client'\s*\|\|\s*\(\s*request\.auth\.token\.email_verified == true\s*&& request\.auth\.token\.email in \[/.test(crear)
+  );
+  for (const correo of ADMIN_EMAILS) {
+    ok(`y ${correo} está en esa lista`, crear.includes(`'${correo}'`), 'la lista de las reglas y la de lib/planBase.ts se han separado');
+  }
+  ok('y nadie nace con suscripción', /!\('subscriptionUntil' in request\.resource\.data\)/.test(crear));
+  ok('aceptar a un alumno ya no mira plazas', !/coachWithinPlan/.test(reglas));
+}
+
+console.log('\n2 · La solicitud llega a Luis sin código');
+{
+  const coach = lee('lib/coachUnico.ts');
+  ok('hay un sitio que dice quién es el coach', /doc\(db, 'config', 'coach'\)/.test(coach));
+  ok('solo se apunta una cuenta de entrenador con correo de Luis', /profile\.role !== 'trainer' \|\| !isAdmin\(profile\)/.test(coach));
+  ok('y solo si falta: abrir la app no es una escritura', /if \(snap\.exists\(\) && snap\.data\(\)\.trainerId\) return;/.test(coach));
+
+  const layout = lee('app/(trainer)/_layout.tsx');
+  ok('la cuenta de Luis se apunta al abrir su panel', /fijarCoach\(profile\)/.test(layout));
+
+  const reglas = lee('firestore.rules');
+  const bloque = reglas.slice(reglas.indexOf('match /config/coach'), reglas.indexOf('match /config/{docId}'));
+  ok('las reglas dejan leer quién es el coach con sesión', /allow read: if request\.auth != null;/.test(bloque));
+  ok('pero escribirlo solo a Luis, verificado', /email_verified == true/.test(bloque) && ADMIN_EMAILS.every((c) => bloque.includes(`'${c}'`)));
+  ok('apuntándose a sí mismo y siendo entrenador', /trainerId == request\.auth\.uid/.test(bloque) && /\.data\.role == 'trainer'/.test(bloque));
+  ok('y no se puede borrar desde la app', /allow delete: if false;/.test(bloque));
+
+  const solicitudes = reglas.slice(reglas.indexOf('match /joinRequests/{reqId}'), reglas.indexOf('match /users/{userId}'));
+  ok(
+    'una solicitud solo puede ir al coach apuntado',
+    /trainerId\s*== get\(\/databases\/\$\(database\)\/documents\/config\/coach\)\.data\.trainerId/.test(solicitudes)
+  );
+
+  const puerta = lee('components/LinkTrainerScreen.tsx');
+  ok('la pantalla de espera solo pide código si no se sabe quién es el coach', /coach === null/.test(puerta));
+
+  ok('el coach se reconoce por los correos de Luis', isAdmin({ email: 'LuisTenaF@gmail.com' }) && !isAdmin({ email: 'otro@gmail.com' }));
+}
+
+console.log('\n3 · Nada que cobre');
+{
+  for (const f of [
+    'components/Paywall.tsx',
+    'components/EntryWall.tsx',
+    'components/TrialBanner.tsx',
+    'components/UpgradeCard.tsx',
+    'components/EditorDeMarca.tsx',
+    'lib/precios.ts',
+    'lib/enlacesDeCobro.ts',
+    'lib/fundador.ts',
+    'lib/marcaPropia.ts',
+    'web/gracias.html',
+    'web/proximamente.html',
+  ]) {
+    ok(`${f} ya no existe`, !hay(f));
+  }
+
+  // Ningún enlace a la pasarela ni al endpoint de pago en lo que se publica.
+  const ficheros = [];
+  const recorre = (dir) => {
+    for (const n of readdirSync(new URL(`../${dir}`, import.meta.url))) {
+      const ruta = join(dir, n);
+      const st = statSync(new URL(`../${ruta}`, import.meta.url));
+      if (st.isDirectory()) recorre(ruta);
+      else if (/\.(tsx?|js|html)$/.test(n)) ficheros.push(ruta);
+    }
+  };
+  for (const d of ['app', 'components', 'lib', 'web']) recorre(d);
+  const conPago = ficheros.filter((f) => /buy\.stripe\.com|\/api\/pagar|\/api\/claim-entry|\/api\/check-subscription/.test(sinComentarios(lee(f))));
+  ok('ni un enlace a Stripe ni a los endpoints de cobro', conPago.length === 0, conPago.join(', '));
+
+  const web = lee('web/index.html').replace(/<!--[\s\S]*?-->/g, '');
+  ok('la web no anuncia precios', !/\d\s*€/.test(web));
+  ok('ni pide pagar', !/data-pago/.test(web));
+  ok('ni la configuración de la web tiene pagos', !/pagos:/.test(lee('web/config.js')));
+}
+
+console.log('\n4 · El nombre nuevo');
+{
+  ok('la app se llama Maestría en Calistenia', MARCA === 'Maestría en Calistenia');
+  const app = JSON.parse(lee('app.json')).expo;
+  ok(`bajo el icono se lee ${MARCA_CORTA}`, app.name === MARCA_CORTA, app.name);
+  ok('sin tocar el identificador de las tiendas', app.ios.bundleIdentifier === 'com.udeca.app' && app.android.package === 'entrenadores.app');
+  const manifest = JSON.parse(lee('public/manifest.json'));
+  ok('la app web instalada también', manifest.short_name === MARCA_CORTA && manifest.name === MARCA);
+  ok('y la pestaña del navegador', lee('app/+html.tsx').includes(`<title>${MARCA}</title>`));
+
+  const i18n = lee('lib/i18n.ts');
+  const conCalico = [...i18n.matchAll(/^ {2}'([^']*CALICO[^']*)':/gm)].map((m) => m[1]);
+  ok('ninguna frase de la app dice CALICO', conCalico.length === 0, conCalico.slice(0, 3).join(' | '));
+
+  for (const f of ['web/index.html', 'web/privacidad.html', 'web/condiciones.html', 'web/eliminar-cuenta.html', 'web/soporte.html']) {
+    const visible = lee(f).replace(/<!--[\s\S]*?-->/g, '');
+    ok(`${f} ya no dice CALICO`, !/CALICO/.test(visible));
+  }
+}
+
+console.log(fallos === 0 ? '\n✔ Un solo entrenador, sin cobros y con su nombre' : `\n${fallos} fallo(s)`);
+process.exit(fallos === 0 ? 0 : 1);

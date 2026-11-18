@@ -15,7 +15,7 @@
  *   node scripts/seed-emulator.mjs && node scripts/check-rules.mjs
  */
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, connectAuthEmulator, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import {
   getFirestore,
   connectFirestoreEmulator,
@@ -909,6 +909,48 @@ await comprobar('otro alumno del mismo entrenador también la ve', true, () =>
 );
 await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
 await comprobar('el entrenador la cancela', true, () => deleteDoc(doc(db, 'llamadasGrupales', grupalHecha.id)));
+
+console.log('\nUn solo entrenador (lib/coachUnico.ts)');
+// Una cuenta recién creada, sin perfil todavía: la que llega a "completar".
+const nuevoCorreo = `nuevo-${Date.now()}@demo.test`;
+const nuevo = await createUserWithEmailAndPassword(auth, nuevoCorreo, PW);
+const nuevoId = nuevo.user.uid;
+await comprobar('quien no es Luis no puede crearse como entrenador', false, () =>
+  setDoc(doc(db, 'users', nuevoId), { uid: nuevoId, role: 'trainer', name: 'Otro coach', email: nuevoCorreo, createdAt: Date.now() })
+);
+await comprobar('ni nacer con suscripción, aunque sea alumno', false, () =>
+  setDoc(doc(db, 'users', nuevoId), { uid: nuevoId, role: 'client', name: 'Nuevo', email: nuevoCorreo, createdAt: Date.now(), subscriptionUntil: Date.now() + 1e9 })
+);
+await comprobar('como alumno sí', true, () =>
+  setDoc(doc(db, 'users', nuevoId), { uid: nuevoId, role: 'client', name: 'Nuevo', email: nuevoCorreo, createdAt: Date.now() })
+);
+await comprobar('y lee quién es el coach', true, () => getDoc(doc(db, 'config', 'coach')));
+await comprobar('pero no puede apuntarse él como coach', false, () =>
+  setDoc(doc(db, 'config', 'coach'), { trainerId: nuevoId, updatedAt: Date.now() })
+);
+await comprobar('su solicitud no puede ir a otro entrenador', false, () =>
+  setDoc(doc(db, 'joinRequests', `${nuevoId}_otro-cualquiera`), {
+    id: `${nuevoId}_otro-cualquiera`, trainerId: 'otro-cualquiera', clientId: nuevoId, name: 'Nuevo', email: nuevoCorreo, createdAt: Date.now(),
+  })
+);
+await comprobar('al coach, sí', true, () =>
+  setDoc(doc(db, 'joinRequests', `${nuevoId}_${coachId}`), {
+    id: `${nuevoId}_${coachId}`, trainerId: coachId, clientId: nuevoId, name: 'Nuevo', email: nuevoCorreo, createdAt: Date.now(),
+  })
+);
+await signInWithEmailAndPassword(auth, 'coach@demo.test', PW);
+await comprobar('un entrenador que no es Luis no se apunta como coach', false, () =>
+  setDoc(doc(db, 'config', 'coach'), { trainerId: coachId, updatedAt: Date.now() })
+);
+await comprobar('el coach acepta al alumno, sin plazas que contar', true, () =>
+  setDoc(doc(db, 'users', nuevoId), { trainerId: coachId }, { merge: true })
+);
+await comprobar('y borra la solicitud', true, () => deleteDoc(doc(db, 'joinRequests', `${nuevoId}_${coachId}`)));
+// El correo de Luis SIN verificar: decir que eres Luis no basta.
+await signInWithEmailAndPassword(auth, 'luistenaf@gmail.com', PW);
+await comprobar('el correo de Luis sin verificar no puede apuntarse como coach', false, () =>
+  setDoc(doc(db, 'config', 'coach'), { trainerId: auth.currentUser.uid, updatedAt: Date.now() })
+);
 
 console.log(
   fallos === 0

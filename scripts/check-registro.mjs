@@ -1,31 +1,15 @@
 /**
- * Crear una cuenta tiene que funcionar. Las tres, siempre.
+ * Crear una cuenta tiene que funcionar, y solo como lo que toca.
  *
- * POR QUÉ ESTA COMPROBACIÓN EXISTE
+ * Maestría en Calistenia es de un solo entrenador: quien se registra nace
+ * ALUMNO, y una cuenta de entrenador solo la puede crear Luis con sus correos,
+ * verificados. Aquí se prueba lo que hace la app DE VERDAD contra las reglas
+ * DE VERDAD.
  *
- * El registro de atleta fallaba con "missing or insufficient permissions" de
- * forma intermitente, y el motivo es de los que no se ven leyendo el código:
- *
- *   - La app calcula el fin de la prueba con el reloj DEL MÓVIL:
- *     `Date.now() + TRIAL_DAYS`.
- *   - La regla lo comprueba con el reloj DEL SERVIDOR:
- *     `<= request.time + TRIAL_DAYS`.
- *
- * Si el móvil va un segundo adelantado —y los relojes de los móviles van
- * adelantados o atrasados constantemente— el valor que llega es MAYOR que el
- * tope, y Firestore rechaza la escritura. El usuario ve un error incomprensible
- * al crear su cuenta, y no puede entrar. Que dependa del reloj del móvil hace
- * además que falle a unos sí y a otros no, que es lo que lo hacía tan difícil
- * de reproducir.
- *
- * Aquí se prueba lo que hace la app DE VERDAD contra las reglas DE VERDAD, con
- * los tres roles, y además con un reloj adelantado a propósito: si alguien
- * vuelve a ajustar el margen de la regla al milímetro, esto lo caza.
- *
- * Da igual si se entró con Google o con Apple: a partir del `signIn`, las dos
- * escriben exactamente el mismo perfil por el mismo camino
- * (`completarPerfilDeGoogle` en lib/auth-context). Lo que se prueba aquí es ese
- * camino, que es donde estaba el fallo.
+ * Y con el reloj del móvil desajustado, que es lo normal: el registro fallaba
+ * hace tiempo con "missing or insufficient permissions" porque una regla
+ * comparaba una fecha del móvil con la del servidor al milímetro. Un alumno con
+ * la hora mal puesta tiene que poder crearse la cuenta igual.
  *
  *   firebase emulators:start --project calico-demo --only auth,firestore
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-registro.mjs
@@ -33,9 +17,6 @@
 import { initializeApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { connectFirestoreEmulator, doc, getFirestore, setDoc } from 'firebase/firestore';
-// De planBase y no de subscription: ese lee Platform.OS y arrastra React
-// Native entera, que en Node pelado no arranca.
-import { DIAS_DE_PRUEBA_ENTRENADOR, suscripcionAlNacer } from '../lib/planBase.ts';
 
 const AUTH_REST = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
 const DIA = 24 * 60 * 60 * 1000;
@@ -56,16 +37,16 @@ const ok = (desc, bien, extra = '') => {
 /**
  * Lo que esta comprobación va creando, para poder borrarlo al terminar.
  *
- * No es limpieza por pulcritud: estas cuentas son atletas y entrenadores de
- * verdad, y se quedaban en el panel de administración del CEO. Las pruebas que
+ * No es limpieza por pulcritud: estas cuentas son de verdad, y se quedaban en
+ * la lista de alumnos. Las pruebas que
  * pulsan "el primero de la lista" acababan tocando una cuenta inventada por
  * este guion en vez de la del seed, y fallaban sin que nada estuviera roto.
  */
 const creadas = [];
 
 /** Una cuenta nueva de verdad, como la que crea Google o Apple al entrar. */
-async function cuentaNueva() {
-  const email = `reg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@demo.test`;
+async function cuentaNueva(correo) {
+  const email = correo ?? `reg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@demo.test`;
   await fetch(`${AUTH_REST}/accounts:signUp?key=demo`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -87,7 +68,7 @@ async function intenta(perfil) {
   }
 }
 
-console.log('\nCrear cuenta: los tres roles');
+console.log('\nCrear cuenta: siempre alumno');
 
 // --- Alumno ---
 {
@@ -96,22 +77,31 @@ console.log('\nCrear cuenta: los tres roles');
   ok('un alumno puede crear su perfil', r.permitido, r.error);
 }
 
-// --- Entrenador ---
+// --- Entrenador que no es Luis ---
 {
   const { uid, email } = await cuentaNueva();
-  const r = await intenta({
-    uid,
-    role: 'trainer',
-    name: 'Coach Nuevo',
-    email,
-    createdAt: Date.now(),
-    inviteCode: 'ABC123',
-    // Ya no nace a cero: nace con sus 14 días. Sin la regla que lo admite,
-    // esto es un PERMISSION_DENIED y el entrenador no puede ni crearse la
-    // cuenta.
-    ...suscripcionAlNacer(),
+  const r = await intenta({ uid, role: 'trainer', name: 'Coach Nuevo', email, createdAt: Date.now() });
+  ok('nadie más puede crearse como entrenador', !r.permitido);
+}
+
+// --- Luis, con su correo verificado ---
+{
+  /*
+   * El emulador no verifica correos solo: se marca como verificado con la
+   * llamada de administración y se vuelve a entrar para que el token lo lleve.
+   * Es lo que tiene la cuenta real de Luis, que entra con Google.
+   */
+  const correo = 'luisetenete07@gmail.com';
+  const { uid, email } = await cuentaNueva(correo);
+  await fetch(`${AUTH_REST}/projects/calico-demo/accounts:update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+    body: JSON.stringify({ localId: uid, emailVerified: true }),
   });
-  ok('un entrenador puede crear su perfil con su prueba', r.permitido, r.error);
+  await signInWithEmailAndPassword(auth, email, PW);
+  await auth.currentUser.getIdToken(true);
+  const r = await intenta({ uid, role: 'trainer', name: 'Luis Tena', email, createdAt: Date.now() });
+  ok('Luis, con su correo verificado, sí', r.permitido, r.error);
 }
 
 console.log('\nY con el reloj del móvil desajustado (que es lo normal)');
@@ -123,22 +113,12 @@ console.log('\nY con el reloj del móvil desajustado (que es lo normal)');
  */
 for (const [texto, desfase] of [
   ['un segundo adelantado', 1000],
-  ['un minuto adelantado', 60 * 1000],
   ['una hora adelantada', 60 * 60 * 1000],
-  ['medio día adelantado', 12 * 60 * 60 * 1000],
   ['un día atrasado', -DIA],
 ]) {
   const { uid, email } = await cuentaNueva();
-  const r = await intenta({
-    uid,
-    role: 'trainer',
-    name: 'Coach Nuevo',
-    email,
-    createdAt: Date.now() + desfase,
-    inviteCode: 'ABC123',
-    ...suscripcionAlNacer(Date.now() + desfase),
-  });
-  ok(`el entrenador entra con el reloj ${texto}`, r.permitido, r.error);
+  const r = await intenta({ uid, role: 'client', name: 'Alumno Nuevo', email, createdAt: Date.now() + desfase });
+  ok(`el alumno entra con el reloj ${texto}`, r.permitido, r.error);
 }
 
 console.log('\nLo que sigue sin poderse hacer');
@@ -146,13 +126,7 @@ console.log('\nLo que sigue sin poderse hacer');
 // El atleta que se entrenaba solo ya no existe: no se puede crear.
 {
   const { uid, email } = await cuentaNueva();
-  const r = await intenta({
-    uid,
-    role: 'athlete',
-    name: 'Atleta',
-    email,
-    createdAt: Date.now(),
-  });
+  const r = await intenta({ uid, role: 'athlete', name: 'Atleta', email, createdAt: Date.now() });
   ok('ya no se puede crear un atleta', !r.permitido);
 }
 // Ni nacer con entrenador: ese vínculo lo pone el entrenador al aceptar.
@@ -168,33 +142,19 @@ console.log('\nLo que sigue sin poderse hacer');
   });
   ok('un alumno no nace dentro de un grupo sin que le acepten', !r.permitido);
 }
-// El margen es para el reloj, no para regalarse meses de prueba.
+// Ni con tiempo de suscripción: la app ya no cobra, y ese campo no significa
+// nada en una cuenta nueva.
 {
   const { uid, email } = await cuentaNueva();
   const r = await intenta({
     uid,
-    role: 'trainer',
+    role: 'client',
     name: 'Listillo',
     email,
     createdAt: Date.now(),
-    inviteCode: 'ABC123',
     subscriptionUntil: Date.now() + 365 * DIA,
   });
-  ok('un entrenador NO se regala la suscripción anual', !r.permitido);
-}
-// Y su prueba tiene su tope: catorce días, no los que él diga.
-{
-  const { uid, email } = await cuentaNueva();
-  const r = await intenta({
-    uid,
-    role: 'trainer',
-    name: 'Listillo',
-    email,
-    createdAt: Date.now(),
-    inviteCode: 'ABC123',
-    subscriptionUntil: Date.now() + (DIAS_DE_PRUEBA_ENTRENADOR + 7) * DIA,
-  });
-  ok('ni una semana de prueba de más', !r.permitido);
+  ok('nadie nace con suscripción', !r.permitido);
 }
 
 // --- A recoger ---

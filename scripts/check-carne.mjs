@@ -1,10 +1,9 @@
 /*
  * El carné de miembro (lib/carne.ts).
  *
- * Lo que hay que proteger: que una tarjeta que se comparte no diga "fundador"
- * de quien ahora mismo no está dentro (el número no se pierde, pero mientras
- * tanto no se enseña), y que los tres tipos de carné se distingan de
- * verdad, que es justo para lo que existe la tarjeta.
+ * Lo que hay que proteger: que los tres tipos de carné se distingan de verdad,
+ * que es justo para lo que existe la tarjeta, y que ninguno lleve ya un número
+ * de fundador: esa campaña era de la app de muchos entrenadores.
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-carne.mjs
  */
@@ -73,28 +72,12 @@ console.log('\nLos tres se distinguen');
   comprueba('sin perfil, no hay carné', datosDelCarne(null) === null);
 }
 
-console.log('\nEl número de fundador solo se enseña encendido');
+console.log('\nSin números de fundador');
 {
-  const ahora = Date.now();
-  // Alumno de un coach: entra gratis, así que su insignia no se apaga nunca.
-  const alumnoFundador = datosDelCarne(perfil({ founderNumber: 28, trainerId: 't' }), { ahora });
-  comprueba('el alumno fundador lo lleva', alumnoFundador.fundador === '#0028', alumnoFundador.fundador);
-  comprueba('con cuatro cifras', /^#\d{4}$/.test(alumnoFundador.fundador));
-
-  // Un entrenador del modelo del primer año: sin su año pagado no está dentro.
-  const coachNuevo = (extra) =>
-    perfil({ role: 'trainer', founderNumber: 7, createdAt: Date.parse('2026-09-20T10:00:00Z'), ...extra });
-  const coachAlDia = datosDelCarne(coachNuevo({ subscriptionUntil: ahora + 30 * DIA }), { ahora });
-  comprueba('el entrenador al día también', coachAlDia.fundador === '#0007', coachAlDia.fundador);
-
-  // Caducado: el número sigue siendo suyo, pero una tarjeta que se comparte no
-  // puede decir "fundador" de quien ahora mismo no está dentro.
-  const coachCaducado = datosDelCarne(coachNuevo({ subscriptionUntil: ahora - 5 * DIA }), { ahora });
-  comprueba('caducado, no se imprime', coachCaducado.fundador === undefined, coachCaducado.fundador);
-  comprueba('pero sigue teniendo su carné', coachCaducado.titulo === 'ENTRENADOR');
-
-  comprueba('quien no es fundador, sin número', datosDelCarne(perfil()).fundador === undefined);
-  comprueba('un número de cero no cuenta', datosDelCarne(perfil({ founderNumber: 0 })).fundador === undefined);
+  // Las cuentas que lo tenían guardado siguen con el dato en Firestore, pero la
+  // tarjeta ya no lo enseña.
+  const conNumero = datosDelCarne(perfil({ role: 'trainer', founderNumber: 7 }));
+  comprueba('aunque la cuenta lo tenga guardado, no se imprime', !('fundador' in conNumero));
 }
 
 console.log('\nEl rótulo de arriba a la izquierda dice qué eres');

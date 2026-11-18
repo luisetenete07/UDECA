@@ -106,6 +106,27 @@ header.scrolled .nav {
 .brand img { width: 34px; height: 34px; }
 /* El logotipo de CALICO entero (con su C): va en vector y se mide por el alto. */
 .brand img.logotipo { width: auto; height: 22px; }
+/* El nombre escrito, hasta que haya logotipo: "MAESTRÍA" manda y "EN
+   CALISTENIA" va debajo, pequeño y espaciado. */
+.marca-texto {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.18em;
+  line-height: 1.05;
+  color: var(--text, #fff);
+  text-decoration: none;
+}
+.marca-texto small {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 8.5px;
+  letter-spacing: 0.32em;
+  color: var(--muted, #9a9a9a);
+}
 .brand span {
   font-family: Sora, 'Helvetica Neue', Arial, sans-serif;
   letter-spacing: -0.02em;

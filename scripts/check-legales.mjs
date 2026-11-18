@@ -90,7 +90,6 @@ console.log('\nLa política dice lo que tiene que decir');
 for (const trozo of [
   'Política de privacidad',
   'Datos que recogemos',
-  'Stripe',
   'Firebase',
   'Conservación',
   'Tus derechos',
@@ -98,13 +97,17 @@ for (const trozo of [
 ]) {
   ok(`habla de "${trozo}"`, privacidad.includes(trozo));
 }
-ok('y también en inglés', privacidad.includes('CALICO privacy policy'));
+// Sin pagos. La app no cobra nada desde que es de un solo entrenador: si la
+// política siguiera hablando de Stripe y de tarjetas, prometería un
+// tratamiento de datos que no existe.
+ok('y ya no habla de pagos con tarjeta', !/Stripe/.test(privacidad) && !/tarjeta/i.test(privacidad));
+ok('y también en inglés', privacidad.includes('Maestría en Calistenia privacy policy'));
 
 console.log('\nY la de borrar la cuenta, también');
 ok('explica cómo se hace desde la app', /Perfil → Eliminar mi cuenta/.test(borrado));
 ok('dice qué se elimina', borrado.includes('Qué se elimina'));
 ok('y qué se conserva', borrado.includes('Qué se conserva'));
-ok('y también en inglés', borrado.includes('Delete your CALICO account'));
+ok('y también en inglés', borrado.includes('Delete your Maestría en Calistenia account'));
 
 console.log('\nLo que exige la tienda: se puede pedir SIN tener la app');
 ok(
@@ -198,7 +201,7 @@ console.log('\nLa de soporte sirve para lo que existe');
   // Sin una forma de contactar no es soporte, es un folleto.
   ok('hay un correo al que escribir', soporte.includes(`mailto:${CORREO}`));
   ok('dice cómo se entra (Google y Apple)', /Google/.test(soporte) && /Apple/.test(soporte));
-  ok('y también en inglés', soporte.includes('CALICO support'));
+  ok('y también en inglés', soporte.includes('Maestría en Calistenia help'));
   ok(
     'la publica el despliegue de la app',
     /for pagina in [^\n]*\bsoporte\b/.test(lee('.github/workflows/deploy.yml')),

@@ -11,8 +11,6 @@ import { EmptyState } from '../../components/EmptyState';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { DashboardSkeleton } from '../../components/Skeleton';
-import { TrialBanner } from '../../components/TrialBanner';
-import { UpgradePopup } from '../../components/UpgradeCard';
 import { createCoachTask, deleteCoachTask, getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
 import { HabitosDelCoach } from '../../components/HabitosDelCoach';
 import { conHoyAlternado } from '../../lib/habitosCoach';
@@ -33,14 +31,12 @@ import {
   subscribeClientsForTrainer,
   updateUserProfile,
 } from '../../lib/firestore/users';
-import { FREE_CLIENT_LIMIT, trainerAtFreeLimit } from '../../lib/subscription';
 import { alargar, coachingDe } from '../../lib/coaching';
 import { alumnosSinEntrenar, DIAS_SIN_ENTRENAR } from '../../lib/sinEntrenar';
 import { SE_APUNTA_EL_ENTRENO } from '../../lib/modoDeEntreno';
 import { haceCuanto } from '../../lib/ultimoEntreno';
 import { unido } from '../../lib/texto';
 import { colorDelPeriodo, textoDelPeriodo } from '../../components/PeriodoDeCoaching';
-import { approveClientOnServer } from '../../lib/join';
 import {
   approveJoinRequest,
   deleteJoinRequest,
@@ -83,9 +79,7 @@ interface DashboardData {
 const GRUPOS_A_LA_VISTA = 6;
 
 export default function TrainerDashboard() {
-  // refreshProfile: tras aceptar a un alumno, el servidor actualiza el recuento
-  // del perfil y hay que releerlo para que el acceso quede al día.
-  const { profile, refreshProfile, logo } = useAuth();
+  const { profile } = useAuth();
   // La bandeja "Por revisar": lo visto, en local para que responda al toque,
   // y guardado en el perfil para que valga en todos los dispositivos.
   const [visto, setVisto] = useState<LoVisto>(() => ({
@@ -182,7 +176,6 @@ export default function TrainerDashboard() {
     return (
       <ScreenContainer>
         <ScreenHeader
-          logo={logo}
           eyebrow="Panel del entrenador"
           title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
         />
@@ -426,39 +419,14 @@ export default function TrainerDashboard() {
   };
 
   const handleApproveRequest = async (req: JoinRequest) => {
-    // Aviso inmediato si ya sabemos que está lleno, para no hacerle esperar a
-    // una respuesta que va a ser que no.
-    if (trainerAtFreeLimit(profile)) {
-      showToast(
-        frase`Tu plan incluye ${FREE_CLIENT_LIMIT} alumnos. Pasa al plan sin tope para aceptar a más.`
-      );
-      return;
-    }
     setProcessingReq(req.id);
     try {
-      // Quien decide es el servidor: cuenta los alumnos con permisos de
-      // administrador, así que ni se puede falsear desde un cliente modificado
-      // ni dos aprobaciones a la vez pueden colar a un tercero.
-      let approved = false;
-      try {
-        const result = await approveClientOnServer(req.clientId);
-        if (!result.ok) {
-          showToast(result.reason ?? 'No se pudo aprobar');
-          return;
-        }
-        approved = true;
-      } catch {
-        // El servidor no responde (sin red, backend caído). Se aprueba por la
-        // vía antigua para no dejar al coach bloqueado por una caída ajena; el
-        // límite se recalcula igualmente en el siguiente `sync`.
-        await approveJoinRequest(req);
-        approved = true;
-      }
-      if (!approved) return;
-      await refreshProfile();
+      // Directo en Firestore: sin tope de alumnos no hay nada que contar en el
+      // servidor. Las reglas comprueban que la solicitud existe y es para ti.
+      await approveJoinRequest(req);
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       if (profile) setClients(await getClientsForTrainer(profile.uid));
-      notifyUser(req.clientId, 'Solicitud aceptada', 'Tu entrenador te ha aceptado en su grupo. ¡A entrenar!').catch(() => {});
+      notifyUser(req.clientId, 'Solicitud aceptada', 'Luis te ha aceptado en el grupo. ¡A entrenar!').catch(() => {});
       showToast(frase`${req.name.split(' ')[0]} ya está en tu grupo`);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'No se pudo aprobar');
@@ -482,12 +450,7 @@ export default function TrainerDashboard() {
 
   return (
     <ScreenContainer>
-      <TrialBanner profile={profile} />
-      {/* A pantalla completa y sin esquivarlo: el tope de alumnos hay que
-          saberlo antes de necesitarlo. Se cierra y no vuelve en una semana. */}
-      <UpgradePopup />
       <ScreenHeader
-        logo={logo}
         eyebrow="Panel del entrenador"
         title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
         actions={
@@ -595,6 +558,8 @@ export default function TrainerDashboard() {
                   disabled={processingReq === req.id}
                   style={styles.reqReject}
                   hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={frase`Rechazar a ${req.name}`}
                 >
                   <Ionicons name="close" size={20} color={colors.danger} />
                 </Pressable>
@@ -603,6 +568,8 @@ export default function TrainerDashboard() {
                   disabled={processingReq === req.id}
                   style={styles.reqApprove}
                   hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={frase`Aceptar a ${req.name}`}
                 >
                   <Ionicons name="checkmark" size={20} color={colors.onPrimary} />
                 </Pressable>

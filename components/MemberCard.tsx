@@ -13,7 +13,6 @@ import {
 } from '../lib/cardStats';
 import { datosDelCarne } from '../lib/carne';
 import { showToast } from './Toast';
-import { estadoInsignia, numeroFundador } from '../lib/fundador';
 import { getCourseProgress } from '../lib/firestore/courseProgress';
 import { getActiveRoutineForClient } from '../lib/firestore/routines';
 import { comunidadAbierta, getSocialLeaderboard } from '../lib/firestore/social';
@@ -40,7 +39,7 @@ export function MemberCard() {
   const [datos, setDatos] = useState<DatoTarjeta[]>([]);
 
   const esEntrenador = profile?.role === 'trainer';
-  // Quién es dentro de CALICO. Se calcula igual aquí y en la imagen que se
+  // Quién es dentro de la app. Se calcula igual aquí y en la imagen que se
   // comparte: son la misma tarjeta, y decir "Alumno" dentro y "Formación"
   // fuera sería tener dos.
   const [soloCursos, setSoloCursos] = useState(false);
@@ -48,30 +47,18 @@ export function MemberCard() {
   const rol = carne?.titulo
     ? carne.titulo.charAt(0) + carne.titulo.slice(1).toLowerCase()
     : 'Miembro';
-  // El número es suyo para siempre; encenderlo depende de estar al día.
-  const insignia = estadoInsignia(profile);
 
   useFocusEffect(
     useCallback(() => {
       if (!profile) return;
       let vivo = true;
-      // El número ya va impreso abajo en la tarjeta: fuera de la rotación.
-      const sinFundador = { conFundador: false };
 
       (async () => {
         // Primero, lo que ya se sabe sin pedir nada.
         setDatos(
           esEntrenador
-            ? tarjetaDeEntrenador(
-                { createdAt: profile.createdAt, alumnos: 0, entrenosDirigidos: 0 },
-                Date.now(),
-                sinFundador
-              )
-            : tarjetaDeAtleta(
-                { createdAt: profile.createdAt, entrenos: 0, racha: 0 },
-                Date.now(),
-                sinFundador
-              )
+            ? tarjetaDeEntrenador({ createdAt: profile.createdAt, alumnos: 0, entrenosDirigidos: 0 })
+            : tarjetaDeAtleta({ createdAt: profile.createdAt, entrenos: 0, racha: 0 })
         );
 
         try {
@@ -82,15 +69,11 @@ export function MemberCard() {
             ]);
             if (!vivo) return;
             setDatos(
-              tarjetaDeEntrenador(
-                {
-                  createdAt: profile.createdAt,
-                  alumnos: clientes.length,
-                  entrenosDirigidos: logs.length,
-                },
-                Date.now(),
-                sinFundador
-              )
+              tarjetaDeEntrenador({
+                createdAt: profile.createdAt,
+                alumnos: clientes.length,
+                entrenosDirigidos: logs.length,
+              })
             );
             return;
           }
@@ -142,8 +125,7 @@ export function MemberCard() {
                 puesto,
                 deCuantos,
               },
-              Date.now(),
-              sinFundador
+              Date.now()
             )
           );
         } catch {
@@ -166,26 +148,11 @@ export function MemberCard() {
         nombre={profile.name}
         rol={rol}
         desde={textoDesde(profile.createdAt)}
-        fundador={insignia.numero ? numeroFundador(insignia.numero) : undefined}
       />
-      {/* Aquí solo cabe el aviso, nunca la insignia apagada: si la cuenta
-          pierde el acceso, esta pantalla ya no se ve —se ve el muro de pago—,
-          y es allí donde se le recuerda que el número sigue siendo suyo.
-
-          El aviso sale solo cuando de verdad queda poco: un mensaje que
-          aparece siempre deja de leerse a la tercera vez. */}
-      {insignia.diasParaApagarse !== null ? (
-        <Text style={styles.aviso}>
-          {insignia.diasParaApagarse === 0
-            ? frase`Hoy pierdes la insignia de fundador. El ${numeroFundador(insignia.numero!)} sigue siendo tuyo: vuelve y se enciende otra vez.`
-            : frase`Tu insignia de fundador se apaga en ${insignia.diasParaApagarse} ${t(insignia.diasParaApagarse === 1 ? 'día' : 'días')}. El número no lo pierdes: al renovar vuelve a encenderse.`}
-        </Text>
-      ) : (
-        /* Se dice el gesto entero: en el móvil, arrastrar sin más lo entiende
-           la pantalla como desplazarse, y el que gira la tarjeta es apoyar el
-           dedo un momento antes de moverlo. */
-        <Text style={styles.ayuda}>Mantén el dedo encima y gírala</Text>
-      )}
+      {/* Se dice el gesto entero: en el móvil, arrastrar sin más lo entiende
+          la pantalla como desplazarse, y el que gira la tarjeta es apoyar el
+          dedo un momento antes de moverlo. */}
+      <Text style={styles.ayuda}>Mantén el dedo encima y gírala</Text>
 
     </View>
   );
@@ -199,15 +166,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: spacing.sm,
     textAlign: 'center',
-  },
-  aviso: {
-    ...typography.small,
-    color: colors.warning,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: spacing.sm,
-    textAlign: 'center',
-    alignSelf: 'center',
-    maxWidth: 360,
   },
 });

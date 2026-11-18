@@ -1,14 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { TabIcon } from '../../components/TabIcon';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import { Paywall } from '../../components/Paywall';
-import { EntryWall } from '../../components/EntryWall';
 import { VerifyEmailScreen } from '../../components/VerifyEmailScreen';
 import { useAuth } from '../../lib/auth-context';
 import { useTabScreenOptions } from '../../lib/navTheme';
-import { t, useT  } from '../../lib/idioma';
-import { hasPlatformAccess, needsEntryPayment } from '../../lib/subscription';
+import { useT } from '../../lib/idioma';
+import { fijarCoach } from '../../lib/coachUnico';
 
 export default function TrainerLayout() {
   const { loading, firebaseUser, profile, emailVerified } = useAuth();
@@ -16,21 +14,19 @@ export default function TrainerLayout() {
   const tabOptions = useTabScreenOptions();
   const t = useT();
 
+  // La cuenta de Luis se apunta como EL coach, para que los alumnos nuevos le
+  // manden la solicitud sin código (lib/coachUnico.ts). Solo escribe si falta.
+  useEffect(() => {
+    void fijarCoach(profile);
+  }, [profile]);
+
   if (loading) return <LoadingScreen />;
   if (!firebaseUser || !profile) return <Redirect href="/(auth)/login" />;
   if (profile.role !== 'trainer') return <Redirect href="/(client)/dashboard" />;
   // Correo sin verificar (cuentas que lo requieren): bloquea hasta verificar.
   if (profile.emailVerificationRequired && !emailVerified) return <VerifyEmailScreen />;
-  // Alta de 1 €: va ANTES que el muro de suscripción porque es el primer
-  // escalón (y el que identifica la tarjeta). Las cuentas anteriores al alta
-  // no lo ven nunca.
-  if (needsEntryPayment(profile)) return <EntryWall />;
-  // SaaS: el coach entra gratis mientras su grupo no pase del límite; el muro
-  // solo aparece cuando lo supera o cuando caduca una suscripción con más
-  // alumnos de los que incluye su alta. Sus datos quedan intactos.
-  // Es la misma puerta que enciende o apaga la insignia de fundador, a
-  // propósito: una sola regla, un solo sitio (lib/planBase.ts).
-  if (!hasPlatformAccess(profile)) return <Paywall />;
+  // Sin muro de pago ni de alta: la app es de un solo entrenador y no cobra
+  // nada a nadie. Esos muros eran de cuando cada coach pagaba su plan.
 
   return (
     <Tabs

@@ -66,10 +66,10 @@ export const POSICIONES: { x: number; y: number }[] = [
  * dirección de nadie.
  */
 export function textoDeMarca(p: Pick<UserProfile, 'name' | 'uid'> | null | undefined): string {
-  if (!p) return 'CALICO';
+  if (!p) return 'MASTERY';
   const nombre = (p.name ?? '').trim();
   const codigo = (p.uid ?? '').slice(-5).toUpperCase();
-  if (!nombre) return codigo ? `CALICO · ${codigo}` : 'CALICO';
+  if (!nombre) return codigo ? `MASTERY · ${codigo}` : 'MASTERY';
   return codigo ? `${nombre} · ${codigo}` : nombre;
 }
 

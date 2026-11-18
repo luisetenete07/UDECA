@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { t, frase  } from '../../lib/idioma';
+import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Alert, Linking, Modal, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
+import { Alert, Platform, Pressable, Share, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../components/Avatar';
@@ -9,104 +8,28 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
-import { EditorDeMarca } from '../../components/EditorDeMarca';
 import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
 import { RateApp } from '../../components/RateApp';
-import { UpgradeCard } from '../../components/UpgradeCard';
 import { ScreenContainer } from '../../components/ScreenContainer';
-import { TextField } from '../../components/TextField';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
-import { MARCA_POR_DEFECTO } from '../../lib/marcaPropia';
-import {
-  deleteCoachAccount,
-  getAllCoaches,
-  normalizeInviteCode,
-  setCoachSubscription,
-  setTrainerInviteCode,
-  updateUserProfile,
-} from '../../lib/firestore/users';
+import { updateUserProfile } from '../../lib/firestore/users';
 import { pickAvatar } from '../../lib/image';
-import {
-  DAY_MS,
-  accesoIlimitado,
-  isAdmin,
-  subscriptionState,
-} from '../../lib/subscription';
+import { isAdmin } from '../../lib/subscription';
 import { getRecentErrorLogs, groupErrors, type ErrorGroup } from '../../lib/firestore/errorLogs';
-import {
-  buildFunnel,
-  getDailyCounters,
-  sumCounters,
-  type FunnelStep,
-} from '../../lib/firestore/analytics';
-import { Chip, ChipRow } from '../../components/Chip';
 import { fechaCorta } from '../../lib/fechas';
-import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
-import type { UserProfile } from '../../lib/types';
-
-/**
- * Las clases de cuenta que pagan plataforma, en el orden en que se pintan.
- * Hoy solo el entrenador; va en lista para que otra sea una línea.
- */
-const GRUPOS_ADMIN = [
-  { rol: 'trainer' as const, titulo: 'Entrenadores', vacio: 'Todavía no hay ningún entrenador registrado.' },
-];
+import { colors, fonts, spacing, typography } from '../../lib/theme';
 
 export default function TrainerProfileScreen() {
-  const { profile, signOut, refreshProfile, marca, logo } = useAuth();
+  const { profile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [editingCode, setEditingCode] = useState(false);
-  const [codeInput, setCodeInput] = useState('');
-  const [savingCode, setSavingCode] = useState(false);
-  const [codeError, setCodeError] = useState<string | null>(null);
-  // Panel admin CALICO (solo cuentas administradoras).
-  const [adminOpen, setAdminOpen] = useState(false);
-  // Errores reales de los usuarios (solo CEO).
+  // Errores reales de los alumnos (solo la cuenta de administración).
   const [errorsOpen, setErrorsOpen] = useState(false);
   const [errorGroups, setErrorGroups] = useState<ErrorGroup[]>([]);
   const [loadingErrors, setLoadingErrors] = useState(false);
-  // Embudo de ventas (solo CEO).
-  const [funnelOpen, setFunnelOpen] = useState(false);
-  const [funnel, setFunnel] = useState<FunnelStep[]>([]);
-  const [funnelExtra, setFunnelExtra] = useState<Record<string, number>>({});
-  const [funnelDays, setFunnelDays] = useState(30);
-  const [loadingFunnel, setLoadingFunnel] = useState(false);
-  /** Las cuentas que pagan plataforma: los entrenadores. */
-  const [coaches, setCoaches] = useState<UserProfile[]>([]);
-  const [loadingCoaches, setLoadingCoaches] = useState(false);
-  const [updatingCoach, setUpdatingCoach] = useState<string | null>(null);
-  const [daysInput, setDaysInput] = useState<Record<string, string>>({});
-
-  const applyDays = async (coach: UserProfile, sign: 1 | -1) => {
-    const n = Math.abs(parseInt(daysInput[coach.uid] ?? '', 10) || 0);
-    if (n === 0) {
-      showToast('Escribe cuántos días');
-      return;
-    }
-    setDaysInput((p) => ({ ...p, [coach.uid]: '' }));
-    await extendCoach(coach, sign * n);
-  };
-
-  const sub = subscriptionState(profile);
   const admin = isAdmin(profile);
-
-  const openFunnel = async (days = funnelDays) => {
-    setFunnelOpen(true);
-    setFunnelDays(days);
-    setLoadingFunnel(true);
-    try {
-      const totals = sumCounters(await getDailyCounters(), days);
-      setFunnel(buildFunnel(totals));
-      setFunnelExtra(totals);
-    } catch {
-      showToast('No se pudieron cargar las métricas');
-    } finally {
-      setLoadingFunnel(false);
-    }
-  };
 
   const openErrors = async () => {
     setErrorsOpen(true);
@@ -117,125 +40,6 @@ export default function TrainerProfileScreen() {
       showToast('No se pudieron cargar los errores');
     } finally {
       setLoadingErrors(false);
-    }
-  };
-
-  const openAdmin = async () => {
-    setAdminOpen(true);
-    setLoadingCoaches(true);
-    setCoaches([]);
-    try {
-      setCoaches(await getAllCoaches());
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo cargar');
-    } finally {
-      setLoadingCoaches(false);
-    }
-  };
-
-  /** Qué plan queda escrito, según los días que se le dan. */
-  const planPorDias = (dias: number): 'annual' | 'monthly' =>
-    dias >= 365 ? 'annual' : 'monthly';
-
-  // Confirmación multiplataforma para acciones destructivas del admin.
-  const confirmAdmin = (message: string): Promise<boolean> => {
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      return Promise.resolve(window.confirm(message));
-    }
-    return new Promise((resolve) => {
-      Alert.alert('Admin CALICO', message, [
-        { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-        { text: 'Confirmar', style: 'destructive', onPress: () => resolve(true) },
-      ]);
-    });
-  };
-
-  // Quita la suscripción de un coach (queda CADUCADO y ve el muro de pago).
-  const revokeCoach = async (coach: UserProfile) => {
-    if (
-      !(await confirmAdmin(
-        frase`¿Quitar la suscripción de ${coach.name}? Verá el muro de pago hasta reactivarla.`
-      ))
-    )
-      return;
-    setUpdatingCoach(coach.uid);
-    try {
-      // Al quitar la suscripción se conserva el plan que tuviera: lo que se le
-      // retira es el acceso, no el recuerdo de lo que contrató.
-      const plan = coach.subscriptionPlan ?? 'annual';
-      await setCoachSubscription(coach.uid, 0, plan);
-      setCoaches((prev) =>
-        prev.map((c) =>
-          c.uid === coach.uid ? { ...c, subscriptionUntil: 0, subscriptionPlan: plan } : c
-        )
-      );
-      showToast('Suscripción retirada');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo retirar');
-    } finally {
-      setUpdatingCoach(null);
-    }
-  };
-
-  // Elimina la cuenta (perfil) de un coach de la plataforma.
-  const deleteCoach = async (coach: UserProfile) => {
-    if (
-      !(await confirmAdmin(
-        frase`¿ELIMINAR la cuenta de ${coach.name} (${coach.email})? Perderá el acceso y desaparecerá de la plataforma. Esta acción no se puede deshacer.`
-      ))
-    )
-      return;
-    setUpdatingCoach(coach.uid);
-    try {
-      await deleteCoachAccount(coach.uid);
-      setCoaches((prev) => prev.filter((c) => c.uid !== coach.uid));
-      showToast('Cuenta eliminada');
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo eliminar');
-    } finally {
-      setUpdatingCoach(null);
-    }
-  };
-
-  // Extiende la suscripción de un coach: +365 días desde hoy o desde su fecha
-  // futura (renovación anticipada no pierde días).
-  const extendCoach = async (coach: UserProfile, days: number) => {
-    setUpdatingCoach(coach.uid);
-    try {
-      const base =
-        coach.subscriptionUntil && coach.subscriptionUntil > Date.now()
-          ? coach.subscriptionUntil
-          : Date.now();
-      const until = base + days * DAY_MS;
-      const plan = planPorDias(days);
-      await setCoachSubscription(coach.uid, until, plan);
-      setCoaches((prev) =>
-        prev.map((c) =>
-          c.uid === coach.uid ? { ...c, subscriptionUntil: until, subscriptionPlan: plan } : c
-        )
-      );
-      showToast(frase`${coach.name.split(' ')[0]}: activo hasta ${fechaCorta(until)}`);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'No se pudo actualizar');
-    } finally {
-      setUpdatingCoach(null);
-    }
-  };
-
-  const handleSaveCode = async () => {
-    if (!profile) return;
-    setCodeError(null);
-    setSavingCode(true);
-    try {
-      await setTrainerInviteCode(profile.uid, codeInput);
-      await refreshProfile();
-      setEditingCode(false);
-      showToast('Código actualizado');
-    } catch (e) {
-      setCodeError(e instanceof Error ? e.message : 'No se pudo guardar el código.');
-    } finally {
-      setSavingCode(false);
     }
   };
 
@@ -257,13 +61,13 @@ export default function TrainerProfileScreen() {
   };
 
   const handleShare = async () => {
-    if (!profile?.inviteCode) return;
+    // Sin código: quien se registra le manda la solicitud a Luis directamente
+    // (lib/coachUnico.ts). Al alumno se le manda donde puede registrarse, no
+    // a la web de presentación.
     const message =
-      `Únete a mis entrenamientos en CALICO.\n\n` +
-      // La app vive en app.udeca.app; www.udeca.app es la web de presentación.
-      // Al alumno hay que mandarlo donde puede registrarse, no al escaparate.
-      `1) Entra en app.udeca.app (o busca "CALICO" en Google Play).\n` +
-      frase`2) Regístrate como alumno con mi código: ${profile.inviteCode}\n\n` +
+      `Te espero en Maestría en Calistenia.\n\n` +
+      `1) Entra en app.udeca.app (o descarga la app MASTERY).\n` +
+      `2) Crea tu cuenta: me llega tu solicitud y te acepto.\n\n` +
       `¡Nos vemos dentro!`;
     if (Platform.OS === 'web') {
       // Usa el diálogo nativo de compartir del navegador si existe; si no, copia.
@@ -286,103 +90,6 @@ export default function TrainerProfileScreen() {
     } else {
       await Share.share({ message });
     }
-  };
-
-  /**
-   * Una cuenta de la lista de administración, con su estado y sus acciones.
-   *
-   * Va fuera del render para pintarse igual en cada sección de GRUPOS_ADMIN.
-   */
-  const filaCuenta = (c: UserProfile) => {
-    const s = subscriptionState(c);
-    // "De prueba" se dice aparte de "Activo": las dos dejan entrar,
-    // pero una es alguien que paga y la otra alguien a quien se le
-    // acaba el plazo. Confundirlas es no saber a quién hay que
-    // llamar esta semana.
-    const label = isAdmin(c)
-      ? 'Admin'
-      : accesoIlimitado(c)
-        ? 'Cuenta de la casa'
-        : s.legacy
-        ? 'Fundador'
-        : s.active
-          ? frase`${t(s.trial ? 'De prueba' : 'Activo')} · hasta ${c.subscriptionUntil ? fechaCorta(c.subscriptionUntil) : '—'}`
-          : c.subscriptionUntil
-            ? frase`CADUCADO · desde ${fechaCorta(c.subscriptionUntil)}`
-            : 'SIN ACTIVAR';
-    return (
-      <View key={c.uid} style={styles.coachCard}>
-        <View style={styles.coachRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.coachName}>{c.name}</Text>
-            <Text style={styles.coachEmail} numberOfLines={1}>
-              {c.email}
-            </Text>
-            <Text style={[styles.coachSub, !s.active && { color: colors.danger }]}>
-              {label}
-            </Text>
-          </View>
-          {!isAdmin(c) ? (
-            <View style={styles.coachActions}>
-              <Button
-                title="+1 año"
-                variant="secondary"
-                onPress={() => extendCoach(c, 365)}
-                loading={updatingCoach === c.uid}
-                style={styles.coachBtn}
-              />
-              {s.active || s.legacy ? (
-                <Pressable
-                  onPress={() => revokeCoach(c)}
-                  disabled={updatingCoach === c.uid}
-                  style={styles.coachIconBtn}
-                  hitSlop={6}
-                >
-                  <Ionicons name="remove-circle-outline" size={18} color={colors.warning} />
-                </Pressable>
-              ) : null}
-              <Pressable
-                onPress={() => deleteCoach(c)}
-                disabled={updatingCoach === c.uid}
-                style={[styles.coachIconBtn, styles.coachIconDanger]}
-                hitSlop={6}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-              </Pressable>
-            </View>
-          ) : null}
-        </View>
-        {!isAdmin(c) ? (
-          <View style={styles.customDaysRow}>
-            <TextField
-              value={daysInput[c.uid] ?? ''}
-              onChangeText={(v) => setDaysInput((p) => ({ ...p, [c.uid]: v }))}
-              placeholder="Nº de días"
-              keyboardType="numeric"
-              containerStyle={styles.customDaysField}
-            />
-            <Pressable
-              onPress={() => applyDays(c, 1)}
-              disabled={updatingCoach === c.uid}
-              style={styles.daysBtn}
-              hitSlop={4}
-            >
-              <Ionicons name="add" size={15} color={colors.primary} />
-              <Text style={styles.daysBtnText}>Añadir</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => applyDays(c, -1)}
-              disabled={updatingCoach === c.uid}
-              style={styles.daysBtn}
-              hitSlop={4}
-            >
-              <Ionicons name="remove" size={15} color={colors.warning} />
-              <Text style={[styles.daysBtnText, { color: colors.warning }]}>Quitar</Text>
-            </Pressable>
-          </View>
-        ) : null}
-      </View>
-    );
   };
 
   return (
@@ -414,188 +121,35 @@ export default function TrainerProfileScreen() {
         <Text style={styles.email}>{profile?.email}</Text>
       </View>
 
-      {/* El carné: quién es dentro de CALICO, y su número si es fundador. */}
+      {/* El carné: quién es dentro de Maestría en Calistenia. */}
       <MemberCard />
-
-      <EditorDeMarca />
 
       <SelectorDeIdioma />
 
-      {/* De aquí abajo, todo son ajustes: cosas que se tocan una vez y no se
-          vuelven a mirar. Plegadas, el perfil pasa de tres pantallas y media a
-          una; y el dato que importa de cada una —el código, hasta cuándo va
-          la suscripción— se lee sin abrirlas.
-          Se abre solo lo que pide acción. */}
+      {/* Cómo entra un alumno nuevo: sin código. Se registra, la solicitud
+          llega a Inicio y se acepta desde allí. Aquí solo queda mandarle la
+          invitación. */}
       <CollapsibleCard
         id="coach-invitacion"
-        icon="key-outline"
-        title="Código de invitación"
-        hint={profile?.inviteCode ?? undefined}
+        icon="person-add-outline"
+        title="Invitar a un alumno"
         defaultOpen={false}
       >
         <Text style={styles.helperText}>
-          Comparte este código con tus clientes para que se registren y queden vinculados a ti
-          automáticamente.
+          Se descarga la app y crea su cuenta. Su solicitud te llega a Inicio y entra cuando la
+          aceptas.
         </Text>
-        <View style={styles.codeBox}>
-          <Text style={styles.code}>{profile?.inviteCode}</Text>
-        </View>
-
-        {editingCode ? (
-          <>
-            <TextField
-              label="Nuevo código (letras y números)"
-              value={codeInput}
-              onChangeText={(v) => setCodeInput(normalizeInviteCode(v))}
-              placeholder="Ej. LUISTENA"
-              autoCapitalize="characters"
-              autoCorrect={false}
-              maxLength={16}
-              error={codeError ?? undefined}
-            />
-            <Button
-              title="Guardar código"
-              onPress={handleSaveCode}
-              loading={savingCode}
-              disabled={codeInput.length < 3}
-            />
-            <Button
-              title="Cancelar"
-              variant="secondary"
-              onPress={() => {
-                setEditingCode(false);
-                setCodeError(null);
-              }}
-              style={{ marginTop: spacing.sm }}
-            />
-          </>
-        ) : (
-          <>
-            <Button
-              title={copied ? 'Copiado' : Platform.OS === 'web' ? 'Copiar código' : 'Compartir código'}
-              variant="secondary"
-              onPress={handleShare}
-            />
-            <Button
-              title="Personalizar mi código"
-              variant="ghost"
-              onPress={() => {
-                setCodeInput(profile?.inviteCode ?? '');
-                setEditingCode(true);
-              }}
-              style={{ marginTop: spacing.sm }}
-            />
-          </>
-        )}
+        <Button
+          title={copied ? 'Copiado' : Platform.OS === 'web' ? 'Copiar invitación' : 'Compartir invitación'}
+          variant="secondary"
+          onPress={handleShare}
+        />
       </CollapsibleCard>
 
-      {/* La clasificación del grupo se fue a Clientes
-          (components/ClasificacionDelGrupo.tsx): es donde se mira al grupo. */}
-
-      <CollapsibleCard
-        id="coach-suscripcion"
-        icon="shield-checkmark-outline"
-        title="Suscripción"
-        hint={admin ? 'Admin' : sub.legacy ? 'Fundador' : sub.active ? 'Activa' : 'Caducada'}
-        // Caducada, abierta: es lo único de aquí que pide hacer algo.
-        defaultOpen={!admin && !sub.legacy && !sub.active}
-      >
-        <Text style={styles.helperText}>
-          {admin
-            ? 'Cuenta administradora de CALICO: acceso completo sin caducidad.'
-            : sub.legacy
-              ? 'Cuenta fundadora: acceso completo a CALICO Pro.'
-              : // El estado de la cuenta, sin precio (ver lib/subscription.ts).
-                sub.active
-                ? frase`Plan activo hasta ${profile?.subscriptionUntil ? fechaCorta(profile.subscriptionUntil) : '—'}.`
-                : profile?.subscriptionUntil
-                  ? frase`Tu plan terminó el ${fechaCorta(profile.subscriptionUntil)}.`
-                  : 'Sin plan activo.'}
-        </Text>
-        {/* El plan y renovarlo, AQUÍ dentro: era otra tarjeta grande más abajo
-            que repetía lo que dice esta fila. */}
-        </CollapsibleCard>
-
       {admin ? (
         <Card accent style={styles.section}>
           <View style={styles.subHeader}>
-            <Text style={styles.sectionTitle}>Embudo de ventas</Text>
-            <Pressable
-              onPress={funnelOpen ? () => setFunnelOpen(false) : () => openFunnel()}
-              hitSlop={8}
-            >
-              <Ionicons
-                name={funnelOpen ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.textMuted}
-              />
-            </Pressable>
-          </View>
-          {!funnelOpen ? (
-            <Text style={styles.helperText}>
-              Dónde se cae la gente entre abrir la app y crear la cuenta.
-            </Text>
-          ) : loadingFunnel ? (
-            <Text style={styles.helperText}>Cargando métricas...</Text>
-          ) : (
-            <>
-              <ChipRow>
-                {[7, 30, 60].map((d) => (
-                  <Chip
-                    key={d}
-                    texto={frase`${d} días`}
-                    activo={funnelDays === d}
-                    onPress={() => openFunnel(d)}
-                  />
-                ))}
-              </ChipRow>
-              {funnel.map((step, i) => (
-                <View key={step.key} style={styles.funnelRow}>
-                  <View style={styles.funnelHead}>
-                    <Text style={styles.funnelLabel}>{step.label}</Text>
-                    <Text style={styles.funnelValue}>{step.value}</Text>
-                  </View>
-                  {/* La barra es sobre el total inicial: se ve el desplome. */}
-                  <View style={styles.funnelTrack}>
-                    <View
-                      style={[
-                        styles.funnelFill,
-                        { width: `${Math.max(2, step.pctOfTop)}%` },
-                        // Menos de la mitad del paso anterior = fuga gorda.
-                        i > 0 && step.pctOfPrev < 50 ? styles.funnelFillBad : null,
-                      ]}
-                    />
-                  </View>
-                  {i > 0 ? (
-                    <Text
-                      style={[
-                        styles.funnelPct,
-                        step.pctOfPrev < 50 ? { color: colors.danger } : null,
-                      ]}
-                    >
-                      {step.pctOfPrev}% de los del paso anterior
-                    </Text>
-                  ) : null}
-                </View>
-              ))}
-              <Text style={styles.funnelFoot}>
-                Altas por tipo — coach {funnelExtra.register_ok_trainer ?? 0} · alumno{' '}
-                {funnelExtra.register_ok_client ?? 0}
-              </Text>
-              <Text style={styles.funnelFoot}>
-                Muro de pago visto {funnelExtra.paywall_view ?? 0} · pagos iniciados{' '}
-                {funnelExtra.checkout_start ?? 0} · altas fallidas{' '}
-                {funnelExtra.register_fail ?? 0}
-              </Text>
-            </>
-          )}
-        </Card>
-      ) : null}
-
-      {admin ? (
-        <Card accent style={styles.section}>
-          <View style={styles.subHeader}>
-            <Text style={styles.sectionTitle}>Errores de usuarios</Text>
+            <Text style={styles.sectionTitle}>Errores de la app</Text>
             <Pressable onPress={errorsOpen ? () => setErrorsOpen(false) : openErrors} hitSlop={8}>
               <Ionicons
                 name={errorsOpen ? 'chevron-up' : 'chevron-down'}
@@ -631,61 +185,10 @@ export default function TrainerProfileScreen() {
         </Card>
       ) : null}
 
-      {admin ? (
-        <Card accent style={styles.section}>
-          <View style={styles.subHeader}>
-            <Text style={styles.sectionTitle}>Admin CALICO · cuentas</Text>
-            <Pressable onPress={adminOpen ? () => setAdminOpen(false) : () => openAdmin()} hitSlop={8}>
-              <Ionicons
-                name={adminOpen ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color={colors.textMuted}
-              />
-            </Pressable>
-          </View>
-          {!adminOpen ? (
-            <Text style={styles.helperText}>
-              Gestiona las suscripciones de los entrenadores.
-            </Text>
-          ) : (
-            <>
-              {loadingCoaches ? (
-                <Text style={styles.helperText}>Cargando…</Text>
-              ) : (
-                /* La sección siempre, aunque esté vacía: esconderla haría
-                   dudar de si existe o si ha fallado algo. */
-                GRUPOS_ADMIN.map(({ rol, titulo, vacio }) => {
-                  const cuentas = coaches.filter((c) => c.role === rol);
-                  return (
-                    <View key={rol} style={styles.grupoAdmin}>
-                      <View style={styles.grupoAdminCab}>
-                        <Text style={styles.grupoAdminTitulo}>{t(titulo)}</Text>
-                        <Text style={styles.grupoAdminCuenta}>{cuentas.length}</Text>
-                      </View>
-                      {cuentas.length === 0 ? (
-                        <Text style={styles.helperText}>{t(vacio)}</Text>
-                      ) : (
-                        cuentas.map(filaCuenta)
-                      )}
-                    </View>
-                  );
-                })
-              )}
-            </>
-          )}
-        </Card>
-      ) : null}
-
-      {/* El plan anual, hasta que lo active. */}
-      <UpgradeCard />
-
       <RateApp />
 
       {/* Sin el rojo de lo peligroso: cerrar sesión no borra nada. */}
       <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={{ marginTop: spacing.lg }} />
-      {/* Con marca propia, una firma pequeña al final: la app es suya, pero se
-          sabe con qué está hecha. */}
-      {marca !== MARCA_POR_DEFECTO || logo ? <Text style={styles.conCalico}>con CALICO</Text> : null}
 
       {/* Ver el comentario del mismo botón en el perfil del alumno. */}
       <Pressable onPress={() => router.push('/account-deletion')} style={styles.borrarCuenta}>
@@ -696,7 +199,6 @@ export default function TrainerProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  conCalico: { ...typography.small, color: colors.textFaint, textAlign: 'center', marginTop: spacing.md, fontSize: 11 },
   borrarCuenta: { alignSelf: 'center', paddingVertical: spacing.lg },
   borrarCuentaTexto: { ...typography.small, color: colors.textFaint, textDecorationLine: 'underline' },
   backBtn: {
@@ -735,45 +237,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.xs,
   },
-  grupoAdmin: { marginTop: spacing.md },
-  grupoAdminCab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  grupoAdminTitulo: {
-    ...typography.label,
-    color: colors.textMuted,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  grupoAdminCuenta: {
-    ...typography.label,
-    color: colors.primary,
-    fontFamily: fonts.semiBold,
-  },
-  coachCard: { borderTopWidth: 1, borderTopColor: colors.border },
-  funnelRow: { marginTop: spacing.md },
-  funnelHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  funnelLabel: { ...typography.small, color: colors.text },
-  funnelValue: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  funnelTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.surfaceAlt,
-    overflow: 'hidden',
-    marginTop: 4,
-  },
-  funnelFill: { height: '100%', borderRadius: 4, backgroundColor: colors.primary },
-  funnelFillBad: { backgroundColor: colors.danger },
-  funnelPct: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 3 },
-  funnelFoot: {
-    ...typography.small,
-    color: colors.textMuted,
-    fontSize: 11,
-    marginTop: spacing.sm,
-  },
   errCard: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -782,68 +245,7 @@ const styles = StyleSheet.create({
   },
   errMsg: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   errMeta: { ...typography.small, color: colors.textMuted, fontSize: 11, marginTop: 2 },
-  coachRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  customDaysRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
-  },
-  customDaysField: { flex: 1, marginBottom: 0 },
-  daysBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
-  },
-  daysBtnText: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
-  coachName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  coachEmail: { ...typography.small, color: colors.textFaint, fontSize: 11 },
-  coachSub: { ...typography.small, color: colors.primaryBright, fontSize: 11, marginTop: 2 },
-  coachBtn: { paddingHorizontal: spacing.md },
   // Con "flexWrap": en pantalla estrecha los botones bajan a la línea
   // siguiente en vez de salirse o comerse los iconos de revocar y borrar.
-  coachActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  coachIconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  coachIconDanger: { borderColor: colors.danger },
   helperText: { ...typography.small, color: colors.textMuted, marginBottom: spacing.md, lineHeight: 20 },
-  codeBox: {
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  code: {
-    ...typography.h1,
-    color: colors.primary,
-    letterSpacing: 4,
-    fontFamily: fonts.display,
-  },
 });

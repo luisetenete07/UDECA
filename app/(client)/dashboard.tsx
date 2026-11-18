@@ -13,7 +13,7 @@ import { getLlamadasGrupales } from '../../lib/firestore/llamadasGrupales';
 import { fijadasAhora, grupalesSinVer, type LlamadaGrupal } from '../../lib/llamadaGrupal';
 import { unido } from '../../lib/texto';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Image, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -98,7 +98,7 @@ interface ClientDashData {
 }
 
 export default function ClientDashboard() {
-  const { profile, refreshProfile, logo } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [reporting, setReporting] = useState(false);
   const router = useRouter();
   // Pinta al instante lo último conocido (caché de sesión) y refresca detrás.
@@ -536,9 +536,6 @@ export default function ClientDashboard() {
     >
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          {/* El logo de su entrenador, si lo ha puesto: para el alumno, la app
-              es la de su coach. */}
-          {logo ? <Image source={{ uri: logo }} style={styles.logoCoach} resizeMode="contain" /> : null}
           <Text style={styles.greetingLabel}>Bienvenido de nuevo</Text>
           <Text style={styles.greeting}>{profile?.name?.split(' ')[0]}</Text>
         </View>
@@ -1075,7 +1072,6 @@ const styles = StyleSheet.create({
   habitoHecho: { borderColor: colors.hairline, backgroundColor: colors.primaryMuted },
   habitoTexto: { ...typography.small, color: colors.text },
   habitoTextoHecho: { color: colors.textMuted, textDecorationLine: 'line-through' },
-  logoCoach: { width: 120, height: 32, alignSelf: 'flex-start', marginBottom: spacing.sm },
   greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
   greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
   reminderBanner: {

@@ -87,12 +87,20 @@ console.log('\nSin dirección, no se promete nada');
   ok('la del ordenador no depende de ninguna tienda', /ready-siempre/.test(html) && /ready-siempre/.test(css));
 }
 
-console.log('\nLas capturas de la portada');
+console.log('\nLas capturas que enseñe la página existen');
 {
-  // Tres capturas de la app en la portada. Si alguien renombra una y no toca el
-  // HTML, el hueco se queda en blanco y solo se ve entrando en la web.
-  for (const n of ['app-entreno', 'app-inicio', 'app-coach']) {
-    ok(`${n} está puesta y existe`, html.includes(`/assets/${n}.webp`) && !!lee(`web/assets/${n}.webp`).length);
+  // Si alguien renombra una captura y no toca el HTML, el hueco se queda en
+  // blanco y solo se ve entrando en la web. Las de CALICO se quitaron con el
+  // cambio de nombre: hasta que haya capturas nuevas, la portada va sin ellas.
+  const capturas = [...html.matchAll(/\/assets\/([\w-]+\.webp)/g)].map((m) => m[1]);
+  for (const n of capturas) {
+    let pesa = 0;
+    try {
+      pesa = lee(`web/assets/${n}`).length;
+    } catch {
+      pesa = 0;
+    }
+    ok(`${n} está puesta y existe`, pesa > 0);
   }
 }
 

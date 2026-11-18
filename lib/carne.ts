@@ -1,6 +1,5 @@
 import { desdeCuando } from './cardStats';
 import { frase } from './idioma';
-import { estadoInsignia, numeroFundador } from './fundador';
 import type { UserProfile } from './types';
 
 /**
@@ -16,9 +15,6 @@ import type { UserProfile } from './types';
  * cosa y enseñarlas iguales las iguala: un entrenador con veinte alumnos y
  * alguien que acaba de comprar una formación no comparten carné en ningún
  * sitio del mundo real, y aquí tampoco.
- *
- * El número de fundador, cuando está encendido, manda sobre todo lo demás. Es
- * el único dato de esta tarjeta que no se puede conseguir más tarde.
  */
 
 export type TipoDeCarne = 'coach' | 'alumno' | 'formacion';
@@ -36,8 +32,6 @@ export interface Carne {
   nombre: string;
   /** "Miembro desde mayo de 2026". */
   desde?: string;
-  /** "#0028", ya escrito, y SOLO si la insignia está encendida. */
-  fundador?: string;
 }
 
 /**
@@ -47,22 +41,22 @@ export interface Carne {
  * luz, no tres colores de marcas distintas. Una tarjeta verde y otra
  * naranja se verían de dos empresas.
  */
-const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'fundador' | 'tipo'>> = {
+const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'tipo'>> = {
   coach: {
     titulo: 'ENTRENADOR',
-    lema: 'Forma a otros dentro de CALICO',
+    lema: 'Dirige Maestría en Calistenia',
     monograma: 'EN',
     acento: '#7FA8FF',
   },
   alumno: {
     titulo: 'ALUMNO',
-    lema: 'Entrena con su entrenador',
+    lema: 'Entrena con Luis Tena',
     monograma: 'AL',
     acento: '#3D7BFF',
   },
   formacion: {
     titulo: 'FORMACIÓN',
-    lema: 'Se forma con los cursos de CALICO',
+    lema: 'Se forma con los cursos de Maestría en Calistenia',
     monograma: 'FO',
     acento: '#A9C4FF',
   },
@@ -97,11 +91,6 @@ export function datosDelCarne(
 ): Carne | null {
   if (!p) return null;
   const tipo = tipoDeCarne(p, opciones);
-  // El número solo se imprime si la insignia está encendida: una tarjeta que
-  // se comparte no puede decir "fundador" de quien ahora mismo no está dentro.
-  // El número no se pierde —vuelve solo al volver—, pero mientras tanto no se
-  // enseña.
-  const insignia = estadoInsignia(p, opciones.ahora ?? Date.now());
   return {
     tipo,
     ...TIPOS[tipo],
@@ -110,14 +99,13 @@ export function datosDelCarne(
     // la tarjeta viaja sola: un "Abril de 2026" suelto no dice desde cuándo
     // qué.
     desde: desdeCuando(p.createdAt) ? frase`Miembro desde ${desdeCuando(p.createdAt)}` : undefined,
-    fundador: insignia.activa && insignia.numero ? numeroFundador(insignia.numero) : undefined,
   };
 }
 
 /**
  * Qué eres, para el rótulo de la marca.
  *
- * Arriba a la izquierda del todo, bajo "CALICO", ponía "Entrenador" a todo el
+ * Arriba a la izquierda del todo, bajo el nombre de la app, ponía "Entrenador" a todo el
  * mundo: un alumno abría la app y lo primero que leía era que era entrenador.
  * No es un detalle de estilo —es la primera frase que dice la app sobre quien
  * la usa, y estaba equivocada para dos de cada tres cuentas.

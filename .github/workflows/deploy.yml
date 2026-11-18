@@ -89,7 +89,7 @@ jobs:
         run: |
           touch dist/.nojekyll
           echo "app.udeca.app" > dist/CNAME
-          for pagina in privacidad eliminar-cuenta soporte proximamente gracias; do
+          for pagina in privacidad eliminar-cuenta soporte; do
             test -f "web/$pagina.html" || { echo "::error::falta web/$pagina.html"; exit 1; }
             mkdir -p "dist/$pagina"
             cp "web/$pagina.html" "dist/$pagina.html"
@@ -166,12 +166,12 @@ jobs:
         continue-on-error: true
         run: |
           fallos=0
-          for pagina in privacidad eliminar-cuenta proximamente gracias; do
+          for pagina in privacidad eliminar-cuenta soporte; do
             url="https://app.udeca.app/$pagina"
             bien=0
             for _ in $(seq 1 18); do
               codigo=$(curl -sL -o /tmp/pagina.html -w '%{http_code}' "$url" || echo 000)
-              if [ "$codigo" = "200" ] && grep -q "CALICO" /tmp/pagina.html; then
+              if [ "$codigo" = "200" ] && grep -q "Calistenia" /tmp/pagina.html; then
                 echo "OK  $url ($(wc -c < /tmp/pagina.html) bytes)"
                 bien=1
                 break

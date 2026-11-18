@@ -84,7 +84,7 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       {Platform.OS === 'web' ? (
         <Head>
-          <title>CALICO — Calisthenics Coaches</title>
+          <title>Maestría en Calistenia</title>
         </Head>
       ) : null}
       <SafeAreaProvider>

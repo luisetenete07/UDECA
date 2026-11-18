@@ -1,5 +1,5 @@
 /**
- * Tarjetas de marca CALICO como imagen PNG (1080×1350):
+ * Tarjetas de marca de Maestría en Calistenia como imagen PNG (1080×1350):
  *  - Resumen de sesión (al terminar de entrenar).
  *  - Récord personal.
  *  - Informe del alumno (lo genera el coach desde su ficha).
@@ -28,7 +28,7 @@ import {
 } from './cardEngine';
 import { canRenderCardNatively, renderCardBase64 } from '../components/CardRendererHost';
 import { CALICO_LOGO_DATA_URI } from './calicoLogo';
-import { marcaActual } from './marcaActual';
+import { MARCA_ARRIBA } from './marca';
 import { getIdioma } from './idioma';
 import { t } from './idioma';
 
@@ -46,9 +46,9 @@ type DrawCard = (
   textos: CardTextos
 ) => Promise<HTMLCanvasElement>;
 
-/** El logo del entrenador si lo tiene (y su plan lo incluye), si no el de CALICO. */
+/** El emblema que va arriba de la tarjeta. */
 function logoDeLaTarjeta(): string {
-  return marcaActual().logo ?? CALICO_LOGO_DATA_URI;
+  return CALICO_LOGO_DATA_URI;
 }
 
 /**
@@ -61,7 +61,7 @@ function logoDeLaTarjeta(): string {
  */
 function textosDeLaTarjeta(): CardTextos {
   return {
-    marca: marcaActual().marca,
+    marca: MARCA_ARRIBA,
     sesionCompletada: t('SESIÓN COMPLETADA'),
     duracion: t('Duración'),
     series: t('Series'),
@@ -184,18 +184,18 @@ async function shareCard(
 // ---------- API pública ----------
 
 export function shareSessionImage(data: SessionCardData): Promise<ShareResult> {
-  return shareCard('session', data, 'sesion-calico.png', 'Sesión CALICO');
+  return shareCard('session', data, 'sesion-maestria.png', 'Sesión Maestría en Calistenia');
 }
 
 export function shareRecordImage(data: RecordCardData): Promise<ShareResult> {
-  return shareCard('record', data, 'record-calico.png', 'Récord CALICO');
+  return shareCard('record', data, 'record-maestria.png', 'Récord Maestría en Calistenia');
 }
 
 export function shareReportImage(data: ReportCardData): Promise<ShareResult> {
-  return shareCard('report', data, 'informe-calico.png', 'Informe CALICO');
+  return shareCard('report', data, 'informe-maestria.png', 'Informe Maestría en Calistenia');
 }
 
 /** Carné de miembro (con número de fundador si lo tiene encendido). */
 export function shareMemberImage(data: MemberCardData): Promise<ShareResult> {
-  return shareCard('member', data, 'carne-calico.png', 'Mi carné CALICO');
+  return shareCard('member', data, 'carne-maestria.png', 'Mi carné Maestría en Calistenia');
 }

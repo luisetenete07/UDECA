@@ -93,28 +93,55 @@ const cli2 = await ensure('alumno2@demo.test', 'Ana Gil');
 // para que el podio del mes pasado tenga de verdad un 1º, un 2º y un 3º.
 const cli3 = await ensure('alumno3@demo.test', 'Iker Sanz');
 
+/**
+ * Escribe un documento saltándose las reglas, como lo haría la consola de
+ * Firebase. El emulador lo permite con el token `owner`.
+ *
+ * Hace falta para dos cosas que la app ya NO puede hacer, y es a propósito:
+ * crear una cuenta de entrenador (las reglas solo lo dejan con los correos de
+ * Luis, verificados) y apuntar quién es el coach en `config/coach`.
+ */
+async function comoAdministrador(ruta, datos) {
+  const valor = (v) =>
+    typeof v === 'number'
+      ? { integerValue: String(v) }
+      : typeof v === 'boolean'
+        ? { booleanValue: v }
+        : { stringValue: String(v) };
+  const fields = Object.fromEntries(Object.entries(datos).map(([k, v]) => [k, valor(v)]));
+  const r = await fetch(
+    `http://127.0.0.1:8080/v1/projects/calico-demo/databases/(default)/documents/${ruta}`,
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+      body: JSON.stringify({ fields }),
+    }
+  );
+  if (!r.ok) throw new Error(`No se pudo escribir ${ruta}: ${r.status} ${await r.text()}`);
+}
+
 await como('coach@demo.test');
-// `subscriptionUntil` y `clientCount` SOLO se escriben al crear la cuenta: son
-// campos del servidor y las reglas prohíben que el propio coach los cambie.
-// Al resembrar sobre una base ya existente hay que dejarlos como están, o el
-// guion muere con "permisos insuficientes" — que es la regla funcionando.
+// El perfil del coach se escribe como administrador: desde la app, una cuenta
+// de entrenador solo la puede crear Luis con sus correos.
 const coachExiste = (await getDoc(doc(db, 'users', coach))).exists();
+if (!coachExiste) {
+  await comoAdministrador(`users/${coach}`, {
+    uid: coach, role: 'trainer', name: 'Luis Tena', email: 'coach@demo.test',
+    createdAt: now - 200 * DAY,
+  });
+}
 await setDoc(
   doc(db, 'users', coach),
   {
     uid: coach, role: 'trainer', name: 'Luis Tena', email: 'coach@demo.test',
     createdAt: now - 200 * DAY, inviteCode: 'DEMO01', emailVerificationRequired: false,
-    // Caducado a propósito: las reglas impiden regalarse suscripción al crear
-    // la cuenta. Con tres alumnos entra igual por el plan gratuito (cinco
-    // incluidos), que es justo el caso que interesa poder revisar.
-    ...(coachExiste ? {} : { subscriptionUntil: 0, clientCount: 3, founderNumber: 7, founderSince: now - 30 * DAY }),
-    // Al resembrar vuelve a salir el aviso del plan: cerrado una vez, no
-    // habría forma de revisarlo hasta la semana siguiente.
-    planPopupClosedAt: deleteField(),
   },
   { merge: true }
 );
 await setDoc(doc(db, 'trainerCodes', 'DEMO01'), { trainerId: coach, full: false });
+// Y se apunta como EL coach: así los alumnos nuevos le mandan la solicitud sin
+// código (lib/coachUnico.ts), igual que en producción con la cuenta de Luis.
+await comoAdministrador('config/coach', { trainerId: coach, updatedAt: now });
 
 /** [uid, nombre, correo, días que le quedan de coaching] */
 const alumnos = [
@@ -442,23 +469,28 @@ for (const uid of [cli, cli2]) {
 }
 
 /**
- * La cuenta del CEO, con poderes de administración.
+ * La cuenta de administración de Luis, con su correo de verdad (el de
+ * `ADMIN_EMAILS`): las reglas miran el correo del token, no una casilla.
  *
- * Se siembra con SU correo de verdad (el de `ADMIN_EMAILS`) porque las reglas
- * miran el correo del token, no una casilla: sin esta cuenta el panel de
- * administración no se puede abrir ni probar en el emulador, que es
- * justamente donde interesa comprobar que un entrenador caducado se puede
- * reactivar sin tocar la base de datos a mano.
+ * En el emulador ese correo no llega verificado, así que las reglas no la
+ * dejan crearse como entrenador ni apuntarse como coach: justo lo que tiene
+ * que pasar con una cuenta que dice ser de Luis sin demostrarlo. Se escribe
+ * como administrador, y el coach de las pruebas sigue siendo coach@demo.test.
  */
 const ceo = await ensure('luistenaf@gmail.com', 'Luis Tena');
 await como('luistenaf@gmail.com');
 const ceoExiste = (await getDoc(doc(db, 'users', ceo))).exists();
+if (!ceoExiste) {
+  await comoAdministrador(`users/${ceo}`, {
+    uid: ceo, role: 'trainer', name: 'Luis Tena (admin)', email: 'luistenaf@gmail.com',
+    createdAt: now - 300 * DAY,
+  });
+}
 await setDoc(
   doc(db, 'users', ceo),
   {
-    uid: ceo, role: 'trainer', name: 'Luis Tena (CEO)', email: 'luistenaf@gmail.com',
+    uid: ceo, role: 'trainer', name: 'Luis Tena (admin)', email: 'luistenaf@gmail.com',
     createdAt: now - 300 * DAY, inviteCode: 'CEO001', emailVerificationRequired: false,
-    ...(ceoExiste ? {} : { clientCount: 0 }),
   },
   { merge: true }
 );
@@ -469,6 +501,6 @@ console.log(`Emulador sembrado.
   alumno@demo.test  (alumno con rutina e historial)
   alumno2@demo.test (alumno con el coaching terminado)
   alumno3@demo.test (alumno solo para la clasificación)
-  luistenaf@gmail.com (el CEO, con panel de administración)
+  luistenaf@gmail.com (cuenta de administración: ve los errores de la app)
   contraseña: ${PW}`);
 process.exit(0);

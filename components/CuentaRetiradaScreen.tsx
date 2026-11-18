@@ -22,7 +22,7 @@ export function CuentaRetiradaScreen() {
     <GateScreen
       icono="information-circle-outline"
       titulo="Este tipo de cuenta ya no existe"
-      texto="CALICO es ahora para entrenadores y sus alumnos. Si entrenas con alguien, pídele que te invite y entra con una cuenta de alumno."
+      texto="Maestría en Calistenia es ahora la app de Luis Tena para sus alumnos. Si quieres entrenar con él, entra con una cuenta de alumno y pide tu plaza."
       nota="Si quieres, puedes eliminar esta cuenta y todos sus datos."
       onSalir={signOut}
     >

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Image, PanResponder, StyleSheet, View } from 'react-native';
+import { Animated, Easing, PanResponder, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
-import { Ionicons } from '@expo/vector-icons';
 import Svg, {
   Defs,
   Ellipse,
@@ -12,16 +11,16 @@ import Svg, {
   Rect,
   Stop,
 } from 'react-native-svg';
-import { useAuth } from '../lib/auth-context';
+import { MARCA, MARCA_ABAJO, MARCA_ARRIBA } from '../lib/marca';
 import { useBloqueoDeScroll } from '../lib/bloqueoDeScroll';
 import { colors, fonts, spacing, tabularNums, typography } from '../lib/theme';
 
 /**
  * La tarjeta: un carné con una sola cifra grande, y esa cifra va cambiando.
  *
- * Todo lo que la identifica vive DENTRO: la marca arriba, el nombre abajo y el
- * número de fundador impreso a su lado. Es un carné, y un carné no reparte su
- * identidad entre la tarjeta y lo que hay debajo de ella.
+ * Todo lo que la identifica vive DENTRO: la marca arriba y el nombre abajo. Es
+ * un carné, y un carné no reparte su identidad entre la tarjeta y lo que hay
+ * debajo de ella.
  *
  * Lo que rota es solo lo que cambia con el tiempo —alumnos, entrenos, racha,
  * puesto— porque un carné con seis datos del mismo tamaño no se enseña a
@@ -65,7 +64,6 @@ export function ProgressCard({
   nombre,
   rol,
   desde,
-  fundador,
 }: {
   /** Las cifras que se van turnando. Con una sola, no rota. */
   datos: DatoTarjeta[];
@@ -74,16 +72,7 @@ export function ProgressCard({
   rol: string;
   /** "Mayo de 2026". */
   desde?: string;
-  /**
-   * "#0001", ya escrito. Se imprime fijo; no entra en la rotación.
-   *
-   * Aquí solo llega encendido: quien no tiene la cuenta al día no ve el
-   * perfil, ve el muro de pago (ver components/Paywall.tsx, que es donde se le
-   * recuerda que el número sigue siendo suyo).
-   */
-  fundador?: string;
 }) {
-  const { marca, logo } = useAuth();
   const [i, setI] = useState(0);
   const [caja, setCaja] = useState({ w: 0, h: 0 });
   const giroX = useRef(new Animated.Value(0)).current;
@@ -363,10 +352,12 @@ export function ProgressCard({
       <View style={styles.arriba}>
         {/* La tarjeta se comparte fuera de la app: aquí la marca importa el
             doble, porque es lo que ve quien todavía no es cliente de nadie. */}
-        <View style={styles.marcaFila}>
-          {logo ? <Image source={{ uri: logo }} style={styles.marcaLogo} resizeMode="contain" /> : null}
+        <View style={styles.marcaFila} accessibilityLabel={MARCA}>
           <Text style={styles.marca} numberOfLines={1}>
-            {marca}
+            {MARCA_ARRIBA}
+          </Text>
+          <Text style={styles.marcaAbajo} numberOfLines={1}>
+            {MARCA_ABAJO}
           </Text>
         </View>
         <Text style={styles.rol}>{rol.toUpperCase()}</Text>
@@ -427,12 +418,6 @@ export function ProgressCard({
             </Text>
           ) : null}
         </View>
-        {fundador ? (
-          <View style={styles.fundador}>
-            <Ionicons name="shield-checkmark" size={11} color={colors.primaryBright} />
-            <Text style={styles.fundadorNumero}>{fundador}</Text>
-          </View>
-        ) : null}
       </View>
     </Animated.View>
   );
@@ -458,8 +443,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   arriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  marcaFila: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  marcaLogo: { width: 26, height: 26 },
+  marcaFila: { flexShrink: 1 },
+  marcaAbajo: {
+    fontSize: 7,
+    fontFamily: fonts.semiBold,
+    letterSpacing: 2.2,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
   marca: {
     fontSize: 15,
     fontFamily: fonts.display,
@@ -491,24 +482,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
   },
   desde: { fontSize: 10, color: colors.textFaint, fontFamily: fonts.medium, marginTop: 1 },
-  fundador: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.hairlineFaint,
-    backgroundColor: colors.primaryMuted,
-    flexShrink: 0,
-  },
-  fundadorNumero: {
-    fontSize: 12,
-    color: colors.primaryBright,
-    fontFamily: fonts.semiBold,
-    ...tabularNums,
-  },
   puntos: { flexDirection: 'row', gap: 5, marginTop: spacing.sm },
   punto: {
     width: 5,

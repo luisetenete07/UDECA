@@ -6,14 +6,14 @@ import { colors, spacing, typography } from '../lib/theme';
 export default function PrivacyPolicy() {
   return (
     <ScrollView contentContainerStyle={styles.container} style={{ backgroundColor: colors.background }}>
-      <Text style={styles.title}>Política de privacidad de CALICO</Text>
-      <Text style={styles.updated}>Última actualización: octubre 2026</Text>
+      <Text style={styles.title}>Política de privacidad de Maestría en Calistenia</Text>
+      <Text style={styles.updated}>Última actualización: noviembre 2026</Text>
 
       <Text style={styles.intro}>
-        CALICO (Calisthenics Coaches) es una aplicación de entrenamiento de calistenia que
-        conecta a entrenadores con sus alumnos. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes.
-        El responsable del tratamiento es el titular de CALICO; puedes contactar en cualquier momento
-        en <Text style={styles.bold}>luistenaf@gmail.com</Text>.
+        Maestría en Calistenia es la aplicación de entrenamiento de calistenia de Luis Tena para sus
+        alumnos. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes.
+        El responsable del tratamiento es Luis Tena; puedes contactar en cualquier momento en{' '}
+        <Text style={styles.bold}>luistenaf@gmail.com</Text>.
       </Text>
 
       <Section title="1. Datos que recogemos">
@@ -37,14 +37,13 @@ export default function PrivacyPolicy() {
       <Section title="2. Para qué usamos tus datos">
         Tratamos tus datos para: ofrecerte el servicio de entrenamiento y seguimiento con tu coach;
         mostrarte tu progreso y estadísticas;
-        gestionar tu cuenta y la relación con tu entrenador; enviarte notificaciones relacionadas con
-        tu entrenamiento y avisos de pago (solo si las activas); y gestionar el cobro de la
-        cuota de tu entrenador. No usamos tus datos para publicidad ni para elaborar perfiles
-        comerciales.
+        gestionar tu cuenta y la relación con tu entrenador; y enviarte notificaciones relacionadas
+        con tu entrenamiento (solo si las activas). La app no cobra nada ni guarda datos de pago. No
+        usamos tus datos para publicidad ni para elaborar perfiles comerciales.
       </Section>
 
       <Section title="3. El contador de pasos">
-        Si activas el contador de pasos, CALICO lee los pasos que cuenta tu propio teléfono. Es
+        Si activas el contador de pasos, la app lee los pasos que cuenta tu propio teléfono. Es
         opcional: la app funciona igual sin ello, y siempre puedes escribir tus pasos a mano.
         {'\n\n'}
         • <Text style={styles.bold}>Qué leemos:</Text> únicamente el número de pasos de cada día
@@ -52,10 +51,10 @@ export default function PrivacyPolicy() {
         cardiaco, ni sueño, ni entrenamientos, ni ubicación.{'\n'}
         • <Text style={styles.bold}>En iPhone:</Text> se le piden a la app{' '}
         <Text style={styles.bold}>Salud</Text> los pasos (los del iPhone y, si lo llevas, tu Apple
-        Watch), y solo eso. CALICO no escribe ni modifica nada en Salud.{'\n'}
+        Watch), y solo eso. La app no escribe ni modifica nada en Salud.{'\n'}
         • <Text style={styles.bold}>En Android:</Text> los cuenta el propio móvil con la API de
-        grabación de Google Play services, que los guarda en el dispositivo, también con CALICO
-        cerrada; si tu móvil no la tiene, el sensor mientras tienes CALICO abierta.
+        grabación de Google Play services, que los guarda en el dispositivo, también con la app
+        cerrada; si tu móvil no la tiene, el sensor mientras tienes la app abierta.
         No usamos Health Connect ni ningún otro almacén de datos de salud.
         {'\n'}
         • <Text style={styles.bold}>Dónde acaba:</Text> la cifra diaria se guarda en tu cuenta para
@@ -68,42 +67,30 @@ export default function PrivacyPolicy() {
         resto de la app. Al borrar tu cuenta se borran también los pasos guardados.
       </Section>
 
-      <Section title="4. Pagos (Stripe)">
-        Los pagos de las cuotas y de la suscripción se procesan a través de{' '}
-        <Text style={styles.bold}>Stripe</Text>, un proveedor de pagos certificado. Los datos de tu
-        tarjeta se introducen y almacenan directamente en Stripe:{' '}
-        <Text style={styles.bold}>CALICO nunca ve ni guarda los datos completos de tu tarjeta</Text>.
-        Solo recibimos la confirmación de si un pago se ha realizado y su historial (fechas e importes)
-        para mostrar tu estado de cuota. Consulta la política de privacidad de Stripe en{' '}
-        <Text style={styles.bold}>stripe.com/es/privacy</Text>.
-      </Section>
-
-      <Section title="5. Proveedores y con quién se comparten">
+      <Section title="4. Proveedores y con quién se comparten">
         Tus datos de entrenamiento son visibles para tu <Text style={styles.bold}>entrenador
-        asignado</Text> en CALICO (no lo son para otros alumnos, salvo la clasificación del grupo y tu
+        asignado</Text>, Luis Tena (no lo son para otros alumnos, salvo la clasificación del grupo y tu
         estado en línea, que puedes tratar con tu coach).{'\n\n'}
         Para funcionar, la app se apoya en proveedores de infraestructura que actúan como encargados
         del tratamiento:{'\n'}
         • <Text style={styles.bold}>Firebase (Google):</Text> autenticación, base de datos y
         almacenamiento de imágenes.{'\n'}
-        • <Text style={styles.bold}>Stripe:</Text> procesamiento de pagos.{'\n'}
         • <Text style={styles.bold}>Expo:</Text> envío de notificaciones push.{'\n\n'}
         No vendemos ni cedemos tus datos a terceros con fines publicitarios.
       </Section>
 
-      <Section title="6. Transferencias internacionales">
-        Algunos de nuestros proveedores (Google, Stripe, Expo) pueden tratar datos en servidores
+      <Section title="5. Transferencias internacionales">
+        Algunos de nuestros proveedores (Google, Expo) pueden tratar datos en servidores
         situados fuera del Espacio Económico Europeo. En esos casos, la transferencia se ampara en las
         garantías previstas por el RGPD (como las Cláusulas Contractuales Tipo de la Comisión Europea).
       </Section>
 
-      <Section title="7. Conservación">
+      <Section title="6. Conservación">
         Conservamos tus datos mientras tu cuenta esté activa. Si eliminas tu cuenta o lo solicitas,
-        borramos tus datos personales, salvo los que debamos conservar por obligaciones legales (por
-        ejemplo, registros de facturación asociados a los pagos).
+        borramos tus datos personales, salvo los que debamos conservar por obligaciones legales.
       </Section>
 
-      <Section title="8. Tus derechos">
+      <Section title="7. Tus derechos">
         Puedes ejercer en cualquier momento tus derechos de acceso, rectificación, supresión,
         oposición, limitación y portabilidad de tus datos. Muchos de ellos los puedes ejercer
         directamente desde la app (editar tu perfil, borrar registros o eliminar tu cuenta). Para
@@ -113,24 +100,24 @@ export default function PrivacyPolicy() {
         (en España, la Agencia Española de Protección de Datos, aepd.es).
       </Section>
 
-      <Section title="9. Eliminar tu cuenta y tus datos">
+      <Section title="8. Eliminar tu cuenta y tus datos">
         Puedes eliminar tu cuenta desde los ajustes de la app o solicitándolo en{' '}
         <Text style={styles.bold}>luistenaf@gmail.com</Text>. Al hacerlo, borramos tu perfil y tus
         datos de entrenamiento asociados.
       </Section>
 
-      <Section title="10. Menores">
-        CALICO no está dirigida a menores de 14 años. Si eres menor de esa edad, no debes usar la app
+      <Section title="9. Menores">
+        Maestría en Calistenia no está dirigida a menores de 14 años. Si eres menor de esa edad, no debes usar la app
         sin el consentimiento de tus padres o tutores.
       </Section>
 
-      <Section title="11. Cambios en esta política">
+      <Section title="10. Cambios en esta política">
         Podemos actualizar esta política para reflejar cambios en el servicio o en la normativa.
         Publicaremos siempre la versión vigente en esta misma página, indicando la fecha de última
         actualización.
       </Section>
 
-      <Section title="12. Contacto">
+      <Section title="11. Contacto">
         Para cualquier duda sobre privacidad o para ejercer tus derechos, escríbenos a{' '}
         <Text style={styles.bold}>luistenaf@gmail.com</Text>.
       </Section>

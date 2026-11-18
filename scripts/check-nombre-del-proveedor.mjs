@@ -182,9 +182,10 @@ console.log('\nLa pantalla NO pide el nombre');
     'vuelve a haber un nombre obligatorio: es el rechazo de la norma 4'
   );
   ok('y no queda el aviso de ponerlo', !/Pon tu nombre/.test(pantalla));
-  // El código del entrenador SÍ se sigue exigiendo, y no es lo mismo: eso
-  // Apple no lo da ni lo puede dar.
-  ok('pero el código del entrenador sí', /if \(role === 'client' && !codigo\.trim\(\)\)/.test(pantalla));
+  // Y tampoco se pide código ni rol: la app es de un solo entrenador y la
+  // solicitud le llega a él sola (lib/coachUnico.ts). Lo único obligatorio
+  // en esta pantalla es pulsar el botón.
+  ok('ni código ni rol que elegir', !/codigo/.test(pantalla) && !/setRole/.test(pantalla));
 
   // Y que el texto no diga "Google" a fuego: a esta pantalla se llega por los
   // dos, y decir el que no es hace dudar de si la cuenta es la correcta.

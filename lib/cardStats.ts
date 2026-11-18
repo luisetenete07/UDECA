@@ -1,7 +1,6 @@
 import type { DatoTarjeta } from '../components/ProgressCard';
 import { frase, t } from './idioma';
 import { localeActual, mayusculaInicial, mesLargo } from './fechas';
-import { numeroFundador } from './fundador';
 
 /**
  * Qué cifras salen en la tarjeta, y en qué orden.
@@ -12,16 +11,9 @@ import { numeroFundador } from './fundador';
  * tiene que superar su listón o no aparece, aunque eso deje la tarjeta con un
  * solo dato el primer día. Un solo dato verdadero vale más que cuatro
  * rellenos.
- *
- * El número de fundador va siempre primero cuando existe: es lo único
- * irrepetible, lo que no se puede volver a conseguir por mucho que se entrene.
  */
 
 const MES_MS = 30.4 * 24 * 60 * 60 * 1000;
-
-// El número escrito vive en lib/fundador.ts, junto a la regla de cuándo se
-// enseña. Aquí se reexporta para no tener dos formas de escribir lo mismo.
-export { numeroFundador } from './fundador';
 
 /**
  * "mayo de 2026", en minúscula: va dentro de una frase ("entrenando desde
@@ -33,7 +25,6 @@ export function desdeCuando(ts?: number): string | undefined {
 }
 
 export interface DatosEntrenador {
-  founderNumber?: number;
   createdAt?: number;
   /** Alumnos en el grupo ahora mismo. */
   alumnos: number;
@@ -41,26 +32,8 @@ export interface DatosEntrenador {
   entrenosDirigidos: number;
 }
 
-/**
- * `conFundador: false` deja el número fuera de la rotación.
- *
- * Se usa cuando el número ya está impreso en la tarjeta de forma permanente:
- * ahí no es una cifra más que compite por su turno, es la identidad, y
- * enseñarlo dos veces en la misma tarjeta lo abarata.
- */
-export interface OpcionesTarjeta {
-  conFundador?: boolean;
-}
-
-export function tarjetaDeEntrenador(
-  d: DatosEntrenador,
-  ahora = Date.now(),
-  { conFundador = true }: OpcionesTarjeta = {}
-): DatoTarjeta[] {
+export function tarjetaDeEntrenador(d: DatosEntrenador): DatoTarjeta[] {
   const out: DatoTarjeta[] = [];
-  if (conFundador && d.founderNumber && d.founderNumber > 0) {
-    out.push({ etiqueta: t('Miembro fundador'), valor: numeroFundador(d.founderNumber) });
-  }
   if (d.alumnos > 0) {
     out.push({
       etiqueta: t(d.alumnos === 1 ? 'Alumno a tu cargo' : 'Alumnos a tu cargo'),
@@ -75,15 +48,10 @@ export function tarjetaDeEntrenador(
       valor: d.entrenosDirigidos.toLocaleString(localeActual()),
     });
   }
-  const meses = mesesDesde(d.createdAt, ahora);
-  if (meses >= 1) {
-    out.push({ etiqueta: t('En CALICO'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
-  }
-  return out.length > 0 ? out : [{ etiqueta: t('Entrenador'), valor: 'CALICO' }];
+  return out.length > 0 ? out : [{ etiqueta: t('Entrenador'), valor: 'MAESTRÍA' }];
 }
 
 export interface DatosAtleta {
-  founderNumber?: number;
   createdAt?: number;
   /** Entrenos registrados desde siempre. */
   entrenos: number;
@@ -95,15 +63,8 @@ export interface DatosAtleta {
   deCuantos?: number;
 }
 
-export function tarjetaDeAtleta(
-  d: DatosAtleta,
-  ahora = Date.now(),
-  { conFundador = true }: OpcionesTarjeta = {}
-): DatoTarjeta[] {
+export function tarjetaDeAtleta(d: DatosAtleta, ahora = Date.now()): DatoTarjeta[] {
   const out: DatoTarjeta[] = [];
-  if (conFundador && d.founderNumber && d.founderNumber > 0) {
-    out.push({ etiqueta: t('Miembro fundador'), valor: numeroFundador(d.founderNumber) });
-  }
   if (d.entrenos > 0) {
     out.push({
       etiqueta: t(d.entrenos === 1 ? 'Entrenamiento' : 'Entrenamientos'),
@@ -121,7 +82,7 @@ export function tarjetaDeAtleta(
   }
   const meses = mesesDesde(d.createdAt, ahora);
   if (meses >= 1) {
-    out.push({ etiqueta: t('En CALICO'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
+    out.push({ etiqueta: t('Con Luis Tena'), valor: `${meses} ${t(meses === 1 ? 'mes' : 'meses')}` });
   }
   return out.length > 0 ? out : [{ etiqueta: t('Empieza hoy'), valor: t('Tu primer entreno') }];
 }

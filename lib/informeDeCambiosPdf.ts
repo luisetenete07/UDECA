@@ -1,7 +1,7 @@
 import { diaLargo, fechaLegible } from './fechas';
 import { frase, t } from './idioma';
 import { CALICO_LOGO_OSCURO_DATA_URI } from './calicoLogo';
-import { marcaActual } from './marcaActual';
+import { FIRMA, MARCA } from './marca';
 import {
   INICIO_DEL_REGISTRO,
   type EventoDelInforme,
@@ -33,8 +33,7 @@ function escapeHtml(value: string): string {
 }
 
 function firma(): string {
-  const { marca } = marcaActual();
-  return marca ? `${marca} · con CALICO` : 'CALICO · Calisthenics Coaches';
+  return `${MARCA} · ${FIRMA}`;
 }
 
 const FUENTE: Record<FuenteDelEvento, { texto: string; color: string }> = {
@@ -214,7 +213,7 @@ export function informeDeCambiosHtml(
   <body>
     <div class="sheet">
       <div class="head">
-        <img src="${marcaActual().logo ?? CALICO_LOGO_OSCURO_DATA_URI}" alt="" />
+        <img src="${CALICO_LOGO_OSCURO_DATA_URI}" alt="" />
         <div class="who">
           <div class="brand">${escapeHtml(firma())}</div>
           <h1>${escapeHtml(quien.alumno)}</h1>

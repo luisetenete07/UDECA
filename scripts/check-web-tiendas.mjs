@@ -22,9 +22,9 @@
  *  3. LOS PRECIOS DE LOS DATOS ESTRUCTURADOS NO SE VEN. El bloque JSON-LD de
  *     la cabecera es lo que lee Google para enseñar el precio en el resultado
  *     de búsqueda. No lo pinta nadie en pantalla, así que si se queda con el
- *     precio viejo nadie se entera: la web dirá 17 € y el buscador seguirá
- *     anunciando otra cosa durante meses. Tienen que salir de lib/precios.ts,
- *     como todo lo demás.
+ *     precio viejo nadie se entera: el buscador seguirá anunciando otra cosa
+ *     durante meses. Desde que la app no vende nada, ahí no puede haber
+ *     ninguno.
  *
  * Y una cuarta, de tamaño: la insignia de Google trae dentro su margen de
  * respeto obligatorio y la de Apple no, así que a la misma altura de CSS la de
@@ -35,7 +35,6 @@
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-web-tiendas.mjs
  */
 import { readFileSync, statSync } from 'node:fs';
-import { COACH_FIRST_YEAR_EUR } from '../lib/precios.ts';
 
 let fallos = 0;
 const ok = (n, c, porQue = '') => {
@@ -74,18 +73,9 @@ for (const [ruta, tienda] of INSIGNIAS) {
   );
 }
 /*
- * En la PORTADA y en el CIERRE, como mínimo. Y no es repetirse.
- *
- * Arriba, porque son la prueba más rápida de que esto es una app de verdad y no
- * una página que promete una: quien llega buscando eso lo ve sin bajar.
- *
- * Abajo, porque quien ha leído la página entera ya ha decidido, y obligarle a
- * subir hasta el principio a buscar el botón es la forma más tonta de perder a
- * alguien convencido.
- *
- * Se comprueba por SECCIÓN y no contando apariciones: contar obliga a tocar
- * esta cuenta cada vez que se añade una sección, y una comprobación que hay que
- * ajustar cada dos por tres acaba ajustándose sin mirar qué protegía.
+ * En la PORTADA y en DESCARGAS, como mínimo. Arriba, porque son la prueba más
+ * rápida de que esto es una app de verdad; abajo, porque quien ha leído la
+ * página entera ya ha decidido y no tiene por qué subir a buscar el botón.
  */
 const trozo = (desde, hasta) => {
   const i = html.indexOf(desde);
@@ -94,15 +84,13 @@ const trozo = (desde, hasta) => {
   return html.slice(i, j < 0 ? html.length : j);
 };
 const PORTADA = trozo('<section class="hero"', '</section>');
-const CIERRE = trozo('<section class="cierre"', '</section>');
 const DESCARGAS = trozo('<section id="descargas"', '</section>');
 
 ok('la portada existe', PORTADA.length > 0);
-ok('y el cierre también', CIERRE.length > 0);
+ok('y descargas también', DESCARGAS.length > 0);
 for (const [ruta, tienda] of INSIGNIAS) {
   const nombre = ruta.replace('web', '');
   ok(`${tienda} está en la portada`, PORTADA.includes(nombre));
-  ok(`${tienda} está en el cierre`, CIERRE.includes(nombre));
   ok(`${tienda} está en descargas`, DESCARGAS.includes(nombre));
 }
 
@@ -194,17 +182,16 @@ if (ld) {
   if (datos) {
     ok('y son JSON válido', true);
     ok('declara que es una aplicación', datos['@type'] === 'SoftwareApplication');
-    const ofertas = datos.offers || [];
-    const precios = ofertas.map((o) => Number(o.price)).sort((a, b) => a - b);
+    ok('con el nombre de la app', datos.name === 'Maestría en Calistenia');
+    /*
+     * SIN OFERTAS. La app no vende nada: es de un solo entrenador y se entra
+     * cuando él acepta. Un precio en los datos estructurados lo enseñaría el
+     * buscador debajo del enlace aunque la página ya no lo diga.
+     */
     ok(
-      'el primer año del entrenador coincide con lib/precios.ts',
-      precios.length === 1 && precios.includes(COACH_FIRST_YEAR_EUR),
-      `en los datos hay ${precios.join(', ')} y el del entrenador es ${COACH_FIRST_YEAR_EUR}`
-    );
-    ok(
-      'y en euros',
-      ofertas.every((o) => o.priceCurrency === 'EUR'),
-      'una moneda equivocada se anuncia sola en el buscador'
+      'y sin precios',
+      !datos.offers,
+      'quedan ofertas en los datos estructurados: el buscador anunciaría un precio que ya no existe'
     );
   }
 }
@@ -215,7 +202,7 @@ console.log('\n6 · Detalles que se pierden solos');
 ok(
   'un enlace del menú no esconde el titular bajo la cabecera',
   /scroll-margin-top:/.test(css),
-  'la cabecera es pegajosa: sin esto, "Planes" deja el título tapado'
+  'la cabecera es pegajosa: sin esto, el enlace deja el título tapado'
 );
 ok(
   'quien va con el teclado ve por dónde va',

@@ -1,5 +1,5 @@
 /**
- * Motor de las tarjetas de marca CALICO (1080×1350 PNG).
+ * Motor de las tarjetas de marca de Maestría en Calistenia (1080×1350 PNG).
  *
  * El dibujo vive UNA sola vez, en CARD_SCRIPT, porque tiene que ejecutarse en
  * dos sitios distintos:
@@ -25,11 +25,7 @@ export type CardKind = 'session' | 'record' | 'report' | 'member';
  * no la decisión.
  */
 export interface CardTextos {
-  /**
-   * La marca del entrenador ("IRON BOX"), o vacía para la de CALICO. Con marca
-   * propia, el rótulo de debajo pasa a "con CALICO": la tarjeta es del
-   * entrenador, y quien la ve en redes sabe con qué está hecha.
-   */
+  /** La palabra grande de arriba: "MAESTRÍA" (debajo va "EN CALISTENIA"). */
   marca?: string;
   sesionCompletada: string;
   duracion: string;
@@ -89,7 +85,7 @@ export interface ReportCardData {
 }
 
 /**
- * Carné de miembro: quién eres dentro de CALICO.
+ * Carné de miembro: quién eres dentro de Maestría en Calistenia.
  *
  * Es la tarjeta que se enseña, no la que se consulta: por eso lleva pocos
  * datos y grandes. El número de fundador, cuando lo hay, es el protagonista.
@@ -524,14 +520,14 @@ function hexA(hex, a) {
   return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + a + ')';
 }
 
-/** La marca grande y espaciada: la del entrenador, o CALICO. */
+/** La marca grande y espaciada: "MAESTRÍA". */
 function marcaGrande(ctx) {
-  return fit(ctx, espaciado(String(T.marca || 'CALICO').toUpperCase()), W - 200);
+  return fit(ctx, espaciado(String(T.marca || 'MAESTRÍA').toUpperCase()), W - 200);
 }
 
-/** Debajo: "Calisthenics Coaches", o "con CALICO" si la marca es otra. */
+/** Debajo, el resto del nombre: "EN CALISTENIA". */
 function subMarca() {
-  return T.marca ? 'C O N   U D E C A' : 'U N I V E R S I D A D   D E   C A L I S T E N I A';
+  return 'E N   C A L I S T E N I A';
 }
 
 /** "ATLETA" -> "A T L E T A". Separado se lee como un sello, no como texto. */

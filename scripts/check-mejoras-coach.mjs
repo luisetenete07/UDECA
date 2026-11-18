@@ -5,7 +5,7 @@
  *  8. Sugerencia de progresión en el editor de rutinas.
  *  9. Aplicar una rutina a varios alumnos a la vez.
  * 10. "Ver como el alumno" antes de guardar.
- * 11. La biblioteca se comparte con un código.
+ * 11. La biblioteca ya no se comparte con otros entrenadores.
  * 12. Ajustes y gestión del alumno, en una sola sección.
  * 13. Colores de categoría: solo la paleta.
  *
@@ -14,7 +14,6 @@
 import { readFileSync } from 'node:fs';
 import { bandeja, conRevisado, idEnLaBandeja, loQueDestaca, MAX_REVISADOS, porRevisar } from '../lib/bandeja.ts';
 import { objetivoSubido, sugerenciaDeProgresion, topeDelObjetivo } from '../lib/progresion.ts';
-import { LARGO_DEL_CODIGO, normalizarCodigo, nuevoCodigo, queLeFaltan } from '../lib/codigoBiblioteca.ts';
 
 let fallos = 0;
 const ok = (desc, bien, extra = '') => {
@@ -119,18 +118,14 @@ console.log('\n9 y 10. Aplicar a varios y ver como el alumno');
   ok('la vista agrupa las superseries como el alumno', /bloqueDe\(dia\.exercises, i\)/.test(lee('components/VistaDelAlumno.tsx')));
 }
 
-console.log('\n11. La biblioteca, por código');
+console.log('\n11. La biblioteca ya no se comparte entre entrenadores');
 {
-  const c = nuevoCodigo();
-  ok('seis caracteres, sin los que se confunden', c.length === LARGO_DEL_CODIGO && !/[01IOL]/.test(c), c);
-  ok('lo escrito se limpia', normalizarCodigo(' ab-c 12x ') === 'ABC12X');
-  ok('añadir solo los que faltan', queLeFaltan([{ name: 'Dominadas' }], [{ name: 'dominadas ' }, { name: 'Fondos' }]).map((e) => e.name).join() === 'Fondos');
+  // Compartir e importar con un código era para que un coach le pasara su
+  // biblioteca a otro. Con un solo entrenador no hay a quién.
   const pantalla = lee('app/(trainer)/exercises/index.tsx');
-  ok('"Compartir mi biblioteca" e "Importar con un código"', /Compartir mi biblioteca/.test(pantalla) && /Importar con un código/.test(pantalla));
-  ok('fuera el texto para pegar', !/Pegar plantilla/.test(pantalla));
-  const reglas = lee('firestore.rules');
-  ok('las reglas dejan leer con el código pero no listar', /match \/bibliotecas\/\{codigo\} \{\s*allow get: if request\.auth != null;/.test(reglas));
-  ok('y se borran con la cuenta', /coleccion: 'bibliotecas'/.test(lee('lib/firestore/eraseAccount.ts')));
+  ok('sin "Compartir mi biblioteca" ni "Importar con un código"', !/Compartir mi biblioteca/.test(pantalla) && !/Importar con un código/.test(pantalla));
+  // Las que se compartieron en su día se siguen borrando con la cuenta.
+  ok('lo compartido antes se borra con la cuenta', /coleccion: 'bibliotecas'/.test(lee('lib/firestore/eraseAccount.ts')));
 }
 
 console.log('\n12 y 13. Ficha del alumno y colores');

@@ -1,9 +1,17 @@
-# CALICO — Calisthenics Coaches
+# Maestría en Calistenia — la app de Luis Tena
 
-App multiplataforma (iOS, Android y Web) de CALICO (by Luis Tena /
-luistenafit) para que el entrenador gestione a sus clientes, rutinas,
-entrenamientos y progreso desde un único lugar, y para que cada cliente
-acceda a su plan personalizado.
+App multiplataforma (iOS, Android y Web) con la que Luis Tena lleva a sus
+alumnos: el plan de entrenamiento, el registro de lo que hacen, su progreso, la
+nutrición y los cursos. En el móvil se llama **MASTERY** (el nombre entero no
+cabe bajo el icono); dentro de la app, en la web y en todo lo que se comparte,
+**Maestría en Calistenia**. El nombre vive en `lib/marca.ts`.
+
+**Es de un solo entrenador.** Antes fue CALICO, una plataforma para muchos
+entrenadores, con su alta, su plan de pago, su marca propia y su código de
+invitación. Todo eso se quitó: nadie se registra como entrenador (las reglas
+solo lo permiten con los correos de Luis), la app no cobra nada a nadie, y un
+alumno nuevo crea su cuenta y le manda la solicitud a Luis sin código
+(`lib/coachUnico.ts`). Lo vigila `scripts/check-un-solo-coach.mjs`.
 
 Construida con **Expo (React Native + React Native Web)** y **Firebase**
 (autenticación + Firestore).
@@ -230,35 +238,26 @@ de ahí, cada usuario que abra la app en un dispositivo físico (no
 simulador) y conceda permiso de notificaciones quedará registrado. Sin
 este paso, la app funciona igual pero no se enviarán notificaciones.
 
-## 6. Cómo funciona la vinculación entrenador–cliente
+## 6. Cómo entra un alumno
 
-No hay panel de administración para crear usuarios: cada persona se
-registra ella misma.
+No hay panel de administración para crear usuarios: cada alumno se registra él
+mismo, con Google o con Apple.
 
-1. El entrenador se registra eligiendo "Soy entrenador". Al crear la
-   cuenta se genera automáticamente un **código de invitación** de 6
-   caracteres, visible en la pestaña **Perfil**.
-2. El entrenador comparte ese código con sus clientes (WhatsApp, email...).
-3. Cada cliente se registra eligiendo "Soy cliente" e introduce ese código.
-   Queda vinculado automáticamente a su entrenador y aparece en la lista de
-   clientes de este.
+1. Al crear la cuenta nace **alumno** y sin entrenador, y la app le manda la
+   solicitud de entrada al coach: al que esté apuntado en `config/coach`.
+2. `config/coach` lo escribe la propia cuenta de Luis al abrir su panel
+   (`fijarCoach`, solo si falta). Las reglas solo se lo permiten a una cuenta
+   de entrenador con uno de sus correos, verificado.
+3. La solicitud le sale a Luis en Inicio, con la foto y el nombre. Al
+   aceptarla, el alumno entra.
+
+Si `config/coach` todavía no estuviera apuntado, la pantalla de espera le pide
+al alumno el código de Luis, como antes: nadie se queda sin poder pedir entrar.
 
 ## 6 bis. Números de fundador
 
-El número lo reparte el servidor al procesar el alta de 1 €, y solo si la
-campaña está abierta (`config/fundadores.abierta === true`). Las cuentas
-anteriores a la campaña no lo reciben nunca: ese código solo corre durante un
-pago. Y las reglas de Firestore prohíben escribirlo desde la app a propósito —
-un distintivo que cualquiera pudiera ponerse no valdría nada.
-
-Para darlo a mano (la cuenta del fundador, un caso especial): Actions →
-**Número de fundador** → Run workflow, con el correo, el número y en qué
-número quieres dejar el contador para la siguiente alta. No hace falta
-descargar nada ni manejar la clave privada: GitHub ya la tiene como secreto.
-
-El script se niega a pisar un número ya repartido y a repetir uno que otra
-cuenta tenga: dos "fundador nº 1" no es un fallo cosmético, es la campaña
-entera perdiendo el sentido.
+Eran de la campaña de altas de entrenadores de CALICO. La app ya no los enseña;
+el dato sigue guardado en las cuentas que lo tenían.
 
 ## 7. Estructura del proyecto
 

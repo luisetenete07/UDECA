@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import {
-  createUserWithEmailAndPassword,
   onAuthStateChanged,
   reauthenticateWithCredential,
   sendEmailVerification,
@@ -8,23 +7,18 @@ import {
   deleteUser,
   EmailAuthProvider,
   signOut as firebaseSignOut,
-  updateProfile,
   type User,
 } from 'firebase/auth';
 import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, isFirebaseConfigured } from './firebase';
-import { getInviteCodeInfo, registerTrainerInviteCode } from './firestore/users';
-import { sendJoinRequest } from './firestore/joinRequests';
+import { pedirEntrada } from './coachUnico';
 import { registerForPushNotificationsAsync } from './notifications';
 import { forgetAccount, proveedorDe, rememberAccount } from './rememberedAccounts';
 import { clearCache } from './screenCache';
-import { suscripcionAlNacer } from './subscription';
-import { MARCA_POR_DEFECTO, marcaDe } from './marcaPropia';
-import { fijarMarcaActual } from './marcaActual';
-import { puedeLlevarLogo } from './planBase';
+import { MARCA } from './marca';
 import { olvidarNombreDelProveedor } from './nombreDelProveedor';
 import { aplicarIdiomaDelPerfil } from './idioma';
-import type { UserProfile, UserRole } from './types';
+import type { UserProfile } from './types';
 
 interface AuthContextValue {
   firebaseUser: User | null;
@@ -33,42 +27,19 @@ interface AuthContextValue {
   isFirebaseConfigured: boolean;
   /** Si el correo del usuario actual está verificado (Firebase Auth). */
   emailVerified: boolean;
-  /**
-   * La palabra que se lee donde pone "CALICO".
-   *
-   * Vive aquí y no en cada pantalla por un motivo concreto: para un ALUMNO no
-   * es la suya, es la de su entrenador, y eso exige leer OTRO documento. Si lo
-   * resolviera cada sitio que la pinta, serían tres lecturas de Firestore por
-   * pantalla en vez de una por sesión.
-   */
+  /** El nombre de la app, tal y como se lee en las cabeceras. */
   marca: string;
-  /**
-   * El logo que sustituye al de CALICO: el suyo si es entrenador, el de su
-   * entrenador si es alumno. `null` si no hay, o si su plan no lo incluye
-   * (`puedeLlevarLogo`): entonces se ve el emblema de siempre.
-   */
-  logo: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  registerTrainer: (name: string, email: string, password: string) => Promise<void>;
-  registerClient: (
-    name: string,
-    email: string,
-    password: string,
-    inviteCode: string
-  ) => Promise<void>;
   /**
-   * Crea el perfil de quien ya ha entrado con Google pero todavía no tiene uno.
+   * Crea el perfil de quien ya ha entrado con Google o con Apple pero todavía
+   * no tiene uno.
    *
-   * Google da una identidad, no un ROL: no sabe si quien entra es alumno,
-   * atleta o entrenador, y eso decide la app entera. Así que entrar con Google
-   * la primera vez deja la sesión iniciada y sin perfil, y esta pantalla lo
-   * completa (ver app/(auth)/completar.tsx).
+   * Siempre es un ALUMNO: Maestría en Calistenia tiene un solo entrenador, y su
+   * cuenta ya existe. Crear la cuenta manda además la solicitud de entrada al
+   * coach (ver lib/coachUnico.ts); hasta que la acepte, se ve la pantalla de
+   * espera.
    */
-  completarPerfilDeGoogle: (
-    role: UserRole,
-    name: string,
-    inviteCode?: string
-  ) => Promise<void>;
+  completarPerfilDeGoogle: (name: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   /**
@@ -89,26 +60,11 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function generateInviteCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return code;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [emailVerified, setEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
-  // Solo la marca del entrenador, no su perfil entero: es lo único que se
-  // necesita de él aquí, y guardar el resto invitaría a usarlo para otras cosas
-  // sin darse cuenta de que puede estar sin cargar.
-  const [marcaDelCoach, setMarcaDelCoach] = useState<string | null>(null);
-  // Su logo, ya filtrado por su plan: aquí solo llega si se puede enseñar.
-  const [logoDelCoach, setLogoDelCoach] = useState<string | null>(null);
 
   /**
    * Lee el perfil de la cuenta y lo devuelve además de guardarlo en el estado.
@@ -129,30 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Recuerda esta cuenta en el dispositivo para el selector de acceso
         // (con nombre, rol y foto completos).
         rememberAccount({ email: p.email, name: p.name, role: p.role, photoURL: p.photoURL });
-        /*
-         * La marca de su entrenador, si es alumno.
-         *
-         * Las reglas ya dejan al alumno leer el perfil de SU coach, así que no
-         * hace falta duplicar el dato en ningún sitio. Se pide sin `await` y
-         * sin bloquear: mientras no llegue se lee CALICO, que es mejor que un
-         * hueco parpadeando en la cabecera. Y si falla —sin red— tampoco pasa
-         * nada: la app arranca igual.
-         */
-        if (p.role === 'client' && p.trainerId) {
-          getDoc(doc(db, 'users', p.trainerId))
-            .then((coach) => {
-              const datos = coach.exists() ? (coach.data() as UserProfile) : null;
-              setMarcaDelCoach(datos?.brandName ?? '');
-              setLogoDelCoach(datos && puedeLlevarLogo(datos) ? (datos.brandLogo ?? null) : null);
-            })
-            .catch(() => {
-              setMarcaDelCoach('');
-              setLogoDelCoach(null);
-            });
-        } else {
-          setMarcaDelCoach(null);
-          setLogoDelCoach(null);
-        }
         return p;
       }
       setProfile(null);
@@ -199,127 +131,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Termina de crear la cuenta de quien entró con Google.
+   * Termina de crear la cuenta de quien entró con Google o con Apple.
    *
-   * Reutiliza a propósito las mismas piezas que el registro con correo —el
-   * código de invitación, la solicitud al entrenador, la prueba gratuita—
-   * porque son las mismas reglas: entrar por Google no puede saltarse el
-   * permiso del entrenador ni regalar una prueba que no toca.
+   * Nace como alumno y SIN entrenador: el vínculo lo pone el coach al
+   * aceptarle. La solicitud sale en el mismo paso para que no tenga que hacer
+   * nada más; si todavía no se sabe quién es el coach, la pantalla de espera
+   * (LinkTrainerScreen) le deja mandarla con el código.
    */
-  const completarPerfilDeGoogle = async (
-    role: UserRole,
-    name: string,
-    inviteCode?: string
-  ) => {
+  const completarPerfilDeGoogle = async (name: string) => {
     const user = auth.currentUser;
     if (!user) throw new Error('No hay ninguna sesión abierta.');
     const limpio = name.trim() || user.displayName || 'Sin nombre';
-    const email = user.email ?? '';
     // Firestore no admite `undefined`, y una cuenta de Google puede venir sin
     // foto. Va como campo que existe o que no existe, nunca como campo vacío.
     const foto = user.photoURL ? { photoURL: user.photoURL } : {};
-
-    if (role === 'client') {
-      const invite = await getInviteCodeInfo((inviteCode ?? '').trim().toUpperCase());
-      if (!invite) {
-        throw new Error('El código de entrenador no es válido. Revísalo con tu entrenador.');
-      }
-      if (invite.full) {
-        throw new Error(
-          'Tu entrenador ha alcanzado el límite de alumnos de su plan. Pídele que active su suscripción para poder entrar.'
-        );
-      }
-      const nuevo: UserProfile = {
-        uid: user.uid,
-        role: 'client',
-        name: limpio,
-        email,
-        createdAt: Date.now(),
-        ...foto,
-      };
-      await setDoc(doc(db, 'users', user.uid), nuevo);
-      await sendJoinRequest(invite.trainerId, nuevo);
-      setProfile(nuevo);
-      return;
-    }
-
-    // Si no es alumno, es entrenador.
-    const codigo = generateInviteCode();
     const nuevo: UserProfile = {
       uid: user.uid,
-      role: 'trainer',
+      role: 'client',
       name: limpio,
-      email,
+      email: user.email ?? '',
       createdAt: Date.now(),
-      inviteCode: codigo,
       ...foto,
-      // Nace con sus 14 días de prueba, sin tarjeta (ver suscripcionAlNacer).
-      ...suscripcionAlNacer(),
     };
     await setDoc(doc(db, 'users', user.uid), nuevo);
-    await registerTrainerInviteCode(codigo, user.uid);
+    // Si la solicitud no sale (sin red), la cuenta ya existe y la pantalla de
+    // espera deja mandarla otra vez: no se pierde nada.
+    await pedirEntrada(nuevo).catch(() => false);
     setProfile(nuevo);
-  };
-
-  const registerTrainer = async (name: string, email: string, password: string) => {
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(credential.user, { displayName: name });
-
-    const inviteCode = generateInviteCode();
-    const newProfile: UserProfile = {
-      uid: credential.user.uid,
-      role: 'trainer',
-      name,
-      email,
-      createdAt: Date.now(),
-      inviteCode,
-      emailVerificationRequired: true,
-      // Nace con sus 14 días de prueba, sin tarjeta (ver suscripcionAlNacer).
-      ...suscripcionAlNacer(),
-    };
-    await setDoc(doc(db, 'users', credential.user.uid), newProfile);
-    await registerTrainerInviteCode(inviteCode, credential.user.uid);
-    // Envía el correo de verificación (no bloquea el registro si falla).
-    sendEmailVerification(credential.user).catch(() => {});
-    setProfile(newProfile);
-  };
-
-  const registerClient = async (
-    name: string,
-    email: string,
-    password: string,
-    inviteCode: string
-  ) => {
-    const invite = await getInviteCodeInfo(inviteCode.trim().toUpperCase());
-    if (!invite) {
-      throw new Error('El código de entrenador no es válido. Revísalo con tu entrenador.');
-    }
-    // Si el coach ha llenado su plan gratuito no se le puede añadir gente: le
-    // dejaría por encima del límite y fuera de la app sin haber hecho nada.
-    if (invite.full) {
-      throw new Error(
-        'Tu entrenador ha alcanzado el límite de alumnos de su plan. Pídele que active su suscripción para poder entrar.'
-      );
-    }
-    const trainerId = invite.trainerId;
-
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(credential.user, { displayName: name });
-
-    // El alumno se crea SIN entrenador: envía una solicitud que el coach debe
-    // aprobar manualmente. Hasta entonces verá la pantalla de "pendiente".
-    const newProfile: UserProfile = {
-      uid: credential.user.uid,
-      role: 'client' as UserRole,
-      name,
-      email,
-      createdAt: Date.now(),
-      emailVerificationRequired: true,
-    };
-    await setDoc(doc(db, 'users', credential.user.uid), newProfile);
-    await sendJoinRequest(trainerId, newProfile);
-    sendEmailVerification(credential.user).catch(() => {});
-    setProfile(newProfile);
   };
 
   const signOut = async () => {
@@ -385,15 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (auth.currentUser) await sendEmailVerification(auth.currentUser);
   };
 
-  const marca = marcaDe(profile, marcaDelCoach === null ? null : { brandName: marcaDelCoach });
-  const logo =
-    profile?.role === 'client'
-      ? logoDelCoach
-      : puedeLlevarLogo(profile)
-        ? (profile?.brandLogo ?? null)
-        : null;
-  // Las tarjetas que se comparten se pintan fuera de React: se les deja aquí.
-  fijarMarcaActual({ marca: marca === MARCA_POR_DEFECTO ? '' : marca, logo });
+  const marca = MARCA;
 
   const value = useMemo(
     () => ({
@@ -403,10 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isFirebaseConfigured,
       emailVerified,
       marca,
-      logo,
       signIn,
-      registerTrainer,
-      registerClient,
       completarPerfilDeGoogle,
       signOut,
       deleteAccount,
@@ -415,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       reloadUser,
       resendVerification,
     }),
-    [firebaseUser, profile, loading, emailVerified, marca, logo]
+    [firebaseUser, profile, loading, emailVerified, marca]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
