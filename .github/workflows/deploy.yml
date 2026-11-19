@@ -1,12 +1,10 @@
-# Despliegue automático de la APP de CALICO a GitHub Pages.
+# Despliegue automático de Maestría en Calistenia a GitHub Pages.
 #
 # Cada push a la rama de desarrollo compila la app web (Expo) y publica el
 # resultado en la rama gh-pages, que GitHub Pages sirve en app.udeca.app.
 #
-# Ojo con el dominio: la app vivía en www.udeca.app, pero ese dominio es ahora
-# la WEB pública (captación, planes y descargas), que se despliega aparte desde
-# la carpeta `web/`. La app se queda en su propio subdominio para poder seguir
-# probándola mientras no esté en las tiendas. Ver docs/WEB.md.
+# Es lo ÚNICO que hay en internet: sin web de presentación, sin páginas sueltas
+# y sin las apps de las tiendas. La app se instala desde el navegador.
 #
 # Nota sobre las variables EXPO_PUBLIC_FIREBASE_*: son la configuración
 # PÚBLICA de cliente de Firebase (van incrustadas en el JavaScript que
@@ -18,12 +16,7 @@ on:
   push:
     branches:
       - claude/calisthenics-coaching-app-o72apc
-    # `web/**` YA NO se ignora: de esa carpeta salen las dos páginas legales que
-    # este despliegue publica (ver "Prepare Pages artifacts"). Ignorarla
-    # significaría cambiar la política de privacidad y que la publicada siguiera
-    # siendo la vieja, que es peor que no tenerla.
     paths-ignore:
-      - 'acceso/**'
       - 'docs/**'
       - '**/*.md'
   workflow_dispatch: {}
@@ -69,32 +62,14 @@ jobs:
       - name: Build web (Expo export)
         run: npx expo export --platform web --clear
 
-      # Las dos páginas legales viajan con la app, y no es un capricho.
-      #
-      # Son las URLs que Google Play y App Store guardan en la ficha y comprueban
-      # ellos solos, sin avisar. Vivían únicamente en la web pública, que se
-      # despliega a mano en Vercel: el día que alguien no se acordó de publicar,
-      # Play devolvió "página no encontrada" y bloqueó el envío a revisión.
-      #
-      # Aquí no hay nadie de quien acordarse: este workflow corre en cada push.
-      # Los ficheros no dependen de ningún CSS ni de ninguna fuente (ver el
-      # comentario dentro de cada uno), así que se sirven igual desde Pages que
-      # desde Vercel.
-      #
-      # Se copian con las DOS formas —fichero suelto y carpeta con index— para
-      # que respondan tanto /privacidad como /privacidad/ pase lo que pase con la
-      # resolución de URLs del servidor. Una tienda no da segundas oportunidades
-      # rápido.
+      # Solo la app. Las páginas legales sueltas (privacidad, borrar la cuenta,
+      # soporte) se copiaban aquí porque las pedían Google Play y App Store; con
+      # la app fuera de las tiendas sobran: la política y el borrado viven
+      # dentro de la propia app (/privacy-policy y /delete-account).
       - name: Prepare Pages artifacts
         run: |
           touch dist/.nojekyll
           echo "app.udeca.app" > dist/CNAME
-          for pagina in privacidad eliminar-cuenta soporte; do
-            test -f "web/$pagina.html" || { echo "::error::falta web/$pagina.html"; exit 1; }
-            mkdir -p "dist/$pagina"
-            cp "web/$pagina.html" "dist/$pagina.html"
-            cp "web/$pagina.html" "dist/$pagina/index.html"
-          done
 
           # La red para las direcciones con identificador dentro.
           #
@@ -148,87 +123,3 @@ jobs:
           user_name: "CALICO Deploy"
           user_email: "calico-bot@example.com"
           commit_message: "Deploy web build"
-
-      # Y se comprueba que están DE VERDAD en internet, no solo en una rama.
-      #
-      # Hasta ahora la acción daba verde con haber subido los ficheros, que no es
-      # lo mismo que estar publicados: Pages tarda un poco, y un dominio mal
-      # apuntado o una copia que no se hizo dan exactamente el mismo verde. La
-      # única pregunta que importa es la que se hace la tienda cuando abre la
-      # URL, así que se hace aquí: se piden las dos direcciones y se mira que
-      # respondan y que traigan su texto.
-      #
-      # Se reintenta durante tres minutos porque la publicación no es instantánea,
-      # y no falla el despliegue de la app si no llegan a tiempo (el aviso queda
-      # escrito): la app ya está subida y tumbar la acción por eso no arregla
-      # nada.
-      - name: Comprobar las páginas legales en vivo
-        continue-on-error: true
-        run: |
-          fallos=0
-          for pagina in privacidad eliminar-cuenta soporte; do
-            url="https://app.udeca.app/$pagina"
-            bien=0
-            for _ in $(seq 1 18); do
-              codigo=$(curl -sL -o /tmp/pagina.html -w '%{http_code}' "$url" || echo 000)
-              if [ "$codigo" = "200" ] && grep -q "Calistenia" /tmp/pagina.html; then
-                echo "OK  $url ($(wc -c < /tmp/pagina.html) bytes)"
-                bien=1
-                break
-              fi
-              sleep 10
-            done
-            if [ "$bien" != "1" ]; then
-              echo "::warning::$url no responde todavía (último código: $codigo)"
-              fallos=$((fallos + 1))
-            fi
-          done
-          if [ "$fallos" -eq 0 ]; then
-            echo "Las cuatro páginas están en vivo."
-          else
-            echo "::warning::$fallos página(s) sin confirmar. Vuelve a lanzar esta acción en unos minutos."
-          fi
-
-      # Y LA WEB PÚBLICA, que es la que se olvida.
-      #
-      # `www.udeca.app` va por Vercel y se despliega A MANO. Este workflow no
-      # puede publicarla, pero sí puede decir si lo que hay publicado es lo de
-      # ahora o lo de la semana pasada, que es la pregunta que de verdad
-      # importa y la única que nadie se acuerda de hacerse.
-      #
-      # Se compara el config.js publicado con el del repositorio, línea a línea
-      # (sin comentarios ni espacios). Antes solo se buscaba "buy.stripe.com",
-      # que sale en un COMENTARIO del fichero: daba "al día" aunque la web
-      # llevara una semana sin desplegarse. Lo que manda —a qué tienda lleva
-      # "Pruébalo gratis", a dónde paga cada botón— está en los valores.
-      #
-      # No tumba el despliegue: la app ya está publicada y esto es un aviso
-      # sobre OTRA web. Sale como warning, arriba del todo, para que se lea.
-      - name: Comprobar la web pública (Vercel)
-        continue-on-error: true
-        run: |
-          codigo=$(curl -sL -o /tmp/web.js -w '%{http_code}' https://www.udeca.app/config.js || echo 000)
-          if [ "$codigo" != "200" ]; then
-            echo "::warning::www.udeca.app no responde (código $codigo). ¿Está desplegada?"
-            exit 0
-          fi
-
-          # Solo lo que no es comentario: valores, claves y enlaces.
-          limpia() { sed -e '/^\s*\/\//d' -e '/^\s*\*/d' -e '/^\s*\/\*/d' "$1" | tr -d ' \t' | grep -v '^$'; }
-          if diff <(limpia web/config.js) <(limpia /tmp/web.js) > /tmp/dif.txt; then
-            echo "OK  www.udeca.app está al día: su config.js es el del repositorio."
-          else
-            echo "::warning::www.udeca.app está DESFASADA: su config.js no es el del repositorio."
-            echo "Diferencias (< repositorio, > publicada):"
-            cat /tmp/dif.txt
-            echo "::warning::Es Vercel. Conéctala a GitHub (Settings -> Git, Root Directory 'web') o lanza: cd web && npx vercel --prod"
-          fi
-          grep -n "pruebaEnTiendas" /tmp/web.js || true
-
-          # Y la portada: desde que se quitó el atleta lleva un solo plan.
-          curl -sL -o /tmp/web.html https://www.udeca.app/ || true
-          if grep -q 'plans-uno' /tmp/web.html && ! grep -q 'altaAtleta' /tmp/web.html; then
-            echo "OK  la portada publicada es la de un solo plan (sin atleta)."
-          else
-            echo "::warning::La portada publicada todavía enseña el plan de atleta: está sin desplegar."
-          fi

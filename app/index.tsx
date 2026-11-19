@@ -1,19 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Redirect } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../components/Texto';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { useAuth } from '../lib/auth-context';
-import { hasSeenIntro } from '../lib/intro';
 import { colors, spacing, typography } from '../lib/theme';
 
 export default function Index() {
   const { loading, firebaseUser, profile, isFirebaseConfigured } = useAuth();
-  // null = todavía no sabemos si este dispositivo ya vio la presentación.
-  const [introSeen, setIntroSeen] = useState<boolean | null>(null);
-  useEffect(() => {
-    hasSeenIntro().then(setIntroSeen);
-  }, []);
 
   if (!isFirebaseConfigured) {
     return (
@@ -39,11 +33,10 @@ export default function Index() {
     return <Redirect href="/(auth)/completar" />;
   }
 
+  // Sin presentación: la app es de Luis para sus alumnos, y quien llega ya sabe
+  // a qué viene. Directo a entrar.
   if (!firebaseUser || !profile) {
-    if (introSeen === null) return <LoadingScreen label="Cargando..." />;
-    // Primera vez en este dispositivo: antes de pedir nada, contamos qué es
-    // CALICO. Después, directo al inicio de sesión.
-    return <Redirect href={introSeen ? '/(auth)/login' : '/(auth)/welcome'} />;
+    return <Redirect href="/(auth)/login" />;
   }
 
   if (profile.role === 'trainer') {

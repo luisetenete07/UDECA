@@ -9,7 +9,6 @@ import { Card } from '../../components/Card';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
 import { MemberCard } from '../../components/MemberCard';
 import { SelectorDeIdioma } from '../../components/SelectorDeIdioma';
-import { RateApp } from '../../components/RateApp';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { showToast } from '../../components/Toast';
 import { useAuth } from '../../lib/auth-context';
@@ -66,7 +65,7 @@ export default function TrainerProfileScreen() {
     // a la web de presentación.
     const message =
       `Te espero en Maestría en Calistenia.\n\n` +
-      `1) Entra en app.udeca.app (o descarga la app MASTERY).\n` +
+      `1) Entra en app.udeca.app y añádela a tu pantalla de inicio.\n` +
       `2) Crea tu cuenta: me llega tu solicitud y te acepto.\n\n` +
       `¡Nos vemos dentro!`;
     if (Platform.OS === 'web') {
@@ -136,7 +135,7 @@ export default function TrainerProfileScreen() {
         defaultOpen={false}
       >
         <Text style={styles.helperText}>
-          Se descarga la app y crea su cuenta. Su solicitud te llega a Inicio y entra cuando la
+          Entra en app.udeca.app y crea su cuenta. Su solicitud te llega a Inicio y entra cuando la
           aceptas.
         </Text>
         <Button
@@ -185,7 +184,6 @@ export default function TrainerProfileScreen() {
         </Card>
       ) : null}
 
-      <RateApp />
 
       {/* Sin el rojo de lo peligroso: cerrar sesión no borra nada. */}
       <Button title="Cerrar sesión" variant="secondary" onPress={signOut} style={{ marginTop: spacing.lg }} />

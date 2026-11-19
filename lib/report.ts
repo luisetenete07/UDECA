@@ -1,7 +1,7 @@
 import { diaMes, fechaLegible, inicioDeLaSemana, masDias, mayusculaInicial } from './fechas';
 import { frase } from './idioma';
 import { setsByMuscleGroup, weeklyExerciseMatrix, workoutsByMonth, type MatrixCell, type MatrixRow } from './stats';
-import { CALICO_LOGO_OSCURO_DATA_URI } from './calicoLogo';
+import { EMBLEMA_OSCURO_DATA_URI } from './emblema';
 import { FIRMA, MARCA } from './marca';
 import { cuentaComoMarca, type Routine, type UserProfile, type WeightLog, type WorkoutLog } from './types';
 
@@ -480,7 +480,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
   <body>
     <div class="sheet">
       <div class="head">
-        <img src="${CALICO_LOGO_OSCURO_DATA_URI}" alt="" />
+        <img src="${EMBLEMA_OSCURO_DATA_URI}" alt="" />
         <div class="who">
           <div class="brand">${escapeHtml(firmaDelInforme())}</div>
           <h1>${escapeHtml(client.name)}</h1>
@@ -635,7 +635,7 @@ export function buildClientReportHtml(data: ClientReportData): string {
 
       <div class="foot">
         <span>${escapeHtml(firmaDelInforme())}</span>
-        <span>www.udeca.app</span>
+        <span>app.udeca.app</span>
       </div>
     </div>
   </body>

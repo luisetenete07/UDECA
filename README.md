@@ -18,14 +18,14 @@ Construida con **Expo (React Native + React Native Web)** y **Firebase**
 
 ## Producción
 
-- **App en vivo**: https://app.udeca.app (dominio propio con HTTPS;
-  instalable en el móvil desde "Añadir a pantalla de inicio").
-- **Web pública**: https://www.udeca.app — presentación, planes y
-  descargas. Vive en `web/` y se despliega aparte; ver `docs/WEB.md`.
-- **Acceso a la comunidad**: https://acceso.udeca.app — la puerta al grupo
-  privado de Telegram (`acceso/`).
-- **Cobros**: qué se cobra, cuándo y por qué en iOS no se puede enseñar un
-  precio dentro de la app; ver `docs/COBROS.md`.
+- **La app, y nada más**: https://app.udeca.app (dominio propio con HTTPS;
+  instalable en el móvil desde "Añadir a pantalla de inicio" y en el ordenador
+  desde el navegador). No hay web de presentación, ni páginas sueltas, ni apps
+  en App Store o Google Play: la app de las tiendas se retiró y la que ya
+  estaba instalada deja de recibir versiones nuevas.
+- **Servidor** (`payments-webhook/`, en Vercel): solo quedan el dictado del
+  entreno con IA (`api/apuntar-entreno`) y la tarea diaria (`api/cron-daily`:
+  métricas del grupo, avisos y el resumen del domingo). Los cobros se quitaron.
 - **Diseño**: colores, tipografía, componentes y cómo se comprueba una
   pantalla antes de darla por buena; ver `docs/DISENO.md`.
 - **Planificación por ciclos**: cómo se monta una temporada en macro, meso

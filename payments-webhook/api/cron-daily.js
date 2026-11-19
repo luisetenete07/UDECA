@@ -15,8 +15,7 @@ import { resumenDeLaSemana, seriesHechas } from './_resumen.js';
  *     haya abierto la app.
  *  2. Avisa por push a quien lleva días sin entrenar.
  *  3. Avisa por push de que se acaba (o se acabó) el periodo de coaching.
- *  4. Avisa de que el año pagado se acaba, ANTES de que se acabe.
- *  5. Los domingos, manda a cada alumno el resumen de su semana (_resumen.js).
+ *  4. Los domingos, manda a cada alumno el resumen de su semana (_resumen.js).
  *
  * Variables de entorno: FIREBASE_SERVICE_ACCOUNT (JSON de la cuenta de
  * servicio) y CRON_SECRET (lo envía Vercel como Authorization: Bearer …).

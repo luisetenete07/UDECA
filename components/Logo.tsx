@@ -1,17 +1,20 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { FIRMA, MARCA, MARCA_ABAJO, MARCA_ARRIBA } from '../lib/marca';
 import { colors, fonts, spacing } from '../lib/theme';
 
 /**
- * El nombre de la app como rótulo: "MAESTRÍA" grande y "EN CALISTENIA" debajo.
+ * El logo: el tridente y, debajo, el nombre como rótulo ("MAESTRÍA" grande y
+ * "EN CALISTENIA" debajo).
  *
- * Va escrito con la tipografía de la casa mientras no haya un logotipo
- * dibujado. Partido en dos líneas porque las veintidós letras seguidas, con el
- * espaciado de un rótulo, no caben en un móvil de 320 px sin bajar tanto el
+ * El nombre va partido en dos líneas porque las veintidós letras seguidas, con
+ * el espaciado de un rótulo, no caben en un móvil de 320 px sin bajar tanto el
  * tamaño que deja de parecer un nombre.
  */
+const TRIDENTE = require('../assets/emblema.png');
+/** Ancho entre alto del tridente recortado (assets/emblema.png). */
+const PROPORCION = 504 / 512;
 export function Logo({ compact }: { compact?: boolean }) {
   return (
     <View
@@ -19,6 +22,12 @@ export function Logo({ compact }: { compact?: boolean }) {
       accessibilityRole="header"
       accessibilityLabel={MARCA}
     >
+      <Image
+        source={TRIDENTE}
+        style={compact ? styles.tridenteCompact : styles.tridente}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
       <Text style={[styles.arriba, compact && styles.arribaCompact]} numberOfLines={1}>
         {MARCA_ARRIBA}
       </Text>
@@ -39,6 +48,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  tridente: { width: 64 * PROPORCION, height: 64, marginBottom: spacing.md },
+  tridenteCompact: { width: 44 * PROPORCION, height: 44, marginBottom: spacing.sm },
   arriba: {
     fontSize: 34,
     fontFamily: fonts.display,

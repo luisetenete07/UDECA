@@ -73,12 +73,11 @@ console.log('\nNo se borra la cuenta equivocada');
 
 console.log('\nY lo que se le cuenta a la gente es verdad');
 {
-  // Tres sitios dicen cómo se borra la cuenta: la pantalla de ayuda de la app,
-  // la página que miran las tiendas y el diccionario del inglés. Si uno se
-  // queda diciendo "con tu contraseña", queda mintiendo.
+  // La pantalla de ayuda de la app es la que cuenta cómo se borra la cuenta
+  // (la página suelta que miraban las tiendas se quitó con ellas). Si se queda
+  // diciendo "con tu contraseña", queda mintiendo.
   for (const [nombre, ruta] of [
     ['la pantalla de ayuda', 'app/delete-account.tsx'],
-    ['la página de las tiendas', 'web/eliminar-cuenta.html'],
   ]) {
     const texto = lee(ruta);
     ok(`${nombre} ya no habla de la contraseña`, !/confirmar con tu\s+contraseña/i.test(texto.replace(/\s+/g, ' ')));

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { useAuth } from '../lib/auth-context';
 import { rotuloDelRol } from '../lib/carne';
@@ -30,6 +30,12 @@ export function SidebarBrand() {
   return (
     <View style={styles.fill} pointerEvents="none">
       <View style={styles.row} accessibilityLabel={MARCA}>
+        <Image
+          source={require('../assets/emblema.png')}
+          style={styles.tridente}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
         <View>
           {/* El nombre en dos líneas, como en las pantallas de entrada: en una
               sola, con el espaciado de rótulo, no cabe en la columna. */}
@@ -56,6 +62,7 @@ const styles = StyleSheet.create({
     height: BRAND_HEIGHT - spacing.md,
     paddingHorizontal: spacing.md,
   },
+  tridente: { width: 34 * (504 / 512), height: 34 },
   mark: {
     fontSize: 19,
     fontFamily: fonts.display,

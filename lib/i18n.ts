@@ -1127,6 +1127,8 @@ export const EN: Record<string, string> = {
   // Botones de las solicitudes de entrada (panel del entrenador).
   'Aceptar a {0}': 'Accept {0}',
   'Rechazar a {0}': 'Decline {0}',
+  // Invitar a un alumno: la app solo vive en app.udeca.app.
+  'Entra en app.udeca.app y crea su cuenta. Su solicitud te llega a Inicio y entra cuando la aceptas.': 'They go to app.udeca.app and create an account. Their request shows up on Home and they are in once you accept it.',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':

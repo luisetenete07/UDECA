@@ -217,8 +217,6 @@ console.log('\nEl aviso de versión nueva, tal y como está montado');
     /if \(!pais\) return 'nada';/.test(tienda) &&
       /if \(!respuesta\?\.resultCount\) return 'nada';/.test(tienda) &&
       !/buscarEnLaAppStore\(\)/.test(tienda));
-  ok('y la mínima se pone mirando la tienda de España',
-    /const ficha = enEspana;/.test(lee('scripts/version-minima.mjs')));
   ok('en Android pregunta a Google Play', /requireOptionalNativeModule<ModuloDeTienda>\('CalicoTienda'\)/.test(tienda));
   ok('con la librería de actualizaciones de Play', /com\.google\.android\.play:app-update:/.test(gradle));
   ok('que solo dice que hay si a este móvil le toca', /UpdateAvailability\.UPDATE_AVAILABLE/.test(kt));

@@ -27,7 +27,7 @@ import {
   type SessionCardData,
 } from './cardEngine';
 import { canRenderCardNatively, renderCardBase64 } from '../components/CardRendererHost';
-import { CALICO_LOGO_DATA_URI } from './calicoLogo';
+import { EMBLEMA_DATA_URI } from './emblema';
 import { MARCA_ARRIBA } from './marca';
 import { getIdioma } from './idioma';
 import { t } from './idioma';
@@ -48,7 +48,7 @@ type DrawCard = (
 
 /** El emblema que va arriba de la tarjeta. */
 function logoDeLaTarjeta(): string {
-  return CALICO_LOGO_DATA_URI;
+  return EMBLEMA_DATA_URI;
 }
 
 /**

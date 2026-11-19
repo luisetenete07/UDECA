@@ -12,7 +12,9 @@
  *     el coach (config/coach), y solo Luis puede apuntarse.
  *  3. No queda nada que cobre: ni muros de pago, ni enlaces a Stripe, ni
  *     precios.
- *  4. El nombre es el nuevo, en la app, en el móvil y en la web.
+ *  4. El nombre es el nuevo, en la app y en el móvil.
+ *  5. No hay nada más en internet que la app: ni web de presentación, ni
+ *     páginas sueltas, ni intro que venda la app a quien no la conoce.
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-un-solo-coach.mjs
  */
@@ -99,8 +101,10 @@ console.log('\n3 · Nada que cobre');
     'lib/enlacesDeCobro.ts',
     'lib/fundador.ts',
     'lib/marcaPropia.ts',
-    'web/gracias.html',
-    'web/proximamente.html',
+    'payments-webhook/api/pagar.js',
+    'payments-webhook/api/stripe-webhook.js',
+    'payments-webhook/api/claim-entry.js',
+    'payments-webhook/api/check-subscription.js',
   ]) {
     ok(`${f} ya no existe`, !hay(f));
   }
@@ -115,14 +119,11 @@ console.log('\n3 · Nada que cobre');
       else if (/\.(tsx?|js|html)$/.test(n)) ficheros.push(ruta);
     }
   };
-  for (const d of ['app', 'components', 'lib', 'web']) recorre(d);
+  for (const d of ['app', 'components', 'lib', 'payments-webhook/api']) recorre(d);
   const conPago = ficheros.filter((f) => /buy\.stripe\.com|\/api\/pagar|\/api\/claim-entry|\/api\/check-subscription/.test(sinComentarios(lee(f))));
   ok('ni un enlace a Stripe ni a los endpoints de cobro', conPago.length === 0, conPago.join(', '));
 
-  const web = lee('web/index.html').replace(/<!--[\s\S]*?-->/g, '');
-  ok('la web no anuncia precios', !/\d\s*€/.test(web));
-  ok('ni pide pagar', !/data-pago/.test(web));
-  ok('ni la configuración de la web tiene pagos', !/pagos:/.test(lee('web/config.js')));
+  ok('el servidor ya no tiene Stripe dentro', !ficheros.filter((f) => f.startsWith('payments-webhook')).some((f) => /from 'stripe'/.test(lee(f))));
 }
 
 console.log('\n4 · El nombre nuevo');
@@ -138,11 +139,18 @@ console.log('\n4 · El nombre nuevo');
   const i18n = lee('lib/i18n.ts');
   const conCalico = [...i18n.matchAll(/^ {2}'([^']*CALICO[^']*)':/gm)].map((m) => m[1]);
   ok('ninguna frase de la app dice CALICO', conCalico.length === 0, conCalico.slice(0, 3).join(' | '));
+}
 
-  for (const f of ['web/index.html', 'web/privacidad.html', 'web/condiciones.html', 'web/eliminar-cuenta.html', 'web/soporte.html']) {
-    const visible = lee(f).replace(/<!--[\s\S]*?-->/g, '');
-    ok(`${f} ya no dice CALICO`, !/CALICO/.test(visible));
+console.log('\n5 · En internet, solo la app');
+{
+  for (const d of ['web', 'acceso', 'payments-webhook/public']) {
+    ok(`${d}/ ya no existe`, !hay(d));
   }
+  const despliegue = lee('.github/workflows/deploy.yml');
+  ok('el despliegue no publica páginas sueltas', !/for pagina in/.test(despliegue) && !despliegue.includes('www.udeca.app'));
+  ok('sin flujos para subir a las tiendas', !hay('.github/workflows/build-ios.yml') && !hay('.github/workflows/build-android.yml'));
+  ok('sin intro de presentación', !hay('app/(auth)/welcome.tsx') && !/welcome/.test(lee('app/index.tsx')));
+  ok('quien no tiene sesión va directo a entrar', /<Redirect href="\/\(auth\)\/login" \/>/.test(lee('app/index.tsx')));
 }
 
 console.log(fallos === 0 ? '\n✔ Un solo entrenador, sin cobros y con su nombre' : `\n${fallos} fallo(s)`);

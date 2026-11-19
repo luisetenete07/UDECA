@@ -1,8 +1,8 @@
-# Guía de uso de CALICO
+# Guía de uso de Maestría en Calistenia
 
-La app vive en **https://app.udeca.app** (en www.udeca.app está la web de
-presentación, con los planes y las descargas). Es gratuita de alojar,
-se actualiza sola con cada mejora y funciona en móvil, tablet y ordenador.
+La app vive en **https://app.udeca.app**, y solo ahí: no hay web de
+presentación ni apps en las tiendas. Se actualiza sola con cada mejora y
+funciona en móvil, tablet y ordenador.
 
 ---
 
@@ -11,13 +11,14 @@ se actualiza sola con cada mejora y funciona en móvil, tablet y ordenador.
 Mándales esto por WhatsApp:
 
 > 1. Abre https://app.udeca.app en el navegador del móvil.
-> 2. Pulsa "Regístrate", elige **Soy cliente** y usa el **código del
->    entrenador** que te he pasado.
+> 2. Pulsa "Regístrate" y entra con Google o con Apple. Me llega tu
+>    solicitud y te acepto.
 > 3. Instálala como app: en iPhone (Safari) botón compartir → "Añadir a
 >    pantalla de inicio"; en Android (Chrome) menú ⋮ → "Instalar
 >    aplicación".
 
-Tu código de invitación está en tu pestaña **Perfil**.
+El mismo mensaje lo tienes en **Perfil → Invitar a un alumno**. Las
+solicitudes te salen en **Inicio**.
 
 ---
 

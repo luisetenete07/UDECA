@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   heroGlow: {
     position: 'absolute',
-    // Ver welcome.tsx: banda, no óvalo. Se desborda a los lados de la columna
+    // Banda, no óvalo. Se desborda a los lados de la columna
     // de contenido para que su borde quede fuera de pantalla en cualquier
     // ancho realista; abajo se apaga a transparente y no deja costura.
     top: -spacing.lg,

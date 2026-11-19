@@ -123,12 +123,10 @@ console.log('\nY la política de privacidad dice lo que la app hace HOY');
    * cuando la app ya no lo usa es una contradicción con la declaración de datos,
    * y es de las cosas que se quedan viejas sin que salte nada.
    *
-   * Está en DOS sitios: la web pública —la que ve Google— y la pantalla de
-   * dentro de la app, que es la que ve el usuario. Las dos tienen que decir lo
-   * mismo.
+   * Vive dentro de la app: la página suelta de la web se quitó con las
+   * tiendas.
    */
   for (const [ruta, quien] of [
-    ['web/privacidad.html', 'la de la web, que es la que mira Google'],
     ['app/privacy-policy.tsx', 'la de dentro de la app'],
   ]) {
     const t = lee(ruta);
@@ -141,7 +139,7 @@ console.log('\nY la política de privacidad dice lo que la app hace HOY');
     ok(`${quien}: dice cómo retirar el permiso`, /retirar el permiso|withdraw the permission/i.test(t));
   }
   // De septiembre de 2026 en adelante (cuando entraron los pasos).
-  ok('la fecha está al día', /Última actualización: (septiembre|octubre|noviembre|diciembre) de 2026/.test(lee('web/privacidad.html')));
+  ok('la fecha está al día', /Última actualización: (septiembre|octubre|noviembre|diciembre) (de )?2026/.test(lee('app/privacy-policy.tsx')));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

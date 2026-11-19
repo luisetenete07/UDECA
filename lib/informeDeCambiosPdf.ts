@@ -1,6 +1,6 @@
 import { diaLargo, fechaLegible } from './fechas';
 import { frase, t } from './idioma';
-import { CALICO_LOGO_OSCURO_DATA_URI } from './calicoLogo';
+import { EMBLEMA_OSCURO_DATA_URI } from './emblema';
 import { FIRMA, MARCA } from './marca';
 import {
   INICIO_DEL_REGISTRO,
@@ -213,7 +213,7 @@ export function informeDeCambiosHtml(
   <body>
     <div class="sheet">
       <div class="head">
-        <img src="${CALICO_LOGO_OSCURO_DATA_URI}" alt="" />
+        <img src="${EMBLEMA_OSCURO_DATA_URI}" alt="" />
         <div class="who">
           <div class="brand">${escapeHtml(firma())}</div>
           <h1>${escapeHtml(quien.alumno)}</h1>
