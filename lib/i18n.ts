@@ -1135,6 +1135,8 @@ export const EN: Record<string, string> = {
   ' · {0} solo VIP': ' · {0} VIP only',
   '{0} solo VIP': '{0} VIP only',
   'Curso solo VIP': 'VIP-only course',
+  // Editor de lecciones: el número va en su casilla.
+  'Mini': 'Mini',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':

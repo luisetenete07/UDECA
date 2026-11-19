@@ -14,6 +14,7 @@ import {
   conMiniNueva,
   leccionesReordenadas,
   minisReordenadas,
+  numerosDeLecciones,
   seccionesReordenadas,
   sinMini,
 } from '../../../lib/curso';
@@ -290,7 +291,8 @@ export default function CourseEditorScreen() {
               renderItem={(lesson, i, _arrastrando, asa) => (
                 <EditorDeLeccion
                   leccion={lesson}
-                  numero={i + 1}
+                  numero={numerosDeLecciones(section.lessons)[i].numero}
+                  automatico={numerosDeLecciones(section.lessons)[i].automatico}
                   handleProps={asa}
                   onCambiar={(campos) =>
                     setSections((prev) => conLeccionCambiada(prev, section.id, lesson.id, campos))

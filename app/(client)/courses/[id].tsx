@@ -30,6 +30,7 @@ import { useAuth } from '../../../lib/auth-context';
 import { getCourse } from '../../../lib/firestore/courses';
 import { getCourseProgress, setLessonsSeen } from '../../../lib/firestore/courseProgress';
 import { contenidosDeLeccion, estadoDeCurso, tieneContenido } from '../../../lib/courseProgress';
+import { numeroDeMini, numerosDeLecciones } from '../../../lib/curso';
 import { claseCerrada, cuantasCerradas, cursoParaMi, esVip } from '../../../lib/vip';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { ContenidoDeCurso, Course, Lesson } from '../../../lib/types';
@@ -237,6 +238,8 @@ export default function ClientCourseDetailScreen() {
             </Pressable>
             {open
               ? section.lessons.map((lesson, index) => {
+                  // El número que puso Luis, o el que toca (lib/curso.ts).
+                  const numeroLeccion = numerosDeLecciones(section.lessons)[index].numero;
                   const locked = isLocked(lesson);
                   const daysLeft = locked ? lesson.unlockAfterDays! - memberDays : 0;
                   // VIP manda sobre el tiempo: aunque pasaran los días, sin
@@ -252,7 +255,7 @@ export default function ClientCourseDetailScreen() {
                       <FilaDeContenido
                         contenido={lesson}
                         thumbURL={lesson.thumbURL}
-                        numero={`${index + 1}`}
+                        numero={numeroLeccion}
                         bloqueada={locked || cerradaVip}
                         soloVip={cerradaVip}
                         diasQueFaltan={daysLeft}
@@ -287,7 +290,7 @@ export default function ClientCourseDetailScreen() {
                         <FilaDeContenido
                           key={mini.id}
                           contenido={mini}
-                          numero={`${index + 1}.${j + 1}`}
+                          numero={numeroDeMini(numeroLeccion, mini, j)}
                           bloqueada={locked || miniVip}
                           soloVip={miniVip}
                           diasQueFaltan={daysLeft}

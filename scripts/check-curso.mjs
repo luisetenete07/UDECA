@@ -17,11 +17,14 @@ import {
   leccionesReordenadas,
   minisReordenadas,
   movido,
+  numeroDeMini,
+  numerosDeLecciones,
   pesoDelCurso,
   seccionesReordenadas,
   sinMini,
   TOPE_SEGURO,
 } from '../lib/curso.ts';
+import { readFileSync } from 'node:fs';
 import { setIdioma } from '../lib/idioma.ts';
 
 // Fuera de la app el idioma sale del sistema, y el de este entorno es inglés:
@@ -180,6 +183,24 @@ console.log('\nEl peso del curso (un documento son 1 MB y las fotos van dentro)'
     'se miden bytes, no caracteres',
     pesoDelCurso(conTildes) > JSON.stringify(conTildes).length
   );
+}
+
+console.log('\nEl número de cada lección lo elige Luis');
+{
+  const ver = (ls) => numerosDeLecciones(ls).map((x) => x.numero).join(',');
+  comprueba('sin números puestos, 1, 2, 3 como siempre', ver([{}, {}, {}]) === '1,2,3', ver([{}, {}, {}]));
+  comprueba('con el suyo, manda el suyo', ver([{ numero: '0' }, {}, {}]) === '0,1,2', ver([{ numero: '0' }, {}, {}]));
+  comprueba('y las siguientes siguen desde ahí', ver([{ numero: '7' }, {}, {}]) === '7,8,9', ver([{ numero: '7' }, {}, {}]));
+  comprueba('uno que no es número no corta la cuenta', ver([{}, {}, { numero: 'Bonus' }, {}]) === '1,2,Bonus,3');
+  comprueba('los espacios no cuentan', ver([{ numero: '  5 ' }, {}]) === '5,6');
+  comprueba('vacío es automático', ver([{ numero: '   ' }, {}]) === '1,2');
+  const pista = numerosDeLecciones([{ numero: '7' }, { numero: '20' }]);
+  comprueba('la pista del editor es el que tocaría sin el suyo', pista[0].automatico === '1' && pista[1].automatico === '8');
+  comprueba('la mini lleva el de su lección', numeroDeMini('7', {}, 1) === '7.2');
+  comprueba('o el suyo', numeroDeMini('7', { numero: '7b' }, 1) === '7b');
+  const lee = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  comprueba('el alumno ve ese número', /numero=\{numeroLeccion\}/.test(lee('app/(client)/courses/[id].tsx')));
+  comprueba('y el editor lo deja escribir', /CasillaDeNumero/.test(lee('components/EditorDeLeccion.tsx')));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

@@ -1612,6 +1612,11 @@ export interface ContenidoDeCurso {
    * la subida dejaba ver la del vídeo, y no había forma de dejarla en blanco.
    */
   sinMiniatura?: boolean;
+  /**
+   * El número que pone el entrenador ("0", "7", "3.5", "Bonus"). Vacío = el
+   * que toca por su posición (ver `numerosDeLecciones` en lib/curso.ts).
+   */
+  numero?: string;
 }
 
 /**

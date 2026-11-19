@@ -187,3 +187,40 @@ export function cabeElCurso(curso: Pick<Course, 'sections'> & Partial<Course>): 
       frase`${t(fotos === 1 ? 'imagen' : 'imágenes')}: quita alguna miniatura y vuelve a guardar.`,
   };
 }
+
+/**
+ * EL NÚMERO DE CADA LECCIÓN: el que pone Luis, o el que toca.
+ *
+ * Antes era siempre la posición (1, 2, 3...). Ahora cada lección puede llevar
+ * el suyo —un "0" de introducción, un "7" porque la sección sigue a otra, un
+ * "Bonus"— y las que no lo llevan siguen contando desde la anterior: tras un
+ * "7" viene el 8, no el 2. Una que no es un número ("Bonus") no corta la
+ * cuenta: tras 1, 2 y "Bonus" viene el 3.
+ *
+ * Devuelve, por cada lección, el número que se ve y el que tendría sin el
+ * suyo (el que se enseña de pista en el editor).
+ */
+export const LARGO_DEL_NUMERO = 6;
+
+export function numerosDeLecciones(
+  lecciones: Pick<Lesson, 'numero'>[]
+): { numero: string; automatico: string }[] {
+  let anterior = 0;
+  return lecciones.map((l) => {
+    const automatico = String(anterior + 1);
+    const propio = (l.numero ?? '').trim();
+    const numero = propio || automatico;
+    if (/^\d+$/.test(numero)) anterior = parseInt(numero, 10);
+    return { numero, automatico };
+  });
+}
+
+/** El de una mini clase: el suyo, o el de su lección con su posición ("3.2"). */
+export function numeroDeMini(
+  numeroDeLaLeccion: string,
+  mini: Pick<MiniClase, 'numero'>,
+  posicion: number
+): string {
+  return (mini.numero ?? '').trim() || `${numeroDeLaLeccion}.${posicion + 1}`;
+}
+

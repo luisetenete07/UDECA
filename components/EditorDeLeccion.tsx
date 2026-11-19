@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
@@ -8,7 +8,41 @@ import { MiniaturaCurso } from './MiniaturaCurso';
 import { Opciones } from './Opciones';
 import { TextField } from './TextField';
 import { colors, fieldLabel, fonts, radius, spacing, typography } from '../lib/theme';
+import { LARGO_DEL_NUMERO, numeroDeMini } from '../lib/curso';
 import type { ContenidoDeCurso, Lesson, MiniClase } from '../lib/types';
+
+/**
+ * El número de la lección, a mano.
+ *
+ * Una casilla pequeña al lado de "Lección": vacía, enseña de pista el número
+ * que le toca por su posición (y ese es el que ve el alumno); escrito, manda el
+ * de Luis. Se guarda tal cual se escribe y se recorta al mostrarlo: recortar
+ * mientras se teclea no dejaría escribir "3 bis".
+ */
+function CasillaDeNumero({
+  valor,
+  automatico,
+  pequena,
+  onCambiar,
+}: {
+  valor?: string;
+  automatico: string;
+  pequena?: boolean;
+  onCambiar: (numero: string | undefined) => void;
+}) {
+  return (
+    <TextInput
+      value={valor ?? ''}
+      onChangeText={(v) => onCambiar(v.slice(0, LARGO_DEL_NUMERO) || undefined)}
+      placeholder={automatico}
+      placeholderTextColor={colors.textFaint}
+      maxLength={LARGO_DEL_NUMERO}
+      autoCorrect={false}
+      accessibilityLabel={`Número (vacío: ${automatico})`}
+      style={[styles.casilla, pequena && styles.casillaPequena]}
+    />
+  );
+}
 
 /**
  * Una lección dentro del editor de cursos, con sus mini clases.
@@ -156,6 +190,7 @@ function CamposDeContenido({
 export function EditorDeLeccion({
   leccion,
   numero,
+  automatico,
   onCambiar,
   onQuitar,
   onMiniatura,
@@ -167,7 +202,9 @@ export function EditorDeLeccion({
   handleProps,
 }: {
   leccion: Lesson;
-  numero: number;
+  /** El número que se ve (el suyo o el que toca) y el que tendría sin el suyo. */
+  numero: string;
+  automatico: string;
   onCambiar: (campos: Partial<Lesson>) => void;
   onQuitar: () => void;
   onMiniatura: () => void;
@@ -187,7 +224,13 @@ export function EditorDeLeccion({
         <View style={styles.asa} {...handleProps}>
           <Ionicons name="reorder-two-outline" size={20} color={colors.textFaint} />
         </View>
-        <Text style={styles.numero}>Lección {numero}</Text>
+        <Text style={styles.numero}>Lección</Text>
+        <CasillaDeNumero
+          valor={leccion.numero}
+          automatico={automatico}
+          onCambiar={(n) => onCambiar({ numero: n })}
+        />
+        <View style={{ flex: 1 }} />
         <Pressable onPress={onQuitar} hitSlop={8}>
           <Ionicons name="close" size={16} color={colors.danger} />
         </Pressable>
@@ -256,7 +299,14 @@ export function EditorDeLeccion({
                   <View style={styles.asa} {...asa}>
                     <Ionicons name="reorder-two-outline" size={18} color={colors.textFaint} />
                   </View>
-                  <Text style={styles.numeroMini}>Mini {i + 1}</Text>
+                  <Text style={styles.numeroMini}>Mini</Text>
+                  <CasillaDeNumero
+                    valor={mini.numero}
+                    automatico={numeroDeMini(numero, {}, i)}
+                    pequena
+                    onCambiar={(n) => onMiniCambiar(mini.id, { numero: n })}
+                  />
+                  <View style={{ flex: 1 }} />
                   <Pressable onPress={() => onMiniQuitar(mini.id)} hitSlop={8}>
                     <Ionicons name="close" size={15} color={colors.danger} />
                   </Pressable>
@@ -302,8 +352,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   asa: { paddingVertical: 2, paddingRight: 2 },
-  numero: { ...typography.label, color: colors.primary, flex: 1 },
-  numeroMini: { ...typography.label, color: colors.textMuted, flex: 1, fontSize: 11 },
+  numero: { ...typography.label, color: colors.primary },
+  numeroMini: { ...typography.label, color: colors.textMuted, fontSize: 11 },
+  casilla: {
+    ...typography.label,
+    color: colors.primary,
+    fontFamily: fonts.semiBold,
+    width: 64,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    textAlign: 'center',
+  },
+  casillaPequena: { fontSize: 11, width: 56, paddingVertical: 2, color: colors.textMuted },
   pista: { ...typography.small, color: colors.textFaint, marginBottom: spacing.sm },
   filaVip: {
     flexDirection: 'row',
