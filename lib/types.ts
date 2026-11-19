@@ -411,12 +411,12 @@ export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];
  *    las repeticiones y, a continuación, el aguante.
  */
 /**
- * Paleta con la que cada entrenador colorea sus categorías. Son tonos que
- * conviven con el negro y el azul de CALICO sin competir con ellos: el
- * primero es el de la marca, y el resto no repite azul.
+ * Paleta con la que el entrenador colorea sus categorías. Son tonos que
+ * conviven con el negro y el oro de la marca sin competir con ellos: el
+ * primero es el de la marca, y el resto no repite oro.
  */
 export const CATEGORY_PALETTE = [
-  '#3D7BFF',
+  '#A2968B',
   '#4CAF7D',
   '#2BB3A6',
   '#8E6FD8',

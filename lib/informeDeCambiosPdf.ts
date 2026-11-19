@@ -20,7 +20,7 @@ import {
  * cada línea marcada por lo que es (nuevo, quitado, series…).
  */
 
-const AZUL = '#1E56D6';
+const ORO = '#96702A';
 const INK = '#14161B';
 const MUTED = '#6C727C';
 const HAIRLINE = '#E4E6EA';
@@ -37,7 +37,7 @@ function firma(): string {
 }
 
 const FUENTE: Record<FuenteDelEvento, { texto: string; color: string }> = {
-  'plan-nuevo': { texto: 'Plan nuevo', color: AZUL },
+  'plan-nuevo': { texto: 'Plan nuevo', color: ORO },
   cambio: { texto: 'Cambio del plan', color: INK },
   ciclo: { texto: 'Planificación', color: MORADO },
   entrenos: { texto: 'Visto en los entrenos', color: MUTED },
@@ -153,10 +153,10 @@ export function informeDeCambiosHtml(
         font-size: 11px; line-height: 1.45; -webkit-font-smoothing: antialiased;
       }
       .sheet { max-width: 186mm; margin: 0 auto; }
-      .head { display: flex; align-items: flex-start; gap: 14px; border-bottom: 2px solid ${AZUL}; padding-bottom: 14px; }
+      .head { display: flex; align-items: flex-start; gap: 14px; border-bottom: 2px solid ${ORO}; padding-bottom: 14px; }
       .head img { width: 46px; height: 46px; }
       .head .who { flex: 1; }
-      .brand { font-size: 9px; letter-spacing: 3.4px; text-transform: uppercase; color: ${AZUL}; font-weight: 700; }
+      .brand { font-size: 9px; letter-spacing: 3.4px; text-transform: uppercase; color: ${ORO}; font-weight: 700; }
       h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 25px; letter-spacing: .4px; margin: 3px 0 2px; }
       .sub { color: ${MUTED}; font-size: 10.5px; }
       .stamp { text-align: right; color: ${MUTED}; font-size: 9.5px; line-height: 1.6; white-space: nowrap; }
@@ -164,7 +164,7 @@ export function informeDeCambiosHtml(
       section { margin-top: 20px; }
       h2 {
         font-family: Georgia, 'Times New Roman', serif; font-size: 12px; letter-spacing: 2.2px;
-        text-transform: uppercase; color: ${AZUL}; margin: 0 0 9px;
+        text-transform: uppercase; color: ${ORO}; margin: 0 0 9px;
         border-bottom: 1px solid ${HAIRLINE}; padding-bottom: 6px; font-weight: 700; break-after: avoid;
       }
       .note { color: ${MUTED}; font-size: 9.5px; margin: 9px 0 0; }
@@ -183,10 +183,10 @@ export function informeDeCambiosHtml(
       th { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: ${MUTED}; font-weight: 600; background: #FAFAFB; }
       td.d, th.d { width: 26%; font-weight: 600; }
       td.num, th.num { text-align: right; width: 56px; font-variant-numeric: tabular-nums; }
-      .cuanto { color: ${AZUL}; font-weight: 600; white-space: nowrap; }
+      .cuanto { color: ${ORO}; font-weight: 600; white-space: nowrap; }
       tr.otro td { color: ${MUTED}; }
 
-      .fecha { margin-bottom: 12px; padding-left: 12px; border-left: 3px solid ${AZUL}; break-inside: avoid; }
+      .fecha { margin-bottom: 12px; padding-left: 12px; border-left: 3px solid ${ORO}; break-inside: avoid; }
       .fecha-cab { font-family: Georgia, 'Times New Roman', serif; font-size: 14px; font-weight: 700; margin-bottom: 5px; break-after: avoid; }
       .evento { margin: 0 0 8px; break-inside: avoid; }
       .evento-cab { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
@@ -201,7 +201,7 @@ export function informeDeCambiosHtml(
       .linea.nuevo .tag { color: ${VERDE}; }
       .linea.quitado .tag { color: ${ROJO}; }
       .linea.quitado .txt { text-decoration: line-through; color: ${MUTED}; }
-      .linea.cambio .tag { color: ${AZUL}; }
+      .linea.cambio .tag { color: ${ORO}; }
       .linea.detalle .tag { color: ${MUTED}; }
       .linea.contenido .txt { color: ${INK}; }
       .vacio { color: ${MUTED}; font-size: 10.5px; }

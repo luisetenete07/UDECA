@@ -28,15 +28,16 @@ Y una prohibición: **nada de emojis**, en ningún sitio del producto.
 ## 2 · Color
 
 Fondo negro de verdad (`#000000`), superficies casi negras y **un solo color de
-marca**: el azul cobalto. El resto son señales, y se usan con cuentagotas.
+marca**: el dorado del tridente. El resto son señales, y se usan con cuentagotas.
 
 | Token | Para qué |
 | --- | --- |
 | `background` `#000000` | El fondo. Negro real, no gris oscuro |
 | `surface` `#0D0D0D` | Tarjetas |
 | `surfaceAlt` `#181818` | Campos, pastillas, huecos |
-| `primary` `#3D7BFF` | La marca (azul cobalto). Lo que manda en la pantalla |
-| `primaryBright` `#7FA8FF` | El mismo azul, claro, para texto pequeño sobre negro |
+| `primary` `#A2968B` | La marca (el dorado del tridente). Lo que manda en la pantalla |
+| `primaryBright` `#C9BDB0` | El mismo oro, claro, para texto pequeño sobre negro |
+| `onPrimary` `#0A0A0A` | La letra sobre el oro: casi negra, que con blanca se lee lavado |
 | `border` `rgba(255,255,255,0.07)` | Bordes casi invisibles: se intuyen |
 | `borderStrong` `#2A2A2A` | Cuando el borde sí tiene que verse |
 | `scrim` `rgba(0,0,0,0.7)` | El velo detrás de todo lo que se abre encima |

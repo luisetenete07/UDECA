@@ -30,7 +30,7 @@ import { useAuth } from '../../../lib/auth-context';
 import { getCourse } from '../../../lib/firestore/courses';
 import { getCourseProgress, setLessonsSeen } from '../../../lib/firestore/courseProgress';
 import { contenidosDeLeccion, estadoDeCurso, tieneContenido } from '../../../lib/courseProgress';
-import { cursoParaMi, esVip } from '../../../lib/vip';
+import { claseCerrada, cuantasCerradas, cursoParaMi, esVip } from '../../../lib/vip';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { ContenidoDeCurso, Course, Lesson } from '../../../lib/types';
 
@@ -49,17 +49,28 @@ export default function ClientCourseDetailScreen() {
   const isLocked = (lesson: Lesson) =>
     !!lesson.unlockAfterDays && memberDays < lesson.unlockAfterDays;
 
+  const vip = esVip(profile);
+  /**
+   * Lo que este alumno puede abrir: con eso se cuenta todo (el anillo, el
+   * siguiente, el "terminado"). La lista pinta el curso entero; si contara las
+   * clases con candado, su avance no llegaría nunca al 100 %.
+   */
+  const accesible = useMemo(() => (course ? cursoParaMi(course, vip) : null), [course, vip]);
+
+  /** Lo que se dice al tocar una clase VIP. Sin precio: se habla con Luis. */
+  const avisarVip = () =>
+    showToast('Esta clase es VIP. Si quieres acceder, háblalo con Luis.');
+
   // Secciones desplegadas (todas empiezan CERRADAS: el índice primero).
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!id) return;
     (async () => {
-      // Podado por VIP antes de nada (ver lib/vip.ts). Un alumno que llegue
-      // por enlace directo a un curso entero VIP se encuentra un curso vacío,
-      // no sus clases.
+      // El curso ENTERO: lo VIP también se enseña, con candado (ver
+      // lib/vip.ts). Lo que se cuenta sale de `accesible`, más abajo.
       const c = await getCourse(id);
-      setCourse(c ? cursoParaMi(c, esVip(profile)) : c);
+      setCourse(c);
       // Nada de autoseleccionar la primera lección: el curso se abre por su
       // índice de secciones y el alumno elige dónde entrar.
       setLoading(false);
@@ -126,10 +137,12 @@ export default function ClientCourseDetailScreen() {
   }, [course, activeLessonId]);
 
   if (loading) return <LoadingScreen />;
-  if (!course) return <EmptyState title="Curso no encontrado" />;
+  if (!course || !accesible) return <EmptyState title="Curso no encontrado" />;
 
-  const totalLessons = course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
-  const estado = estadoDeCurso(course, vistas, memberDays);
+  const enElCurso = course.sections.reduce((sum, s) => sum + s.lessons.length, 0);
+  const totalLessons = accesible.sections.reduce((sum, s) => sum + s.lessons.length, 0);
+  const estado = estadoDeCurso(accesible, vistas, memberDays);
+  const conCandado = cuantasCerradas(course, vip);
   const vista = (lessonId: string) => vistas.includes(lessonId);
 
   return (
@@ -170,11 +183,12 @@ export default function ClientCourseDetailScreen() {
             {totalLessons > estado.total
               ? ` · ${totalLessons - estado.total} en camino`
               : ''}
+            {conCandado > 0 ? frase` · ${conCandado} solo VIP` : ''}
           </Text>
         </View>
       </View>
 
-      {totalLessons === 0 ? (
+      {enElCurso === 0 ? (
         <EmptyState title="Este curso aún no tiene lecciones" />
       ) : (
         course.sections.map((section) => {
@@ -209,7 +223,8 @@ export default function ClientCourseDetailScreen() {
                         (t, l) => t + contenidosDeLeccion(l).length,
                         0
                       );
-                      return `${n} ${n === 1 ? 'vídeo' : 'vídeos'}`;
+                      const cerradas = cuantasCerradas({ ...course, sections: [section] }, vip);
+                      return `${n} ${n === 1 ? 'vídeo' : 'vídeos'}${cerradas > 0 ? frase` · ${cerradas} solo VIP` : ''}`;
                     })()}
                   </Text>
                 </View>
@@ -224,6 +239,9 @@ export default function ClientCourseDetailScreen() {
               ? section.lessons.map((lesson, index) => {
                   const locked = isLocked(lesson);
                   const daysLeft = locked ? lesson.unlockAfterDays! - memberDays : 0;
+                  // VIP manda sobre el tiempo: aunque pasaran los días, sin
+                  // ser VIP seguiría cerrada.
+                  const cerradaVip = claseCerrada(lesson, vip);
                   const minis = lesson.minis ?? [];
                   // Una lección puede ser solo un contenedor: sin vídeo propio
                   // y con mini clases dentro. Entonces la fila no se abre, se
@@ -235,7 +253,8 @@ export default function ClientCourseDetailScreen() {
                         contenido={lesson}
                         thumbURL={lesson.thumbURL}
                         numero={`${index + 1}`}
-                        bloqueada={locked}
+                        bloqueada={locked || cerradaVip}
+                        soloVip={cerradaVip}
                         diasQueFaltan={daysLeft}
                         activa={lesson.id === activeLessonId}
                         vista={vista(lesson.id)}
@@ -246,6 +265,10 @@ export default function ClientCourseDetailScreen() {
                             : undefined
                         }
                         onAbrir={() => {
+                          if (cerradaVip) {
+                            avisarVip();
+                            return;
+                          }
                           if (locked) {
                             showToast(frase`Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`);
                             return;
@@ -258,18 +281,25 @@ export default function ClientCourseDetailScreen() {
                       {/* Las mini clases van sangradas y con la miniatura más
                           pequeña: se ve de un vistazo que son de la lección de
                           arriba y no lecciones sueltas. */}
-                      {minis.map((mini, j) => (
+                      {minis.map((mini, j) => {
+                        const miniVip = claseCerrada(mini, vip, lesson);
+                        return (
                         <FilaDeContenido
                           key={mini.id}
                           contenido={mini}
                           numero={`${index + 1}.${j + 1}`}
-                          bloqueada={locked}
+                          bloqueada={locked || miniVip}
+                          soloVip={miniVip}
                           diasQueFaltan={daysLeft}
                           activa={mini.id === activeLessonId}
                           vista={vista(mini.id)}
                           abrible={tieneContenido(mini)}
                           sangrada
                           onAbrir={() => {
+                            if (miniVip) {
+                              avisarVip();
+                              return;
+                            }
                             if (locked) {
                               showToast(
                                 frase`Se desbloquea en ${daysLeft} día${daysLeft === 1 ? '' : 's'}`
@@ -280,7 +310,8 @@ export default function ClientCourseDetailScreen() {
                           }}
                           onMarcar={() => alternarVista(mini.id)}
                         />
-                      ))}
+                        );
+                      })}
                     </View>
                   );
                 })
@@ -302,7 +333,7 @@ export default function ClientCourseDetailScreen() {
         onMarcar={() => {
           if (!activeLesson) return;
           alternarVista(activeLesson.id);
-          const resto = estadoDeCurso(course, [...vistas, activeLesson.id], memberDays).siguiente;
+          const resto = estadoDeCurso(accesible, [...vistas, activeLesson.id], memberDays).siguiente;
           // Encadenar sin cerrar: terminar una lección y empezar la siguiente
           // son dos gestos que siempre van juntos, así que aquí es uno.
           if (resto && resto.id !== activeLesson.id) setActiveLessonId(resto.id);
@@ -596,6 +627,7 @@ function FilaDeContenido({
   thumbURL,
   numero,
   bloqueada,
+  soloVip,
   diasQueFaltan,
   activa,
   vista,
@@ -610,6 +642,8 @@ function FilaDeContenido({
   thumbURL?: string;
   numero: string;
   bloqueada: boolean;
+  /** Cerrada por ser VIP (y no por tiempo): lo dice en vez de los días. */
+  soloVip?: boolean;
   diasQueFaltan: number;
   activa: boolean;
   vista: boolean;
@@ -649,7 +683,12 @@ function FilaDeContenido({
           >
             {numero}. {contenido.title || 'Sin título'}
           </Text>
-          {bloqueada ? (
+          {soloVip ? (
+            <View style={styles.vipFila}>
+              <Ionicons name="lock-closed" size={11} color={colors.primary} />
+              <Text style={styles.vipTexto}>Solo VIP</Text>
+            </View>
+          ) : bloqueada ? (
             <Text style={styles.lessonMeta}>
               Se desbloquea en {diasQueFaltan} día{diasQueFaltan === 1 ? '' : 's'}
             </Text>
@@ -683,6 +722,8 @@ function FilaDeContenido({
 }
 
 const styles = StyleSheet.create({
+  vipFila: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  vipTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
   repFondo: { flex: 1, backgroundColor: colors.background },
   tapa: {
     ...StyleSheet.absoluteFill,

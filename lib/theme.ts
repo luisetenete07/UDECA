@@ -34,26 +34,25 @@ export const colors = {
   /** Para lo poquísimo que de verdad necesita marcar un límite. */
   borderStrong: '#2A2A2A',
   /**
-   * AZUL COBALTO: el color de CALICO.
+   * EL DORADO DEL TRIDENTE: el color de Maestría en Calistenia.
    *
-   * Pasó del champán (venía del tridente dorado de la marca anterior) a azul
-   * con el logo nuevo, blanco sobre negro. El azul es lo que se lee como
-   * técnico y de fiar para el entrenador, y con la energía que pide quien
-   * entrena: lo que hay que tocar —"Hecha", empezar la sesión, la serie que
-   * toca— salta a la vista sin gritar.
+   * Un champán cálido, el del metal del tridente del logo. Fue azul cobalto
+   * una temporada, con el logo de CALICO; con el tridente de vuelta, vuelve
+   * su color. Lo que hay que tocar —"Hecha", empezar la sesión, la serie que
+   * toca— se ve en oro sobre negro.
    */
-  primary: '#3D7BFF',
-  /** Azul claro: texto de marca pequeño sobre negro, brillos, extremos de degradado. */
-  primaryBright: '#7FA8FF',
-  primaryDark: '#2556D9',
-  primaryMuted: 'rgba(61, 123, 255, 0.16)',
-  /** Línea fina de marca, translúcida, para bordes que destacan sin pesar. */
-  hairline: 'rgba(61, 123, 255, 0.35)',
-  hairlineFaint: 'rgba(61, 123, 255, 0.18)',
+  primary: '#A2968B',
+  /** Oro claro: texto de marca pequeño sobre negro, brillos, extremos de degradado. */
+  primaryBright: '#C9BDB0',
+  primaryDark: '#7A6F66',
+  primaryMuted: 'rgba(162, 150, 139, 0.16)',
+  /** Línea fina dorada, translúcida, para bordes que destacan sin pesar. */
+  hairline: 'rgba(162, 150, 139, 0.35)',
+  hairlineFaint: 'rgba(162, 150, 139, 0.18)',
   /** El filo de la tarjeta de cada día, a juego con su degradado (`gradients.diario`). */
   hairlineSilver: 'rgba(150, 160, 170, 0.30)',
-  /** Sobre el azul, blanco: con letra oscura el botón parecía apagado. */
-  onPrimary: '#FFFFFF',
+  /** Sobre el oro, casi negro: con letra blanca el botón se lee lavado. */
+  onPrimary: '#0A0A0A',
   /**
    * El velo detrás de cualquier cosa que se abre encima. Estaba escrito a mano
    * en dieciséis sitios con cuatro opacidades distintas, así que abrir dos
@@ -78,35 +77,35 @@ export const colors = {
 
 /** Degradados de marca (para expo-linear-gradient). */
 export const gradients = {
-  marca: ['#7FA8FF', '#3D7BFF', '#2556D9'] as const,
-  marcaSuave: ['rgba(61,123,255,0.22)', 'rgba(61,123,255,0.06)'] as const,
+  marca: ['#C9BDB0', '#A2968B', '#8A7E73'] as const,
+  marcaSuave: ['rgba(162,150,139,0.22)', 'rgba(162,150,139,0.06)'] as const,
   // Halo ambiental: se funde a totalmente transparente (sin corte contra el negro).
-  halo: ['rgba(61,123,255,0.20)', 'rgba(61,123,255,0)'] as const,
+  halo: ['rgba(162,150,139,0.20)', 'rgba(162,150,139,0)'] as const,
   // Igual, pero transparente TAMBIÉN al principio: para bandas que no arrancan
   // en el borde de la pantalla, donde `halo` dejaría una línea dura al
   // empezar directamente a máxima opacidad.
   haloSuave: [
-    'rgba(61,123,255,0)',
-    'rgba(61,123,255,0.18)',
-    'rgba(61,123,255,0)',
+    'rgba(162,150,139,0)',
+    'rgba(162,150,139,0.18)',
+    'rgba(162,150,139,0)',
   ] as const,
   surface: ['#141414', '#0A0A0A'] as const,
   /**
    * La rutina de cada día (grease the groove): PLATA, y en la diagonal
-   * contraria. El azul es de la sesión de hoy; con el mismo degradado las dos
+   * contraria. El oro es de la sesión de hoy; con el mismo degradado las dos
    * tarjetas parecían una sola partida en dos. La plata la separa sin salirse
-   * de la marca.
+   * de la marca: sigue siendo metal, solo que el segundo.
    */
   diario: ['rgba(150,160,170,0.20)', 'rgba(150,160,170,0.04)'] as const,
   /**
    * Fondo de toda la app. Negro, pero no plano: se aclara muy poco arriba y
    * cae a negro puro abajo, como luz cenital sobre una superficie oscura. El
-   * matiz es frío, a juego con el azul de la marca.
+   * matiz es cálido (no gris azulado) para convivir con el oro de la marca.
    *
    * La diferencia es deliberadamente pequeña: en un fondo oscuro, un degradado
    * que se nota es un degradado que ensucia.
    */
-  appBackground: ['#0E1118', '#07080C', '#000000'] as const,
+  appBackground: ['#141210', '#0A0908', '#000000'] as const,
 };
 
 /** Sombras suaves reutilizables (web + nativo). */
@@ -119,7 +118,7 @@ export const shadows = {
     elevation: 6,
   },
   /**
-   * El brillo azul de la marca. En Android NO lleva `elevation`, y no es un
+   * El brillo dorado de la marca. En Android NO lleva `elevation`, y no es un
    * olvido.
    *
    * `elevation` no dibuja un resplandor: dibuja la sombra del sistema con la
@@ -130,7 +129,7 @@ export const shadows = {
    * ahí se queda.
    */
   brillo: {
-    shadowColor: '#3D7BFF',
+    shadowColor: '#A2968B',
     shadowOpacity: 0.35,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 0 },

@@ -12,7 +12,8 @@
  *
  *   node --experimental-strip-types --import ./scripts/_ts-hook.mjs scripts/check-vip.mjs
  */
-import { cursoParaMi, cursosParaMi, cuantasVip, esVip, leccionParaMi, tieneAlgoVip, visibleParaMi } from '../lib/vip.ts';
+import { readFileSync } from 'node:fs';
+import { claseCerrada, cuantasCerradas, cursoParaMi, cuantasVip, esVip, leccionParaMi, tieneAlgoVip, todoCerrado, visibleParaMi } from '../lib/vip.ts';
 import { estadoDeCurso, leccionesContables } from '../lib/courseProgress.ts';
 
 let fallos = 0;
@@ -115,17 +116,39 @@ console.log('\nUna lección suelta');
   comprueba('sin minis no se inventa una lista', leccionParaMi({ id: 'y', title: 'y', videoUrl: 'v' }, false).minis.length === 0);
 }
 
-console.log('\nLa lista de cursos');
+console.log('\nLo VIP se ve, con candado');
 {
+  // Antes lo VIP ni aparecía. Ahora el que no es VIP ve el curso entero y lo
+  // VIP va cerrado; lo que se CUENTA sigue siendo solo lo que puede abrir.
+  comprueba('la lección VIP va con candado', claseCerrada({ vip: true }, false));
+  comprueba('la abierta no', !claseCerrada({}, false));
+  comprueba('la mini de una lección VIP también se cierra', claseCerrada({}, false, { vip: true }));
+  comprueba('la mini VIP dentro de una abierta, cerrada', claseCerrada({ vip: true }, false, {}));
+  comprueba('al VIP no se le cierra nada', !claseCerrada({ vip: true }, true, { vip: true }));
+  comprueba('cuántas van con candado (vídeos de verdad)', cuantasCerradas(curso, false) === 4, String(cuantasCerradas(curso, false)));
+  comprueba('al VIP, ninguna', cuantasCerradas(curso, true) === 0);
+
   const soloVip = {
     ...curso,
     id: 'c2',
     sections: [{ id: 's', title: 's', lessons: [{ id: 'z', title: 'z', videoUrl: 'v', vip: true }] }],
   };
-  const vistos = cursosParaMi([curso, soloVip], false).map((c) => c.id);
-  comprueba('un curso entero VIP no se enseña', !vistos.includes('c2'), vistos.join(','));
-  comprueba('el mixto sí', vistos.includes('c1'));
-  comprueba('al VIP se le enseñan los dos', cursosParaMi([curso, soloVip], true).length === 2);
+  comprueba('un curso entero VIP se ve cerrado', todoCerrado(soloVip, false));
+  comprueba('el mixto no', !todoCerrado(curso, false));
+  comprueba('y para el VIP, nada cerrado', !todoCerrado(soloVip, true));
+  const vacio = { ...curso, sections: [] };
+  comprueba('un curso sin clases no cuenta como cerrado', !todoCerrado(vacio, false));
+
+  const lee = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  const ficha = lee('app/(client)/courses/[id].tsx');
+  comprueba('la ficha pinta el curso entero', /setCourse\(c\);/.test(ficha) && !/setCourse\(c \? cursoParaMi/.test(ficha));
+  comprueba('pero cuenta con lo que puede abrir', /estadoDeCurso\(accesible,/.test(ficha) && !/estadoDeCurso\(course,/.test(ficha));
+  comprueba('y la clase VIP no se abre: avisa', /if \(cerradaVip\) \{\s*avisarVip\(\);\s*return;/.test(ficha));
+  comprueba('sin precio ni botón de comprar', !/€|comprar|Comprar|pagar/.test(ficha));
+  const lista = lee('app/(client)/courses/index.tsx');
+  comprueba('la lista enseña todos los cursos', /setCourses\(data\);/.test(lista));
+  comprueba('y su avance es el de lo que puede abrir', /estadoDeCurso\(cursoParaMi\(course, vip\)/.test(lista));
+  comprueba('la pestaña sale si hay cualquier curso', /\.then\(\(cs\) => cs\.length > 0\)/.test(lee('app/(client)/_layout.tsx')));
 }
 
 console.log('\nLo que ve el entrenador');

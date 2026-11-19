@@ -17,7 +17,7 @@ import {
   leccionesContables,
   type LessonsSeen,
 } from '../../../lib/courseProgress';
-import { cursosParaMi, esVip } from '../../../lib/vip';
+import { cuantasCerradas, cursoParaMi, esVip, todoCerrado } from '../../../lib/vip';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { Course } from '../../../lib/types';
 
@@ -36,10 +36,9 @@ export default function ClientCoursesScreen() {
     }
     const data = await getPublishedCourses(profile.trainerId);
     data.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.createdAt - b.createdAt);
-    // Las clases VIP se podan AQUÍ, antes de contar nada (ver lib/vip.ts): si
-    // se ocultaran solo al pintar, seguirían sumando al total y este alumno se
-    // quedaría en un porcentaje que no puede subir nunca.
-    setCourses(cursosParaMi(data, esVip(profile)));
+    // Todos, también los que son enteros VIP: se ven con candado (ver
+    // lib/vip.ts). El avance se cuenta abajo con el curso podado.
+    setCourses(data);
     setVistas(await getCourseProgress(profile.uid));
     setLoading(false);
     setRefreshing(false);
@@ -53,6 +52,7 @@ export default function ClientCoursesScreen() {
 
   // Los días de alta abren los candados por antigüedad de cada lección.
   const dias = diasDeAlta(profile?.createdAt);
+  const vip = esVip(profile);
 
   if (loading) return <LoadingScreen />;
 
@@ -76,7 +76,11 @@ export default function ClientCoursesScreen() {
         />
       ) : (
         courses.map((course) => {
-          const estado = estadoDeCurso(course, vistas[course.id], dias);
+          // Se cuenta solo lo que puede abrir: si sumaran las clases VIP, su
+          // avance no llegaría nunca al 100 %.
+          const estado = estadoDeCurso(cursoParaMi(course, vip), vistas[course.id], dias);
+          const cerrado = todoCerrado(course, vip);
+          const conCandado = cuantasCerradas(course, vip);
           return (
           <Pressable key={course.id} onPress={() => router.push(`/(client)/courses/${course.id}`)}>
             <Card style={styles.card}>
@@ -127,8 +131,23 @@ export default function ClientCoursesScreen() {
                     {leccionesContables(course).length === 1 ? 'lección' : 'lecciones'}
                   </Text>
                 )}
+                {/* Lo VIP se dice aquí también: el curso se puede abrir para
+                    ver lo que tiene, pero esas clases van con candado. */}
+                {cerrado ? (
+                  <View style={styles.vipFila}>
+                    <Ionicons name="lock-closed" size={11} color={colors.primary} />
+                    <Text style={styles.vipTexto}>Curso solo VIP</Text>
+                  </View>
+                ) : conCandado > 0 ? (
+                  <View style={styles.vipFila}>
+                    <Ionicons name="lock-closed" size={11} color={colors.primary} />
+                    <Text style={styles.vipTexto}>{frase`${conCandado} solo VIP`}</Text>
+                  </View>
+                ) : null}
               </View>
-              {estado.terminado ? (
+              {cerrado ? (
+                <Ionicons name="lock-closed" size={18} color={colors.textFaint} />
+              ) : estado.terminado ? (
                 <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
               ) : (
                 <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
@@ -165,6 +184,8 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   courseMeta: { ...typography.small, color: colors.textFaint, marginTop: 4 },
+  vipFila: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  vipTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold, fontSize: 12 },
   barra: {
     height: 4,
     borderRadius: 2,

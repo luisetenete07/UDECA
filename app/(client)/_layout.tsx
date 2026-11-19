@@ -18,7 +18,7 @@ import { markOnboardingComplete } from '../../lib/firestore/sync';
 import { updateUserProfile } from '../../lib/firestore/users';
 import { getPublishedCourses } from '../../lib/firestore/courses';
 import { comunidadAbierta, getSocialLeaderboard } from '../../lib/firestore/social';
-import { cursosParaMi, esVip } from '../../lib/vip';
+import { esVip } from '../../lib/vip';
 import { useTabScreenOptions } from '../../lib/navTheme';
 import { t, useT  } from '../../lib/idioma';
 
@@ -87,7 +87,9 @@ export default function ClientLayout() {
     const mirar = () =>
       Promise.all([
         getPublishedCourses(trainerId)
-          .then((cs) => cursosParaMi(cs, vip).length > 0)
+          // Cualquier curso publicado, también los enteros VIP: se ven con
+          // candado aunque no se puedan abrir (ver lib/vip.ts).
+          .then((cs) => cs.length > 0)
           .catch(() => true),
         getSocialLeaderboard(trainerId)
           .then((filas) => filas.some((f) => f.uid !== uid))

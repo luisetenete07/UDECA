@@ -15,18 +15,18 @@ import { tieneContenido } from './courseProgress';
  *  - Que un alumno sea VIP se marca en SU ficha, y vale para todos los cursos
  *    de ese entrenador. Un alumno no es "VIP de este curso": es VIP o no lo es.
  *
- * CÓMO SE APLICA: filtrando el curso ANTES de hacer nada con él
- * (`cursoParaMi`). Es a propósito, y es lo que evita el fallo silencioso de
- * este tipo de funciones: si el filtro se aplicara solo al pintar la lista, el
- * porcentaje de avance seguiría contando lecciones que ese alumno no puede
- * abrir y se quedaría clavado en el 60 % para siempre, sin que nadie entienda
- * por qué. Filtrando el curso entero, todo lo demás —el total, el siguiente,
- * el "terminado"— sale bien sin tocar una línea.
+ * LO QUE VE EL QUE NO ES VIP: el curso ENTERO, con lo VIP cerrado con
+ * candado. Antes lo VIP ni aparecía; Luis lo quiere a la vista, para que el
+ * alumno sepa todo lo que tiene el curso aunque no pueda abrirlo. Sin precio ni
+ * botón de comprar: la app no vende nada, y pasar a VIP es cosa de hablarlo con
+ * Luis.
  *
- * Lo que NO hace: enseñar un candado. Una clase VIP no existe para quien no lo
- * es. Enseñar lo que no puedes tener es un anuncio dentro de algo que ya has
- * pagado, y el que decide vender el plan de arriba es el entrenador hablando
- * con su alumno, no la app poniéndole un cartel.
+ * LO QUE CUENTA: solo lo que puede abrir. El avance se calcula con el curso ya
+ * podado (`cursoParaMi`), y es a propósito: si las clases cerradas sumaran al
+ * total, el porcentaje se quedaría clavado en el 60 % para siempre, sin que
+ * nadie entienda por qué. Así que hay dos vistas del mismo curso: la entera,
+ * para PINTAR (`claseCerrada` dice qué va con candado), y la podada, para
+ * CONTAR —el total, el siguiente, el "terminado"—.
  */
 
 /** ¿Este alumno tiene acceso a lo VIP? */
@@ -72,12 +72,49 @@ export function cursoParaMi(course: Course, vip: boolean): Course {
   return { ...course, sections };
 }
 
-/** Todos los cursos, podados de una vez. */
-export function cursosParaMi(courses: Course[], vip: boolean): Course[] {
-  if (vip) return courses;
-  // Un curso al que no le queda nada no se enseña: sería una portada que al
-  // abrirla está vacía.
-  return courses.map((c) => cursoParaMi(c, vip)).filter((c) => c.sections.length > 0);
+/**
+ * ¿Va con candado esta clase para este alumno?
+ *
+ * Una mini clase se cierra si es VIP ella o si lo es la lección que la
+ * contiene: lo que hay dentro de algo cerrado también está cerrado.
+ */
+export function claseCerrada(
+  clase: Pick<ContenidoDeCurso, 'vip'>,
+  vip: boolean,
+  leccion?: Pick<Lesson, 'vip'>
+): boolean {
+  if (vip) return false;
+  return !visibleParaMi(clase, vip) || (!!leccion && !visibleParaMi(leccion, vip));
+}
+
+/** ¿Está entero cerrado? Un curso o una sección sin nada que pueda abrir. */
+export function todoCerrado(course: Course, vip: boolean): boolean {
+  if (vip) return false;
+  const tiene = course.sections.some((s) => s.lessons.length > 0);
+  return tiene && cursoParaMi(course, vip).sections.length === 0;
+}
+
+/** Cuántas clases le quedan con candado en este curso (lecciones y minis). */
+export function cuantasCerradas(course: Course, vip: boolean): number {
+  return vip ? 0 : cuantasVipVisibles(course);
+}
+
+/**
+ * Las clases con candado tal y como las ve quien no es VIP: cada vídeo o
+ * e-book que no puede abrir. Las minis de una lección VIP se cierran con ella,
+ * y una lección que solo agrupa minis no cuenta como clase.
+ */
+function cuantasVipVisibles(course: Course): number {
+  let n = 0;
+  for (const s of course.sections) {
+    for (const l of s.lessons) {
+      if (l.vip === true && tieneContenido(l)) n++;
+      for (const m of l.minis ?? []) {
+        if ((l.vip === true || m.vip === true) && tieneContenido(m)) n++;
+      }
+    }
+  }
+  return n;
 }
 
 /** ¿Hay algo VIP aquí dentro? Lo usa el coach para saber qué está limitando. */

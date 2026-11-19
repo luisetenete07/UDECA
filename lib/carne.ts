@@ -37,7 +37,7 @@ export interface Carne {
 /**
  * Cada tipo con su color, su monograma y su frase.
  *
- * Los tres colores salen del mismo azul: son el mismo color a distinta
+ * Los tres colores salen del mismo oro: son el mismo color a distinta
  * luz, no tres colores de marcas distintas. Una tarjeta verde y otra
  * naranja se verían de dos empresas.
  */
@@ -46,19 +46,19 @@ const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'tipo'>> = {
     titulo: 'ENTRENADOR',
     lema: 'Dirige Maestría en Calistenia',
     monograma: 'EN',
-    acento: '#7FA8FF',
+    acento: '#C9BDB0',
   },
   alumno: {
     titulo: 'ALUMNO',
     lema: 'Entrena con Luis Tena',
     monograma: 'AL',
-    acento: '#3D7BFF',
+    acento: '#8A7E73',
   },
   formacion: {
     titulo: 'FORMACIÓN',
     lema: 'Se forma con los cursos de Maestría en Calistenia',
     monograma: 'FO',
-    acento: '#A9C4FF',
+    acento: '#B9A98F',
   },
 };
 

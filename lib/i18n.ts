@@ -1129,6 +1129,12 @@ export const EN: Record<string, string> = {
   'Rechazar a {0}': 'Decline {0}',
   // Invitar a un alumno: la app solo vive en app.udeca.app.
   'Entra en app.udeca.app y crea su cuenta. Su solicitud te llega a Inicio y entra cuando la aceptas.': 'They go to app.udeca.app and create an account. Their request shows up on Home and they are in once you accept it.',
+  // Clases VIP con candado (cursos del alumno).
+  'Esta clase es VIP. Si quieres acceder, háblalo con Luis.': 'This class is VIP. If you want access, talk to Luis.',
+  'Solo VIP': 'VIP only',
+  ' · {0} solo VIP': ' · {0} VIP only',
+  '{0} solo VIP': '{0} VIP only',
+  'Curso solo VIP': 'VIP-only course',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':
