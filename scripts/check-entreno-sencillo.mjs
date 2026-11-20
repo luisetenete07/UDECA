@@ -74,10 +74,20 @@ console.log('\nEn tabla, si el entrenador lo elige');
   ok('algo raro cuenta como la app', modoDelAlumno({ modoAlumno: 'excel' }) === 'app');
   ok('el alumno ve su día en la tabla, siempre', /<TablaDeEntreno\s*\n\s*day=\{day\}/.test(w));
   const tabla = lee('components/TablaDeEntreno.tsx');
-  ok('la tabla: ejercicio, series, reps y descanso', />Ejercicio</.test(tabla) && />Series</.test(tabla) && />Reps</.test(tabla) && />Desc\.</.test(tabla));
+  ok('la tabla: ejercicio, series, reps y descanso', />Ejercicio</.test(tabla) && />Series</.test(tabla) && />Reps</.test(tabla) && />Descanso</.test(tabla));
+  /*
+   * Y QUE SE LEA EN EL MÓVIL. Era la tabla del ordenador encogida: cuatro
+   * columnas de números dejaban al nombre y a las notas una tira de 100 px. En
+   * el móvil, una tarjeta por ejercicio con los números grandes y su rótulo; la
+   * tabla clásica, solo cuando hay ancho.
+   */
+  ok('en el móvil, una tarjeta por ejercicio; la tabla, solo con ancho',
+    /const enTabla = ancho >= ANCHO_DE_TABLA;/.test(tabla) && /onLayout=\{\(e\) => setAncho\(/.test(tabla) && /styles\.franja/.test(tabla));
+  ok('cada número con su rótulo encima', /<Text style=\{styles\.rotulo\} numberOfLines=\{1\}>/.test(tabla));
+  ok('las columnas casan también en una superserie', /d\.columnaDeDescanso && styles\.colDescanso/.test(tabla));
   ok('el objetivo, solo si alguno lo lleva', /const conObjetivo = ejercicios\.some/.test(tabla));
   ok('las superseries, juntas y con su letra', /esSuperserie\(b\)/.test(tabla) && /styles\.filaEnlazada/.test(tabla));
-  ok('y las notas del entrenador', /ex\.notes \? <Text style=\{styles\.nota\}>/.test(tabla));
+  ok('y las notas del entrenador', /ex\.notes \?[\s\S]{0,240}<Text style=\{styles\.nota\}>\{ex\.notes\}<\/Text>/.test(tabla));
   const editor = lee('app/(trainer)/clients/[id]/routine.tsx');
   ok('el entrenador lo elige en la rutina de cada alumno', /\{ valor: 'tabla', texto: 'En tabla'/.test(editor) && /modoAlumno,/.test(editor));
 }

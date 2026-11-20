@@ -648,7 +648,6 @@ export const EN: Record<string, string> = {
   'con {0} kg': 'at {0} kg',
   // Entreno más sencillo, vista en tabla y editor de rutinas con menú Más.
   'Agarre {0}': '{0} grip',
-  'Desc.': 'Rest',
   'Obj.': 'Target',
   '{0} de descanso': '{0} rest',
   'Prefiero apuntar las series': 'I\'d rather log my sets',
