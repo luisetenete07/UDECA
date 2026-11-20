@@ -1,5 +1,5 @@
 /**
- * Tarjetas de marca de Maestría en Calistenia como imagen PNG (1080×1350):
+ * Tarjetas de marca de Mastery como imagen PNG (1080×1350):
  *  - Resumen de sesión (al terminar de entrenar).
  *  - Récord personal.
  *  - Informe del alumno (lo genera el coach desde su ficha).
@@ -28,7 +28,7 @@ import {
 } from './cardEngine';
 import { canRenderCardNatively, renderCardBase64 } from '../components/CardRendererHost';
 import { EMBLEMA_DATA_URI } from './emblema';
-import { MARCA_ARRIBA } from './marca';
+import { MARCA_ABAJO, MARCA_ARRIBA } from './marca';
 import { getIdioma } from './idioma';
 import { t } from './idioma';
 
@@ -62,6 +62,7 @@ function logoDeLaTarjeta(): string {
 function textosDeLaTarjeta(): CardTextos {
   return {
     marca: MARCA_ARRIBA,
+    abajo: MARCA_ABAJO,
     sesionCompletada: t('SESIÓN COMPLETADA'),
     duracion: t('Duración'),
     series: t('Series'),
@@ -184,18 +185,18 @@ async function shareCard(
 // ---------- API pública ----------
 
 export function shareSessionImage(data: SessionCardData): Promise<ShareResult> {
-  return shareCard('session', data, 'sesion-maestria.png', 'Sesión Maestría en Calistenia');
+  return shareCard('session', data, 'sesion-maestria.png', 'Sesión Mastery');
 }
 
 export function shareRecordImage(data: RecordCardData): Promise<ShareResult> {
-  return shareCard('record', data, 'record-maestria.png', 'Récord Maestría en Calistenia');
+  return shareCard('record', data, 'record-maestria.png', 'Récord Mastery');
 }
 
 export function shareReportImage(data: ReportCardData): Promise<ShareResult> {
-  return shareCard('report', data, 'informe-maestria.png', 'Informe Maestría en Calistenia');
+  return shareCard('report', data, 'informe-maestria.png', 'Informe Mastery');
 }
 
 /** Carné de miembro (con número de fundador si lo tiene encendido). */
 export function shareMemberImage(data: MemberCardData): Promise<ShareResult> {
-  return shareCard('member', data, 'carne-maestria.png', 'Mi carné Maestría en Calistenia');
+  return shareCard('member', data, 'carne-maestria.png', 'Mi carné Mastery');
 }

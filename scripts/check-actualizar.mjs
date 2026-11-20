@@ -143,7 +143,7 @@ console.log('\nEl muro, tal y como está montado');
   ok('al actualizar se salta la página guardada', /fetch\(window\.location\.href, \{ cache: 'reload' \}\)/.test(html));
 
   const sw = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
-  ok('el service worker cambia en cada despliegue', /const CACHE = 'maestria-__VERSION_WEB__';/.test(sw));
+  ok('el service worker cambia en cada despliegue', /const CACHE = 'mastery-__VERSION_WEB__';/.test(sw));
   ok('y nunca guarda version.json', /pathname\.endsWith\('\/version\.json'\)\) return;/.test(sw));
 
   const despliegue = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');

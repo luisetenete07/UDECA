@@ -1,4 +1,4 @@
-# Despliegue automático de Maestría en Calistenia a GitHub Pages.
+# Despliegue automático de Mastery a GitHub Pages.
 #
 # Cada push a la rama de desarrollo compila la app web (Expo) y publica el
 # resultado en la rama gh-pages, que GitHub Pages sirve en app.udeca.app.

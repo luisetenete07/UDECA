@@ -1,5 +1,5 @@
 /*
- * Maestría en Calistenia es de UN entrenador. Que siga siéndolo.
+ * Mastery es de UN entrenador. Que siga siéndolo.
  *
  * La app fue CALICO: una plataforma para muchos entrenadores, cada uno con su
  * alta, su plan, su marca y su código de invitación. Todo eso se quitó cuando
@@ -128,7 +128,7 @@ console.log('\n3 · Nada que cobre');
 
 console.log('\n4 · El nombre nuevo');
 {
-  ok('la app se llama Maestría en Calistenia', MARCA === 'Maestría en Calistenia');
+  ok('la app se llama Mastery', MARCA === 'Mastery');
   const app = JSON.parse(lee('app.json')).expo;
   ok(`bajo el icono se lee ${MARCA_CORTA}`, app.name === MARCA_CORTA, app.name);
   ok('sin tocar el identificador de las tiendas', app.ios.bundleIdentifier === 'com.udeca.app' && app.android.package === 'entrenadores.app');

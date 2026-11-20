@@ -24,7 +24,7 @@
       "infoPlist": {
         "NSMotionUsageDescription": "Para contar los pasos que das cada día y sumarlos a tu plan de nutrición, sin que tengas que apuntarlos a mano.",
         "NSHealthShareUsageDescription": "Para leer los pasos que das cada día, también los de tu Apple Watch, y sumarlos a tu plan de nutrición sin que tengas que apuntarlos a mano.",
-        "NSHealthUpdateUsageDescription": "Maestría en Calistenia solo lee tus pasos de Salud para tu plan de nutrición. No escribe ni cambia ningún dato de Salud."
+        "NSHealthUpdateUsageDescription": "Mastery solo lee tus pasos de Salud para tu plan de nutrición. No escribe ni cambia ningún dato de Salud."
       },
       "entitlements": {
         "com.apple.developer.healthkit": true,

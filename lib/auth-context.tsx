@@ -34,7 +34,7 @@ interface AuthContextValue {
    * Crea el perfil de quien ya ha entrado con Google o con Apple pero todavía
    * no tiene uno.
    *
-   * Siempre es un ALUMNO: Maestría en Calistenia tiene un solo entrenador, y su
+   * Siempre es un ALUMNO: Mastery tiene un solo entrenador, y su
    * cuenta ya existe. Crear la cuenta manda además la solicitud de entrada al
    * coach (ver lib/coachUnico.ts); hasta que la acepte, se ve la pantalla de
    * espera.

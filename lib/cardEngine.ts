@@ -1,5 +1,5 @@
 /**
- * Motor de las tarjetas de marca de Maestría en Calistenia (1080×1350 PNG).
+ * Motor de las tarjetas de marca de Mastery (1080×1350 PNG).
  *
  * El dibujo vive UNA sola vez, en CARD_SCRIPT, porque tiene que ejecutarse en
  * dos sitios distintos:
@@ -25,8 +25,10 @@ export type CardKind = 'session' | 'record' | 'report' | 'member';
  * no la decisión.
  */
 export interface CardTextos {
-  /** La palabra grande de arriba: "MAESTRÍA" (debajo va "EN CALISTENIA"). */
+  /** La palabra grande de arriba: "MASTERY". */
   marca?: string;
+  /** Debajo, más pequeño: "@luistenafit". */
+  abajo?: string;
   sesionCompletada: string;
   duracion: string;
   series: string;
@@ -85,7 +87,7 @@ export interface ReportCardData {
 }
 
 /**
- * Carné de miembro: quién eres dentro de Maestría en Calistenia.
+ * Carné de miembro: quién eres dentro de Mastery.
  *
  * Es la tarjeta que se enseña, no la que se consulta: por eso lleva pocos
  * datos y grandes. El número de fundador, cuando lo hay, es el protagonista.
@@ -115,6 +117,8 @@ export const CARD_SCRIPT = `
 var W = 1080, H = 1350;
 var BG = '#000000';
 var ORO = '#A2968B';
+// MASTERY va en el color del tridente (lib/marca.ts, COLOR_DEL_TRIDENTE).
+var TRIDENTE = '#E2DCD6';
 var ORO_CLARO = '#C9BDB0';
 var TEXT = '#FFFFFF';
 var MUTED = '#ADADAD';
@@ -166,7 +170,7 @@ function drawFrame(ctx, logo) {
   ctx.stroke();
   ctx.textAlign = 'center';
   if (logo) ctx.drawImage(logo, W / 2 - 52, 44, 104, 104);
-  ctx.fillStyle = ORO_CLARO;
+  ctx.fillStyle = TRIDENTE;
   ctx.font = '600 54px ' + DISPLAY;
   ctx.fillText(marcaGrande(ctx), W / 2, 198);
   ctx.fillStyle = MUTED;
@@ -291,7 +295,7 @@ function drawRecord(ctx, data, logo) {
   ctx.stroke();
   ctx.textAlign = 'center';
   if (logo) ctx.drawImage(logo, W / 2 - 52, 44, 104, 104);
-  ctx.fillStyle = ORO_CLARO;
+  ctx.fillStyle = TRIDENTE;
   ctx.font = '600 54px ' + DISPLAY;
   ctx.fillText(marcaGrande(ctx), W / 2, 198);
   ctx.fillStyle = MUTED;
@@ -414,7 +418,7 @@ function drawMember(ctx, data, logo) {
 
   ctx.textAlign = 'center';
   if (logo) ctx.drawImage(logo, W / 2 - 46, 96, 92, 92);
-  ctx.fillStyle = ORO_CLARO;
+  ctx.fillStyle = TRIDENTE;
   ctx.font = '600 46px ' + DISPLAY;
   ctx.fillText(marcaGrande(ctx), W / 2, 244);
   ctx.fillStyle = MUTED;
@@ -520,14 +524,14 @@ function hexA(hex, a) {
   return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + a + ')';
 }
 
-/** La marca grande y espaciada: "MAESTRÍA". */
+/** La marca grande y espaciada: "MASTERY". */
 function marcaGrande(ctx) {
-  return fit(ctx, espaciado(String(T.marca || 'MAESTRÍA').toUpperCase()), W - 200);
+  return fit(ctx, espaciado(String(T.marca || 'MASTERY').toUpperCase()), W - 200);
 }
 
-/** Debajo, el resto del nombre: "EN CALISTENIA". */
+/** Debajo, el usuario de Luis: "@luistenafit". Sin espaciar: es un usuario, se lee junto. */
 function subMarca() {
-  return 'E N   C A L I S T E N I A';
+  return String(T.abajo || '@luistenafit');
 }
 
 /** "ATLETA" -> "A T L E T A". Separado se lee como un sello, no como texto. */

@@ -1,7 +1,7 @@
 /*
  * Que la app se pueda instalar desde el navegador.
  *
- * Maestría en Calistenia ya no está en App Store ni en Google Play: la única
+ * Mastery ya no está en App Store ni en Google Play: la única
  * forma de tenerla es app.udeca.app, instalada desde el navegador. Si el
  * manifiesto se rompe, instalarla pasa a ser un acceso directo a una página, y
  * eso no lo nota nadie hasta que un alumno nuevo pregunta dónde está la app.
@@ -56,7 +56,7 @@ console.log('\nQue la app se pueda instalar en el ordenador');
   for (const i of m.icons ?? []) {
     ok(`${i.src} existe`, existsSync(new URL(`../public/${i.src}`, import.meta.url)));
   }
-  ok('con el nombre de la app', m.name === 'Maestría en Calistenia' && m.short_name === 'MASTERY');
+  ok('con el nombre de la app', m.name === 'Mastery' && m.short_name === 'MASTERY');
 }
 
 console.log('\nQue se instale con el icono de ahora, no con uno guardado');
@@ -82,7 +82,7 @@ console.log('\nQue se instale con el icono de ahora, no con uno guardado');
   ok('el manifiesto se pide a la red antes que a la caché',
     /pathname\.endsWith\('\/manifest\.json'\)\) \{\s*event\.respondWith\(redPrimero\(request\)\)/.test(sw));
   ok('cada despliegue estrena caché y tira la anterior',
-    /const CACHE = 'maestria-__VERSION_WEB__';/.test(sw) && /k !== CACHE\)\.map\(\(k\) => caches\.delete\(k\)\)/.test(sw));
+    /const CACHE = 'mastery-__VERSION_WEB__';/.test(sw) && /k !== CACHE\)\.map\(\(k\) => caches\.delete\(k\)\)/.test(sw));
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

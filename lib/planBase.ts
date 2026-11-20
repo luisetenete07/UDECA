@@ -6,8 +6,8 @@ import type { UserProfile } from './types';
  *
  * Antes este fichero era el corazón del cobro de la plataforma: la prueba de
  * catorce días, el alta del primer año, las plazas de alumno y el muro de pago
- * de cada entrenador. Todo eso se fue con la app de un solo coach: Maestría en
- * Calistenia no le cobra nada a nadie. Lo que queda es lo que sigue decidiendo
+ * de cada entrenador. Todo eso se fue con la app de un solo coach: Mastery no
+ * le cobra nada a nadie. Lo que queda es lo que sigue decidiendo
  * algo:
  *
  *  - Las cuentas de administración (las de Luis).

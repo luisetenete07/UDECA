@@ -1,5 +1,5 @@
 /*
- * Service worker de Maestría en Calistenia.
+ * Service worker de Mastery.
  *
  * Estrategia:
  *  - Bundles de /_expo/ (llevan hash en el nombre): cache-first, la app
@@ -23,7 +23,7 @@
  * del anterior entera, con lo que no queda ni un icono ni un bundle viejo.
  */
 
-const CACHE = 'maestria-__VERSION_WEB__';
+const CACHE = 'mastery-__VERSION_WEB__';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());

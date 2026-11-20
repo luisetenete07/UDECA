@@ -22,7 +22,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MASTERY" />
-        <title>Maestría en Calistenia</title>
+        <title>Mastery</title>
         <link rel="manifest" href={`${base}/manifest.json`} />
         <link rel="apple-touch-icon" href={`${base}/tridente-180.png`} />
 
@@ -89,9 +89,9 @@ const swRegistration = (base: string) => `
 (function () {
 var VERSION_WEB = '__VERSION_WEB__';
 function showUpdateBanner() {
-  if (document.getElementById('maestria-version-nueva')) return;
+  if (document.getElementById('mastery-version-nueva')) return;
   var fondo = document.createElement('div');
-  fondo.id = 'maestria-version-nueva';
+  fondo.id = 'mastery-version-nueva';
   fondo.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
   var caja = document.createElement('div');
   caja.style.cssText = 'max-width:380px;width:100%;text-align:center;';

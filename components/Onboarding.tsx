@@ -69,7 +69,7 @@ export function Onboarding({
     const base: Slide[] = [
       {
         icon: 'flame',
-        title: name ? frase`Bienvenido a Maestría en Calistenia, ${name.split(' ')[0]}` : t('Bienvenido a Maestría en Calistenia'),
+        title: name ? frase`Bienvenido a Mastery, ${name.split(' ')[0]}` : t('Bienvenido a Mastery'),
         lines: [
           'Luis te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.',
           'Este es tu campo base. Vamos a verlo en 20 segundos.',

@@ -22,7 +22,7 @@ export function CuentaRetiradaScreen() {
     <GateScreen
       icono="information-circle-outline"
       titulo="Este tipo de cuenta ya no existe"
-      texto="Maestría en Calistenia es ahora la app de Luis Tena para sus alumnos. Si quieres entrenar con él, entra con una cuenta de alumno y pide tu plaza."
+      texto="Mastery es ahora la app de Luis Tena para sus alumnos. Si quieres entrenar con él, entra con una cuenta de alumno y pide tu plaza."
       nota="Si quieres, puedes eliminar esta cuenta y todos sus datos."
       onSalir={signOut}
     >

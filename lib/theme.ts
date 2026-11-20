@@ -34,7 +34,7 @@ export const colors = {
   /** Para lo poquísimo que de verdad necesita marcar un límite. */
   borderStrong: '#2A2A2A',
   /**
-   * EL DORADO DEL TRIDENTE: el color de Maestría en Calistenia.
+   * EL DORADO DEL TRIDENTE: el color de Mastery.
    *
    * Un champán cálido, el del metal del tridente del logo. Fue azul cobalto
    * una temporada, con el logo de CALICO; con el tridente de vuelta, vuelve

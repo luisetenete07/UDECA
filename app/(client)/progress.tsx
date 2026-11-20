@@ -241,7 +241,7 @@ export default function ProgressScreen() {
     const t = sessionTotals(log.exercises, measureByExercise);
     try {
       const result = await shareSessionImage({
-        routineName: log.routineName ?? 'Maestría en Calistenia',
+        routineName: log.routineName ?? 'Mastery',
         dayName: log.dayName,
         durationMin: log.durationMin ?? 0,
         sets: t.sets,
@@ -258,14 +258,14 @@ export default function ProgressScreen() {
       // Caemos al texto.
     }
     const parts = [
-      `Sesión completada en Maestría en Calistenia: ${log.dayName ?? log.routineName ?? ''}`.trim(),
+      `Sesión completada en Mastery: ${log.dayName ?? log.routineName ?? ''}`.trim(),
       log.durationMin ? `${log.durationMin} min` : null,
       frase`${t.sets} series`,
       t.reps > 0 ? `${t.reps} reps` : null,
       t.seconds > 0 ? `${t.seconds}s isométrico` : null,
       t.volumeKg > 0 ? frase`${t.volumeKg} kg de volumen` : null,
     ].filter(Boolean);
-    const message = frase`${parts.join(' · ')}\n\nEntreno con Maestría en Calistenia`;
+    const message = frase`${parts.join(' · ')}\n\nEntreno con Mastery`;
     try {
       await Share.share({ message });
     } catch {

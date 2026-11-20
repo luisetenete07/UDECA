@@ -204,7 +204,7 @@ function firmaDelInforme(): string {
 }
 
 /**
- * Informe de progreso con la identidad de Maestría en Calistenia: resumen del periodo, mejoría
+ * Informe de progreso con la identidad de Mastery: resumen del periodo, mejoría
  * ejercicio por ejercicio, la tabla semana a semana que se ve en pantalla,
  * reparto de trabajo, peso corporal y rutina en vigor.
  */

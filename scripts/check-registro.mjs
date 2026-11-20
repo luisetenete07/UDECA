@@ -1,7 +1,7 @@
 /**
  * Crear una cuenta tiene que funcionar, y solo como lo que toca.
  *
- * Maestría en Calistenia es de un solo entrenador: quien se registra nace
+ * Mastery es de un solo entrenador: quien se registra nace
  * ALUMNO, y una cuenta de entrenador solo la puede crear Luis con sus correos,
  * verificados. Aquí se prueba lo que hace la app DE VERDAD contra las reglas
  * DE VERDAD.

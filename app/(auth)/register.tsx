@@ -93,8 +93,7 @@ export default function RegisterScreen() {
         ) : null}
 
         <Text style={styles.legal}>
-          Al crear tu cuenta aceptas los términos y la política de privacidad de Maestría en
-          Calistenia.
+          Al crear tu cuenta aceptas los términos y la política de privacidad de Mastery.
         </Text>
       </Card>
 

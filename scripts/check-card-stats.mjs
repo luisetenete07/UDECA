@@ -34,7 +34,7 @@ console.log('\nEntrenador');
 const coachNuevo = tarjetaDeEntrenador({ createdAt: AHORA - 3 * DIA, alumnos: 0, entrenosDirigidos: 0 });
 comprueba(
   'recién llegado y sin alumnos: no enseña ceros',
-  coachNuevo.length === 1 && coachNuevo[0].valor === 'MAESTRÍA',
+  coachNuevo.length === 1 && coachNuevo[0].valor === 'MASTERY',
   etiquetas(coachNuevo)
 );
 const coachPocos = tarjetaDeEntrenador({ createdAt: AHORA - 10 * DIA, alumnos: 2, entrenosDirigidos: 4 });

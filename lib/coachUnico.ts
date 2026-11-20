@@ -5,7 +5,7 @@ import { sendJoinRequest } from './firestore/joinRequests';
 import type { UserProfile } from './types';
 
 /**
- * Maestría en Calistenia tiene UN entrenador: Luis Tena.
+ * Mastery tiene UN entrenador: Luis Tena.
  *
  * Antes la app era de muchos entrenadores y cada alumno llegaba con el código
  * del suyo. Ahora no hay a quién elegir, así que el código sobra: quien se

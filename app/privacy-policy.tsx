@@ -6,11 +6,11 @@ import { colors, spacing, typography } from '../lib/theme';
 export default function PrivacyPolicy() {
   return (
     <ScrollView contentContainerStyle={styles.container} style={{ backgroundColor: colors.background }}>
-      <Text style={styles.title}>Política de privacidad de Maestría en Calistenia</Text>
+      <Text style={styles.title}>Política de privacidad de Mastery</Text>
       <Text style={styles.updated}>Última actualización: noviembre 2026</Text>
 
       <Text style={styles.intro}>
-        Maestría en Calistenia es la aplicación de entrenamiento de calistenia de Luis Tena para sus
+        Mastery es la aplicación de entrenamiento de calistenia de Luis Tena para sus
         alumnos. Esta política explica qué datos tratamos, con qué finalidad y qué derechos tienes.
         El responsable del tratamiento es Luis Tena; puedes contactar en cualquier momento en{' '}
         <Text style={styles.bold}>luistenaf@gmail.com</Text>.
@@ -107,7 +107,7 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="9. Menores">
-        Maestría en Calistenia no está dirigida a menores de 14 años. Si eres menor de esa edad, no debes usar la app
+        Mastery no está dirigida a menores de 14 años. Si eres menor de esa edad, no debes usar la app
         sin el consentimiento de tus padres o tutores.
       </Section>
 

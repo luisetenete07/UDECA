@@ -14,5 +14,5 @@ export {
   isAdmin,
 } from './planBase';
 
-/** Correo de contacto de Maestría en Calistenia. */
+/** Correo de contacto de Mastery. */
 export const CONTACT_EMAIL = 'luistenaf@gmail.com';

@@ -6,7 +6,7 @@ import { colors, spacing, typography } from '../lib/theme';
 export default function DeleteAccount() {
   return (
     <ScrollView contentContainerStyle={styles.container} style={{ backgroundColor: colors.background }}>
-      <Text style={styles.title}>Eliminar tu cuenta de Maestría en Calistenia</Text>
+      <Text style={styles.title}>Eliminar tu cuenta de Mastery</Text>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Desde la app, tú mismo</Text>

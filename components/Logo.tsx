@@ -1,16 +1,13 @@
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
-import { FIRMA, MARCA, MARCA_ABAJO, MARCA_ARRIBA } from '../lib/marca';
+import { COLOR_DEL_TRIDENTE, FIRMA, MARCA, MARCA_ABAJO, MARCA_ARRIBA } from '../lib/marca';
 import { colors, fonts, spacing } from '../lib/theme';
 
 /**
- * El logo: el tridente y, debajo, el nombre como rótulo ("MAESTRÍA" grande y
- * "EN CALISTENIA" debajo).
- *
- * El nombre va partido en dos líneas porque las veintidós letras seguidas, con
- * el espaciado de un rótulo, no caben en un móvil de 320 px sin bajar tanto el
- * tamaño que deja de parecer un nombre.
+ * El logo: el tridente y, debajo, MASTERY grande, en el color del tridente, y
+ * @luistenafit más pequeño. Lo mismo que se lee arriba a la izquierda dentro
+ * de la app.
  */
 const TRIDENTE = require('../assets/emblema.png');
 /** Ancho entre alto del tridente recortado (assets/emblema.png). */
@@ -54,17 +51,17 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontFamily: fonts.display,
     letterSpacing: 5,
-    color: colors.primary,
+    color: COLOR_DEL_TRIDENTE,
   },
   arribaCompact: { fontSize: 26, letterSpacing: 4 },
   abajo: {
     fontSize: 12,
     fontFamily: fonts.semiBold,
-    letterSpacing: 4.5,
+    letterSpacing: 0.6,
     color: colors.textMuted,
     marginTop: 2,
   },
-  abajoCompact: { fontSize: 10, letterSpacing: 3.5 },
+  abajoCompact: { fontSize: 11, letterSpacing: 0.5 },
   credit: {
     fontSize: 11,
     fontFamily: fonts.body,

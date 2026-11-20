@@ -44,7 +44,7 @@ export interface Carne {
 const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'tipo'>> = {
   coach: {
     titulo: 'ENTRENADOR',
-    lema: 'Dirige Maestría en Calistenia',
+    lema: 'Dirige Mastery',
     monograma: 'EN',
     acento: '#C9BDB0',
   },
@@ -56,7 +56,7 @@ const TIPOS: Record<TipoDeCarne, Omit<Carne, 'nombre' | 'desde' | 'tipo'>> = {
   },
   formacion: {
     titulo: 'FORMACIÓN',
-    lema: 'Se forma con los cursos de Maestría en Calistenia',
+    lema: 'Se forma con los cursos de Mastery',
     monograma: 'FO',
     acento: '#B9A98F',
   },

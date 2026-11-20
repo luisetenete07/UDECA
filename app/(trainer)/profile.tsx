@@ -64,7 +64,7 @@ export default function TrainerProfileScreen() {
     // (lib/coachUnico.ts). Al alumno se le manda donde puede registrarse, no
     // a la web de presentación.
     const message =
-      `Te espero en Maestría en Calistenia.\n\n` +
+      `Te espero en Mastery.\n\n` +
       `1) Entra en app.udeca.app y añádela a tu pantalla de inicio.\n` +
       `2) Crea tu cuenta: me llega tu solicitud y te acepto.\n\n` +
       `¡Nos vemos dentro!`;
@@ -120,7 +120,7 @@ export default function TrainerProfileScreen() {
         <Text style={styles.email}>{profile?.email}</Text>
       </View>
 
-      {/* El carné: quién es dentro de Maestría en Calistenia. */}
+      {/* El carné: quién es dentro de Mastery. */}
       <MemberCard />
 
       <SelectorDeIdioma />

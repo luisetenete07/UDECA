@@ -11,7 +11,7 @@ import Svg, {
   Rect,
   Stop,
 } from 'react-native-svg';
-import { MARCA, MARCA_ABAJO, MARCA_ARRIBA } from '../lib/marca';
+import { COLOR_DEL_TRIDENTE, MARCA, MARCA_ABAJO, MARCA_ARRIBA } from '../lib/marca';
 import { useBloqueoDeScroll } from '../lib/bloqueoDeScroll';
 import { colors, fonts, spacing, tabularNums, typography } from '../lib/theme';
 
@@ -445,9 +445,9 @@ const styles = StyleSheet.create({
   arriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   marcaFila: { flexShrink: 1 },
   marcaAbajo: {
-    fontSize: 7,
+    fontSize: 8,
     fontFamily: fonts.semiBold,
-    letterSpacing: 2.2,
+    letterSpacing: 0.4,
     color: colors.textMuted,
     marginTop: 1,
   },
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: fonts.display,
     letterSpacing: 2.4,
-    color: colors.text,
+    color: COLOR_DEL_TRIDENTE,
   },
   rol: {
     fontSize: 9,

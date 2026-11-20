@@ -1,10 +1,10 @@
-# Maestría en Calistenia — la app de Luis Tena
+# Mastery — la app de Luis Tena
 
 App multiplataforma (iOS, Android y Web) con la que Luis Tena lleva a sus
 alumnos: el plan de entrenamiento, el registro de lo que hacen, su progreso, la
 nutrición y los cursos. En el móvil se llama **MASTERY** (el nombre entero no
 cabe bajo el icono); dentro de la app, en la web y en todo lo que se comparte,
-**Maestría en Calistenia**. El nombre vive en `lib/marca.ts`.
+**Mastery**. El nombre vive en `lib/marca.ts`.
 
 **Es de un solo entrenador.** Antes fue CALICO, una plataforma para muchos
 entrenadores, con su alta, su plan de pago, su marca propia y su código de

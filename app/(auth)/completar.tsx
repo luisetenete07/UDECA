@@ -12,7 +12,7 @@ import { colors, fonts, radius, spacing, typography } from '../../lib/theme';
  * El último paso de entrar con Google o con Apple.
  *
  * El proveedor da una identidad —nombre, correo, foto— y aquí se crea con ella
- * la cuenta de alumno. No se pregunta nada más: Maestría en Calistenia tiene un
+ * la cuenta de alumno. No se pregunta nada más: Mastery tiene un
  * solo entrenador, así que no hay rol que elegir ni código que escribir. Crear
  * la cuenta le manda la solicitud a Luis, y se entra cuando la acepta.
  *

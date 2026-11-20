@@ -1,4 +1,4 @@
-// El tridente de Maestría en Calistenia embebido (data URI), para dibujarlo en
+// El tridente de Mastery embebido (data URI), para dibujarlo en
 // las tarjetas que se comparten (canvas) y en el informe en PDF sin depender de
 // cómo resuelva los assets cada plataforma. Sale de la misma imagen que los
 // iconos de la app (assets/emblema.png).

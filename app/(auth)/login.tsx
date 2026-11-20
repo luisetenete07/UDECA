@@ -356,7 +356,7 @@ export default function LoginScreen() {
         ) : null}
 
         <Text style={styles.legal}>
-          Al entrar aceptas los términos y la política de privacidad de Maestría en Calistenia.
+          Al entrar aceptas los términos y la política de privacidad de Mastery.
         </Text>
       </Card>
 

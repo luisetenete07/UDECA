@@ -48,7 +48,7 @@ export function tarjetaDeEntrenador(d: DatosEntrenador): DatoTarjeta[] {
       valor: d.entrenosDirigidos.toLocaleString(localeActual()),
     });
   }
-  return out.length > 0 ? out : [{ etiqueta: t('Entrenador'), valor: 'MAESTRÍA' }];
+  return out.length > 0 ? out : [{ etiqueta: t('Entrenador'), valor: 'MASTERY' }];
 }
 
 export interface DatosAtleta {

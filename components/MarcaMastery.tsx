@@ -1,25 +1,19 @@
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
-import { ARROBA, MARCA, MARCA_CORTA } from '../lib/marca';
+import { ARROBA, COLOR_DEL_TRIDENTE, MARCA, MARCA_CORTA } from '../lib/marca';
 import { useLayout } from '../lib/responsive';
 import { colors, fonts, spacing } from '../lib/theme';
 
 /** Ancho entre alto del tridente recortado (assets/emblema.png). */
 const PROPORCION = 504 / 512;
-/**
- * El color del tridente (assets/emblema.png), medido en el propio dibujo.
- * MASTERY va en este mismo color: lo pidió Luis, para que nombre y logo se
- * lean como una sola pieza y no como un dibujo y un rótulo puestos al lado.
- */
-export const COLOR_DEL_TRIDENTE = '#E2DCD6';
 
 /**
  * La firma de la app arriba a la izquierda: el tridente, MASTERY y, debajo,
  * @luistenafit.
  *
  * Lo pidió Luis tal cual: es su app, y lo primero que se lee al abrirla tiene
- * que ser suyo. Antes, en ese sitio ponía "MAESTRÍA EN CALISTENIA" y debajo el
+ * que ser suyo. Antes, en ese sitio ponía el nombre largo de la app y debajo el
  * rol de la cuenta ("Entrenador", "Alumno"): un rótulo de plataforma, no de
  * una persona.
  *

@@ -1,4 +1,4 @@
-# Guía de uso de Maestría en Calistenia
+# Guía de uso de Mastery
 
 La app vive en **https://app.udeca.app**, y solo ahí: no hay web de
 presentación ni apps en las tiendas. Se actualiza sola con cada mejora y

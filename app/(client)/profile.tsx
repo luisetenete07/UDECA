@@ -228,7 +228,7 @@ export default function ClientProfileScreen() {
         ) : null}
       </View>
 
-      {/* El carné: quién es dentro de Maestría en Calistenia. */}
+      {/* El carné: quién es dentro de Mastery. */}
       <MemberCard />
 
       <SelectorDeIdioma />
