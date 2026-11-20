@@ -23,7 +23,7 @@
  * del anterior entera, con lo que no queda ni un icono ni un bundle viejo.
  */
 
-const CACHE = 'maestria-64c97fb1a3bb-599';
+const CACHE = 'maestria-f95a1698924b-600';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
