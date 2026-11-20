@@ -70,7 +70,7 @@ console.log('\nEl día exacto, y lo que cambió dentro');
   ok('las series: "3 × 8 → 4 × 8"', d.estado === 'cambiado' && d.antes === '3 × 8' && textoDelCambio(d) === '3 × 8 → 4 × 8', textoDelCambio(d));
   ok('lo demás, dicho: "Descanso y nota"', f.estado === 'cambiado' && textoDelCambio(f) === 'Descanso y nota', textoDelCambio(f));
   ok('en una línea: "2 cambiados"', resumenDelDia(c.dias[0]) === '2 cambiados', resumenDelDia(c.dias[0]));
-  ok('el móvil dice qué día', textoDelAviso('Fuerza', c, false) === 'Tu entrenador ha cambiado Lunes · Empuje', textoDelAviso('Fuerza', c, false));
+  ok('el móvil dice qué día', textoDelAviso('Fuerza', c, false) === 'Luis ha cambiado Lunes · Empuje', textoDelAviso('Fuerza', c, false));
 }
 
 console.log('\nVarios días: salen todos');
@@ -86,9 +86,9 @@ console.log('\nVarios días: salen todos');
   ok('uno quitado en el miércoles', c.dias[1].quitados?.[0] === 'Plancha' && resumenDelDia(c.dias[1]) === '1 quitado');
   ok('el viernes cambia de nombre', c.dias[2].que?.includes('nombre') && nombreDelDiaDelAviso(c.dias[2]) === 'Viernes · Tirón');
   ok('y el sábado es nuevo', c.dias[3].estado === 'nuevo' && resumenDelDia(c.dias[3]) === 'Día nuevo · 1 ejercicio');
-  ok('con muchos, el móvil los cuenta', textoDelAviso('Fuerza', c, false) === 'Tu entrenador ha cambiado 4 días de tu plan');
+  ok('con muchos, el móvil los cuenta', textoDelAviso('Fuerza', c, false) === 'Luis ha cambiado 4 días de tu plan');
   const tres = cambiosDelPlan(plan, { ...ahora, days: ahora.days.slice(0, 3) });
-  ok('con tres, los nombra', textoDelAviso('Fuerza', tres, false) === 'Tu entrenador ha cambiado Lunes · Empuje, Miércoles · Pierna y Viernes · Tirón', textoDelAviso('Fuerza', tres, false));
+  ok('con tres, los nombra', textoDelAviso('Fuerza', tres, false) === 'Luis ha cambiado Lunes · Empuje, Miércoles · Pierna y Viernes · Tirón', textoDelAviso('Fuerza', tres, false));
 }
 
 console.log('\nDías quitados, orden y ejercicio cambiado por otro');
@@ -110,7 +110,7 @@ console.log('\nEl plan en general, y un plan nuevo');
   const ahora = { ...copia(plan), name: 'Fuerza 2', modoAlumno: 'tabla' };
   const c = cambiosDelPlan(plan, ahora);
   ok('el nombre y la vista en tabla', c.dias.length === 0 && c.ajustes.join() === 'nombre,vista', c.ajustes.join());
-  ok('sin días, el móvil lo dice igual', textoDelAviso('Fuerza 2', c, false) === 'Tu entrenador ha cambiado los ajustes de tu plan: Fuerza 2');
+  ok('sin días, el móvil lo dice igual', textoDelAviso('Fuerza 2', c, false) === 'Luis ha cambiado los ajustes de tu plan: Fuerza 2');
   const ciclo = { ...copia(plan), schedule: 'cycle', cycleStartDate: 1 };
   ok('la fecha del ciclo', cambiosDelPlan(ciclo, { ...ciclo, cycleStartDate: 2 }).ajustes.join() === 'fecha');
   const enCiclo = copia(ciclo);
@@ -120,7 +120,7 @@ console.log('\nEl plan en general, y un plan nuevo');
   ok('en un ciclo, el número del día: "Día 2 · Pierna", "Día 3"', nombreDelDiaDelAviso(dc[0]) === 'Día 2 · Pierna' && nombreDelDiaDelAviso(dc[1]) === 'Día 3', dc.map(nombreDelDiaDelAviso).join());
   const nuevo = cambiosDelPlan(null, plan);
   ok('plan nuevo: todos sus días', nuevo.dias.length === 3 && nuevo.dias.every((d) => d.estado === 'nuevo' && d.ejercicios.length > 0));
-  ok('"Tu entrenador te ha preparado un plan nuevo: Fuerza"', textoDelAviso('Fuerza', nuevo, true) === 'Tu entrenador te ha preparado un plan nuevo: Fuerza');
+  ok('"Luis te ha preparado un plan nuevo: Fuerza"', textoDelAviso('Fuerza', nuevo, true) === 'Luis te ha preparado un plan nuevo: Fuerza');
 }
 
 console.log('\nCómo se escribe lo que hay que hacer');

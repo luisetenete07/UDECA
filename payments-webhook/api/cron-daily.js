@@ -255,8 +255,8 @@ export default async function handler(req, res) {
           to: u.pushToken,
           title: overdue ? 'Tu coaching ha terminado' : 'Tu coaching termina pronto',
           body: overdue
-            ? 'Háblalo con tu entrenador para renovarlo. Si pasan unos días, la app se pausa hasta que lo haga.'
-            : `Tu periodo de coaching termina el ${new Date(due).toLocaleDateString('es-ES')}. Háblalo con tu entrenador para renovarlo.`,
+            ? 'Háblalo con Luis para renovarlo. Si pasan unos días, la app se pausa hasta que lo haga.'
+            : `Tu periodo de coaching termina el ${new Date(due).toLocaleDateString('es-ES')}. Háblalo con Luis para renovarlo.`,
         });
         nudged.push({ id: doc.id, data: { lastPaymentNudge: now } });
       }

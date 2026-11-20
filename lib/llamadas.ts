@@ -261,8 +261,8 @@ export function puedeCancelar(
 
 /** Lo que se le dice al alumno cuando no puede reservar. */
 export const TEXTO_POR_QUE_NO: Record<PorQueNo, string> = {
-  apagadas: 'Tu entrenador no tiene las llamadas abiertas ahora mismo.',
-  'sin-llamadas': 'Tu plan no incluye llamadas. Pregúntale a tu entrenador.',
+  apagadas: 'Luis no tiene las llamadas abiertas ahora mismo.',
+  'sin-llamadas': 'Tu plan no incluye llamadas. Pregúntale a Luis.',
   'sin-cupo': 'Ya has reservado todas las llamadas de ese mes.',
   ocupada: 'Esa hora acaba de cogerse. Elige otra.',
   'fuera-de-plazo': 'Esa hora ya no se puede reservar. Elige otra.',
@@ -275,7 +275,7 @@ export function nuevoIdDePlan(azar: () => number = Math.random): string {
 
 /** Cómo es la llamada, dicho al alumno. */
 export const COMO_SE_HACE: Record<ComoEsLaLlamada, string> = {
-  whatsapp: 'Tu entrenador te llamará por WhatsApp',
-  telefono: 'Tu entrenador te llamará por teléfono',
+  whatsapp: 'Luis te llamará por WhatsApp',
+  telefono: 'Luis te llamará por teléfono',
   enlace: 'Por videollamada: entra con el enlace a la hora',
 };

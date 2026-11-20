@@ -37,7 +37,7 @@ export function TarjetaDeLlamada({
         <Ionicons name={siguiente ? 'call' : 'call-outline'} size={18} color={colors.success} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={styles.titulo}>{siguiente ? 'Tu próxima llamada' : 'Llamada con tu entrenador'}</Text>
+        <Text style={styles.titulo}>{siguiente ? 'Tu próxima llamada' : 'Llamada con Luis'}</Text>
         <Text style={styles.detalle} numberOfLines={1}>
           {siguiente
             ? `${diaLargo(siguiente.inicio)} · ${horaCorta(siguiente.inicio)}`

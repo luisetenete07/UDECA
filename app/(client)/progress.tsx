@@ -648,7 +648,7 @@ export default function ProgressScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.navTitle}>Tu progreso completo</Text>
                 <Text style={styles.navHint}>
-                  La misma tabla que ve tu entrenador.
+                  La misma tabla que ve Luis.
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />

@@ -56,7 +56,7 @@ export function ClientLockScreen() {
         ).catch(() => {});
       }
       await refreshProfile();
-      showToast('Se lo hemos dicho a tu entrenador');
+      showToast('Se lo hemos dicho a Luis');
     } catch {
       showToast('No se pudo enviar el aviso');
     } finally {
@@ -73,7 +73,7 @@ export function ClientLockScreen() {
       texto={
         trainerName && profile?.nextPaymentDate
           ? frase`Tu periodo con ${trainerName} terminó el ${diaYMes(profile.nextPaymentDate)}. En cuanto lo renueve, sigues justo donde lo dejaste.`
-          : 'Tu periodo de coaching ha terminado. En cuanto tu entrenador lo renueve, sigues justo donde lo dejaste.'
+          : 'Tu periodo de coaching ha terminado. En cuanto Luis lo renueve, sigues justo donde lo dejaste.'
       }
       onSalir={signOut}
     >
@@ -84,7 +84,7 @@ export function ClientLockScreen() {
         </Text>
       </View>
       <Button
-        title={pedido ? 'Tu entrenador ya lo sabe' : 'Quiero renovar'}
+        title={pedido ? 'Luis ya lo sabe' : 'Quiero renovar'}
         onPress={pedirRenovar}
         loading={pidiendo}
         disabled={pedido}

@@ -568,7 +568,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                   ) : null}
                   {porTiempo.max && totalMin > porTiempo.max ? (
                     <Text style={styles.ajusteNota}>
-                      {frase`Más de lo que puso tu entrenador (${textoDeMinutos(porTiempo)})`}
+                      {frase`Más de lo que puso Luis (${textoDeMinutos(porTiempo)})`}
                     </Text>
                   ) : null}
                 </>
@@ -598,7 +598,7 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
                     <Text style={[styles.ajusteTexto, { color: colors.primary }]}>Añadir</Text>
                   </Pressable>
                   {series !== seriesDe(e) ? (
-                    <Text style={styles.ajusteNota}>{frase`Hoy ${series} · tu entrenador puso ${seriesDe(e)}`}</Text>
+                    <Text style={styles.ajusteNota}>{frase`Hoy ${series} · Luis puso ${seriesDe(e)}`}</Text>
                   ) : null}
                 </View>
               ) : null}

@@ -346,8 +346,8 @@ export default function ClientDetailScreen() {
         id,
         'Tu coaching',
         client.nextPaymentDate && client.nextPaymentDate >= Date.now()
-          ? frase`Hola ${nombre}, tu periodo de coaching termina el ${fechaCorta(client.nextPaymentDate)}. Háblalo con tu entrenador para renovarlo.`
-          : frase`Hola ${nombre}, tu periodo de coaching ha terminado. Háblalo con tu entrenador para renovarlo.`
+          ? frase`Hola ${nombre}, tu periodo de coaching termina el ${fechaCorta(client.nextPaymentDate)}. Háblalo con Luis para renovarlo.`
+          : frase`Hola ${nombre}, tu periodo de coaching ha terminado. Háblalo con Luis para renovarlo.`
       );
       setAvisoEnviado(true);
       showToast('Aviso enviado');

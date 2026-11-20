@@ -55,7 +55,7 @@ export function RegistrarOtroDia({ compacto = false }: { compacto?: boolean } = 
         <Text style={styles.titulo}>Registrar un entreno de otro día</Text>
         <Text style={styles.pie}>
           ¿Entrenaste sin el móvil delante? Apúntalo con su fecha y cuenta igual: para tu racha,
-          para tu progreso y para tu entrenador.
+          para tu progreso y para Luis.
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={colors.primary} />

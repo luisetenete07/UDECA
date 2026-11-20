@@ -178,7 +178,7 @@ export default function ReservarLlamada() {
   return (
     <ScreenContainer maxWidth={620}>
       {volver}
-      <Text style={styles.titulo}>Llamada con tu entrenador</Text>
+      <Text style={styles.titulo}>Llamada con Luis</Text>
       <Text style={styles.subtitulo}>
         {suyo.llamadasAlMes > 0
           ? `${suyo.plan ? frase`Tu plan ${suyo.plan.nombre}: ` : ''}${frase`${suyo.llamadasAlMes} al mes`} · ${
@@ -293,7 +293,7 @@ export default function ReservarLlamada() {
         titulo="¿Cancelar la llamada?"
         texto={
           aCancelar
-            ? frase`La del ${diaLargo(aCancelar.inicio)} a las ${horaCorta(aCancelar.inicio)}. Se le avisa a tu entrenador y recuperas la llamada para reservar otra.`
+            ? frase`La del ${diaLargo(aCancelar.inicio)} a las ${horaCorta(aCancelar.inicio)}. Se le avisa a Luis y recuperas la llamada para reservar otra.`
             : ''
         }
         accion="Sí, cancelarla"

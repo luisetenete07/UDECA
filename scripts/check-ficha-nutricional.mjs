@@ -173,7 +173,7 @@ ok(
 ok(
   'el aviso ya no matiza nada: se aplica y punto',
   /showToast\('Macros actualizados'\)/.test(panel) &&
-    !/sigue mandando el plan de tu entrenador/.test(panel)
+    !/sigue mandando el plan de Luis/.test(panel)
 );
 ok(
   'la pantalla usa la regla, no la escribe otra vez',
@@ -182,7 +182,7 @@ ok(
 );
 ok(
   'con plan del coach se dice de quién son los números y cómo cambiarlos',
-  /Los ha puesto tu entrenador\. Si calculas los tuyos, mandan los tuyos\./.test(panel),
+  /Los ha puesto Luis\. Si calculas los tuyos, mandan los tuyos\./.test(panel),
   'unas cifras que no reconoces y sin salida es lo que hace escribir al soporte'
 );
 

@@ -128,7 +128,7 @@ export default function SocialScreen() {
         <EmptyState
           icon="people-outline"
           title="Sin comunidad todavía"
-          subtitle="Vincúlate a tu entrenador con un código de invitación para ver a tus compañeros."
+          subtitle="Vincúlate a Luis con un código de invitación para ver a tus compañeros."
         />
       </ScreenContainer>
     );

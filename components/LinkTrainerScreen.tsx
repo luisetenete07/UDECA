@@ -75,12 +75,12 @@ export function LinkTrainerScreen() {
       }
       const clean = code.trim().toUpperCase();
       if (!clean) {
-        setError('Introduce el código de tu entrenador.');
+        setError('Introduce el código de Luis.');
         return;
       }
       const trainerId = await getTrainerIdForInviteCode(clean);
       if (!trainerId) {
-        setError('Ese código no es válido. Revísalo con tu entrenador.');
+        setError('Ese código no es válido. Revísalo con Luis.');
         return;
       }
       await enviar(trainerId);

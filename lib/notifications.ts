@@ -407,7 +407,7 @@ export async function programarAvisoDeLlamada(id: string, inicio: number, como: 
     if (!granted) return;
     await Notifications.scheduleNotificationAsync({
       identifier: `${LLAMADA_PREFIJO}${id}`,
-      content: { title: t('Llamada con tu entrenador en 1 hora'), body: t(como) },
+      content: { title: t('Llamada con Luis en 1 hora'), body: t(como) },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(cuando) },
     });
   } catch {

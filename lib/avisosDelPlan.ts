@@ -424,11 +424,11 @@ export function nombreDelDiaDelAviso(d: Pick<DiaDelAviso, 'nombre' | 'indice' | 
 
 /** El texto de la notificación del móvil: qué días, con su nombre. */
 export function textoDelAviso(plan: string, c: CambiosDelPlan, nuevo: boolean): string {
-  if (nuevo) return frase`Tu entrenador te ha preparado un plan nuevo: ${plan}`;
+  if (nuevo) return frase`Luis te ha preparado un plan nuevo: ${plan}`;
   const nombres = c.dias.map(nombreDelDiaDelAviso);
-  if (nombres.length === 0) return frase`Tu entrenador ha cambiado los ajustes de tu plan: ${plan}`;
-  if (nombres.length <= 3) return frase`Tu entrenador ha cambiado ${enLista(nombres)}`;
-  return frase`Tu entrenador ha cambiado ${nombres.length} días de tu plan`;
+  if (nombres.length === 0) return frase`Luis ha cambiado los ajustes de tu plan: ${plan}`;
+  if (nombres.length <= 3) return frase`Luis ha cambiado ${enLista(nombres)}`;
+  return frase`Luis ha cambiado ${nombres.length} días de tu plan`;
 }
 
 /** "Series 3 × 8 → 4 × 8", "Nuevo", "Descanso y nota". */

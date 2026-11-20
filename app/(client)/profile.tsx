@@ -305,7 +305,7 @@ export default function ClientProfileScreen() {
           label="Bio"
           value={bio}
           onChangeText={setBio}
-          placeholder="Cuéntale a tu entrenador sobre ti..."
+          placeholder="Cuéntale a Luis sobre ti..."
           multiline
           numberOfLines={3}
           style={styles.textarea}

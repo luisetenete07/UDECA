@@ -71,7 +71,7 @@ export function Onboarding({
         icon: 'flame',
         title: name ? frase`Bienvenido a Maestría en Calistenia, ${name.split(' ')[0]}` : t('Bienvenido a Maestría en Calistenia'),
         lines: [
-          'Tu entrenador te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.',
+          'Luis te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.',
           'Este es tu campo base. Vamos a verlo en 20 segundos.',
         ],
       },
@@ -80,7 +80,7 @@ export function Onboarding({
         title: 'Entrena con el modo enfocado',
         lines: [
           'En Entreno, dale al día que toca: un ejercicio por pantalla, marca cada serie con ✓ y el crono de descanso arranca solo.',
-          'Apunta reps o segundos según el ejercicio; si algo cambia, deja una nota al coach.',
+          'Apunta reps o segundos según el ejercicio; si algo cambia, deja una nota a Luis.',
         ],
       },
       {
@@ -88,7 +88,7 @@ export function Onboarding({
         title: 'Registra tu progreso',
         lines: [
           'Peso, fotos y tus entrenos quedan guardados en Progreso, mes a mes.',
-          'Tu coach ve cómo va tu semana y ajusta tu plan sin que tengas que pedírselo.',
+          'Luis ve cómo va tu semana y ajusta tu plan sin que tengas que pedírselo.',
         ],
       },
     ];
@@ -160,7 +160,7 @@ export function Onboarding({
           </View>
           <Text style={styles.title}>¿Cuál es tu objetivo?</Text>
           <Text style={styles.line}>
-            Defínelo para que tu entrenador lo tenga presente. Podrás cambiarlo cuando quieras desde tu perfil.
+            Defínelo para que Luis lo tenga presente. Podrás cambiarlo cuando quieras desde tu perfil.
           </Text>
           {Dots}
           <View style={{ alignSelf: 'stretch', maxWidth: 420, width: '100%' }}>

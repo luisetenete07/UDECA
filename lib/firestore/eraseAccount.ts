@@ -148,6 +148,6 @@ export async function eraseMyData(
  */
 export const RESTOS_TRAS_BORRAR = [
   'Comidas y hábitos registrados (sin nombre ni correo)',
-  'Mensajes con tu entrenador, que conserva su copia',
+  'Mensajes con Luis, que conserva su copia',
   'Facturas, si hubo un pago: la ley obliga a guardarlas',
 ];

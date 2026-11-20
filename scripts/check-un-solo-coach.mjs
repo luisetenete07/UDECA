@@ -141,6 +141,39 @@ console.log('\n4 · El nombre nuevo');
   ok('ninguna frase de la app dice CALICO', conCalico.length === 0, conCalico.slice(0, 3).join(' | '));
 }
 
+console.log('\n4b · Es la app de Luis, y se nota');
+{
+  /*
+   * "Personaliza todo para mí. Soy Luis. Es mi app": arriba a la izquierda el
+   * tridente, MASTERY y @luistenafit, y en los textos, Luis en vez de "tu
+   * entrenador". Una app de un solo coach que habla de "tu entrenador" suena
+   * a plataforma de muchos.
+   */
+  const marca = lee('lib/marca.ts');
+  ok('el usuario de Luis está apuntado', /export const ARROBA = '@luistenafit';/.test(marca));
+  const firma = sinComentarios(lee('components/MarcaMastery.tsx'));
+  ok('la firma lleva el tridente, MASTERY y @luistenafit',
+    /emblema\.png/.test(firma) && /\{MARCA_CORTA\}/.test(firma) && /\{ARROBA\}/.test(firma));
+  ok('en la barra lateral del ordenador', /<MarcaMastery \/>/.test(sinComentarios(lee('components/SidebarBrand.tsx'))));
+  ok('sin el rol de la cuenta debajo', !/rotuloDelRol/.test(lee('components/SidebarBrand.tsx')));
+  for (const f of ['app/(client)/dashboard.tsx', 'app/(trainer)/dashboard.tsx']) {
+    ok(`y en el inicio del móvil (${f})`, /<MarcaMasteryEnMovil \/>/.test(lee(f)));
+  }
+  ok('el panel no se llama "Panel del entrenador"', !/Panel del entrenador/.test(lee('app/(trainer)/dashboard.tsx')));
+
+  const ficheros = [];
+  const recorre = (dir) => {
+    for (const n of readdirSync(new URL(`../${dir}`, import.meta.url))) {
+      const ruta = join(dir, n);
+      if (statSync(new URL(`../${ruta}`, import.meta.url)).isDirectory()) recorre(ruta);
+      else if (/\.(tsx?|js)$/.test(n)) ficheros.push(ruta);
+    }
+  };
+  for (const d of ['app', 'components', 'lib', 'payments-webhook/api']) recorre(d);
+  const generico = ficheros.filter((f) => /\b[Tt]u (entrenador|coach)\b|\b[Yy]our coach\b/.test(sinComentarios(lee(f))));
+  ok('ningún texto dice "tu entrenador": dice Luis', generico.length === 0, generico.join(', '));
+}
+
 console.log('\n5 · En internet, solo la app');
 {
   for (const d of ['web', 'acceso', 'payments-webhook/public']) {

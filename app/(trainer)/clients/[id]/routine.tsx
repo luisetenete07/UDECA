@@ -1426,7 +1426,7 @@ export default function RoutineEditorScreen() {
         notifyUser(
           clientId,
           nuevo ? 'Nueva rutina asignada' : 'Rutina actualizada',
-          conDetalle ? textoDelAviso(name, cambios, nuevo) : frase`Tu entrenador ha actualizado tu plan: ${name}`,
+          conDetalle ? textoDelAviso(name, cambios, nuevo) : frase`Luis ha actualizado tu plan: ${name}`,
           { abrir: 'notificaciones' }
         );
       }

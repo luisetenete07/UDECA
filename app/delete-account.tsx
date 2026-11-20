@@ -28,7 +28,7 @@ export default function DeleteAccount() {
         <Text style={styles.body}>
           Asunto: "Eliminar cuenta". Procesaremos la solicitud en un máximo de 30 días. Es
           también la vía para pedir que se borren los restos que la app no puede quitar por
-          sí sola (comidas y hábitos registrados, y los mensajes con tu entrenador, que
+          sí sola (comidas y hábitos registrados, y los mensajes con Luis, que
           conserva su copia).
         </Text>
       </View>
@@ -38,7 +38,7 @@ export default function DeleteAccount() {
         <Text style={styles.body}>
           Perfil (nombre, email, foto), rutinas y ejercicios asignados, historial de
           entrenamientos y estadísticas, registros de peso y nutrición, fotos de progreso,
-          historial de pagos y mensajes con tu entrenador.
+          historial de pagos y mensajes con Luis.
         </Text>
       </View>
 

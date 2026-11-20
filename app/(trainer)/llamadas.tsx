@@ -169,7 +169,7 @@ export default function LlamadasDelCoach() {
       if (estaFijada(l)) {
         avisarATodos(
           'Llamada grupal cancelada',
-          frase`Tu entrenador ha cancelado "${l.titulo}" del ${diaLargo(l.inicio)} a las ${horaCorta(l.inicio)}.`
+          frase`Luis ha cancelado "${l.titulo}" del ${diaLargo(l.inicio)} a las ${horaCorta(l.inicio)}.`
         );
       }
       showToast('Llamada grupal cancelada');
@@ -292,7 +292,7 @@ export default function LlamadasDelCoach() {
       notifyUser(
         l.clientId,
         'Llamada cancelada',
-        frase`Tu entrenador ha cancelado la llamada del ${diaLargo(l.inicio)} a las ${horaCorta(l.inicio)}. Puedes reservar otra.`
+        frase`Luis ha cancelado la llamada del ${diaLargo(l.inicio)} a las ${horaCorta(l.inicio)}. Puedes reservar otra.`
       ).catch(() => {});
       showToast('Llamada cancelada');
     } catch {

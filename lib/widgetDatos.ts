@@ -29,7 +29,7 @@ export function datosDelWidget(p: {
   objetivoPasos: number;
 }): DatosDelWidget {
   const base = { dia: p.dia, pasos: p.pasos ?? null, objetivoPasos: p.objetivoPasos };
-  if (p.sinPlan) return { ...base, titulo: 'Sin plan todavía', detalle: 'Tu entrenador te lo prepara', hecho: false };
+  if (p.sinPlan) return { ...base, titulo: 'Sin plan todavía', detalle: 'Luis te lo prepara', hecho: false };
   if (p.enPausa) return { ...base, titulo: 'Plan en pausa', detalle: 'Hoy no toca entrenar', hecho: false };
   if (p.hecho) return { ...base, titulo: p.nombreDelDia || 'Entreno de hoy', detalle: 'Hecho. Buen trabajo', hecho: true };
   if (p.descanso) return { ...base, titulo: 'Descanso', detalle: 'Hoy toca recuperar', hecho: false };

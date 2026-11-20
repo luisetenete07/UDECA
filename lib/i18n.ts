@@ -233,8 +233,8 @@ export const EN: Record<string, string> = {
   'Fecha de fin quitada': 'End date removed',
   'Escribe la fecha así: 13/02/2027': 'Write the date like this: 13/02/2027',
   'Tu coaching': 'Your coaching',
-  'Hola {0}, tu periodo de coaching termina el {1}. Háblalo con tu entrenador para renovarlo.': 'Hi {0}, your coaching period ends on {1}. Talk to your coach to renew it.',
-  'Hola {0}, tu periodo de coaching ha terminado. Háblalo con tu entrenador para renovarlo.': 'Hi {0}, your coaching period has ended. Talk to your coach to renew it.',
+  'Hola {0}, tu periodo de coaching termina el {1}. Háblalo con Luis para renovarlo.': 'Hi {0}, your coaching period ends on {1}. Talk to Luis to renew it.',
+  'Hola {0}, tu periodo de coaching ha terminado. Háblalo con Luis para renovarlo.': 'Hi {0}, your coaching period has ended. Talk to Luis to renew it.',
   '1 periodo de coaching terminado': '1 coaching period ended',
   '{0} periodos de coaching terminados': '{0} coaching periods ended',
   'Por renovar': 'To renew',
@@ -252,16 +252,16 @@ export const EN: Record<string, string> = {
   'Tu periodo de coaching termina mañana ({0}).': 'Your coaching period ends tomorrow ({0}).',
   'Tu periodo de coaching termina en {0} días ({1}).': 'Your coaching period ends in {0} days ({1}).',
   'Tu coaching ha terminado': 'Your coaching has ended',
-  'Terminó el {0}. Mañana se pausa la app si no lo renuevas con tu entrenador.': 'It ended on {0}. Tomorrow the app is paused unless you renew with your coach.',
-  'Terminó el {0}. En {1} días se pausa la app si no lo renuevas con tu entrenador.': 'It ended on {0}. In {1} days the app is paused unless you renew with your coach.',
-  'Tu entrenador ya sabe que quieres renovar': 'Your coach knows you want to renew',
+  'Terminó el {0}. Mañana se pausa la app si no lo renuevas con Luis.': 'It ended on {0}. Tomorrow the app is paused unless you renew with Luis.',
+  'Terminó el {0}. En {1} días se pausa la app si no lo renuevas con Luis.': 'It ended on {0}. In {1} days the app is paused unless you renew with Luis.',
+  'Luis ya sabe que quieres renovar': 'Luis knows you want to renew',
   'Quiero renovar': 'I want to renew',
-  'Se lo hemos dicho a tu entrenador': 'We have told your coach',
+  'Se lo hemos dicho a Luis': 'We have told Luis',
   'Quiere renovar': 'Wants to renew',
   '{0} quiere renovar su periodo de coaching.': '{0} wants to renew their coaching period.',
   'Tu periodo con {0} terminó el {1}. En cuanto lo renueve, sigues justo donde lo dejaste.': 'Your period with {0} ended on {1}. As soon as they renew it, you pick up right where you left off.',
-  'Tu periodo de coaching ha terminado. En cuanto tu entrenador lo renueve, sigues justo donde lo dejaste.': 'Your coaching period has ended. As soon as your coach renews it, you pick up right where you left off.',
-  'Tu entrenador ya lo sabe': 'Your coach already knows',
+  'Tu periodo de coaching ha terminado. En cuanto Luis lo renueve, sigues justo donde lo dejaste.': 'Your coaching period has ended. As soon as Luis renews it, you pick up right where you left off.',
+  'Luis ya lo sabe': 'Luis already knows',
   'Ya lo ha renovado · Actualizar': 'Already renewed · Refresh',
   // Los pasos en el inicio del alumno (components/ContadorDePasos.tsx, compacto).
   Pasos: 'Steps',
@@ -497,8 +497,8 @@ export const EN: Record<string, string> = {
   'La de {0}, el {1} a las {2}. Le avisamos y le devolvemos la llamada a su cupo del mes.': '{0}\'s, on {1} at {2}. We\'ll let them know and give the call back to their monthly allowance.',
   'Llamada cancelada': 'Call cancelled',
   'No se pudo cancelar': 'Couldn\'t cancel',
-  'Tu entrenador ha cancelado la llamada del {0} a las {1}. Puedes reservar otra.': 'Your coach cancelled the call on {0} at {1}. You can book another one.',
-  'Llamada con tu entrenador': 'Call with your coach',
+  'Luis ha cancelado la llamada del {0} a las {1}. Puedes reservar otra.': 'Luis cancelled the call on {0} at {1}. You can book another one.',
+  'Llamada con Luis': 'Call with Luis',
   'Tu plan no incluye llamadas por ahora.': 'Your plan doesn\'t include calls for now.',
   'Entrar a la llamada': 'Join the call',
   'Cancelar la llamada': 'Cancel the call',
@@ -514,16 +514,16 @@ export const EN: Record<string, string> = {
   '{0} ha reservado una llamada el {1} a las {2}.': '{0} booked a call on {1} at {2}.',
   '{0} ha cancelado la llamada del {1} a las {2}.': '{0} cancelled the call on {1} at {2}.',
   'No se pudo reservar': 'Couldn\'t book',
-  'La del {0} a las {1}. Se le avisa a tu entrenador y recuperas la llamada para reservar otra.': 'The one on {0} at {1}. Your coach will be told and you get the call back to book another.',
+  'La del {0} a las {1}. Se le avisa a Luis y recuperas la llamada para reservar otra.': 'The one on {0} at {1}. Luis will be told and you get the call back to book another.',
   'Sin entrenador': 'No coach',
   'Cuando entrenes con alguien, podrás reservar llamadas con él aquí.': 'When you train with someone, you\'ll be able to book calls with them here.',
-  'Tu entrenador no tiene las llamadas abiertas ahora mismo.': 'Your coach doesn\'t have calls open right now.',
-  'Tu plan no incluye llamadas. Pregúntale a tu entrenador.': 'Your plan doesn\'t include calls. Ask your coach.',
+  'Luis no tiene las llamadas abiertas ahora mismo.': 'Luis doesn\'t have calls open right now.',
+  'Tu plan no incluye llamadas. Pregúntale a Luis.': 'Your plan doesn\'t include calls. Ask Luis.',
   'Ya has reservado todas las llamadas de ese mes.': 'You\'ve already booked all the calls for that month.',
   'Esa hora acaba de cogerse. Elige otra.': 'That time was just taken. Pick another.',
   'Esa hora ya no se puede reservar. Elige otra.': 'That time can no longer be booked. Pick another.',
-  'Tu entrenador te llamará por WhatsApp': 'Your coach will call you on WhatsApp',
-  'Tu entrenador te llamará por teléfono': 'Your coach will phone you',
+  'Luis te llamará por WhatsApp': 'Luis will call you on WhatsApp',
+  'Luis te llamará por teléfono': 'Luis will phone you',
   'Por videollamada: entra con el enlace a la hora': 'Video call: join with the link at the time',
   'Tu próxima llamada': 'Your next call',
   'Te quedan {0} este mes · Reservar': '{0} left this month · Book',
@@ -541,7 +541,7 @@ export const EN: Record<string, string> = {
   'Llamada · {0}': 'Call · {0}',
   'Llamadas, fin de coaching, ciclos y tus tareas. Toca un día y apunta lo que quieras.': 'Calls, coaching end dates, cycles and your tasks. Tap a day and note whatever you want.',
   'Tus horarios y los planes de tus alumnos': 'Your hours and your clients\' plans',
-  'Llamada con tu entrenador en 1 hora': 'Call with your coach in 1 hour',
+  'Llamada con Luis en 1 hora': 'Call with Luis in 1 hour',
   'Lunes': 'Monday',
   'Martes': 'Tuesday',
   'Miércoles': 'Wednesday',
@@ -560,7 +560,7 @@ export const EN: Record<string, string> = {
   'Indicaciones: técnica, cómo repartirlo, qué notar (opcional)': 'Cues: technique, how to spread it out, what to feel (optional)',
   'Indicaciones del día (opcional)': 'Cues for the day (optional)',
   'Cada cuánto, cuánto dejar en la recámara, qué hacer si una serie sale fea…': 'How often, how much to leave in the tank, what to do if a set gets ugly…',
-  'Indicaciones de tu entrenador': 'Cues from your coach',
+  'Indicaciones de Luis': 'Cues from Luis',
   'Ver más': 'Show more',
   'Ver menos': 'Show less',
   'Cada día': 'Every day',
@@ -579,7 +579,7 @@ export const EN: Record<string, string> = {
   // Tiempos de la fusión y ejercicios aislados (lib/combinarRutinas.ts).
   'Una serie de cada una con {0} para cambiar, y después descansas': 'One set of each with {0} to switch, then you rest',
   'Una serie de cada una, seguidas, y después descansas': 'One set of each, back to back, then you rest',
-  'El orden lo pone tu entrenador.': 'Your coach sets the order.',
+  'El orden lo pone Luis.': 'Luis sets the order.',
   'Empieza la que has marcado primero.': 'The one you picked first goes first.',
   '  · aislado, con su descanso': '  · on its own, with its own rest',
   '  · sola': '  · on its own',
@@ -602,7 +602,7 @@ export const EN: Record<string, string> = {
   'Superserie · {0} para cambiar': 'Superset · {0} to switch',
   'Ahora: {0}': 'Now: {0}',
   // Series del grease the groove: añadir/quitar y su historial (components/SeriesDelGtg.tsx).
-  'Hoy {0} · tu entrenador puso {1}': 'Today {0} · your coach set {1}',
+  'Hoy {0} · Luis puso {1}': 'Today {0} · Luis set {1}',
   'Quitar una serie hoy': 'Remove a set today',
   'Añadir una serie hoy': 'Add a set today',
   'Nada en los últimos 7 días.': 'Nothing in the last 7 days.',
@@ -676,7 +676,7 @@ export const EN: Record<string, string> = {
   ' El esfuerzo se le pregunta en cada serie, mientras descansa.': ' Effort is asked on every set, while resting.',
   // La tarjeta del ejercicio: nota, herramientas y series (app/(client)/workout.tsx)
   'Tu nota': 'Your note',
-  'Para tu entrenador: variante, molestias, cómo ha ido...': 'For your coach: variation, discomfort, how it went...',
+  'Para Luis: variante, molestias, cómo ha ido...': 'For Luis: variation, discomfort, how it went...',
   'Descanso entre bloques · {0}s': 'Rest between blocks · {0}s',
   'SEGUNDOS': 'SECONDS',
   // El editor de rutinas, más rápido (app/(trainer)/clients/[id]/routine.tsx)
@@ -704,7 +704,7 @@ export const EN: Record<string, string> = {
   'Quitar 5 minutos': 'Remove 5 minutes',
   'Minutos (mínimo)': 'Minutes (minimum)',
   'Minutos (máximo, opcional)': 'Minutes (maximum, optional)',
-  'Más de lo que puso tu entrenador ({0})': 'More than your coach set ({0})',
+  'Más de lo que puso Luis ({0})': 'More than Luis set ({0})',
   'Minutos al día, o un margen (de 20 a 30). Los va sumando y, al llegar al mínimo, queda hecho.': 'Minutes a day, or a range (20 to 30). They add them up and, once they reach the minimum, it\'s done.',
   // Semana y días sueltos: no solo RIR; superserie con series y descanso únicos (app/(trainer)/clients/[id]/routine.tsx)
   'Intensidad {0}': 'Intensity {0}',
@@ -788,13 +788,13 @@ export const EN: Record<string, string> = {
   'min en los últimos 7 días': 'min in the last 7 days',
   '{0} de 7 días · objetivo cumplido {1} · media {2} min al día': '{0} of 7 days · target hit {1} · {2} min a day on average',
   // Las notificaciones del alumno: los cambios del plan (lib/avisosDelPlan.ts, app/(client)/notificaciones.tsx).
-  'Tu entrenador te ha preparado un plan nuevo: {0}': 'Your coach has set up a new plan for you: {0}',
-  'Tu entrenador ha cambiado los ajustes de tu plan: {0}': 'Your coach has changed your plan settings: {0}',
-  'Tu entrenador ha cambiado {0}': 'Your coach has changed {0}',
-  'Tu entrenador ha cambiado {0} días de tu plan': 'Your coach has changed {0} days of your plan',
-  'Tu entrenador ha cambiado 1 día de tu plan': 'Your coach has changed 1 day of your plan',
-  'Tu entrenador te ha preparado un plan nuevo': 'Your coach has set up a new plan for you',
-  'Tu entrenador ha cambiado los ajustes de tu plan': 'Your coach has changed your plan settings',
+  'Luis te ha preparado un plan nuevo: {0}': 'Luis has set up a new plan for you: {0}',
+  'Luis ha cambiado los ajustes de tu plan: {0}': 'Luis has changed your plan settings: {0}',
+  'Luis ha cambiado {0}': 'Luis has changed {0}',
+  'Luis ha cambiado {0} días de tu plan': 'Luis has changed {0} days of your plan',
+  'Luis ha cambiado 1 día de tu plan': 'Luis has changed 1 day of your plan',
+  'Luis te ha preparado un plan nuevo': 'Luis has set up a new plan for you',
+  'Luis ha cambiado los ajustes de tu plan': 'Luis has changed your plan settings',
   'Antes: {0}': 'Before: {0}',
   'Día nuevo · {0} ejercicios': 'New day · {0} exercises',
   'Día nuevo · 1 ejercicio': 'New day · 1 exercise',
@@ -809,9 +809,9 @@ export const EN: Record<string, string> = {
   'También: {0}': 'Also: {0}',
   'Quitado: {0}': 'Removed: {0}',
   'Notificaciones': 'Notifications',
-  'Lo que tu entrenador cambia de tu plan, con el día exacto.': 'What your coach changes in your plan, with the exact day.',
+  'Lo que Luis cambia de tu plan, con el día exacto.': 'What Luis changes in your plan, with the exact day.',
   'Sin notificaciones': 'No notifications',
-  'Cuando tu entrenador cambie algo de tu plan, lo verás aquí con el día que ha cambiado.': 'When your coach changes something in your plan, you\'ll see it here with the day that changed.',
+  'Cuando Luis cambie algo de tu plan, lo verás aquí con el día que ha cambiado.': 'When Luis changes something in your plan, you\'ll see it here with the day that changed.',
   'Notificaciones, 1 nueva': 'Notifications, 1 new',
   'Notificaciones, {0} nuevas': 'Notifications, {0} new',
   'Intensidad': 'Intensity',
@@ -952,7 +952,7 @@ export const EN: Record<string, string> = {
   'Empieza en {0} min': 'Starts in {0} min',
   'Faltan {0} días': '{0} days to go',
   'En directo': 'Live now',
-  'Tu entrenador os dirá por dónde se hace.': 'Your coach will tell you where it takes place.',
+  'Luis os dirá por dónde se hace.': 'Luis will tell you where it takes place.',
   'Nueva llamada grupal': 'New group call',
   'Cambiar la llamada grupal': 'Edit the group call',
   'Con todos tus alumnos a la vez. La llamada va por tu enlace (Meet, Zoom…).': 'With all your students at once. The call runs on your link (Meet, Zoom…).',
@@ -992,11 +992,11 @@ export const EN: Record<string, string> = {
   '{0} a las {1}. La tienes fijada en tu inicio.': '{0} at {1}. It is pinned on your home screen.',
   'Cambio en la llamada grupal: {0}': 'Change to the group call: {0}',
   'Ahora es el {0} a las {1}.': 'It is now on {0} at {1}.',
-  'Tu entrenador ha cancelado "{0}" del {1} a las {2}.': 'Your coach has cancelled "{0}" on {1} at {2}.',
+  'Luis ha cancelado "{0}" del {1} a las {2}.': 'Luis has cancelled "{0}" on {1} at {2}.',
   'Llamada grupal en 1 hora': 'Group call in 1 hour',
   'Llamada grupal · {0}': 'Group call · {0}',
   'Grupales con todos tus alumnos, y tus horarios para las 1:1': 'Group calls with all your students, and your hours for 1:1 calls',
-  'Las llamadas grupales de tu entrenador y lo que cambia de tu plan, con el día exacto.': 'Your coach\'s group calls and what changes in your plan, with the exact day.',
+  'Las llamadas grupales de Luis y lo que cambia de tu plan, con el día exacto.': 'Luis\'s group calls and what changes in your plan, with the exact day.',
   // El temporizador de descanso suelto (lib/cronoLibre.ts).
   'Temporizador de descanso': 'Rest timer',
   'Elige cuánto quieres descansar entre series. Suena al terminar, aunque cambies de pantalla.': 'Choose how long you want to rest between sets. It rings when it ends, even if you switch screens.',
@@ -1007,7 +1007,7 @@ export const EN: Record<string, string> = {
   'Escribe el tiempo así: 1:30, o en segundos: 90': 'Type the time like this: 1:30, or in seconds: 90',
   'Empezar descanso': 'Start rest',
   'Volver a empezar': 'Start again',
-  'Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, controla tus descansos con el temporizador.': 'Your coach has not assigned you a routine in the app yet. Meanwhile, keep track of your rests with the timer.',
+  'Luis todavía no te ha asignado una rutina en la app. Mientras, controla tus descansos con el temporizador.': 'Luis has not assigned you a routine in the app yet. Meanwhile, keep track of your rests with the timer.',
   // Vídeo a pantalla completa
   'Cerrar vídeo': 'Close video',
   'Ver sin girar': 'View without rotating',
@@ -1037,7 +1037,7 @@ export const EN: Record<string, string> = {
   'Empezar de nuevo por el Día 1': 'Restart from Day 1',
   'Día {0}{1}': 'Day {0}{1}',
   'Todo el día · {0} series sueltas, ninguna al fallo': 'All day · {0} loose sets, none to failure',
-  'Tu entrenador aún no ha puesto ejercicios en este día.': 'Your coach hasn\'t added exercises to this day yet.',
+  'Luis aún no ha puesto ejercicios en este día.': 'Luis hasn\'t added exercises to this day yet.',
   'Opcional, para ver tu progreso': 'Optional, to see your progress',
   '¿Qué día te toca hoy?': 'Which day are you on today?',
   'Si te has saltado un día o lo has cambiado, dile a la app por dónde vas.': 'If you skipped or swapped a day, tell the app where you are.',
@@ -1076,7 +1076,7 @@ export const EN: Record<string, string> = {
   'Empezar el descanso de {0}: {1}': 'Start the rest for {0}: {1}',
   'Toca el descanso de un ejercicio y empieza la cuenta atrás.': 'Tap an exercise\'s rest to start the countdown.',
   'EMOM · {0}': 'EMOM · {0}',
-  'Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, tienes el temporizador para tus descansos.': 'Your coach hasn\'t assigned you a routine in the app yet. Meanwhile, you have the timer for your rests.',
+  'Luis todavía no te ha asignado una rutina en la app. Mientras, tienes el temporizador para tus descansos.': 'Luis hasn\'t assigned you a routine in the app yet. Meanwhile, you have the timer for your rests.',
   'Verá {0}. Cada ejercicio hace tantas rondas como series le pongas y, si hay varios, se turnan; una superserie va entera en la misma ronda.': 'They\'ll see {0}. Each exercise does as many rounds as the sets you give it and, if there are several, they take turns; a superset goes entirely in the same round.',
   'Añade los ejercicios: cada uno hará tantas rondas como series le pongas.': 'Add the exercises: each one will do as many rounds as the sets you give it.',
   'Día EMOM: el alumno tiene un contador por rondas': 'EMOM day: the student gets a round counter',
@@ -1087,12 +1087,12 @@ export const EN: Record<string, string> = {
   'Es privada: creas tu cuenta y entras cuando Luis te acepta.': 'It\'s private: create your account and you\'re in once Luis accepts you.',
   'Al crear tu cuenta aceptas los términos y la política de privacidad de Maestría en Calistenia.': 'By creating your account you accept the Maestría en Calistenia terms and privacy policy.',
   'Al entrar aceptas los términos y la política de privacidad de Maestría en Calistenia.': 'By signing in you accept the Maestría en Calistenia terms and privacy policy.',
-  'Al crear tu cuenta, Luis recibe tu solicitud. Entras en cuanto te acepte.': 'When you create your account, Luis gets your request. You\'re in as soon as he accepts it.',
+  'Al crear tu cuenta, Luis recibe tu solicitud. Entras en cuanto te acepte.': 'When you create your account, Luis gets your request. You\'re in as soon as Luis accepts it.',
   '. Al crear tu cuenta, Luis recibe tu solicitud para entrar en el grupo.': '. When you create your account, Luis gets your request to join the group.',
   'Luis tiene que aceptarte en el grupo. Cuando lo haga, entrarás automáticamente. Pulsa “Ya me han aceptado” para comprobarlo.': 'Luis has to accept you into the group. When he does, you\'ll get in automatically. Tap "I\'ve been accepted" to check.',
   'Pide entrar en el grupo': 'Ask to join the group',
-  'Introduce el código que te ha dado Luis. Le llegará una solicitud con tu nombre y foto para aceptarte.': 'Enter the code Luis gave you. He\'ll get a request with your name and photo to accept you.',
-  'Le llegará a Luis una solicitud con tu nombre y foto. Entras en cuanto te acepte.': 'Luis will get a request with your name and photo. You\'re in as soon as he accepts it.',
+  'Introduce el código que te ha dado Luis. Le llegará una solicitud con tu nombre y foto para aceptarte.': 'Enter the code Luis gave you. Luis will get a request with your name and photo to accept you.',
+  'Le llegará a Luis una solicitud con tu nombre y foto. Entras en cuanto te acepte.': 'Luis will get a request with your name and photo. You\'re in as soon as Luis accepts it.',
   'Enviar mi solicitud': 'Send my request',
   'Invitar a un alumno': 'Invite a student',
   'Se descarga la app y crea su cuenta. Su solicitud te llega a Inicio y entra cuando la aceptas.': 'They download the app and create an account. Their request shows up on Home and they\'re in once you accept it.',
@@ -1157,7 +1157,7 @@ export const EN: Record<string, string> = {
   'Ya casi': 'Almost there',
   '¿Cómo entrenas?': 'How do you train?',
   'Nombre y apellido': 'First and last name',
-  'Código de tu entrenador': "Your coach's code",
+  'Código de Luis': "Luis's code",
   'Ej. AB12CD': 'e.g. AB12CD',
   'Crear mi cuenta': 'Create my account',
   'Bienvenido de nuevo': 'Welcome back',
@@ -1193,8 +1193,8 @@ export const EN: Record<string, string> = {
   'No se pudo guardar. Inténtalo de nuevo.': "Couldn't save. Try again.",
   'Cursos exclusivos de tu coaching': 'Courses exclusive to your coaching',
   'Aún no hay cursos': 'No courses yet',
-  'Cuando tu entrenador publique cursos, aparecerán aquí.':
-    "When your coach publishes courses, they'll show up here.",
+  'Cuando Luis publique cursos, aparecerán aquí.':
+    "When Luis publishes courses, they'll show up here.",
 
   // --- Inicio del alumno ---
   'Ya he pagado': "I've already paid",
@@ -1215,7 +1215,7 @@ export const EN: Record<string, string> = {
   'Diseña tus días y empieza hoy. Toca para crearlo.':
     'Design your days and start today. Tap to create it.',
   'Sin rutina aún': 'No routine yet',
-  'Tu entrenador te la asignará pronto.': 'Your coach will assign you one soon.',
+  'Luis te la asignará pronto.': 'Luis will assign you one soon.',
   'Crea y edita tus días y ejercicios.': 'Create and edit your days and exercises.',
   'Bloques, semanas y descargas.': 'Blocks, weeks and deloads.',
   'Llevas más de una semana sin registrar tu peso.':
@@ -1226,7 +1226,7 @@ export const EN: Record<string, string> = {
   Planificado: 'Planned',
   'Hábitos de hoy': "Today's habits",
   semana: 'week',
-  'Tu entrenador recibirá el aviso': 'Your coach will get the notice',
+  'Luis recibirá el aviso': 'Luis will get the notice',
   'No se pudo abrir el pago': "Couldn't open the payment",
 
   // --- Mi plan (alumno) ---
@@ -1280,7 +1280,7 @@ export const EN: Record<string, string> = {
   'Insistir si se me olvida': 'Remind me if I forget',
   'Cambiar nombre': 'Change name',
   'Sobre mí': 'About me',
-  'Cuéntale a tu entrenador sobre ti...': 'Tell your coach about yourself...',
+  'Cuéntale a Luis sobre ti...': 'Tell Luis about yourself...',
   'Peso objetivo (kg)': 'Target weight (kg)',
   'Ej. 72': 'e.g. 72',
 
@@ -1331,8 +1331,8 @@ export const EN: Record<string, string> = {
 
   // --- Registrar un entreno de otro día ---
   'Cuéntamelo hablando': 'Tell me out loud',
-  '¿Entrenaste sin el móvil delante? Apúntalo ahora. Cuenta igual que cualquier otro: para tu racha, para tu histórico y para tu entrenador.':
-    'Trained without your phone at hand? Log it now. It counts just like any other: for your streak, your history and your coach.',
+  '¿Entrenaste sin el móvil delante? Apúntalo ahora. Cuenta igual que cualquier otro: para tu racha, para tu histórico y para Luis.':
+    'Trained without your phone at hand? Log it now. It counts just like any other: for your streak, your history and Luis.',
   'Dime las series y las marcas en voz alta y lo apunto yo.':
     "Say your sets and numbers out loud and I'll write them down.",
   'Ese día del plan no tiene ejercicios.': 'That day of the plan has no exercises.',
@@ -1344,8 +1344,8 @@ export const EN: Record<string, string> = {
   'Ej. 45': 'e.g. 45',
   'Ponle al menos una serie': 'Add at least one set',
   'Entreno registrado': 'Workout logged',
-  '¿Entrenaste sin el móvil delante? Apúntalo con su fecha y cuenta igual: para tu racha, para tu progreso y para tu entrenador.':
-    'Trained without your phone at hand? Log it with its date and it counts all the same: for your streak, your progress and your coach.',
+  '¿Entrenaste sin el móvil delante? Apúntalo con su fecha y cuenta igual: para tu racha, para tu progreso y para Luis.':
+    'Trained without your phone at hand? Log it with its date and it counts all the same: for your streak, your progress and Luis.',
 
   // --- Comunidad ---
   'Aún no hay actividad': 'No activity yet',
@@ -1356,8 +1356,8 @@ export const EN: Record<string, string> = {
   TÚ: 'YOU',
   marcas: 'PRs',
   'Sin comunidad todavía': 'No community yet',
-  'Vincúlate a tu entrenador con un código de invitación para ver a tus compañeros.':
-    'Link up with your coach using an invite code to see your teammates.',
+  'Vincúlate a Luis con un código de invitación para ver a tus compañeros.':
+    'Link up with Luis using an invite code to see your teammates.',
   'Cuando tú y tus compañeros registréis entrenamientos, apareceréis aquí.':
     "When you and your teammates log workouts, you'll show up here.",
 
@@ -1388,8 +1388,8 @@ export const EN: Record<string, string> = {
   'GOMA KG': 'BAND KG',
   'Marca cada serie con ✓, o pulsa “Terminar” para dar la sesión por hecha sin apuntar nada.':
     'Tick each set with ✓, or press "Finish" to call the session done without logging anything.',
-  'Tu entrenador todavía no te ha asignado una rutina. Vuelve a comprobarlo pronto.':
-    "Your coach hasn't assigned you a routine yet. Check back soon.",
+  'Luis todavía no te ha asignado una rutina. Vuelve a comprobarlo pronto.':
+    "Luis hasn't assigned you a routine yet. Check back soon.",
   'Salir (emergencia)': 'Exit (emergency)',
   'Mejor entrenar': 'Better train',
   'Hoy descanso': 'Rest today',
@@ -1911,11 +1911,11 @@ export const EN: Record<string, string> = {
   'Por correo, si prefieres': 'By email, if you prefer',
   'Escríbenos desde la dirección con la que te registraste a:':
     'Write to us from the address you signed up with:',
-  'Asunto: "Eliminar cuenta". Procesaremos la solicitud en un máximo de 30 días. Es también la vía para pedir que se borren los restos que la app no puede quitar por sí sola (comidas y hábitos registrados, y los mensajes con tu entrenador, que conserva su copia).':
-    'Subject: "Delete account". We will process the request within 30 days at most. This is also the way to ask us to erase what the app cannot remove on its own (logged meals and habits, and the messages with your coach, who keeps their copy).',
+  'Asunto: "Eliminar cuenta". Procesaremos la solicitud en un máximo de 30 días. Es también la vía para pedir que se borren los restos que la app no puede quitar por sí sola (comidas y hábitos registrados, y los mensajes con Luis, que conserva su copia).':
+    'Subject: "Delete account". We will process the request within 30 days at most. This is also the way to ask us to erase what the app cannot remove on its own (logged meals and habits, and the messages with Luis, who keeps their copy).',
   'Qué se elimina': 'What gets deleted',
-  'Perfil (nombre, email, foto), rutinas y ejercicios asignados, historial de entrenamientos y estadísticas, registros de peso y nutrición, fotos de progreso, historial de pagos y mensajes con tu entrenador.':
-    'Profile (name, email, photo), assigned routines and exercises, workout history and statistics, weight and nutrition logs, progress photos, payment history and messages with your coach.',
+  'Perfil (nombre, email, foto), rutinas y ejercicios asignados, historial de entrenamientos y estadísticas, registros de peso y nutrición, fotos de progreso, historial de pagos y mensajes con Luis.':
+    'Profile (name, email, photo), assigned routines and exercises, workout history and statistics, weight and nutrition logs, progress photos, payment history and messages with Luis.',
   'Qué se conserva': 'What is kept',
   'Ningún dato personal. Podemos conservar registros de facturación durante el tiempo exigido por la ley aplicable.':
     'No personal data. We may keep billing records for as long as applicable law requires.',
@@ -1967,8 +1967,8 @@ export const EN: Record<string, string> = {
     'You lose nothing: your plan, your history and your PRs are all still saved.',
   'Tu acceso está en pausa': 'Your access is paused',
   'No se pudo abrir el pago. Reinténtalo.': "Couldn't open the payment. Try again.",
-  'Avisado. Recuperas el acceso mientras tu entrenador lo confirma.':
-    'Notified. You get access back while your coach confirms it.',
+  'Avisado. Recuperas el acceso mientras Luis lo confirma.':
+    'Notified. You get access back while Luis confirms it.',
   'Tu calendario de siempre': 'The calendar you already use',
   'Cuando tengas tareas con fecha, cobros o bloques programados, aparecerán aquí.':
     'Once you have dated tasks, payments or scheduled blocks, they will show up here.',
@@ -2070,13 +2070,11 @@ export const EN: Record<string, string> = {
   Cambio: 'Change',
   'Mín / Máx': 'Min / Max',
   'Solicitud enviada': 'Request sent',
-  'Tu entrenador tiene que aceptarte en su grupo. Cuando lo haga, entrarás automáticamente. Pulsa “Ya me han aceptado” para comprobarlo.':
-    'Your coach has to accept you into their group. Once they do, you get in automatically. Press "They accepted me" to check.',
+  'Luis tiene que aceptarte en su grupo. Cuando lo haga, entrarás automáticamente. Pulsa “Ya me han aceptado” para comprobarlo.':
+    'Luis has to accept you into the group. Once accepted, you get in automatically. Press "They accepted me" to check.',
   'Ya me han aceptado': 'They accepted me',
   'Cancelar solicitud': 'Cancel request',
-  'Vincúlate con tu entrenador': 'Link up with your coach',
-  'Introduce el código que te ha dado tu entrenador. Le llegará una solicitud con tu nombre y foto para aceptarte.':
-    'Enter the code your coach gave you. They will get a request with your name and photo to accept you.',
+  'Vincúlate con Luis': 'Link up with Luis',
   'Código del entrenador': 'Coach code',
   'Enviar solicitud': 'Send request',
   'Solicitud cancelada': 'Request cancelled',
@@ -2107,19 +2105,19 @@ export const EN: Record<string, string> = {
   'Mi objetivo': 'My goal',
   'Ej. Conseguir mi primera dominada': 'e.g. Get my first pull-up',
   'Récord personal': 'Personal record',
-  'Mientras tu entrenador tenga un plan activo, manda el suyo.':
-    "While your coach has an active plan, theirs is the one that counts.",
+  'Mientras Luis tenga un plan activo, manda el suyo.':
+    "While Luis has an active plan, theirs is the one that counts.",
   'Todavía no has registrado comidas hoy.': "You haven't logged any meals today.",
-  'Libretas de tu coach': "Your coach's books",
-  'Recetas y ejemplos de platos que ha preparado tu entrenador.':
-    'Recipes and example meals your coach has put together.',
+  'Libretas de Luis': "Luis's books",
+  'Recetas y ejemplos de platos que ha preparado Luis.':
+    'Recipes and example meals Luis has put together.',
   'Sin fotos todavía.': 'No photos yet.',
-  'Sube fotos de frente, perfil y espalda. Solo tú y tu entrenador las veréis.':
-    'Upload front, side and back photos. Only you and your coach will see them.',
+  'Sube fotos de frente, perfil y espalda. Solo tú y Luis las veréis.':
+    'Upload front, side and back photos. Only you and Luis will see them.',
   'Mantén pulsada una foto para borrarla.': 'Press and hold a photo to delete it.',
   'Aún no tienes objetivos': 'No targets yet',
-  'Calcula tus calorías y macros en 30 segundos, o espera a que tu entrenador te asigne un plan.':
-    'Work out your calories and macros in 30 seconds, or wait for your coach to assign you a plan.',
+  'Calcula tus calorías y macros en 30 segundos, o espera a que Luis te asigne un plan.':
+    'Work out your calories and macros in 30 seconds, or wait for Luis to assign you a plan.',
   '+ Añadir comida': '+ Add meal',
   'Registrar comida': 'Log meal',
   'Ej. Desayuno': 'e.g. Breakfast',
@@ -2245,7 +2243,7 @@ export const EN: Record<string, string> = {
   ' se creó con contraseña. Escríbela una última vez y la dejamos unida a tu cuenta de Google: no perderás nada y a partir de ahora entras de un toque.':
     " was created with a password. Type it one last time and we'll link it to your Google account: you lose nothing, and from now on you get in with one tap.",
   ' Entrar': ' Sign in',
-  'Con tu entrenador o por tu cuenta, con ': 'With your coach or on your own, with ',
+  'Con Luis o por tu cuenta, con ': 'With Luis or on your own, with ',
   ' días abiertos para probarlo. Y si entrenas a otros, empiezas con ':
     ' days open to try it out. And if you train others, you start with ',
   'Se desbloquea en ': 'Unlocks in ',
@@ -2570,14 +2568,14 @@ export const EN: Record<string, string> = {
     ' You have {0} days before your access is paused.',
   ' Te queda 1 día antes de que el acceso se pause.':
     ' You have 1 day before your access is paused.',
-  'Hoy vence tu cuota de {0}. Ponte al día con tu entrenador.':
-    'Your {0} fee is due today. Settle up with your coach.',
+  'Hoy vence tu cuota de {0}. Ponte al día con Luis.':
+    'Your {0} fee is due today. Settle up with Luis.',
   'Tu cuota de {0} vence mañana ({1}).': 'Your {0} fee is due tomorrow ({1}).',
   'Tu cuota de {0} vence en {1} días ({2}).': 'Your {0} fee is due in {1} days ({2}).',
-  'Tienes un pago pendiente de {0}. Renueva con tu entrenador.':
-    'You have a payment of {0} outstanding. Renew with your coach.',
-  'Tu entrenador espera el pago de {0}. Ponte al día cuando puedas.':
-    'Your coach is waiting for the {0} payment. Settle up when you can.',
+  'Tienes un pago pendiente de {0}. Renueva con Luis.':
+    'You have a payment of {0} outstanding. Renew with Luis.',
+  'Luis espera el pago de {0}. Ponte al día cuando puedas.':
+    'Luis is waiting for the {0} payment. Settle up when you can.',
   '{0} dice que ya ha pagado su cuota. Revísalo y confírmalo.':
     '{0} says they have already paid their fee. Check it and confirm.',
   'Tienes pendiente la cuota con {0}. En cuanto se resuelva, sigues justo donde lo dejaste.':
@@ -2602,7 +2600,7 @@ export const EN: Record<string, string> = {
   ' · {0} más que la semana pasada': ' · {0} more than last week',
   ' · {0} menos que la semana pasada': ' · {0} fewer than last week',
   'Para {0}': 'For {0}',
-  'Tu entrenador ha actualizado tu plan: {0}': 'Your coach has updated your plan: {0}',
+  'Luis ha actualizado tu plan: {0}': 'Luis has updated your plan: {0}',
   'Escribe entre {0} y {1} pasos.': 'Type between {0} and {1} steps.',
   '{0} (por defecto)': '{0} (default)',
   '¿Quitar "{0}" de sus hábitos?': 'Remove "{0}" from their habits?',
@@ -2683,13 +2681,13 @@ export const EN: Record<string, string> = {
   // NO está aquí a propósito es lo que se GUARDA —los ejercicios de la
   // biblioteca base, los nombres de las plantillas que el entrenador edita—,
   // porque eso deja de ser texto de la app en cuanto alguien lo toca.
-  'Entrenas con tu entrenador, que te manda el plan. Hace falta su código.':
-    'You train with your coach, who sends you the plan. You need their code.',
-  'Entrenas con tu entrenador, que te manda el plan. Necesitas su código.':
-    'You train with your coach, who sends you the plan. You need their code.',
-  'Pon tu nombre para que tu entrenador sepa quién eres.':
-    'Put your name in so your coach knows who you are.',
-  'Hace falta el código de tu entrenador.': "Your coach's code is required.",
+  'Entrenas con Luis, que te manda el plan. Hace falta su código.':
+    'You train with Luis, who sends you the plan. You need Luis\'s code.',
+  'Entrenas con Luis, que te manda el plan. Necesitas su código.':
+    'You train with Luis, who sends you the plan. You need Luis\'s code.',
+  'Pon tu nombre para que Luis sepa quién eres.':
+    'Put your name in so Luis knows who you are.',
+  'Hace falta el código de Luis.': "Luis's code is required.",
   'No se ha podido crear la cuenta.': "Couldn't create the account.",
   'tu cuenta de Google': 'your Google account',
   'tu cuenta': 'your account',
@@ -2706,9 +2704,9 @@ export const EN: Record<string, string> = {
   'Método, no improvisación': 'Method, not improvisation',
   'Planes con progresión medida. Cada serie, cada segundo de isométrico y cada récord quedan registrados.':
     'Plans with measured progression. Every set, every second of a hold and every PR is logged.',
-  'Con tu entrenador': 'With your coach',
-  'Entrena con tu entrenador y tu grupo: te manda el plan y lo sigues desde el móvil.':
-    'Train with your coach and your group: they send you the plan and you follow it on your phone.',
+  'Con Luis': 'With Luis',
+  'Entrena con Luis y tu grupo: te manda el plan y lo sigues desde el móvil.':
+    'Train with Luis and your group: you get the plan and follow it on your phone.',
 
   // --- Cursos ---
   sección: 'section',
@@ -2760,7 +2758,7 @@ export const EN: Record<string, string> = {
   'Cómo se te reparte el trabajo': 'How your work is spread out',
   'La mejor serie de cada ejercicio, semana a semana.':
     'The best set of each exercise, week by week.',
-  'La misma tabla que ve tu entrenador.': 'The same table your coach sees.',
+  'La misma tabla que ve Luis.': 'The same table Luis sees.',
   sesión: 'session',
   'No se pudo registrar': "Couldn't log it",
   'Registrar entreno': 'Log workout',
@@ -2889,10 +2887,9 @@ export const EN: Record<string, string> = {
   Sesión: 'Session',
 
   // --- Inicio del coach ---
-  'Panel del entrenador': 'Coach dashboard',
   'No se pudo aprobar': "Couldn't approve",
-  'Tu entrenador te ha aceptado en su grupo. ¡A entrenar!':
-    'Your coach has accepted you into their group. Time to train!',
+  'Luis te ha aceptado en su grupo. ¡A entrenar!':
+    'Luis has accepted you into the group. Time to train!',
   'No se pudo rechazar': "Couldn't reject",
   'No se pudo actualizar': "Couldn't update",
   'No se pudo confirmar': "Couldn't confirm",
@@ -2959,7 +2956,7 @@ export const EN: Record<string, string> = {
     'Too many attempts. Wait a few minutes and try again.',
   'No se ha podido completar. Inténtalo de nuevo o escríbenos.':
     "Couldn't complete it. Try again or write to us.",
-  'Tu perfil, tu foto y tu código de entrenador': 'Your profile, your photo and your coach code',
+  'Tu perfil, tu foto y tu código de entrenador': 'Your profile, your photo and Luis code',
   'Tu biblioteca de ejercicios, rutinas y plantillas':
     'Your exercise library, routines and templates',
   'Tus cursos, tus notas y tus tareas': 'Your courses, your notes and your tasks',
@@ -2975,8 +2972,8 @@ export const EN: Record<string, string> = {
   'Ficha de la clasificación': 'Leaderboard entry',
   'Comidas y hábitos registrados (sin nombre ni correo)':
     'Logged meals and habits (with no name or email)',
-  'Mensajes con tu entrenador, que conserva su copia':
-    'Messages with your coach, who keeps their copy',
+  'Mensajes con Luis, que conserva su copia':
+    'Messages with Luis, who keeps a copy',
   'Facturas, si hubo un pago: la ley obliga a guardarlas':
     'Invoices, if there was a payment: the law requires us to keep them',
 
@@ -2991,8 +2988,8 @@ export const EN: Record<string, string> = {
   'La imagen tardó demasiado': 'The image took too long',
   'Tienes la cuota pendiente. En cuanto se resuelva, sigues justo donde lo dejaste.':
     'Your fee is outstanding. As soon as it is sorted, you carry on right where you left off.',
-  'Si has pagado por otra vía, avisa a tu entrenador y recuperas el acceso mientras lo confirma.':
-    'If you paid another way, tell your coach and you get access back while they confirm it.',
+  'Si has pagado por otra vía, avisa a Luis y recuperas el acceso mientras lo confirma.':
+    'If you paid another way, tell Luis and you get access back while Luis confirms it.',
   'Agenda descargada. Ábrela con Google Calendar o Apple Calendar.':
     'Schedule downloaded. Open it with Google Calendar or Apple Calendar.',
   'No se pudo generar el fichero': "Couldn't generate the file",
@@ -3066,9 +3063,9 @@ export const EN: Record<string, string> = {
   'última vez': 'last time',
   'Necesitas al menos dos sesiones con este ejercicio.':
     'You need at least two sessions with this exercise.',
-  'Introduce el código de tu entrenador.': "Enter your coach's code.",
-  'Ese código no es válido. Revísalo con tu entrenador.':
-    'That code is not valid. Check it with your coach.',
+  'Introduce el código de Luis.': "Enter Luis's code.",
+  'Ese código no es válido. Revísalo con Luis.':
+    'That code is not valid. Check it with Luis.',
   'No se pudo enviar la solicitud.': "Couldn't send the request.",
   'Guardar mis macros': 'Save my macros',
   'Revisa tus datos: edad (10+), altura en cm (100+) y peso en kg (30+).':
@@ -3095,13 +3092,13 @@ export const EN: Record<string, string> = {
     'Weight, photos and your workouts are saved in Progress, month by month.',
   'Tus récords y tu racha se actualizan solos para que veas tu evolución.':
     'Your PRs and your streak update by themselves so you can see how you evolve.',
-  'Tu entrenador te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.':
-    'Your coach is with you from here: routine, progress and communication in one place.',
-  'Apunta reps o segundos según el ejercicio; si algo cambia, deja una nota al coach.':
-    'Log reps or seconds depending on the exercise; if something changes, leave a note for your coach.',
+  'Luis te acompaña desde aquí: rutina, progreso y comunicación en un solo sitio.':
+    'Luis is with you from here: routine, progress and communication in one place.',
+  'Apunta reps o segundos según el ejercicio; si algo cambia, deja una nota a Luis.':
+    'Log reps or seconds depending on the exercise; if something changes, leave a note for Luis.',
   'Registra tu progreso': 'Log your progress',
-  'Tu coach ve cómo va tu semana y ajusta tu plan sin que tengas que pedírselo.':
-    'Your coach sees how your week is going and adjusts your plan without you having to ask.',
+  'Luis ve cómo va tu semana y ajusta tu plan sin que tengas que pedírselo.':
+    'Luis sees how your week is going and adjusts your plan without you having to ask.',
   'Instálala como app': 'Install it as an app',
   'En Safari: toca el botón Compartir (cuadrado con flecha, abajo).':
     'In Safari: tap the Share button (the square with an arrow, at the bottom).',
@@ -3110,8 +3107,8 @@ export const EN: Record<string, string> = {
   'Guardar y empezar': 'Save and start',
   'Defínelo para tenerlo siempre presente y medir tu avance. Podrás cambiarlo cuando quieras desde tu perfil.':
     'Set it so you always have it in mind and can measure your progress. You can change it whenever you like from your profile.',
-  'Defínelo para que tu entrenador lo tenga presente. Podrás cambiarlo cuando quieras desde tu perfil.':
-    'Set it so your coach has it in mind. You can change it whenever you like from your profile.',
+  'Defínelo para que Luis lo tenga presente. Podrás cambiarlo cuando quieras desde tu perfil.':
+    'Set it so Luis has it in mind. You can change it whenever you like from your profile.',
   'Definir mi objetivo': 'Set my goal',
   'Indica un nombre y las calorías de la comida.': 'Give it a name and the calories of the meal.',
   'kcal de más': 'kcal over',
@@ -3119,7 +3116,7 @@ export const EN: Record<string, string> = {
     'A few days off that break nothing. When it ends, the plan carries on where it stopped.',
   'Ej. Lesión de hombro': 'e.g. Shoulder injury',
   'Ej. Viaje de trabajo': 'e.g. Work trip',
-  'Alumnos ilimitados con tu código de coach': 'Unlimited students with your coach code',
+  'Alumnos ilimitados con tu código de coach': 'Unlimited students with Luis code',
   'Rutinas, plantillas y programaciones a medida':
     'Routines, templates and programming made to measure',
   'Gestión de cobros y pagos de tus alumnos': "Managing your students' fees and payments",
@@ -3200,8 +3197,8 @@ export const EN: Record<string, string> = {
     'You train on your own. You come in with a full year ahead.',
   'Entrenas por tu cuenta: tus rutinas, tu progreso y tu nutrición. Entras con un año entero por delante.':
     'You train on your own: your routines, your progress and your nutrition. You come in with a full year ahead.',
-  'Con tu entrenador o por tu cuenta, con un año entero por delante. Y si entrenas a otros, empiezas con ':
-    'With your coach or on your own, with a full year ahead. And if you train others, you start with ',
+  'Con Luis o por tu cuenta, con un año entero por delante. Y si entrenas a otros, empiezas con ':
+    'With Luis or on your own, with a full year ahead. And if you train others, you start with ',
   'Entras con un año entero por delante. Al terminarlo decides si sigues.':
     'You come in with a full year ahead. When it ends, you decide whether to carry on.',
   'Tu primer año incluye {0} alumnos con su propia cuenta. Si tu grupo crece, pasas al plan sin tope.':
@@ -3235,7 +3232,7 @@ export const EN: Record<string, string> = {
   'Tu grupo sin tope de alumnos y la app entera, doce meses. Se paga una vez.':
     'Your group with no cap on students and the whole app, twelve months. Paid once.',
   'Tu año ha terminado': 'Your year is over',
-  'Renueva tu cuenta de entrenador': 'Renew your coach account',
+  'Renueva tu cuenta de entrenador': 'Renew Luis account',
   'Ya has hecho la parte difícil: un año entrenando. Todo tu progreso sigue aquí, intacto, esperándote. Renueva y sigue donde lo dejaste.':
     "You've already done the hard part: a year of training. All your progress is still here, untouched, waiting for you. Renew and carry on where you left off.",
   'Esta cuenta no incluye alumnos: su tarjeta ya gastó las plazas en otra cuenta de entrenador. Con el plan anual tienes alumnos ilimitados. Tus datos están a salvo y te esperan.':
@@ -3301,8 +3298,8 @@ export const EN: Record<string, string> = {
   'Subir': 'Move up',
   'Bajar': 'Move down',
   'Saltado': 'Skipped',
-  'Saltado hoy. Se guarda así para que tu entrenador lo sepa.':
-    'Skipped today. It is saved like this so your coach knows.',
+  'Saltado hoy. Se guarda así para que Luis lo sepa.':
+    'Skipped today. It is saved like this so Luis knows.',
   'Añadir a la sesión de hoy': "Add to today's session",
   'De las otras rutinas de tu plan. Solo para hoy: tu plan no cambia.':
     'From the other routines in your plan. Today only: your plan does not change.',
@@ -3312,7 +3309,7 @@ export const EN: Record<string, string> = {
   '≈ {0} min': '≈ {0} min',
 
   'Tu plan de atleta': 'Your athlete plan',
-  'Tu plan de entrenador': 'Your coach plan',
+  'Tu plan de entrenador': 'Luis plan',
   'Así funciona tu prueba': 'How your trial works',
   'Te queda un día de prueba': 'You have one day of trial left',
   'Así funciona tu grupo': 'How your group works',
@@ -3328,10 +3325,10 @@ export const EN: Record<string, string> = {
   'Sin conexión con el servidor': 'No connection to the server',
   'No hay ninguna sesión abierta.': 'There is no session open.',
   'Sin nombre': 'No name',
-  'El código de entrenador no es válido. Revísalo con tu entrenador.':
-    'That coach code is not valid. Check it with your coach.',
-  'Tu entrenador ha alcanzado el límite de alumnos de su plan. Pídele que active su suscripción para poder entrar.':
-    'Your coach has reached the student limit on their plan. Ask them to activate their subscription so you can get in.',
+  'El código de entrenador no es válido. Revísalo con Luis.':
+    'That coach code is not valid. Check it with Luis.',
+  'Luis ha alcanzado el límite de alumnos de su plan. Pídele que active su suscripción para poder entrar.':
+    'Luis has reached the student limit. Ask Luis to make room so you can get in.',
   'No hay sesión activa': 'No active session',
   'Elige hasta qué día queda pagado.': 'Choose the day it is paid up to.',
   'Esa fecha ya ha pasado: elige una futura.': 'That date has passed: choose a future one.',

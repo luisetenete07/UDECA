@@ -194,7 +194,7 @@ export default function WorkoutScreen() {
         <EmptyState
           icon="barbell-outline"
           title="Sin rutina asignada"
-          subtitle="Tu entrenador todavía no te ha asignado una rutina en la app. Mientras, tienes el temporizador para tus descansos."
+          subtitle="Luis todavía no te ha asignado una rutina en la app. Mientras, tienes el temporizador para tus descansos."
         />
       </ScreenContainer>
     );
@@ -372,7 +372,7 @@ export default function WorkoutScreen() {
             />
           ) : (
             <Card style={styles.aviso}>
-              <Text style={styles.avisoTexto}>Tu entrenador aún no ha puesto ejercicios en este día.</Text>
+              <Text style={styles.avisoTexto}>Luis aún no ha puesto ejercicios en este día.</Text>
             </Card>
           )}
 

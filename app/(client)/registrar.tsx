@@ -265,7 +265,7 @@ export default function RegistrarScreen() {
       <Text style={styles.titulo}>Registrar un entreno</Text>
       <Text style={styles.subtitulo}>
         ¿Entrenaste sin el móvil delante? Apúntalo ahora. Cuenta igual que cualquier otro:
-        para tu racha, para tu histórico y para tu entrenador.
+        para tu racha, para tu histórico y para Luis.
       </Text>
 
       {!routine || routine.days.length === 0 ? (

@@ -9,6 +9,7 @@ import { Avatar } from '../../components/Avatar';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { MarcaMasteryEnMovil } from '../../components/MarcaMastery';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { createCoachTask, deleteCoachTask, getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
@@ -175,8 +176,8 @@ export default function TrainerDashboard() {
   if (loading) {
     return (
       <ScreenContainer>
+        <MarcaMasteryEnMovil />
         <ScreenHeader
-          eyebrow="Panel del entrenador"
           title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
         />
         {/* Esqueleto con la FORMA del panel, no una lista genérica: al llegar
@@ -450,8 +451,8 @@ export default function TrainerDashboard() {
 
   return (
     <ScreenContainer>
+      <MarcaMasteryEnMovil />
       <ScreenHeader
-        eyebrow="Panel del entrenador"
         title={`Hola, ${profile?.name?.split(' ')[0] ?? ''}`}
         actions={
           <Pressable onPress={() => router.push('/(trainer)/profile')}>

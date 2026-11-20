@@ -72,7 +72,7 @@ export default function ClientCoursesScreen() {
         <EmptyState
           icon="school-outline"
           title="Aún no hay cursos"
-          subtitle="Cuando tu entrenador publique cursos, aparecerán aquí."
+          subtitle="Cuando Luis publique cursos, aparecerán aquí."
         />
       ) : (
         courses.map((course) => {

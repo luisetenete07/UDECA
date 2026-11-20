@@ -235,7 +235,7 @@ export function PanelDeNutricion() {
             <EmptyState
               icon="restaurant-outline"
               title="Aún no tienes objetivos"
-              subtitle="Calcula tus calorías y macros en 30 segundos, o espera a que tu entrenador te asigne un plan."
+              subtitle="Calcula tus calorías y macros en 30 segundos, o espera a que Luis te asigne un plan."
             />
             <Button title="Calcular mis macros" onPress={() => setCalcOpen(true)} />
           </>
@@ -282,7 +282,7 @@ export function PanelDeNutricion() {
                 que no reconoce no tiene forma de saber de dónde salen. */}
             {targets.fromCoach ? (
               <Text style={styles.recalcPista}>
-                Los ha puesto tu entrenador. Si calculas los tuyos, mandan los tuyos.
+                Los ha puesto Luis. Si calculas los tuyos, mandan los tuyos.
               </Text>
             ) : null}
             {/* Si el entrenador lo puso por kilo, su criterio y lo que sale
@@ -400,8 +400,8 @@ export function PanelDeNutricion() {
       {/* Libretas de comida del coach: recetas y platos por foto, dentro de la app. */}
       {books.length > 0 ? (
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Libretas de tu coach</Text>
-          <Text style={styles.hint}>Recetas y ejemplos de platos que ha preparado tu entrenador.</Text>
+          <Text style={styles.sectionTitle}>Libretas de Luis</Text>
+          <Text style={styles.hint}>Recetas y ejemplos de platos que ha preparado Luis.</Text>
           {books.map((book) => (
             <View key={book.id} style={styles.bookBlock}>
               <Text style={styles.bookTitle}>{book.title}</Text>
@@ -467,7 +467,7 @@ export function PanelDeNutricion() {
               />
               {zoomPhoto.comentario ? (
                 <View style={styles.zoomComentario}>
-                  <Text style={styles.zoomComentarioRotulo}>Tu entrenador</Text>
+                  <Text style={styles.zoomComentarioRotulo}>Luis</Text>
                   <Text style={styles.zoomComentarioTexto}>{zoomPhoto.comentario}</Text>
                 </View>
               ) : null}

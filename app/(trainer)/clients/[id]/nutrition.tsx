@@ -222,7 +222,7 @@ export default function NutritionEditorScreen() {
       notifyUser(
         clientId,
         planId ? 'Plan nutricional actualizado' : 'Nuevo plan nutricional',
-        frase`Tu entrenador ha actualizado tu plan: ${data.name}`
+        frase`Luis ha actualizado tu plan: ${data.name}`
       );
       router.back();
     } catch (e) {

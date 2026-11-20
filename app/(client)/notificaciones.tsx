@@ -124,7 +124,7 @@ export default function NotificacionesScreen() {
       {volver}
       <Text style={styles.titulo}>Notificaciones</Text>
       <Text style={styles.subtitulo}>
-        Las llamadas grupales de tu entrenador y lo que cambia de tu plan, con el día exacto.
+        Las llamadas grupales de Luis y lo que cambia de tu plan, con el día exacto.
       </Text>
 
       {/* Las llamadas grupales que tiene por delante: tienen fecha, van primero. */}
@@ -136,7 +136,7 @@ export default function NotificacionesScreen() {
         <EmptyState
           icon="notifications-outline"
           title="Sin notificaciones"
-          subtitle="Cuando tu entrenador cambie algo de tu plan, lo verás aquí con el día que ha cambiado."
+          subtitle="Cuando Luis cambie algo de tu plan, lo verás aquí con el día que ha cambiado."
         />
       ) : null}
 
@@ -158,12 +158,12 @@ export default function NotificacionesScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.avisoTitulo}>
                   {a.nuevo
-                    ? t('Tu entrenador te ha preparado un plan nuevo')
+                    ? t('Luis te ha preparado un plan nuevo')
                     : a.dias.length === 0
-                      ? t('Tu entrenador ha cambiado los ajustes de tu plan')
+                      ? t('Luis ha cambiado los ajustes de tu plan')
                       : a.dias.length === 1
-                        ? t('Tu entrenador ha cambiado 1 día de tu plan')
-                        : frase`Tu entrenador ha cambiado ${a.dias.length} días de tu plan`}
+                        ? t('Luis ha cambiado 1 día de tu plan')
+                        : frase`Luis ha cambiado ${a.dias.length} días de tu plan`}
                 </Text>
                 <Text style={styles.avisoMeta}>{unido(a.plan, cuandoFue(a.cuando))}</Text>
               </View>

@@ -124,7 +124,7 @@ export function PantallaGtg({
           </View>
         ) : null}
         {onCambiarObjetivo && p.objetivo !== delPlan && delPlan > 0 ? (
-          <Text style={styles.ajusteNota}>{frase`Hoy ${p.objetivo} · tu entrenador puso ${delPlan}`}</Text>
+          <Text style={styles.ajusteNota}>{frase`Hoy ${p.objetivo} · Luis puso ${delPlan}`}</Text>
         ) : null}
       </Card>
 
@@ -215,7 +215,7 @@ export function PantallaGtg({
         <Card style={styles.tarjeta}>
           <View style={styles.indicacionesCab}>
             <Ionicons name="document-text-outline" size={15} color={colors.primary} />
-            <Text style={styles.indicacionesTitulo}>Indicaciones de tu entrenador</Text>
+            <Text style={styles.indicacionesTitulo}>Indicaciones de Luis</Text>
           </View>
           <Text style={styles.indicacionesTexto} numberOfLines={indicacionesAbiertas || !indicacionesLargas ? undefined : 3}>
             {indicaciones}

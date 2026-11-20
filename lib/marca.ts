@@ -27,5 +27,11 @@ export const MARCA_CORTA = 'MASTERY';
 export const MARCA_ARRIBA = 'MAESTRÍA';
 export const MARCA_ABAJO = 'EN CALISTENIA';
 
+/**
+ * El usuario de Luis en redes. Va debajo de MASTERY arriba a la izquierda: la
+ * app es suya, y es lo primero que se lee al abrirla.
+ */
+export const ARROBA = '@luistenafit';
+
 /** Quién firma: va debajo del nombre en las pantallas de entrada. */
 export const FIRMA = 'by Luis Tena';

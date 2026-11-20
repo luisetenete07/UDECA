@@ -3,6 +3,7 @@ import { t, frase  } from '../../lib/idioma';
 import { diaLargo, diaMes, diaYMes, esHoy, inicioDelDia } from '../../lib/fechas';
 import { datosDelWidget, guardarDatosDelWidget } from '../../lib/widgetHoy';
 import { TarjetaDeLlamada } from '../../components/TarjetaDeLlamada';
+import { MarcaMasteryEnMovil } from '../../components/MarcaMastery';
 import { getAjustesLlamadas, getLlamadasDelAlumno } from '../../lib/firestore/llamadas';
 import { getAvisosDelAlumno } from '../../lib/firestore/avisos';
 import { avisosSinVer } from '../../lib/avisosDelPlan';
@@ -481,7 +482,7 @@ export default function ClientDashboard() {
         ).catch(() => {});
       }
       await refreshProfile();
-      showToast('Se lo hemos dicho a tu entrenador');
+      showToast('Se lo hemos dicho a Luis');
     } catch {
       showToast('No se pudo enviar el aviso');
     } finally {
@@ -519,8 +520,8 @@ export default function ClientDashboard() {
         title: 'Tu coaching ha terminado',
         text:
           restan === 1
-            ? frase`Terminó el ${fecha}. Mañana se pausa la app si no lo renuevas con tu entrenador.`
-            : frase`Terminó el ${fecha}. En ${restan} días se pausa la app si no lo renuevas con tu entrenador.`,
+            ? frase`Terminó el ${fecha}. Mañana se pausa la app si no lo renuevas con Luis.`
+            : frase`Terminó el ${fecha}. En ${restan} días se pausa la app si no lo renuevas con Luis.`,
       };
     }
     return null;
@@ -534,6 +535,7 @@ export default function ClientDashboard() {
         load();
       }}
     >
+      <MarcaMasteryEnMovil />
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.greetingLabel}>Bienvenido de nuevo</Text>
@@ -582,7 +584,7 @@ export default function ClientDashboard() {
             {profile?.paymentReportedAt ? (
               <View style={styles.payReported}>
                 <Ionicons name="checkmark-circle" size={15} color={colors.primaryBright} />
-                <Text style={styles.payReportedText}>Tu entrenador ya sabe que quieres renovar</Text>
+                <Text style={styles.payReportedText}>Luis ya sabe que quieres renovar</Text>
               </View>
             ) : (
               <View style={styles.payActions}>
@@ -718,7 +720,7 @@ export default function ClientDashboard() {
             ) : (
               <>
                 <Text style={styles.todayTitle}>Sin rutina aún</Text>
-                <Text style={styles.todaySub}>Tu entrenador te la asignará pronto.</Text>
+                <Text style={styles.todaySub}>Luis te la asignará pronto.</Text>
               </>
             )}
           </View>

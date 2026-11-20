@@ -67,7 +67,7 @@ export function LlamadaGrupalFijada({ llamada: l, ahora = Date.now() }: { llamad
           style={styles.entrar}
         />
       ) : (
-        <Text style={styles.sinEnlace}>Tu entrenador os dirá por dónde se hace.</Text>
+        <Text style={styles.sinEnlace}>Luis os dirá por dónde se hace.</Text>
       )}
     </Card>
   );

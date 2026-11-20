@@ -26,7 +26,7 @@ export default function PrivacyPolicy() {
         repeticiones, cargas (lastre), peso corporal, sensaciones, hábitos, retos y estadísticas de
         progreso.{'\n'}
         • <Text style={styles.bold}>Nutrición:</Text> macros y datos que introduzcas.{'\n'}
-        • <Text style={styles.bold}>Comunicación:</Text> mensajes con tu entrenador, y
+        • <Text style={styles.bold}>Comunicación:</Text> mensajes con Luis, y
         anuncios del grupo.{'\n'}
         • <Text style={styles.bold}>Pasos:</Text> el número de pasos que das al día, solo si
         conectas el contador de tu móvil (ver el apartado 3).{'\n'}
@@ -35,9 +35,9 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="2. Para qué usamos tus datos">
-        Tratamos tus datos para: ofrecerte el servicio de entrenamiento y seguimiento con tu coach;
+        Tratamos tus datos para: ofrecerte el servicio de entrenamiento y seguimiento con Luis;
         mostrarte tu progreso y estadísticas;
-        gestionar tu cuenta y la relación con tu entrenador; y enviarte notificaciones relacionadas
+        gestionar tu cuenta y la relación con Luis; y enviarte notificaciones relacionadas
         con tu entrenamiento (solo si las activas). La app no cobra nada ni guarda datos de pago. No
         usamos tus datos para publicidad ni para elaborar perfiles comerciales.
       </Section>
@@ -58,7 +58,7 @@ export default function PrivacyPolicy() {
         No usamos Health Connect ni ningún otro almacén de datos de salud.
         {'\n'}
         • <Text style={styles.bold}>Dónde acaba:</Text> la cifra diaria se guarda en tu cuenta para
-        calcular tu gasto calórico y tu objetivo de pasos. La veis tu entrenador y tú, nadie más.
+        calcular tu gasto calórico y tu objetivo de pasos. La veis Luis y tú, nadie más.
         {'\n'}
         • <Text style={styles.bold}>Para qué NO se usa:</Text> ni para publicidad, ni se vende, ni se
         comparte con terceros.{'\n'}
@@ -70,7 +70,7 @@ export default function PrivacyPolicy() {
       <Section title="4. Proveedores y con quién se comparten">
         Tus datos de entrenamiento son visibles para tu <Text style={styles.bold}>entrenador
         asignado</Text>, Luis Tena (no lo son para otros alumnos, salvo la clasificación del grupo y tu
-        estado en línea, que puedes tratar con tu coach).{'\n\n'}
+        estado en línea, que puedes tratar con Luis).{'\n\n'}
         Para funcionar, la app se apoya en proveedores de infraestructura que actúan como encargados
         del tratamiento:{'\n'}
         • <Text style={styles.bold}>Firebase (Google):</Text> autenticación, base de datos y
