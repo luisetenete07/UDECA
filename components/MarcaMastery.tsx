@@ -7,6 +7,12 @@ import { colors, fonts, spacing } from '../lib/theme';
 
 /** Ancho entre alto del tridente recortado (assets/emblema.png). */
 const PROPORCION = 504 / 512;
+/**
+ * El color del tridente (assets/emblema.png), medido en el propio dibujo.
+ * MASTERY va en este mismo color: lo pidió Luis, para que nombre y logo se
+ * lean como una sola pieza y no como un dibujo y un rótulo puestos al lado.
+ */
+export const COLOR_DEL_TRIDENTE = '#E2DCD6';
 
 /**
  * La firma de la app arriba a la izquierda: el tridente, MASTERY y, debajo,
@@ -65,7 +71,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: fonts.display,
     letterSpacing: 3.5,
-    color: colors.primary,
+    color: COLOR_DEL_TRIDENTE,
   },
   nombreMovil: { fontSize: 18, letterSpacing: 3 },
   arroba: {

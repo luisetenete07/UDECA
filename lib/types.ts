@@ -1054,7 +1054,8 @@ export interface TrainingCycle {
 /*
  * 'day': en un día del calendario. 'pending': un pendiente, sin día
  * (lib/pendientes.ts). 'goal': un objetivo con porcentaje. 'habit': un hábito
- * diario del entrenador, que se marca cada día (lib/habitosCoach.ts). 'week' y
+ * diario del entrenador; la sección de hábitos se quitó del inicio y los que
+ * quedaron guardados ya no salen en ningún sitio. 'week' y
  * 'month' son de las antiguas listas y se leen como pendientes.
  */
 export type TaskScope = 'day' | 'pending' | 'week' | 'month' | 'goal' | 'habit';

@@ -13,8 +13,6 @@ import { MarcaMasteryEnMovil } from '../../components/MarcaMastery';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { createCoachTask, deleteCoachTask, getCoachTasks, updateCoachTask } from '../../lib/firestore/coachTasks';
-import { HabitosDelCoach } from '../../components/HabitosDelCoach';
-import { conHoyAlternado } from '../../lib/habitosCoach';
 import { conIdGuardado, conLoQueSeEstaGuardando } from '../../lib/pendientes';
 import { getCyclesForTrainer } from '../../lib/firestore/cycles';
 import { SemanaDelCoach } from '../../components/SemanaDelCoach';
@@ -364,54 +362,6 @@ export default function TrainerDashboard() {
       showToast('No se pudo guardar');
     });
   };
-  /*
-   * LOS HÁBITOS DEL ENTRENADOR (lib/habitosCoach.ts): se marcan por días, así
-   * que mañana salen sin marcar solos. Igual que lo demás: al momento, y se
-   * guarda detrás.
-   */
-  type Tarea = import('../../lib/types').CoachTask;
-  const handleAddHabito = async (title: string) => {
-    if (!profile) return;
-    const temp: Tarea = {
-      id: `tmp-${Date.now()}`,
-      trainerId: profile.uid,
-      title,
-      scope: 'habit',
-      done: false,
-      dias: [],
-      order: Date.now(),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setTasks((prev) => [...prev, temp]);
-    try {
-      const id = await createCoachTask({ trainerId: profile.uid, title, scope: 'habit', done: false, dias: [], order: temp.order });
-      setTasks((prev) => conIdGuardado(prev, temp.id, id));
-    } catch {
-      setTasks((prev) => prev.filter((x) => x.id !== temp.id));
-      showToast('No se pudo guardar');
-    }
-  };
-  const handleToggleHabito = (h: Tarea) => {
-    const dias = conHoyAlternado(h.dias);
-    setTasks((prev) => prev.map((x) => (x.id === h.id ? { ...x, dias } : x)));
-    updateCoachTask(h.id, { dias }).catch(() => {
-      setTasks((prev) => prev.map((x) => (x.id === h.id ? h : x)));
-      showToast('No se pudo guardar');
-    });
-  };
-  const handleRenombrarHabito = (h: Tarea, title: string) => {
-    setTasks((prev) => prev.map((x) => (x.id === h.id ? { ...x, title } : x)));
-    updateCoachTask(h.id, { title }).catch(() => showToast('No se pudo guardar'));
-  };
-  const handleBorrarHabito = (h: Tarea) => {
-    setTasks((prev) => prev.filter((x) => x.id !== h.id));
-    deleteCoachTask(h.id).catch(() => {
-      setTasks((prev) => [...prev, h]);
-      showToast('No se pudo borrar');
-    });
-  };
-
   const recargarTareas = () => {
     if (!profile) return;
     getCoachTasks(profile.uid)
@@ -839,17 +789,6 @@ export default function TrainerDashboard() {
         </Card>
       </FadeIn>
 
-      {/* Sus hábitos de cada día, debajo de "Por revisar": un toque y hecho,
-          y mañana salen sin marcar (lib/habitosCoach.ts). */}
-      <FadeIn delay={300}>
-        <HabitosDelCoach
-          tasks={tasks}
-          onAdd={handleAddHabito}
-          onToggle={handleToggleHabito}
-          onRename={handleRenombrarHabito}
-          onDelete={handleBorrarHabito}
-        />
-      </FadeIn>
 
       {/* Los periodos que se acaban esta semana o ya se acabaron, con +1 mes
           a un toque. Para otra fecha, la ficha del alumno. */}
