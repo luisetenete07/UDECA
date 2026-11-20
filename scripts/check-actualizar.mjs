@@ -119,16 +119,37 @@ console.log('\nEl muro, tal y como está montado');
     /document\.documentElement\.style\.overflow = 'hidden'/.test(html));
   ok('pero no recarga sola', !/setTimeout\([^)]*location\.reload/.test(html));
   /*
-   * Y NO SALE EN LA PRIMERA VISITA.
+   * Y SALE DE VERDAD.
    *
-   * El service worker que se instala por primera vez también avisa de "cambio
-   * de mando". Sin distinguirlo, quien abre la app por primera vez se
-   * encontraría un muro pidiéndole que actualice lo que acaba de cargar — lo
-   * primero que vería, y encima sin poder tocar nada.
+   * El muro dependía de que el navegador encontrara un service worker nuevo,
+   * pero sw.js era idéntico en cada despliegue: no salía nunca. Ahora cada
+   * despliegue se sella con su versión (scripts/sellar-version.mjs) y la
+   * página compara la suya con version.json.
    */
-  ok('no sale la primera vez que se entra',
-    /var yaHabiaControl = !!navigator\.serviceWorker\.controller/.test(html) &&
-      /if \(yaHabiaControl\) showUpdateBanner\(\)/.test(html));
+  ok('la página sabe qué versión es', /var VERSION_WEB = '__VERSION_WEB__';/.test(html));
+  ok('y pregunta por la publicada sin caché', /version\.json\?v=' \+ ahora, \{ cache: 'no-store' \}/.test(html));
+  ok('al abrir y al volver a la app', /addEventListener\('visibilitychange'[\s\S]{0,120}mirarSiHayNueva\(\)/.test(html));
+  ok('el muro sale solo si la publicada es otra', /v !== VERSION_WEB\) showUpdateBanner\(\)/.test(html));
+  /*
+   * Y NO SALE AL ESTRENAR LA PÁGINA.
+   *
+   * Avisar cuando cambia el service worker hacía saltar el muro justo después
+   * de cargar la versión nueva: abrir la app en frío trae la página nueva y,
+   * a la vez, el service worker nuevo. Solo la comparación de versiones sabe
+   * que esa página ya es la última.
+   */
+  ok('no avisa por cambiar de service worker', !/controllerchange|updatefound/.test(html));
+  ok('sin sellar (en desarrollo) no pregunta', /VERSION_WEB\.indexOf\('__'\) === 0\) return/.test(html));
+  ok('al actualizar se salta la página guardada', /fetch\(window\.location\.href, \{ cache: 'reload' \}\)/.test(html));
+
+  const sw = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
+  ok('el service worker cambia en cada despliegue', /const CACHE = 'maestria-__VERSION_WEB__';/.test(sw));
+  ok('y nunca guarda version.json', /pathname\.endsWith\('\/version\.json'\)\) return;/.test(sw));
+
+  const despliegue = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+  const sellar = despliegue.indexOf('node scripts/sellar-version.mjs dist');
+  ok('el despliegue sella la versión', sellar > 0);
+  ok('después de hacer el 404, que también es una página', sellar > despliegue.indexOf('node scripts/fallback-404.mjs dist'));
 }
 
 /*

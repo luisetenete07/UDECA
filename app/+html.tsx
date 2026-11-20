@@ -24,7 +24,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-title" content="MASTERY" />
         <title>Maestría en Calistenia</title>
         <link rel="manifest" href={`${base}/manifest.json`} />
-        <link rel="apple-touch-icon" href={`${base}/icon-180.png`} />
+        <link rel="apple-touch-icon" href={`${base}/tridente-180.png`} />
 
         {/* Fondo negro inmediato para evitar el destello blanco al cargar. */}
         <style dangerouslySetInnerHTML={{ __html: backgroundStyle }} />
@@ -41,16 +41,26 @@ export default function Root({ children }: PropsWithChildren) {
 /*
  * Registro del service worker y aviso de versión nueva.
  *
- * Lo que fallaba: el navegador solo comprueba si hay una versión nueva al
- * navegar o cada muchas horas. En una app instalada, que se abre y se cierra
- * sin navegar nunca, esa comprobación podía no ocurrir en días — y el usuario
- * se quedaba con la versión vieja sin saber por qué, aunque la nueva llevara
- * publicada desde la mañana.
+ * CÓMO SE SABE QUE HAY UNA VERSIÓN NUEVA
  *
- * Ahora se pregunta al cargar y cada vez que la app vuelve a primer plano, que
- * es justo cuando alguien la abre esperando ver lo último. Y se mira si ya
- * había una versión esperando de la sesión anterior, porque en ese caso
- * "updatefound" no vuelve a dispararse y el aviso no salía nunca.
+ * Cada despliegue lleva su identificador (scripts/sellar-version.mjs): va
+ * escrito en esta página y en version.json. La página pregunta por
+ * version.json al abrir la app y cada vez que se vuelve a ella; si dice otra
+ * versión que la suya, hay una nueva publicada.
+ *
+ * Antes se esperaba a que el navegador encontrara un service worker distinto,
+ * pero sw.js era idéntico en todos los despliegues: el navegador nunca veía
+ * nada nuevo y este aviso no salía jamás. La versión nueva solo llegaba al
+ * cerrar la app del todo, y un iPhone la deja dormida en segundo plano días.
+ *
+ * Tampoco vale avisar cuando cambia el service worker: al abrir la app en
+ * frío ya se carga la página nueva, y entonces el aviso saldría pidiendo
+ * actualizar lo que se acaba de cargar. Comparar la versión de la página con
+ * la publicada solo avisa cuando de verdad hay una diferencia.
+ *
+ * Sin sellar (en desarrollo, o si algo falla) la marca se queda tal cual y no
+ * se pregunta nada. Ante la duda —sin red, un version.json raro— no hay muro:
+ * un muro por error deja fuera a todo el mundo a la vez.
  *
  * ACTUALIZAR ES OBLIGATORIO
  *
@@ -67,87 +77,79 @@ export default function Root({ children }: PropsWithChildren) {
  * muro dice lo que va a pasar y espera a que lo pulse él, que es la diferencia
  * entre obligar y arrebatar.
  *
+ * El botón primero vuelve a pedir la página saltándose lo guardado, y luego
+ * recarga. Sin eso, el navegador podía servir la página vieja que tenía
+ * guardada unos minutos, y el muro volvía a salir nada más recargar.
+ *
  * Se pinta a mano, sin React, porque esto vive en el HTML: tiene que poder
  * aparecer aunque el JavaScript de la app se haya quedado a medias, que es
  * precisamente uno de los casos en los que hay que actualizar.
  */
 const swRegistration = (base: string) => `
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
+(function () {
+var VERSION_WEB = '__VERSION_WEB__';
+function showUpdateBanner() {
+  if (document.getElementById('maestria-version-nueva')) return;
+  var fondo = document.createElement('div');
+  fondo.id = 'maestria-version-nueva';
+  fondo.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
+  var caja = document.createElement('div');
+  caja.style.cssText = 'max-width:380px;width:100%;text-align:center;';
+  var tit = document.createElement('div');
+  tit.style.cssText = 'color:#fff;font-size:26px;font-weight:800;letter-spacing:-0.3px;';
+  tit.textContent = 'Hay una versión nueva';
+  var txt = document.createElement('div');
+  txt.style.cssText = 'color:#9A9A9A;font-size:15px;line-height:22px;margin-top:10px;';
+  txt.textContent = 'Actualiza para seguir entrenando. Tarda un segundo y no pierdes nada de lo que tienes guardado.';
+  var btn = document.createElement('button');
+  btn.style.cssText = 'margin-top:24px;width:100%;border:none;border-radius:14px;padding:15px 16px;font-weight:700;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#C9BDB0,#A2968B);color:#0A0A0A;';
+  btn.textContent = 'Actualizar';
+  btn.onclick = function () {
+    btn.disabled = true;
+    btn.textContent = 'Actualizando…';
+    var recargar = function () { window.location.reload(); };
+    fetch(window.location.href, { cache: 'reload' }).then(recargar, recargar);
+  };
+  caja.appendChild(tit); caja.appendChild(txt); caja.appendChild(btn);
+  fondo.appendChild(caja);
+  document.body.appendChild(fondo);
+  // Detrás del muro no se puede seguir tocando ni desplazando: si se
+  // pudiera, no sería obligatorio.
+  document.documentElement.style.overflow = 'hidden';
+}
+
+// Preguntar de verdad: al cargar y cada vez que se vuelve a la app.
+var ultima = 0;
+function mirarSiHayNueva() {
+  if (VERSION_WEB.indexOf('__') === 0) return; // sin sellar: en desarrollo
+  var ahora = Date.now();
+  if (ahora - ultima < 60000) return; // sin machacar el servidor
+  ultima = ahora;
+  fetch('${base}/version.json?v=' + ahora, { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (publicada) {
+      var v = publicada && publicada.version;
+      if (typeof v === 'string' && v.length >= 4 && v !== VERSION_WEB) showUpdateBanner();
+    })
+    .catch(function () {});
+}
+
+window.addEventListener('load', function () {
+  mirarSiHayNueva();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') mirarSiHayNueva();
+  });
+  if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('${base}/sw.js', { updateViaCache: 'none' }).then(function (reg) {
-      function showUpdateBanner() {
-        if (document.getElementById('calico-update-bar')) return;
-        var fondo = document.createElement('div');
-        fondo.id = 'calico-update-bar';
-        fondo.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;';
-        var caja = document.createElement('div');
-        caja.style.cssText = 'max-width:380px;width:100%;text-align:center;';
-        var tit = document.createElement('div');
-        tit.style.cssText = 'color:#fff;font-size:26px;font-weight:800;letter-spacing:-0.3px;';
-        tit.textContent = 'Hay una versión nueva';
-        var txt = document.createElement('div');
-        txt.style.cssText = 'color:#9A9A9A;font-size:15px;line-height:22px;margin-top:10px;';
-        txt.textContent = 'Actualiza para seguir entrenando. Tarda un segundo y no pierdes nada de lo que tienes guardado.';
-        var btn = document.createElement('button');
-        btn.style.cssText = 'margin-top:24px;width:100%;border:none;border-radius:14px;padding:15px 16px;font-weight:700;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#C9BDB0,#A2968B);color:#0A0A0A;';
-        btn.textContent = 'Actualizar';
-        btn.onclick = function () { window.location.reload(); };
-        caja.appendChild(tit); caja.appendChild(txt); caja.appendChild(btn);
-        fondo.appendChild(caja);
-        document.body.appendChild(fondo);
-        // Detrás del muro no se puede seguir tocando ni desplazando: si se
-        // pudiera, no sería obligatorio.
-        document.documentElement.style.overflow = 'hidden';
-      }
-      reg.addEventListener('updatefound', function () {
-        var nw = reg.installing;
-        if (!nw) return;
-        nw.addEventListener('statechange', function () {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateBanner();
-          }
-        });
-      });
-
-      // Una versión que quedó instalada en la sesión anterior: "updatefound"
-      // ya no volverá a saltar, así que el aviso hay que ponerlo aquí.
-      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
-
-      /*
-       * El service worker nuevo entra solo (hace skipWaiting), pero la pantalla
-       * sigue siendo la vieja hasta que se recargue. Ese cambio de mando es la
-       * señal más fiable de que hay algo nuevo que ver.
-       *
-       * SOLO SI YA HABÍA UNO MANDANDO. En la PRIMERA visita no hay ninguno, y
-       * el que se acaba de instalar también dispara este aviso: sin esta
-       * condición, quien abre la app por primera vez se encuentra un muro
-       * diciéndole que actualice algo que acaba de cargar.
-       *
-       * Con la barra pequeña de antes eso era una molestia y pasó desapercibido.
-       * Convertida en un muro que tapa la pantalla, es lo primero que vería un
-       * usuario nuevo. Lo cazaron las pruebas: cada navegador limpio se comía el
-       * muro y no podía tocar nada.
-       */
-      var yaHabiaControl = !!navigator.serviceWorker.controller;
-      navigator.serviceWorker.addEventListener('controllerchange', function () {
-        if (yaHabiaControl) showUpdateBanner();
-      });
-
-      // Preguntar de verdad: al cargar y cada vez que se vuelve a la app.
-      var ultima = 0;
-      function mirarSiHayNueva() {
-        var ahora = Date.now();
-        if (ahora - ultima < 60000) return; // sin machacar el servidor
-        ultima = ahora;
-        reg.update().catch(function () {});
-      }
-      mirarSiHayNueva();
+      // Que el service worker también se renueve al volver: el nuevo tira la
+      // caché del anterior, iconos incluidos.
       document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') mirarSiHayNueva();
+        if (document.visibilityState === 'visible') reg.update().catch(function () {});
       });
     }).catch(function () {});
-  });
-}
+  }
+});
+})();
 `;
 
 const backgroundStyle = `

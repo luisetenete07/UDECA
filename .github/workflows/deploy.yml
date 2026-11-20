@@ -94,6 +94,12 @@ jobs:
           # entero está en el propio script.
           node scripts/fallback-404.mjs dist
 
+          # Cada despliegue, con su versión: en las páginas, en sw.js y en
+          # version.json. Es lo que hace saltar el aviso de "Hay una versión
+          # nueva" a quien tenga la app abierta. Va después del 404, que es
+          # una página más y también tiene que saber qué versión es.
+          node scripts/sellar-version.mjs dist "${GITHUB_SHA::12}-${GITHUB_RUN_NUMBER}"
+
           # Y que las dos cosas que se acaban de arreglar sigan arregladas.
           #
           # Las dos se rompen en silencio: la web seguiría publicándose, se
