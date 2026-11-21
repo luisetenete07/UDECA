@@ -127,7 +127,7 @@ export default function ClientProfileScreen() {
 
   const load = useCallback(async () => {
     if (!profile) return;
-    // Ya no lee los entrenos: eran para los logros, que viven en Progreso.
+    // Ya no lee los entrenos: eran para los logros, que se quitaron de la app.
     setLoading(false);
     getRutinaDiaria(profile.uid)
       .then((r) => setTieneRutinaDiaria(hayRutinaDiaria(r)))
@@ -238,9 +238,6 @@ export default function ClientProfileScreen() {
           mismas cifras dos veces y a diez píxeles: la de arriba grande y
           animada, la de abajo repitiéndola. Se queda la tarjeta, que además
           las cuenta solas y no ocupa el doble. */}
-
-      {/* Los logros se han ido a Progreso (components/LogrosDelAlumno.tsx):
-          son progreso, y aquí, entre los ajustes, casi no se veían. */}
 
       {/* Tarjeta de cambio de nombre: solo visible si NO se ha consumido el
           límite de una vez cada 90 días. Al gastarlo, desaparece hasta que
@@ -401,7 +398,7 @@ export default function ClientProfileScreen() {
           </Pressable>
         </View>
         <Text style={styles.reminderHint}>
-          Los domingos, tus entrenos, series y pasos de la semana. Solo si has entrenado.
+          Los domingos, tus entrenos y series de la semana. Solo si has entrenado.
         </Text>
       </Card>
 

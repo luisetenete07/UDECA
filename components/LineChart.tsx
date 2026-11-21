@@ -37,6 +37,8 @@ interface LineChartProps {
    * repetir el mismo número dos veces seguidas no informa, distrae.
    */
   showSummary?: boolean;
+  /** Alto de la gráfica en px (160 si no se dice). Más baja donde va apretada, como el peso. */
+  alto?: number;
 }
 
 
@@ -64,6 +66,7 @@ export function LineChart({
   labeled = false,
   labelAll = false,
   showSummary = true,
+  alto = CHART_HEIGHT,
 }: LineChartProps) {
   if (points.length < 2) {
     return (
@@ -89,9 +92,9 @@ export function LineChart({
   const coords = points.map((point, index) => {
     const x = (index / (points.length - 1)) * (chartWidth - 24) + 12;
     const y =
-      CHART_HEIGHT -
+      alto -
       paddingBottom -
-      ((point.value - min) / range) * (CHART_HEIGHT - paddingTop - paddingBottom);
+      ((point.value - min) / range) * (alto - paddingTop - paddingBottom);
     return { x, y };
   });
 
@@ -122,12 +125,12 @@ export function LineChart({
         </View>
       ) : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <Svg width={chartWidth} height={CHART_HEIGHT}>
+        <Svg width={chartWidth} height={alto}>
           <Line
             x1={0}
-            y1={CHART_HEIGHT - paddingBottom}
+            y1={alto - paddingBottom}
             x2={chartWidth}
-            y2={CHART_HEIGHT - paddingBottom}
+            y2={alto - paddingBottom}
             stroke={colors.border}
             strokeWidth={1}
           />
@@ -157,7 +160,7 @@ export function LineChart({
                     </SvgText>
                     <SvgText
                       x={p.x}
-                      y={CHART_HEIGHT - 8}
+                      y={alto - 8}
                       fontSize={9}
                       fill={colors.textFaint}
                       textAnchor="middle"

@@ -6,7 +6,6 @@ import {
   type ExerciseLoad,
   type ExerciseMeasure,
   type LoggedExercise,
-  type WeightLog,
   type WorkoutLog,
 } from './types';
 import { diasEntre, inicioDeLaSemana, inicioDelDia, masDias, mesLargo } from './fechas';
@@ -291,128 +290,6 @@ export function bestStreakInMonth(logs: WorkoutLog[], ref: number = Date.now()):
 /** Número de semanas distintas con al menos un entrenamiento. */
 export function activeWeeks(logs: WorkoutLog[]): number {
   return new Set(logs.map((l) => inicioDeLaSemana(l.date))).size;
-}
-
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string; // nombre de icono Ionicons
-  unlocked: boolean;
-}
-
-/**
- * Calcula el estado de los logros a partir de los datos ya existentes del
- * alumno. Los logros/insignias son un patrón clásico de gamificación en las
- * mejores apps de fitness para reforzar la adherencia.
- */
-export function computeAchievements(
-  workoutLogs: WorkoutLog[],
-  weightLogs: WeightLog[]
-): Achievement[] {
-  const totalWorkouts = workoutLogs.length;
-  const streak = currentStreak(workoutLogs);
-  const weeks = activeWeeks(workoutLogs);
-  const weightEntries = weightLogs.length;
-
-  const weightProgress =
-    weightLogs.length >= 2
-      ? weightLogs[weightLogs.length - 1].weightKg - weightLogs[0].weightKg
-      : 0;
-
-  return [
-    {
-      id: 'first-workout',
-      title: 'Primer paso',
-      description: 'Completa tu primer entrenamiento',
-      icon: 'flag',
-      unlocked: totalWorkouts >= 1,
-    },
-    {
-      id: 'ten-workouts',
-      title: 'Constante',
-      description: 'Registra 10 entrenamientos',
-      icon: 'barbell',
-      unlocked: totalWorkouts >= 10,
-    },
-    {
-      id: 'fifty-workouts',
-      title: 'Guerrero',
-      description: 'Registra 50 entrenamientos',
-      icon: 'flame',
-      unlocked: totalWorkouts >= 50,
-    },
-    {
-      id: 'streak-3',
-      title: 'En racha',
-      description: '3 días seguidos entrenando',
-      icon: 'trending-up',
-      unlocked: streak >= 3,
-    },
-    {
-      id: 'streak-7',
-      title: 'Imparable',
-      description: '7 días seguidos entrenando',
-      icon: 'rocket',
-      unlocked: streak >= 7,
-    },
-    {
-      id: 'month-active',
-      title: 'Mes de fuego',
-      description: 'Entrena durante 4 semanas distintas',
-      icon: 'calendar',
-      unlocked: weeks >= 4,
-    },
-    {
-      id: 'tracker',
-      title: 'Bajo control',
-      description: 'Registra tu peso 5 veces',
-      icon: 'scale',
-      unlocked: weightEntries >= 5,
-    },
-    {
-      id: 'transformation',
-      title: 'Transformación',
-      description: 'Reduce 3 kg desde tu inicio',
-      icon: 'ribbon',
-      unlocked: weightProgress <= -3,
-    },
-    {
-      id: 'hundred-workouts',
-      title: 'Centurión',
-      description: 'Registra 100 entrenamientos',
-      icon: 'shield-checkmark',
-      unlocked: totalWorkouts >= 100,
-    },
-    {
-      id: 'streak-14',
-      title: 'Máquina',
-      description: '14 días seguidos entrenando',
-      icon: 'flash',
-      unlocked: streak >= 14,
-    },
-    {
-      id: 'streak-30',
-      title: 'Leyenda',
-      description: '30 días seguidos entrenando',
-      icon: 'trophy',
-      unlocked: streak >= 30,
-    },
-    {
-      id: 'weeks-12',
-      title: 'Trimestre',
-      description: 'Entrena durante 12 semanas distintas',
-      icon: 'medal',
-      unlocked: weeks >= 12,
-    },
-    {
-      id: 'twentyfive-workouts',
-      title: 'Veterano',
-      description: 'Registra 25 entrenamientos',
-      icon: 'barbell',
-      unlocked: totalWorkouts >= 25,
-    },
-  ];
 }
 
 /** Marcas históricas de un ejercicio: mejor peso y mejores reps sin lastre. */
@@ -710,50 +587,6 @@ export function weekComparison(logs: WorkoutLog[]): {
   return { thisWeek, lastWeek, activeClients: active.size };
 }
 
-export interface WeeklySetsByGroup {
-  weekStart: number;
-  pushSets: number;
-  pullSets: number;
-}
-
-/**
- * Series COMPLETADAS por semana separadas por patrón: empuje (grupo muscular
- * 'Empuje') y tirón ('Tirón'). El mapa exerciseId → grupo muscular viene de la
- * biblioteca del entrenador (el registro de la serie no guarda el grupo).
- */
-/**
- * Series completadas por semana para las categorías que se pidan.
- *
- * Sustituye al par fijo Empuje/Tirón: no todo el mundo entrena en esos dos
- * patrones, y a quien trabaja sobre todo Core o Tren inferior esas dos gráficas
- * le salían planas. Aquí manda quien mira: se piden las categorías que
- * interesan y se devuelven sus series semana a semana.
- */
-export function weeklySetsForGroups(
-  logs: WorkoutLog[],
-  muscleByExercise: Record<string, string>,
-  groups: string[],
-  weeks = 8
-): { weekStart: number; byGroup: Record<string, number> }[] {
-  const currentWeek = inicioDeLaSemana(Date.now());
-  const wanted = new Set(groups);
-  const result = Array.from({ length: weeks }, (_, i) => ({
-    weekStart: masDias(currentWeek, -7 * (weeks - 1 - i)),
-    byGroup: Object.fromEntries(groups.map((g) => [g, 0])) as Record<string, number>,
-  }));
-  const index = new Map(result.map((r, i) => [r.weekStart, i]));
-  for (const log of logs) {
-    const i = index.get(inicioDeLaSemana(log.date));
-    if (i === undefined) continue;
-    for (const ex of log.exercises) {
-      const group = muscleByExercise[ex.exerciseId];
-      if (!group || !wanted.has(group)) continue;
-      result[i].byGroup[group] += ex.sets.filter((s) => s.completed).length;
-    }
-  }
-  return result;
-}
-
 
 /**
  * Mapa muscular: series completadas por grupo muscular en los últimos `days`
@@ -828,27 +661,6 @@ export function workoutsByMonth(
   const months = [...map.values()].sort((a, b) => b.monthStart - a.monthStart);
   for (const m of months) m.sessions.sort((a, b) => b.date - a.date);
   return months;
-}
-
-/** Actividad agregada por semana (últimas `weeks`), para gráficas. */
-export function weeklyActivity(
-  logs: WorkoutLog[],
-  weeks = 8
-): { weekStart: number; sessions: number; volumeKg: number }[] {
-  const currentWeek = inicioDeLaSemana(Date.now());
-  const result = Array.from({ length: weeks }, (_, i) => ({
-    weekStart: masDias(currentWeek, -7 * (weeks - 1 - i)),
-    sessions: 0,
-    volumeKg: 0,
-  }));
-  const index = new Map(result.map((r, i) => [r.weekStart, i]));
-  for (const log of logs) {
-    const i = index.get(inicioDeLaSemana(log.date));
-    if (i === undefined) continue;
-    result[i].sessions += 1;
-    result[i].volumeKg += sessionTotals(log.exercises).volumeKg;
-  }
-  return result;
 }
 
 export interface WeeklyVolumePoint {
@@ -935,47 +747,6 @@ export function trainingDays(logs: WorkoutLog[]): Set<number> {
 }
 
 /** Ejercicios que aparecen en el historial (id + nombre), más recientes primero. */
-export interface PeriodSnapshot {
-  sessions: number;
-  sets: number;
-  volumeKg: number;
-  weightKg: number | null;
-}
-
-/**
- * Comparador "tú hace 3 meses → hoy": últimos 28 días frente a la misma
- * ventana de 28 días hace 3 meses. null si entonces no había datos (alumno
- * nuevo): la tarjeta simplemente no se muestra.
- */
-export function thenVsNow(
-  logs: WorkoutLog[],
-  weights: WeightLog[]
-): { then: PeriodSnapshot; now: PeriodSnapshot } | null {
-  const DAY = 24 * 60 * 60 * 1000;
-  const nowTs = Date.now();
-  const snapshot = (from: number, to: number): PeriodSnapshot => {
-    let sessions = 0;
-    let sets = 0;
-    let volumeKg = 0;
-    for (const log of logs) {
-      if (log.date < from || log.date > to) continue;
-      sessions += 1;
-      const t = sessionTotals(log.exercises);
-      sets += t.sets;
-      volumeKg += t.volumeKg;
-    }
-    // Peso corporal al final de la ventana (último registro hasta esa fecha).
-    let weightKg: number | null = null;
-    for (const w of weights) {
-      if (w.date <= to) weightKg = w.weightKg;
-    }
-    return { sessions, sets, volumeKg: Math.round(volumeKg), weightKg };
-  };
-  const then = snapshot(nowTs - 112 * DAY, nowTs - 84 * DAY);
-  if (then.sessions === 0) return null;
-  return { then, now: snapshot(nowTs - 28 * DAY, nowTs) };
-}
-
 /**
  * Ritmo de progreso: pendiente (unidades por mes de 30 días) por regresión
  * lineal simple sobre los puntos de un ejercicio. null si no hay base (<3).
@@ -1208,6 +979,11 @@ export function exerciseProgression(
         hasWeight = true;
       }
     }
+    // Sin una marca de verdad (el ejercicio venía en el entreno pero no se
+    // hizo ninguna serie), ese día no es un punto de la gráfica: sería un cero
+    // que no ha pasado. Solo entran las marcas registradas, la mejor de cada
+    // registro.
+    if (bestReps === 0 && bestSeconds === 0 && bestWeight === 0) continue;
     points.push({
       date: log.date,
       reps: bestReps,

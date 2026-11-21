@@ -2,7 +2,7 @@ import { unido } from '../../lib/texto';
 import { inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { Modal, Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../../components/Texto';
 import { t, frase } from '../../lib/idioma';
 import { esLaPalabra } from '../../lib/i18n';
@@ -11,7 +11,6 @@ import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { ExerciseHistory } from '../../components/ExerciseHistory';
-import { LineChart } from '../../components/LineChart';
 import { CardsSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { PanelDeNutricion } from '../../components/PanelDeNutricion';
@@ -28,18 +27,15 @@ import { ObjetivosDeCiclo } from '../../components/ObjetivosDeCiclo';
 import { buildBlockView } from '../../lib/blockView';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
-import { SeriesDelGtg } from '../../components/SeriesDelGtg';
-import { updateUserProfile } from '../../lib/firestore/users';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
 import { getCached, setCached } from '../../lib/screenCache';
 import { deleteWorkoutLog, getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { getExerciseLibrary } from '../../lib/firestore/exercises';
-import { isComboExercise, isIsometricExercise, toNum, listExercisesInLogs, monthKeyOf, sessionTotals, setsByMuscleGroup, weeklyActivity, weeklySetsForGroups, thenVsNow, workoutsByMonth } from '../../lib/stats';
+import { isComboExercise, isIsometricExercise, toNum, listExercisesInLogs, monthKeyOf, sessionTotals, workoutsByMonth } from '../../lib/stats';
 import { FadeIn } from '../../components/FadeIn';
 import { Dialogo } from '../../components/Dialogo';
 import { Segmented } from '../../components/Segmented';
 import { CollapsibleCard } from '../../components/CollapsibleCard';
-import { LogrosDelAlumno } from '../../components/LogrosDelAlumno';
 import { ventanaDeConstancia } from '../../lib/constancia';
 import { Chip, ChipRow } from '../../components/Chip';
 import { fonts, colors, radius, spacing, tabularNums, typography } from '../../lib/theme';
@@ -55,7 +51,7 @@ import {
  *
  * La de en medio era "Peso" y ahora es "Nutrición": el peso no sube ni baja
  * por lo que levantas, sube y baja por lo que comes, así que se fue con las
- * calorías, los macros y los pasos. Aquí se sigue mirando su evolución —que es
+ * calorías y los macros. Aquí se sigue mirando su evolución —que es
  * a lo que se viene a esta pantalla— y se apunta desde el mismo bloque, que es
  * el mismo componente que se usa allí.
  */
@@ -72,7 +68,7 @@ interface ProgressData {
 const ENTRENOS_A_LA_VISTA = 5;
 
 export default function ProgressScreen() {
-  const { profile, refreshProfile } = useAuth();
+  const { profile } = useAuth();
   const router = useRouter();
   // Se puede llegar pidiendo una pestaña concreta: el peso del inicio abre
   // directamente la de Nutrición, que si no habría que buscarla a mano.
@@ -113,7 +109,6 @@ export default function ProgressScreen() {
   const [planExercises, setPlanExercises] = useState<{ id: string; name: string }[]>([]);
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [cycles, setCycles] = useState<import('../../lib/types').TrainingCycle[]>([]);
-  const [fullOpen, setFullOpen] = useState(false);
   // Lo que la tabla está enseñando ahora mismo, para que el PDF salga igual.
   const [matrixView, setMatrixView] = useState<{ weeks: number; exerciseIds: string[] }>({
     weeks: 8,
@@ -309,7 +304,6 @@ export default function ProgressScreen() {
     () => workoutsByMonth(workoutLogs, measureByExercise),
     [workoutLogs, measureByExercise]
   );
-  const comparison = useMemo(() => thenVsNow(workoutLogs, weightLogs), [workoutLogs, weightLogs]);
 
   // Mapa corporal: intensidad por músculo según lo trabajado en la última
   // sesión o en la semana. `muscleByExercise` (grupo del ejercicio) refina la
@@ -325,44 +319,6 @@ export default function ProgressScreen() {
     return muscleLoad(workoutLogs, inicioDeLaSemana(Date.now()), gruposDeEjercicio, musclesByExercise);
   }, [workoutLogs, muscleMode, gruposDeEjercicio, musclesByExercise]);
 
-  const muscleMap = useMemo(
-    () => setsByMuscleGroup(workoutLogs, gruposDeEjercicio),
-    [workoutLogs, gruposDeEjercicio]
-  );
-  /**
-   * Categorías de las gráficas de series semanales: las que haya elegido el
-   * alumno y, si no ha elegido, las DOS que más trabaja. Antes eran siempre
-   * Empuje y Tirón, aunque entrenase otra cosa.
-   */
-  const gruposDisponibles = useMemo(
-    () => muscleMap.filter((m) => m.group !== 'Otros').map((m) => m.group),
-    [muscleMap]
-  );
-  const gruposMostrados = useMemo(() => {
-    const elegidos = (profile?.progressGroups ?? []).filter((g) => g);
-    if (elegidos.length > 0) return elegidos;
-    return gruposDisponibles.slice(0, 2);
-  }, [profile?.progressGroups, gruposDisponibles]);
-  const weeklySets = useMemo(
-    () => weeklySetsForGroups(workoutLogs, gruposDeEjercicio, gruposMostrados),
-    [workoutLogs, gruposDeEjercicio, gruposMostrados]
-  );
-
-  // Añade o quita una categoría de las que se grafican (mínimo una).
-  const alternarGrupo = async (grupo: string) => {
-    if (!profile) return;
-    const actuales = gruposMostrados;
-    const next = actuales.includes(grupo)
-      ? actuales.filter((g) => g !== grupo)
-      : [...actuales, grupo];
-    if (next.length === 0) return;
-    try {
-      await updateUserProfile(profile.uid, { progressGroups: next });
-      await refreshProfile();
-    } catch {
-      showToast('No se pudo guardar tu selección');
-    }
-  };
   const exercisesInLogs = useMemo(() => listExercisesInLogs(workoutLogs), [workoutLogs]);
   const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
 
@@ -611,7 +567,6 @@ export default function ProgressScreen() {
               subtitle="Cuando termines una sesión se guardará aquí, en tu registro mensual."
             />
           </Card>
-          {uid ? <SeriesDelGtg clientId={uid} workoutLogs={workoutLogs} routine={activeRoutine} /> : null}
           </>
         ) : (
           <>
@@ -636,26 +591,58 @@ export default function ProgressScreen() {
               constancia de la semana ya está en el anillo del inicio, contra
               lo que pide su plan.
             */}
-            {/* Las series del grease the groove, día a día: la misma tarjeta que
-                ve su entrenador en su ficha. */}
-            {uid ? <SeriesDelGtg clientId={uid} workoutLogs={workoutLogs} routine={activeRoutine} /> : null}
 
-            {/* Una tarjeta entera con un botón grande partía en dos lo que se
-                lee de corrido: el reparto del bloque, la constancia y el mes a
-                mes. Como fila cabe en su sitio sin cortar nada. */}
-            <Pressable style={styles.navRow} onPress={() => setFullOpen(true)}>
-              <Ionicons name="grid-outline" size={18} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.navTitle}>Tu progreso completo</Text>
-                <Text style={styles.navHint}>
-                  La misma tabla que ve Luis.
-                </Text>
+            {/* TU PROGRESO COMPLETO, ABIERTO. Es de lo más importante de la
+                pantalla: la tabla de marcas, semana a semana, la misma que ve
+                Luis. Antes estaba detrás de una fila que abría otra pantalla;
+                ahora se lee aquí mismo, sin tocar nada. Debajo, el reparto del
+                bloque y el PDF, que es opcional. */}
+            <Card style={styles.section}>
+              <View style={styles.completoCab}>
+                <Ionicons name="grid-outline" size={18} color={colors.primary} />
+                <Text style={styles.completoTitulo}>Tu progreso completo</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
-            </Pressable>
+              <Text style={styles.completoPista}>La misma tabla que ve Luis.</Text>
+              {profile ? (
+                <ProgressMatrix
+                  logs={workoutLogs}
+                  clientId={profile.uid}
+                  // La tabla la decide quien le entrena, no el alumno: las reglas
+                  // de Firestore lo imponen igualmente.
+                  planExercises={planExercises}
+                  onViewChange={setMatrixView}
+                />
+              ) : null}
+
+              {/* El reparto del bloque, DEBAJO de la tabla de marcas: arriba qué
+                  se ha levantado en cada ejercicio, y justo debajo en qué se ha
+                  repartido el trabajo esas mismas semanas. */}
+              <View style={styles.bloqueEnCompleto}>
+                <BlockOverview
+                  view={buildBlockView({
+                    cycle: bloqueActual,
+                    cycles,
+                    logs: workoutLogs,
+                    routine: activeRoutine,
+                    muscleByExercise,
+                    measureByExercise,
+                  })}
+                  title={ventana.titulo}
+                  subtitle={ventana.hayBloque ? 'Tu bloque en curso' : 'Cómo se te reparte el trabajo'}
+                />
+              </View>
+
+              <Button
+                title="Exportar a PDF"
+                variant="secondary"
+                onPress={handleExportPdf}
+                loading={generatingReport}
+                style={{ marginTop: spacing.lg }}
+              />
+            </Card>
 
             {/* EL MES EN CURSO, a la vista. Los anteriores van dentro de
-                "Hace 3 meses → hoy": son lo que se mira para comparar, no lo que
+                "Meses anteriores": son lo que se mira para comparar, no lo que
                 se viene a ver cada día, y abiertos aquí eran un rollo de meses
                 por el que había que bajar para llegar a todo lo demás. */}
             {mesActual ? (
@@ -668,126 +655,31 @@ export default function ProgressScreen() {
               </Card>
             )}
 
-            {comparison || mesesAnteriores.length > 0 ? (
+            {/* Los meses anteriores, plegados: son lo que se mira de vez en
+                cuando, no lo que se viene a ver cada día. Cada uno con su
+                resumen y su detalle a un toque. */}
+            {mesesAnteriores.length > 0 ? (
               <CollapsibleCard
-                id="progreso-comparativa"
-                icon="git-compare-outline"
-                title={comparison ? 'Hace 3 meses → hoy' : 'Meses anteriores'}
-                hint={
-                  comparison
-                    ? `${comparison.now.sessions} vs ${comparison.then.sessions} sesiones`
-                    : mesesAnteriores.length === 1
-                      ? '1 mes'
-                      : frase`${mesesAnteriores.length} meses`
-                }
+                id="progreso-meses"
+                icon="calendar-outline"
+                title="Meses anteriores"
+                hint={mesesAnteriores.length === 1 ? '1 mes' : frase`${mesesAnteriores.length} meses`}
                 defaultOpen={false}
               >
-                {comparison ? (
-                <>
-                <Text style={styles.photoHint}>
-                  Tus últimos 28 días frente a los mismos días de hace 3 meses.
-                </Text>
-                <CompareRow
-                  label="Sesiones"
-                  then={comparison.then.sessions}
-                  now={comparison.now.sessions}
-                />
-                <CompareRow
-                  label="Series"
-                  then={comparison.then.sets}
-                  now={comparison.now.sets}
-                />
-                {comparison.then.volumeKg > 0 || comparison.now.volumeKg > 0 ? (
-                  <CompareRow
-                    label="Volumen (kg)"
-                    then={comparison.then.volumeKg}
-                    now={comparison.now.volumeKg}
-                  />
-                ) : null}
-                {comparison.then.weightKg != null && comparison.now.weightKg != null ? (
-                  <CompareRow
-                    label="Peso corporal"
-                    then={comparison.then.weightKg}
-                    now={comparison.now.weightKg}
-                    neutral
-                  />
-                ) : null}
-                </>
-                ) : null}
-
-                {/* Los entrenamientos de los meses anteriores, aquí dentro:
-                    cada uno con su resumen y su detalle a un toque. */}
-                {mesesAnteriores.length > 0 ? (
-                  <>
-                    {comparison ? (
-                      <Text style={styles.mesesAnterioresTitulo}>Meses anteriores</Text>
-                    ) : null}
-                    {mesesAnteriores.map((m) => (
-                      <View key={m.key} style={styles.mesDentro}>
-                        {pintarMes(m)}
-                      </View>
-                    ))}
-                  </>
-                ) : null}
+                {mesesAnteriores.map((m) => (
+                  <View key={m.key} style={styles.mesDentro}>
+                    {pintarMes(m)}
+                  </View>
+                ))}
               </CollapsibleCard>
             ) : null}
 
 
-            <CollapsibleCard
-              id="progreso-series"
-              icon="stats-chart-outline"
-              title="Series semanales"
-              defaultOpen={false}
-            >
-              <Text style={styles.photoHint}>
-                Series completadas cada semana en lo que más entrenas. Toca una categoría
-                para seguirla o dejar de seguirla.
-              </Text>
-              {gruposDisponibles.length > 0 ? (
-                <ChipRow>
-                  {gruposDisponibles.map((g) => (
-                    <Chip
-                      key={g}
-                      texto={g}
-                      activo={gruposMostrados.includes(g)}
-                      onPress={() => alternarGrupo(g)}
-                    />
-                  ))}
-                </ChipRow>
-              ) : null}
-              {gruposMostrados.length === 0 ? (
-                <Text style={styles.photoHint}>
-                  Registra entrenamientos para ver aquí tus series por categoría.
-                </Text>
-              ) : (
-                gruposMostrados.map((g, i) => (
-                  <View key={g}>
-                    <Text style={[styles.sectionTitle, i > 0 && { marginTop: spacing.lg }]}>
-                      {g}
-                    </Text>
-                    <LineChart
-                      points={weeklySets.map((w) => ({
-                        date: w.weekStart,
-                        value: w.byGroup[g] ?? 0,
-                      }))}
-                      unit="series"
-                      lowerIsBetter={false}
-                      emptyMessage={frase`Aún no hay series de ${g} registradas.`}
-                    />
-                  </View>
-                ))
-              )}
-            </CollapsibleCard>
-
-            {/* Fuera "Mapa muscular" (lo mismo que "Músculos trabajados" en
-                Ejercicios, contado otra vez) y "Más entrenados" (cuántas
-                sesiones lleva cada ejercicio: no dice nada de cómo va). */}
-            <LogrosDelAlumno workoutLogs={workoutLogs} weightLogs={weightLogs} />
           </>
         )
       ) : null}
 
-      {/* La nutrición ENTERA: el peso, los pasos, los macros, las comidas, las
+      {/* La nutrición ENTERA: el peso, los macros, las comidas, las
           libretas del coach y las fotos. Era una pestaña propia de la app y
           ahora vive aquí, porque es aquí donde se lee junto a los entrenos:
           lo que come y lo que pesa alguien explica la mitad de lo que le pasa
@@ -891,129 +783,15 @@ export default function ProgressScreen() {
         />
       </Dialogo>
 
-      {/* Progreso completo: la tabla se CONSULTA aquí dentro. El PDF queda
-          como exportación opcional, no como única forma de verlo. */}
-      <Modal
-        visible={fullOpen}
-        animationType="slide"
-        onRequestClose={() => setFullOpen(false)}
-      >
-        <View style={styles.fullSheet}>
-          <View style={styles.fullHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.fullTitle}>Progreso completo</Text>
-              <Text style={styles.fullSubtitle}>{profile?.name}</Text>
-            </View>
-            <Pressable onPress={() => setFullOpen(false)} hitSlop={10}>
-              <Ionicons name="close" size={24} color={colors.textMuted} />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerStyle={styles.fullBody}>
-            {profile ? (
-              <ProgressMatrix
-                logs={workoutLogs}
-                clientId={profile.uid}
-                // La tabla la decide quien le entrena, no el alumno: las reglas
-                // de Firestore lo imponen igualmente.
-                planExercises={planExercises}
-                onViewChange={setMatrixView}
-              />
-            ) : null}
-
-            {/* El reparto del bloque, DEBAJO de la tabla de marcas.
-                Aquí es donde tiene sentido: arriba se ve qué se ha levantado
-                en cada ejercicio, y justo debajo, en qué se ha repartido el
-                trabajo esas mismas semanas. Separados —uno en cada pantalla—
-                eran dos tablas que nadie cruzaba. */}
-            <View style={styles.bloqueEnCompleto}>
-              <BlockOverview
-                view={buildBlockView({
-                  cycle: bloqueActual,
-                  cycles,
-                  logs: workoutLogs,
-                  routine: activeRoutine,
-                  muscleByExercise,
-                  measureByExercise,
-                })}
-                title={ventana.titulo}
-                subtitle={ventana.hayBloque ? 'Tu bloque en curso' : 'Cómo se te reparte el trabajo'}
-              />
-            </View>
-
-            <Button
-              title="Exportar a PDF"
-              variant="secondary"
-              onPress={handleExportPdf}
-              loading={generatingReport}
-              style={{ marginTop: spacing.xl }}
-            />
-          </ScrollView>
-        </View>
-      </Modal>
     </ScreenContainer>
   );
 }
 
-/** Fila del comparador 3 meses → hoy, con delta coloreado. */
-function CompareRow({
-  label,
-  then,
-  now,
-  neutral,
-}: {
-  label: string;
-  then: number;
-  now: number;
-  neutral?: boolean;
-}) {
-  const delta = now - then;
-  const flat = Math.abs(delta) < 0.05;
-  const color = neutral || flat ? colors.textMuted : delta > 0 ? colors.success : colors.danger;
-  const fmt = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ','));
-  return (
-    <View style={styles.compareRow}>
-      <Text style={styles.compareLabel}>{label}</Text>
-      <Text style={styles.compareThen}>{fmt(then)}</Text>
-      <Ionicons name="arrow-forward" size={13} color={colors.textFaint} />
-      <Text style={styles.compareNow}>{fmt(now)}</Text>
-      <Text style={[styles.compareDelta, { color }]}>
-        {flat ? '=' : `${delta > 0 ? '+' : ''}${fmt(delta)}`}
-      </Text>
-    </View>
-  );
-}
-
-
 const styles = StyleSheet.create({
-  navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    marginBottom: spacing.md,
-  },
-  navTitle: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  navHint: { ...typography.small, color: colors.textMuted, marginTop: 1 },
-  fullSheet: { flex: 1, backgroundColor: colors.background },
-  fullHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl * 1.6,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  fullTitle: { ...typography.h2, color: colors.text },
-  fullSubtitle: { ...typography.small, color: colors.textMuted, marginTop: 2 },
-  fullBody: { padding: spacing.lg, paddingBottom: spacing.xl * 2, maxWidth: 900, width: '100%', alignSelf: 'center' },
   title: { ...typography.h1, color: colors.text, marginBottom: spacing.md },
+  completoCab: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  completoTitulo: { ...typography.h3, color: colors.text, flex: 1 },
+  completoPista: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
   section: { marginBottom: spacing.md },
   // Separado de la tabla de marcas con una raya: son dos cosas distintas que
   // se leen seguidas, y pegadas parecerían la misma tabla con más filas.
@@ -1053,25 +831,9 @@ const styles = StyleSheet.create({
   muscleTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
   muscleTabTextOn: { color: colors.onPrimary },
   // ----- Comparador 3 meses → hoy -----
-  compareRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  compareLabel: { ...typography.small, color: colors.textMuted, flex: 1 },
-  compareThen: { ...typography.body, color: colors.textFaint, fontFamily: fonts.medium },
-  compareNow: { ...typography.body, color: colors.text, fontFamily: fonts.heading },
-  compareDelta: { ...typography.small, fontFamily: fonts.semiBold, width: 52, textAlign: 'right' },
   // ----- Registro de entrenamiento mensual -----
   // Los meses anteriores, dentro de "Hace 3 meses → hoy": separados por una
   // raya en vez de tarjeta dentro de tarjeta.
-  mesesAnterioresTitulo: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    marginTop: spacing.lg,
-  },
   mesDentro: {
     marginTop: spacing.md,
     paddingTop: spacing.md,

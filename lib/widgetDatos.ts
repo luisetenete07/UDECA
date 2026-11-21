@@ -10,8 +10,6 @@ export interface DatosDelWidget {
   /** "5 ejercicios", "Entreno hecho"… */
   detalle: string;
   hecho: boolean;
-  pasos: number | null;
-  objetivoPasos: number;
   /** El día al que se refiere (medianoche): pasado ese día, ya no vale. */
   dia: number;
 }
@@ -25,10 +23,8 @@ export function datosDelWidget(p: {
   enPausa?: boolean;
   hecho?: boolean;
   sinPlan?: boolean;
-  pasos?: number | null;
-  objetivoPasos: number;
 }): DatosDelWidget {
-  const base = { dia: p.dia, pasos: p.pasos ?? null, objetivoPasos: p.objetivoPasos };
+  const base = { dia: p.dia };
   if (p.sinPlan) return { ...base, titulo: 'Sin plan todavía', detalle: 'Luis te lo prepara', hecho: false };
   if (p.enPausa) return { ...base, titulo: 'Plan en pausa', detalle: 'Hoy no toca entrenar', hecho: false };
   if (p.hecho) return { ...base, titulo: p.nombreDelDia || 'Entreno de hoy', detalle: 'Hecho. Buen trabajo', hecho: true };

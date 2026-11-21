@@ -23,13 +23,11 @@ export default function PrivacyPolicy() {
         • <Text style={styles.bold}>Perfil:</Text> foto de perfil (opcional) y objetivos de
         entrenamiento.{'\n'}
         • <Text style={styles.bold}>Datos de entrenamiento y forma física:</Text> rutinas, series,
-        repeticiones, cargas (lastre), peso corporal, sensaciones, hábitos, retos y estadísticas de
+        repeticiones, cargas (lastre), peso corporal (y su foto, si la añades), sensaciones, hábitos, retos y estadísticas de
         progreso.{'\n'}
         • <Text style={styles.bold}>Nutrición:</Text> macros y datos que introduzcas.{'\n'}
         • <Text style={styles.bold}>Comunicación:</Text> mensajes con Luis, y
         anuncios del grupo.{'\n'}
-        • <Text style={styles.bold}>Pasos:</Text> el número de pasos que das al día, solo si
-        conectas el contador de tu móvil (ver el apartado 3).{'\n'}
         • <Text style={styles.bold}>Datos técnicos:</Text> un identificador de dispositivo para
         notificaciones push (solo si las activas).
       </Section>
@@ -42,32 +40,7 @@ export default function PrivacyPolicy() {
         usamos tus datos para publicidad ni para elaborar perfiles comerciales.
       </Section>
 
-      <Section title="3. El contador de pasos">
-        Si activas el contador de pasos, la app lee los pasos que cuenta tu propio teléfono. Es
-        opcional: la app funciona igual sin ello, y siempre puedes escribir tus pasos a mano.
-        {'\n\n'}
-        • <Text style={styles.bold}>Qué leemos:</Text> únicamente el número de pasos de cada día
-        (el de hoy y los anteriores que guarde tu móvil, hasta una semana). Nada más: ni ritmo
-        cardiaco, ni sueño, ni entrenamientos, ni ubicación.{'\n'}
-        • <Text style={styles.bold}>En iPhone:</Text> se le piden a la app{' '}
-        <Text style={styles.bold}>Salud</Text> los pasos (los del iPhone y, si lo llevas, tu Apple
-        Watch), y solo eso. La app no escribe ni modifica nada en Salud.{'\n'}
-        • <Text style={styles.bold}>En Android:</Text> los cuenta el propio móvil con la API de
-        grabación de Google Play services, que los guarda en el dispositivo, también con la app
-        cerrada; si tu móvil no la tiene, el sensor mientras tienes la app abierta.
-        No usamos Health Connect ni ningún otro almacén de datos de salud.
-        {'\n'}
-        • <Text style={styles.bold}>Dónde acaba:</Text> la cifra diaria se guarda en tu cuenta para
-        calcular tu gasto calórico y tu objetivo de pasos. La veis Luis y tú, nadie más.
-        {'\n'}
-        • <Text style={styles.bold}>Para qué NO se usa:</Text> ni para publicidad, ni se vende, ni se
-        comparte con terceros.{'\n'}
-        • <Text style={styles.bold}>Cómo se corta:</Text> puedes retirar el permiso cuando quieras
-        desde los ajustes de tu móvil (Salud en iPhone, Actividad física en Android), sin perder el
-        resto de la app. Al borrar tu cuenta se borran también los pasos guardados.
-      </Section>
-
-      <Section title="4. Proveedores y con quién se comparten">
+      <Section title="3. Proveedores y con quién se comparten">
         Tus datos de entrenamiento son visibles para tu <Text style={styles.bold}>entrenador
         asignado</Text>, Luis Tena (no lo son para otros alumnos, salvo la clasificación del grupo y tu
         estado en línea, que puedes tratar con Luis).{'\n\n'}
@@ -79,18 +52,18 @@ export default function PrivacyPolicy() {
         No vendemos ni cedemos tus datos a terceros con fines publicitarios.
       </Section>
 
-      <Section title="5. Transferencias internacionales">
+      <Section title="4. Transferencias internacionales">
         Algunos de nuestros proveedores (Google, Expo) pueden tratar datos en servidores
         situados fuera del Espacio Económico Europeo. En esos casos, la transferencia se ampara en las
         garantías previstas por el RGPD (como las Cláusulas Contractuales Tipo de la Comisión Europea).
       </Section>
 
-      <Section title="6. Conservación">
+      <Section title="5. Conservación">
         Conservamos tus datos mientras tu cuenta esté activa. Si eliminas tu cuenta o lo solicitas,
         borramos tus datos personales, salvo los que debamos conservar por obligaciones legales.
       </Section>
 
-      <Section title="7. Tus derechos">
+      <Section title="6. Tus derechos">
         Puedes ejercer en cualquier momento tus derechos de acceso, rectificación, supresión,
         oposición, limitación y portabilidad de tus datos. Muchos de ellos los puedes ejercer
         directamente desde la app (editar tu perfil, borrar registros o eliminar tu cuenta). Para
@@ -100,24 +73,24 @@ export default function PrivacyPolicy() {
         (en España, la Agencia Española de Protección de Datos, aepd.es).
       </Section>
 
-      <Section title="8. Eliminar tu cuenta y tus datos">
+      <Section title="7. Eliminar tu cuenta y tus datos">
         Puedes eliminar tu cuenta desde los ajustes de la app o solicitándolo en{' '}
         <Text style={styles.bold}>luistenaf@gmail.com</Text>. Al hacerlo, borramos tu perfil y tus
         datos de entrenamiento asociados.
       </Section>
 
-      <Section title="9. Menores">
+      <Section title="8. Menores">
         Mastery no está dirigida a menores de 14 años. Si eres menor de esa edad, no debes usar la app
         sin el consentimiento de tus padres o tutores.
       </Section>
 
-      <Section title="10. Cambios en esta política">
+      <Section title="9. Cambios en esta política">
         Podemos actualizar esta política para reflejar cambios en el servicio o en la normativa.
         Publicaremos siempre la versión vigente en esta misma página, indicando la fecha de última
         actualización.
       </Section>
 
-      <Section title="11. Contacto">
+      <Section title="10. Contacto">
         Para cualquier duda sobre privacidad o para ejercer tus derechos, escríbenos a{' '}
         <Text style={styles.bold}>luistenaf@gmail.com</Text>.
       </Section>

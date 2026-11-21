@@ -156,33 +156,6 @@ export interface UserProfile {
   /** Peso objetivo del alumno en kg. */
   targetWeightKg?: number;
   /**
-   * Pasos al día que se propone. Sin valor, los de por omisión (ver
-   * lib/pasos.ts). Va en el perfil y no en cada día porque es un objetivo, no
-   * un dato del martes.
-   */
-  stepGoal?: number;
-  /**
-   * De dónde salen sus pasos, una vez elegido. Se guarda en LA CUENTA.
-   *
-   * Antes no se guardaba nada: había que pulsar "traer los pasos del móvil"
-   * cada día, y un contador que hay que pedir a mano cada mañana no lo usa
-   * nadie más de tres días. Ahora se elige una vez y a partir de ahí los pasos
-   * aparecen solos al abrir la app.
-   *
-   * En la cuenta y no en el móvil a propósito: quien cambia de teléfono o entra
-   * desde otro no tiene que volver a decidirlo. Lo único que sigue siendo del
-   * aparato es el PERMISO del sistema, que no se puede llevar de un móvil a
-   * otro por definición.
-   *
-   *  - `telefono`: el contador del propio móvil.
-   *  - `mano`: lo escribe él (reloj, otra app). Es una elección legítima, no un
-   *    plan B: mucha gente lleva reloj, y un contador que solo acepta lo que
-   *    mide él deja fuera justo a quien más anda.
-   *
-   * Sin valor = todavía no lo ha elegido.
-   */
-  stepsSource?: 'telefono' | 'mano';
-  /**
    * Idioma elegido ('es' | 'en'). Sin valor, el del teléfono. No se guarda
    * "es" por omisión a propósito: quien no ha elegido no ha elegido español,
    * ha elegido "lo que hable mi móvil", y el día que cambie de móvil quiere
@@ -1258,6 +1231,8 @@ export interface WeightLog {
   date: number;
   weightKg: number;
   notes?: string;
+  /** Lleva foto (en `progressPhotos/<id>`, ver lib/firestore/fotosDePeso.ts). */
+  conFoto?: boolean;
   createdAt: number;
 }
 

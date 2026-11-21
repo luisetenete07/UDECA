@@ -42,56 +42,14 @@ const lee = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 const sinComentarios = (s) =>
   s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-const pasos = sinComentarios(lee('components/ContadorDePasos.tsx'));
 const panel = sinComentarios(lee('components/PanelDeNutricion.tsx'));
 const progreso = sinComentarios(lee('app/(client)/progress.tsx'));
 
 // =========================================================================
-console.log('\n1 · La lectura automática no molesta a nadie');
+console.log('\n1 · Sin pasos');
 // =========================================================================
-ok(
-  'en silencio solo MIRA el permiso, no lo pide',
-  /enSilencio\s*\n?\s*\?\s*await Pedometer\.getPermissionsAsync\(\)/.test(pasos),
-  'pedirlo abre el diálogo del sistema, y en Android eso vuelve a disparar la lectura'
-);
-ok(
-  'y lo pide solo cuando lo ha pulsado alguien',
-  /:\s*await Pedometer\.requestPermissionsAsync\(\)/.test(pasos)
-);
-ok(
-  'una lectura a la vez',
-  /if \(leyendoRef\.current\) return;/.test(pasos),
-  'dos a la vez son dos suscripciones al sensor y dos escrituras del mismo dato'
-);
-ok(
-  'y no más de una automática por minuto',
-  /ESPERA_ENTRE_LECTURAS_MS = 60 \* 1000/.test(pasos) &&
-    /ahora - ultimaAutomaticaRef\.current < ESPERA_ENTRE_LECTURAS_MS/.test(pasos),
-  'volver al frente pasa muchas veces seguidas'
-);
-ok(
-  'el aviso de "leyendo" es solo para quien lo pidió',
-  /if \(!enSilencio\) setLeyendo\(true\);/.test(pasos) &&
-    /if \(!enSilencio\) setLeyendo\(false\);/.test(pasos),
-  'encenderlo solo ya hacía parpadear la tarjeta'
-);
-ok(
-  'si el número no cambia, no se escribe (iPhone)',
-  /if \(enSilencio && aGuardar === \(deHoy\?\.steps \?\? 0\)\) return( ponerAlDia\(deHoy\))?;/.test(pasos)
-);
-ok(
-  'si el número no cambia, no se escribe (Android)',
-  /if \(enSilencio && sumado === \(deHoyAndroid\?\.steps \?\? 0\)\) return( ponerAlDia\(deHoyAndroid\))?;/.test(pasos),
-  'esta rama escribía siempre, y cada escritura recarga la sección entera'
-);
-// El motivo por el que existe `registrosRef`: sin él, guardar hacía recargar al
-// padre, y la lista nueva volvía a disparar la lectura. Ver el comentario largo
-// en el propio componente.
-ok(
-  'los pasos de hoy se leen por referencia, no de la prop',
-  /const registrosRef = useRef\(registros\);/.test(pasos) &&
-    !/\}, \[origen, registros\]\)/.test(pasos)
-);
+// El conteo de pasos —la causa 1 de arriba— se quitó de la app entera.
+ok('el panel ya no cuenta pasos', !/ContadorDePasos|pasos/i.test(panel));
 
 // =========================================================================
 console.log('\n2 · Guardar la ficha no recarga media app');

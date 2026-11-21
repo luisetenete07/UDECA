@@ -11,12 +11,6 @@ import { EmptyState } from '../../../../components/EmptyState';
 import { DashboardSkeleton } from '../../../../components/Skeleton';
 import { confirmar } from '../../../../lib/confirmar';
 import { hayObjetivos, objetivosDe, objetivosVisibles } from '../../../../lib/objetivos';
-import {
-  objetivoDeTexto,
-  OBJETIVO_MAXIMO,
-  OBJETIVO_MINIMO,
-  OBJETIVO_POR_DEFECTO,
-} from '../../../../lib/pasos';
 import { conMiles, unido } from '../../../../lib/texto';
 import { textoDeRango } from '../../../../lib/macrosPorKg';
 import { getCoursesForTrainer } from '../../../../lib/firestore/courses';
@@ -32,6 +26,8 @@ import { showToast } from '../../../../components/Toast';
 import { ConsistencyMap } from '../../../../components/ConsistencyMap';
 import { LineChart } from '../../../../components/LineChart';
 import { WeightChart } from '../../../../components/WeightChart';
+import { RegistrosDePeso } from '../../../../components/RegistrosDePeso';
+import { kgCorto } from '../../../../lib/peso';
 import { getExerciseLibrary } from '../../../../lib/firestore/exercises';
 import { alargar, ALARGAR_MESES, coachingDe, DIAS_DE_MARGEN, fechaEscrita } from '../../../../lib/coaching';
 import { colorDelPeriodo, PeriodoDeCoaching, textoDelPeriodo } from '../../../../components/PeriodoDeCoaching';
@@ -60,7 +56,6 @@ import {
   getUserProfile,
   removeClientFromTrainer,
   setClientPlanPauses,
-  setClientStepGoal,
   setClientVip,
   setCoachingHasta,
   updateClientStatus,
@@ -136,11 +131,6 @@ export default function ClientDetailScreen() {
     ultimaPestana = p;
     setPestana(p);
   };
-  // Los pasos al día que le pide su entrenador (ver lib/pasos.ts).
-  const [pasosInput, setPasosInput] = useState('');
-  const [savingPasos, setSavingPasos] = useState(false);
-  const [pasosSaved, setPasosSaved] = useState(false);
-  const [pasosError, setPasosError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   // El periodo de coaching (ver lib/coaching.ts): una fecha escrita a mano y
   // el aviso de que se acaba.
@@ -189,7 +179,6 @@ export default function ClientDetailScreen() {
           Object.fromEntries(exerciseData.map((e) => [e.id, e.measure ?? 'reps']))
         );
         setCoachNote(noteData);
-        setPasosInput(clientData?.stepGoal ? String(clientData.stepGoal) : '');
         setRoutines(routineData);
         setWeightLogs(weightData);
         setWorkoutLogs(workoutData);
@@ -299,35 +288,6 @@ export default function ClientDetailScreen() {
     fijarPeriodo(hasta);
   };
 
-  /**
-   * Guarda los pasos al día. Vacío = quitar el objetivo y volver al de la app;
-   * no es lo mismo que escribir 10.000 a mano, porque el día que cambie el que
-   * trae CALICO este alumno se quedaría con el viejo escrito a fuego.
-   */
-  const handleSaveStepGoal = async () => {
-    if (!id || savingPasos) return;
-    const limpio = pasosInput.trim();
-    const meta = limpio ? objetivoDeTexto(limpio) : undefined;
-    // Al salir del campo sin tocar nada no se guarda (ni se avisa) nada.
-    if (limpio && meta !== undefined && meta === client?.stepGoal) return;
-    if (!limpio && !client?.stepGoal) return;
-    if (limpio && meta === undefined) {
-      setPasosError(frase`Escribe entre ${conMiles(OBJETIVO_MINIMO)} y ${conMiles(OBJETIVO_MAXIMO)} pasos.`);
-      return;
-    }
-    setPasosError(null);
-    setSavingPasos(true);
-    try {
-      await setClientStepGoal(id, meta);
-      setClient((prev) => (prev ? { ...prev, stepGoal: meta } : prev));
-      setPasosSaved(true);
-      setTimeout(() => setPasosSaved(false), 2500);
-    } catch {
-      setPasosError('No se pudo guardar.');
-    } finally {
-      setSavingPasos(false);
-    }
-  };
 
   const handleSaveNote = async () => {
     if (!id || !profile) return;
@@ -621,14 +581,14 @@ export default function ClientDetailScreen() {
            * AJUSTES DEL ALUMNO: lo que se decide una vez y no se vuelve a mirar.
            * Eran tres tarjetas —VIP, pasos y pedirle el esfuerzo— con un solo
            * control cada una. El esfuerzo se fue a la rutina, que es donde se
-           * decide cómo se entrena; VIP y pasos van juntos, y plegados dicen lo
-           * que hay puesto sin abrirlos.
+           * decide cómo se entrena, y los pasos se quitaron de la app; plegado,
+           * dice lo que hay puesto sin abrirlo.
            */}
           <CollapsibleCard
             id="alumno-ajustes"
             icon="options-outline"
             title="Ajustes del alumno"
-            hint={`${currentStatus !== 'active' ? `${CLIENT_STATUS_LABEL[currentStatus]} · ` : ''}${client?.vip === true ? 'VIP · ' : ''}${frase`${conMiles(client?.stepGoal ?? OBJETIVO_POR_DEFECTO)} pasos`}`}
+            hint={[currentStatus !== 'active' ? CLIENT_STATUS_LABEL[currentStatus] : null, client?.vip === true ? 'VIP' : null].filter(Boolean).join(' · ') || undefined}
             defaultOpen={false}
             style={styles.ultimaTarjeta}
           >
@@ -665,28 +625,6 @@ export default function ClientDetailScreen() {
               />
             </View>
 
-            {/* Los pasos se guardan solos al salir del campo, como las notas: un
-                botón de "Guardar" para un número era un toque de más. */}
-            <Text style={[styles.ajusteTitulo, { marginTop: spacing.md }]}>Pasos al día</Text>
-            <Text style={styles.mutedText}>
-              Los ve en su nutrición, y lo que ande suma calorías al día. Vacío: {conMiles(OBJETIVO_POR_DEFECTO)}.
-            </Text>
-            <TextField
-              value={pasosInput}
-              onChangeText={(v) => {
-                setPasosInput(v);
-                setPasosError(null);
-              }}
-              onBlur={handleSaveStepGoal}
-              onSubmitEditing={handleSaveStepGoal}
-              placeholder={String(OBJETIVO_POR_DEFECTO)}
-              keyboardType="number-pad"
-              returnKeyType="done"
-              containerStyle={{ marginTop: spacing.sm, marginBottom: 0 }}
-              style={{ marginBottom: 0 }}
-            />
-            {pasosError ? <Text style={styles.confirmText}>{pasosError}</Text> : null}
-            {pasosSaved ? <Text style={styles.confirmSavedText}>Objetivo guardado</Text> : null}
 
             {/* Sacarlo del grupo, al final de los ajustes y no en una tarjeta
                 propia: era una sección entera para un botón que se usa una vez
@@ -1126,10 +1064,12 @@ export default function ClientDetailScreen() {
             id="alumno-peso"
             icon="trending-down-outline"
             title="Evolución del peso"
-            hint={weightLogs.length > 0 ? `${weightLogs[0].weightKg} kg` : 'Sin registros'}
+            hint={weightLogs.length > 0 ? `${kgCorto(weightLogs[weightLogs.length - 1].weightKg)} kg` : 'Sin registros'}
             defaultOpen={false}
           >
             <WeightChart logs={weightLogs} />
+            {/* Cada registro con su fecha, su nota y su foto si la subió. */}
+            <RegistrosDePeso logs={weightLogs} />
           </CollapsibleCard>
         </>
       ) : null}

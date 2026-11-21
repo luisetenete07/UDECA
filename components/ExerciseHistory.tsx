@@ -1,7 +1,6 @@
 import React from 'react';
-import { frase, t } from '../lib/idioma';
-import { diaMes } from '../lib/fechas';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { frase } from '../lib/idioma';
+import { StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
@@ -35,22 +34,22 @@ interface Props {
 }
 
 /**
- * Historial de UN ejercicio: cuánto se hace ahora, cuánto se ha mejorado y qué
- * se hizo cada día.
+ * Historial de UN ejercicio: cuánto se hace ahora, cuánto se ha mejorado y su
+ * gráfica de marcas.
  *
- * La versión anterior era una gráfica y poco más: para saber qué series se
- * habían hecho un día concreto había que salir a la pestaña de entrenos,
- * buscar la fecha y abrir la sesión entera. Aquí el ejercicio se cuenta solo,
- * y de arriba abajo en el orden en que se pregunta: cuánto hago ahora, cuánto
- * he mejorado, y qué hice cada día.
+ * LA GRÁFICA, SOLO CON MARCAS DE VERDAD. Un punto por cada registro, con la
+ * mejor marca de ese registro. Los días sin entrenar no son puntos (no hay
+ * ceros que no han pasado) y los puntos van seguidos, sin huecos por los días
+ * de en medio.
  *
- * Las series se leen como marcas y no como una tabla, con una barra que las
- * compara de un vistazo: dos sesiones seguidas se comparan mirando, sin tener
- * que restar números de cabeza.
+ * CON EL PESO CORPORAL NO HAY KG. Si el ejercicio se hace sin lastre —o solo
+ * a veces con él— la gráfica va en repeticiones (o segundos) y los kilos solo
+ * se escriben en el punto que los llevó. Antes, bastaba un registro con lastre
+ * para que la gráfica entera pasara a kg y los días sin él cayeran a 0 kg.
+ *
+ * Fuera "Día a día": lo pidió Luis. La gráfica ya dice qué se hizo cada vez.
  */
 export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) {
-  const [verTodas, setVerTodas] = React.useState(false);
-
   const progresion = React.useMemo(
     () => exerciseProgression(logs, exerciseId),
     [logs, exerciseId]
@@ -63,9 +62,6 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
     () => exerciseSessions(logs, exerciseId, measureByExercise),
     [logs, exerciseId, measureByExercise]
   );
-
-  // Al cambiar de ejercicio, la lista vuelve a empezar recogida.
-  React.useEffect(() => setVerTodas(false), [exerciseId]);
 
   /*
    * Los días con alguna serie de VERDAD, es decir, no en regresión. Son los que
@@ -89,17 +85,18 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
       : ((measureByExercise?.[exerciseId] as ExerciseMeasure | undefined) ?? 'reps');
   const esAguante = isHoldMeasure(medida);
   const esCombo = medida === 'combo';
-  const unidad = progresion.hasWeight ? 'kg' : esAguante ? 's' : 'reps';
-  /** Lo que se compara entre sesiones: el lastre si lo hay, y si no la marca. */
+  // En kg solo si TODOS los registros llevan lastre: un ejercicio de peso
+  // corporal no tiene kilos que contar.
+  const usaKg = progresion.hasWeight && progresion.points.every((p) => p.weight !== 0);
+  const unidad = usaKg ? 'kg' : esAguante ? 's' : 'reps';
+  /** Lo que se compara entre sesiones: el lastre si siempre lo hay, y si no la marca. */
   const valorDe = (s: { sets: { reps: number; weight: number; regresion?: boolean }[] }) =>
-    Math.max(...s.sets.filter((x) => !x.regresion).map((x) => (progresion.hasWeight ? x.weight : x.reps)), 0);
+    Math.max(...s.sets.filter((x) => !x.regresion).map((x) => (usaKg ? x.weight : x.reps)), 0);
 
   // Ojo con el orden: `sesiones` viene de la más reciente a la más antigua.
   const ahora = valorDe(deVerdad[0]);
   const primera = valorDe(deVerdad[deVerdad.length - 1]);
   const cambio = ahora - primera;
-  const maximo = Math.max(...deVerdad.map(valorDe), 1);
-  const mejorHistorico = maximo;
 
   /**
    * Cada punto de la gráfica lleva escrita SU MARCA y SU DÍA. La línea sola
@@ -115,14 +112,11 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
     ].filter(Boolean);
     return {
       date: p.date,
-      value: progresion.hasWeight ? p.weight : p.reps,
+      value: usaKg ? p.weight : p.reps,
       label: partes.join(' '),
     };
   });
 
-  // Los 3 últimos días: la gráfica de arriba ya enseña la tendencia, y la
-  // lista entera era media pantalla de barras casi iguales.
-  const visibles = verTodas ? sesiones : sesiones.slice(0, 3);
   const totalSeries = sesiones.reduce((n, s) => n + s.sets.length, 0);
 
   return (
@@ -188,92 +182,6 @@ export function ExerciseHistory({ logs, exerciseId, measureByExercise }: Props) 
         />
       </Card>
 
-      <Card style={styles.card}>
-        <Text style={styles.tituloSeccion}>Día a día</Text>
-        <Text style={styles.pista}>
-          Cada barra compara ese día con tu mejor marca. Las series, tal y como las hiciste.
-        </Text>
-
-        {visibles.map((s) => {
-          const valor = valorDe(s);
-          const esRecord = valor >= mejorHistorico && valor > 0;
-          const fecha = new Date(s.date);
-          // Todo el día en regresión: no hay marca de este ejercicio que poner.
-          const soloRegresion = s.sets.every((x) => x.regresion);
-          // La mejor serie del día se marca para que salte a la vista cuál fue
-          // (de las de verdad: una en regresión no es "la mejor" de nada).
-          const mejorSerie = valor;
-          return (
-            <View key={s.id} style={styles.dia}>
-              <View style={styles.diaCabecera}>
-                <Text style={styles.diaFecha}>
-                  {diaMes(fecha)}
-                </Text>
-                <Text style={styles.diaNombre} numberOfLines={1}>
-                  {s.dayName}
-                </Text>
-                {esRecord ? (
-                  <Ionicons name="trophy" size={13} color={colors.primary} />
-                ) : null}
-                <Text style={[styles.diaValor, soloRegresion && styles.diaValorRegresion]}>
-                  {soloRegresion ? t('En regresión') : `${num(valor)} ${unidad}`}
-                </Text>
-              </View>
-              <View style={styles.barra}>
-                <View
-                  style={[
-                    styles.barraRelleno,
-                    { width: `${Math.max(4, (valor / maximo) * 100)}%` },
-                    esRecord && styles.barraRecord,
-                    soloRegresion && styles.barraRegresion,
-                  ]}
-                />
-              </View>
-              <View style={styles.marcas}>
-                {s.sets.map((set, i) => {
-                  const suya = progresion.hasWeight ? set.weight : set.reps;
-                  const destaca = !set.regresion && suya >= mejorSerie && mejorSerie > 0;
-                  return (
-                    <View
-                      key={i}
-                      style={[styles.marca, destaca && styles.marcaMejor, set.regresion && styles.marcaRegresion]}
-                    >
-                      {set.cluster ? (
-                        <Ionicons name="layers-outline" size={11} color={colors.textMuted} />
-                      ) : null}
-                      {set.regresion ? (
-                        <Ionicons name="trending-down" size={11} color={colors.warning} />
-                      ) : null}
-                      <Text
-                        style={[
-                          styles.marcaTexto,
-                          destaca && styles.marcaTextoMejor,
-                          set.regresion && styles.marcaTextoRegresion,
-                        ]}
-                      >
-                        {set.label}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-          );
-        })}
-
-        {sesiones.length > 3 ? (
-          <Pressable onPress={() => setVerTodas((v) => !v)} style={styles.masBoton}>
-            <Ionicons
-              name={verTodas ? 'chevron-up' : 'chevron-down'}
-              size={14}
-              color={colors.primary}
-            />
-            <Text style={styles.masTexto}>
-              {verTodas ? 'Ver menos' : frase`Ver los ${sesiones.length} días`}
-            </Text>
-          </Pressable>
-        ) : null}
-      </Card>
     </>
   );
 }
@@ -340,53 +248,7 @@ const styles = StyleSheet.create({
   datoValor: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   datoEtiqueta: { ...typography.small, color: colors.textFaint, fontSize: 10, marginTop: 1 },
 
-  tituloSeccion: { ...typography.label, color: colors.text },
-  pista: { ...typography.small, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md },
 
-  dia: { marginBottom: spacing.md },
-  diaCabecera: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  diaFecha: {
-    ...typography.small,
-    color: colors.text,
-    fontFamily: fonts.semiBold,
-    minWidth: 52,
-  },
-  diaNombre: { ...typography.small, color: colors.textFaint, flex: 1 },
-  diaValor: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
-  diaValorRegresion: { color: colors.warning },
-  barra: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.surfaceAlt,
-    overflow: 'hidden',
-    marginTop: 5,
-  },
-  barraRelleno: { height: '100%', backgroundColor: colors.primaryDark, borderRadius: 3 },
-  barraRecord: { backgroundColor: colors.primary },
-  barraRegresion: { backgroundColor: colors.warning },
-  marcas: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 7 },
-  marca: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.sm,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  marcaMejor: { backgroundColor: colors.primaryMuted },
   // En regresión: se ve, en ámbar, y nunca como la mejor del día.
-  marcaRegresion: { backgroundColor: colors.warningMuted },
-  marcaTextoRegresion: { color: colors.warning },
-  marcaTexto: { ...typography.small, color: colors.textMuted, fontSize: 12 },
-  marcaTextoMejor: { color: colors.primaryBright, fontFamily: fonts.semiBold },
 
-  masBoton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: spacing.sm,
-  },
-  masTexto: { ...typography.small, color: colors.primary, fontFamily: fonts.semiBold },
 });

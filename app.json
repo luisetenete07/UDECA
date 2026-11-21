@@ -20,22 +20,11 @@
       "config": {
         "usesNonExemptEncryption": false
       },
-      "usesAppleSignIn": true,
-      "infoPlist": {
-        "NSMotionUsageDescription": "Para contar los pasos que das cada día y sumarlos a tu plan de nutrición, sin que tengas que apuntarlos a mano.",
-        "NSHealthShareUsageDescription": "Para leer los pasos que das cada día, también los de tu Apple Watch, y sumarlos a tu plan de nutrición sin que tengas que apuntarlos a mano.",
-        "NSHealthUpdateUsageDescription": "Mastery solo lee tus pasos de Salud para tu plan de nutrición. No escribe ni cambia ningún dato de Salud."
-      },
-      "entitlements": {
-        "com.apple.developer.healthkit": true,
-        "com.apple.developer.healthkit.access": []
-      }
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "entrenadores.app",
-      "permissions": [
-        "android.permission.ACTIVITY_RECOGNITION"
-      ],
+      "permissions": [],
       "blockedPermissions": [
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_MEDIA_VIDEO"

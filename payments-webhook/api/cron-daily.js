@@ -139,17 +139,8 @@ export default async function handler(req, res) {
       }
     });
 
-    // ---- Los domingos: pasos de la semana, para el resumen ----
+    // ---- Los domingos, el resumen de la semana ----
     const esDomingo = new Date(now).getDay() === 0;
-    const pasosSemana = new Map();
-    if (esDomingo) {
-      const pasosSnap = await db.collection('stepLogs').where('date', '>=', inicioSemana).get();
-      pasosSnap.forEach((doc) => {
-        const p = doc.data();
-        if (!p?.clientId || typeof p.steps !== 'number') return;
-        pasosSemana.set(p.clientId, (pasosSemana.get(p.clientId) ?? 0) + p.steps);
-      });
-    }
 
     // ---- 2. Alumnos ----
     const usersSnap = await db.collection('users').get();
@@ -210,7 +201,6 @@ export default async function handler(req, res) {
         const resumen = resumenDeLaSemana({
           entrenos: dates.filter((d) => d >= weekStart).length,
           series: seriesSemana.get(doc.id) ?? 0,
-          pasos: pasosSemana.get(doc.id) ?? 0,
           racha: streakFrom(dayStamps),
         });
         if (resumen) {

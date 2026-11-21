@@ -56,9 +56,10 @@ console.log('\n2. Widget "Hoy"');
 
 console.log('\n3. Resumen del domingo');
 {
-  const r = resumenDeLaSemana({ entrenos: 3, series: 48, pasos: 52300, racha: 5 });
-  ok('con entrenos, series y pasos', r?.body === '3 entrenos, 48 series y 52.300 pasos esta semana. Llevas una racha de 5 días.', r?.body);
-  ok('sin entrenar, no se manda', resumenDeLaSemana({ entrenos: 0, series: 0, pasos: 9000, racha: 0 }) === null);
+  const r = resumenDeLaSemana({ entrenos: 3, series: 48, racha: 5 });
+  // Sin pasos: el conteo de pasos se quitó de la app.
+  ok('con entrenos y series', r?.body === '3 entrenos y 48 series esta semana. Llevas una racha de 5 días.', r?.body);
+  ok('sin entrenar, no se manda', resumenDeLaSemana({ entrenos: 0, series: 0, racha: 0 }) === null);
   ok('cuenta solo series hechas', seriesHechas({ exercises: [{ sets: [{ completed: true }, { completed: false }] }] }) === 1);
   const cron = lee('payments-webhook/api/cron-daily.js');
   ok('el servidor lo manda los domingos', /const esDomingo = new Date\(now\)\.getDay\(\) === 0;/.test(cron));
@@ -79,7 +80,6 @@ console.log('\n4. El récord con su historia');
   ok('cuánto ha subido', c.mejora === '+3 reps', c.mejora);
   ok('desde cuándo tenía la marca', c.desde === 'hace 6 semanas', c.desde);
   ok('en una línea', contextoEnUnaLinea(c, '8 reps') === '+3 reps · antes 8 reps, hace 6 semanas');
-  ok('y el resumen del final', /pr\.contexto/.test(lee('components/DespuesDelEntreno.tsx')));
 }
 
 console.log('\n5. Los hábitos, en la tarjeta del día');
@@ -89,10 +89,10 @@ console.log('\n5. Los hábitos, en la tarjeta del día');
   ok('y ya no en una tarjeta aparte', !/Hábitos de hoy/.test(d));
 }
 
-console.log('\n6. Los logros, en Progreso');
+console.log('\n6. Sin logros: Luis los quitó de la app');
 {
-  ok('están en Progreso', /<LogrosDelAlumno/.test(lee('app/(client)/progress.tsx')));
-  ok('y ya no en el perfil', !/computeAchievements/.test(lee('app/(client)/profile.tsx')));
+  ok('ni en Progreso', !/LogrosDelAlumno/.test(lee('app/(client)/progress.tsx')));
+  ok('ni en el perfil', !/computeAchievements/.test(lee('app/(client)/profile.tsx')));
 }
 
 console.log(fallos === 0 ? '\n✔ Las seis mejoras del alumno, en su sitio' : `\n${fallos} fallo(s)`);

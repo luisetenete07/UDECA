@@ -99,7 +99,8 @@ console.log('\nPantallas, reglas e índices');
   ok('la pantalla GTG tiene "Añadir serie" y "Quitar serie"', /onCambiarObjetivo\(p\.objetivo \+ 1\)/.test(lee('components/PantallaGtg.tsx')) && /onCambiarObjetivo\(p\.objetivo - 1\)/.test(lee('components/PantallaGtg.tsx')));
   const entreno = lee('app/(client)/workout.tsx');
   ok('la rutina diaria tiene su más y su menos', /cambiarSeries\(e\.id, series \+ 1\)/.test(lee('components/RutinaDiariaDelDia.tsx')));
-  ok('el alumno lo ve en Progreso', /<SeriesDelGtg clientId=\{uid\}/.test(lee('app/(client)/progress.tsx')));
+  // Luis lo quitó de "Mi progreso" del alumno; él lo sigue viendo en la ficha.
+  ok('el alumno ya no lo ve en Progreso', !/<SeriesDelGtg/.test(lee('app/(client)/progress.tsx')));
   ok('y el entrenador en su ficha', /<SeriesDelGtg\s+clientId=\{id\}\s+trainerId=\{profile\.uid\}/.test(lee('app/(trainer)/clients/[id]/index.tsx')));
   ok('las reglas dejan guardar las series de hoy', /'esfuerzo', 'gtg'\]/.test(lee('firestore.rules')));
   ok('con su índice para el historial', (lee('firestore.indexes.json').match(/"rutinasDiariasDias"/g) ?? []).length >= 2);

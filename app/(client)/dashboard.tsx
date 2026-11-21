@@ -31,7 +31,6 @@ import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
 import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { RutinaDiariaDelDia } from '../../components/RutinaDiariaDelDia';
-import { ContadorDePasos } from '../../components/ContadorDePasos';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import {
@@ -42,12 +41,6 @@ import {
   unlogHabit,
 } from '../../lib/firestore/habits';
 import { getWeightLogsForClient } from '../../lib/firestore/weightLogs';
-import { getStepLogsForClient, type StepLog } from '../../lib/firestore/steps';
-import { getActiveNutritionPlanForClient, getMealLogsForClient } from '../../lib/firestore/nutrition';
-import { objetivosDelDia } from '../../lib/macrosDelDia';
-import { balanceDelDia, caloriasDePasos, OBJETIVO_POR_DEFECTO, pasosDeHoy } from '../../lib/pasos';
-import { conMiles } from '../../lib/texto';
-import { FilaDelDia } from '../../components/FilaDelDia';
 import { getWorkoutLogsForClient } from '../../lib/firestore/workoutLogs';
 import { flushPendingWorkouts } from '../../lib/offlineQueue';
 import { getCached, setCached } from '../../lib/screenCache';
@@ -60,7 +53,6 @@ import { SE_APUNTA_EL_ENTRENO } from '../../lib/modoDeEntreno';
 import { getCyclesForClientSelf } from '../../lib/firestore/cycles';
 import { getUserProfile, reportClientPayment } from '../../lib/firestore/users';
 import { coachingDe } from '../../lib/coaching';
-import { kgCorto } from '../../lib/peso';
 import { notifyUser } from '../../lib/notifications';
 import { showToast } from '../../components/Toast';
 import { activeCycle, computeCycleStats, cycleWeekInfo } from '../../lib/cycleStats';
@@ -76,15 +68,12 @@ import {
   WEEKDAY_NAMES,
   type Habit,
   type HabitLog,
-  type MealLog,
-  type NutritionPlan,
   type Routine,
   type TrainingCycle,
   type WeightLog,
   type WorkoutLog,
 } from '../../lib/types';
 
-const WEIGHT_REMINDER_DAYS = 7;
 
 interface ClientDashData {
   routine: Routine | null;
@@ -92,9 +81,6 @@ interface ClientDashData {
   workoutLogs: WorkoutLog[];
   habits: Habit[];
   habitLogs: HabitLog[];
-  stepLogs: StepLog[];
-  nutritionPlan: NutritionPlan | null;
-  mealLogs: MealLog[];
   cycleAnchor: AnclaDelAlumno | null;
 }
 
@@ -110,9 +96,6 @@ export default function ClientDashboard() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
   const [habits, setHabits] = useState<Habit[]>(cached?.habits ?? []);
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>(cached?.habitLogs ?? []);
-  const [stepLogs, setStepLogs] = useState<StepLog[]>(cached?.stepLogs ?? []);
-  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(cached?.nutritionPlan ?? null);
-  const [mealLogs, setMealLogs] = useState<MealLog[]>(cached?.mealLogs ?? []);
   const [cycleAnchor, setCycleAnchor] = useState<AnclaDelAlumno | null>(cached?.cycleAnchor ?? null);
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
@@ -127,18 +110,13 @@ export default function ClientDashboard() {
       if (!profile) return;
       // Sube entrenos que quedaron pendientes por falta de conexión.
       await flushPendingWorkouts().catch(() => {});
-      const [routineData, weightData, workoutData, habitData, habitLogData, stepData, planData, mealData] =
+      const [routineData, weightData, workoutData, habitData, habitLogData] =
         await Promise.all([
           getActiveRoutineForClient(profile.uid),
           getWeightLogsForClient(profile.uid),
           getWorkoutLogsForClient(profile.uid),
           getHabitsForClient(profile.uid),
           getHabitLogsForClient(profile.uid),
-          // Los pasos no pueden tumbar el inicio: sin ellos, la fila sale a cero.
-          getStepLogsForClient(profile.uid).catch(() => [] as StepLog[]),
-          // Lo mismo con la nutrición: sin ella, la fila de calorías no sale.
-          getActiveNutritionPlanForClient(profile.uid).catch(() => null),
-          getMealLogsForClient(profile.uid).catch(() => [] as MealLog[]),
         ]);
       const anchor = routineData ? await anclaDelAlumno(routineData.id, profile) : null;
       if (isActive && !isActive()) return;
@@ -148,18 +126,12 @@ export default function ClientDashboard() {
       setWorkoutLogs(workoutData);
       setHabits(habitData);
       setHabitLogs(habitLogData);
-      setStepLogs(stepData);
-      setNutritionPlan(planData);
-      setMealLogs(mealData);
       setCached(cacheKey, {
         routine: routineData,
         weightLogs: weightData,
         workoutLogs: workoutData,
         habits: habitData,
         habitLogs: habitLogData,
-        stepLogs: stepData,
-        nutritionPlan: planData,
-        mealLogs: mealData,
         cycleAnchor: anchor,
       } satisfies ClientDashData);
       setLoading(false);
@@ -190,14 +162,6 @@ export default function ClientDashboard() {
     },
     [profile, cacheKey]
   );
-
-  // Al leer pasos del móvil solo cambian los pasos: recargar el inicio entero
-  // por eso serían seis consultas y la pantalla repintándose cada minuto.
-  const recargarPasos = useCallback(async () => {
-    if (!profile) return;
-    const pasos = await getStepLogsForClient(profile.uid).catch(() => null);
-    if (pasos) setStepLogs(pasos);
-  }, [profile]);
 
   useFocusEffect(
     useCallback(() => {
@@ -301,11 +265,9 @@ export default function ClientDashboard() {
         descanso: sesion.isRest,
         nombreDelDia: sesion.day?.name,
         ejercicios: sesion.day?.exercises.length,
-        pasos: pasosDeHoy(stepLogs)?.steps ?? null,
-        objetivoPasos: profile.stepGoal ?? OBJETIVO_POR_DEFECTO,
       })
     ).catch(() => {});
-  }, [loading, profile, routine, cycleAnchor, workoutLogs, stepLogs]);
+  }, [loading, profile, routine, cycleAnchor, workoutLogs]);
 
   if (loading)
     return (
@@ -314,20 +276,6 @@ export default function ClientDashboard() {
       </ScreenContainer>
     );
 
-  const currentWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weightKg : null;
-  /*
-   * Las calorías de hoy, con la misma cuenta que Nutrición: lo del plan más lo
-   * ganado andando, contra lo comido (lib/pasos.ts). Solo si tiene objetivos:
-   * a quien no lleva plan no se le enseña una fila vacía.
-   */
-  const objetivosHoy = objetivosDelDia(nutritionPlan, profile?.nutritionTargets);
-  const balanceHoy = objetivosHoy
-    ? balanceDelDia(
-        objetivosHoy.dailyCalories,
-        mealLogs.filter((m) => esHoy(m.date)).reduce((t, m) => t + (m.calories || 0), 0),
-        caloriasDePasos(pasosDeHoy(stepLogs)?.steps ?? 0, currentWeight ?? undefined)
-      )
-    : null;
   const sessions = weekSessions(workoutLogs);
   /*
    * Pausa del plan (lesión, viaje, una semana imposible). Toca tres cosas:
@@ -366,22 +314,6 @@ export default function ClientDashboard() {
     ? progresoGtg(routine, entrenoDeHoy(workoutLogs, routine!.id))
     : null;
 
-  /*
-   * El aviso de peso solo se le pone a quien YA se pesa.
-   *
-   * Antes salía también a quien no lo había registrado nunca, y a ese no había
-   * forma de quitárselo: un recordatorio ámbar en su pantalla de inicio, todos
-   * los días, para siempre, por no usar algo que es opcional. Eso no es un
-   * recordatorio, es una piedra en el zapato.
-   *
-   * A quien empieza ya se lo ofrece "Primeros pasos" —una vez, con su casilla
-   * y su forma de darlo por hecho—, así que el aviso no aportaba nada nuevo:
-   * repetía la misma invitación sin la salida.
-   */
-  const lastWeightLog = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
-  const showWeightReminder =
-    !!lastWeightLog &&
-    (Date.now() - lastWeightLog.date) / (1000 * 60 * 60 * 24) > WEIGHT_REMINDER_DAYS;
 
   const today = todayStart();
   const todayLogByHabit = new Map(
@@ -760,16 +692,6 @@ export default function ClientDashboard() {
         <RutinaDiariaDelDia profile={profile} />
       </FadeIn>
 
-      {showWeightReminder ? (
-        <Pressable onPress={() => router.push('/(client)/progress')}>
-          <View style={styles.reminderBanner}>
-            <Ionicons name="alert-circle-outline" size={18} color={colors.warning} />
-            <Text style={styles.reminderText}>
-              Llevas más de una semana sin registrar tu peso.
-            </Text>
-          </View>
-        </Pressable>
-      ) : null}
 
 
       {/* Plan semanal: el anillo manda, y debajo la tira de días. */}
@@ -871,39 +793,8 @@ export default function ClientDashboard() {
           </View>
         </View>
 
-        {/* PASOS, CALORÍAS Y PESO, DENTRO DE LA SEMANA.
-            Eran cajas sueltas debajo, con su borde cada una, contando cosas
-            de la misma semana por separado. Aquí son filas de la misma
-            tarjeta: lo entrenado, lo andado, lo comido y lo que pesas, de un
-            vistazo. La racha y las sesiones no se repiten: ya están en el
-            anillo de arriba.
-
-            Los pasos, encima: cambian cada día y suman a las calorías, que van
-            justo debajo. Se leen solos del móvil al abrir la app, así que la
-            cifra ya está puesta. Las calorías, solo con objetivos puestos. Las
-            tres filas llevan a Nutrición, que es donde se apuntan. */}
-        {profile ? (
-          <ContadorDePasos
-            compacto
-            profile={profile}
-            registros={stepLogs}
-            onCambio={recargarPasos}
-            onAbrir={() => router.push('/(client)/progress?tab=nutricion')}
-          />
-        ) : null}
-        {balanceHoy && balanceHoy.disponibles > 0 ? (
-          <FilaDelDia
-            icono="restaurant-outline"
-            etiqueta="Calorías"
-            valor={conMiles(balanceHoy.consumidas)}
-            de={frase`${conMiles(balanceHoy.disponibles)} kcal`}
-            progreso={balanceHoy.consumidas / balanceHoy.disponibles}
-            tono={balanceHoy.pasado ? 'pasado' : 'normal'}
-            onPress={() => router.push('/(client)/progress?tab=nutricion')}
-          />
-        ) : null}
         {/* LOS HÁBITOS DEL DÍA, AQUÍ Y NO EN UNA TARJETA AL FINAL.
-            Son cosas de hoy, como los pasos y las calorías: van en la misma
+            Son cosas de hoy: van en la misma
             lista, con su cuenta y su barra, y se marcan con un toque sin
             salir de la tarjeta. Al final de la pantalla casi no se veían. */}
         {habits.length > 0 ? (
@@ -943,17 +834,6 @@ export default function ClientDashboard() {
               })}
             </View>
           </View>
-        ) : null}
-        {/* El peso, solo si hay alguno: "Sin registrar" era una fila para
-            decir que no hay nada (para apuntarlo está Primeros pasos y
-            Progreso). */}
-        {currentWeight != null ? (
-          <FilaDelDia
-            icono="body-outline"
-            etiqueta="Peso"
-            valor={`${kgCorto(currentWeight)} kg`}
-            onPress={() => router.push('/(client)/progress?tab=nutricion')}
-          />
         ) : null}
         {/*
           APUNTAR UN ENTRENO DE OTRO DÍA, COMO UNA FILA MÁS DE LA SEMANA.
@@ -1076,17 +956,6 @@ const styles = StyleSheet.create({
   habitoTextoHecho: { color: colors.textMuted, textDecorationLine: 'line-through' },
   greetingLabel: { ...typography.label, color: colors.primary, textTransform: 'uppercase' },
   greeting: { ...typography.h1, color: colors.text, marginTop: 2 },
-  reminderBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.warningMuted,
-    borderWidth: 1,
-    borderColor: colors.warning,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
   payCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1115,7 +984,6 @@ const styles = StyleSheet.create({
   payActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   payReported: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: spacing.sm },
   payReportedText: { ...typography.small, color: colors.primaryBright, fontFamily: fonts.semiBold },
-  reminderText: { ...typography.small, color: colors.warning, fontFamily: fonts.semiBold, flex: 1 },
   streakInline: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
   streakInlineText: {
     ...typography.small,

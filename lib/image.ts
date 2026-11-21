@@ -73,6 +73,14 @@ export function pickMealPhoto(): Promise<string | null> {
   return pickImage({ maxSize: 500, compress: 0.5 });
 }
 
+/**
+ * La foto de un registro de peso: sin recortar (es el cuerpo entero), a 720 px
+ * y ligera, porque va en Firestore (lib/firestore/fotosDePeso.ts).
+ */
+export function pickWeightPhoto(): Promise<string | null> {
+  return pickImage({ maxSize: 720, compress: 0.6, sinRecorte: true });
+}
+
 /** Portada de curso/sección (16:9, ligera; se guarda embebida en el curso). */
 export function pickCoverPhoto(): Promise<string | null> {
   return pickImage({ maxSize: 640, compress: 0.55, aspect: [16, 9] });

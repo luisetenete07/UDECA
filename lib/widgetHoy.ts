@@ -4,8 +4,7 @@ import { Platform } from 'react-native';
 /*
  * EL WIDGET "HOY" DE LA PANTALLA DEL MÓVIL (Android).
  *
- * Lo de hoy sin abrir la app: qué entreno toca (o si ya está hecho) y los
- * pasos. El widget no puede preguntar nada a Firestore —vive fuera de la app,
+ * Lo de hoy sin abrir la app: qué entreno toca (o si ya está hecho). El widget no puede preguntar nada a Firestore —vive fuera de la app,
  * sin sesión—, así que la app le deja apuntado lo que tiene que enseñar cada
  * vez que se abre el inicio, y le pide que se repinte.
  *

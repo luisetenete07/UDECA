@@ -7,8 +7,8 @@ import type { WeightLog } from './types';
  *
  * Estaba en Progreso, en una pestaña propia entre los entrenos y los
  * ejercicios, y ahí no significaba nada: el peso no sube ni baja por lo que
- * levantas, sube y baja por lo que comes. Puesto al lado de las calorías, los
- * macros y los pasos, la cifra por fin se lee junto a lo que la explica.
+ * levantas, sube y baja por lo que comes. Puesto al lado de las calorías y los
+ * macros, la cifra por fin se lee junto a lo que la explica.
  *
  * Aquí vive lo que hay que calcular para enseñarlo: cuánto pesa hoy, cuánto se
  * ha movido, y cuánto falta para donde quiere llegar. Son cuatro cuentas, pero

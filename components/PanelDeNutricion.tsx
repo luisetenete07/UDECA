@@ -22,11 +22,9 @@ import { objetivosDelDia } from '../lib/macrosDelDia';
 import { textoDeGramos, textoDeRango, type MacrosPorKg, type Rango } from '../lib/macrosPorKg';
 import { updateUserProfile } from '../lib/firestore/users';
 import { MacroCalculator } from './MacroCalculator';
-import { ContadorDePasos } from './ContadorDePasos';
 import { BloqueDePeso } from './BloqueDePeso';
 import { getWeightLogsForClient } from '../lib/firestore/weightLogs';
-import { getStepLogsForClient, type StepLog } from '../lib/firestore/steps';
-import { balanceDelDia, caloriasDePasos, pasosDeHoy, textoDelBalance } from '../lib/pasos';
+import { balanceDelDia, textoDelBalance } from '../lib/caloriasDelDia';
 import { conMiles } from '../lib/texto';
 import type { WeightLog } from '../lib/types';
 import { Sheet } from './Sheet';
@@ -36,8 +34,8 @@ import { fonts, colors, radius, spacing, tabularNums, typography } from '../lib/
 import { type MealBook, type MealLog, type NutritionPlan } from '../lib/types';
 
 /**
- * Toda la nutrición: el peso, los pasos, los macros, las comidas y las
- * libretas del coach. Las fotos de progreso se quitaron: fotos y vídeos van por
+ * Toda la nutrición: el peso, los macros, las comidas y las libretas del
+ * coach. Las fotos de progreso se quitaron: fotos y vídeos van por
  * WhatsApp o Telegram, y CALICO se centra en lo que solo hace ella.
  *
  * Era una pestaña propia de la app y ahora vive dentro de Progreso, en la
@@ -82,23 +80,14 @@ export function PanelDeNutricion() {
   const [receta, setReceta] = useState<string | null>(null);
   const [calcOpen, setCalcOpen] = useState(false);
   // El peso vive aquí desde que se sacó de Progreso: no sube ni baja por lo
-  // que levantas, sube y baja por lo que comes. Y de paso es lo que permite
-  // estimar el gasto de andar sin inventarse un peso medio.
+  // que levantas, sube y baja por lo que comes.
   const [pesos, setPesos] = useState<WeightLog[]>([]);
-  // Los pasos viven aquí porque son parte del presupuesto de calorías del día,
-  // no una sección aparte: andar 12.000 pasos cambia lo que se puede cenar.
-  const [pasos, setPasos] = useState<StepLog[]>([]);
-
-  // El último peso apuntado, que es lo que necesita el contador de pasos para
-  // estimar las calorías del día. Sin él no se estima nada, en vez de tirar de
-  // un peso medio inventado.
-  const ultimoPeso = pesos.length > 0 ? pesos[pesos.length - 1].weightKg : undefined;
 
   /*
    * DE QUIÉN SE CARGA, NO EL PERFIL ENTERO.
    *
    * Esto colgaba del objeto `profile`, y ese objeto es NUEVO cada vez que se
-   * relee la cuenta —al guardar los macros, al conectar los pasos, al volver de
+   * relee la cuenta —al guardar los macros, al volver de
    * cualquier sitio que llame a `refreshProfile`—, aunque no haya cambiado ni
    * una letra. Como `load` vive dentro de `useFocusEffect`, cada relectura de la
    * cuenta disparaba una recarga completa de la sección: seis consultas a
@@ -114,18 +103,16 @@ export function PanelDeNutricion() {
 
   const load = useCallback(async () => {
     if (!uid) return;
-    const [planData, mealData, bookData, pesoData, pasoData] = await Promise.all([
+    const [planData, mealData, bookData, pesoData] = await Promise.all([
       getActiveNutritionPlanForClient(uid),
       getMealLogsForClient(uid),
       trainerId ? getMealBooksForTrainer(trainerId).catch(() => []) : Promise.resolve([]),
       getWeightLogsForClient(uid).catch(() => []),
-      getStepLogsForClient(uid).catch(() => [] as StepLog[]),
     ]);
     setPlan(planData);
     setMeals(mealData);
     setBooks(bookData);
     setPesos(pesoData);
-    setPasos(pasoData);
     setLoading(false);
   }, [uid, trainerId]);
 
@@ -152,11 +139,10 @@ export function PanelDeNutricion() {
   const targets = objetivosDelDia(plan, nt);
   const mealTrainerId = plan?.trainerId ?? profile?.trainerId ?? '';
 
-  // El presupuesto de hoy: lo del plan más lo que se ha ganado andando (ver
-  // lib/pasos.ts). Se calcula aquí y no dentro de la tarjeta porque la cifra
-  // grande y la rejilla de macros tienen que contar lo mismo.
-  const kcalDeLosPasos = caloriasDePasos(pasosDeHoy(pasos)?.steps ?? 0, ultimoPeso);
-  const balance = balanceDelDia(targets?.dailyCalories ?? 0, totals.calories, kcalDeLosPasos);
+  // El presupuesto de hoy (lib/caloriasDelDia.ts). Se calcula aquí y no
+  // dentro de la tarjeta porque la cifra grande y la rejilla de macros tienen
+  // que contar lo mismo.
+  const balance = balanceDelDia(targets?.dailyCalories ?? 0, totals.calories);
 
   const handleSaveMacros = async (result: {
     dailyCalories: number;
@@ -218,16 +204,13 @@ export function PanelDeNutricion() {
   return (
     <>
       {/* El peso, lo primero: es la cifra que la gente viene a mirar y a
-          apuntar, y es aquí —junto a las calorías, los macros y los pasos—
+          apuntar, y es aquí —junto a las calorías y los macros—
           donde significa algo. En Progreso estaba entre los entrenos y los
           ejercicios, que es justo lo que no la explica. */}
       <BloqueDePeso profile={profile} logs={pesos} onCambio={load} />
 
       {/* La tarjeta de HOY se pinta SIEMPRE, con macros o sin ellos.
-          Estaba metida entera dentro del "si tiene objetivos", y el efecto era
-          que a quien no había calculado sus macros se le escondían también las
-          comidas y —peor— los pasos que le pide su entrenador. Andar no
-          depende de haber hecho una calculadora. */}
+          Sin objetivos, invita a calcularlos. */}
       <Card accent style={styles.section}>
         {!targets ? (
           <>
@@ -246,10 +229,7 @@ export function PanelDeNutricion() {
               <Text style={styles.planName}>{targets.name}</Text>
             </View>
 
-            {/* Lo que queda por comer HOY, contando lo que se ha ganado
-                andando. Los pasos suman al presupuesto en vez de restarse de
-                lo comido: es la misma resta dicha al derecho, y así se
-                entiende sin pensar. */}
+            {/* Lo que queda por comer HOY. */}
             <View style={styles.calSummary}>
               <Text style={[styles.calBig, balance.pasado && { color: colors.danger }]}>
                 {conMiles(Math.abs(balance.restantes))}
@@ -291,9 +271,6 @@ export function PanelDeNutricion() {
           </>
         )}
 
-        {/* Las comidas y los pasos van fuera del "si tiene objetivos": se
-            apuntan igual, con plan o sin él, y son la otra mitad de lo que
-            pasa hoy. */}
         {targets ? (
           <>
             {/* Las comidas, DENTRO del conteo y no en una tarjeta debajo. Eran
@@ -335,20 +312,7 @@ export function PanelDeNutricion() {
           </>
         ) : null}
 
-        {/* Y los pasos, en la misma tarjeta: son la otra mitad de la cifra de
-            arriba. Ver el número que suma justo debajo del número al que suma
-            es lo que hace que andar deje de ser un adorno. Se enseñan aunque
-            no haya macros: el objetivo de pasos lo pone el ENTRENADOR, y
-            escondérselo a quien no ha hecho la calculadora es esconderle lo
-            que su coach le ha pedido. */}
-        {profile ? (
-          <ContadorDePasos
-            profile={profile}
-            pesoKg={ultimoPeso}
-            registros={pasos}
-            onCambio={load}
-          />
-        ) : null}
+
       </Card>
 
           {/* El formulario vivía siempre abierto: cinco campos vacíos ocupando

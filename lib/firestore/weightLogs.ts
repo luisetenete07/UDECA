@@ -2,6 +2,7 @@ import { addDoc, collection, deleteDoc, doc, getDocs, query, where } from 'fireb
 import { stripUndefined } from './clean';
 import { db } from '../firebase';
 import type { WeightLog } from '../types';
+import { borrarFotoDePeso } from './fotosDePeso';
 
 const collectionRef = () => collection(db, 'weightLogs');
 
@@ -27,7 +28,8 @@ export async function createWeightLog(
   return ref.id;
 }
 
-/** Borra un registro de peso erróneo (solo el propio alumno). */
-export async function deleteWeightLog(id: string) {
+/** Borra un registro de peso erróneo (solo el propio alumno), con su foto si la tiene. */
+export async function deleteWeightLog(id: string, conFoto?: boolean) {
   await deleteDoc(doc(db, 'weightLogs', id));
+  if (conFoto) await borrarFotoDePeso(id);
 }

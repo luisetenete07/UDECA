@@ -105,13 +105,7 @@ console.log('\nLa ficha de nutrición del alumno');
   // fotos y vídeos van por WhatsApp o Telegram.)
   ok('las fotos de progreso ya no están', !/Fotos de progreso|poseRow/.test(lee('components/PanelDeNutricion.tsx')));
 
-  const pasos = lee('components/ContadorDePasos.tsx');
-  // "Los escribo yo" se salía por el borde derecho de su tarjeta.
-  ok('el selector de origen envuelve', /elegirBotones: \{[\s\S]{0,300}?flexWrap: 'wrap'/.test(pasos));
-  // Con el botón fijo al lado, al campo le quedaban 80 px y "Ej. 9500" se
-  // leía "Ej. 950".
-  ok('el campo de pasos tiene ancho mínimo', /campo: \{[^}]*minWidth: \d+/.test(pasos));
-  ok('y su fila también se parte', /filaMano: \{[^}]*flexWrap: 'wrap'/.test(pasos));
+  // (El contador de pasos, con su selector y su campo, se quitó de la app.)
 
   const peso = lee('components/BloqueDePeso.tsx');
   /*
@@ -123,7 +117,7 @@ console.log('\nLa ficha de nutrición del alumno');
   // Acortarlo no bastaba: con el botón fijo de 104 px al lado, en 320 px ni el
   // corto entraba. La fila se parte y el campo ocupa el ancho.
   ok('y su fila se parte si no cabe', /apuntar: \{[\s\S]{0,600}?flexWrap: 'wrap'/.test(peso));
-  ok('con ancho mínimo en el campo', /containerStyle=\{\{ flexGrow: 1, flexBasis: \d+, minWidth: \d+ \}\}/.test(peso));
+  ok('con ancho mínimo en el campo', /containerStyle=\{styles\.campo\}/.test(peso) && /campo: \{ flexGrow: 1, flexBasis: \d+, minWidth: \d+ \}/.test(peso));
 
   /*
    * Y el título de una libreta de comidas: "Título (Ej. Recetas de desayuno)"

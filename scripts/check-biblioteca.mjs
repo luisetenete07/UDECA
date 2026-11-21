@@ -26,13 +26,40 @@ const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 console.log('\nMúsculos principales');
 {
+  /*
+   * SE DEDUCEN SOLOS. Luis pidió que los músculos no hubiera que ponerlos a
+   * mano: salen del nombre, con lo que se sabe de calistenia. Lo apuntado en
+   * la plantilla antigua solo cuenta si el nombre no dice nada.
+   */
   const r = musculosPrincipales({
     name: 'Muscle up',
-    muscleWeights: { lats: 100, chest: 75, triceps: 50, biceps: 25, abs: 50 },
+    muscleWeights: { abs: 100 },
   });
-  ok('de más a menos, sin los de un cuarto, y hasta tres', igual(r, ['Dorsales', 'Pecho', 'Tríceps']), r.join(', '));
+  ok('de más a menos, hasta tres, y lo deducido manda', igual(r, ['Dorsales', 'Tríceps', 'Pecho']), r.join(', '));
   const l = musculosPrincipales({ name: 'Algo', muscles: ['abs', 'shoulders'] });
-  ok('con la lista antigua, todos cuentan', igual(l, ['Abdomen', 'Hombros']), l.join(', '));
+  ok('si el nombre no dice nada, la lista antigua', igual(l, ['Abdomen', 'Hombros']), l.join(', '));
+  const primero = (name) => musculosPrincipales({ name })[0];
+  for (const [nombre, musculo] of [
+    ['Plancha', 'Abdomen'],
+    ['Plancha straddle', 'Hombros'],
+    ['Pseudo planche push-ups', 'Hombros'],
+    ['Pino contra la pared', 'Hombros'],
+    ['Flexiones en pino', 'Hombros'],
+    ['Fondos en paralelas', 'Pecho'],
+    ['Flexiones diamante', 'Tríceps'],
+    ['Remo australiano', 'Trapecio'],
+    ['Front lever tuck', 'Dorsales'],
+    ['Curl nórdico', 'Isquios'],
+    ['Curl de bíceps con goma', 'Bíceps'],
+    ['Sentadilla búlgara', 'Cuádriceps'],
+    ['Elevaciones de piernas colgado', 'Abdomen'],
+    ['L-sit en paralelas', 'Abdomen'],
+    ['Hip thrust a una pierna', 'Glúteos'],
+    ['Elevación de talones', 'Gemelos'],
+  ]) {
+    ok(`${nombre}: ${musculo}`, primero(nombre) === musculo, musculosPrincipales({ name: nombre }).join(', '));
+  }
+  ok('la movilidad no carga ningún músculo', musculosPrincipales({ name: 'Movilidad de hombro' }).length === 0);
   const n = musculosPrincipales({ name: 'Dominadas supinas' });
   ok('sin datos, se deducen del nombre', n[0] === 'Dorsales' || n[0] === 'Bíceps', n.join(', '));
   ok('nada que decir, nada que pintar', musculosPrincipales({ name: 'Zzz' }).length === 0);

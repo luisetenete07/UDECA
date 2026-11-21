@@ -19,7 +19,10 @@ import type { UserProfile } from '../types';
 const MIAS: { coleccion: string; campo: string }[] = [
   { coleccion: 'workoutLogs', campo: 'clientId' },
   { coleccion: 'weightLogs', campo: 'clientId' },
+  // Las fotos de cada registro de peso (lib/firestore/fotosDePeso.ts).
   { coleccion: 'progressPhotos', campo: 'clientId' },
+  // Los pasos que quedaron guardados de cuando la app los contaba.
+  { coleccion: 'stepLogs', campo: 'clientId' },
   { coleccion: 'joinRequests', campo: 'clientId' },
   // Sus llamadas reservadas: borrarlas libera el hueco en la agenda del coach.
   { coleccion: 'llamadas', campo: 'clientId' },

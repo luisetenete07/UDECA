@@ -1,33 +1,37 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Texto';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { Card } from './Card';
 import { TextField } from './TextField';
 import { WeightChart } from './WeightChart';
+import { RegistrosDePeso } from './RegistrosDePeso';
 import { showToast } from './Toast';
 import { confirmar } from '../lib/confirmar';
-import { fechaNumerica } from '../lib/fechas';
+import { frase } from '../lib/idioma';
 import { createWeightLog, deleteWeightLog } from '../lib/firestore/weightLogs';
+import { guardarFotoDePeso } from '../lib/firestore/fotosDePeso';
+import { pickWeightPhoto } from '../lib/image';
 import { conSigno, kgCorto, pesoDeTexto, resumenDePeso, textoDelObjetivo } from '../lib/peso';
 import { colors, fonts, radius, spacing, tabularNums, typography } from '../lib/theme';
 import type { UserProfile, WeightLog } from '../lib/types';
 
 /**
- * El peso: cuánto pesa, cómo va, cómo ha ido y apuntar el de hoy. TODO en una
- * tarjeta.
+ * El peso: cuánto pesa, cómo va, cómo ha ido y apuntar el de hoy, con su foto
+ * si quiere. TODO en una tarjeta, y ajustada.
  *
- * Eran tres: "Mi peso" con la cifra y el formulario, "Evolución" con la
- * gráfica, e "Historial" con la lista de registros. Tres tarjetas para una
- * cifra, y las tres decían lo mismo con distinta forma: el número de hoy, el
- * número de hoy dibujado y el número de hoy en una fila. La lista, además, era
- * la más larga y la que menos aportaba —quien se pesa a diario tiene ahí
- * trescientas filas que no va a leer nunca—, así que se ha ido entera.
+ * Luis la pidió más pequeña sin perder nada. Lo que tenía sigue: la cifra, el
+ * cambio de la semana y del mes, el objetivo, la gráfica, apuntar con nota y
+ * deshacer el último. Lo que cambia es cómo ocupa:
  *
- * Lo único que hacía falta de la lista era poder deshacer un peso mal escrito:
- * un 667 en vez de 67 estropea la gráfica para siempre. Eso se queda, pero
- * como una línea bajo la cifra, no como una sección.
+ *  - La cifra y los cambios van en la misma franja, no en tres filas.
+ *  - La gráfica es más baja y sin su fila de resumen, que repetía la cifra.
+ *  - La nota no es un campo siempre abierto: "Añadir nota" lo abre.
+ *
+ * Y suma lo que pidió: una FOTO EN CADA REGISTRO. Se elige al apuntar (el
+ * botón de la cámara, junto a "Apuntar") y se ve en la lista de registros,
+ * que de paso enseña los últimos pesos con su fecha y su nota.
  */
 export function BloqueDePeso({
   profile,
@@ -44,11 +48,22 @@ export function BloqueDePeso({
 }) {
   const [peso, setPeso] = useState('');
   const [notas, setNotas] = useState('');
+  const [conNota, setConNota] = useState(false);
+  const [foto, setFoto] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   const resumen = resumenDePeso(logs, profile?.targetWeightKg);
   const delObjetivo = textoDelObjetivo(resumen, profile?.targetWeightKg);
+
+  const elegirFoto = async () => {
+    try {
+      const elegida = await pickWeightPhoto();
+      if (elegida) setFoto(elegida);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'No se pudo abrir la foto');
+    }
+  };
 
   const guardar = async () => {
     if (!profile) return;
@@ -60,15 +75,29 @@ export function BloqueDePeso({
     setError(null);
     setGuardando(true);
     try {
-      await createWeightLog({
+      const fecha = Date.now();
+      const id = await createWeightLog({
         trainerId: profile.trainerId ?? '',
         clientId: profile.uid,
-        date: Date.now(),
+        date: fecha,
         weightKg: kg,
         notes: notas.trim() || undefined,
+        conFoto: foto ? true : undefined,
       });
+      if (foto) {
+        // El peso ya está guardado: si la foto falla, se dice, pero el peso
+        // no se pierde por ella.
+        await guardarFotoDePeso(id, {
+          clientId: profile.uid,
+          trainerId: profile.trainerId ?? '',
+          date: fecha,
+          foto,
+        }).catch(() => showToast('El peso se ha guardado, pero la foto no. Inténtalo otra vez.'));
+      }
       setPeso('');
       setNotas('');
+      setConNota(false);
+      setFoto(null);
       await onCambio();
       showToast('Peso guardado');
     } catch (e) {
@@ -78,10 +107,12 @@ export function BloqueDePeso({
     }
   };
 
-  const borrar = async (id: string) => {
-    if (!(await confirmar('¿Borrar este registro de peso?'))) return;
+  // Solo se deshace el último: es el que se acaba de escribir mal. Deshacer el
+  // de hace tres semanas no lo pide nadie.
+  const borrar = async (log: WeightLog) => {
+    if (!(await confirmar(frase`¿Borrar el registro de ${kgCorto(log.weightKg)} kg?`))) return;
     try {
-      await deleteWeightLog(id);
+      await deleteWeightLog(log.id, log.conFoto);
       await onCambio();
       showToast('Registro borrado');
     } catch {
@@ -89,92 +120,103 @@ export function BloqueDePeso({
     }
   };
 
-  // El último apuntado, que es el único que se puede deshacer. Deshacer el de
-  // hace tres semanas no lo pide nadie; deshacer el que acabas de escribir mal,
-  // todo el mundo.
-  const ultimo = [...logs].sort((a, b) => b.date - a.date)[0];
-
   return (
-    <>
-      <Card style={styles.tarjeta}>
+    <Card style={styles.tarjeta}>
+      <View style={styles.cabecera}>
         {conTitulo ? <Text style={styles.titulo}>Mi peso</Text> : null}
-
-        {/* Sin peso todavía: una línea, no un cartel con icono. El campo de
-            justo debajo ya dice qué hacer, y el cartel empujaba la tarjeta de
-            Hoy medio móvil más abajo. */}
-        {resumen.actual === undefined ? (
-          <Text style={styles.vacio}>
-            Pésate a la misma hora, mejor en ayunas. Lo que importa no es el número de hoy: es
-            hacia dónde va.
+        {resumen.actual !== undefined ? (
+          <Text style={styles.cifra}>
+            {kgCorto(resumen.actual)}
+            <Text style={styles.unidad}> kg</Text>
           </Text>
-        ) : (
-          <>
-            <View style={styles.cifraFila}>
-              <Text style={styles.cifra}>{kgCorto(resumen.actual)}</Text>
-              <Text style={styles.unidad}>kg</Text>
-            </View>
-            <View style={styles.cambios}>
-              <Cambio etiqueta="Esta semana" kg={resumen.semana} />
-              <Cambio etiqueta="Este mes" kg={resumen.mes} />
-            </View>
+        ) : null}
+      </View>
+
+      {resumen.actual === undefined ? (
+        <Text style={styles.vacio}>
+          Pésate a la misma hora, mejor en ayunas. Lo que importa no es el número de hoy: es hacia
+          dónde va.
+        </Text>
+      ) : (
+        <>
+          {/* Los cambios y el objetivo, en una franja. */}
+          <View style={styles.franja}>
+            <Cambio etiqueta="Semana" kg={resumen.semana} />
+            <Cambio etiqueta="Mes" kg={resumen.mes} />
             {delObjetivo ? (
               <View style={styles.objetivo}>
                 <Ionicons
                   name={resumen.enObjetivo ? 'checkmark-circle' : 'flag-outline'}
-                  size={15}
+                  size={13}
                   color={resumen.enObjetivo ? colors.success : colors.primaryBright}
                 />
-                <Text style={styles.objetivoTexto}>{delObjetivo}</Text>
+                <Text style={styles.objetivoTexto} numberOfLines={2}>
+                  {delObjetivo}
+                </Text>
               </View>
             ) : null}
+          </View>
+          {logs.length > 1 ? (
+            <View style={styles.grafica}>
+              <WeightChart logs={logs} compacto />
+            </View>
+          ) : null}
+        </>
+      )}
 
-            {/* La gráfica, aquí mismo y no en una tarjeta aparte: la cifra sin
-                la línea no dice nada, y la línea sin la cifra tampoco. */}
-            {logs.length > 1 ? (
-              <View style={styles.grafica}>
-                <WeightChart logs={logs} />
-              </View>
-            ) : null}
-          </>
-        )}
+      {/* Apuntar: el peso, su foto si quiere, y listo. */}
+      <View style={styles.apuntar}>
+        <TextField
+          placeholder="Ej. 66,4 kg"
+          keyboardType="decimal-pad"
+          value={peso}
+          onChangeText={setPeso}
+          containerStyle={styles.campo}
+          style={{ marginBottom: 0 }}
+        />
+        <Pressable
+          onPress={elegirFoto}
+          style={[styles.botonFoto, foto && styles.botonFotoPuesta]}
+          accessibilityRole="button"
+          accessibilityLabel={foto ? 'Cambiar la foto' : 'Añadir una foto'}
+          hitSlop={4}
+        >
+          {foto ? (
+            <Image source={{ uri: foto }} style={styles.fotoElegida} resizeMode="cover" />
+          ) : (
+            <Ionicons name="camera-outline" size={20} color={colors.primaryBright} />
+          )}
+        </Pressable>
+        <Button title="Apuntar" onPress={guardar} loading={guardando} style={styles.boton} />
+      </View>
 
-        <View style={styles.apuntar}>
-          <TextField
-            /*
-             * Corto a propósito. "Peso en kg (ej. 66,4)" no cabía en el hueco
-             * que deja el botón de al lado y se leía "Peso en kg (ej. 66,4",
-             * sin cerrar. Y sobraba: la tarjeta se llama "Mi peso" y el botón
-             * dice "Apuntar", así que lo único que falta por decir es la unidad
-             * y que se puede usar coma. Mismo formato que el de los pasos.
-             */
-            placeholder="Ej. 66,4 kg"
-            keyboardType="decimal-pad"
-            value={peso}
-            onChangeText={setPeso}
-            containerStyle={{ flexGrow: 1, flexBasis: 150, minWidth: 150 }}
-            style={{ marginBottom: 0 }}
-          />
-          <Button title="Apuntar" onPress={guardar} loading={guardando} style={styles.boton} />
-        </View>
+      <View style={styles.extras}>
+        {foto ? (
+          <Pressable onPress={() => setFoto(null)} style={styles.enlace} hitSlop={6}>
+            <Ionicons name="close-circle-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.enlaceTexto}>Quitar la foto</Text>
+          </Pressable>
+        ) : null}
+        {!conNota ? (
+          <Pressable onPress={() => setConNota(true)} style={styles.enlace} hitSlop={6}>
+            <Ionicons name="create-outline" size={14} color={colors.primary} />
+            <Text style={[styles.enlaceTexto, { color: colors.primary }]}>Añadir nota</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {conNota ? (
         <TextField
           placeholder="Notas (opcional)"
           value={notas}
           onChangeText={setNotas}
+          autoFocus
           style={{ marginBottom: 0 }}
         />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+      ) : null}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        {/* La red de seguridad de escribir un número mal. */}
-        {ultimo ? (
-          <Pressable onPress={() => borrar(ultimo.id)} style={styles.deshacer} hitSlop={8}>
-            <Ionicons name="arrow-undo-outline" size={13} color={colors.textFaint} />
-            <Text style={styles.deshacerTexto}>
-              Borrar el último ({kgCorto(ultimo.weightKg)} kg, {fechaNumerica(ultimo.date)})
-            </Text>
-          </Pressable>
-        ) : null}
-      </Card>
-    </>
+      <RegistrosDePeso logs={logs} onBorrarUltimo={borrar} />
+    </Card>
   );
 }
 
@@ -192,54 +234,58 @@ function Cambio({ etiqueta, kg }: { etiqueta: string; kg?: number }) {
 }
 
 const styles = StyleSheet.create({
-  vacio: { ...typography.small, color: colors.textMuted, lineHeight: 19, marginBottom: spacing.md },
   tarjeta: { marginBottom: spacing.md },
-  titulo: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
-  grafica: { marginTop: spacing.lg },
-  cifraFila: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  cifra: { ...typography.h1, color: colors.text, fontSize: 40, ...tabularNums },
-  unidad: { ...typography.body, color: colors.textMuted },
-  cambios: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.sm },
-  cambio: { gap: 2 },
+  cabecera: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm },
+  titulo: { ...typography.h3, color: colors.text },
+  cifra: { fontSize: 28, lineHeight: 32, fontFamily: fonts.heading, color: colors.text, ...tabularNums },
+  unidad: { ...typography.small, color: colors.textMuted, fontFamily: fonts.body },
+  vacio: { ...typography.small, color: colors.textMuted, lineHeight: 19, marginTop: spacing.xs },
+  franja: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginTop: spacing.xs,
+  },
+  cambio: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   cambioEtiqueta: {
     ...typography.label,
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     fontSize: 10,
   },
-  cambioValor: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, ...tabularNums },
-  objetivo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    padding: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceAlt,
-  },
-  objetivoTexto: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 18 },
+  cambioValor: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold, ...tabularNums },
+  objetivo: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1, minWidth: 140 },
+  objetivoTexto: { ...typography.small, fontSize: 12, color: colors.textMuted, flexShrink: 1 },
+  grafica: { marginTop: spacing.sm },
   apuntar: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    /*
-     * Se parte si no cabe. Con el botón fijo de 104 px al lado, en un móvil de
-     * 320 al campo le quedaban unos 120 y ni "Ej. 66,4 kg" entraba. Partiéndose
-     * el campo ocupa la fila y el botón baja debajo, que se lee perfectamente.
-     */
+    // Se parte si no cabe: en un móvil de 320, campo, foto y botón juntos le
+    // dejaban al campo 76 px y "Ej. 66,4 kg" no entraba. Partida, el botón
+    // baja a su propia línea.
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.md,
-    marginBottom: spacing.sm,
   },
-  boton: { flexGrow: 1, minWidth: 104 },
-  error: { ...typography.small, color: colors.danger, marginTop: spacing.sm },
-  deshacer: {
-    flexDirection: 'row',
+  campo: { flexGrow: 1, flexBasis: 150, minWidth: 150 },
+  botonFoto: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    paddingTop: spacing.md,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  deshacerTexto: { ...typography.small, color: colors.textFaint, fontSize: 11 },
+  botonFotoPuesta: { borderColor: colors.primary },
+  fotoElegida: { width: '100%', height: '100%' },
+  boton: { flexGrow: 1, minWidth: 96 },
+  extras: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs, marginBottom: spacing.xs },
+  enlace: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
+  enlaceTexto: { ...typography.small, fontSize: 12, color: colors.textMuted, fontFamily: fonts.semiBold },
+  error: { ...typography.small, color: colors.danger, marginTop: spacing.sm },
 });

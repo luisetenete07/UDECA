@@ -14,8 +14,7 @@ import type { DiaDeRutinaDiaria, RutinaDiaria } from '../types';
  * consultas ni índices: una rutina diaria por alumno y un registro por día, sin
  * forma de acabar con dos.
  *
- * Es el mismo patrón que los pasos (lib/firestore/steps.ts), y por el mismo
- * motivo: son cosas que se escriben una y otra vez el mismo día —se marca un
+ * Un documento por alumno y día, porque son cosas que se escriben una y otra vez el mismo día —se marca un
  * ejercicio, se desmarca, se vuelve a marcar— y con `addDoc` cada toque dejaría
  * un documento nuevo.
  */

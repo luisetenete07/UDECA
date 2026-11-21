@@ -38,12 +38,7 @@ const plist = introspect.ios?.infoPlist ?? {};
 
 /** Lo que la app usa de verdad, y por qué. */
 const NECESARIOS = [
-  ['NSPhotoLibraryUsageDescription', 'foto de perfil y libretas de comida'],
-  ['NSMotionUsageDescription', 'contador de pasos'],
-  // Salud (HealthKit): los pasos con el Apple Watch incluido. Solo se leen,
-  // pero Apple pide también el texto de escritura en cuanto la app usa Salud.
-  ['NSHealthShareUsageDescription', 'leer los pasos de Salud'],
-  ['NSHealthUpdateUsageDescription', 'decir que no se escribe nada en Salud'],
+  ['NSPhotoLibraryUsageDescription', 'foto de perfil, foto del peso y libretas de comida'],
 ];
 
 /** Lo que NO se usa: si aparece, alguien añadió un plugin sin mirar. */
@@ -68,6 +63,14 @@ const SOBRAN = [
   'NSRemindersFullAccessUsageDescription',
   'NSLocationWhenInUseUsageDescription',
   'NSContactsUsageDescription',
+  /*
+   * Ni movimiento ni Salud: eran para el contador de pasos, que Luis quitó de
+   * la app. Pedir un permiso para algo que ya no existe es justo lo que hace
+   * dudar a quien instala.
+   */
+  'NSMotionUsageDescription',
+  'NSHealthShareUsageDescription',
+  'NSHealthUpdateUsageDescription',
 ];
 
 for (const [clave, para] of NECESARIOS) {

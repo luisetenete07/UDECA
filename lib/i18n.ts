@@ -129,8 +129,6 @@ export const EN: Record<string, string> = {
 
   // --- Nutrición ---
   'Mi nutrición': 'My nutrition',
-  'Pasos de hoy': "Today's steps",
-  'Traer los pasos del móvil': 'Get steps from your phone',
   'Apuntar a mano': 'Enter manually',
   'Comidas de hoy': "Today's meals",
   'Calcular mis macros': 'Calculate my macros',
@@ -263,7 +261,6 @@ export const EN: Record<string, string> = {
   'Tu periodo de coaching ha terminado. En cuanto Luis lo renueve, sigues justo donde lo dejaste.': 'Your coaching period has ended. As soon as Luis renews it, you pick up right where you left off.',
   'Luis ya lo sabe': 'Luis already knows',
   'Ya lo ha renovado · Actualizar': 'Already renewed · Refresh',
-  // Los pasos en el inicio del alumno (components/ContadorDePasos.tsx, compacto).
   Pasos: 'Steps',
   Conectar: 'Connect',
   // Los meses anteriores, dentro de "Hace 3 meses → hoy" (app/(client)/progress.tsx).
@@ -289,13 +286,7 @@ export const EN: Record<string, string> = {
   'Si a las 18 h te queda algo por marcar, te aviso una vez. Si ya lo has terminado, no suena.':
     "If something is left to tick at 6 pm, I'll remind you once. If you've finished, it stays quiet.",
   // Los pasos del sistema: Salud en iPhone, la grabación de Google en Android.
-  'Se leen solos de Salud: iPhone y Apple Watch': 'Read automatically from Health: iPhone and Apple Watch',
   'Se cuentan solos, también con la app cerrada': 'Counted automatically, even with the app closed',
-  'Conectado. Desde ahora tus pasos se cuentan solos, también con la app cerrada.':
-    'Connected. From now on your steps are counted automatically, even with the app closed.',
-  'Traídos {0} pasos de este móvil': '{0} steps brought over from this phone',
-  'En este móvil los pasos solo se cuentan con la app abierta. Escribe los del día a mano y quedan guardados igual.':
-    'On this phone steps are only counted with the app open. Type in the day\'s steps by hand and they are saved just the same.',
   // Pulido de diseño: panel del coach, ficha, editor y entreno del alumno.
   '1 entreno': '1 workout',
   '{0} aún sin entrenar': '{0} yet to train',
@@ -391,7 +382,7 @@ export const EN: Record<string, string> = {
   'Crear ejercicio': 'Create exercise',
   // Tanda de octubre: superserie, bandeja, progresión, biblioteca por código, widget.
   'Resumen del domingo': 'Sunday summary',
-  'Los domingos, tus entrenos, series y pasos de la semana. Solo si has entrenado.': 'On Sundays, your workouts, sets and steps for the week. Only if you trained.',
+  'Los domingos, tus entrenos y series de la semana. Solo si has entrenado.': 'On Sundays, your workouts and sets for the week. Only if you trained.',
   'Hábitos': 'Habits',
   'hace 1 mes': '1 month ago',
   'antes {0}, {1}': 'before {0}, {1}',
@@ -1132,6 +1123,26 @@ export const EN: Record<string, string> = {
   '{0} semanas': '{0} weeks',
   '1 sem': '1 wk',
   '{0} sem': '{0} wk',
+  // La política de privacidad, renumerada sin el contador de pasos (app/privacy-policy.tsx).
+  '3. Proveedores y con quién se comparten': '3. Providers and who we share with',
+  '4. Transferencias internacionales': '4. International transfers',
+  '5. Conservación': '5. Retention',
+  '6. Tus derechos': '6. Your rights',
+  '7. Eliminar tu cuenta y tus datos': '7. Deleting your account and your data',
+  '8. Menores': '8. Minors',
+  '9. Cambios en esta política': '9. Changes to this policy',
+  '10. Contacto': '10. Contact',
+  // El peso con foto y Mi progreso (components/BloqueDePeso.tsx, components/RegistrosDePeso.tsx).
+  'Quitar la foto': 'Remove photo',
+  'Cambiar la foto': 'Change photo',
+  'Añadir una foto': 'Add a photo',
+  'Ver los {0} registros': 'See all {0} entries',
+  'Foto del {0}': 'Photo from {0}',
+  'Borrar el registro de {0} kg': 'Delete the {0} kg entry',
+  '¿Borrar el registro de {0} kg?': 'Delete the {0} kg entry?',
+  'El peso se ha guardado, pero la foto no. Inténtalo otra vez.': 'Your weight was saved, but the photo wasn\'t. Try again.',
+  'No se pudo abrir la foto': 'Couldn\'t open the photo',
+  'Mes': 'Month',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':
@@ -1291,13 +1302,7 @@ export const EN: Record<string, string> = {
   'No se pudo compartir': "Couldn't share",
   'Días que has entrenado': "Days you've trained",
   'Tu progreso completo': 'Your full progress',
-  'Tus últimos 28 días frente a los mismos días de hace 3 meses.':
-    'Your last 28 days against the same days three months ago.',
   'Eliminar este entrenamiento': 'Delete this workout',
-  'Series completadas cada semana en lo que más entrenas. Toca una categoría para seguirla o dejar de seguirla.':
-    'Sets completed each week in what you train the most. Tap a category to follow or unfollow it.',
-  'Registra entrenamientos para ver aquí tus series por categoría.':
-    'Log workouts to see your sets by category here.',
   'Series completadas por patrón de movimiento, en los últimos 28 días.':
     'Sets completed by movement pattern, over the last 28 days.',
   'Músculos trabajados': 'Muscles worked',
@@ -1314,7 +1319,6 @@ export const EN: Record<string, string> = {
   'Hace 3 meses → hoy': '3 months ago → today',
   'Peso corporal': 'Body weight',
   'isom.': 'hold',
-  'Series semanales': 'Weekly sets',
   'Mapa muscular': 'Muscle map',
   'Más entrenados': 'Most trained',
   'Aún no hay datos por ejercicio': 'No per-exercise data yet',
@@ -1517,7 +1521,6 @@ export const EN: Record<string, string> = {
   'Notas privadas': 'Private notes',
   'Escribe aquí tus notas sobre este alumno...': 'Write your notes about this student here...',
   'Alumno VIP': 'VIP student',
-  'Pasos al día': 'Steps per day',
   'Pedirle el esfuerzo (RIR)': 'Ask them for effort (RIR)',
   'Evolución del peso': 'Weight over time',
   'Hábitos diarios': 'Daily habits',
@@ -1973,17 +1976,6 @@ export const EN: Record<string, string> = {
     'Double-click the file, or use Import in your calendar',
   'Los de hoy los has escrito tú.': "Today's were typed in by you.",
   'Ej. 9500': 'e.g. 9500',
-  'El contador del móvil solo está en la app de iPhone o Android':
-    'The phone step counter is only in the iPhone or Android app',
-  'Este móvil no tiene contador de pasos': 'This phone has no step counter',
-  'Sin permiso de actividad no se pueden leer los pasos':
-    'Without activity permission the steps cannot be read',
-  'Traídos {0} pasos de tu iPhone': '{0} steps brought over from your iPhone',
-  'Tu iPhone no tiene pasos guardados de hoy. Comprueba en Ajustes › Privacidad › Movimiento y forma física.':
-    'Your iPhone has no steps saved for today. Check Settings › Privacy › Motion & Fitness.',
-  'No se ha podido leer el contador del móvil': "Couldn't read the phone's counter",
-  'Escribe cuántos pasos has dado': 'Type how many steps you took',
-  'Pasos guardados': 'Steps saved',
   Empieza: 'Starts',
   'Tus plantillas': 'Your templates',
   'Entrenos por semana': 'Workouts per week',
@@ -2057,8 +2049,6 @@ export const EN: Record<string, string> = {
   'Ha fallado esta pantalla, pero tu sesión y tus entrenamientos siguen a salvo. Vuelve a intentarlo.':
     'This screen failed, but your session and your workouts are safe. Try again.',
   'Día a día': 'Day by day',
-  'Cada barra compara ese día con tu mejor marca. Las series, tal y como las hiciste.':
-    'Each bar compares that day with your best. The sets, exactly as you did them.',
   Intervalo: 'Interval',
   Rondas: 'Rounds',
   Actual: 'Current',
@@ -2323,7 +2313,6 @@ export const EN: Record<string, string> = {
   'Borrar el último (': 'Delete the last one (',
   ' kcal de gasto, aproximadas': ' kcal burned, approximate',
   'Media de la semana: ': 'Weekly average: ',
-  ' pasos al día': ' steps a day',
   'Las semanas van de lunes a domingo, así que el plan arranca el lunes':
     'Weeks run Monday to Sunday, so the plan starts on a Monday',
   ' en el mesociclo': ' in the mesocycle',
@@ -2418,7 +2407,6 @@ export const EN: Record<string, string> = {
   'apagada': 'off',
   'sin ejercicios': 'no exercises',
   // El contador de pasos, que ahora se conecta una sola vez.
-  '¿De dónde saco tus pasos?': 'Where do I get your steps from?',
   'Se elige una vez. A partir de ahí aparecen solos cada día.':
     'You choose once. From then on they appear on their own every day.',
   'Este móvil': 'This phone',
@@ -2486,10 +2474,6 @@ export const EN: Record<string, string> = {
     'You have {0} kg to lose to reach your target of {1} kg.',
   'Te faltan ganar {0} kg para tu objetivo de {1} kg.':
     'You have {0} kg to gain to reach your target of {1} kg.',
-  'Hoy aún no has andado. El objetivo son {0} pasos.':
-    "You haven't walked yet today. The target is {0} steps.",
-  'Te quedan {0} pasos para el objetivo.': '{0} steps to go to reach your target.',
-  '{0} · {1} del plan + {2} por andar': '{0} · {1} from the plan + {2} for walking',
   'El {0} de {1}': '{0} {1}',
   'Del {0} al {1} de {2}': 'From {0} to {1} {2}',
   'Del {0} de {1} al {2} de {3}': 'From {0} {1} to {2} {3}',
@@ -2596,7 +2580,6 @@ export const EN: Record<string, string> = {
   ' · {0} menos que la semana pasada': ' · {0} fewer than last week',
   'Para {0}': 'For {0}',
   'Luis ha actualizado tu plan: {0}': 'Luis has updated your plan: {0}',
-  'Escribe entre {0} y {1} pasos.': 'Type between {0} and {1} steps.',
   '{0} (por defecto)': '{0} (default)',
   '¿Quitar "{0}" de sus hábitos?': 'Remove "{0}" from their habits?',
   '¿Quitar la suscripción de {0}? Verá el muro de pago hasta reactivarla.':
@@ -2994,10 +2977,6 @@ export const EN: Record<string, string> = {
   'Lleva tus cobros, tus bloques y tus tareas al calendario del móvil. Puedes volver a pulsarlo cuando quieras: actualiza lo que hay, no lo duplica.':
     "Take your payments, your blocks and your tasks to your phone's calendar. You can press it again whenever you like: it updates what is there, it does not duplicate it.",
   'Nada con fecha todavía': 'Nothing dated yet',
-  'Sumados {0} pasos andados con la app abierta':
-    '{0} steps walked with the app open have been added',
-  'Android solo cuenta los pasos con la app abierta. Escríbelos a mano si llevas reloj o usas otra app.':
-    'Android only counts steps while the app is open. Type them in by hand if you wear a watch or use another app.',
   'Una semana seguida entrenando.': 'A full week of training.',
   '¡Un mes entero de racha!': 'A whole month of streak!',
   'Un año. Trescientos sesenta y cinco días.': 'A year. Three hundred and sixty-five days.',
@@ -3124,7 +3103,6 @@ export const EN: Record<string, string> = {
     'Your progress exercise by exercise, with numbers that do not lie',
   'Nutrición y macros alineados con tu objetivo':
     'Nutrition and macros lined up with your goal',
-  'Racha y logros para no soltar la barra': 'Streak and achievements so you never let go of the bar',
   'Aún no consta el pago': 'The payment is not showing yet',
   'Tu cuenta no está activa': 'Your account is not active',
   'Has terminado la prueba': 'Your trial is over',
