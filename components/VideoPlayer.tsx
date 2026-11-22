@@ -298,8 +298,17 @@ function VimeoVideo({
       src: embedUrl,
       // Contenido protegido: sin Picture-in-Picture (no se puede "sacar" el
       // vídeo de la app) ni menú contextual sobre el marco.
-      allow: protectedContent ? 'autoplay; fullscreen' : 'autoplay; fullscreen; picture-in-picture',
-      allowFullScreen: true,
+      allow: protectedContent ? 'autoplay' : 'autoplay; fullscreen; picture-in-picture',
+      /*
+       * PROTEGIDO, NO SALE DE AQUÍ. Sin pantalla completa del sistema (el visor
+       * de la app ya es pantalla completa, y la del sistema pinta el vídeo por
+       * encima de la marca de agua) y con `sandbox`: el marco puede ejecutar su
+       * reproductor, pero no abrir ventanas ni cambiar la página de la app. Así
+       * el "Abrir en Drive" o "Ver en…" de cualquier reproductor no lleva a
+       * ninguna parte.
+       */
+      allowFullScreen: !protectedContent,
+      ...(protectedContent ? { sandbox: 'allow-scripts allow-same-origin allow-presentation' } : null),
       frameBorder: '0',
       onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
       style: {

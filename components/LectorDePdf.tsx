@@ -10,6 +10,7 @@ import {
   puedeAbrirse,
   puedeCargarseDentro,
 } from '../lib/visorDeEbook';
+import { t } from '../lib/idioma';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
 /*
@@ -39,6 +40,9 @@ import { colors, fonts, radius, spacing, typography } from '../lib/theme';
  */
 export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
   const { width, height } = useWindowDimensions();
+  // Volver a cargar el documento: el visor de Google, alguna vez, se queda en
+  // blanco al primer intento. Cambiar la clave monta el marco de nuevo.
+  const [intento, setIntento] = React.useState(0);
   const src = enlaceDeLectura(url, Platform.OS, width, height);
   const altoMuestra = altoDeLaMuestra(height);
   /*
@@ -52,13 +56,24 @@ export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
    * para cambiar de página.
    */
   const conVisorDeGoogle = esVisorDeGoogle(src);
+  /*
+   * La tapa de esa esquina es, además, el botón de volver a cargar: el visor de
+   * Google a veces se queda en blanco al primer intento, y así el sitio que no
+   * puede tocarse sirve para algo.
+   */
   const tapa = conVisorDeGoogle ? (
-    <View style={styles.tapaVentana}>
-      <Ionicons name="lock-closed-outline" size={14} color={colors.textFaint} />
-    </View>
+    <Pressable
+      onPress={() => setIntento((n) => n + 1)}
+      style={styles.tapaVentana}
+      accessibilityRole="button"
+      accessibilityLabel={t('Volver a cargar el documento')}
+    >
+      <Ionicons name="refresh" size={16} color={colors.textMuted} />
+    </Pressable>
   ) : null;
   if (Platform.OS === 'web') {
     const marco = React.createElement('iframe', {
+      key: intento,
       src,
       ...(conVisorDeGoogle ? { sandbox: 'allow-scripts allow-same-origin' } : null),
       style: lleno
@@ -91,6 +106,7 @@ export function EmbeddedDoc({ url, lleno }: { url: string; lleno?: boolean }) {
   return (
     <View style={lleno ? styles.pdfLleno : [styles.pdfNative, { height: altoMuestra }]}>
       <WebView
+        key={intento}
         source={{ uri: src }}
         injectedJavaScript={conVisorDeGoogle ? GUION_SIN_VENTANA : undefined}
         // Un e-book de un curso es material de pago igual que el vídeo. Fuera

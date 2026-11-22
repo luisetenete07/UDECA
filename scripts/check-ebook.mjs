@@ -91,12 +91,20 @@ console.log('\nLa dirección que se le da al visor');
    */
   ok('sin la barra del navegador', /toolbar=0/.test(enMovil), enMovil);
   ok('y con el ajuste puesto', /#view=FitH/.test(enMovil), enMovil);
-  ok('en un portátil, la página entera', /#view=Fit&/.test(enlaceDeLectura('https://x.com/a.pdf', 'web', 1440, 900)));
-
   // Dos almohadillas en una dirección no son dos ajustes: es una dirección
   // rota, y el visor abre por donde le parece.
-  const conAncla = enlaceDeLectura('https://x.com/a.pdf#page=4', 'web', 1440, 900);
+  const conAncla = enlaceDeLectura('https://x.com/a.pdf#page=4', 'ios', 1440, 900);
   ok('una sola almohadilla', (conAncla.match(/#/g) || []).length === 1, conAncla);
+
+  /*
+   * EN LA APP DEL NAVEGADOR, POR EL VISOR DE GOOGLE. El visor de PDF del
+   * navegador es una puerta de salida (en Android Chrome, un botón de "Abrir"
+   * que lo saca con descargar y compartir). Luis pidió que nada se comparta ni
+   * se saque: el visor de Google empotrado, en un marco cerrado.
+   */
+  const enWeb = enlaceDeLectura('https://x.com/a.pdf#page=4', 'web', 1440, 900);
+  ok('la web va por el visor de Google', enWeb.startsWith(VISOR_DE_GOOGLE), enWeb);
+  ok('sin la almohadilla del ancla', !enWeb.includes('page%3D4') && !enWeb.includes('#'), enWeb);
 
   /*
    * ANDROID. Su WebView no trae visor de PDF (lo trae Chrome, que es otra

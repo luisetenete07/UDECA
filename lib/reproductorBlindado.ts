@@ -377,9 +377,14 @@ export function paginaDelReproductor(fuente: FuenteBlindada): string {
    * El paracaídas.
    *
    * Si la API de la plataforma no ha contestado, el vídeo se recarga con sus
-   * controles de siempre y se quita el cristal. Se pierde el blindaje, sí;
-   * pero una clase que no se puede ni arrancar es un problema peor que una
-   * clase que se puede compartir.
+   * controles de siempre: una clase que no se puede ni arrancar es un problema
+   * peor que cualquier otro.
+   *
+   * PERO SIN DEJAR LA PUERTA ABIERTA. El cristal no se quita entero: se queda
+   * tapando la barra de arriba (título, "Compartir", "Ver más tarde") y la
+   * esquina de abajo a la derecha (el logo, que lleva a "Ver en YouTube" o
+   * "Ver en Vimeo"). El play, la barra de tiempo y el resto de controles, que
+   * viven abajo, siguen libres.
    */
   function desblinda(){
     if (listo) return;
@@ -387,6 +392,12 @@ export function paginaDelReproductor(fuente: FuenteBlindada): string {
     marco.src = NORMAL;
     escudo.parentNode && escudo.parentNode.removeChild(escudo);
     barra.parentNode && barra.parentNode.removeChild(barra);
+    var arriba = document.createElement('div');
+    arriba.style.cssText = 'position:absolute;left:0;right:0;top:0;height:72px;background:linear-gradient(#000,#000 62%,rgba(0,0,0,0))';
+    var esquina = document.createElement('div');
+    esquina.style.cssText = 'position:absolute;right:0;bottom:0;width:120px;height:52px;background:#000';
+    caja.appendChild(arriba);
+    caja.appendChild(esquina);
     avisa('sin-blindaje');
   }
   setTimeout(desblinda, ESPERA);

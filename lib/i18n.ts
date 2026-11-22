@@ -1143,6 +1143,8 @@ export const EN: Record<string, string> = {
   'El peso se ha guardado, pero la foto no. Inténtalo otra vez.': 'Your weight was saved, but the photo wasn\'t. Try again.',
   'No se pudo abrir la foto': 'Couldn\'t open the photo',
   'Mes': 'Month',
+  // El lector de PDF (components/LectorDePdf.tsx).
+  'Volver a cargar el documento': 'Reload the document',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':

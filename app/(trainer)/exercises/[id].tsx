@@ -759,7 +759,6 @@ export default function ExerciseEditorScreen() {
         titulo={name.trim() || undefined}
         profile={profile}
         onCerrar={() => setVerVideo(false)}
-        protegido={false}
       />
 
       <Dialogo

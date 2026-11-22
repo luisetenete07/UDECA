@@ -399,7 +399,6 @@ export default function WorkoutScreen() {
         titulo={videoAbierto?.titulo}
         profile={profile}
         onCerrar={() => setVideoAbierto(null)}
-        protegido={false}
       />
 
       {esCiclo ? (

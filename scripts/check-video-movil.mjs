@@ -169,19 +169,29 @@ console.log('\nCuando el blindaje se rinde, alguien lo escucha');
 console.log('\nQué va blindado y qué no');
 {
   const visor = lee('components/VisorDeVideo.tsx');
-  ok('el visor deja elegir', /protegido = true/.test(visor));
-  ok('y por defecto protege', /protectedContent=\{protegido\}/.test(visor));
+  /*
+   * TODO VA PROTEGIDO. Luis lo pidió: cualquier contenido se ve a pantalla
+   * completa, pero no se comparte ni se sale al enlace. El visor ya no tiene
+   * forma de abrir un vídeo sin protección.
+   */
+  ok('el visor protege siempre', /<VideoPlayer url=\{url\} protectedContent pantallaCompleta \/>/.test(visor));
+  ok('y no deja elegir', !/protegido/.test(visor.replace(/\/\*[\s\S]*?\*\//g, '')));
   // Una clase de curso es material de pago: va blindada.
   const curso = lee('app/(client)/courses/[id].tsx');
   const reproductor = lee('components/VideoPlayer.tsx');
   ok('las clases de un curso siguen blindadas', !/protegido=\{false\}/.test(curso));
-  /*
-   * El vídeo de técnica no. Es un enlace público que el entrenador ha pegado, y
-   * el blindaje es la parte más frágil del reproductor: arriesgar el vídeo que
-   * más se mira para proteger algo que cualquiera puede buscar sale carísimo.
-   */
-  ok('la técnica del entreno, sin blindar', /protegido=\{false\}/.test(lee('app/(client)/workout.tsx')));
-  ok('la de la rutina diaria, tampoco', /protegido=\{false\}/.test(lee('components/RutinaDiariaDelDia.tsx')));
+  // Y la técnica, el calentamiento y la rutina diaria, igual que las clases.
+  for (const f of ['app/(client)/workout.tsx', 'components/RutinaDiariaDelDia.tsx', 'app/(trainer)/exercises/[id].tsx']) {
+    ok(`protegido también en ${f}`, !/protegido=\{false\}/.test(lee(f)));
+  }
+  // Un reproductor que no es YouTube ni Vimeo (Drive, Dropbox): sin ventanas
+  // nuevas, sin cambiar la página y sin la pantalla completa del sistema.
+  ok('los demás reproductores, en un marco cerrado',
+    /sandbox: 'allow-scripts allow-same-origin allow-presentation'/.test(reproductor) && /allowFullScreen: !protectedContent/.test(reproductor));
+  // Y si el blindaje se rinde, la barra de compartir y el logo siguen tapados.
+  const blindaje = lee('lib/reproductorBlindado.ts');
+  ok('el paracaídas no destapa compartir ni el logo',
+    /arriba\.style\.cssText = 'position:absolute;left:0;right:0;top:0;height:72px/.test(blindaje) && /esquina\.style\.cssText = 'position:absolute;right:0;bottom:0/.test(blindaje));
 
   /*
    * LA BARRA DE COMPARTIR DE YOUTUBE, TAPADA EN LAS CLASES.

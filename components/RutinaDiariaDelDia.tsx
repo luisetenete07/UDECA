@@ -628,7 +628,6 @@ export function RutinaDiariaDelDia({ profile }: { profile: UserProfile | null })
         titulo={video?.titulo}
         profile={profile}
         onCerrar={() => setVideo(null)}
-        protegido={false}
       />
     </LinearGradient>
   );

@@ -30,6 +30,9 @@ export default function Root({ children }: PropsWithChildren) {
         <style dangerouslySetInnerHTML={{ __html: backgroundStyle }} />
         <ScrollViewStyleReset />
 
+        {/* Sin menú de mantener pulsado ni de clic derecho sobre el contenido. */}
+        <script dangerouslySetInnerHTML={{ __html: sinMenuDelNavegador }} />
+
         {/* Service worker: carga instantánea y soporte offline de la PWA. */}
         <script dangerouslySetInnerHTML={{ __html: swRegistration(base) }} />
       </head>
@@ -152,6 +155,23 @@ window.addEventListener('load', function () {
 })();
 `;
 
+/*
+ * EL CONTENIDO NO SE SACA CON EL DEDO.
+ *
+ * Mantener pulsada una imagen o un enlace (o el clic derecho en el ordenador)
+ * abre el menú del navegador: "Guardar imagen", "Compartir", "Copiar enlace",
+ * "Abrir en una pestaña nueva". Son las puertas de salida que quedan cuando
+ * los reproductores y el lector ya no dejan salir. Se cierran para toda la
+ * app, salvo en los campos de texto, donde pegar y corregir hace falta.
+ */
+const sinMenuDelNavegador = `
+document.addEventListener('contextmenu', function (e) {
+  var t = e.target;
+  if (t && t.closest && t.closest('input, textarea, [contenteditable="true"]')) return;
+  e.preventDefault();
+}, true);
+`;
+
 const backgroundStyle = `
 html, body {
   background-color: #000000;
@@ -176,8 +196,10 @@ input, textarea, button, select { font-family: inherit; }
 ::-webkit-scrollbar-thumb:hover { background: #3A3A3A; }
 /* Tipografía nítida en pantallas de alta densidad. */
 body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-/* Las imágenes nunca se arrastran como fantasma al hacer clic. */
-img { -webkit-user-drag: none; }
+/* Las imágenes nunca se arrastran como fantasma al hacer clic, ni se sacan
+   manteniéndolas pulsadas (el menú de "Guardar" o "Compartir" del iPhone). */
+img { -webkit-user-drag: none; -webkit-touch-callout: none; }
+a, video, iframe { -webkit-touch-callout: none; }
 @media (prefers-color-scheme: light) {
   html, body { background-color: #000000; }
 }

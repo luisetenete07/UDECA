@@ -135,7 +135,20 @@ export function enlaceDeLectura(
   // Lo que venga detrás de la almohadilla se tira: dos almohadillas en una
   // dirección no son dos ajustes, son una dirección rota.
   const limpio = base.split('#')[0];
-  if (plataforma === 'android') return VISOR_DE_GOOGLE + encodeURIComponent(limpio);
+  /*
+   * EN LA APP DEL NAVEGADOR, TAMBIÉN POR EL VISOR DE GOOGLE.
+   *
+   * El visor de PDF del propio navegador es una puerta de salida, y en cada
+   * móvil una distinta: en Android Chrome ni siquiera pinta el PDF dentro de la
+   * página, enseña un botón de "Abrir" que lo saca a otra pestaña con
+   * descargar y compartir; en el iPhone, mantener pulsado ofrece compartirlo;
+   * en el ordenador, su menú tiene "Guardar como" e "Imprimir". Luis lo pidió:
+   * se ve a pantalla completa, pero no se comparte ni se saca. El visor de
+   * Google empotrado va en un marco sin permiso para abrir ventanas ni cambiar
+   * de página, con su esquina de "abrir fuera" tapada (components/LectorDePdf).
+   * Es el mismo camino que ya seguían los enlaces de Drive.
+   */
+  if (plataforma === 'android' || plataforma === 'web') return VISOR_DE_GOOGLE + encodeURIComponent(limpio);
   const ajuste = ajusteDeLectura(anchoVentana, altoVentana);
   return `${limpio}#view=${ajuste}&toolbar=0&navpanes=0&pagemode=none`;
 }

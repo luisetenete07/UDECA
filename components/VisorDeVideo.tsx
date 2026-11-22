@@ -31,6 +31,13 @@ import type { UserProfile } from '../lib/types';
  * Se usa en todos los sitios donde hay vídeo porque las protecciones tienen que
  * ser las mismas en todos. Dos visores distintos serían dos sitios donde se
  * puede colar un botón de compartir.
+ *
+ * Y SIEMPRE VA PROTEGIDO. Antes las clases de un curso iban blindadas y los
+ * vídeos de técnica, el calentamiento y la rutina diaria no: con el
+ * reproductor de YouTube a la vista, su "Compartir" y su "Ver en YouTube".
+ * Luis lo pidió claro: cualquier contenido se ve a pantalla completa, pero de
+ * aquí no se comparte ni se sale. Ya no hay forma de abrir un vídeo sin
+ * protección.
  */
 export function VisorDeVideo({
   url,
@@ -38,31 +45,12 @@ export function VisorDeVideo({
   profile,
   visible,
   onCerrar,
-  protegido = true,
 }: {
   url?: string;
   titulo?: string;
   profile: Pick<UserProfile, 'name' | 'uid'> | null | undefined;
   visible: boolean;
   onCerrar: () => void;
-  /**
-   * Si el vídeo va BLINDADO (el reproductor de la plataforma tapado con un
-   * cristal y con controles nuestros) o con el embed normal.
-   *
-   * Las CLASES DE UN CURSO van blindadas: son el material que se vende, y ahí
-   * el logo, el título y el "Ver en YouTube" son puertas para sacarlo.
-   *
-   * Los VÍDEOS DE TÉCNICA de un ejercicio, no. Es un enlace público de YouTube
-   * que el entrenador ha pegado para que se vea dónde va el codo: no hay nada
-   * que proteger, y el blindaje es la parte más frágil de todo esto —depende de
-   * que la API de YouTube conteste dentro de una página con origen prestado—.
-   * Poner en riesgo el vídeo que más se mira, para proteger un enlace que
-   * cualquiera puede buscar, sale carísimo.
-   *
-   * Lo que NO cambia con esto: la marca de agua sigue encima, el vídeo sigue
-   * sin poder navegar fuera de la app y sin la pantalla completa del sistema.
-   */
-  protegido?: boolean;
 }) {
   const ventana = useWindowDimensions();
   const seguros = useSafeAreaInsets();
@@ -131,7 +119,7 @@ export function VisorDeVideo({
               y no puede haber nada por encima que le robe el toque. */}
           <View style={[styles.marco, { width: pc.video.width, height: pc.video.height }]}>
             <MarcaDeAgua profile={profile}>
-              <VideoPlayer url={url} protectedContent={protegido} pantallaCompleta />
+              <VideoPlayer url={url} protectedContent pantallaCompleta />
             </MarcaDeAgua>
           </View>
 

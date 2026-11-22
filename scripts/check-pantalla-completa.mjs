@@ -84,7 +84,7 @@ console.log('\nEmpieza solo y pide la mejor calidad');
 console.log('\nDónde se usa');
 {
   const visor = lee('components/VisorDeVideo.tsx');
-  ok('el visor pide al reproductor la pantalla completa', /<VideoPlayer url=\{url\} protectedContent=\{protegido\} pantallaCompleta \/>/.test(visor));
+  ok('el visor pide al reproductor la pantalla completa', /<VideoPlayer url=\{url\} protectedContent pantallaCompleta \/>/.test(visor));
   ok('con la marca de agua encima del vídeo', /<MarcaDeAgua profile=\{profile\}>\s*<VideoPlayer/.test(visor));
   ok('girado cuando toca', /transform: pc\.girado \? \[\{ rotate: '90deg' \}\] : \[\]/.test(visor));
   ok('de borde a borde, sin barra de estado', /statusBarTranslucent/.test(visor) && /navigationBarTranslucent/.test(visor) && /<StatusBar hidden \/>/.test(visor));
