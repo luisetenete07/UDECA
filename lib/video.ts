@@ -107,7 +107,8 @@ export function esVertical(url: string): boolean {
  * que en iPhone se reproduzca en la propia pantalla, sin salir de la app.
  */
 export function youTubeEmbedUrl(id: string): string {
-  return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
+  // Sin subtítulos ni anotaciones (lo pidió Luis): `cc_load_policy=0` e `iv_load_policy=3`.
+  return `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1&cc_load_policy=0&iv_load_policy=3`;
 }
 
 /**

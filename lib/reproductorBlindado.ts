@@ -127,7 +127,14 @@ export function fuenteBlindada(
      * Es lo que hay que enseñar cuando lo otro no sale, porque una clase que no
      * se puede ver es peor problema que una clase que se puede compartir.
      */
-    const desnudo = new URLSearchParams({ rel: '0', modestbranding: '1', playsinline: '1' });
+    const desnudo = new URLSearchParams({
+      rel: '0',
+      modestbranding: '1',
+      playsinline: '1',
+      // Sin API no se pueden descargar los subtítulos, pero al menos no se piden.
+      cc_load_policy: '0',
+      iv_load_policy: '3',
+    });
     return {
       dialecto: 'youtube',
       src: `https://www.youtube-nocookie.com/embed/${yt}?${new URLSearchParams(blindado).toString()}`,
@@ -159,12 +166,29 @@ export const ESPERA_MS = 5000;
  * El estado se pregunta cuatro veces por segundo porque YouTube no avisa del
  * paso del tiempo: solo de los cambios de estado. Sin esto la barra no se
  * movería.
+ *
+ * SIN SUBTÍTULOS. Luis no los quiere. `cc_load_policy=0` en la dirección no
+ * basta: YouTube los enciende igual si la cuenta o el navegador de quien mira
+ * los tiene puestos, o si el vídeo está en otro idioma que el del móvil. Lo
+ * que los quita de verdad es descargar su módulo con la API, y hay que
+ * hacerlo cada vez que YouTube lo vuelve a cargar: al arrancar, al darle al
+ * play y cuando avisa de que ha cargado un módulo (`onApiChange`).
  */
 const MANDO_YOUTUBE = `
   window.onYouTubeIframeAPIReady = function(){
-    var yt = new YT.Player('v', {
+    var yt;
+    function sinSubtitulos(){
+      try { yt.unloadModule('captions'); } catch (e) {}
+      try { yt.unloadModule('cc'); } catch (e) {}
+    }
+    yt = new YT.Player('v', {
       events: {
+        onApiChange: function(){ sinSubtitulos(); },
+        onStateChange: function(e){
+          if (e.data === 1 || e.data === 3) { sinSubtitulos(); setTimeout(sinSubtitulos, 800); }
+        },
         onReady: function(){
+          sinSubtitulos();
           mando = {
             suena: function(){ yt.playVideo(); },
             pausa: function(){ yt.pauseVideo(); },
@@ -202,10 +226,12 @@ const MANDO_VIMEO = `
         estado.dur = d.duration || estado.dur;
         pinta();
       });
-      vp.on('play', function(){ estado.sonando = true; pinta(); });
+      // Sin subtítulos, como en YouTube: se apagan al arrancar y al darle al play.
+      vp.on('play', function(){ estado.sonando = true; pinta(); vp.disableTextTrack().catch(function(){}); });
       vp.on('pause', function(){ estado.sonando = false; pinta(); });
       vp.on('ended', function(){ estado.sonando = false; pinta(); });
       vp.ready().then(function(){
+        vp.disableTextTrack().catch(function(){});
         vp.getDuration().then(function(d){ estado.dur = d || 0; arranca(); }, arranca);
       }, desblinda);
     } catch (e) { desblinda(); }

@@ -190,6 +190,17 @@ console.log('\nQué va blindado y qué no');
     /sandbox: 'allow-scripts allow-same-origin allow-presentation'/.test(reproductor) && /allowFullScreen: !protectedContent/.test(reproductor));
   // Y si el blindaje se rinde, la barra de compartir y el logo siguen tapados.
   const blindaje = lee('lib/reproductorBlindado.ts');
+  /*
+   * SIN SUBTÍTULOS DE YOUTUBE (lo pidió Luis). La dirección ya dice
+   * cc_load_policy=0, pero YouTube los enciende igual según la cuenta o el
+   * idioma de quien mira: hay que descargar su módulo con la API cada vez que
+   * lo vuelve a cargar.
+   */
+  ok('sin subtítulos: se descarga su módulo',
+    /unloadModule\('captions'\)/.test(blindaje) && /onApiChange: function\(\)\{ sinSubtitulos\(\); \}/.test(blindaje));
+  ok('y al darle al play, otra vez', /e\.data === 1 \|\| e\.data === 3\) \{ sinSubtitulos\(\);/.test(blindaje));
+  ok('en Vimeo, igual', /vp\.disableTextTrack\(\)/.test(blindaje));
+  ok('y el embed normal tampoco los pide', /cc_load_policy=0/.test(lee('lib/video.ts')));
   ok('el paracaídas no destapa compartir ni el logo',
     /arriba\.style\.cssText = 'position:absolute;left:0;right:0;top:0;height:72px/.test(blindaje) && /esquina\.style\.cssText = 'position:absolute;right:0;bottom:0/.test(blindaje));
 
