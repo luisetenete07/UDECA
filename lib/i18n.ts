@@ -1166,6 +1166,9 @@ export const EN: Record<string, string> = {
   'Ej. 5 dominadas seguidas': 'E.g. 5 pull-ups in a row',
   'Ej. Mi primera muscle up': 'E.g. My first muscle up',
   'Ej. Plancha completa': 'E.g. Full planche',
+  // Duración de cada módulo de un curso (app/(trainer)/courses/[id].tsx).
+  'Duración del módulo (ej. 45 min)': 'Module length (e.g. 45 min)',
+  'Duración del módulo': 'Module length',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':

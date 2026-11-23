@@ -31,6 +31,7 @@ import {
 import { pickCoverPhoto } from '../../../lib/image';
 import { showToast } from '../../../components/Toast';
 import { nuevoId } from '../../../lib/ids';
+import { t } from '../../../lib/idioma';
 import { Dialogo } from '../../../components/Dialogo';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import type { CourseSection, Lesson } from '../../../lib/types';
@@ -81,6 +82,10 @@ export default function CourseEditorScreen() {
 
   const updateSectionTitle = (sectionId: string, value: string) => {
     setSections((prev) => prev.map((s) => (s.id === sectionId ? { ...s, title: value } : s)));
+  };
+
+  const updateSectionDuration = (sectionId: string, value: string) => {
+    setSections((prev) => prev.map((s) => (s.id === sectionId ? { ...s, durationLabel: value } : s)));
   };
 
   const addLesson = (sectionId: string) => {
@@ -135,7 +140,9 @@ export default function CourseEditorScreen() {
         description: description.trim() || undefined,
         published,
         coverURL,
-        sections,
+        // Una duración vaciada no se guarda como "": así el alumno no ve un
+        // " · " colgando junto al número de vídeos.
+        sections: sections.map((s) => ({ ...s, durationLabel: s.durationLabel?.trim() || undefined })),
       };
       if (isNew) {
         await createCourse(data);
@@ -239,6 +246,20 @@ export default function CourseEditorScreen() {
               <Pressable onPress={() => removeSection(section.id)} style={styles.iconBtn}>
                 <Ionicons name="trash-outline" size={18} color={colors.danger} />
               </Pressable>
+            </View>
+
+            {/* La duración del módulo: el alumno la ve junto al número de
+                vídeos, antes de abrirlo. */}
+            <View style={styles.duracionModulo}>
+              <Ionicons name="time-outline" size={16} color={colors.textMuted} />
+              <TextField
+                value={section.durationLabel ?? ''}
+                onChangeText={(v) => updateSectionDuration(section.id, v)}
+                placeholder="Duración del módulo (ej. 45 min)"
+                maxLength={20}
+                accessibilityLabel={t('Duración del módulo')}
+                containerStyle={styles.duracionModuloCampo}
+              />
             </View>
 
             <Pressable
@@ -415,6 +436,8 @@ const styles = StyleSheet.create({
   sectionCard: { marginBottom: spacing.md },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionNameInput: { flex: 1, marginBottom: 0 },
+  duracionModulo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, paddingLeft: 2 },
+  duracionModuloCampo: { flex: 1, marginBottom: 0 },
   iconBtn: { padding: spacing.xs },
   addSection: { marginBottom: spacing.lg },
   error: { ...typography.small, color: colors.danger, marginBottom: spacing.sm },

@@ -1630,6 +1630,13 @@ export interface CourseSection {
   title: string;
   /** Portada de la sección (data URL comprimida), opcional. */
   coverURL?: string;
+  /**
+   * Duración del módulo tal y como la escribe Luis ("45 min", "1 h 20").
+   *
+   * A mano por lo mismo que la de cada lección: esas duraciones son texto
+   * libre ("12 min", "1 h 05") y sumarlas sería adivinar. Vacía = no se enseña.
+   */
+  durationLabel?: string;
   lessons: Lesson[];
 }
 

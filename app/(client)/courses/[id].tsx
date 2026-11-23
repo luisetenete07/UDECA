@@ -215,19 +215,29 @@ export default function ClientCourseDetailScreen() {
                 )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.sectionName}>{section.title}</Text>
-                  <Text style={styles.sectionMeta}>
-                    {(() => {
-                      // Se cuenta lo que se puede VER: una lección que solo
-                      // agrupa mini clases no es un vídeo más, y contarla haría
-                      // que los números de la sección no cuadraran con las filas.
-                      const n = section.lessons.reduce(
-                        (t, l) => t + contenidosDeLeccion(l).length,
-                        0
-                      );
-                      const cerradas = cuantasCerradas({ ...course, sections: [section] }, vip);
-                      return `${n} ${n === 1 ? 'vídeo' : 'vídeos'}${cerradas > 0 ? frase` · ${cerradas} solo VIP` : ''}`;
-                    })()}
-                  </Text>
+                  <View style={styles.sectionMetaFila}>
+                    <Text style={styles.sectionMeta}>
+                      {(() => {
+                        // Se cuenta lo que se puede VER: una lección que solo
+                        // agrupa mini clases no es un vídeo más, y contarla haría
+                        // que los números de la sección no cuadraran con las filas.
+                        const n = section.lessons.reduce(
+                          (t, l) => t + contenidosDeLeccion(l).length,
+                          0
+                        );
+                        const cerradas = cuantasCerradas({ ...course, sections: [section] }, vip);
+                        return `${n} ${n === 1 ? 'vídeo' : 'vídeos'}${cerradas > 0 ? frase` · ${cerradas} solo VIP` : ''}`;
+                      })()}
+                    </Text>
+                    {/* La duración que puso Luis al módulo: lo que va a llevar
+                        antes de abrirlo. */}
+                    {section.durationLabel ? (
+                      <View style={styles.sectionDuracion}>
+                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                        <Text style={styles.sectionDuracionTexto}>{section.durationLabel}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
                 <Ionicons
                   name={open ? 'chevron-up' : 'chevron-down'}
@@ -882,7 +892,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   sectionName: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold },
-  sectionMeta: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  sectionMeta: { ...typography.small, color: colors.textMuted },
+  sectionMetaFila: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: 2, marginTop: 2 },
+  sectionDuracion: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  sectionDuracionTexto: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold },
   lessonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   // Sangrada y algo más apagada: se ve que cuelga de la lección de arriba sin
   // necesidad de una línea ni de un título de grupo.
