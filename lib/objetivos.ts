@@ -30,10 +30,60 @@ export interface Objetivos {
   largo: string;
 }
 
-export const PLAZOS: { clave: Plazo; etiqueta: string; ejemplo: string }[] = [
-  { clave: 'corto', etiqueta: 'Corto plazo', ejemplo: 'Ej. 5 dominadas seguidas' },
-  { clave: 'medio', etiqueta: 'Medio plazo', ejemplo: 'Ej. Mi primera muscle up' },
-  { clave: 'largo', etiqueta: 'Largo plazo', ejemplo: 'Ej. Plancha completa' },
+/**
+ * CADA PLAZO, CON SU GRADO DE REALISMO. Lo marcó Luis:
+ *
+ *  - Corto plazo: REALISMO MÁXIMO. Lo que vas a conseguir sí o sí con lo que
+ *    ya haces. Si no es seguro, no es de corto plazo.
+ *  - Medio plazo: DIFÍCIL, pero alcanzable en 6 meses.
+ *  - Largo plazo: CASI IMPOSIBLE. El sueño; lo que te hace levantarte a
+ *    entrenar.
+ *
+ * `realismo` va de 3 (máximo) a 1 (casi imposible) y se pinta como tres
+ * barras, como la cobertura del móvil: se entiende sin leer.
+ */
+export interface PlazoDeObjetivo {
+  clave: Plazo;
+  etiqueta: string;
+  ejemplo: string;
+  /** El icono (Ionicons) de cada plazo. */
+  icono: 'flag' | 'trending-up' | 'rocket';
+  /** 3 = realismo máximo, 2 = difícil pero alcanzable, 1 = casi imposible. */
+  realismo: 1 | 2 | 3;
+  /** Cómo de realista tiene que ser, en una línea. */
+  comoDeRealista: string;
+  /** Lo que se le dice a quien lo escribe. */
+  pista: string;
+}
+
+export const PLAZOS: PlazoDeObjetivo[] = [
+  {
+    clave: 'corto',
+    etiqueta: 'Corto plazo',
+    ejemplo: 'Ej. 5 dominadas seguidas',
+    icono: 'flag',
+    realismo: 3,
+    comoDeRealista: 'Realismo máximo',
+    pista: 'Lo que vas a conseguir sí o sí con lo que ya haces.',
+  },
+  {
+    clave: 'medio',
+    etiqueta: 'Medio plazo',
+    ejemplo: 'Ej. Mi primera muscle up',
+    icono: 'trending-up',
+    realismo: 2,
+    comoDeRealista: 'Difícil, alcanzable en 6 meses',
+    pista: 'Te va a costar, pero en seis meses es tuyo.',
+  },
+  {
+    clave: 'largo',
+    etiqueta: 'Largo plazo',
+    ejemplo: 'Ej. Plancha completa',
+    icono: 'rocket',
+    realismo: 1,
+    comoDeRealista: 'Casi imposible',
+    pista: 'El sueño. Lo que te hace levantarte a entrenar.',
+  },
 ];
 
 /**

@@ -59,6 +59,11 @@ export default function ClientProfileScreen() {
   // Los tres objetivos (ver lib/objetivos.ts). El antiguo, si lo había, entra
   // ya colocado en el de corto plazo.
   const [objetivos, setObjetivos] = useState<Objetivos>(() => objetivosDe(profile));
+  // Si se actualizan desde el inicio (components/ObjetivosDelAlumno.tsx), aquí
+  // también: si no, guardar "Sobre mí" escribiría encima los de antes.
+  useEffect(() => {
+    setObjetivos(objetivosDe(profile));
+  }, [profile?.goalShort, profile?.goalMid, profile?.goalLong, profile?.goal]);
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [level, setLevel] = useState<ExperienceLevel | undefined>(profile?.level);
   const [targetWeight, setTargetWeight] = useState(

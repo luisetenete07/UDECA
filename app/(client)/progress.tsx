@@ -1,5 +1,5 @@
 import { unido } from '../../lib/texto';
-import { inicioDeLaSemana, inicioDelDia, mayusculaInicial, mesCorto } from '../../lib/fechas';
+import { mayusculaInicial, mesCorto } from '../../lib/fechas';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, Share, StyleSheet, TextInput, View } from 'react-native';
@@ -14,11 +14,9 @@ import { ExerciseHistory } from '../../components/ExerciseHistory';
 import { CardsSkeleton } from '../../components/Skeleton';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { PanelDeNutricion } from '../../components/PanelDeNutricion';
-import { MuscleMap } from '../../components/MuscleMap';
 import { shareSessionImage } from '../../lib/brandCards';
 import { buildClientReportHtml } from '../../lib/report';
 import { printReportHtml } from '../../lib/printReport';
-import { muscleLoad, weightsOfExercise } from '../../lib/muscles';
 import { useAuth } from '../../lib/auth-context';
 import { showToast } from '../../components/Toast';
 import { ProgressMatrix } from '../../components/ProgressMatrix';
@@ -77,7 +75,6 @@ export default function ProgressScreen() {
   useEffect(() => {
     if (tabPedida === 'nutricion') setTab('nutrition');
   }, [tabPedida]);
-  const [muscleMode, setMuscleMode] = useState<'session' | 'week'>('week');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
   // Meses replegados a mano. Sin entrada = vale el criterio por defecto (solo
@@ -92,9 +89,6 @@ export default function ProgressScreen() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(cached?.workoutLogs ?? []);
   const [measureByExercise, setMeasureByExercise] = useState<Record<string, string>>({});
   const [muscleByExercise, setMuscleByExercise] = useState<Record<string, string>>({});
-  const [musclesByExercise, setMusclesByExercise] = useState<
-    Record<string, import('../../lib/muscles').Weights>
-  >({});
   const [loading, setLoading] = useState(cached === undefined);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -182,16 +176,12 @@ export default function ProgressScreen() {
       .then((library) => {
         const mmap: Record<string, string> = {};
         const gmap: Record<string, string> = {};
-        const musMap: Record<string, import('../../lib/muscles').Weights> = {};
         for (const ex of library) {
           mmap[ex.id] = ex.measure ?? 'reps';
           gmap[ex.id] = ex.muscleGroup;
-          const w = weightsOfExercise(ex);
-          if (w) musMap[ex.id] = w;
         }
         setMeasureByExercise(mmap);
         setMuscleByExercise(gmap);
-        setMusclesByExercise(musMap);
       })
       .catch(() => {});
     setLoading(false);
@@ -305,19 +295,6 @@ export default function ProgressScreen() {
     [workoutLogs, measureByExercise]
   );
 
-  // Mapa corporal: intensidad por músculo según lo trabajado en la última
-  // sesión o en la semana. `muscleByExercise` (grupo del ejercicio) refina la
-  // clasificación por nombre.
-  const muscleIntensity = useMemo(() => {
-    if (muscleMode === 'session') {
-      const lastSessionDay = workoutLogs.length > 0 ? inicioDelDia(workoutLogs[0].date) : 0;
-      const sessionLogs = workoutLogs.filter((l) => inicioDelDia(l.date) === lastSessionDay);
-      return muscleLoad(sessionLogs, undefined, gruposDeEjercicio, musclesByExercise);
-    }
-    // Semana NATURAL (lunes 00:00 → domingo 23:59), no los últimos 7 días: al
-    // pasar el domingo el mapa arranca limpio.
-    return muscleLoad(workoutLogs, inicioDeLaSemana(Date.now()), gruposDeEjercicio, musclesByExercise);
-  }, [workoutLogs, muscleMode, gruposDeEjercicio, musclesByExercise]);
 
   const exercisesInLogs = useMemo(() => listExercisesInLogs(workoutLogs), [workoutLogs]);
   const selExerciseId = selectedExerciseId ?? exercisesInLogs[0]?.exerciseId ?? null;
@@ -367,7 +344,6 @@ export default function ProgressScreen() {
     return guardado === undefined ? key === monthKeyOf() : !guardado;
   };
 
-  const muscleHasData = Object.values(muscleIntensity).some((v) => v > 0);
 
   const mesActual = months.find((m) => m.key === monthKeyOf()) ?? null;
   const mesesAnteriores = months.filter((m) => m.key !== monthKeyOf());
@@ -688,40 +664,6 @@ export default function ProgressScreen() {
         <PanelDeNutricion />
       ) : tab === 'exercises' ? (
         <>
-          <Card style={styles.section}>
-            <View style={styles.muscleHeader}>
-              <Text style={styles.sectionTitle}>Músculos trabajados</Text>
-              <View style={styles.muscleToggle}>
-                <Pressable
-                  onPress={() => setMuscleMode('session')}
-                  style={[styles.muscleTab, muscleMode === 'session' && styles.muscleTabOn]}
-                >
-                  <Text
-                    style={[
-                      styles.muscleTabText,
-                      muscleMode === 'session' && styles.muscleTabTextOn,
-                    ]}
-                  >
-                    Última sesión
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setMuscleMode('week')}
-                  style={[styles.muscleTab, muscleMode === 'week' && styles.muscleTabOn]}
-                >
-                  <Text
-                    style={[
-                      styles.muscleTabText,
-                      muscleMode === 'week' && styles.muscleTabTextOn,
-                    ]}
-                  >
-                    Semana
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-            <MuscleMap intensity={muscleIntensity} hasData={muscleHasData} />
-          </Card>
           {exercisesInLogs.length === 0 ? (
             <Card style={styles.section}>
               <EmptyState
@@ -808,28 +750,7 @@ const styles = StyleSheet.create({
    * vivía encima. Al mudarse ese, quedaba un hueco vacío con una raya en medio
    * de la nada, que es de esas cosas que parecen un fallo de carga.
    */
-  sectionTitle: { ...typography.h3, color: colors.text, marginBottom: spacing.sm },
   // ----- Mapa muscular -----
-  muscleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  muscleToggle: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: radius.sm,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  muscleTab: { paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.sm - 2 },
-  muscleTabOn: { backgroundColor: colors.primary },
-  muscleTabText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.semiBold, fontSize: 12 },
-  muscleTabTextOn: { color: colors.onPrimary },
   // ----- Comparador 3 meses → hoy -----
   // ----- Registro de entrenamiento mensual -----
   // Los meses anteriores, dentro de "Hace 3 meses → hoy": separados por una

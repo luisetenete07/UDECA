@@ -31,6 +31,7 @@ import { StatTile } from '../../components/StatTile';
 import { WeekStrip } from '../../components/WeekStrip';
 import { RegistrarOtroDia } from '../../components/RegistrarOtroDia';
 import { RutinaDiariaDelDia } from '../../components/RutinaDiariaDelDia';
+import { ObjetivosDelAlumno } from '../../components/ObjetivosDelAlumno';
 import { useAuth } from '../../lib/auth-context';
 import { getActiveRoutineForClient } from '../../lib/firestore/routines';
 import {
@@ -690,6 +691,13 @@ export default function ClientDashboard() {
           cuando no se ve. Se pinta sola solo si le han puesto una. */}
       <FadeIn delay={70}>
         <RutinaDiariaDelDia profile={profile} />
+      </FadeIn>
+
+      {/* SUS OBJETIVOS, a la vista: corto (realismo máximo), medio (difícil,
+          seis meses) y largo (casi imposible). Se actualizan desde aquí
+          (components/ObjetivosDelAlumno.tsx). */}
+      <FadeIn delay={110}>
+        <ObjetivosDelAlumno />
       </FadeIn>
 
 

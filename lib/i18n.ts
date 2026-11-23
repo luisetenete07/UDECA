@@ -1145,6 +1145,27 @@ export const EN: Record<string, string> = {
   'Mes': 'Month',
   // El lector de PDF (components/LectorDePdf.tsx).
   'Volver a cargar el documento': 'Reload the document',
+  // Los objetivos del alumno en su inicio (components/ObjetivosDelAlumno.tsx, lib/objetivos.ts).
+  'Tus objetivos': 'Your goals',
+  'Actualizar': 'Update',
+  'Actualizar mis objetivos': 'Update my goals',
+  'Sin escribir': 'Not written yet',
+  'Corto plazo': 'Short term',
+  'Medio plazo': 'Medium term',
+  'Largo plazo': 'Long term',
+  'Guardar objetivos': 'Save goals',
+  'Objetivos guardados': 'Goals saved',
+  'No se pudieron guardar. Inténtalo otra vez.': 'Couldn\'t save them. Try again.',
+  'Realismo máximo': 'Maximum realism',
+  'Difícil, alcanzable en 6 meses': 'Hard, reachable in 6 months',
+  'Casi imposible': 'Almost impossible',
+  'Lo que vas a conseguir sí o sí con lo que ya haces.': 'What you will achieve for sure with what you already do.',
+  'Te va a costar, pero en seis meses es tuyo.': 'It will be hard, but in six months it\'s yours.',
+  'El sueño. Lo que te hace levantarte a entrenar.': 'The dream. What gets you up to train.',
+  'Uno por plazo, en una línea. Cámbialos cuando quieras: según avanzas, los de ahora se quedan cortos.': 'One per term, in one line. Change them whenever you like: as you progress, today\'s ones fall short.',
+  'Ej. 5 dominadas seguidas': 'E.g. 5 pull-ups in a row',
+  'Ej. Mi primera muscle up': 'E.g. My first muscle up',
+  'Ej. Plancha completa': 'E.g. Full planche',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':
@@ -1307,7 +1328,6 @@ export const EN: Record<string, string> = {
   'Eliminar este entrenamiento': 'Delete this workout',
   'Series completadas por patrón de movimiento, en los últimos 28 días.':
     'Sets completed by movement pattern, over the last 28 days.',
-  'Músculos trabajados': 'Muscles worked',
   'Última sesión': 'Last session',
   CONFIRMAR: 'CONFIRM',
   // El texto llega partido en trozos porque la palabra va resaltada en medio:
