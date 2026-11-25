@@ -23,7 +23,7 @@
  * del anterior entera, con lo que no queda ni un icono ni un bundle viejo.
  */
 
-const CACHE = 'mastery-4bc828f585a8-607';
+const CACHE = 'mastery-cf5f5cc53d8f-608';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
