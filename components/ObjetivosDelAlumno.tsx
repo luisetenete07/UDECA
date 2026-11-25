@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Texto';
 import { Button } from './Button';
 import { Card } from './Card';
+import { Realismo, TONO_DEL_REALISMO } from './RealismoDelObjetivo';
 import { Sheet } from './Sheet';
 import { TextField } from './TextField';
 import { showToast } from './Toast';
@@ -20,16 +21,7 @@ import {
 } from '../lib/objetivos';
 import { colors, fonts, radius, spacing, typography } from '../lib/theme';
 
-/**
- * El color de cada grado de realismo, como un semáforo: verde lo seguro, ámbar
- * lo difícil, rojo lo casi imposible. Con el beige de la marca, el sueño
- * parecía un objetivo desactivado.
- */
-const TONO: Record<PlazoDeObjetivo['realismo'], string> = {
-  3: colors.success,
-  2: colors.warning,
-  1: colors.danger,
-};
+const TONO = TONO_DEL_REALISMO;
 
 /**
  * LOS OBJETIVOS DEL ALUMNO, EN SU INICIO.
@@ -143,32 +135,6 @@ export function ObjetivosDelAlumno() {
   );
 }
 
-/**
- * Lo realista que es un plazo: tres barras como las de la cobertura, más
- * llenas cuanto más seguro, y su nombre al lado.
- */
-function Realismo({ plazo }: { plazo: PlazoDeObjetivo }) {
-  const tono = TONO[plazo.realismo];
-  return (
-    <View style={styles.realismo} accessible accessibilityLabel={t(plazo.comoDeRealista)}>
-      <View style={styles.barras}>
-        {[1, 2, 3].map((n) => (
-          <View
-            key={n}
-            style={[
-              styles.barra,
-              { height: 4 + n * 3, backgroundColor: n <= plazo.realismo ? tono : colors.borderStrong },
-            ]}
-          />
-        ))}
-      </View>
-      <Text style={[styles.realismoTexto, { color: tono }]} numberOfLines={1}>
-        {plazo.comoDeRealista}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   tarjeta: { marginBottom: spacing.md },
   cabecera: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs },
@@ -196,10 +162,6 @@ const styles = StyleSheet.create({
   },
   texto: { ...typography.body, color: colors.text, fontFamily: fonts.semiBold, marginTop: 3 },
   vacio: { ...typography.small, color: colors.textFaint, marginTop: 3 },
-  realismo: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  barras: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 13 },
-  barra: { width: 4, borderRadius: 1 },
-  realismoTexto: { fontSize: 11, lineHeight: 14, fontFamily: fonts.semiBold },
   campo: { marginBottom: spacing.md, gap: 4 },
   campoPlazo: { ...typography.small, color: colors.text, fontFamily: fonts.semiBold },
   campoPista: { ...typography.small, color: colors.textMuted, marginBottom: 2 },

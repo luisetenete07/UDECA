@@ -77,13 +77,19 @@ console.log('\nAl guardar');
     objetivosDe(g).corto === 'uno dos' && objetivosDe(g).largo === 'tres');
 }
 
-console.log('\nEl inicio ya no los enseña');
+console.log('\nEn el inicio, con su realismo');
 {
-  // Se quitaron de la pestaña de inicio: cerraban la pantalla con algo que no
-  // cambia de un día para otro. Siguen en su perfil.
+  // Luis los quiso a la vista en el inicio del alumno, y editables desde ahí
+  // (components/ObjetivosDelAlumno.tsx). El realismo se lee como un número:
+  // "Realista 3/3", "2/3", "1/3", de corto a largo.
   const { readFileSync } = await import('node:fs');
   const inicio = readFileSync(new URL('../app/(client)/dashboard.tsx', import.meta.url), 'utf8');
-  comprueba('sin "Mis objetivos" en el inicio', !/Mis objetivos|objetivosVisibles/.test(inicio));
+  comprueba('el inicio enseña los objetivos', /<ObjetivosDelAlumno\b/.test(inicio));
+  comprueba('realismo 3/3, 2/3, 1/3, de corto a largo',
+    PLAZOS.map((p) => p.comoDeRealista).join(' | ') === 'Realista 3/3 | Realista 2/3 | Realista 1/3',
+    PLAZOS.map((p) => p.comoDeRealista).join(' | '));
+  comprueba('cada objetivo visible lleva su plazo (para el realismo)',
+    objetivosVisibles({ corto: 'A', medio: '', largo: '' })[0].plazo?.realismo === 3);
 }
 
 console.log(fallos === 0 ? '\nTodo correcto ✔' : `\n${fallos} fallo(s)`);

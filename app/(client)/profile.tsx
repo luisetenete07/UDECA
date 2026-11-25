@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { frase } from '../../lib/idioma';
+import { frase, t } from '../../lib/idioma';
+import { Realismo } from '../../components/RealismoDelObjetivo';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Texto';
@@ -292,16 +293,22 @@ export default function ClientProfileScreen() {
             semana. */}
         <Text style={styles.fieldLabel}>Mis objetivos</Text>
         {PLAZOS.map((p) => (
-          <TextField
-            key={p.clave}
-            label={p.etiqueta}
-            value={objetivos[p.clave]}
-            onChangeText={(v) =>
-              setObjetivos((prev) => ({ ...prev, [p.clave]: v.slice(0, MAX_OBJETIVO) }))
-            }
-            placeholder={p.ejemplo}
-            maxLength={MAX_OBJETIVO}
-          />
+          <View key={p.clave}>
+            {/* El plazo con su realismo (3/3, 2/3, 1/3), como en el inicio. */}
+            <View style={styles.objetivoCab}>
+              <Text style={styles.objetivoEtiqueta}>{p.etiqueta}</Text>
+              <Realismo plazo={p} />
+            </View>
+            <TextField
+              value={objetivos[p.clave]}
+              onChangeText={(v) =>
+                setObjetivos((prev) => ({ ...prev, [p.clave]: v.slice(0, MAX_OBJETIVO) }))
+              }
+              placeholder={p.ejemplo}
+              maxLength={MAX_OBJETIVO}
+              accessibilityLabel={t(p.etiqueta)}
+            />
+          </View>
         ))}
         <TextField
           label="Bio"
@@ -458,6 +465,8 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.h3, color: colors.text },
   textarea: { height: 78, textAlignVertical: 'top' },
   fieldLabel: fieldLabel,
+  objetivoCab: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm, marginBottom: 6 },
+  objetivoEtiqueta: { ...fieldLabel, marginBottom: 0 },
   savedText: { ...typography.small, color: colors.primary, marginBottom: spacing.sm },
   nameHintRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.md },
   nameHint: { ...typography.small, color: colors.textMuted, flex: 1, lineHeight: 17 },

@@ -40,7 +40,9 @@ export interface Objetivos {
  *    entrenar.
  *
  * `realismo` va de 3 (máximo) a 1 (casi imposible) y se pinta como tres
- * barras, como la cobertura del móvil: se entiende sin leer.
+ * barras, como la cobertura del móvil, con "Realista 3/3", "2/3" o "1/3" al
+ * lado: así lo quiso Luis, un número que se lee de un vistazo en vez de una
+ * frase en cada plazo.
  */
 export interface PlazoDeObjetivo {
   clave: Plazo;
@@ -50,7 +52,7 @@ export interface PlazoDeObjetivo {
   icono: 'flag' | 'trending-up' | 'rocket';
   /** 3 = realismo máximo, 2 = difícil pero alcanzable, 1 = casi imposible. */
   realismo: 1 | 2 | 3;
-  /** Cómo de realista tiene que ser, en una línea. */
+  /** Cómo de realista tiene que ser: "Realista 3/3", "2/3" o "1/3". */
   comoDeRealista: string;
   /** Lo que se le dice a quien lo escribe. */
   pista: string;
@@ -63,7 +65,7 @@ export const PLAZOS: PlazoDeObjetivo[] = [
     ejemplo: 'Ej. 5 dominadas seguidas',
     icono: 'flag',
     realismo: 3,
-    comoDeRealista: 'Realismo máximo',
+    comoDeRealista: 'Realista 3/3',
     pista: 'Lo que vas a conseguir sí o sí con lo que ya haces.',
   },
   {
@@ -72,7 +74,7 @@ export const PLAZOS: PlazoDeObjetivo[] = [
     ejemplo: 'Ej. Mi primera muscle up',
     icono: 'trending-up',
     realismo: 2,
-    comoDeRealista: 'Difícil, alcanzable en 6 meses',
+    comoDeRealista: 'Realista 2/3',
     pista: 'Te va a costar, pero en seis meses es tuyo.',
   },
   {
@@ -81,7 +83,7 @@ export const PLAZOS: PlazoDeObjetivo[] = [
     ejemplo: 'Ej. Plancha completa',
     icono: 'rocket',
     realismo: 1,
-    comoDeRealista: 'Casi imposible',
+    comoDeRealista: 'Realista 1/3',
     pista: 'El sueño. Lo que te hace levantarte a entrenar.',
   },
 ];
@@ -116,9 +118,11 @@ export function hayObjetivos(o: Objetivos): boolean {
   return Boolean(o.corto || o.medio || o.largo);
 }
 
-/** Solo los que tienen texto, en orden, listos para pintar. */
-export function objetivosVisibles(o: Objetivos): { etiqueta: string; texto: string }[] {
-  return PLAZOS.map((p) => ({ etiqueta: p.etiqueta, texto: o[p.clave] })).filter((x) => x.texto);
+/** Solo los que tienen texto, en orden, listos para pintar (con su plazo, para el realismo). */
+export function objetivosVisibles(
+  o: Objetivos
+): { plazo: PlazoDeObjetivo; etiqueta: string; texto: string }[] {
+  return PLAZOS.map((p) => ({ plazo: p, etiqueta: p.etiqueta, texto: o[p.clave] })).filter((x) => x.texto);
 }
 
 /**

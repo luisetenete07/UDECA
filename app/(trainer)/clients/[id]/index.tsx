@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '../../../../components/Avatar';
 import { Button } from '../../../../components/Button';
 import { Card } from '../../../../components/Card';
+import { Realismo } from '../../../../components/RealismoDelObjetivo';
 import { EmptyState } from '../../../../components/EmptyState';
 import { DashboardSkeleton } from '../../../../components/Skeleton';
 import { confirmar } from '../../../../lib/confirmar';
@@ -536,7 +537,11 @@ export default function ClientDetailScreen() {
                   {objetivosVisibles(metas).map((o) => (
                     <View key={o.etiqueta} style={styles.objetivoFila}>
                       <Text style={styles.objetivoPlazo}>{o.etiqueta}</Text>
-                      <Text style={styles.objetivoTexto}>{o.texto}</Text>
+                      {/* Con su realismo, el mismo que ve el alumno en su inicio. */}
+                      <View style={styles.objetivoCuerpo}>
+                        <Text style={styles.objetivoTexto}>{o.texto}</Text>
+                        <Realismo plazo={o.plazo} />
+                      </View>
                     </View>
                   ))}
                 </>
@@ -1224,7 +1229,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  objetivoTexto: { ...typography.small, color: colors.text, flex: 1, lineHeight: 18 },
+  objetivoCuerpo: { flex: 1, gap: 3 },
+  objetivoTexto: { ...typography.small, color: colors.text, lineHeight: 18 },
   miniValue: { ...typography.body, color: colors.text, marginTop: 2 },
   section: { marginBottom: spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },

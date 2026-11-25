@@ -23,16 +23,15 @@ import {
   setCoachingHasta,
   subscribeClientsForTrainer,
 } from '../../../lib/firestore/users';
-import { getWorkoutLogsForTrainer } from '../../../lib/firestore/workoutLogs';
 import { QuickSheet } from '../../../components/QuickSheet';
 import { ClasificacionDelGrupo } from '../../../components/ClasificacionDelGrupo';
 import { AccesoALibretas } from '../../../components/AccesoALibretas';
-import { getActiveRoutinesForTrainer } from '../../../lib/firestore/routines';
 import { buildCsv, downloadCsv } from '../../../lib/exportCsv';
 import { getCached, setCached } from '../../../lib/screenCache';
 import { Chip, ChipRow } from '../../../components/Chip';
 import { getAjustesLlamadas } from '../../../lib/firestore/llamadas';
-import { fechaNumerica, inicioDeLaSemana, inicioDelDia, masDias } from '../../../lib/fechas';
+import { fechaNumerica } from '../../../lib/fechas';
+import { objetivosDe } from '../../../lib/objetivos';
 import { colors, fonts, radius, spacing, typography } from '../../../lib/theme';
 import { alargar, coachingDe } from '../../../lib/coaching';
 import { colorDelPeriodo, textoDelPeriodo } from '../../../components/PeriodoDeCoaching';
@@ -42,50 +41,27 @@ const porRenovar = (c: UserProfile) => {
   const e = coachingDe(c).estado;
   return e === 'acaba' || e === 'terminado' || e === 'pausado';
 };
-import {
-  CLIENT_STATUS_LABEL,
-  todayWeekday,
-  type Routine,
-  type UserProfile,
-  type WorkoutLog,
-} from '../../../lib/types';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Medianoche local del timestamp (para contar por días de calendario). */
+import { CLIENT_STATUS_LABEL, type UserProfile } from '../../../lib/types';
 
 /**
- * Última actividad como texto + tono: hoy/ayer verde, <7d ámbar, resto rojo.
- * Se cuenta por DÍAS DE CALENDARIO (no por periodos de 24 h), así "hoy" y
- * "ayer" cuadran con el día real aunque hayan pasado más o menos de 24 horas.
+ * El objetivo que se enseña en la lista: el de corto plazo, que es el que se
+ * trabaja ahora (o el primero que haya). El campo antiguo `goal` se vacía al
+ * guardar los tres nuevos (lib/objetivos.ts), así que leerlo a él dejaba a
+ * todos en "Sin objetivo definido".
  */
-function activityInfo(last?: number): { label: string; color: string } {
-  if (!last) return { label: 'Sin entrenos', color: colors.textFaint };
-  const days = Math.round((inicioDelDia(Date.now()) - inicioDelDia(last)) / DAY_MS);
-  if (days <= 0) return { label: 'Hoy', color: colors.success };
-  if (days === 1) return { label: 'Ayer', color: colors.success };
-  if (days < 7) return { label: frase`Hace ${days} días`, color: '#C9902B' };
-  return { label: frase`${days} días parado`, color: colors.danger };
+function objetivoDeLaLista(c: UserProfile): string {
+  const o = objetivosDe(c);
+  return o.corto || o.medio || o.largo;
 }
 
-/**
- * Entrenamientos que el alumno se ha SALTADO esta semana: días de entreno
- * (no descanso) con día de la semana asignado que ya han pasado (antes de hoy)
- * y en los que no registró ninguna sesión. Solo aplica a rutinas semanales
- * (en ciclo/sensaciones no hay día fijo, así que no se puede "saltar" uno).
+/*
+ * SIN "SE SALTÓ" NI "HACE X DÍAS".
+ *
+ * La lista decía cuándo entrenó cada alumno (aro de color, "Hace 3 días",
+ * "12 días parado") y cuántos entrenos se saltó esta semana. Luis lo quitó: los
+ * alumnos no apuntan cada entreno (lib/modoDeEntreno.ts), así que esas cifras
+ * hablaban de registros, no de si entrenan, y señalaban a quien sí entrenaba.
  */
-function skippedThisWeek(routine: Routine | null | undefined, trainedDays: Set<number>): number {
-  if (!routine || (routine.schedule ?? 'weekly') !== 'weekly') return 0;
-  const monday = inicioDeLaSemana(Date.now());
-  const todayWd = todayWeekday();
-  let skipped = 0;
-  for (const day of routine.days) {
-    if (day.isRest || day.optionalRest || day.weekday == null) continue;
-    if (day.weekday >= todayWd) continue; // hoy o futuro: aún no cuenta
-    if (!trainedDays.has(masDias(monday, day.weekday))) skipped++;
-  }
-  return skipped;
-}
 
 export default function ClientsScreen() {
   const { profile } = useAuth();
@@ -95,19 +71,10 @@ export default function ClientsScreen() {
   const [clients, setClients] = useState<UserProfile[]>(
     () => getCached<UserProfile[]>(cacheKey) ?? []
   );
-  const [lastTrained, setLastTrained] = useState<Record<string, number>>(
-    () => getCached<Record<string, number>>(`${cacheKey}-last`) ?? {}
-  );
-  const [skipped, setSkipped] = useState<Record<string, number>>(
-    () => getCached<Record<string, number>>(`${cacheKey}-skip`) ?? {}
-  );
   const [loading, setLoading] = useState(() => getCached(cacheKey) === undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [soloRenovar, setSoloRenovar] = useState(false);
-  // Orden: alfabético o por actividad (los que llevan más tiempo sin entrenar
-  // primero, para actuar rápido con grupos grandes).
-  const [sortMode, setSortMode] = useState<'name' | 'activity'>('name');
   const [error, setError] = useState<string | null>(null);
   // Alumno sobre el que se mantiene pulsado, para las acciones rápidas.
   const [rapidas, setRapidas] = useState<UserProfile | null>(null);
@@ -120,44 +87,14 @@ export default function ClientsScreen() {
     if (!profile) return;
     try {
       setError(null);
-      const [data, logs] = await Promise.all([
-        getClientsForTrainer(profile.uid),
-        getWorkoutLogsForTrainer(profile.uid),
-      ]);
-      // Última sesión de cada alumno, para ver de un vistazo quién entrena.
-      const last: Record<string, number> = {};
-      for (const log of logs) {
-        if (!last[log.clientId] || log.date > last[log.clientId]) last[log.clientId] = log.date;
-      }
+      const data = await getClientsForTrainer(profile.uid);
       setClients(data);
-      setLastTrained(last);
       setCached(cacheKey, data);
-      setCached(`${cacheKey}-last`, last);
-      // Entrenamientos saltados esta semana: requiere la rutina activa de cada
-      // alumno + los días que entrenó esta semana. Se calcula en segundo plano
-      // para no frenar el pintado de la lista.
-      const monday = inicioDeLaSemana(Date.now());
-      const trainedByClient: Record<string, Set<number>> = {};
-      for (const log of logs as WorkoutLog[]) {
-        if (log.date < monday) continue;
-        (trainedByClient[log.clientId] ??= new Set()).add(inicioDelDia(log.date));
-      }
       getAjustesLlamadas(profile.uid)
         .then((a) => {
           const nombres = Object.fromEntries(a.planes.map((p) => [p.id, p.nombre]));
           setPlanes(nombres);
           setCached(`${cacheKey}-planes`, nombres);
-        })
-        .catch(() => {});
-      getActiveRoutinesForTrainer(profile.uid)
-        .then((rutinas) => {
-          const skip: Record<string, number> = {};
-          for (const c of data) {
-            const n = skippedThisWeek(rutinas[c.uid] ?? null, trainedByClient[c.uid] ?? new Set());
-            if (n > 0) skip[c.uid] = n;
-          }
-          setSkipped(skip);
-          setCached(`${cacheKey}-skip`, skip);
         })
         .catch(() => {});
     } catch (e) {
@@ -175,9 +112,8 @@ export default function ClientsScreen() {
   );
 
   // Altas y bajas del grupo en vivo: un alumno recién aceptado aparece en la
-  // lista sin refrescar ni volver atrás. El resto de datos derivados (últimas
-  // sesiones, entrenos saltados) los sigue calculando `load`. Solo escucha
-  // mientras la lista está delante.
+  // lista sin refrescar ni volver atrás. Los nombres de los planes los sigue
+  // trayendo `load`. Solo escucha mientras la lista está delante.
   useFocusEffect(
     useCallback(() => {
       if (!profile) return;
@@ -230,11 +166,7 @@ export default function ClientsScreen() {
         (c.name ?? '').toLowerCase().includes(search.toLowerCase().trim()) &&
         (!soloRenovar || porRenovar(c))
     )
-    .sort((a, b) =>
-      sortMode === 'activity'
-        ? (lastTrained[a.uid] ?? 0) - (lastTrained[b.uid] ?? 0)
-        : (a.name ?? '').localeCompare(b.name ?? '')
-    );
+    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   const cuantosPorRenovar = clients.filter(porRenovar).length;
 
   const handleExportCsv = () => {
@@ -243,11 +175,10 @@ export default function ClientsScreen() {
       c.name,
       c.email,
       fmt(c.nextPaymentDate),
-      fmt(lastTrained[c.uid]),
-      c.goal ?? '',
+      objetivoDeLaLista(c),
     ]);
     const csv = buildCsv(
-      ['Nombre', 'Email', 'Coaching hasta', 'Última sesión', 'Objetivo'],
+      ['Nombre', 'Email', 'Coaching hasta', 'Objetivo'],
       rows
     );
     const stamp = new Date().toISOString().slice(0, 10);
@@ -285,12 +216,6 @@ export default function ClientsScreen() {
       {clients.length > 0 ? (
         <ChipRow scroll>
           <Chip
-            texto={sortMode === 'activity' ? 'Menos activos primero' : 'A-Z'}
-            icono="swap-vertical"
-            activo={sortMode === 'activity'}
-            onPress={() => setSortMode((m) => (m === 'name' ? 'activity' : 'name'))}
-          />
-          <Chip
             texto={`Todos (${clients.length})`}
             activo={!soloRenovar}
             onPress={() => setSoloRenovar(false)}
@@ -317,7 +242,6 @@ export default function ClientsScreen() {
       ) : (
         <Grid>
         {filtered.map((client, index) => {
-          const activity = activityInfo(lastTrained[client.uid]);
           return (
           <FadeIn key={client.uid} delay={Math.min(index * 40, 280)}>
           <CardButton
@@ -326,12 +250,7 @@ export default function ClientsScreen() {
             delayLongPress={280}
             style={styles.clientCard}
           >
-              {/* El aro dice cuándo entrenó sin que haya que leer nada: es el
-                  mismo lenguaje que las caras del panel, para que no haya que
-                  aprender dos códigos distintos en la misma app. */}
-              <View style={[styles.aro, { borderColor: activity.color }]}>
-                <Avatar name={client.name} photoURL={client.photoURL} size={40} />
-              </View>
+              <Avatar name={client.name} photoURL={client.photoURL} size={46} />
               <View style={{ flex: 1 }}>
                 <View style={styles.nombreFila}>
                   <Text style={[styles.clientName, { flexShrink: 1 }]} numberOfLines={1}>
@@ -343,30 +262,15 @@ export default function ClientsScreen() {
                     </Text>
                   ) : null}
                 </View>
-                <Text style={styles.clientGoal}>{client.goal || 'Sin objetivo definido'}</Text>
-                <View style={styles.payBadgeRow}>
-                  <View style={[styles.dot, { backgroundColor: activity.color }]} />
-                  <Text style={[styles.payBadgeText, { color: activity.color }]}>
-                    {activity.label}
-                  </Text>
-                  {/* El periodo de coaching, solo si tiene fecha: lo que se
-                      lee es cuánto le queda, en el color de su estado. */}
-                </View>
-                {/* El periodo en su propia línea: al lado de la actividad no
-                    cabía, y al partirse dejaba un punto colgando. */}
+                <Text style={styles.clientGoal} numberOfLines={1}>
+                  {objetivoDeLaLista(client) || 'Sin objetivo definido'}
+                </Text>
+                {/* El periodo de coaching, solo si tiene fecha: lo que se lee
+                    es cuánto le queda, en el color de su estado. */}
                 {client.nextPaymentDate ? (
                   <Text style={[styles.payBadgeText, styles.periodoLinea, { color: colorDelPeriodo(coachingDe(client)) }]}>
                     {textoDelPeriodo(coachingDe(client))}
                   </Text>
-                ) : null}
-                {skipped[client.uid] ? (
-                  <View style={styles.skipRow}>
-                    <Ionicons name="close-circle" size={13} color={colors.danger} />
-                    <Text style={styles.skipText}>
-                      Se saltó {skipped[client.uid]} entrenamiento
-                      {skipped[client.uid] === 1 ? '' : 's'}
-                    </Text>
-                  </View>
                 ) : null}
               </View>
               {client.status && client.status !== 'active' ? (
@@ -484,12 +388,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  payBadgeRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginTop: 4 },
   payBadgeText: { ...typography.small, color: colors.textMuted, fontFamily: fonts.medium, fontSize: 11 },
-  periodoLinea: { marginTop: 2 },
-  skipRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  skipText: { ...typography.small, color: colors.danger, fontFamily: fonts.semiBold, fontSize: 11 },
+  periodoLinea: { marginTop: 4 },
   clientCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -501,14 +401,6 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  aro: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

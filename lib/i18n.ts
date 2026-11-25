@@ -1156,9 +1156,6 @@ export const EN: Record<string, string> = {
   'Guardar objetivos': 'Save goals',
   'Objetivos guardados': 'Goals saved',
   'No se pudieron guardar. Inténtalo otra vez.': 'Couldn\'t save them. Try again.',
-  'Realismo máximo': 'Maximum realism',
-  'Difícil, alcanzable en 6 meses': 'Hard, reachable in 6 months',
-  'Casi imposible': 'Almost impossible',
   'Lo que vas a conseguir sí o sí con lo que ya haces.': 'What you will achieve for sure with what you already do.',
   'Te va a costar, pero en seis meses es tuyo.': 'It will be hard, but in six months it\'s yours.',
   'El sueño. Lo que te hace levantarte a entrenar.': 'The dream. What gets you up to train.',
@@ -1169,6 +1166,10 @@ export const EN: Record<string, string> = {
   // Duración de cada módulo de un curso (app/(trainer)/courses/[id].tsx).
   'Duración del módulo (ej. 45 min)': 'Module length (e.g. 45 min)',
   'Duración del módulo': 'Module length',
+  // Realismo de cada objetivo (lib/objetivos.ts).
+  'Realista 3/3': 'Realistic 3/3',
+  'Realista 2/3': 'Realistic 2/3',
+  'Realista 1/3': 'Realistic 1/3',
   // La puerta de las cuentas antiguas de atleta (components/CuentaRetiradaScreen.tsx).
   'Este tipo de cuenta ya no existe': 'This type of account no longer exists',
   'Si quieres, puedes eliminar esta cuenta y todos sus datos.':
@@ -1331,7 +1332,6 @@ export const EN: Record<string, string> = {
   'Eliminar este entrenamiento': 'Delete this workout',
   'Series completadas por patrón de movimiento, en los últimos 28 días.':
     'Sets completed by movement pattern, over the last 28 days.',
-  'Última sesión': 'Last session',
   CONFIRMAR: 'CONFIRM',
   // El texto llega partido en trozos porque la palabra va resaltada en medio:
   // cada trozo se busca por su cuenta, con sus espacios tal cual.
@@ -2307,7 +2307,6 @@ export const EN: Record<string, string> = {
   'Medida: ': 'Measured in: ',
   ' · lo decide el grupo «': ' · decided by the group «',
   'Crear ejercicio nuevo': 'Create a new exercise',
-  'Se saltó ': 'Skipped ',
   ' pago': ' payment',
   ' vencido': ' overdue',
   ' ha': ' has',
@@ -2404,8 +2403,6 @@ export const EN: Record<string, string> = {
   '{0} kg de volumen': '{0} kg of volume',
   '{0} kg de goma': '{0} kg of band',
   '{0} días': '{0} days',
-  '{0} días parado': '{0} days idle',
-  'Hace {0} días': '{0} days ago',
   'hace {0} días': '{0} days ago',
   // Retomar el ciclo por donde ibas (components/UltimoEntreno.tsx).
   hoy: 'today',
@@ -2861,7 +2858,6 @@ export const EN: Record<string, string> = {
   'Indica un nombre y las calorías diarias objetivo.':
     'Give it a name and the daily calorie target.',
   'No se pudo guardar el plan.': "Couldn't save the plan.",
-  'Sin entrenos': 'No workouts',
   Pago: 'Payment',
   'Ver mi código': 'See my code',
   'Sin objetivo definido': 'No goal set',
